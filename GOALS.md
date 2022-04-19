@@ -40,7 +40,7 @@ allowing vendors to shift to a higher management plane layer.
 ## Non-objectives
 
 ### Cannibalize vendor models
-Vendors need to have the ability to add value and make money, so the goal is not to cannibalize any existing vendor 
+Vendors need to have the ability to drive commercial value, so the goal is not to cannibalize any existing vendor 
 monetization model, though some vendors may be affected by it.
 
 ### Disrupt current Envoy usage patterns
