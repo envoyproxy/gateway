@@ -1,30 +1,39 @@
 # Goals
 
-The high-level goal of the Envoy Gateway project is to attract more users to Envoy by adding new capabilities 
-and lowering barriers to adoption.
+The high-level goal of the Envoy Gateway project is to attract more users to Envoy by lowering barriers to adoption 
+through expressive, extensible, role-oriented APIs that support a multitude of ingress and L7/L4 traffic routing
+use cases.
 
 ## Objectives
 
-### Simplified and expressive API
-The Envoy Gateway project will introduce a simplified API, with defaults set for many capabilities.
+### Expressive API
+The Envoy Gateway project will expose a simplified and expressive API, with defaults set for many capabilities.
 
-This simplified API will make Envoy accessible to more users, especially application developers, and make Envoy a 
-stronger option for "getting started" as compared to Nginx/HAProxy. Application developers will use this simple API
+This expressive API will make Envoy accessible to more users, especially application developers, and make Envoy a 
+stronger option for "getting started" as compared to other proxies. Application developers will use a simple API
 out of the box without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers. 
-The simplified API will use nouns that application developers understand.
+The expressive API will use familiar nouns that [expert personas](#personas) understand.
 
 The core full-featured Envoy APIs (xDS) will remain available for those who need more capability and for those who 
 add functionality on top of Envoy, such as commercial API gateway products.
 
-This simplified API will not be implemented by the Envoy Proxy, but rather an officially supported translation layer 
+This expressive API will not be implemented by the Envoy Proxy, but rather an officially supported translation layer 
 on top.
+
+### Simplified deployment
+The Envoy Gateway will simplify how Envoy is deployed and managed, allowing application developers to focus on 
+delivering core business value.
+
+Making an application accessible needs to be a trivial task for any developer. Similarly, infrastructure administrator
+will enjoy a simplified deployment model that doesn't require extensive knowledge of the solution's architecture to
+operate.
 
 ### All environments
 The Envoy Gateway will support running natively in Kubernetes environments as well as non-Kubernetes deployments.
 
 Initially, Kubernetes will receive the most focus, with the aim of having the Envoy Gateway become the de facto 
 standard for Kubernetes ingress supporting the [Gateway API](https://gateway-api.sigs.k8s.io/). 
-Medium-term goals include multi-cluster support and various runtime environments.
+Additional goals include multi-cluster support and various runtime environments.
 
 ### Extensibility
 Vendors will have the ability to provide value-added products built on the Envoy Gateway foundation.
