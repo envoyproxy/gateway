@@ -12,9 +12,9 @@ The Envoy Gateway project will expose a simplified and expressive API, with defa
 This expressive API will make Envoy accessible to more users, especially application developers, and make Envoy a 
 stronger option for "getting started" as compared to other proxies. Application developers will use a simple API
 out of the box without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers. 
-The expressive API will use familiar nouns that [expert personas](#personas) understand.
+The expressive API will use familiar nouns that [users](#personas) understand.
 
-The core full-featured Envoy APIs (xDS) will remain available for those who need more capability and for those who 
+The core full-featured Envoy APIs will remain available for those who need more capability and for those who 
 add functionality on top of Envoy, such as commercial API gateway products.
 
 This expressive API will not be implemented by the Envoy Proxy, but rather an officially supported translation layer 
@@ -24,8 +24,8 @@ on top.
 The Envoy Gateway will simplify how Envoy is deployed and managed, allowing application developers to focus on 
 delivering core business value.
 
-Making an application accessible needs to be a trivial task for any developer. Similarly, infrastructure administrator
-will enjoy a simplified deployment model that doesn't require extensive knowledge of the solution's architecture to
+Making an application accessible needs to be a trivial task for any developer. Similarly, infrastructure administrators
+will enjoy a simplified management model that doesn't require extensive knowledge of the solution's architecture to
 operate.
 
 ### All environments
@@ -39,8 +39,8 @@ Additional goals include multi-cluster support and various runtime environments.
 Vendors will have the ability to provide value-added products built on the Envoy Gateway foundation.
 
 It will remain easy for end-users to use common Envoy Proxy extension points such as providing an implementation for 
-authentication methods and rate-limiting. For advanced use cases, users will have the ability to switch to using xDS 
-directly.
+authentication methods and rate-limiting. For advanced use cases, users will have the ability to use the full power 
+of xDS.
 
 Since a general-purpose API cannot address all use cases, the Envoy Gateway will provide additional extension points 
 for flexibility. As such, the Envoy Gateway will form the base of vendor-provided managed control plane solutions, 
@@ -67,14 +67,4 @@ TLS termination, rate limits, authentication and authorization policies, etc.
 ### 2. Infrastructure administrators
 The infrastructure administrators are responsible for the installation, maintenance, and operation of
 API gateways appliances in infrastructure, such as CRDs, roles, service accounts, certificates, etc.
-Infrastructure administrators support the needs of application developers by deploying instances of the Envoy Gateway.
-
-### 3. Envoy developer
-The Envoy developer has the ability to quickly develop and test out new or improved features in Envoy proxy, 
-that later can be graduated into a user-friendly gateway feature.
-
-## Other
-
-Further discussions and drafts of the project's goals can be found in this document:
-https://docs.google.com/document/d/18MuuV9Qzij7Z1OeZ6GrOURKzVi9D0qv2SgvFPELM4gc/edit
-
+Infrastructure administrators support the needs of application developers by managing instances of the Envoy Gateway.
