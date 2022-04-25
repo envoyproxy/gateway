@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-gateway-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: envoy-gateway-provisioner
+  namespace: envoy-gateway-system

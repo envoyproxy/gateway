@@ -1,0 +1,183 @@
+// Copyright Project Contour Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package status holds pieces for handling status updates propagated from
+// the DAG back to Kubernetes
+package status
+
+import (
+	"github.com/projectcontour/contour/internal/k8s"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayapi_v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+)
+
+// ConditionType is used to ensure we only use a limited set of possible values
+// for DetailedCondition types. It's cast back to a string before sending off to
+// HTTPProxy structs, as those use upstream types which we can't alias easily.
+type ConditionType string
+
+// ValidCondition is the ConditionType for Valid.
+const ValidCondition ConditionType = "Valid"
+
+// NewCache creates a new Cache for holding status updates.
+func NewCache(gateway types.NamespacedName, gatewayController gatewayapi_v1alpha2.GatewayController) Cache {
+	return Cache{
+		gatewayRef:        gateway,
+		gatewayController: gatewayController,
+		gatewayUpdates:    make(map[types.NamespacedName]*GatewayStatusUpdate),
+		routeUpdates:      make(map[types.NamespacedName]*RouteConditionsUpdate),
+		entries:           make(map[string]map[types.NamespacedName]CacheEntry),
+	}
+}
+
+type CacheEntry interface {
+	AsStatusUpdate() k8s.StatusUpdate
+}
+
+// Cache holds status updates from the DAG back towards Kubernetes.
+// It holds a per-Kind cache, and is intended to be accessed with a
+// KindAccessor.
+type Cache struct {
+	gatewayRef        types.NamespacedName
+	gatewayController gatewayapi_v1alpha2.GatewayController
+
+	gatewayUpdates map[types.NamespacedName]*GatewayStatusUpdate
+	routeUpdates   map[types.NamespacedName]*RouteConditionsUpdate
+
+	// Map of cache entry maps, keyed on Kind.
+	entries map[string]map[types.NamespacedName]CacheEntry
+}
+
+// Get returns a pointer to a the cache entry if it exists, nil
+// otherwise. The return value is shared between all callers, who
+// should take care to cooperate.
+func (c *Cache) Get(obj metav1.Object) CacheEntry {
+	kind := k8s.KindOf(obj)
+
+	if _, ok := c.entries[kind]; !ok {
+		c.entries[kind] = make(map[types.NamespacedName]CacheEntry)
+	}
+
+	return c.entries[kind][k8s.NamespacedNameOf(obj)]
+}
+
+// Put returns an entry to the cache.
+func (c *Cache) Put(obj metav1.Object, e CacheEntry) {
+	kind := k8s.KindOf(obj)
+
+	if _, ok := c.entries[kind]; !ok {
+		c.entries[kind] = make(map[types.NamespacedName]CacheEntry)
+	}
+
+	c.entries[kind][k8s.NamespacedNameOf(obj)] = e
+}
+
+// GetStatusUpdates returns a slice of StatusUpdates, ready to be sent off
+// to the StatusUpdater by the event handler.
+// As more kinds are handled by Cache, we'll update this method.
+func (c *Cache) GetStatusUpdates() []k8s.StatusUpdate {
+	var flattened []k8s.StatusUpdate
+
+	for fullname, routeUpdate := range c.routeUpdates {
+		update := k8s.StatusUpdate{
+			NamespacedName: fullname,
+			Resource:       routeUpdate.Resource,
+			Mutator:        routeUpdate,
+		}
+
+		flattened = append(flattened, update)
+	}
+
+	for fullname, gwUpdate := range c.gatewayUpdates {
+		update := k8s.StatusUpdate{
+			NamespacedName: fullname,
+			Resource:       &gatewayapi_v1alpha2.Gateway{},
+			Mutator:        gwUpdate,
+		}
+
+		flattened = append(flattened, update)
+	}
+
+	for _, byKind := range c.entries {
+		for _, e := range byKind {
+			flattened = append(flattened, e.AsStatusUpdate())
+		}
+	}
+
+	return flattened
+}
+
+// GetGatewayUpdates gets the underlying GatewayStatusUpdate objects from the cache.
+func (c *Cache) GetGatewayUpdates() []*GatewayStatusUpdate {
+	var allUpdates []*GatewayStatusUpdate
+	for _, conditionsUpdate := range c.gatewayUpdates {
+		allUpdates = append(allUpdates, conditionsUpdate)
+	}
+	return allUpdates
+}
+
+// GetRouteUpdates gets the underlying RouteConditionsUpdate objects from the cache.
+func (c *Cache) GetRouteUpdates() []*RouteConditionsUpdate {
+	var allUpdates []*RouteConditionsUpdate
+	for _, conditionsUpdate := range c.routeUpdates {
+		allUpdates = append(allUpdates, conditionsUpdate)
+	}
+	return allUpdates
+}
+
+// GatewayStatusAccessor returns a GatewayStatusUpdate that allows a client to build up a list of
+// status changes as well as a function to commit the change back to the cache when everything
+// is done. The commit function pattern is used so that the GatewayStatusUpdate does not need
+// to know anything the cache internals.
+func (c *Cache) GatewayStatusAccessor(nsName types.NamespacedName, generation int64, gs *gatewayapi_v1alpha2.GatewayStatus) (*GatewayStatusUpdate, func()) {
+	gu := &GatewayStatusUpdate{
+		FullName:           nsName,
+		Conditions:         make(map[gatewayapi_v1alpha2.GatewayConditionType]metav1.Condition),
+		ExistingConditions: getGatewayConditions(gs),
+		Generation:         generation,
+		TransitionTime:     metav1.NewTime(clock.Now()),
+	}
+
+	return gu, func() {
+		if len(gu.Conditions) == 0 && len(gu.ListenerStatus) == 0 {
+			return
+		}
+		c.gatewayUpdates[gu.FullName] = gu
+	}
+}
+
+// RouteConditionsAccessor returns a RouteConditionsUpdate that allows a client to build up a list of
+// metav1.Conditions as well as a function to commit the change back to the cache when everything
+// is done. The commit function pattern is used so that the RouteConditionsUpdate does not need
+// to know anything the cache internals.
+func (c *Cache) RouteConditionsAccessor(nsName types.NamespacedName, generation int64, resource client.Object, gateways []gatewayapi_v1alpha2.RouteParentStatus) (*RouteConditionsUpdate, func()) {
+	pu := &RouteConditionsUpdate{
+		FullName:           nsName,
+		Conditions:         make(map[gatewayapi_v1alpha2.RouteConditionType]metav1.Condition),
+		ExistingConditions: c.getRouteGatewayConditions(gateways),
+		GatewayRef:         c.gatewayRef,
+		GatewayController:  c.gatewayController,
+		Generation:         generation,
+		TransitionTime:     metav1.NewTime(clock.Now()),
+		Resource:           resource,
+	}
+
+	return pu, func() {
+		if len(pu.Conditions) == 0 {
+			return
+		}
+		c.routeUpdates[pu.FullName] = pu
+	}
+}

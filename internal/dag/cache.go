@@ -1,0 +1,391 @@
+// Copyright Project Contour Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package dag
+
+import (
+	"context"
+	"fmt"
+	"sync"
+
+	envoygateway_api_v1alpha1 "github.com/projectcontour/contour/apis/envoygateway/v1alpha1"
+	"github.com/projectcontour/contour/internal/annotation"
+	"github.com/projectcontour/contour/internal/k8s"
+	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayapi_v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+)
+
+// A KubernetesCache holds Kubernetes objects and associated configuration and produces
+// DAG values.
+type KubernetesCache struct {
+	// RootNamespaces specifies the namespaces where root
+	// HTTPProxies can be defined. If empty, roots can be defined in any
+	// namespace.
+	RootNamespaces []string
+
+	// Names of ingress classes to cache HTTPProxies/Ingresses for. If not
+	// set, objects with no ingress class or DEFAULT_INGRESS_CLASS will be
+	// cached.
+	IngressClassNames []string
+
+	// ConfiguredGatewayToCache is the optional name of the specific Gateway to cache.
+	// If set, only the Gateway with this namespace/name will be kept.
+	ConfiguredGatewayToCache *types.NamespacedName
+
+	// Secrets that are referred from the configuration file.
+	ConfiguredSecretRefs []*types.NamespacedName
+
+	secrets           map[types.NamespacedName]*v1.Secret
+	services          map[types.NamespacedName]*v1.Service
+	namespaces        map[string]*v1.Namespace
+	gatewayclass      *gatewayapi_v1alpha2.GatewayClass
+	gateway           *gatewayapi_v1alpha2.Gateway
+	httproutes        map[types.NamespacedName]*gatewayapi_v1alpha2.HTTPRoute
+	tlsroutes         map[types.NamespacedName]*gatewayapi_v1alpha2.TLSRoute
+	referencepolicies map[types.NamespacedName]*gatewayapi_v1alpha2.ReferencePolicy
+
+	Client client.Reader
+
+	initialize sync.Once
+
+	logrus.FieldLogger
+}
+
+// init creates the internal cache storage. It is called implicitly from the public API.
+func (kc *KubernetesCache) init() {
+	kc.secrets = make(map[types.NamespacedName]*v1.Secret)
+	kc.services = make(map[types.NamespacedName]*v1.Service)
+	kc.namespaces = make(map[string]*v1.Namespace)
+	kc.httproutes = make(map[types.NamespacedName]*gatewayapi_v1alpha2.HTTPRoute)
+	kc.referencepolicies = make(map[types.NamespacedName]*gatewayapi_v1alpha2.ReferencePolicy)
+	kc.tlsroutes = make(map[types.NamespacedName]*gatewayapi_v1alpha2.TLSRoute)
+}
+
+// Insert inserts obj into the KubernetesCache.
+// Insert returns true if the cache accepted the object, or false if the value
+// is not interesting to the cache. If an object with a matching type, name,
+// and namespace exists, it will be overwritten.
+func (kc *KubernetesCache) Insert(obj interface{}) bool {
+	kc.initialize.Do(kc.init)
+
+	maybeInsert := func(obj interface{}) bool {
+		switch obj := obj.(type) {
+		case *v1.Secret:
+			valid, err := isValidSecret(obj)
+			if !valid {
+				if err != nil {
+					kc.WithField("name", obj.GetName()).
+						WithField("namespace", obj.GetNamespace()).
+						WithField("kind", "Secret").
+						WithField("version", k8s.VersionOf(obj)).
+						Error(err)
+				}
+				return false
+			}
+
+			kc.secrets[k8s.NamespacedNameOf(obj)] = obj
+			return kc.secretTriggersRebuild(obj)
+		case *v1.Service:
+			kc.services[k8s.NamespacedNameOf(obj)] = obj
+			return kc.serviceTriggersRebuild(obj)
+		case *v1.Namespace:
+			kc.namespaces[obj.Name] = obj
+			return true
+		case *gatewayapi_v1alpha2.GatewayClass:
+			switch {
+			// Specific gateway configured: make sure the incoming gateway class
+			// matches that gateway's.
+			case kc.ConfiguredGatewayToCache != nil:
+				if kc.gateway == nil || obj.Name != string(kc.gateway.Spec.GatewayClassName) {
+					return false
+				}
+
+				kc.gatewayclass = obj
+				return true
+			// Otherwise, take whatever we're given.
+			default:
+				kc.gatewayclass = obj
+				return true
+			}
+		case *gatewayapi_v1alpha2.Gateway:
+			switch {
+			// Specific gateway configured: make sure the incoming gateway
+			// matches, and get its gateway class.
+			case kc.ConfiguredGatewayToCache != nil:
+				if k8s.NamespacedNameOf(obj) != *kc.ConfiguredGatewayToCache {
+					return false
+				}
+
+				kc.gateway = obj
+
+				gatewayClass := &gatewayapi_v1alpha2.GatewayClass{}
+				if err := kc.Client.Get(context.Background(), client.ObjectKey{Name: string(kc.gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
+					kc.WithError(err).Errorf("error getting gatewayclass for gateway %s/%s", kc.gateway.Namespace, kc.gateway.Name)
+				} else {
+					kc.gatewayclass = gatewayClass
+				}
+
+				return true
+			// Otherwise, take whatever we're given.
+			default:
+				kc.gateway = obj
+				return true
+			}
+		case *gatewayapi_v1alpha2.HTTPRoute:
+			kc.httproutes[k8s.NamespacedNameOf(obj)] = obj
+			return true
+		case *gatewayapi_v1alpha2.TLSRoute:
+			kc.tlsroutes[k8s.NamespacedNameOf(obj)] = obj
+			return true
+		case *gatewayapi_v1alpha2.ReferencePolicy:
+			kc.referencepolicies[k8s.NamespacedNameOf(obj)] = obj
+			return true
+		case *envoygateway_api_v1alpha1.EnvoyGatewayConfiguration:
+			return false
+		default:
+			// not an interesting object
+			kc.WithField("object", obj).Error("insert unknown object")
+			return false
+		}
+	}
+
+	if maybeInsert(obj) {
+		// Only check annotations if we actually inserted
+		// the object in our cache; uninteresting objects
+		// should not be checked.
+		if obj, ok := obj.(metav1.Object); ok {
+			kind := k8s.KindOf(obj)
+			for key := range obj.GetAnnotations() {
+				// Emit a warning if this is a known annotation that has
+				// been applied to an invalid object kind. Note that we
+				// only warn for known annotations because we want to
+				// allow users to add arbitrary orthogonal annotations
+				// to objects that we inspect.
+				if annotation.IsKnown(key) && !annotation.ValidForKind(kind, key) {
+					// TODO(jpeach): this should be exposed
+					// to the user as a status condition.
+					kc.WithField("name", obj.GetName()).
+						WithField("namespace", obj.GetNamespace()).
+						WithField("kind", kind).
+						WithField("version", k8s.VersionOf(obj)).
+						WithField("annotation", key).
+						Error("ignoring invalid or unsupported annotation")
+				}
+			}
+		}
+
+		return true
+	}
+
+	return false
+}
+
+// Remove removes obj from the KubernetesCache.
+// Remove returns a boolean indicating if the cache changed after the remove operation.
+func (kc *KubernetesCache) Remove(obj interface{}) bool {
+	kc.initialize.Do(kc.init)
+
+	switch obj := obj.(type) {
+	default:
+		return kc.remove(obj)
+	case cache.DeletedFinalStateUnknown:
+		return kc.Remove(obj.Obj) // recurse into ourselves with the tombstoned value
+	}
+}
+
+func (kc *KubernetesCache) remove(obj interface{}) bool {
+	switch obj := obj.(type) {
+	case *v1.Secret:
+		m := k8s.NamespacedNameOf(obj)
+		_, ok := kc.secrets[m]
+		delete(kc.secrets, m)
+		return ok
+	case *v1.Service:
+		m := k8s.NamespacedNameOf(obj)
+		_, ok := kc.services[m]
+		delete(kc.services, m)
+		return ok
+	case *v1.Namespace:
+		_, ok := kc.namespaces[obj.Name]
+		delete(kc.namespaces, obj.Name)
+		return ok
+	case *gatewayapi_v1alpha2.GatewayClass:
+		switch {
+		case kc.ConfiguredGatewayToCache != nil:
+			if kc.gatewayclass == nil || obj.Name != kc.gatewayclass.Name {
+				return false
+			}
+			kc.gatewayclass = nil
+			return true
+		default:
+			kc.gatewayclass = nil
+			return true
+		}
+	case *gatewayapi_v1alpha2.Gateway:
+		switch {
+		case kc.ConfiguredGatewayToCache != nil:
+			if kc.gateway == nil || k8s.NamespacedNameOf(obj) != k8s.NamespacedNameOf(kc.gateway) {
+				return false
+			}
+			kc.gateway = nil
+			return true
+		default:
+			kc.gateway = nil
+			return true
+		}
+	case *gatewayapi_v1alpha2.HTTPRoute:
+		m := k8s.NamespacedNameOf(obj)
+		_, ok := kc.httproutes[m]
+		delete(kc.httproutes, m)
+		return ok
+	case *gatewayapi_v1alpha2.TLSRoute:
+		m := k8s.NamespacedNameOf(obj)
+		_, ok := kc.tlsroutes[m]
+		delete(kc.tlsroutes, m)
+		return ok
+	case *gatewayapi_v1alpha2.ReferencePolicy:
+		m := k8s.NamespacedNameOf(obj)
+		_, ok := kc.referencepolicies[m]
+		delete(kc.referencepolicies, m)
+		return ok
+	case *envoygateway_api_v1alpha1.EnvoyGatewayConfiguration:
+		return false
+	default:
+		// not interesting
+		kc.WithField("object", obj).Error("remove unknown object")
+		return false
+	}
+}
+
+// serviceTriggersRebuild returns true if this service is referenced
+// by an Ingress or HTTPProxy in this cache.
+func (kc *KubernetesCache) serviceTriggersRebuild(service *v1.Service) bool {
+	for _, route := range kc.httproutes {
+		for _, rule := range route.Spec.Rules {
+			for _, backend := range rule.BackendRefs {
+				if isRefToService(backend.BackendObjectReference, service, route.Namespace) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func isRefToService(ref gatewayapi_v1alpha2.BackendObjectReference, service *v1.Service, routeNamespace string) bool {
+	return ref.Group != nil && *ref.Group == "" &&
+		ref.Kind != nil && *ref.Kind == "Service" &&
+		((ref.Namespace != nil && *ref.Namespace == gatewayapi_v1alpha2.Namespace(service.Namespace)) || (ref.Namespace == nil && routeNamespace == service.Namespace)) &&
+		string(ref.Name) == service.Name
+}
+
+// secretTriggersRebuild returns true if this secret is referenced by an Ingress
+// or HTTPProxy object, or by the configuration file. If the secret is not in the same namespace
+// it must be mentioned by a TLSCertificateDelegation.
+func (kc *KubernetesCache) secretTriggersRebuild(secret *v1.Secret) bool {
+	if _, isCA := secret.Data[CACertificateKey]; isCA {
+		// locating a secret validation usage involves traversing each
+		// proxy object, determining if there is a valid delegation,
+		// and if the reference the secret as a certificate. The DAG already
+		// does this so don't reproduce the logic and just assume for the moment
+		// that any change to a CA secret will trigger a rebuild.
+		return true
+	}
+
+	// Secrets referred by the configuration file shall also trigger rebuild.
+	for _, s := range kc.ConfiguredSecretRefs {
+		if s.Namespace == secret.Namespace && s.Name == secret.Name {
+			return true
+		}
+	}
+
+	if kc.gateway != nil {
+		for _, listener := range kc.gateway.Spec.Listeners {
+			if listener.TLS == nil {
+				continue
+			}
+
+			for _, certificateRef := range listener.TLS.CertificateRefs {
+				if isRefToSecret(*certificateRef, secret, kc.gateway.Namespace) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+func isRefToSecret(ref gatewayapi_v1alpha2.SecretObjectReference, secret *v1.Secret, gatewayNamespace string) bool {
+	return ref.Group != nil && *ref.Group == "" &&
+		ref.Kind != nil && *ref.Kind == "Secret" &&
+		((ref.Namespace != nil && *ref.Namespace == gatewayapi_v1alpha2.Namespace(secret.Namespace)) || (ref.Namespace == nil && gatewayNamespace == secret.Namespace)) &&
+		string(ref.Name) == secret.Name
+}
+
+// LookupSecret returns a Secret if present or nil if the underlying kubernetes
+// secret fails validation or is missing.
+func (kc *KubernetesCache) LookupSecret(name types.NamespacedName, validate func(*v1.Secret) error) (*Secret, error) {
+	sec, ok := kc.secrets[name]
+	if !ok {
+		return nil, fmt.Errorf("Secret not found")
+	}
+
+	if err := validate(sec); err != nil {
+		return nil, err
+	}
+
+	s := &Secret{
+		Object: sec,
+	}
+
+	return s, nil
+}
+
+func validCA(s *v1.Secret) error {
+	if len(s.Data[CACertificateKey]) == 0 {
+		return fmt.Errorf("empty %q key", CACertificateKey)
+	}
+
+	return nil
+}
+
+// LookupService returns the Kubernetes service and port matching the provided parameters,
+// or an error if a match can't be found.
+func (kc *KubernetesCache) LookupService(meta types.NamespacedName, port intstr.IntOrString) (*v1.Service, v1.ServicePort, error) {
+	svc, ok := kc.services[meta]
+	if !ok {
+		return nil, v1.ServicePort{}, fmt.Errorf("service %q not found", meta)
+	}
+
+	for i := range svc.Spec.Ports {
+		p := svc.Spec.Ports[i]
+		if int(p.Port) == port.IntValue() || port.String() == p.Name {
+			switch p.Protocol {
+			case "", v1.ProtocolTCP:
+				return svc, p, nil
+			default:
+				return nil, v1.ServicePort{}, fmt.Errorf("unsupported service protocol %q", p.Protocol)
+			}
+		}
+	}
+
+	return nil, v1.ServicePort{}, fmt.Errorf("port %q on service %q not matched", port.String(), meta)
+}

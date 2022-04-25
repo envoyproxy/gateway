@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: s1
+  namespace: default
+spec:
+  selector:
+    app: echoserver-1
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoserver-1
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echoserver-1
+  template:
+    metadata:
+      labels:
+        app: echoserver-1
+    spec:
+      containers:
+      - name: echoserver
+        image: stevesloka/echo-server
+        command: ["echo-server"]
+        args:
+        - --echotext="Hello from echoserver 1!"
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s2
+  namespace: default
+spec:
+  selector:
+    app: echoserver2
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoserver-2
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echoserver2
+  template:
+    metadata:
+      labels:
+        app: echoserver2
+    spec:
+      containers:
+      - name: echoserver
+        image: stevesloka/echo-server
+        command: ["echo-server"]
+        args:
+        - --echotext="Hello from echoserver 2!"
+        imagePullPolicy: IfNotPresent
+---
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: s3
+  namespace: default
+spec:
+  selector:
+    app: echoserver3
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echoserver-3
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echoserver3
+  template:
+    metadata:
+      labels:
+        app: echoserver3
+    spec:
+      containers:
+      - name: echoserver
+        image: stevesloka/echo-server
+        command: ["echo-server"]
+        args:
+        - --echotext="Hello from echoserver 3!"
+        imagePullPolicy: IfNotPresent

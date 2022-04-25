@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: envoy-gateway-provisioner
+  name: envoy-gateway-provisioner
+  namespace: envoy-gateway-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway-provisioner
+  template:
+    metadata:
+      labels:
+        control-plane: envoy-gateway-provisioner
+    spec:
+      containers:
+      - args:
+        - gateway-provisioner
+        - --gateway-controller-name=envoyproxy.io/gateway-controller
+        - --contour-image=docker.io/envoyproxy/envoy-gateway-controller:latest
+        - --metrics-addr=127.0.0.1:8080
+        - --enable-leader-election
+        command: ["contour"]
+        image: docker.io/envoyproxy/envoy-gateway-controller:latest
+        imagePullPolicy: IfNotPresent
+        name: envoy-gateway-provisioner
+        resources:
+          requests:
+            cpu: 100m
+            memory: 70Mi
+      serviceAccountName: envoy-gateway-provisioner
+      terminationGracePeriodSeconds: 10
