@@ -22,9 +22,15 @@ add functionality on top of Envoy, such as commercial API gateway products.
 This expressive API will not be implemented by Envoy Proxy, but rather an officially supported translation layer 
 on top.
 
-### Simplified deployment
+### Batteries included
 Envoy Gateway will simplify how Envoy is deployed and managed, allowing application developers to focus on 
 delivering core business value.
+
+The project plans to include additional infrastructure components required by users to fulfill their Ingress and API
+gateway needs: It will handle Envoy infrastructure provisioning (e.g. Kubernetes Service, Deployment, et cetera), and
+possibly infrastructure provisioning of related sidecar services.  It will include sensible defaults with the ability to
+override.  It will included channels for improving ops by exposing status through API conditions and Kubernetes status
+sub-resources.
 
 Making an application accessible needs to be a trivial task for any developer. Similarly, infrastructure administrators
 will enjoy a simplified management model that doesn't require extensive knowledge of the solution's architecture to
