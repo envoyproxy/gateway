@@ -17,7 +17,7 @@ The expressive API will use familiar nouns that [users](#personas) understand.
 The core full-featured Envoy APIs will remain available for those who need more capability and for those who 
 add functionality on top of Envoy, such as commercial API gateway products.
 
-This expressive API will not be implemented by the Envoy Proxy, but rather an officially supported translation layer 
+This expressive API will not be implemented by Envoy Proxy, but rather an officially supported translation layer 
 on top.
 
 ### Simplified deployment
