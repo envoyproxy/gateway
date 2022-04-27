@@ -38,8 +38,8 @@ Additional goals include multi-cluster support and various runtime environments.
 ### Extensibility
 Vendors will have the ability to provide value-added products built on the Envoy Gateway foundation.
 
-It will remain easy for end-users to use common Envoy Proxy extension points such as providing an implementation for 
-authentication methods and rate-limiting. For advanced use cases, users will have the ability to use the full power 
+It will remain easy for end-users to leverage common Envoy Proxy extension points such as providing an implementation
+for authentication methods and rate-limiting.  For advanced use cases, users will have the ability to use the full power
 of xDS.
 
 Since a general-purpose API cannot address all use cases, Envoy Gateway will provide additional extension points 
