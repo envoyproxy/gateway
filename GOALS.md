@@ -60,9 +60,8 @@ with Envoy Proxy, xDS, or go-control-plane.
 _In order of priority_
 
 ### 1. Application developer
-The application developer spends the majority of their time developing business logic code. They require API gateway 
-functionalities to expose their applications. Using expressive configurations, they will define request routes,
-TLS termination, rate limits, authentication and authorization policies, etc.
+The application developer spends the majority of their time developing business logic code.  They require the ability to
+manage access to their application.
 
 ### 2. Infrastructure administrators
 The infrastructure administrators are responsible for the installation, maintenance, and operation of
