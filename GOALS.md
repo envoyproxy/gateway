@@ -7,12 +7,13 @@ use cases.
 ## Objectives
 
 ### Expressive API
-The Envoy Gateway project will expose a simplified and expressive API, with defaults set for many capabilities.
+The Envoy Gateway project will expose a simple and expressive API, with defaults set for many capabilities.
 
-This expressive API will make Envoy accessible to more users, especially application developers, and make Envoy a 
-stronger option for "getting started" as compared to other proxies. Application developers will use a simple API
-out of the box without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers. 
-The expressive API will use familiar nouns that [users](#personas) understand.
+The API is the Kubernetes-native [Gateway API][], plus Envoy-specific extensions and extension points.  This expressive
+and familiar API will make Envoy accessible to more users, especially application developers, and make Envoy a stronger
+option for "getting started" as compared to other proxies.  Application developers will use a simple API out of the box
+without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers.  The expressive API will use
+familiar nouns that [users](#personas) understand.
 
 The core full-featured Envoy APIs will remain available for those who need more capability and for those who 
 add functionality on top of Envoy, such as commercial API gateway products.
@@ -32,7 +33,7 @@ operate.
 Envoy Gateway will support running natively in Kubernetes environments as well as non-Kubernetes deployments.
 
 Initially, Kubernetes will receive the most focus, with the aim of having Envoy Gateway become the de facto 
-standard for Kubernetes ingress supporting the [Gateway API](https://gateway-api.sigs.k8s.io/). 
+standard for Kubernetes ingress supporting the [Gateway API][].
 Additional goals include multi-cluster support and various runtime environments.
 
 ### Extensibility
@@ -67,3 +68,5 @@ manage access to their application.
 The infrastructure administrators are responsible for the installation, maintenance, and operation of
 API gateways appliances in infrastructure, such as CRDs, roles, service accounts, certificates, etc.
 Infrastructure administrators support the needs of application developers by managing instances of Envoy Gateway.
+
+[Gateway API]: https://gateway-api.sigs.k8s.io/
