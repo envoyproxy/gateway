@@ -9,11 +9,11 @@ use cases.
 ### Expressive API
 The Envoy Gateway project will expose a simple and expressive API, with defaults set for many capabilities.
 
-The API is the Kubernetes-native [Gateway API][], plus Envoy-specific extensions and extension points.  This expressive
-and familiar API will make Envoy accessible to more users, especially application developers, and make Envoy a stronger
-option for "getting started" as compared to other proxies.  Application developers will use a simple API out of the box
-without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers.  The expressive API will use
-familiar nouns that [users](#personas) understand.
+The API will be the Kubernetes-native [Gateway API][], plus Envoy-specific extensions and extension points.  This
+expressive and familiar API will make Envoy accessible to more users, especially application developers, and make Envoy
+a stronger option for "getting started" as compared to other proxies.  Application developers will use the API out of
+the box without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers.  The API will use familiar
+nouns that [users](#personas) understand.
 
 The core full-featured Envoy APIs will remain available for those who need more capability and for those who 
 add functionality on top of Envoy, such as commercial API gateway products.
