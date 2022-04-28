@@ -17,7 +17,7 @@ This is the configuration provided by the Infrastructure Administrator that allo
 #### User Config
 This configuration is based on the [Gateway API](https://gateway-api.sigs.k8s.io) and will provide:
 * Infrastructure Management capabilities to provision the infrastructure required to run Envoy Proxy.
-This is expressed using the [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) and [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway).
+This is expressed using [GatewayClass](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) and [Gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway)resources.
 * Ingress and API Gateway capabilities for the application developer to define networking and security intent for their incoming traffic.
 This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute), [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute),
 [TCPRoute or UDPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute).
@@ -27,7 +27,7 @@ This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api
 2. They will configure a [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass), that represents a class of Envoy Proxies.
 3. They will configure a [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) linking it to a specific GatewayClass 
 with information such as hostnames, protocol and ports stating which traffic flows are of interest.
-Envoy Gateway consumes this configuration and provisions a new instance of Envoy Proxy with the paramters defined in the config.
+Envoy Gateway consumes this configuration and provisions an instance of Envoy Proxy with the paramters defined in the config.
 4. Application developers can now expose their APIs by configuring [HTTPRoute resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute).
 These routes are attached to a specific [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) allowing application traffic to reach
 the upstream application.
@@ -38,7 +38,7 @@ the upstream application.
 This component is responsible for consuming the user configuration from various platforms. Data persistence should be tied to the specific config source’s capabilities. For e.g. in Kubernetes, the resources will persist in `etcd`, if using the `path-watcher`, the resources will persist in a file.
 
 ##### Kubernetes
-The Kubernetes controller watches the Kubernetes API Server for resources, fetches them, and publishes it to the translators for further processing.
+It watches the Kubernetes API Server for resources, fetches them, and publishes it to the translators for further processing.
 
 ##### Path Watcher
 It watches for file changes in a path, allowing the user to configure Envoy Gateway using resource configurations saved in a file or directory.
@@ -51,7 +51,7 @@ This is an internal data model that user facing APIs are translated into allowin
 
 #### Config Manager
 This component consumes the Bootstrap Config, and spawns the appropriate internal services in Envoy Gateway based on the config spec. For e.g. if the platform field
-in the Bootsrap Config is set to `kubernetes`, the config manager will instantiate kubernetes controller services that implement the Config Source, Service Resolver
+in the Bootsrap Config is set to `kubernetes`, the Config Manager will instantiate kubernetes controller services that implement the Config Source, Service Resolver
 and the Envoy Provisioner interfaces.
 
 #### Message Service
@@ -77,7 +77,7 @@ and is responsible for configuring xDS resources in Envoy Proxy.
 #### Provisioner
 The provisioner configures any infrastruture needed based on the IR.
 
-* Envoy - Provisions an Envoy based Load balancer service. This is a platform specific component. 
+* Envoy - This is a platform specific component that provisions all the infrastructure required to run the managed Envoy Proxy fleet. 
 For example, a Terraform or Ansible provisioner could be added in the future to provision the Envoy infrastructure in a non-Kubernetes environment.
 
 * Auxiliary Control Planes - These optional components are services needed to implement API Gateway features that require external integrations with Envoy Proxy. A good example is [Global Ratelimiting](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting) which would require instatiating and 
@@ -85,13 +85,10 @@ configuring the [Envoy Rate Limit Service](https://github.com/envoyproxy/ratelim
 be exposed to the user using [Custom Route Filters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional) defined in the Gateway API.
 
 ### Design Decisions
-* Each Envoy Gateway will consume many [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass).
-* Each Envoy Gateway will consume many [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) to manage a fleet of Envoy Proxies with different configurations i.e. each [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) will map to a unique instance of Envoy Proxy created
+* Each Envoy Gateway will consume one or more [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass).
+* Each Envoy Gateway will consume one or more [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) to manage a fleet of Envoy Proxies with different configurations i.e. each [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) will map to a unique instance of Envoy Proxy created
 by the Provisioner.
 * The goal is to make the Provisioner & Translator layers extensible, but for the near future, extensibility can be achieved using xDS support that Envoy Gateway
 will provide.
-
-### Open Questions
-* Which API Gateway and Ingress features will Envoy Gateway introduce in the near future?
 
 The draft for this document is [here](https://docs.google.com/document/d/1riyTPPYuvNzIhBdrAX8dpfxTmcobWZDSYTTB5NeybuY/edit)
