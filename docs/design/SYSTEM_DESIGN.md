@@ -43,7 +43,7 @@ The Kubernetes controller watches the Kubernetes API Server for resources, fetch
 ##### Path Watcher
 It watches for file changes in a path, allowing the user to configure Envoy Gateway using resource configurations saved in a file or directory.
 
-#### Config Server
+##### Config Server
 This is a HTTP/gRPC Server allowing Envoy Gateway to be configured from a remote endpoint. 
 
 #### Intermediate Representation (IR)
@@ -85,8 +85,8 @@ configuring the [Envoy Rate Limit Service](https://github.com/envoyproxy/ratelim
 be exposed to the user using [Custom Route Filters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional) defined in the Gateway API.
 
 ### Design Decisions
-* A single Envoy Gateway will consume many [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass).
-* A single Envoy Gateway will consume many [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) to manage a fleet of Envoy Proxies with different configurations i.e. each [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) will map to a unique instance of Envoy Proxy created
+* Each Envoy Gateway will consume many [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass).
+* Each Envoy Gateway will consume many [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) to manage a fleet of Envoy Proxies with different configurations i.e. each [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) will map to a unique instance of Envoy Proxy created
 by the Provisioner.
 * The goal is to make the Provisioner & Translator layers extensible, but for the near future, extensibility can be achieved using xDS support that Envoy Gateway
 will provide.
