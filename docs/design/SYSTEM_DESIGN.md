@@ -25,9 +25,9 @@ This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api
 #### Workflow
 1. The Infrastructure Administrator spawns an Envoy Gateway process using a Bootstrap Configuration to manage a fleet of Envoy Proxies.
 2. They will configure a [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass), that represents a class of Envoy Proxies.
+Envoy Gateway consumes this configuration and provisions a unique fleet of Envoy Proxies.
 3. They will configure a [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) linking it to a specific GatewayClass 
 with information such as hostnames, protocol and ports stating which traffic flows are of interest.
-Envoy Gateway consumes this configuration and provisions an instance of Envoy Proxy with the paramters defined in the config.
 4. Application developers can now expose their APIs by configuring [HTTPRoute resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute).
 These routes are attached to a specific [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) allowing application traffic to reach
 the upstream application.
@@ -85,9 +85,9 @@ configuring the [Envoy Rate Limit Service](https://github.com/envoyproxy/ratelim
 be exposed to the user using [Custom Route Filters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional) defined in the Gateway API.
 
 ### Design Decisions
-* Each Envoy Gateway will consume one or more [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass).
-* Each Envoy Gateway will consume one or more [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) to manage a fleet of Envoy Proxies with different configurations i.e. each [Gateway resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) will map to a unique instance of Envoy Proxy created
-by the Provisioner.
+* Each Envoy Gateway will consume one or more [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) to manage a fleet of Envoy Proxies
+with different configurations i.e. each [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) will map to a unique set of Envoy Proxies
+created by the Provisioner.
 * The goal is to make the Provisioner & Translator layers extensible, but for the near future, extensibility can be achieved using xDS support that Envoy Gateway
 will provide.
 
