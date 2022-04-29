@@ -16,8 +16,8 @@ a stronger option for "getting started" as compared to other proxies.  Applicati
 the box without needing to understand in-depth concepts of Envoy Proxy or use OSS wrappers.  The API will use familiar
 nouns that [users](#personas) understand.
 
-The core full-featured Envoy APIs will remain available for those who need more capability and for those who 
-add functionality on top of Envoy, such as commercial API gateway products.
+The core full-featured Envoy xDS APIs will remain available for those who need more capability and for those who 
+add functionality on top of Envoy Gateway, such as commercial API gateway products.
 
 This expressive API will not be implemented by Envoy Proxy, but rather an officially supported translation layer 
 on top.
