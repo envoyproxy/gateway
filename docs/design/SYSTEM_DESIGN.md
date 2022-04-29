@@ -19,8 +19,7 @@ This configuration is based on the [Gateway API](https://gateway-api.sigs.k8s.io
 * Infrastructure Management capabilities to provision the infrastructure required to run Envoy Proxy.
 This is expressed using [GatewayClass](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) and [Gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway)resources.
 * Ingress and API Gateway capabilities for the application developer to define networking and security intent for their incoming traffic.
-This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute), [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute),
-[TCPRoute or UDPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tcproute-and-udproute).
+This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute) and [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute).
 
 #### Workflow
 1. The Infrastructure Administrator spawns an Envoy Gateway process using a Bootstrap Configuration to manage a fleet of Envoy Proxies.
