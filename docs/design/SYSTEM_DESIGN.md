@@ -12,19 +12,27 @@
 ### Configuration
 
 #### Bootstrap Config
-This is the configuration provided by the Infrastructure Administrator that allows them to bootstrap and configure various internal aspects of Envoy Gateway. 
+This is the configuration provided by the Infrastructure Administrator that allows them to bootstrap and configure various internal aspects of Envoy Gateway.
+It can be defined using a CLI argument similar to what [Envoy Proxy has](https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-c).
+For e.g. users wanting to run Envoy Gateway in Kubernetes and use a custom [Envoy Proxy bootstrap config](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap) could define their Boostrap Config as -
+```
+platform: kubernetes
+envoyProxy:
+  bootstrap: 
+    ......
+```
 
 #### User Config
 This configuration is based on the [Gateway API](https://gateway-api.sigs.k8s.io) and will provide:
-* Infrastructure Management capabilities to provision the infrastructure required to run Envoy Proxy.
-This is expressed using [GatewayClass](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) and [Gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway)resources.
+* Infrastructure Management capabilities to provision the infrastructure required to run the data plane, Envoy Proxy.
+This is expressed using [GatewayClass](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) and [Gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) resources.
 * Ingress and API Gateway capabilities for the application developer to define networking and security intent for their incoming traffic.
 This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute) and [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute).
 
 #### Workflow
-1. The Infrastructure Administrator spawns an Envoy Gateway process using a Bootstrap Configuration to manage a fleet of Envoy Proxies.
+1. The Infrastructure Administrator spawns an Envoy Gateway process using a [Bootstrap Config](#bootstrap-config) to manage a fleet of Envoy Proxies.
 2. They will configure a [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass), that represents a class of Envoy Proxies.
-Envoy Gateway consumes this configuration and provisions a unique fleet of Envoy Proxies.
+Envoy Gateway consumes this configuration and provisions a unique fleet of Envoy Proxies. the [GatawayClass parameters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/gatewayclass/#gatewayclass-parameters) section allows the infrastructure administrator to further modify attributes of the data plane. 
 3. They will configure a [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) linking it to a specific GatewayClass 
 with information such as hostnames, protocol and ports stating which traffic flows are of interest.
 4. Application developers can now expose their APIs by configuring [HTTPRoute resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute).
@@ -49,13 +57,16 @@ This is a HTTP/gRPC Server allowing Envoy Gateway to be configured from a remote
 This is an internal data model that user facing APIs are translated into allowing for internal services & components to be decoupled. 
 
 #### Config Manager
-This component consumes the Bootstrap Config, and spawns the appropriate internal services in Envoy Gateway based on the config spec. For e.g. if the platform field
-in the Bootsrap Config is set to `kubernetes`, the Config Manager will instantiate kubernetes controller services that implement the Config Source, Service Resolver
-and the Envoy Provisioner interfaces.
+This component consumes the [Bootstrap Config](#bootstrap-config), and spawns the appropriate internal services in Envoy Gateway based on the config specification.
+For e.g. if the platform field in the Bootstrap Config is set to `kubernetes`, the Config Manager will instantiate kubernetes controller services that implement the
+[Config Source](#config-source), [Service Resolver](#service-resolver) and the [Envoy Provisioner](#provisioner) interfaces.
 
 #### Message Service
-This component allows internal services to publish message / data types as well as subscribe to them. A message bus architecture allows components to be loosely coupled
-, work in an asynchronous manner and also scale out into multiple processes if needed.
+This component allows internal services to publish messages as well as subscribe to them. The message service's interface is used by the [Config Manager](#config-manager) to 
+allow communication between the services instantiated by it.
+A message bus architecture allows components to be loosely coupled, work in an asynchronous manner and also scale out into multiple processes if needed. 
+For e.g. the [Config Source](#config-source) and the [Provisioner](#provisoner) could run as separate processes in different environments decoupling user configuration consumption
+from the environment where the Envoy Proxy infrastructure is being provisioned.
 
 #### Service Resolver
 This optional component preprocesses the IR resources and resolves the services into endpoints enabling precise load balancing and resilience policies.
