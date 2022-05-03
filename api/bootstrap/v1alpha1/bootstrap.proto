@@ -1,0 +1,35 @@
+// Copyright 2022 Envoyproxy Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gateway.api.bootstrap.v1alpha1;
+
+import "validate/validate.proto";
+import "google/api/field_behavior.proto";
+
+option go_package = "github.com/envoyproxy/gateway/api/bootstrap/v1alpha1";
+
+message Bootstrap {
+	ControlPlane control_plane = 1[(google.api.field_behavior) = REQUIRED, (validate.rules).message.required = true];
+	DataPlane data_plane = 2[(google.api.field_behavior) = REQUIRED, (validate.rules).message.required = true];   
+}
+
+message ControlPlane {
+	string dummy = 1[(google.api.field_behavior) = REQUIRED, (validate.rules).string.min_len = 1];
+}
+
+message DataPlane {
+	string dummy = 1[(google.api.field_behavior) = REQUIRED, (validate.rules).string.min_len = 1];
+}
