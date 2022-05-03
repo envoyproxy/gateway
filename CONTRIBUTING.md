@@ -70,7 +70,7 @@ to the following guidelines for all code, APIs, and documentation:
 * We expect that once a PR is opened, it will be actively worked on until it is merged or closed.
   We reserve the right to close PRs that are not making progress. This is generally defined as no
   changes for 7 days. Obviously PRs that are closed due to lack of activity can be reopened later.
-  Closing stale PRs helps us to keep on top of all of the work currently in flight.
+  Closing stale PRs helps us to keep on top of all the work currently in flight.
 
 ## Maintainer PR Review Policy
 
