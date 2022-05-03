@@ -10,7 +10,7 @@ and following guidelines to streamline your contributions.
 * A "major feature" is defined as any change that is > 100 LOC altered (not including tests), or
   changes any user-facing behavior. We will use the GitHub issue to discuss the feature and come to
   agreement. This is to prevent your time being wasted, as well as ours. The GitHub review process
-  for major features is also important so that [organizations with commit access](CODEOWNERS.md) can
+  for major features is also important so that [affiliations with commit access](CODEOWNERS.md) can
   come to agreement on the design. If it's appropriate to write a design document, the document must
   be hosted either in the GitHub issue, or linked to from the issue and hosted in a world-readable
   location.
@@ -65,8 +65,8 @@ to the following guidelines for all code, APIs, and documentation:
 * When all tests are passing and all other conditions described herein are satisfied, a maintainer
   will be assigned to review and merge the PR.
 * Once you submit a PR, *please do not rebase it*. It's much easier to review if subsequent commits
-  are new commits and/or merges. We squash rebase the final merged commit so the number of commits
-  you have in the PR don't matter.
+  are new commits and/or merges. We squash and merge so the number of commits you have in the PR
+  doesn't matter.
 * We expect that once a PR is opened, it will be actively worked on until it is merged or closed.
   We reserve the right to close PRs that are not making progress. This is generally defined as no
   changes for 7 days. Obviously PRs that are closed due to lack of activity can be reopened later.
@@ -75,8 +75,8 @@ to the following guidelines for all code, APIs, and documentation:
 ## Maintainer PR Review Policy
 
 * See [CODEOWNERS.md](CODEOWNERS.md) for the current list of maintainers.
-* It is generally expected that a maintainer representing a different organization from the PR owner
-  is required to review the PR.
+* A maintainer representing a different affiliation from the PR owner is required to review and
+  approve the PR.
 * When the project matures, it is expected that a "domain expert" for the code the PR touches should
   review the PR. This person does not require commit access, just domain knowledge.
 * The above rules may be waived for PRs which only update docs or comments, or trivial changes to
