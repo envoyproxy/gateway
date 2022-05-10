@@ -1,2 +1,26 @@
-# gateway
-Envoy API gateway and ingress controller
+# Envoy Gateway
+Envoy Gateway is an open source project for managing Envoy Proxy as an application gateway
+and Kubernetes ingress controller.
+
+## Documentation
+
+* [Goals](GOALS.md)
+
+## Contact
+
+* Slack: Go to https://envoyproxy.io/slack and join the #gateway-dev channel.
+* [Google Group][group]: Envoy Gateway developer discussion (APIs, feature design, etc.).
+
+## Contributing
+
+* [Contributing guide](CONTRIBUTING.md)
+* [Code of conduct](CODE_OF_CONDUCT.md)
+
+## Community Meeting
+
+The Envoy Gateway team meets every Tuesday/Thursday at 3:00 PM Pacific Timezone.
+
+* [Meeting details][meeting]
+
+[meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
+[group]: https://groups.google.com/forum/#!forum/envoy-gateway-developers
