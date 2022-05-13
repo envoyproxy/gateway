@@ -13,6 +13,13 @@ governance. In case of any conflict, steering will vote and decide on the direct
 the project, though the goal will be that decisions are made unanimously and voting is
 not needed.
 
+## Voting Procedure
+In the unlikely circumstance that a vote is required in order to make forward progress,
+a majority vote among steering committee members will be used. This implies that any vote
+must be a binary decision between two options. In the case of a tie (due to abstention or
+future addition of committee seats), the Envoy core proxy maintainer seat will break the
+tie with a super vote.
+
 ## Steering Committee
 The steering committee will be a 5-member body that will make directional and any strategic
 technical decisions on the Envoy gateway project. It will also decide on any changes on its
@@ -33,6 +40,7 @@ on any changes to the steering committee based on what is best for the project a
 
 Organizations can also be removed from the steering committee due to lack of project commitment
 on the same yearly basis. This will be determined by a majority vote of the existing committee.
+The exception to this is the Envoy core proxy maintainer seat which is a permanent seat.
 
 ## Schedule and Cadence
 The project will have one steering meeting every month.
