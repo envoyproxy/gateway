@@ -1,6 +1,6 @@
 # Envoy Gateway
-Envoy Gateway is an open source project for managing Envoy Proxy as an application gateway
-and Kubernetes ingress controller.
+Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
+Kubernetes-based application gateway.
 
 ## Documentation
 
