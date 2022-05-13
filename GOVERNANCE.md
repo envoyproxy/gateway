@@ -30,7 +30,6 @@ individuals and will be valid for 1 year from the start date.
 - Tetrate [Member: Varun Talwar; Start Date: 5/16/2022]
 - VMWare [Member: Nick Young; Start Date: 5/16/2022]
 - Ambassador Labs [Member: Richard Li; Start Date: 5/16/2022]
-- Fidelity Investments [Member: Venkat Sarma Kasisomayajula; Start Date: 5/16/2022]
 
 Steering seats will be evaluated once per year and new people/organizations can be nominated
 for being added to the steering committee based on contribution to the project or being a
