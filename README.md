@@ -4,6 +4,7 @@ Kubernetes-based application gateway.
 
 ## Documentation
 
+* [Blog][blog] introducing Envoy Gateway.
 * [Goals](GOALS.md)
 
 ## Contact
@@ -24,3 +25,4 @@ The Envoy Gateway team meets every Tuesday/Thursday at 3:00 PM Pacific Timezone.
 
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
 [group]: https://groups.google.com/forum/#!forum/envoy-gateway-developers
+[blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
