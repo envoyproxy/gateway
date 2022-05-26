@@ -1,7 +1,13 @@
 name: Build and Test
 on:
   push:
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.png"
   pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "**/*.png"
 env:
   GO_VERSION: 1.18.2
 jobs:
