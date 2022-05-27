@@ -98,6 +98,10 @@ be exposed to the user using [Custom Route Filters](https://gateway-api.sigs.k8s
 * Each Envoy Gateway will consume one or more [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) to manage a fleet of Envoy Proxies
 with different configurations i.e. each [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) will map to a unique set of Envoy Proxies
 created by the Provisioner.
+* Mapping the [Gateway API](https://gateway-api.sigs.k8s.io) to the Envoy based data plane - 
+  * A [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) maps to a unique data plane i.e. a managed Envoy Proxy fleet
+  * A [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) maps to a listener configuration within a specific data plane (such as port, protocol fields within a Kubernetes Service) as well as a [Envoy Listener resource](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-msg-config-listener-v3-listener)
+  * A [HTTPRoute resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute) maps to a [Envoy Route Configuration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#config-route-v3-routeconfiguration) .Each [backendRefs](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#backendrefs-optional) maps to a [Envoy Cluster resource](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster)
 * The goal is to make the Provisioner & Translator layers extensible, but for the near future, extensibility can be achieved using xDS support that Envoy Gateway
 will provide.
 
