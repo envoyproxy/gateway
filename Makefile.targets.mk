@@ -43,3 +43,22 @@ help: ## Display this help
 	@echo Targets:
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9._-]+:.*?## / {printf "  %-25s %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 
+.PHONY: lint
+lint: ## Run lint checks
+lint: lint-golint lint-yamllint lint-codespell
+
+.PHONY: lint-golint
+lint-golint:
+	@echo Running Go linter ...
+	@golangci-lint run --build-tags=e2e --config=tools/golangci-lint/.golangci.yml
+
+.PHONY: lint-yamllint
+lint-yamllint:
+	@echo Running YAML linter ...
+	## TODO(lianghao208): add other directories later
+	@yamllint --config-file=tools/yamllint/.yamllint changelogs/
+
+.PHONY: lint-codespell
+lint-codespell: CODESPELL_SKIP := $(shell cat tools/codespell/.codespell.skip | tr \\n ',')
+lint-codespell:
+	@codespell --skip $(CODESPELL_SKIP) --ignore-words tools/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2

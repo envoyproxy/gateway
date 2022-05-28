@@ -14,7 +14,7 @@
 #### Bootstrap Config
 This is the configuration provided by the Infrastructure Administrator that allows them to bootstrap and configure various internal aspects of Envoy Gateway.
 It can be defined using a CLI argument similar to what [Envoy Proxy has](https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-c).
-For e.g. users wanting to run Envoy Gateway in Kubernetes and use a custom [Envoy Proxy bootstrap config](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap) could define their Boostrap Config as -
+For e.g. users wanting to run Envoy Gateway in Kubernetes and use a custom [Envoy Proxy bootstrap config](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap) could define their Bootstrap Config as -
 ```
 platform: kubernetes
 envoyProxy:
@@ -85,7 +85,7 @@ This component is a xDS gRPC Server based on the [Envoy Go Control Plane](https:
 and is responsible for configuring xDS resources in Envoy Proxy. 
 
 #### Provisioner
-The provisioner configures any infrastruture needed based on the IR.
+The provisioner configures any infrastructure needed based on the IR.
 
 * Envoy - This is a platform specific component that provisions all the infrastructure required to run the managed Envoy Proxy fleet. 
 For example, a Terraform or Ansible provisioner could be added in the future to provision the Envoy infrastructure in a non-Kubernetes environment.

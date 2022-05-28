@@ -15,15 +15,17 @@ build system. Our CI is based on [Github Actions](https://docs.github.com/en/act
 
 ### docker
 * Optional when you want to build a Docker image or run make inside Docker.
-* Recommened Version: 20.10.16
+* Recommended Version: 20.10.16
 * Installation Guide: https://docs.docker.com/engine/install/
 
 ### linters
-* [TODO](https://github.com/envoyproxy/gateway/issues/73)
-
+* If you already have tools: `golangci-lint, yamllint and codespell` installed on your machine, you can run `make <target>`
+directly on your machine.
 * If you do not have these tools installed on your machine,
 you can alternatively run `MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the
 preinstalled tools needed to support all the `make` targets.
+* Installation Guide: [golangci-lint](https://github.com/golangci/golangci-lint#install), [yamllint](https://github.com/adrienverge/yamllint#installation), 
+[codespell](https://github.com/codespell-project/codespell#installation)
 
 ## Quick start
 
