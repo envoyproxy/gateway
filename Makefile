@@ -20,6 +20,6 @@ docker-build: test ## Build the envoy-gateway docker image.
 	docker build -t $(IMAGE):$(TAG) -f Dockerfile . 
 
 .PHONY: docker-push
-docker-push: ## Push docker image for envoy-gateway.
+docker-push: ## Push the docker image for envoy-gateway.
 	docker push $(IMAGE):$(TAG)
 
