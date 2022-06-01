@@ -12,15 +12,13 @@ RUN go mod download
 COPY . /workspace
 
 # Build
-# Keep this in sync with the `make build` target (https://github.com/envoyproxy/gateway/blob/main/Makefile#L2)
-# TODO(arkodg): Support multiarch
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o envoy-gateway cmd/envoy-gateway/main.go 
+RUN make build
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
-COPY --from=builder /workspace/envoy-gateway .
+COPY --from=builder /workspace/bin/envoy-gateway .
 USER 65532:65532
 
 ENTRYPOINT ["/envoy-gateway"]
