@@ -1,10 +1,16 @@
 name: Build and Test
 on:
   push:
+    branches:
+      - "main"
+      - "release-v*"
     paths-ignore:
       - "**/*.md"
       - "**/*.png"
   pull_request:
+    branches:
+      - "main"
+      - "release-v*"
     paths-ignore:
       - "**/*.md"
       - "**/*.png"
