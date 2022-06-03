@@ -1,4 +1,7 @@
 # Envoy Gateway
+
+[![codecov](https://codecov.io/gh/envoyproxy/gateway/branch/main/graph/badge.svg)](https://codecov.io/gh/envoyproxy/gateway)
+
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
 Kubernetes-based application gateway.
 
