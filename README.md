@@ -1,5 +1,6 @@
 # Envoy Gateway
 
+[![Build and Test](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/envoyproxy/gateway/actions/workflows/build_and_test.yaml)
 [![codecov](https://codecov.io/gh/envoyproxy/gateway/branch/main/graph/badge.svg)](https://codecov.io/gh/envoyproxy/gateway)
 
 Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or
