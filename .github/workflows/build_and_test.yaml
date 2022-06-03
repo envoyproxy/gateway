@@ -29,10 +29,12 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: test
+      - name: test and report coverage
         run: go test ./... -race -coverprofile=coverage.xml -covermode=atomic
       - name: Upload coverage to Codecov
-        run: |
-          curl -Os https://uploader.codecov.io/latest/linux/codecov
-          chmod +x codecov
-          ./codecov
+        uses: codecov/codecov-action@v2
+        with:
+          fail_ci_if_error: true
+          files: ./coverage.xml
+          name: codecov-envoy-gateway
+          verbose: true
