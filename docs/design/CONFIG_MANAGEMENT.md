@@ -37,7 +37,7 @@ func GetRootCommand() *cobra.Command {
 		Short: "Manages Envoy Proxy as a standalone or Kubernetes-based application gateway",
 	}
 
-	cmd.AddCommand(serve.AddCommand())
+	cmd.AddCommand(serve.NewCommand())
 
 	return cmd
 }
@@ -46,26 +46,47 @@ func GetRootCommand() *cobra.Command {
 The serve package provides the following functionality:
 - Allows the serve package to be run as a Cobra Command.
 - Validates, processes, etc. command line flags and the Envoy Gateway config file. 
-- Constructs a object, e.g. `GatewayServer`, based on the validated flags/config. This object encapsulates all the
+- Constructs an object, e.g. `GatewayServer`, based on the validated flags/config. This object encapsulates all the
 necessary parameters for running Envoy Gateway.
 - Runs Envoy Gateway based on the provided `GatewayServer`.
+
+A subset of the Envoy Gateway's configuration parameters may be set by a configuration file, as a substitute for
+command-line flags. Providing parameters via a config file is the recommended approach as it simplifies deployment
+and configuration management. The config file is defined by the `BootstrapConfig` struct. The config file must be a YAML
+representation of the parameters in this struct. For example:
+```yaml
+apiVersion: gateway.envoy.io/v1alpha1
+kind: BootstrapConfig
+foo:
+  bar: baz
+...
+```
+The `--config` flag specifies the path of the Envoy Gateway configuration file. Envoy Gateway will load its config from
+this file. Command line flags which target the same value as a config file will override that value. If `--config` is
+provided and values are not specified via the command line, the defaults for the config file are applied.
 ```go
 // gateway/internal/cmd/serve/serve.go
 
 package serve
 
 import (
+	"context"
+
+	"github.com/oklog/run"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/envoyproxy/gateway/apis/config/v1alpha1"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
-// AddCommand allows the serve package to be run as a Cobra Command.
-func AddCommand() *cobra.Command {
-	flags := NewGatewayFlags()
+// NewCommand creates the "serve" *cobra.Command object with default parameters.
+func NewCommand() *cobra.Command {
+	flags := NewBootstrapFlags()
 
-	gatewayCfg, _ := NewGatewayConfig()
+	cfg, _ := NewBootstrapConfig()
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -73,42 +94,48 @@ func AddCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// If provided, validate flags and config file.
 			// If provided, load the envoy gateway config file.
-			// Construct a GatewayServer object from the GatewayConfig type.
+			// Construct a GatewayServer object from the BootstrapConfig type.
 			// Run Envoy Gateway using the provided GatewayServer.
+			return run(GatewayServer)
 		},
 	}
 
 	return cmd
 }
 
-// GatewayFlags contains Envoy Gateway configuration flags.
-type GatewayFlags struct {
-	// Add fields for command line flags, e.g. config file, enabled services, etc.
+// BootstrapFlags contains Envoy Gateway bootstrap configuration flags.
+type BootstrapFlags struct {
+	// Add fields for command line flags, e.g. bootstrap config file, enabled services, etc.
 }
 
-// NewGatewayFlags will create a new GatewayFlags with default values.
-func NewGatewayFlags() *GatewayFlags {
-	return &GatewayFlags{
+// NewBootstrapFlags will create a new BootstrapFlags with default values.
+func NewBootstrapFlags() *BootstrapFlags {
+	return &BootstrapFlags{
 		// Set flag defaults, e.g. enabled services, config file path, etc.
 	}
 }
 
-// ValidateGatewayFlags validates Envoy Gateway's configuration flags.
-func ValidateGatewayFlags(f *GatewayFlags) error {
+// AddFlags adds flags for a specific BootstrapFlags to the specified FlagSet.
+func (f *BootstrapFlags) AddFlags(fs *pflag.FlagSet) {
+	// Add command line flags, e.g. config file, enabled services, etc.
 }
 
-// NewGatewayConfig will create a new GatewayConfig with default values.
-func NewGatewayConfig() (*v1alpha1.GatewayConfig, error) {
+// ValidateBootstrapFlags validates Envoy Gateway's bootstrap configuration flags.
+func (f *BootstrapFlags) ValidateBootstrapFlags() error {
+}
+
+// NewBootstrapConfig will create a new BootstrapConfig with default values.
+func NewBootstrapConfig() (*v1alpha1.BootstrapConfig, error) {
 	// Create a Scheme that understands the types in the gateway.config API group.
-	// Create an instance of the GatewayConfig object, set defaults, and return.
+	// Create an instance of the BootstrapConfig object, set defaults, and return.
 }
 
 // GatewayServer encapsulates all the necessary parameters for starting Envoy Gateway.
 // These can either be set via command line or in the config file.
 type GatewayServer struct {
-	GatewayFlags
-	// TBD Envoy Gateway config CRD.
-	Config v1alpha1.GatewayConfig
+	BootstrapFlags
+	// TBD Envoy Gateway bootstrap config CRD.
+	Config v1alpha1.BootstrapConfig
 }
 
 // ValidateGatewayServer validates configuration of GatewayServer and returns
@@ -117,32 +144,45 @@ func (s *GatewayServer) ValidateGatewayServer() error {
 	// Validate flags and config file.
 }
 
-// AddFlags adds flags for a specific GatewayFlags to the specified FlagSet.
-func (f *GatewayFlags) AddFlags(fs *pflag.FlagSet) {
-	// Add command line flags, e.g. config file, enabled services, etc.
+// Run runs the provided GatewayServer.
+func run(s *GatewayServer) error {
+	var g run.Group
+
+	// Set up the channels for the watcher, operator, and metrics using
+	// the context provided from the controller runtime.
+	signal, cancel := context.WithCancel(signals.SetupSignalHandler())
+	defer cancel()
+
+	if s.Config.Kubernetes != nil {
+		// GetConfig creates a *rest.Config for talking to a Kubernetes API server.
+		// If --kubeconfig is set, it will use the kubeconfig file at that location.
+		// Otherwise, it will assume running in cluster and use the cluster provided kubeconfig.
+		cfg, _ := config.GetConfig()
+
+		// Set up and start the manager for managing k8s controllers.
+		mgr, _ := kube.NewManager(cfg, s)
+
+		g.Add(func() error {
+			return mgr.Start(signal)
+		}, func(error) {
+			cancel()
+		})
+	}
+	// Repeat for other components, e.g. Message Server, Provisioner, etc.
+
+	return nil
 }
 ```
-A subset of the Envoy Gateway's configuration parameters may be set by a configuration file, as a substitute for
-command-line flags. Providing parameters via a config file is the recommended approach as it simplifies deployment
-and configuration management. The config file is defined by the `GatewayConfig` struct. The config file must be a YAML
-representation of the parameters in this struct. For example:
-```yaml
-apiVersion: gateway.envoy.io/v1alpha1
-kind: GatewayConfig
-foo:
-  bar: baz
-...
-```
-The `--config` flag specifies the path of the Envoy Gateway configuration file. Envoy Gateway will load its config from
-this file. Command line flags which target the same value as a config file will override that value. If `--config` is
-provided and values are not specified via the command line, the defaults for the config file are applied.
+The `run()` function uses `run.Group` to manage goroutine lifecycles. A zero-value `run.Group` is created and actors,
+e.g. the Kubernetes Manager, are added to it.
 
-The `serve` command calls `New()` and `Start()` to create and run Envoy Gateway. [Manager][mgr] creates controllers,
-e.g. GatewayClass controller, and provides shared dependencies such as clients, caches, etc. Non-controller
-processes, e.g. xDS server, implement the [Runnable][runnable] interface. This allows Manager to manage these processes
-in the same manner as controller-based processes.
+If Kubernetes is set in BootstrapConfig, `NewManager()` and
+`Manager.Start()` are called to create and run Kubernetes controllers. [Manager][mgr] creates controllers, e.g.
+GatewayClass controller, and provides shared dependencies such as clients, caches, etc.
 ```go
-package manager
+// gateway/internal/kubernetes/manager.go
+
+package kubernetes
 
 import (
 	"context"
@@ -152,74 +192,57 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/envoyproxy/gateway/internal/kubernetes/gateway"
-	"github.com/envoyproxy/gateway/internal/kubernetes/gatewayclass"
-	"github.com/envoyproxy/gateway/internal/kubernetes/httproute"
+	"github.com/envoyproxy/internal/cmd/serve"
+	"github.com/envoyproxy/internal/kubernetes/gateway"
+	"github.com/envoyproxy/internal/kubernetes/gatewayclass"
+	"github.com/envoyproxy/internal/kubernetes/httproute"
 )
 
-// GatewayManager sets-up dependencies and defines the topology of Envoy Gateway
+// Manager sets-up dependencies and defines the topology of Envoy Gateway
 // managed components, wiring them together.
-type GatewayManager struct {
-	client  client.Client
-	manager manager.Manager
-	config  *v1alpha1.GatewayConfig
+type Manager struct {
+	client client.Client
+
+	manager.Manager
 }
 
-// New creates a new Envoy Gateway using the provided configs.
-// TODO: A Manager requires a rest config to construct a clutser. This means
-// using Manager to manage services requires access to a k8s cluster.
-// xref: https://github.com/kubernetes-sigs/controller-runtime/blob/v0.12.1/pkg/cluster/cluster.go#L145-L205
-func New(cliCfg *rest.Config, s *GatewayServer) (*GatewayManager, error) {
+// NewManager creates a new Manager for managing k8s controllers.
+func NewManager(cfg *rest.Config, s *serve.GatewayServer) (*Manager, error) {
 	mgrOpts := manager.Options{
 		// Add the scheme with types supported by Envoy Gateway.
 		// Add other manager configuration options, e.g. metrics bind address,
 		// leader election, etc. from GatewayServer.
 	}
-	mgr, _ := ctrl.NewManager(cliCfg, mgrOpts)
+	mgr, _ := ctrl.NewManager(cfg, mgrOpts)
 
-	// Create and register components with the manager.
-	if !s.Config.StandAlone {
-		// Create and register the kube controllers.
-		gcCfg := &gatewayclass.ControllerConfig{
-			// GatewayClass controller config.
-		}
-		if _, err := gatewayclass.NewController(mgr, gcCfg); err != nil {
-			return nil, err
-		}
-		gwCfg := &gateway.ControllerConfig{
-			// Gateway controller config.
-		}
-		if _, err := gateway.NewController(mgr, gwCfg); err != nil {
-			return nil, err
-		}
-		httpCfg := &controller.HttpRouteConfig{
-			// HTTPRoute controller config.
-		}
-		if _, err := httproute.NewController(mgr, httpCfg); err != nil {
-			return nil, err
-		}
+    // Create and register the kube controllers.
+    gcCfg := &gatewayclass.Config{
+        // GatewayClass controller config.
     }
-	if s.Config.XdsService {
-		// The xds service will implement the Runnable interface, so it can be added to manager.
-		x, _ := xds.NewServer()
-		if err := mgr.Add(x); err != nil {
-			return nil, err
-		}
-	}
-	if s.Config.ProvisionerService {
-		// The provisioner service will implement the Runnable interface, so it can be added to manager.
-		p, _ := provisioner.NewServer()
-		if err := mgr.Add(p); err != nil {
-			return nil, err
-		}
-	}
+    if _, err := gatewayclass.NewController(mgr, gcCfg); err != nil {
+        return nil, err
+    }
+    gwCfg := &gateway.Config{
+        // Gateway controller config.
+    }
+    if _, err := gateway.NewController(mgr, gwCfg); err != nil {
+        return nil, err
+    }
+    httpCfg := &httproute.Config{
+        // HTTPRoute controller config.
+    }
+    if _, err := httproute.NewController(mgr, httpCfg); err != nil {
+        return nil, err
+    }
+
+	return &Manager{mgr.GetClient(), mgr}, nil
 }
 
 // Start starts Envoy Gateway manager, waiting for it to exit or an explicit stop.
-func (g *GatewayManager) Start(ctx context.Context) error {
+func (m *Manager) Start(ctx context.Context) error {
 	errChan := make(chan error)
 	go func() {
-		errChan <- g.manager.Start(ctx)
+		errChan <- m.Start(ctx)
 	}()
 
 	// Wait for the manager to exit or an explicit stop.
