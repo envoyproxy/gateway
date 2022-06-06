@@ -61,9 +61,11 @@ foo:
   bar: baz
 ...
 ```
-The `--config` flag specifies the path of the Envoy Gateway configuration file. Envoy Gateway will load its config from
-this file. Command line flags which target the same value as a config file will override that value. If `--config` is
-provided and values are not specified via the command line, the defaults for the config file are applied.
+
+Envoy Gateway will follow Envoy's approach to command line flags for specifying configuration by supporting
+[--config-path][cfg_path] and [--config-yaml][cfg_file]. Command line flags which target the same value as a config file
+will override that value. If either config flag is provided and individual values are not specified via the command
+line, the defaults for the config file are applied.
 ```go
 // gateway/internal/cmd/serve/serve.go
 
@@ -259,3 +261,5 @@ func (m *Manager) Start(ctx context.Context) error {
 [issue_60]: https://github.com/envoyproxy/gateway/issues/60
 [mgr]: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/manager#Manager
 [runnable]: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/manager#Runnable
+[cfg_path]: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-c
+[cfg_file]: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-config-yaml
