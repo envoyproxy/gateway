@@ -43,7 +43,7 @@ jobs:
       - name: Build
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: bin 
           platforms: linux/amd64
           tags: ${{ env.ENVOY_GATEWAY_DEV_IMAGE }}:${{ github.sha }}
           cache-from: type=gha
@@ -58,7 +58,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: bin
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.ENVOY_GATEWAY_DEV_IMAGE }}:${{ github.sha }}, ${{ env.ENVOY_GATEWAY_DEV_IMAGE }}:${{ env.ENVOY_GATEWAY_DEV_TAG }}
