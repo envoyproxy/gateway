@@ -1,3 +1,8 @@
+# Golang variables
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+
+# Docker variables
 # REGISTRY is the image registry to use for build and push image targets.
 REGISTRY ?= docker.io/envoyproxy
 # IMAGE is the image URL for build and push image targets.
@@ -8,16 +13,24 @@ REV=$(shell git rev-parse --short HEAD)
 TAG ?= $(REV)
 
 .PHONY: build
-build:
-	@CGO_ENABLED=0 go build -a -o ./bin/ github.com/envoyproxy/gateway/cmd/envoy-gateway
+build:  ## Build the envoy-gateway binary
+	@CGO_ENABLED=0 go build -a -o ./bin/${GOOS}/${GOARCH}/ github.com/envoyproxy/gateway/cmd/envoy-gateway
+
+build-linux-amd64:
+	@GOOS=linux GOARCH=amd64 $(MAKE) build
+
+build-linux-arm64:
+	@GOOS=linux GOARCH=arm64 $(MAKE) build
+
+build-all: build-linux-amd64 build-linux-arm64
 
 .PHONY: test
 test:
 	@go test ./...
 
 .PHONY: docker-build
-docker-build: test ## Build the envoy-gateway docker image.
-	docker build -t $(IMAGE):$(TAG) -f Dockerfile . 
+docker-build: build-all ## Build the envoy-gateway docker image.
+	docker build -t $(IMAGE):$(TAG) -f Dockerfile bin 
 
 .PHONY: docker-push
 docker-push: ## Push the docker image for envoy-gateway.
