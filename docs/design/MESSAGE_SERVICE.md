@@ -46,7 +46,7 @@ svc.Publisher.Publish(msg)
 svc.Subscriber = msgSvc.Subscriber([]message.MessageType{message.GatewayClassMessageType})
 ```
 
-#### Service Subscribing to Messages by calling Subscribe (a blocking function)
+#### Service subscribing to Messages by calling Subscribe (a blocking function)
 ```
 svc.Subscriber.Subscribe(svc.handleFunc)
 ```
@@ -60,6 +60,11 @@ func (svc *Service) handleFunc(v interface{}) error {
 	}
 	return nil
 }
+```
+
+#### Service unsubscribing from the Message Service 
+```
+svc.Subscriber.UnSubscribe()
 ```
 
 ### Notes
