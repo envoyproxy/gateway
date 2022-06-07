@@ -30,7 +30,7 @@ test:
 
 .PHONY: docker-build
 docker-build: build-all ## Build the envoy-gateway docker image.
-	docker build -t $(IMAGE):$(TAG) -f Dockerfile bin 
+	@DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) -f Dockerfile bin 
 
 .PHONY: docker-push
 docker-push: ## Push the docker image for envoy-gateway.
