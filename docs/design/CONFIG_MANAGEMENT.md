@@ -55,7 +55,7 @@ command-line flags. Providing parameters via a config file is the recommended ap
 and configuration management. The config file is defined by the `BootstrapConfig` struct. The config file must be a YAML
 representation of the parameters in this struct. For example:
 ```yaml
-apiVersion: gateway.envoy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BootstrapConfig
 foo:
   bar: baz
@@ -63,9 +63,9 @@ foo:
 ```
 
 Envoy Gateway will follow Envoy's approach to command line flags for specifying configuration by supporting
-[--config-path][cfg_path] and [--config-yaml][cfg_file]. Command line flags which target the same value as a config file
-will override that value. If either config flag is provided and individual values are not specified via the command
-line, the defaults for the config file are applied.
+[--config-path][cfg_path]. Command line flags which target the same value as a config file will override that value. If
+either config flag is provided and individual values are not specified via the command line, the defaults for the config
+file are applied.
 ```go
 // gateway/internal/cmd/serve/serve.go
 
@@ -262,4 +262,3 @@ func (m *Manager) Start(ctx context.Context) error {
 [mgr]: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/manager#Manager
 [runnable]: https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/manager#Runnable
 [cfg_path]: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-c
-[cfg_file]: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-config-yaml
