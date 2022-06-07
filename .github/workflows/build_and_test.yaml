@@ -43,6 +43,7 @@ jobs:
       - name: Build
         uses: docker/build-push-action@v3
         with:
+          file: ./Dockerfile
           context: bin 
           platforms: linux/amd64
           tags: ${{ env.ENVOY_GATEWAY_DEV_IMAGE }}:${{ github.sha }}
@@ -58,6 +59,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/build-push-action@v3
         with:
+          file: ./Dockerfile
           context: bin
           platforms: linux/amd64,linux/arm64
           push: true
