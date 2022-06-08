@@ -15,6 +15,11 @@ and following guidelines to streamline your contributions.
   be hosted either in the GitHub issue, or linked to from the issue and hosted in a world-readable
   location.
 * Small patches and bug fixes don't need prior communication.
+* When multiple options exist, the following precedence should be applied for importing a package:
+  * A package common across the Envoy ecosystem.
+  * A package common across the CNCF ecosystem.
+  * A package with an upstream that is well-supported by a diverse developer community.
+  * A downstream package.
 
 ## Inclusivity
 
