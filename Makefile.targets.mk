@@ -30,9 +30,16 @@ test:
 
 .PHONY: docker-build
 docker-build: build-all ## Build the envoy-gateway docker image.
-	@DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) -f Dockerfile bin 
+	@DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) -f Dockerfile bin
 
 .PHONY: docker-push
 docker-push: ## Push the docker image for envoy-gateway.
 	@docker push $(IMAGE):$(TAG)
+
+.PHONY: help
+help: ## Display this help
+	@echo Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or Kubernetes-based application gateway
+	@echo
+	@echo Targets:
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9._-]+:.*?## / {printf "  %-25s %s\n", $$1, $$2}' $(MAKEFILE_LIST) | sort
 
