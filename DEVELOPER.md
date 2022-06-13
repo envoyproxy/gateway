@@ -10,7 +10,7 @@ build system. Our CI is based on [Github Actions](https://docs.github.com/en/act
 * Installation Guide: https://go.dev/doc/install to
 
 ### make
-* Recommended Version: 4.3 
+* Recommended Version: 4.3
 * Installation Guide: https://www.gnu.org/software/make/).
 
 ### docker
@@ -27,5 +27,4 @@ preinstalled tools needed to support all the `make` targets.
 
 ## Quick start
 
-[TODO](https://github.com/envoyproxy/gateway/issues/101) Run `make help` to see all the available targets to build, test
-and run `envoy-gateway`.
+Run `make help` to see all the available targets to build, test and run `envoy-gateway`.
