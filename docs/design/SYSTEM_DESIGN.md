@@ -95,9 +95,7 @@ configuring the [Envoy Rate Limit Service](https://github.com/envoyproxy/ratelim
 be exposed to the user using [Custom Route Filters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional) defined in the Gateway API.
 
 ### Design Decisions
-* Each Envoy Gateway will consume one or more [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) to manage a fleet of Envoy Proxies
-with different configurations i.e. each [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) will map to a unique set of Envoy Proxies
-created by the Provisioner.
+* Each Envoy Gateway will consume one [GatewayClass resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) to manage a unique fleet of Envoy Proxies.
 * Mapping the [Gateway API](https://gateway-api.sigs.k8s.io) to the Envoy based data plane - 
   * A [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) maps to a unique data plane i.e. a managed Envoy Proxy fleet
   * A [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) maps to a listener configuration within a specific data plane (such as port, protocol fields within a Kubernetes Service) as well as a [Envoy Listener resource](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-msg-config-listener-v3-listener)
