@@ -28,7 +28,7 @@ build system. Our CI is based on [Github Actions](https://docs.github.com/en/act
 
 ### codespell
 * Recommended Version: 2.1.0
-Installation Guide: https://github.com/codespell-project/codespell#installation
+* Installation Guide: https://github.com/codespell-project/codespell#installation
 
 * If you do not have these tools installed on your machine,
 you can alternatively run `MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the
