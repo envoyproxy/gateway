@@ -7,25 +7,32 @@ build system. Our CI is based on [Github Actions](https://docs.github.com/en/act
 
 ### go
 * Version: 1.18.2
-* Installation Guide: https://go.dev/doc/install to
+* Installation Guide: https://go.dev/doc/install
 
 ### make
 * Recommended Version: 4.3
-* Installation Guide: https://www.gnu.org/software/make/).
+* Installation Guide: https://www.gnu.org/software/make.
 
 ### docker
-* Optional when you want to build a Docker image or run make inside Docker.
+* Optional when you want to build a Docker image or run `make` inside Docker.
 * Recommended Version: 20.10.16
-* Installation Guide: https://docs.docker.com/engine/install/
+* Installation Guide: https://docs.docker.com/engine/install
 
-### linters
-* If you already have tools: `golangci-lint, yamllint and codespell` installed on your machine, you can run `make <target>`
-directly on your machine.
+### golangci-lint
+* Recommended Version: 1.46.2
+* Installation Guide: https://github.com/golangci/golangci-lint#install
+
+### yamllint
+* Recommended Version: 1.24.2
+* Installation Guide: https://github.com/adrienverge/yamllint#installation
+
+### codespell
+* Recommended Version: 2.1.0
+Installation Guide: https://github.com/codespell-project/codespell#installation
+
 * If you do not have these tools installed on your machine,
 you can alternatively run `MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the
 preinstalled tools needed to support all the `make` targets.
-* Installation Guide: [golangci-lint](https://github.com/golangci/golangci-lint#install), [yamllint](https://github.com/adrienverge/yamllint#installation), 
-[codespell](https://github.com/codespell-project/codespell#installation)
 
 ## Quick start
 
