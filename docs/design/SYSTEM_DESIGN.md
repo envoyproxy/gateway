@@ -6,101 +6,132 @@
 ### Non-Goals
 * Create a detailed design and interface specification for each system component.
 
+### Terminology
+* Control Plane- A collection of inter-related software components for providing application gateway and routing
+  functionality. The control plane is implemented by Envoy Gateway and provides services for managing the data plane.
+  These services are detailed in the [components](#components) section.
+* Data Plane- Provides intelligent application-level traffic routing and is implemented by Envoy proxy. Envoy Gateway
+  manages the data plane as one or more Envoy proxies.
+
 ### Architecture
 ![Architecture](../images/architecture.png)
 
 ### Configuration
+Envoy Gateway is configured statically at runtime and the managed data plane is configured dynamically through
+[Gateway API][gw_api] objects.
 
-#### Bootstrap Config
-This is the configuration provided by the Infrastructure Administrator that allows them to bootstrap and configure various internal aspects of Envoy Gateway.
-It can be defined using a CLI argument similar to what [Envoy Proxy has](https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-c).
-For e.g. users wanting to run Envoy Gateway in Kubernetes and use a custom [Envoy Proxy bootstrap config](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap) could define their Bootstrap Config as -
-```
-platform: kubernetes
-envoyProxy:
-  bootstrap: 
-    ......
-```
+#### Static Configuration
+This is the configuration used to configure various internal aspects of Envoy Gateway at runtime. There are three,
+__mutually exclusive__ options for defining static configuration:
 
-#### User Config
-This configuration is based on the [Gateway API](https://gateway-api.sigs.k8s.io) and will provide:
-* Infrastructure Management capabilities to provision the infrastructure required to run the data plane, Envoy Proxy.
-This is expressed using [GatewayClass](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) and [Gateway](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) resources.
-* Ingress and API Gateway capabilities for the application developer to define networking and security intent for their incoming traffic.
-This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute) and [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute).
+* A configuration file.
+* Command-line (CLI) arguments
+* Environment variables
 
-#### Workflow
-1. The Infrastructure Administrator spawns an Envoy Gateway process using a [Bootstrap Config](#bootstrap-config) to manage a fleet of Envoy Proxies.
-2. They will configure a [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass), that represents a class of Envoy Proxies.
-Envoy Gateway consumes this configuration and provisions a unique fleet of Envoy Proxies. the [GatawayClass parameters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/gatewayclass/#gatewayclass-parameters) section allows the infrastructure administrator to further modify attributes of the data plane. 
-3. They will configure a [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) linking it to a specific GatewayClass 
-with information such as hostnames, protocol and ports stating which traffic flows are of interest.
-4. Application developers can now expose their APIs by configuring [HTTPRoute resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute).
-These routes are attached to a specific [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) allowing application traffic to reach
-the upstream application.
+These options are evaluated in the order listed above. See the [configuration](../CONFIG.md) guide for additional
+details.
+
+#### Dynamic Configuration
+Dynamic configuration manages the data plane through [Gateway API][gw_api] objects, e.g. Gateway, HTTPRoute, etc. and
+provides the following services:
+* Infrastructure Management- Capabilities to manage, e.g. deploy, upgrade, etc. the data plane infrastructure. This is
+  expressed using [GatewayClass][gc] and [Gateway][gw] resources.
+* Traffic Routing- Capabilities that define how to handle application-level requests to backend services. This is
+  expressed using [HTTPRoute][hroute] and [TLSRoute][troute].
+
+#### Configuration Workflow
+See the [configuration](../CONFIG.md) guide for additional details on how to configure and run Envoy Gateway.
 
 ### Components
 
-#### Config Sources
-This component is responsible for consuming the user configuration from various platforms. Data persistence should be tied to the specific config source’s capabilities. For e.g. in Kubernetes, the resources will persist in `etcd`, if using the `path-watcher`, the resources will persist in a file.
+#### Providers
+Providers are infrastructure components that Envoy Gateway calls to establish its
+[dynamic configuration](#dynamic-configuration), resolve services, persist data, and provide additional services through
+extensions. Only Kubernetes and File providers are currently defined. However, other providers can be added in the
+future as Envoy Gateway use cases are better understood.
 
-##### Kubernetes
-It watches the Kubernetes API Server for resources, fetches them, and publishes it to the translators for further processing.
+##### Kubernetes Provider
+* Uses Kubernetes-style controllers to reconcile managed Kubernetes resources.
+* Loads the Kubernetes [Infrastructure Manager](#infrastructure-manager) that uses the Kubernetes API to manage the
+  Envoy infrastructure, e.g. CRUD Service, Deployment, etc. resources.
+* Loads the Kubernetes Service Resolver which uses the `<service_name>.<namespace>.svc.cluster.local`
+  for SDS and builds EDS by resolving Endpoints from the Service.
+* Uses etcd (via Kubernetes API) to persist data.
 
-##### Path Watcher
-It watches for file changes in a path, allowing the user to configure Envoy Gateway using resource configurations saved in a file or directory.
+##### File Provider
 
-##### Config Server
-This is a HTTP/gRPC Server allowing Envoy Gateway to be configured from a remote endpoint. 
+* Watches files in a provided directory to manage Envoy.
+* Loads the Internal [Infrastructure Manager](#infrastructure-manager) to run the Envoy process by calling internal
+  APIs, e.g. `CreateDataPlane()`. __Note:__ A future Infrastructure Manager can be introduced for this provider, e.g.
+  Terraform, to provide a more comprehensive management solution.
+* Loads the DNS Service Resolver which uses the `gateway.envoyproxy.io/hostname: my-service.my-org.com` Service
+  annotation to form SDS and builds EDS by resolving the `my-service.my-org.com` FQDN. In the future, Envoy Gateway
+  can support additional providers for a more comprehensive non-Kubernetes service discovery solution.
+* If needed, the local filesystem is used to persist data.
 
 #### Intermediate Representation (IR)
-This is an internal data model that user facing APIs are translated into allowing for internal services & components to be decoupled. 
-
-#### Config Manager
-This component consumes the [Bootstrap Config](#bootstrap-config), and spawns the appropriate internal services in Envoy Gateway based on the config specification.
-For e.g. if the platform field in the Bootstrap Config is set to `kubernetes`, the Config Manager will instantiate kubernetes controller services that implement the
-[Config Source](#config-source), [Service Resolver](#service-resolver) and the [Envoy Provisioner](#provisioner) interfaces.
-
-#### Message Service
-This component allows internal services to publish messages as well as subscribe to them. The message service's interface is used by the [Config Manager](#config-manager) to 
-allow communication between the services instantiated by it.
-A message bus architecture allows components to be loosely coupled, work in an asynchronous manner and also scale out into multiple processes if needed. 
-For e.g. the [Config Source](#config-source) and the [Provisioner](#provisoner) could run as separate processes in different environments decoupling user configuration consumption
-from the environment where the Envoy Proxy infrastructure is being provisioned.
+This is an internal data model that user facing APIs are translated into allowing for internal services & components to
+be decoupled.
 
 #### Service Resolver
-This optional component preprocesses the IR resources and resolves the services into endpoints enabling precise load balancing and resilience policies.
-For e.g. in Kubernetes, a controller service could watch for EndpointSlice resources, converting Services to Endpoints, allowing for Envoyproxy to skip kube-proxy’s
-load balancing layer. This component is tied to the platform where it is running.  When disabled, the services will be resolved by the underlying DNS resolver or
-by explicitly specifying IPs.
+This Service Resolver preprocesses the IR resources and resolves the services into endpoints enabling precise
+load-balancing and resilience policies. For the Kubernetes provider, a controller watches EndpointSlice resources,
+converting Services to Endpoints, allowing Envoy proxy to skip kube-proxy load-balancing. This component is tied to the
+configured provider.
 
 #### Gateway API Translator
-This is a platform agnostic translator that translates Gateway API resources to an Intermediate Representation.
+The Gateway API Translator translates Gateway API resources to the Intermediate Representation (IR).
 
 #### xDS Translator
-This component translates the IR into Envoy Proxy xDS Resources.
+The xDS Translator translates the IR into xDS Resources.
 
 #### xDS Server
-This component is a xDS gRPC Server based on the [Envoy Go Control Plane](https://github.com/envoyproxy/go-control-plane) project that implements the xDS Server Protocol
-and is responsible for configuring xDS resources in Envoy Proxy. 
+The xDS Server is a xDS gRPC Server based on [Go Control Plane][go_cp]. Go Control Plane implements the xDS Server
+Protocol and is responsible for using xDS to configure the data plane.
 
-#### Provisioner
-The provisioner configures any infrastructure needed based on the IR.
+#### Infrastructure Manager
+The Infrastructure Manager is a provider-specific component responsible for managing the following infrastructure:
 
-* Envoy - This is a platform specific component that provisions all the infrastructure required to run the managed Envoy Proxy fleet. 
-For example, a Terraform or Ansible provisioner could be added in the future to provision the Envoy infrastructure in a non-Kubernetes environment.
-
-* Auxiliary Control Planes - These optional components are services needed to implement API Gateway features that require external integrations with Envoy Proxy. A good example is [Global Ratelimiting](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting) which would require instatiating and 
-configuring the [Envoy Rate Limit Service](https://github.com/envoyproxy/ratelimit) as well the [Rate Limit filter](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit) using the IR passed to this component. Such features would
-be exposed to the user using [Custom Route Filters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional) defined in the Gateway API.
+* Data Plane - Manages all the infrastructure required to run the managed Envoy proxies. For example, CRUD Deployment,
+  Service, etc. resources to run Envoy in a Kubernetes cluster.
+* Auxiliary Control Planes - Optional infrastructure needed to implement application Gateway features that require
+  external integrations with the managed Envoy proxies. For example, [Global Rate Limiting][grl] requires provisioning
+  and configuring the [Envoy Rate Limit Service][rls] and the [Rate Limit filter][rlf]. Such features are exposed to
+  users through the [Custom Route Filters][crf] extension.
 
 ### Design Decisions
-* Each Envoy Gateway will consume one [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) to manage a unique fleet of Envoy Proxies.
-* Mapping the [Gateway API](https://gateway-api.sigs.k8s.io) to the Envoy based data plane - 
-  * A [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass) maps to a unique data plane i.e. a managed Envoy Proxy fleet
-  * A [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) maps to a listener configuration within a specific data plane (such as port, protocol fields within a Kubernetes Service) as well as a [Envoy Listener resource](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-msg-config-listener-v3-listener)
-  * A [HTTPRoute resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute) maps to a [Envoy Route Configuration](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#config-route-v3-routeconfiguration) .Each [backendRefs](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#backendrefs-optional) maps to a [Envoy Cluster resource](https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster)
-* The goal is to make the Provisioner & Translator layers extensible, but for the near future, extensibility can be achieved using xDS support that Envoy Gateway
-will provide.
+* Envoy Gateway will consume one [GatewayClass][gc] by comparing its configured controller name with
+  `spec.controllerName` of a GatewayClass. If multiple GatewayClasses exist with the same `spec.controllerName`, Envoy
+  Gateway will follow Gateway API [guidelines][gwapi_conflicts] to resolve the conflict.
+  `gatewayclass.spec.parametersRef` refers to a custom resource for configuring the managed proxy infrastructure. If
+  unspecified, default configuration parameters are used.
+* Envoy Gateway will manage [Gateways][gw] that reference its GatewayClass.
+  * The first Gateway causes Envoy Gateway to provision the managed Envoy proxy infrastructure.
+  * Envoy Gateway will merge multiple Gateways that match its GatewayClass and follow Gateway API
+    [guidelines][gwapi_conflicts] to resolve any conflicts.
+  * A Gateway `listener` corresponds to a proxy [Listener][listener].
+* An [HTTPRoute][hroute] resource corresponds to a proxy [Route][route].
+  * Each [backendRef][be_ref] corresponds to a proxy [Cluster][cluster].
+* The goal is to make the Infrastructure Manager & Translator components extensible in the future. For now,
+  extensibility can be achieved using xDS support that Envoy Gateway will provide.
 
-The draft for this document is [here](https://docs.google.com/document/d/1riyTPPYuvNzIhBdrAX8dpfxTmcobWZDSYTTB5NeybuY/edit)
+The draft for this document is [here][draft_design].
+
+[envoy]: https://www.envoyproxy.io/
+[gw_api]: https://gateway-api.sigs.k8s.io
+[gc]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass
+[gw]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway
+[hroute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute
+[troute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute
+[gc_params]: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/gatewayclass/#gatewayclass-parameters
+[go_cp]: https://github.com/envoyproxy/go-control-plane
+[grl]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
+[rls]: https://github.com/envoyproxy/ratelimit
+[rlf]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit
+[crf]: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#filters-optional
+[gwapi_conflicts]: https://gateway-api.sigs.k8s.io/concepts/guidelines/#conflicts
+[listener]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/listeners#config-listeners
+[route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto#config-route-v3-routeconfiguration
+[be_ref]: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/httproute/#backendrefs-optional
+[cluster]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster
+[draft_design]: https://docs.google.com/document/d/1riyTPPYuvNzIhBdrAX8dpfxTmcobWZDSYTTB5NeybuY/edit
