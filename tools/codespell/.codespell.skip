@@ -1,0 +1,12 @@
+.git
+.idea
+*.png
+*.woff
+*.woff2
+*.eot
+*.ttf
+*.jpg
+*.ico
+*.svg
+go.mod
+go.sum
