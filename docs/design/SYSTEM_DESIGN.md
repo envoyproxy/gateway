@@ -30,14 +30,7 @@ This is expressed using [GatewayClass](https://gateway-api.sigs.k8s.io/concepts/
 This is expressed using [HTTPRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute) and [TLSRoute](https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute).
 
 #### Workflow
-1. The Infrastructure Administrator spawns an Envoy Gateway process using a [Bootstrap Config](#bootstrap-config) to manage a fleet of Envoy Proxies.
-2. They will configure a [GatewayClass resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass), that represents a class of Envoy Proxies.
-Envoy Gateway consumes this configuration and provisions a unique fleet of Envoy Proxies. the [GatawayClass parameters](https://gateway-api.sigs.k8s.io/v1alpha2/api-types/gatewayclass/#gatewayclass-parameters) section allows the infrastructure administrator to further modify attributes of the data plane. 
-3. They will configure a [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) linking it to a specific GatewayClass 
-with information such as hostnames, protocol and ports stating which traffic flows are of interest.
-4. Application developers can now expose their APIs by configuring [HTTPRoute resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute).
-These routes are attached to a specific [Gateway resource](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway) allowing application traffic to reach
-the upstream application.
+See the [user workflow](./USER_WORKFLOW.md) document for additional details on how to configure and run Envoy Gateway.
 
 ### Components
 
