@@ -13,7 +13,7 @@ Kubernetes-based application gateway.
 
 ## Contact
 
-* Slack: Go to https://envoyproxy.io/slack and join the #gateway-dev channel.
+* Slack: Go to [Envoy Gateway Channel](https://envoyproxy.slack.com/archives/C03E6NHLESV).
 * [Google Group][group]: Envoy Gateway developer discussion (APIs, feature design, etc.).
 
 ## Contributing
