@@ -42,7 +42,7 @@ jobs:
           version: v1.46.2
           args: --build-tags=e2e
       - name: Build
-        run: make build-all
+        run: make build.multiarch
       - name: Test and report coverage
         run: go test ./... -race -coverprofile=coverage.xml -covermode=atomic
       - name: Upload coverage to Codecov

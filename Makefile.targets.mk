@@ -1,6 +1,53 @@
-# Golang variables
-GOOS ?= $(shell go env GOOS)
-GOARCH ?= $(shell go env GOARCH)
+# ROOT Options:
+ROOT_PACKAGE=github.com/envoyproxy/gateway
+
+# Set Root Directory Path
+ifeq ($(origin ROOT_DIR),undefined)
+ROOT_DIR := $(abspath $(shell  pwd -P))
+endif
+
+# Set Output Directory Path
+ifeq ($(origin OUTPUT_DIR),undefined)
+OUTPUT_DIR := $(ROOT_DIR)/bin
+$(shell mkdir -p $(OUTPUT_DIR))
+endif
+
+# Set the version number. you should not need to do this
+# for the majority of scenarios.
+ifeq ($(origin VERSION), undefined)
+VERSION := $(shell git describe --abbrev=0 --dirty --always --tags | sed 's/-/./g')
+endif
+
+# Supported Platforms for building multiarch binaries.
+PLATFORMS ?= darwin_amd64 darwin_arm64 linux_amd64 linux_arm64 
+
+# Set a specific PLATFORM
+ifeq ($(origin PLATFORM), undefined)
+	ifeq ($(origin GOOS), undefined)
+		GOOS := $(shell go env GOOS)
+	endif
+	ifeq ($(origin GOARCH), undefined)
+		GOARCH := $(shell go env GOARCH)
+	endif
+	PLATFORM := $(GOOS)_$(GOARCH)
+	# Use linux as the default OS when building images
+	IMAGE_PLAT := linux_$(GOARCH)
+else
+	GOOS := $(word 1, $(subst _, ,$(PLATFORM)))
+	GOARCH := $(word 2, $(subst _, ,$(PLATFORM)))
+	IMAGE_PLAT := $(PLATFORM)
+endif
+
+# List commands in cmd directory for building targets
+COMMANDS ?= $(wildcard ${ROOT_DIR}/cmd/*)
+BINS ?= $(foreach cmd,${COMMANDS},$(notdir ${cmd}))
+
+ifeq (${COMMANDS},)
+  $(error Could not determine COMMANDS, set ROOT_DIR or run in source dir)
+endif
+ifeq (${BINS},)
+  $(error Could not determine BINS, set ROOT_DIR or run in source dir)
+endif
 
 # Docker variables
 # REGISTRY is the image registry to use for build and push image targets.
@@ -48,24 +95,39 @@ help: ## Display this help
 
 ##@ Build
 
+# Build the envoy-gateway binaries in target platforms
+.PHONY: build.%
+build.%:
+	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
+	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
+	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
+	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
+	@echo "===========> Building binary $(COMMAND) $(VERSION) for $(OS) $(ARCH)"
+	@mkdir -p $(OUTPUT_DIR)/$(OS)/$(ARCH)
+	@CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) -ldflags "$(GO_LDFLAGS)" $(ROOT_PACKAGE)/cmd/$(COMMAND)
+
+# Build the envoy-gateway binaries in hosted platforms
 .PHONY: build
-build:  ## Build the envoy-gateway binary
-	@CGO_ENABLED=0 go build -a -o ./bin/${GOOS}/${GOARCH}/ github.com/envoyproxy/gateway/cmd/envoy-gateway
+build:  $(addprefix build., $(addprefix $(PLATFORM)., $(BINS)))
 
-build-linux-amd64:
-	@GOOS=linux GOARCH=amd64 $(MAKE) build
+# Build the envoy-gateway binaries in multi platforms
+.PHONY: build.multiarch
+build.multiarch:  $(foreach p,$(PLATFORMS),$(addprefix build., $(addprefix $(p)., $(BINS))))
 
-build-linux-arm64:
-	@GOOS=linux GOARCH=arm64 $(MAKE) build
-
-build-all: build-linux-amd64 build-linux-arm64
+.PHONY: clean
+clean: ## Clean the building output files
+	@echo "===========> Cleaning all build output"
+	@rm -rf $(OUTPUT_DIR)
 
 .PHONY: test
-test:
+test: ## Run go unit tests
 	@go test ./...
 
 .PHONY: docker-build
-docker-build: build-all ## Build the envoy-gateway docker image.
+docker-build: build ## Build the envoy-gateway docker image.
+	$(eval IMAGE_NAME := $(COMMAND))
+	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
+	@echo "===========> Building docker image $(IMAGE_NAME) $(VERSION) for $(IMAGE_PLAT)"
 	@DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) -f Dockerfile bin
 
 .PHONY: docker-push
