@@ -18,7 +18,7 @@ DOCKER_RUN_CMD ?= docker run \
 %:
 ifeq ($(MAKE_IN_DOCKER), 1)
 # Build builder image
-	@$(DOCKER_BUILD_CMD) -t $(DOCKER_BUILDER_IMAGE):$(DOCKER_BUILDER_TAG) - < tools/Dockerfile.builder
+	@$(DOCKER_BUILD_CMD) -t $(DOCKER_BUILDER_IMAGE):$(DOCKER_BUILDER_TAG) - < tools/docker/Dockerfile
 # Run make inside the builder image
 # Run with MAKE_IN_DOCKER=0 to eliminate an infinite loop
 	@$(DOCKER_RUN_CMD) $(DOCKER_BUILDER_IMAGE):$(DOCKER_BUILDER_TAG) MAKE_IN_DOCKER=0 $@
