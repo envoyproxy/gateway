@@ -21,15 +21,9 @@ Envoy Gateway is configured statically at runtime and the managed data plane is 
 [Gateway API][gw_api] objects.
 
 #### Static Configuration
-This is the configuration used to configure various internal aspects of Envoy Gateway at runtime. There are three,
-__mutually exclusive__ options for defining static configuration:
-
-* A configuration file.
-* Command-line (CLI) arguments
-* Environment variables
-
-These options are evaluated in the order listed above. See the [configuration](../CONFIG.md) guide for additional
-details.
+This is the configuration used to configure various internal aspects of Envoy Gateway at runtime. Currently, Envoy
+Gateway only supports runtime configuration through a configuration file. See the [configuration](../CONFIG.md) guide
+for additional details.
 
 #### Dynamic Configuration
 Dynamic configuration manages the data plane through [Gateway API][gw_api] objects, e.g. Gateway, HTTPRoute, etc. and
@@ -52,32 +46,20 @@ future as Envoy Gateway use cases are better understood.
 
 ##### Kubernetes Provider
 * Uses Kubernetes-style controllers to reconcile managed Kubernetes resources.
-* Loads the Kubernetes [Infrastructure Manager](#infrastructure-manager) that uses the Kubernetes API to manage the
-  Envoy infrastructure, e.g. CRUD Service, Deployment, etc. resources.
-* Loads the Kubernetes Service Resolver which uses the `<service_name>.<namespace>.svc.cluster.local`
-  for SDS and builds EDS by resolving Endpoints from the Service.
+* Manages the data plane infrastructure through CRUD operations of Kubernetes resources.
+* Use Kubernetes for Service discovery.
 * Uses etcd (via Kubernetes API) to persist data.
 
 ##### File Provider
 
-* Watches files in a provided directory to manage Envoy.
-* Loads the Internal [Infrastructure Manager](#infrastructure-manager) to run the Envoy process by calling internal
-  APIs, e.g. `CreateDataPlane()`. __Note:__ A future Infrastructure Manager can be introduced for this provider, e.g.
-  Terraform, to provide a more comprehensive management solution.
-* Loads the DNS Service Resolver which uses the `gateway.envoyproxy.io/hostname: my-service.my-org.com` Service
-  annotation to form SDS and builds EDS by resolving the `my-service.my-org.com` FQDN. In the future, Envoy Gateway
-  can support additional providers for a more comprehensive non-Kubernetes service discovery solution.
+* Watches files in a directory to manage Envoy.
+* Manages the data plane infrastructure by calling internal APIs, e.g. `CreateDataPlane()`.
+* Use DNS for Service discovery.
 * If needed, the local filesystem is used to persist data.
 
 #### Intermediate Representation (IR)
 This is an internal data model that user facing APIs are translated into allowing for internal services & components to
 be decoupled.
-
-#### Service Resolver
-This Service Resolver preprocesses the IR resources and resolves the services into endpoints enabling precise
-load-balancing and resilience policies. For the Kubernetes provider, a controller watches EndpointSlice resources,
-converting Services to Endpoints, allowing Envoy proxy to skip kube-proxy load-balancing. This component is tied to the
-configured provider.
 
 #### Gateway API Translator
 The Gateway API Translator translates Gateway API resources to the Intermediate Representation (IR).
@@ -89,8 +71,8 @@ The xDS Translator translates the IR into xDS Resources.
 The xDS Server is a xDS gRPC Server based on [Go Control Plane][go_cp]. Go Control Plane implements the xDS Server
 Protocol and is responsible for using xDS to configure the data plane.
 
-#### Infrastructure Manager
-The Infrastructure Manager is a provider-specific component responsible for managing the following infrastructure:
+#### Infra Manager
+The Infra Manager is a provider-specific component responsible for managing the following infrastructure:
 
 * Data Plane - Manages all the infrastructure required to run the managed Envoy proxies. For example, CRUD Deployment,
   Service, etc. resources to run Envoy in a Kubernetes cluster.
@@ -112,18 +94,16 @@ The Infrastructure Manager is a provider-specific component responsible for mana
   * A Gateway `listener` corresponds to a proxy [Listener][listener].
 * An [HTTPRoute][hroute] resource corresponds to a proxy [Route][route].
   * Each [backendRef][be_ref] corresponds to a proxy [Cluster][cluster].
-* The goal is to make the Infrastructure Manager & Translator components extensible in the future. For now,
-  extensibility can be achieved using xDS support that Envoy Gateway will provide.
+* The goal is to make the Infra Manager & Translator components extensible in the future. For now, extensibility can be
+  achieved using xDS support that Envoy Gateway will provide.
 
 The draft for this document is [here][draft_design].
 
-[envoy]: https://www.envoyproxy.io/
 [gw_api]: https://gateway-api.sigs.k8s.io
 [gc]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass
 [gw]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway
 [hroute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute
 [troute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute
-[gc_params]: https://gateway-api.sigs.k8s.io/v1alpha2/api-types/gatewayclass/#gatewayclass-parameters
 [go_cp]: https://github.com/envoyproxy/go-control-plane
 [grl]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [rls]: https://github.com/envoyproxy/ratelimit
