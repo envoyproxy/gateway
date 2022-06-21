@@ -5,13 +5,15 @@ import (
 )
 
 // Xds holds the intermediate representation of a Gateway and is
-// used by the xDS Translator to convert it into xDS resources
+// used by the xDS Translator to convert it into xDS resources.
 type Xds struct {
+	// Name of the Xds IR.
 	Name string
-	// One or more HTTP or HTTPS listeners exposed by the gateway
+	// HTTP listeners exposed by the gateway.
 	Http []HttpListener
 }
 
+// HttpListener holds the listener configuration.
 type HttpListener struct {
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
@@ -19,10 +21,10 @@ type HttpListener struct {
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	Hostnames []string
 
-	// TLS certificate info. If omitted, the gateway will expose a plain text HTTP server.
+	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
 	Tls ServerTLSSettings
 
-	// Routing rules associated with HTTP traffic to the service.
+	// Routes associated with HTTP traffic to the service.
 	Routes []HttpRoute
 }
 
@@ -39,20 +41,20 @@ type RouteDestination struct {
 	Port uint32
 	// Weight associated with this destination.
 	Weight uint32
-	// Priority of the destination.
-	Priority uint32
 }
 
-// TLSMode Describes how authentication is performed as part of establishing TLS connection.
-type TLSMode int32
+// TLSMode describes how authentication is performed as part of establishing a TLS connection.
+type TLSMode string
 
 const (
-	INVALID TLSMode = 0
 	// Only the server is authenticated.
-	SIMPLE = 1
-	// Both the peers in the communication must present their certificate for TLS authentication.
-	MUTUAL = 2
+	SimpleTLS TLSMode = "simple-tls"
 )
+
+// String returns the string literal for the TLS Mode
+func (m TLSMode) String() string {
+	return string(m)
+}
 
 type ServerTLSSettings struct {
 	// Set this to SIMPLE, or MUTUAL for one-way TLS, mutual TLS respectively.
