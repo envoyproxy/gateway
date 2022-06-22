@@ -16,7 +16,7 @@ RUN curl -fsSL https://get.docker.com | VERSION=20.10.16 sh
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip
 
 # golangci Lint
-Run curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
+RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s ${GOLINT_VERSION}
 
 # pip install
 RUN python3 -m pip install --no-cache-dir yamllint==${YAMLLINT_VERSION}
