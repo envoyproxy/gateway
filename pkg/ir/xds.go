@@ -15,6 +15,9 @@ type Xds struct {
 
 // HttpListener holds the listener configuration.
 type HttpListener struct {
+	// Address that the listener should listen on.
+	Address string
+
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
 
@@ -28,16 +31,19 @@ type HttpListener struct {
 	Routes []HttpRoute
 }
 
+// HttpRoute holds the route information associated with the HTTP Route
 type HttpRoute struct {
-	// Match condition.
-	Matchers     []route.HeaderMatcher
+	// Matchers define the match conditions for this route.
+	Matchers []route.HeaderMatcher
+	// Destinations associated with this matched route.
 	Destinations []RouteDestination
 }
 
+// RouteDestination holds the destination details associated with the route
 type RouteDestination struct {
-	// FQDN or IP address of the backend service.
+	// Host refers to the FQDN or IP address of the backend service.
 	Host string
-	// The port on the service to forward the request to.
+	// Port on the service to forward the request to.
 	Port uint32
 	// Weight associated with this destination.
 	Weight uint32
@@ -47,7 +53,7 @@ type RouteDestination struct {
 type TLSMode string
 
 const (
-	// Only the server is authenticated.
+	// SimpleTLS denotes that only the server is authenticated.
 	SimpleTLS TLSMode = "simple-tls"
 )
 
@@ -57,12 +63,12 @@ func (m TLSMode) String() string {
 }
 
 type ServerTLSSettings struct {
-	// Set this to SIMPLE, or MUTUAL for one-way TLS, mutual TLS respectively.
+	// Mode for TLS Authentication.Set this to SIMPLE, or MUTUAL for one-way TLS, mutual TLS respectively.
 	Mode TLSMode
-	// The server certificate.
+	// ServerCertificate of the server.
 	ServerCertificate []byte
-	// The server private key.
+	// PrivateKey for the server.
 	PrivateKey []byte
-	// The CA certificates for authenticating clients when using TLS mode "MUTUAL".
+	// CaCertificates for authenticating clients when using TLS mode "MUTUAL".
 	CaCertificates []byte
 }
