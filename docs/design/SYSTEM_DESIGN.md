@@ -16,13 +16,13 @@
 ![Architecture](../images/architecture.png)
 
 ### Configuration
-Envoy Gateway is configured statically at runtime and the managed data plane is configured dynamically through
+Envoy Gateway is configured statically at startup and the managed data plane is configured dynamically through
 Kubernetes resources, primarily [Gateway API][gw_api] objects.
 
 #### Static Configuration
-Static configuration is used to configure various internal aspects of Envoy Gateway at runtime, i.e. change the
-GatewayClass controllerName, configure a Provider, etc. Currently, Envoy Gateway only supports runtime configuration
-through a configuration file. See the [configuration](../CONFIG.md) guide for additional details.
+Static configuration is used to configure Envoy Gateway at startup, i.e. change the GatewayClass controllerName,
+configure a Provider, etc. Currently, Envoy Gateway only supports configuration through a configuration file. If the
+configuration file is not provided, Envoy Gateway will start up with default configuration parameters.
 
 #### Dynamic Configuration
 Dynamic configuration is based on the concept of a declaring the desired state of the data plane and using
@@ -41,10 +41,10 @@ defined as Kubernetes resources that provide the following services:
 ### Components
 
 #### Provider
-A Provider is an infrastructure component that Envoy Gateway calls to establish its
-[static configuration](#static-configuration), resolve services, persist data, etc. Kubernetes and File are the only
-supported providers. However, other providers can be added in the future as Envoy Gateway use cases are better
-understood. A provider is configured at runtime through Envoy Gateway's [static configuration](#static-configuration).
+A Provider is an infrastructure component that Envoy Gateway calls to establish its runtime configuration, resolve
+services, persist data, etc. Kubernetes and File are the only supported providers. However, other providers can be added
+in the future as Envoy Gateway use cases are better understood. A provider is configured at start up through Envoy
+Gateway's [static configuration](#static-configuration).
 
 ##### Kubernetes Provider
 * Uses Kubernetes-style controllers to reconcile Kubernetes resources that comprise the
@@ -74,7 +74,8 @@ Representation (IR). It is responsible for:
 
 #### Intermediate Representation (IR)
 The Intermediate Representation defines internal data models that external resources are translated into. This allows
-Envoy Gateway to be decoupled from the external resources used for dynamic configuration. The IR consists of:
+Envoy Gateway to be decoupled from the external resources used for dynamic configuration. The IR consists of an Infra IR
+used as input for the Infra Manager and an xDS IR used as input for the xDS Translator.
 * Infra IR- Used as the internal definition of the managed data plane infrastructure.
 * xDS IR- Used as the internal definition of the managed data plane xDS configuration.
 
