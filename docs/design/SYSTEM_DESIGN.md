@@ -10,8 +10,7 @@
 * Control Plane- A collection of inter-related software components for providing application gateway and routing
   functionality. The control plane is implemented by Envoy Gateway and provides services for managing the data plane.
   These services are detailed in the [components](#components) section.
-* Data Plane- Provides intelligent application-level traffic routing and is implemented by Envoy proxy. Envoy Gateway
-  manages the data plane as one or more Envoy proxies.
+* Data Plane- Provides intelligent application-level traffic routing and is implemented as one or more Envoy proxies.
 
 ### Architecture
 ![Architecture](../images/architecture.png)
