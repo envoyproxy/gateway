@@ -22,10 +22,12 @@ type HTTPListener struct {
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
-	// This field is required.
+	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
+	// for more info.
 	Hostnames []string
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS TLSListenerSettings
+	TLS TLSListenerConfig
 	// Routes associated with HTTP traffic to the service.
 	Routes []HTTPRoute
 }
@@ -34,8 +36,8 @@ type HTTPListener struct {
 type HTTPRoute struct {
 	// Name of the HttpRoute
 	Name string
-	// Matchers define the match conditions for this route.
-	Matchers []route.HeaderMatcher
+	// Matches define the match conditions for this route.
+	Matches []route.HeaderMatcher
 	// Destinations associated with this matched route.
 	Destinations []RouteDestination
 }
@@ -55,7 +57,7 @@ type TLSMode string
 
 const (
 	// SimpleTLS denotes that only the server is authenticated.
-	SimpleTLS TLSMode = "simple-tls"
+	SimpleTLS TLSMode = "SimpleTLS"
 )
 
 // String returns the string literal for the TLS Mode
@@ -63,13 +65,12 @@ func (m TLSMode) String() string {
 	return string(m)
 }
 
-type TLSListenerSettings struct {
-	// Mode for TLS Authentication.Set this to SIMPLE, or MUTUAL for one-way TLS, mutual TLS respectively.
+// TLSListenerConfig holds the configuration for downstream TLS context.
+type TLSListenerConfig struct {
+	// Mode for TLS Authentication. Set this to SIMPLE for one-way TLS.
 	Mode TLSMode
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.
 	PrivateKey []byte
-	// CaCertificates for authenticating clients when using TLS mode "MUTUAL".
-	CaCertificates []byte
 }
