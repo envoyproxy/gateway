@@ -79,6 +79,28 @@ used as input for the Infra Manager and an xDS IR used as input for the xDS Tran
 * Infra IR- Used as the internal definition of the managed data plane infrastructure.
 * xDS IR- Used as the internal definition of the managed data plane xDS configuration.
 
+#### Config Manager
+This component consumes the [Bootstrap Config](#bootstrap-config), and spawns the appropriate internal services in Envoy Gateway based on the config specification.
+For e.g. if the platform field in the Bootstrap Config is set to `kubernetes`, the Config Manager will instantiate kubernetes controller services that implement the
+[Config Source](#config-source), [Service Resolver](#service-resolver) and the [Envoy Provisioner](#provisioner) interfaces.
+
+#### Message Service
+This component allows internal services to publish messages as well as subscribe to them. The message service's interface is used by the [Config Manager](#config-manager) to 
+allow communication between the services instantiated by it.
+A message bus architecture allows components to be loosely coupled, work in an asynchronous manner and also scale out into multiple processes if needed. 
+For e.g. the [Config Source](#config-source) and the [Provisioner](#provisoner) could run as separate processes in different environments decoupling user configuration consumption
+from the environment where the Envoy Proxy infrastructure is being provisioned.
+
+#### Service Resolver
+This optional component preprocesses the IR resources and resolves the services into endpoints enabling precise load balancing and resilience policies.
+For e.g. in Kubernetes, a controller service could watch for EndpointSlice resources, converting Services to Endpoints, allowing for Envoyproxy to skip kube-proxy’s
+load balancing layer. This component is tied to the platform where it is running.  When disabled, the services will be resolved by the underlying DNS resolver or
+by explicitly specifying IPs.
+
+#### Gateway API Translator
+This is a platform agnostic translator that translates Gateway API resources to an Intermediate Representation.
+>>>>>>> 8928024... address comments
+
 #### xDS Translator
 The xDS Translator translates the xDS IR into xDS Resources that are consumed by the xDS server.
 

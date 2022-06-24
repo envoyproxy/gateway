@@ -15,24 +15,25 @@ type Xds struct {
 
 // HttpListener holds the listener configuration.
 type HttpListener struct {
+	// Name of the HttpListener
+	Name string
 	// Address that the listener should listen on.
 	Address string
-
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
-
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
+	// This field is required.
 	Hostnames []string
-
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	Tls ServerTLSSettings
-
+	Tls ListenerTLSSettings
 	// Routes associated with HTTP traffic to the service.
 	Routes []HttpRoute
 }
 
 // HttpRoute holds the route information associated with the HTTP Route
 type HttpRoute struct {
+	// Name of the HttpRoute
+	Name string
 	// Matchers define the match conditions for this route.
 	Matchers []route.HeaderMatcher
 	// Destinations associated with this matched route.
