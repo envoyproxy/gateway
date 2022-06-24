@@ -57,7 +57,7 @@ Gateway's [static configuration](#static-configuration).
 
 * Uses a file watcher to watch files in a directory that define the data plane configuration.
 * Manages the data plane by calling internal APIs, e.g. `CreateDataPlane()`.
-* Uses DNS for Service discovery.
+* Uses the host's DNS for Service discovery.
 * If needed, the local filesystem is used to persist data.
 
 #### Resource Watcher
