@@ -10,11 +10,11 @@ type Xds struct {
 	// Name of the Xds IR.
 	Name string
 	// HTTP listeners exposed by the gateway.
-	Http []HttpListener
+	HTTP []HTTPListener
 }
 
-// HttpListener holds the listener configuration.
-type HttpListener struct {
+// HTTPListener holds the listener configuration.
+type HTTPListener struct {
 	// Name of the HttpListener
 	Name string
 	// Address that the listener should listen on.
@@ -25,13 +25,13 @@ type HttpListener struct {
 	// This field is required.
 	Hostnames []string
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	Tls ListenerTLSSettings
+	TLS TLSListenerSettings
 	// Routes associated with HTTP traffic to the service.
-	Routes []HttpRoute
+	Routes []HTTPRoute
 }
 
-// HttpRoute holds the route information associated with the HTTP Route
-type HttpRoute struct {
+// HTTPRoute holds the route information associated with the HTTP Route
+type HTTPRoute struct {
 	// Name of the HttpRoute
 	Name string
 	// Matchers define the match conditions for this route.
@@ -63,7 +63,7 @@ func (m TLSMode) String() string {
 	return string(m)
 }
 
-type ServerTLSSettings struct {
+type TLSListenerSettings struct {
 	// Mode for TLS Authentication.Set this to SIMPLE, or MUTUAL for one-way TLS, mutual TLS respectively.
 	Mode TLSMode
 	// ServerCertificate of the server.
