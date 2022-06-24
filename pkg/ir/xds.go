@@ -67,7 +67,7 @@ func (m TLSMode) String() string {
 
 // TLSListenerConfig holds the configuration for downstream TLS context.
 type TLSListenerConfig struct {
-	// Mode for TLS Authentication. Set this to SIMPLE for one-way TLS.
+	// Mode for TLS Authentication. Set this to SimpleTLS for one-way TLS.
 	Mode TLSMode
 	// ServerCertificate of the server.
 	ServerCertificate []byte
