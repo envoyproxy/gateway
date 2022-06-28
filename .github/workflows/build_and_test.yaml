@@ -25,26 +25,19 @@ jobs:
         run: |
           MAKE_IN_DOCKER=1 make lint-yamllint
       - name: Run Codespell
-        uses: codespell-project/actions-codespell@master
-        with:
-          # can't reuse tools/codespell/.codespell.skip, shell is not supported
-          skip: .git,*.png,*.woff,*.woff2,*.eot,*.ttf,*.jpg,*.ico,*.svg,go.mod,go.sum
-          ignore_words_file: 'tools/codespell/.codespell.ignorewords'
-          check_filenames: true
-          check_hidden: true
+        run: |
+          MAKE_IN_DOCKER=1 make lint-codespell
+      - name: Run Golangci-lint
+        run: |
+          MAKE_IN_DOCKER=1 make lint-golint
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.46.2
-          args: --build-tags=e2e
       - name: Build
         run: make build
       - name: Test and report coverage
-        run: go test ./... -race -coverprofile=coverage.xml -covermode=atomic
+        run: make test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
