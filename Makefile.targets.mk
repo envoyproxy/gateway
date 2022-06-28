@@ -48,24 +48,26 @@ help: ## Display this help
 
 ##@ Build
 
-.PHONY: build
-build:  ## Build the envoy-gateway binary
-	@CGO_ENABLED=0 go build -a -o ./bin/${GOOS}/${GOARCH}/ github.com/envoyproxy/gateway/cmd/envoy-gateway
+SUPPORT_ARCHS ?= amd64 arm64
+# Generate three targets: build-amd64, build-arm64
+# Run make build -n to see the result with dry run.
+BUILD_BINARY_ARCHS = $(addprefix build-,$(SUPPORT_ARCHS))
 
-build-linux-amd64:
-	@GOOS=linux GOARCH=amd64 $(MAKE) build
+.PHONY: build $(BUILD_BINARY_ARCHS)
+build: $(BUILD_BINARY_ARCHS) ## Build the envoy-gateway binary.
+$(BUILD_BINARY_ARCHS): build-%:
+	@CGO_ENABLED=0 GOOS=linux GOARCH="$*" go build -a -o ./bin/${GOOS}/${GOARCH}/ github.com/envoyproxy/gateway/cmd/envoy-gateway
 
-build-linux-arm64:
-	@GOOS=linux GOARCH=arm64 $(MAKE) build
-
-build-all: build-linux-amd64 build-linux-arm64
+.PHONY: clean
+clean:
+	@rm -rf bin
 
 .PHONY: test
 test:
-	@go test ./...
+	@go test ./... -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: docker-build
-docker-build: build-all ## Build the envoy-gateway docker image.
+docker-build: build ## Build the envoy-gateway docker image.
 	@DOCKER_BUILDKIT=1 docker build -t $(IMAGE):$(TAG) -f Dockerfile bin
 
 .PHONY: docker-push
