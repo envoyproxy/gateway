@@ -1,9 +1,5 @@
 package ir
 
-import (
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-)
-
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
 type Xds struct {
@@ -27,19 +23,23 @@ type HTTPListener struct {
 	// for more info.
 	Hostnames []string
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS TLSListenerConfig
+	TLS *TLSListenerConfig
 	// Routes associated with HTTP traffic to the service.
-	Routes []HTTPRoute
+	Routes []*HTTPRoute
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
 type HTTPRoute struct {
 	// Name of the HttpRoute
 	Name string
-	// Matches define the match conditions for this route.
-	Matches []route.HeaderMatcher
+	// PathMatch defines the match conditions on the path.
+	PathMatch *StringMatch
+	// HeaderMatches define the match conditions on the request headers for this route.
+	HeaderMatches []*StringMatch
+	// QueryParamMatches define the match conditions on the query parameters.
+	QueryParamMatches []*StringMatch
 	// Destinations associated with this matched route.
-	Destinations []RouteDestination
+	Destinations []*RouteDestination
 }
 
 // RouteDestination holds the destination details associated with the route
@@ -52,25 +52,23 @@ type RouteDestination struct {
 	Weight uint32
 }
 
-// TLSMode describes how authentication is performed as part of establishing a TLS connection.
-type TLSMode string
-
-const (
-	// SimpleTLS denotes that only the server is authenticated.
-	SimpleTLS TLSMode = "SimpleTLS"
-)
-
-// String returns the string literal for the TLS Mode
-func (m TLSMode) String() string {
-	return string(m)
-}
-
 // TLSListenerConfig holds the configuration for downstream TLS context.
 type TLSListenerConfig struct {
-	// Mode for TLS Authentication. Set this to SimpleTLS for one-way TLS.
-	Mode TLSMode
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.
 	PrivateKey []byte
+}
+
+// StringMatch holds the various match conditions.
+// Only one of Exact, Prefix or SafeRegex can be set.
+type StringMatch struct {
+	// Name of the field to match on.
+	Name string
+	// Exact match condition.
+	Exact *string
+	// Prefix match condition.
+	Prefix *string
+	// SafeRegex match condition.
+	SafeRegex *string
 }
