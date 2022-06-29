@@ -68,20 +68,20 @@ image.push.%: image.build.%
 .PHONY: image.multiarch.verify
 image.multiarch.verify:
 	$(eval pass := $(shell ))
-	@docker buildx --help | grep -qw "docker buildx" || { \
+	docker buildx --help | grep -qw "docker buildx" || { \
 		echo "Cannot find `docker buildx`, please install first"; \
 		exit 1; }
 
 .PHONY: image.multiarch.emulate $(EMULATE_TARGETS)
 image.multiarch.emulate: $(EMULATE_TARGETS)
 $(EMULATE_TARGETS): image.multiarch.emulate.%:
-	@docker run --rm --privileged tonistiigi/binfmt --install linux/$* # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
+	docker run --rm --privileged tonistiigi/binfmt --install linux/$* # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
 
 .PHONY: image.multiarch.setup
 image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
-	@docker run --rm --privileged tonistiigi/binfmt --install all # Install QEMU emulators
-	@docker buildx rm $(BUILDX_CONTEXT) || :
-	@docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
+	docker run --rm --privileged tonistiigi/binfmt --install all # Install QEMU emulators
+	docker buildx rm $(BUILDX_CONTEXT) || :
+	docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.build.multiarch
 image.build.multiarch: image.multiarch.setup go.build.multiarch
