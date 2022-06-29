@@ -61,9 +61,6 @@ package valpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/gateway/pkg/provider/file"
-	"github.com/gateway/pkg/provider/kubernetes"
 )
 
 // EnvoyGateway is the Schema for the envoygateways API
@@ -112,13 +109,13 @@ type Provider struct {
 	// provides runtime configuration via the Kubernetes API.
 	//
 	// +optional
-	Kubernetes *kubernetes.Provider `json:"kubernetes,omitempty"`
+	Kubernetes *KubernetesProvider `json:"kubernetes,omitempty"`
 
 	// File defines the configuration of the File provider. File provides runtime
 	// configuration defined by one or more files.
 	//
 	// +optional
-	File *file.Provider `json:"file,omitempty"`
+	File *FileProvider `json:"file,omitempty"`
 }
 
 // ProviderType defines the types of providers supported by Envoy Gateway.
@@ -131,20 +128,18 @@ const (
 	// FileProviderType defines the "File" provider.
 	FileProviderType ProviderType = "File"
 )
-```
-Note that a provider-specific configuration is defined in the provider package. The following is an example of the
-Kubernetes provider:
-```go
-// gateway/pkg/kubernetes/kubernetes.go
 
-package kubernetes
+// KubernetesProvider defines configuration for the Kubernetes provider.
+type KubernetesProvider struct {
+	// TODO: Add config as use cases are better understood.
+}
 
-// Provider defines the configuration of the Kubernetes provider.
-type Provider struct {
-	// TODO: Define Kubernetes configuration fields, e.g. restrict namespaces to watch
-	//       Gateway/HTTPRoute resources.
+// FileProvider defines configuration for the File provider.
+type FileProvider struct {
+	// TODO: Add config as use cases are better understood.
 }
 ```
+__Note:__ Provider-specific configuration is defined in the `{$PROVIDER_NAME}Provider` API.
 
 ### Gateway
 Gateway defines desired configuration of [Gateway API][gw_api] controllers that reconcile and translate Gateway API
@@ -170,6 +165,8 @@ Since the configuration file does not exist, Envoy Gateway will start with defau
 The Kubernetes provider can be configured explicitly using `provider.kubernetes`:
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
 provider:
   type: Kubernetes
   kubernetes: {}

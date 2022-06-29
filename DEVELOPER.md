@@ -1,7 +1,7 @@
 # Developer documentation
 
-Envoy Gateway is built using a [make](https://www.gnu.org/software/make/)-based
-build system. Our CI is based on [Github Actions](https://docs.github.com/en/actions) (see: [workflows](.github/workflows))
+Envoy Gateway is built using a [make][make]-based build system. Our CI is based on [Github Actions][gha]
+(see: [workflows](.github/workflows)).
 
 ## Prerequisites
 
@@ -24,16 +24,19 @@ build system. Our CI is based on [Github Actions](https://docs.github.com/en/act
 
 ### yamllint
 * Recommended Version: 1.24.2
-* Installation Guide: https://github.com/adrienverge/yamllint#installation
+* Installation Guide: https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint
 
 ### codespell
 * Recommended Version: 2.1.0
 * Installation Guide: https://github.com/codespell-project/codespell#installation
 
-* If you do not have these tools installed on your machine,
-you can alternatively run `MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the
-preinstalled tools needed to support all the `make` targets.
+__Note:__ If you do not have these tools installed on your machine, you can alternatively run
+`MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the preinstalled tools needed to
+support all the `make` targets.
 
 ## Quick start
 
 Run `make help` to see all the available targets to build, test and run `envoy-gateway`.
+
+[make]: https://www.gnu.org/software/make/
+[gha]: https://docs.github.com/en/actions

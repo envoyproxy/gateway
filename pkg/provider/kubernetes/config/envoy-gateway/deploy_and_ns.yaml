@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: envoy-gateway
+  name: system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: envoy-gateway
+  namespace: system
+  labels:
+    control-plane: envoy-gateway
+spec:
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: envoy-gateway
+      labels:
+        control-plane: envoy-gateway
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - command:
+        - /envoy-gateway
+        args:
+        - --leader-elect
+        image: envoyproxy/gateway-dev:latest
+        name: envoy-gateway
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        # TODO(user): Configure the resources accordingly based on the project requirements.
+        # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+      serviceAccountName: envoy-gateway
+      terminationGracePeriodSeconds: 10

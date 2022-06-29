@@ -1,0 +1,10 @@
+resources:
+- deploy_and_ns.yaml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: envoy-gateway-config
+  files:
+  - config.yaml
