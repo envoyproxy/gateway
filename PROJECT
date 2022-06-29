@@ -1,0 +1,16 @@
+domain: gateway.envoyproxy.io
+layout:
+- go.kubebuilder.io/v3
+projectName: kube
+repo: github.com/envoyproxy/gateway
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: gateway.envoyproxy.io
+  group: config
+  kind: EnvoyProxy
+  path: github.com/envoyproxy/gateway/api/v1alpha1
+  version: v1alpha1
+version: "3"

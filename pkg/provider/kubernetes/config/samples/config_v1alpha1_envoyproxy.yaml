@@ -1,0 +1,6 @@
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: envoyproxy-sample
+spec:
+  # TODO(user): Add fields here
