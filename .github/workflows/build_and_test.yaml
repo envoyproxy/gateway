@@ -20,6 +20,7 @@ jobs:
       - uses: ./tools/github-actions/setup-deps
 
       # lint
+      - run: make lint-deps
       - run: make -k lint
         env:
           MAKE_IN_DOCKER: "1 "

@@ -8,23 +8,31 @@ GITHUB_ACTION ?=
 
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
-lint: lint.golint lint.yamllint lint.codespell lint.whitenoise
+
+PHONY: lint-deps
+lint-deps: ## Everything necessary to lint (useful to separate out in the logs)
 
 GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
 .PHONY: lint.golint
-lint.golint:
+lint: lint.golint
+lint-deps: $(tools/golangci-lint)
+lint.golint: $(tools/golangci-lint)
 	@echo Running Go linter ...
-	golangci-lint run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e --config=tools/linter/golangci-lint/.golangci.yml
+	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
-lint.yamllint:
+lint: lint.yamllint
+lint-deps: $(tools/yamllint)
+lint.yamllint: $(tools/yamllint)
 	@echo Running YAML linter ...
-	yamllint --config-file=tools/linter/yamllint/.yamllint changelogs/
+	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint changelogs/
 
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
 .PHONY: lint.codespell
+lint: lint.codespell
+lint-deps: $(tools/codespell)
 lint.codespell: CODESPELL_SKIP := $(shell cat tools/linter/codespell/.codespell.skip | tr \\n ',')
-lint.codespell:
+lint.codespell: $(tools/codespell)
 	@echo Running Codespell linter ...
 # This ::add-matcher/::remove-matcher business is based on
 # https://github.com/codespell-project/actions-codespell/blob/2292753ad350451611cafcbabc3abe387491339a/entrypoint.sh
@@ -40,10 +48,12 @@ lint.codespell:
 	    printf '::add-matcher::$(CURDIR)/tools/linter/codespell/matcher.json\n'; \
 	    trap "printf '::remove-matcher owner=codespell-matcher-default::\n::remove-matcher owner=codespell-matcher-specified::\n'" EXIT; \
 	  fi; \
-	  (set -x; codespell $(CODESPELL_FLAGS) --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2); \
+	  (set -x; $(tools/codespell) $(CODESPELL_FLAGS) --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2); \
 	}
 
 .PHONY: lint.whitenoise
-lint.whitenoise:
+lint: lint.whitenoise
+lint-deps: $(tools/whitenoise)
+lint.whitenoise: $(tools/whitenoise)
 	@echo Running WhiteNoise linter ...
-	tools/linter/lint-whitenoise
+	$(tools/whitenoise)

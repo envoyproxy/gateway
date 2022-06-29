@@ -10,3 +10,4 @@
 *.svg
 go.mod
 go.sum
+bin

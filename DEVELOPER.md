@@ -10,25 +10,20 @@ Envoy Gateway is built using a [make][make]-based build system. Our CI is based 
 * Installation Guide: https://go.dev/doc/install
 
 ### make
-* Recommended Version: 4.3
-* Installation Guide: https://www.gnu.org/software/make.
+* Recommended Version: 4.0 or later
+* Installation Guide: https://www.gnu.org/software/make
 
 ### docker
 * Optional when you want to build a Docker image or run `make` inside Docker.
 * Recommended Version: 20.10.16
 * Installation Guide: https://docs.docker.com/engine/install
 
-### golangci-lint
-* Recommended Version: 1.46.2
-* Installation Guide: https://github.com/golangci/golangci-lint#install
-
-### yamllint
-* Recommended Version: 1.24.2
-* Installation Guide: https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint
-
-### codespell
-* Recommended Version: 2.1.0
-* Installation Guide: https://github.com/codespell-project/codespell#installation
+### python3
+* Need a `python3` program
+* Must have a functioning `venv` module; this is part of the standard
+  library, but some distributions (such as Debian and Ubuntu) replace
+  it with a stub and require you to install a `python3-venv` package
+  separately.
 
 __Note:__ If you do not have these tools installed on your machine, you can alternatively run
 `MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the preinstalled tools needed to
