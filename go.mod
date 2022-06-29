@@ -3,6 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.18
 
 require (
+	github.com/envoyproxy/go-control-plane v0.10.3
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.7.1
 	k8s.io/apimachinery v0.24.2
@@ -14,6 +15,17 @@ require (
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
+	github.com/tetratelabs/multierror v1.1.0
+	google.golang.org/protobuf v1.28.0
+	sigs.k8s.io/yaml v1.3.0
+)
+
+require (
+	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
+	github.com/cncf/xds/go v0.0.0-20220314180256-7f1daf1720fc // indirect
+	github.com/envoyproxy/protoc-gen-validate v0.6.7 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

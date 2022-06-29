@@ -1,0 +1,10 @@
+name: "http-route"
+http:
+- name: "listener-1"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - destinations:
+    - host: "1.2.3.4"
+      port: 50000
