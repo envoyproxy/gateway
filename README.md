@@ -23,7 +23,7 @@ Kubernetes-based application gateway.
 
 ## Community Meeting
 
-The Envoy Gateway team meets every Tuesday/Thursday at 3:00 PM Pacific Timezone.
+The Envoy Gateway team meets every Tuesday and Thursday. Refer to the meeting details for additional information.
 
 * [Meeting details][meeting]
 
