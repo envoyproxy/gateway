@@ -5,14 +5,12 @@ on:
       - "main"
       - "release-v*"
     paths-ignore:
-      - "**/*.md"
       - "**/*.png"
   pull_request:
     branches:
       - "main"
       - "release-v*"
     paths-ignore:
-      - "**/*.md"
       - "**/*.png"
 env:
   GO_VERSION: 1.18.2
