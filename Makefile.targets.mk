@@ -49,17 +49,21 @@ help: ## Display this help
 ##@ Build
 
 SUPPORT_ARCHS ?= amd64 arm64
-# Generate three targets: build-amd64, build-arm64
+SUPPORT_PLATFORM ?= linux darwin
+# Generate three targets: build-${PLATFORM}-${ARCH}
 # Run make build -n to see the result with dry run.
-BUILD_BINARY_ARCHS = $(addprefix build-,$(SUPPORT_ARCHS))
+BUILD_BINARY_ARCHS = $(foreach TMP, $(SUPPORT_PLATFORM),$(addprefix build-$(TMP)-, $(SUPPORT_ARCHS)))
+
+# split by dash, $1 means index which starts from 1, $2 means the whole word
+word-dash = $(word $2,$(subst -, ,$1))
 
 .PHONY: build $(BUILD_BINARY_ARCHS)
 build: $(BUILD_BINARY_ARCHS) ## Build the envoy-gateway binary.
 $(BUILD_BINARY_ARCHS): build-%:
-	@CGO_ENABLED=0 GOOS=linux GOARCH="$*" go build -a -o ./bin/${GOOS}/${GOARCH}/ github.com/envoyproxy/gateway/cmd/envoy-gateway
+	@CGO_ENABLED=0 GOOS="$(call word-dash,$*,1)" GOARCH="$(call word-dash,$*,2)" go build -a -o ./bin/${GOOS}/${GOARCH}/ github.com/envoyproxy/gateway/cmd/envoy-gateway
 
 .PHONY: clean
-clean:
+clean: ## Clean the build output directory.
 	@rm -rf bin
 
 .PHONY: test
