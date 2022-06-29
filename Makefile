@@ -16,8 +16,10 @@ DOCKER_RUN_CMD ?= docker run \
 		  --rm \
 		  -t \
 		  --env=MAKEFLAGS \
+		  --env=GITHUB_ACTION \
 		  -v /var/run/docker.sock:/var/run/docker.sock \
-		  -v ${PWD}:/workspace
+		  --volume=$(CURDIR):$(CURDIR) \
+	          --workdir=$(CURDIR)
 
 %:
 ifeq ($(MAKE_IN_DOCKER), 1)
