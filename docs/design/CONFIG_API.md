@@ -2,7 +2,7 @@ Configuration API Design
 ===================
 
 # Table of Contents
-1. [Motivation](#motiviation)
+1. [Motivation](#motivation)
 2. [Goals](#goals)
 3. [Non-Goals](#non-goals)
 4. [Control Plane API](#control_plane_api)

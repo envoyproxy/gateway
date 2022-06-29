@@ -30,7 +30,7 @@ type HTTPListener struct {
 
 // HTTPRoute holds the route information associated with the HTTP Route
 type HTTPRoute struct {
-	// Name of the HttpRoute
+	// Name of the HTTPRoute
 	Name string
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch
