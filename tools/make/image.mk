@@ -40,11 +40,10 @@ image.verify:
 	fi
 
 .PHONY: image.build
-image.build: image.verify
-	@$(MAKE) $(addprefix image.build., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
+image.build: $(addprefix image.build.$(IMAGE_PLAT)., $(IMAGES))
 
 .PHONY: image.build.%
-image.build.%: go.build.%
+image.build.%: go.build.% image.verify
 	$(eval IMAGES := $(COMMAND))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
 	@$(call log, "Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)"
@@ -53,10 +52,10 @@ image.build.%: go.build.%
 	$(DOCKER) build --platform $(IMAGE_PLAT) $(BUILD_SUFFIX)
 
 .PHONY: image.push
-image.push: image.verify $(addprefix image.push., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
+image.push: $(addprefix image.push.$(IMAGE_PLAT)., $(IMAGES))
 
 .PHONY: image.push.%
-image.push.%:
+image.push.%: image.build.%
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
@@ -96,16 +95,16 @@ image.push.multiarch: image.multiarch.setup go.build.multiarch
 
 .PHONY: image
 image: ## Build docker images for host platform. See Option PLATFORM and BINS.
-	@$(MAKE) image.build
+image: image.build
 
 .PHONY: image-multiarch
 image-multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
-	@$(MAKE) image.build.multiarch
+image-multiarch: image.build.multiarch
 
 .PHONY: push
 push: ## Push docker images to registry.
-	@$(MAKE) image.push
+push: image.push
 
 .PHONY: push-multiarch
 push-multiarch: ## Push docker images for multiple platforms to registry.
-	@$(MAKE) image.push.multiarch
+push-multiarch: image.push.multiarch

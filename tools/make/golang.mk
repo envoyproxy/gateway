@@ -24,14 +24,12 @@ go.build.%:
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
-go.build:
-	@$(MAKE) $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
+go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 
 # Build the envoy-gateway binaries in multi platforms
 # It will build the linux/amd64, linux/arm64, darwin/amd64, darwin/arm64 binaries out.
 .PHONY: go.build.multiarch
-go.build.multiarch:
-	@$(MAKE) $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
+go.build.multiarch: $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
 
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
@@ -58,20 +56,20 @@ go.tidy:
 
 .PHONY: build
 build: ## Build envoy-gateway for host platform. See Option PLATFORM and BINS.
-	@$(MAKE) go.build
+build: go.build
 
 .PHONY: build-multiarch
 build-multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATFORMS and IMAGES.
-	@$(MAKE) go.build.multiarch
+build-multiarch: go.build.multiarch
 
 .PHONY: test
 test: ## Run all Go test of code sources.
-	@$(MAKE) go.test.unit
+test: go.test.unit
 
 .PHONY: format
 format: ## Update dependences with mod tidy.
-	@$(MAKE) go.tidy
+format: go.tidy
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
-	@$(MAKE) go.clean
+clean: go.clean

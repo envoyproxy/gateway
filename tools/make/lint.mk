@@ -6,7 +6,7 @@
 
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
-	@$(MAKE) lint.golint lint.yamllint lint.codespell lint.whitenoise
+lint: lint.golint lint.yamllint lint.codespell lint.whitenoise
 
 .PHONY: lint.golint
 lint.golint:

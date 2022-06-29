@@ -20,14 +20,6 @@
 
 ROOT_PACKAGE=github.com/envoyproxy/gateway
 
-# ====================================================================================================
-# Includes:
-# ====================================================================================================
-include tools/make/golang.mk
-include tools/make/image.mk
-include tools/make/lint.mk
-include tools/make/kube.mk
-
 # Set Root Directory Path
 ifeq ($(origin ROOT_DIR),undefined)
 ROOT_DIR := $(abspath $(shell  pwd -P))
@@ -77,6 +69,14 @@ endif
 ifeq (${BINS},)
   $(error Could not determine BINS, set ROOT_DIR or run in source dir)
 endif
+
+# ====================================================================================================
+# Includes:
+# ====================================================================================================
+include tools/make/golang.mk
+include tools/make/image.mk
+include tools/make/lint.mk
+include tools/make/kube.mk
 
 # Log the running target
 LOG_TARGET = echo "===========> Running $@..."

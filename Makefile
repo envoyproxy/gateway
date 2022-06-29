@@ -27,5 +27,5 @@ ifeq ($(MAKE_IN_DOCKER), 1)
 	@$(DOCKER_RUN_CMD) $(DOCKER_BUILDER_IMAGE):$(DOCKER_BUILDER_TAG) MAKE_IN_DOCKER=0 $@
 else
 # Run make locally
-	@$(MAKE) -f tools/make/common.mk $@
+	@$(MAKE) --warn-undefined-variables -f tools/make/common.mk $@
 endif

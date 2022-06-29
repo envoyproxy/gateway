@@ -23,4 +23,4 @@ RUN python3 -m pip install --no-cache-dir yamllint==${YAMLLINT_VERSION}
 RUN python3 -m pip install --no-cache-dir codespell==${CODESPELL_VERSION}
 
 WORKDIR /workspace
-ENTRYPOINT ["make"]
+ENTRYPOINT ["make", "--warn-undefined-variables"]
