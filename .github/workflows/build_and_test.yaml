@@ -22,8 +22,6 @@ jobs:
       # lint
       - run: make lint-deps
       - run: make -k lint
-        env:
-          MAKE_IN_DOCKER: "1 "
 
   build-and-test:
     runs-on: ubuntu-latest

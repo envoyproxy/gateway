@@ -25,10 +25,6 @@ Envoy Gateway is built using a [make][make]-based build system. Our CI is based 
   it with a stub and require you to install a `python3-venv` package
   separately.
 
-__Note:__ If you do not have these tools installed on your machine, you can alternatively run
-`MAKE_IN_DOCKER=1 make <target>` to run `make` inside a Docker container which has all the preinstalled tools needed to
-support all the `make` targets.
-
 ## Quick start
 
 Run `make help` to see all the available targets to build, test and run `envoy-gateway`.

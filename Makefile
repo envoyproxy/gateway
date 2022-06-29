@@ -3,32 +3,18 @@
 # Supported Targets: (Run `make help` to see more information)
 # ====================================================================================================
 
-# This is a wrapper around `make` so it can run
-# directly on the host or inside a container
-#
-# Set MAKE_IN_DOCKER=1 as an environment variable to run `make` inside
-# a Docker container with preinstalled tools.
+# This file is a wrapper around `make` so that we can force on the
+# --warn-undefined-variables flag.  Sure, you can set
+# `MAKEFLAGS += --warn-undefined-variables` from inside of a Makefile,
+# but then it won't turn on until the second phase (recipe execution),
+# and won't actually be on during the initial phase (parsing).
+# See: https://www.gnu.org/software/make/manual/make.html#Reading-Makefiles
 
-DOCKER_BUILDER_IMAGE ?= envoyproxy/gateway-dev-builder
-DOCKER_BUILDER_TAG ?= latest
-DOCKER_BUILD_CMD ?= DOCKER_BUILDKIT=1 docker build
-DOCKER_RUN_CMD ?= docker run \
-		  --rm \
-		  -t \
-		  --env=MAKEFLAGS \
-		  --env=GITHUB_ACTION \
-		  -v /var/run/docker.sock:/var/run/docker.sock \
-		  --volume=$(CURDIR):$(CURDIR) \
-	          --workdir=$(CURDIR)
-
-%:
-ifeq ($(MAKE_IN_DOCKER), 1)
-# Build builder image
-	@$(DOCKER_BUILD_CMD) -t $(DOCKER_BUILDER_IMAGE):$(DOCKER_BUILDER_TAG) - < tools/docker/builder/Dockerfile
-# Run make inside the builder image
-# Run with MAKE_IN_DOCKER=0 to eliminate an infinite loop
-	@$(DOCKER_RUN_CMD) $(DOCKER_BUILDER_IMAGE):$(DOCKER_BUILDER_TAG) MAKE_IN_DOCKER=0 $@
-else
-# Run make locally
-	@$(MAKE) --warn-undefined-variables -f tools/make/common.mk $@
-endif
+# Have everything-else ("%") depend on _run (which uses
+# $(MAKECMDGOALS) to decide what to run), rather than having
+# everything else run $(MAKE) directly, since that'd end up running
+# multiple sub-Makes if you give multiple targets on the CLI.
+_run:
+	$(MAKE) --warn-undefined-variables -f tools/make/common.mk $(MAKECMDGOALS)
+.PHONY: _run
+$(if $(MAKECMDGOALS),$(MAKECMDGOALS): %: _run)
