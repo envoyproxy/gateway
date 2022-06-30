@@ -16,3 +16,8 @@ lint.yamllint:
 lint.codespell: CODESPELL_SKIP := $(shell cat tools/linter/codespell/.codespell.skip | tr \\n ',')
 lint.codespell:
 	@codespell --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2
+
+.PHONY: lint.whitenoise
+lint.whitenoise:
+	@echo Running WhiteNoise linter ...
+	tools/linter/lint-whitenoise
