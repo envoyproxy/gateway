@@ -23,6 +23,24 @@ ifeq (${IMAGES},)
   $(error Could not determine IMAGES, set ROOT_DIR or run in source dir)
 endif
 
+##@ Image
+
+.PHONY: image
+image: ## Build docker images for host platform. See Option PLATFORM and BINS.
+	@$(MAKE) image.build
+
+.PHONY: push
+push: ## Push docker images to registry.
+	@$(MAKE) image.push
+
+.PHONY: image.multiarch
+image.multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
+	@$(MAKE) image.build.multiarch
+
+.PHONY: push.multiarch
+push.multiarch: ## Push docker images for multiple platforms to registry.
+	@$(MAKE) image.push.multiarch
+
 .PHONY: image.verify
 image.verify:
 	$(eval API_VERSION := $(shell $(DOCKER) version | grep -E 'API version: {1,6}[0-9]' | head -n1 | awk '{print $$3} END { if (NR==0) print 0}' ))
@@ -34,10 +52,12 @@ image.verify:
 	fi
 
 .PHONY: image.build
-image.build: image.verify  $(addprefix image.build., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
+image.build: image.verify
+	@$(MAKE) $(addprefix image.build., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
 
 .PHONY: image.build.multiarch
-image.build.multiarch: image.verify  $(foreach p,$(IMAGE_PLATFORMS),$(addprefix image.build., $(addprefix $(p)., $(IMAGES))))
+image.build.multiarch: image.verify
+	# TODO: use buildx
 
 .PHONY: image.build.%
 image.build.%: go.build.%

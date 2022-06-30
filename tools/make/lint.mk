@@ -2,6 +2,12 @@
 #
 # All make targets related to lint are defined in this file.
 
+##@ Lint
+
+.PHONY: lint
+lint: ## Run all linter of code sources, including golint, yamllint and codespell.
+	@$(MAKE) lint.golint lint.yamllint lint.codespell
+
 .PHONY: lint.golint
 lint.golint:
 	@echo Running Go linter ...
@@ -15,4 +21,5 @@ lint.yamllint:
 .PHONY: lint.codespell
 lint.codespell: CODESPELL_SKIP := $(shell cat tools/linter/codespell/.codespell.skip | tr \\n ',')
 lint.codespell:
+	@echo Running Codespell linter ...
 	@codespell --skip $(CODESPELL_SKIP) --ignore-words tools/linter/codespell/.codespell.ignorewords --check-filenames --check-hidden -q2
