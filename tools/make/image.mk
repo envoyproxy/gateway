@@ -57,10 +57,10 @@ image.push.multiarch: image.verify  $(foreach p,$(IMAGE_PLATFORMS),$(addprefix i
 .PHONY: image.push.%
 image.push.%:
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
-	$(eval IMAGE := $(COMMAND))
+	$(eval IMAGES := $(COMMAND))
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
-	@echo "===========> Pushing image $(IMAGE) $(TAG) to $(REGISTRY)"
-	@echo "===========> Pushing docker image tag $(REGISTRY)/$(IMAGE):$(TAG) for $(ARCH)"; \
-	$(DOCKER) push $(REGISTRY)/$(IMAGE):$(TAG); \
+	@echo "===========> Pushing image $(IMAGES) $(TAG) to $(REGISTRY)"
+	@echo "===========> Pushing docker image tag $(IMAGE):$(TAG) for $(ARCH)"; \
+	$(DOCKER) push $(IMAGE):$(TAG); \
