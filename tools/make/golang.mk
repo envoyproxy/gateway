@@ -1,4 +1,4 @@
-# This is a wrapper to build and push golang binaries
+# This is a wrapper to build golang binaries
 #
 # All make targets related to golang are defined in this file.
 
@@ -22,12 +22,14 @@ go.build.%:
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
-go.build:  $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
+go.build:
+	@$(MAKE) $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 
 # Build the envoy-gateway binaries in multi platforms
 # It will build the linux/amd64, linux/arm64, darwin/amd64, darwin/arm64 binaries out.
 .PHONY: go.build.multiarch
-go.build.multiarch:  $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
+go.build.multiarch:
+	@$(MAKE) $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
 
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
@@ -56,3 +58,25 @@ go.format:  go.format.verify
 	@gofmt -s -w .
 	@goimports -w -local $(ROOT_PACKAGE) .
 	@go mod tidy
+
+##@ Golang
+
+.PHONY: build
+build: ## Build envoy-gateway for host platform. See Option PLATFORM and BINS.
+	@$(MAKE) go.build
+
+.PHONY: build.multiarch
+build.multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATFORMS and IMAGES.
+	@$(MAKE) go.build.multiarch
+
+.PHONY: test
+test: ## Run all Go test of code sources.
+	@$(MAKE) go.test.unit
+
+.PHONY: format
+format: ## Format codes style with mod tidy, gofmt and goimports.
+	@$(MAKE) go.format
+
+.PHONY: clean
+clean: ## Remove all files that are created during builds.
+	@$(MAKE) go.clean
