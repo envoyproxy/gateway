@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Run whitenoise lint
         run: |
-          MAKE_IN_DOCKER=1 make lint-whitenoise
+          MAKE_IN_DOCKER=1 make lint.whitenoise
       - name: Run yamllint
         run: |
           MAKE_IN_DOCKER=1 make lint.yamllint
