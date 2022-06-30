@@ -10,13 +10,6 @@ endif
 # Set Output Directory Path
 ifeq ($(origin OUTPUT_DIR),undefined)
 OUTPUT_DIR := $(ROOT_DIR)/bin
-$(shell mkdir -p $(OUTPUT_DIR))
-endif
-
-# Set TMP Directory Path
-ifeq ($(origin TMP_DIR),undefined)
-TMP_DIR := $(OUTPUT_DIR)/tmp
-$(shell mkdir -p $(TMP_DIR))
 endif
 
 # Set the version number. you should not need to do this

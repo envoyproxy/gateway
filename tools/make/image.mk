@@ -12,11 +12,6 @@ TAG ?= $(REV)
 
 DOCKER := docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
-_DOCKER_BUILD_EXTRA_ARGS := --build-arg TARGETPLATFORM=.
-
-ifdef HTTP_PROXY
-_DOCKER_BUILD_EXTRA_ARGS += --build-arg HTTP_PROXY=${HTTP_PROXY}
-endif
 
 # Determine image files by looking into build/docker/*/Dockerfile
 IMAGES_DIR ?= $(wildcard ${ROOT_DIR}tools/docker/*)
@@ -46,18 +41,12 @@ image.build.multiarch: image.verify  $(foreach p,$(IMAGE_PLATFORMS),$(addprefix 
 
 .PHONY: image.build.%
 image.build.%: go.build.%
-	$(eval IMAGE := $(COMMAND))
+	$(eval IMAGES := $(COMMAND))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
-	@echo "===========> Building image $(IMAGE) in tag $(TAG) for $(IMAGE_PLAT)"
-	@mkdir -p $(TMP_DIR)/$(IMAGE)
-	@cat $(ROOT_DIR)/tools/docker/$(IMAGE)/Dockerfile\
-		>$(TMP_DIR)/$(IMAGE)/Dockerfile
-	@cp $(OUTPUT_DIR)/$(IMAGE_PLAT)/$(IMAGE) $(TMP_DIR)/$(IMAGE)/
-	$(eval BUILD_SUFFIX := $(_DOCKER_BUILD_EXTRA_ARGS) --pull -t $(REGISTRY)/$(IMAGE):$(TAG) $(TMP_DIR)/$(IMAGE))
-	$(eval BUILD_SUFFIX_ARM := $(_DOCKER_BUILD_EXTRA_ARGS) --pull -t $(REGISTRY)/$(IMAGE).$(ARCH):$(TAG) $(TMP_DIR)/$(IMAGE))
-	@echo "===========> Creating image tag $(REGISTRY)/$(IMAGE):$(TAG) for $(ARCH)"; \
+	@echo "===========> Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)"
+	$(eval BUILD_SUFFIX := --pull -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
+	@echo "===========> Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) for $(ARCH)"; \
 	$(DOCKER) build --platform $(IMAGE_PLAT) $(BUILD_SUFFIX)
-	@rm -r $(TMP_DIR)
 
 .PHONY: image.push
 image.push: image.verify $(addprefix image.push., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))

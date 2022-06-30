@@ -18,7 +18,6 @@ go.build.%:
 	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	@echo "===========> Building binary $(COMMAND) with commit $(REV) in version $(VERSION) for $(OS) $(ARCH)"
-	@mkdir -p $(OUTPUT_DIR)/$(OS)/$(ARCH)/
 	@CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) $(ROOT_PACKAGE)/cmd/$(COMMAND)
 
 # Build the envoy-gateway binaries in the hosted platforms.
