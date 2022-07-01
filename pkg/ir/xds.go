@@ -28,6 +28,16 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 }
 
+func (x *Xds) GetListener(name string) *HTTPListener {
+	for _, listener := range x.HTTP {
+		if listener.Name == name {
+			return listener
+		}
+	}
+
+	return nil
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 type HTTPRoute struct {
 	// Name of the HTTPRoute
