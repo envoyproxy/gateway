@@ -7,6 +7,8 @@ ifeq ($(origin GOBIN), undefined)
 	GOBIN := $(GOPATH)/bin
 endif
 
+GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' ' -f2)
+
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
 # If we want to build envoy-gateway in linux amd64 platform, 
@@ -44,20 +46,13 @@ go.clean: ## Clean the building output files
 	@echo "===========> Cleaning all build output"
 	@rm -rf $(OUTPUT_DIR)
 
-.PHONY: go.format.verify
-go.format.verify:
-ifeq ($(shell which goimports), )
-	@echo "===========> Installing missing goimports"
-	@go get -v golang.org/x/tools/cmd/goimports
-	@go install golang.org/x/tools/cmd/goimports
-endif
-
-.PHONY: go.format
-go.format:  go.format.verify
-	@echo "===========> Running go codes format"
-	@gofmt -s -w .
-	@goimports -w -local $(ROOT_PACKAGE) .
-	@go mod tidy
+.PHONY: go.tidy
+go.tidy:
+	@echo "===========> Running go tidy" $(pwd)
+	@go mod tidy -compat=$(GO_VERSION)
+	## ensure all changes have been committed
+	git diff --exit-code go.mod
+	git diff --exit-code go.sum
 
 ##@ Golang
 
@@ -73,9 +68,9 @@ build.multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATF
 test: ## Run all Go test of code sources.
 	@$(MAKE) go.test.unit
 
-.PHONY: format
-format: ## Format codes style with mod tidy, gofmt and goimports.
-	@$(MAKE) go.format
+.PHONY: tidy
+format: ## Update dependences with mod tidy.
+	@$(MAKE) go.tidy
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
