@@ -50,9 +50,13 @@ go.clean: ## Clean the building output files
 go.tidy:
 	@echo "===========> Running go tidy" $(pwd)
 	@go mod tidy -compat=$(GO_VERSION)
-	## ensure all changes have been committed
-	git diff --exit-code go.mod
-	git diff --exit-code go.sum
+	@if git status -s | grep -E 'go(.mod)|go(.sum)' ; then \
+		git diff --exit-code go.mod; \
+		git diff --exit-code go.sum; \
+   		echo '\nError: ensure all changes have been committed!'; \
+	else \
+		echo 'Go module looks clean!'; \
+   	fi
 
 ##@ Golang
 
