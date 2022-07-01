@@ -60,8 +60,8 @@ go.tidy:
 build: ## Build envoy-gateway for host platform. See Option PLATFORM and BINS.
 	@$(MAKE) go.build
 
-.PHONY: build.multiarch
-build.multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATFORMS and IMAGES.
+.PHONY: build-multiarch
+build-multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATFORMS and IMAGES.
 	@$(MAKE) go.build.multiarch
 
 .PHONY: test

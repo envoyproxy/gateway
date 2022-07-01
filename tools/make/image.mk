@@ -23,24 +23,6 @@ ifeq (${IMAGES},)
   $(error Could not determine IMAGES, set ROOT_DIR or run in source dir)
 endif
 
-##@ Image
-
-.PHONY: image
-image: ## Build docker images for host platform. See Option PLATFORM and BINS.
-	@$(MAKE) image.build
-
-.PHONY: push
-push: ## Push docker images to registry.
-	@$(MAKE) image.push
-
-.PHONY: image.multiarch
-image.multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
-	@$(MAKE) image.build.multiarch
-
-.PHONY: push.multiarch
-push.multiarch: ## Push docker images for multiple platforms to registry.
-	@$(MAKE) image.push.multiarch
-
 .PHONY: image.verify
 image.verify:
 	$(eval API_VERSION := $(shell $(DOCKER) version | grep -E 'API version: {1,6}[0-9]' | head -n1 | awk '{print $$3} END { if (NR==0) print 0}' ))
@@ -84,3 +66,21 @@ image.push.%:
 	@echo "===========> Pushing image $(IMAGES) $(TAG) to $(REGISTRY)"
 	@echo "===========> Pushing docker image tag $(IMAGE):$(TAG) for $(ARCH)"; \
 	$(DOCKER) push $(IMAGE):$(TAG); \
+
+##@ Image
+
+.PHONY: image
+image: ## Build docker images for host platform. See Option PLATFORM and BINS.
+	@$(MAKE) image.build
+
+.PHONY: image-multiarch
+image-multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
+	@$(MAKE) image.build.multiarch
+
+.PHONY: push
+push: ## Push docker images to registry.
+	@$(MAKE) image.push
+
+.PHONY: push-multiarch
+push-multiarch: ## Push docker images for multiple platforms to registry.
+	@$(MAKE) image.push.multiarch
