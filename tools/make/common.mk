@@ -69,20 +69,28 @@ endif
 define USAGE_OPTIONS
 
 Options:
-  BINS         The binaries to build. Default is all of cmd.
-               This option is available when using: make build|build-multiarch
-               Example: make build BINS="envoy-gateway"
-  IMAGES       Backend images to make. Default is all of cmds.
-               This option is available when using: make image|image-multiarch|push|push-multiarch
-               Example: make image.multiarch IMAGES="envoy-gateway"
-  PLATFORM     The specified platform to build.
-               This option is available when using: make build|image
-               Example: make build BINS="envoy-gateway" PLATFORM="linux_amd64"
-               Supported Platforms: linux_amd64 linux_arm64 darwin_amd64 darwin_arm64
-  PLATFORMS    The multiple platforms to build.
-               This option is available when using: make build-multiarch
-               Example: make image.multiarch IMAGES="envoy-gateway" PLATFORMS="linux_amd64 linux_arm64"
-               Default is "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64".
+  \033[36mMAKE_IN_DOCKER\033[0m	
+		 Run make inside a Docker container which has all the preinstalled tools needed to support all the make targets
+		 This option is available to all cmds.
+		 Example: \033[36mmake build MAKE_IN_DOCKER=1\033[0m
+  \033[36mBINS\033[0m       
+		 The binaries to build. Default is all of cmd.
+		 This option is available when using: make build|build-multiarch
+		 Example: \033[36mmake build BINS="envoy-gateway"\033[0m
+  \033[36mIMAGES\033[0m     
+		 Backend images to make. Default is all of cmds.
+		 This option is available when using: make image|image-multiarch|push|push-multiarch
+		 Example: \033[36mmake image-multiarch IMAGES="envoy-gateway"\033[0m
+  \033[36mPLATFORM\033[0m   
+		 The specified platform to build.
+		 This option is available when using: make build|image
+		 Example: \033[36mmake build BINS="envoy-gateway" PLATFORM="linux_amd64""\033[0m
+		 Supported Platforms: linux_amd64 linux_arm64 darwin_amd64 darwin_arm64
+  \033[36mPLATFORMS\033[0m  
+		 The multiple platforms to build.
+		 This option is available when using: make build-multiarch
+		 Example: \033[36mmake build-multiarch BINS="envoy-gateway" PLATFORMS="linux_amd64 linux_arm64"\033[0m
+		 Default is "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64".
 endef
 export USAGE_OPTIONS
 
@@ -90,7 +98,6 @@ export USAGE_OPTIONS
 .PHONY: help
 help:
 	@echo "Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or Kubernetes-based application gateway\n"
-	@echo "You can also run \"MAKE_IN_DOCKER=1 make <Targets> <Options>\" to run make inside a Docker container which has all the preinstalled tools needed to support all the make targets\n"
-	@echo "Usage: make <Targets> <Options> ...\n\nTargets:"
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@echo "Usage:\n  make \033[36m<Target>\033[0m \033[36m<Option>\033[0m\n\nTargets:"
+	@awk 'BEGIN {FS = ":.*##"; printf ""} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo "$$USAGE_OPTIONS"
