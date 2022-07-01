@@ -68,7 +68,7 @@ build.multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATF
 test: ## Run all Go test of code sources.
 	@$(MAKE) go.test.unit
 
-.PHONY: tidy
+.PHONY: format
 format: ## Update dependences with mod tidy.
 	@$(MAKE) go.tidy
 
