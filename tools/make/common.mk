@@ -70,17 +70,17 @@ define USAGE_OPTIONS
 
 Options:
   BINS         The binaries to build. Default is all of cmd.
-               This option is available when using: make build/build.multiarch
+               This option is available when using: make build|build-multiarch
                Example: make build BINS="envoy-gateway"
   IMAGES       Backend images to make. Default is all of cmds.
-               This option is available when using: make image/image.multiarch/push/push.multiarch
+               This option is available when using: make image|image-multiarch|push|push-multiarch
                Example: make image.multiarch IMAGES="envoy-gateway"
   PLATFORM     The specified platform to build.
-               This option is available when using: make build/image
+               This option is available when using: make build|image
                Example: make build BINS="envoy-gateway" PLATFORM="linux_amd64"
                Supported Platforms: linux_amd64 linux_arm64 darwin_amd64 darwin_arm64
   PLATFORMS    The multiple platforms to build.
-               This option is available when using: make build.multiarch
+               This option is available when using: make build-multiarch
                Example: make image.multiarch IMAGES="envoy-gateway" PLATFORMS="linux_amd64 linux_arm64"
                Default is "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64".
 endef
@@ -90,6 +90,7 @@ export USAGE_OPTIONS
 .PHONY: help
 help:
 	@echo "Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or Kubernetes-based application gateway\n"
+	@echo "You can also run \"MAKE_IN_DOCKER=1 make <Targets> <Options>\" to run make inside a Docker container which has all the preinstalled tools needed to support all the make targets\n"
 	@echo "Usage: make <Targets> <Options> ...\n\nTargets:"
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo "$$USAGE_OPTIONS"
