@@ -15,6 +15,7 @@ DOCKER_BUILD_CMD ?= DOCKER_BUILDKIT=1 docker build
 DOCKER_RUN_CMD ?= docker run \
 		  --rm \
 		  -t \
+		  --env=MAKEFLAGS \
 		  -v /var/run/docker.sock:/var/run/docker.sock \
 		  -v ${PWD}:/workspace
 

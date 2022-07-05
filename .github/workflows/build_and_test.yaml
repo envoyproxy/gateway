@@ -20,18 +20,9 @@ jobs:
       - uses: ./tools/github-actions/setup-deps
 
       # lint
-      - name: Run whitenoise lint
-        run: |
-          MAKE_IN_DOCKER=1 make lint.whitenoise
-      - name: Run yamllint
-        run: |
-          MAKE_IN_DOCKER=1 make lint.yamllint
-      - name: Run codespell
-        run: |
-          MAKE_IN_DOCKER=1 make lint.codespell
-      - name: Run golangci-lint
-        run: |
-          MAKE_IN_DOCKER=1 make lint.golint
+      - run: make -k lint
+        env:
+          MAKE_IN_DOCKER: "1 "
 
   build-and-test:
     runs-on: ubuntu-latest
