@@ -3,6 +3,18 @@
 # All make targets related to common variables are defined in this file.
 
 # ====================================================================================================
+# Configure Make itself:
+# ====================================================================================================
+
+# Turn off .INTERMEDIATE file removal by marking all files as
+# .SECONDARY.  .INTERMEDIATE file removal is a space-saving hack from
+# a time when drives were small; on modern computers with plenty of
+# storage, it causes nothing but headaches.
+#
+# https://news.ycombinator.com/item?id=16486331
+.SECONDARY:
+
+# ====================================================================================================
 # ROOT Options:
 # ====================================================================================================
 
