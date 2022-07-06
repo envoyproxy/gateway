@@ -17,7 +17,11 @@ DOCKER_SUPPORTED_API_VERSION ?= 1.32
 IMAGES_DIR ?= $(wildcard ${ROOT_DIR}tools/docker/*)
 # Determine images names by stripping out the dir names
 IMAGES ?= envoy-gateway
-IMAGE_PLATFORMS ?= linux_amd64 linux_arm64 
+IMAGE_PLATFORMS ?= linux_amd64 linux_arm64
+
+BUILDX_CONTEXT := gateway-build-tools-builder
+# Covert to linux/arm64,linux/amd64
+$(eval BUILDX_PLATFORMS := $(shell echo "${IMAGE_PLATFORMS}" | sed "s# #,#;s#_#/#g"))
 
 ifeq (${IMAGES},)
   $(error Could not determine IMAGES, set ROOT_DIR or run in source dir)
@@ -37,10 +41,6 @@ image.verify:
 image.build: image.verify
 	@$(MAKE) $(addprefix image.build., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
 
-.PHONY: image.build.multiarch
-image.build.multiarch: image.verify
-	# TODO: use buildx
-
 .PHONY: image.build.%
 image.build.%: go.build.%
 	$(eval IMAGES := $(COMMAND))
@@ -53,9 +53,6 @@ image.build.%: go.build.%
 .PHONY: image.push
 image.push: image.verify $(addprefix image.push., $(addprefix $(IMAGE_PLAT)., $(IMAGES)))
 
-.PHONY: image.push.multiarch
-image.push.multiarch: image.verify  $(foreach p,$(IMAGE_PLATFORMS),$(addprefix image.push., $(addprefix $(p)., $(IMAGES)))) 
-
 .PHONY: image.push.%
 image.push.%:
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
@@ -66,6 +63,27 @@ image.push.%:
 	@echo "===========> Pushing image $(IMAGES) $(TAG) to $(REGISTRY)"
 	@echo "===========> Pushing docker image tag $(IMAGE):$(TAG) for $(ARCH)"; \
 	$(DOCKER) push $(IMAGE):$(TAG); \
+
+.PHONY: image.multiarch.verify
+image.multiarch.verify:
+	$(eval pass := $(shell ))
+	@docker buildx --help | grep -qw "docker buildx" || { \
+		echo "Cannot find `docker buildx`, please install first"; \
+		exit 1; }
+
+.PHONY: image.multiarch.setup
+image.multiarch.setup: image.verify image.multiarch.verify
+	@docker run --rm --privileged tonistiigi/binfmt --install all # Install QEMU emulators
+	@docker buildx rm $(BUILDX_CONTEXT) &>/dev/null || :
+	@docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
+
+.PHONY: image.build.multiarch
+image.build.multiarch: image.multiarch.setup
+	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}"
+
+.PHONY: image.push.multiarch
+image.push.multiarch: image.multiarch.setup
+	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --push
 
 ##@ Image
 
