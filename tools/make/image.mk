@@ -20,7 +20,7 @@ IMAGES ?= envoy-gateway
 IMAGE_PLATFORMS ?= linux_amd64 linux_arm64
 
 BUILDX_CONTEXT := gateway-build-tools-builder
-# Covert to linux/arm64,linux/amd64
+# Convert to linux/arm64,linux/amd64
 $(eval BUILDX_PLATFORMS := $(shell echo "${IMAGE_PLATFORMS}" | sed "s# #,#;s#_#/#g"))
 
 ifeq (${IMAGES},)
