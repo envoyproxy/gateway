@@ -19,9 +19,11 @@ IMAGES_DIR ?= $(wildcard ${ROOT_DIR}tools/docker/*)
 IMAGES ?= envoy-gateway
 IMAGE_PLATFORMS ?= linux_amd64 linux_arm64
 
-BUILDX_CONTEXT := gateway-build-tools-builder
+BUILDX_CONTEXT = gateway-build-tools-builder
 # Convert to linux/arm64,linux/amd64
-$(eval BUILDX_PLATFORMS := $(shell echo "${IMAGE_PLATFORMS}" | sed "s# #,#;s#_#/#g"))
+$(eval BUILDX_PLATFORMS = $(shell echo "${IMAGE_PLATFORMS}" | sed "s# #,#;s#_#/#g"))
+EMULATE_PLATFORMS = amd64 arm64
+EMULATE_TARGETS = $(addprefix image.multiarch.emulate.,$(EMULATE_PLATFORMS))
 
 ifeq (${IMAGES},)
   $(error Could not determine IMAGES, set ROOT_DIR or run in source dir)
@@ -71,10 +73,15 @@ image.multiarch.verify:
 		echo "Cannot find `docker buildx`, please install first"; \
 		exit 1; }
 
+.PHONY: image.multiarch.emulate $(EMULATE_TARGETS)
+image.multiarch.emulate: $(EMULATE_TARGETS)
+$(EMULATE_TARGETS): image.multiarch.emulate.%:
+	docker run --rm --privileged tonistiigi/binfmt --install linux/$* # Install QEMU emulator, the same emulator as the host will report an error but can safe ignre
+
 .PHONY: image.multiarch.setup
-image.multiarch.setup: image.verify image.multiarch.verify
+image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
 	@docker run --rm --privileged tonistiigi/binfmt --install all # Install QEMU emulators
-	@docker buildx rm $(BUILDX_CONTEXT) &>/dev/null || :
+	@docker buildx rm $(BUILDX_CONTEXT) || :
 	@docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.build.multiarch
