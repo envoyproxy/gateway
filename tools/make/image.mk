@@ -76,7 +76,7 @@ image.multiarch.verify:
 .PHONY: image.multiarch.emulate $(EMULATE_TARGETS)
 image.multiarch.emulate: $(EMULATE_TARGETS)
 $(EMULATE_TARGETS): image.multiarch.emulate.%:
-	docker run --rm --privileged tonistiigi/binfmt --install linux/$* # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
+	@docker run --rm --privileged tonistiigi/binfmt --install linux/$* # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
 
 .PHONY: image.multiarch.setup
 image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
@@ -85,11 +85,11 @@ image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emula
 	@docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.build.multiarch
-image.build.multiarch: image.multiarch.setup
+image.build.multiarch: image.multiarch.setup go.build.multiarch
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.push.multiarch
-image.push.multiarch: image.multiarch.setup
+image.push.multiarch: image.multiarch.setup go.build.multiarch
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --push
 
 ##@ Image
