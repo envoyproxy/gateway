@@ -10,7 +10,7 @@ IMAGE ?= ${REGISTRY}/gateway-dev
 # Tag is the tag to use for build and push image targets.
 TAG ?= $(REV)
 
-DOCKER := docker
+DOCKER := DOCKER_BUILDKIT=1 docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
 
 # Determine image files by looking into build/docker/*/Dockerfile
