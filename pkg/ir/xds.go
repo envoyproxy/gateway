@@ -6,7 +6,7 @@ type Xds struct {
 	// Name of the Xds IR.
 	Name string
 	// HTTP listeners exposed by the gateway.
-	HTTP []HTTPListener
+	HTTP []*HTTPListener
 }
 
 // HTTPListener holds the listener configuration.
