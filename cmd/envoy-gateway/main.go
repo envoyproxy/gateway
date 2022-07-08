@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/envoyproxy/gateway/internal/cmd"
-
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
+
+	"github.com/envoyproxy/gateway/internal/cmd"
 )
 
 func main() {

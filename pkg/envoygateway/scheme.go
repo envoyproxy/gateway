@@ -1,11 +1,11 @@
 package envoygateway
 
 import (
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 var (

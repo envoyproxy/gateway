@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/envoyproxy/gateway/pkg/envoygateway"
-
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/envoyproxy/gateway/pkg/envoygateway"
+	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
 )
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies
@@ -20,7 +21,7 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *envoygateway.Config) (*Provider, error) {
+func New(cfg *config.Server) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:             envoygateway.GetScheme(),

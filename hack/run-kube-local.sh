@@ -2,7 +2,6 @@ set -euo pipefail
 
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
-CFG_PATH="${CFG_PATH:-./pkg/provider/kubernetes/config/envoy-gateway/config.yaml}"
 KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
 
 # Check that kubectl is installed.
@@ -18,4 +17,4 @@ if ! [ "$(stat ${KUBECONFIG})" ] ; then
 fi
 
 # Run the envoy gateway binary
-./bin/${GOOS}/${GOARCH}/envoy-gateway server --config-path "${CFG_PATH}" "$@"
+./bin/${GOOS}/${GOARCH}/envoy-gateway server "$@"

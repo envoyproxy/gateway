@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/envoyproxy/gateway/pkg/envoygateway"
-
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -15,6 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
 )
 
 type gatewayClassReconciler struct {
@@ -26,7 +26,7 @@ type gatewayClassReconciler struct {
 // newGatewayClassController creates the gatewayclass controller. The controller
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
-func newGatewayClassController(mgr manager.Manager, cfg *envoygateway.Config) error {
+func newGatewayClassController(mgr manager.Manager, cfg *config.Server) error {
 	r := &gatewayClassReconciler{
 		client:     mgr.GetClient(),
 		controller: gwapiv1a2.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
