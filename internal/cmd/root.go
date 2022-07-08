@@ -15,14 +15,19 @@
 package cmd
 
 import (
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 )
 
 // GetRootCommand returns the root cobra command to be executed
 // by main.
-func GetRootCommand() *cobra.Command {
-	return &cobra.Command{
+func GetRootCommand(log logr.Logger) *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "envoy-gateway",
 		Short: "Manages Envoy Proxy as a standalone or Kubernetes-based application gateway",
 	}
+
+	cmd.AddCommand(getServerCommand(log))
+
+	return cmd
 }

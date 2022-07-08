@@ -27,6 +27,10 @@ kube-install: manifests kustomize ## Install CRDs into the Kubernetes cluster sp
 kube-uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build pkg/provider/kubernetes/config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
+.PHONY: run-kube-local ## Run EG locally.
+run-kube-local: kube-install
+	hack/run-kube-local.sh
+
 ##@ Kubernetes Build Dependencies
 
 ## Location to install dependencies to

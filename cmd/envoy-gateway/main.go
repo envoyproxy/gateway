@@ -19,10 +19,20 @@ import (
 	"os"
 
 	"github.com/envoyproxy/gateway/internal/cmd"
+
+	"github.com/go-logr/zapr"
+	"go.uber.org/zap"
 )
 
 func main() {
-	if err := cmd.GetRootCommand().Execute(); err != nil {
+	zap, err := zap.NewDevelopment()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	log := zapr.NewLogger(zap)
+
+	if err := cmd.GetRootCommand(log).Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

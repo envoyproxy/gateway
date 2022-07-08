@@ -4,6 +4,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// KindEnvoyGateway is the name of the EnvoyGateway kind.
+	KindEnvoyGateway = "EnvoyGateway"
+	// GatewayControllerName is the name of the GatewayClass controller.
+	GatewayControllerName = "gateway.envoyproxy.io/gatewayclass-controller"
+)
+
 //+kubebuilder:object:root=true
 
 // EnvoyGateway is the Schema for the envoygateways API.
@@ -81,6 +88,18 @@ type KubernetesProvider struct {
 // FileProvider defines configuration for the File provider.
 type FileProvider struct {
 	// TODO: Add config as use cases are better understood.
+}
+
+// SetDefaults sets default configuration parameters.
+func (e *EnvoyGateway) SetDefaults() {
+	if e.Gateway == nil {
+		gw := &Gateway{ControllerName: GatewayControllerName}
+		e.Gateway = gw
+	}
+	if e.Provider == nil {
+		provider := &Provider{Type: ProviderTypeKubernetes}
+		e.Provider = provider
+	}
 }
 
 func init() {
