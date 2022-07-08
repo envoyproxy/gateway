@@ -5,5 +5,3 @@
 
 # Collapse generated code in code reviews.
 **/zz_generated.*.go linguist-generated=true
-api/config/v1alpha1/zz_generated.*.go linguist-generated=true
-api/config/v1beta1/zz_generated.*.go linguist-generated=true
