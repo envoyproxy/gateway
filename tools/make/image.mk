@@ -47,9 +47,9 @@ image.build: image.verify
 image.build.%: go.build.%
 	$(eval IMAGES := $(COMMAND))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
-	@echo "===========> Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)"
+	@$(call log, "Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)"
 	$(eval BUILD_SUFFIX := --pull -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
-	@echo "===========> Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) for $(ARCH)"; \
+	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) for $(ARCH)")
 	$(DOCKER) build --platform $(IMAGE_PLAT) $(BUILD_SUFFIX)
 
 .PHONY: image.push
@@ -62,9 +62,9 @@ image.push.%:
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
-	@echo "===========> Pushing image $(IMAGES) $(TAG) to $(REGISTRY)"
-	@echo "===========> Pushing docker image tag $(IMAGE):$(TAG) for $(ARCH)"; \
-	$(DOCKER) push $(IMAGE):$(TAG); \
+	@$(call log, "Pushing image $(IMAGES) $(TAG) to $(REGISTRY)")
+	@$(call log, "Pushing docker image tag $(IMAGE):$(TAG) for $(ARCH)")
+	$(DOCKER) push $(IMAGE):$(TAG)
 
 .PHONY: image.multiarch.verify
 image.multiarch.verify:

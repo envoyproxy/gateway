@@ -66,6 +66,14 @@ ifeq (${BINS},)
   $(error Could not determine BINS, set ROOT_DIR or run in source dir)
 endif
 
+# Log the running target
+LOG_TARGET = echo "===========> Running $@..."
+# Log debugging info
+define log
+echo "===========> $1"
+endef
+
+
 define USAGE_OPTIONS
 
 Options:

@@ -19,7 +19,7 @@ go.build.%:
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
 	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
-	@echo "===========> Building binary $(COMMAND) with commit $(REV) in version $(VERSION) for $(OS) $(ARCH)"
+	@$(call log, "Building binary $(COMMAND) with commit $(REV) in version $(VERSION) for $(OS) $(ARCH)")
 	@CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) $(ROOT_PACKAGE)/cmd/$(COMMAND)
 
 # Build the envoy-gateway binaries in the hosted platforms.
@@ -43,12 +43,12 @@ go.test.coverage: ## Run go unit tests in GitHub Actions
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files
-	@echo "===========> Cleaning all build output"
+	@$(call log, "Cleaning all build output")
 	@rm -rf $(OUTPUT_DIR)
 
 .PHONY: go.tidy
 go.tidy:
-	@echo "===========> Running go tidy" $(pwd)
+	@$(LOG_TARGET)
 	@go mod tidy -compat=$(GO_VERSION)
 	## ensure all changes have been committed
 	git diff --exit-code go.mod
