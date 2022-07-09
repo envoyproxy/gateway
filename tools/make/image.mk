@@ -80,7 +80,6 @@ $(EMULATE_TARGETS): image.multiarch.emulate.%:
 
 .PHONY: image.multiarch.setup
 image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
-	@docker run --rm --privileged tonistiigi/binfmt --install all # Install QEMU emulators
 	@docker buildx rm $(BUILDX_CONTEXT) || :
 	@docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
