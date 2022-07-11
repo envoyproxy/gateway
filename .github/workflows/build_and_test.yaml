@@ -38,6 +38,11 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION }}
+      - name: deps
+        run: |
+          ./hack/actions/install-kubernetes-toolchain.sh $GITHUB_WORKSPACE/bin
+          echo "$GITHUB_WORKSPACE/bin" >> $GITHUB_PATH
+          echo "/usr/local/kubebuilder/bin" >> $GITHUB_PATH
       - name: Build Binaries
         run: make build-multiarch
       - name: Test and report coverage
