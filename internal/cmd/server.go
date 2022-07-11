@@ -5,7 +5,6 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
-	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 
 	"github.com/envoyproxy/gateway/pkg/provider"
@@ -17,13 +16,13 @@ var (
 )
 
 // getServerCommand returns the server cobra command to be executed.
-func getServerCommand(log logr.Logger) *cobra.Command {
+func getServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "server",
 		Aliases: []string{"serve"},
 		Short:   "Serve Envoy Gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return server(log)
+			return server()
 		},
 	}
 	cmd.PersistentFlags().StringVarP(&cfgPath, "config-path", "c", "",
@@ -32,10 +31,14 @@ func getServerCommand(log logr.Logger) *cobra.Command {
 	return cmd
 }
 
-// server serves Envoy Gateway using log as the logger.
-func server(log logr.Logger) error {
-	cfg := new(config.Server)
-	cfg.Logger = log
+// server serves Envoy Gateway.
+func server() error {
+	cfg, err := config.NewDefaultServer()
+	if err != nil {
+		return err
+	}
+	log := cfg.Logger
+
 	// Read the config file.
 	if cfgPath == "" {
 		// Use default config parameters

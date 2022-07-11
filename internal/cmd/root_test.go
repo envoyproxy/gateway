@@ -17,13 +17,10 @@ package cmd
 import (
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 )
 
-var log logr.Logger
-
 func TestGetRootCommand(t *testing.T) {
-	got := GetRootCommand(log)
+	got := GetRootCommand()
 	assert.Equal(t, "envoy-gateway", got.Use)
 }
