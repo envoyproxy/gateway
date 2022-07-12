@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,22 +22,22 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *config.Server) (*Provider, error) {
+func New(cfg *rest.Config, svr *config.Server) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:             envoygateway.GetScheme(),
-		Logger:             cfg.Logger,
+		Logger:             svr.Logger,
 		LeaderElection:     false,
 		LeaderElectionID:   "5b9825d2.gateway.envoyproxy.io",
 		MetricsBindAddress: ":8080",
 	}
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), mgrOpts)
+	mgr, err := ctrl.NewManager(cfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayClassController(mgr, cfg); err != nil {
+	if err := newGatewayClassController(mgr, svr); err != nil {
 		return nil, fmt.Errorf("failed to create gatewayclass controller: %w", err)
 	}
 	// TODO: Add gateway, httproute, etc. controllers.

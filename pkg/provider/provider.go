@@ -10,11 +10,12 @@ import (
 	"github.com/envoyproxy/gateway/pkg/provider/kubernetes"
 )
 
-func Start(cfg *config.Server) error {
-	log := cfg.Logger
-	if cfg.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
+func Start(svr *config.Server) error {
+	log := svr.Logger
+	if svr.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		log.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
-		provider, err := kubernetes.New(cfg)
+		cfg := ctrl.GetConfigOrDie()
+		provider, err := kubernetes.New(cfg, svr)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
 		}
@@ -23,5 +24,5 @@ func Start(cfg *config.Server) error {
 		}
 	}
 	// Unsupported provider.
-	return fmt.Errorf("unsupported provider type %v", cfg.EnvoyGateway.Provider.Type)
+	return fmt.Errorf("unsupported provider type %v", svr.EnvoyGateway.Provider.Type)
 }
