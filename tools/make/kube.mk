@@ -9,9 +9,8 @@ generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopy
 	$(tools/controller-gen) object paths="./..."
 
 .PHONY: kube-test
-kube-test: manifests generate lint $(tools/setup-envtest) ## Run Kubernetes provider tests.
+kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
-
 
 ##@ Kubernetes Deployment
 
@@ -26,3 +25,7 @@ kube-install: manifests $(tools/kustomize) ## Install CRDs into the Kubernetes c
 .PHONY: kube-uninstall
 kube-uninstall: manifests $(tools/kustomize) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(tools/kustomize) build pkg/provider/kubernetes/config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: run-kube-local ## Run EG locally.
+run-kube-local: kube-install
+	hack/run-kube-local.sh

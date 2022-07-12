@@ -4,6 +4,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// KindEnvoyGateway is the name of the EnvoyGateway kind.
+	KindEnvoyGateway = "EnvoyGateway"
+	// GatewayControllerName is the name of the GatewayClass controller.
+	GatewayControllerName = "gateway.envoyproxy.io/gatewayclass-controller"
+)
+
 //+kubebuilder:object:root=true
 
 // EnvoyGateway is the Schema for the envoygateways API.

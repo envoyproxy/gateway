@@ -2,7 +2,7 @@ module local
 
 go 1.18
 
-require sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220629132207-365ae09c4c6c
+require sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220706173534-cd0058ad295c
 
 require (
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
