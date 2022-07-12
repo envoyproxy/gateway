@@ -15,18 +15,12 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// GetRootCommand returns the root cobra command to be executed
-// by main.
-func GetRootCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "envoy-gateway",
-		Short: "Manages Envoy Proxy as a standalone or Kubernetes-based application gateway",
-	}
-
-	cmd.AddCommand(getServerCommand())
-
-	return cmd
+func TestGetServerCommand(t *testing.T) {
+	got := getServerCommand()
+	assert.Equal(t, "server", got.Use)
 }

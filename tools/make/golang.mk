@@ -38,8 +38,8 @@ go.test.unit: ## Run go unit tests
 	@go test ./...
 
 .PHONY: go.test.coverage
-go.test.coverage: ## Run go unit tests in GitHub Actions
-	@go test ./... -race -coverprofile=coverage.xml -covermode=atomic
+go.test.coverage: envtest ## Run go unit tests in GitHub Actions
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files
