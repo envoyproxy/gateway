@@ -91,6 +91,18 @@ to the following guidelines for all code, APIs, and documentation:
   overwrite the body with the original commit message from the PR (cleaning it up if necessary)
   while preserving the PR author's final DCO sign-off.
 
+## Decision making
+
+This is a new and complex project, and we need to make a lot of decisions very quickly.
+To this end, we've settled on this process for making (possibly contentious) decisions:
+
+* For decisions that need a record, we create an issue.
+* In that issue, we discuss opinions, then a maintainer can call for a vote in a comment.
+* Maintainers can cast binding votes on that comment by reacting or replying in another comment.
+* Non-maintainer community members are welcome to cast non-binding votes by either of these methods.
+* Voting will be resolved by simple majority.
+* In the event of deadlocks, the question will be put to steering instead.
+
 ## DCO: Sign your work
 
 The sign-off is a simple line at the end of the explanation for the
