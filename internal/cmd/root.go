@@ -21,8 +21,12 @@ import (
 // GetRootCommand returns the root cobra command to be executed
 // by main.
 func GetRootCommand() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "envoy-gateway",
 		Short: "Manages Envoy Proxy as a standalone or Kubernetes-based application gateway",
 	}
+
+	cmd.AddCommand(getServerCommand())
+
+	return cmd
 }

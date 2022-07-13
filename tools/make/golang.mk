@@ -20,36 +20,34 @@ go.build.%:
 	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	@$(call log, "Building binary $(COMMAND) with commit $(REV) in version $(VERSION) for $(OS) $(ARCH)")
-	@CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) $(ROOT_PACKAGE)/cmd/$(COMMAND)
+	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) $(ROOT_PACKAGE)/cmd/$(COMMAND)
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
-go.build:
-	@$(MAKE) $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
+go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 
 # Build the envoy-gateway binaries in multi platforms
 # It will build the linux/amd64, linux/arm64, darwin/amd64, darwin/arm64 binaries out.
 .PHONY: go.build.multiarch
-go.build.multiarch:
-	@$(MAKE) $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
+go.build.multiarch: $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
 
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
-	@go test ./...
+	go test ./...
 
 .PHONY: go.test.coverage
-go.test.coverage: ## Run go unit tests in GitHub Actions
-	@go test ./... -race -coverprofile=coverage.xml -covermode=atomic
+go.test.coverage: $(tools/setup-envtest) ## Run go unit tests in GitHub Actions
+	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files
 	@$(call log, "Cleaning all build output")
-	@rm -rf $(OUTPUT_DIR)
+	rm -rf $(OUTPUT_DIR)
 
 .PHONY: go.tidy
 go.tidy:
 	@$(LOG_TARGET)
-	@go mod tidy -compat=$(GO_VERSION)
+	go mod tidy -compat=$(GO_VERSION)
 	## ensure all changes have been committed
 	git diff --exit-code go.mod
 	git diff --exit-code go.sum
@@ -58,20 +56,20 @@ go.tidy:
 
 .PHONY: build
 build: ## Build envoy-gateway for host platform. See Option PLATFORM and BINS.
-	@$(MAKE) go.build
+build: go.build
 
 .PHONY: build-multiarch
 build-multiarch: ## Build envoy-gateway for multiple platforms. See Option PLATFORMS and IMAGES.
-	@$(MAKE) go.build.multiarch
+build-multiarch: go.build.multiarch
 
 .PHONY: test
 test: ## Run all Go test of code sources.
-	@$(MAKE) go.test.unit
+test: go.test.unit
 
 .PHONY: format
 format: ## Update dependences with mod tidy.
-	@$(MAKE) go.tidy
+format: go.tidy
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
-	@$(MAKE) go.clean
+clean: go.clean
