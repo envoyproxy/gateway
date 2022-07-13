@@ -3,18 +3,22 @@
 # All make targets related to common variables are defined in this file.
 
 # ====================================================================================================
+# Configure Make itself:
+# ====================================================================================================
+
+# Turn off .INTERMEDIATE file removal by marking all files as
+# .SECONDARY.  .INTERMEDIATE file removal is a space-saving hack from
+# a time when drives were small; on modern computers with plenty of
+# storage, it causes nothing but headaches.
+#
+# https://news.ycombinator.com/item?id=16486331
+.SECONDARY:
+
+# ====================================================================================================
 # ROOT Options:
 # ====================================================================================================
 
 ROOT_PACKAGE=github.com/envoyproxy/gateway
-
-# ====================================================================================================
-# Includes:
-# ====================================================================================================
-include tools/make/golang.mk
-include tools/make/image.mk
-include tools/make/lint.mk
-include tools/make/kube.mk
 
 # Set Root Directory Path
 ifeq ($(origin ROOT_DIR),undefined)
@@ -65,6 +69,15 @@ endif
 ifeq (${BINS},)
   $(error Could not determine BINS, set ROOT_DIR or run in source dir)
 endif
+
+# ====================================================================================================
+# Includes:
+# ====================================================================================================
+include tools/make/tools.mk
+include tools/make/golang.mk
+include tools/make/image.mk
+include tools/make/lint.mk
+include tools/make/kube.mk
 
 # Log the running target
 LOG_TARGET = echo "===========> Running $@..."
