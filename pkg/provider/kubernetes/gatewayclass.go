@@ -1,3 +1,6 @@
+// Portions of this code are based on code from Contour, available at:
+// https://github.com/projectcontour/contour/blob/main/internal/controller/gatewayclass.go
+
 package kubernetes
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -14,26 +18,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
 )
 
 type gatewayClassReconciler struct {
-	client     client.Client
-	controller gwapiv1b1.GatewayController
-	log        logr.Logger
+	client        client.Client
+	controller    gwapiv1b1.GatewayController
+	statusUpdater status.Updater
+	log           logr.Logger
 }
 
 // newGatewayClassController creates the gatewayclass controller. The controller
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
 func newGatewayClassController(mgr manager.Manager, cfg *config.Server) error {
-	r := &gatewayClassReconciler{
-		client:     mgr.GetClient(),
-		controller: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		log:        cfg.Logger,
+	cli := mgr.GetClient()
+	uh := status.NewUpdateHandler(cfg.Logger, cli)
+	if err := mgr.Add(uh); err != nil {
+		return fmt.Errorf("failed to add status update handler %v", err)
 	}
 
-	c, err := controller.New("gatewayclass-controller", mgr, controller.Options{Reconciler: r})
+	r := &gatewayClassReconciler{
+		client:        cli,
+		controller:    gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		statusUpdater: uh.Writer(),
+		log:           cfg.Logger,
+	}
+
+	c, err := controller.New("gatewayclass", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -69,7 +82,7 @@ func (r *gatewayClassReconciler) hasMatchingController(obj client.Object) bool {
 		return true
 	}
 
-	log.Info("bypassing reconciliation due to controller name", "controllerName", gc.Spec.ControllerName)
+	log.Info("bypassing reconciliation due to controller name", "controller", gc.Spec.ControllerName)
 	return false
 }
 
@@ -77,10 +90,99 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	r.log.WithName(request.Name).Info("reconciling gatewayclass")
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
-	if err := r.client.List(context.Background(), &gatewayClasses); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %w", err)
+	if err := r.client.List(ctx, &gatewayClasses); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
 	}
+
+	var cc controlledClasses
+
+	for i := range gatewayClasses.Items {
+		if gatewayClasses.Items[i].Spec.ControllerName == r.controller {
+			cc.addMatch(&gatewayClasses.Items[i])
+		}
+	}
+
+	// no controlled gatewayclasses, trigger a delete
+	if len(cc.matchedClasses) == 0 {
+		r.log.Info("failed to find gatewayclass", "name", request.Name)
+		// TODO: Delete gatewayclass from the IR.
+		// xref: https://github.com/envoyproxy/gateway/issues/38
+		return reconcile.Result{}, nil
+	}
+
+	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
+		if r.statusUpdater != nil {
+			r.statusUpdater.Send(status.Update{
+				NamespacedName: types.NamespacedName{Name: gc.Name},
+				Resource:       &gwapiv1b1.GatewayClass{},
+				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					gc, ok := obj.(*gwapiv1b1.GatewayClass)
+					if !ok {
+						panic(fmt.Sprintf("unsupported object type %T", obj))
+					}
+
+					return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
+				}),
+			})
+		} else {
+			// this branch makes testing easier by not going through the status.Updater.
+			copy := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
+
+			if err := r.client.Status().Update(ctx, copy); err != nil {
+				return fmt.Errorf("error updating status of gatewayclass %s: %w", copy.Name, err)
+			}
+		}
+		return nil
+	}
+
+	for _, gc := range cc.notAcceptedClasses() {
+		if err := updater(gc, false); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	if err := updater(cc.acceptedClass(), true); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// TODO: Add gatewayclass to the IR.
+	// xref: https://github.com/envoyproxy/gateway/issues/38
 
 	r.log.WithName(request.Name).Info("reconciled gatewayclass")
 	return reconcile.Result{}, nil
+}
+
+type controlledClasses struct {
+	matchedClasses []*gwapiv1b1.GatewayClass
+	oldestClass    *gwapiv1b1.GatewayClass
+}
+
+func (cc *controlledClasses) addMatch(gc *gwapiv1b1.GatewayClass) {
+	cc.matchedClasses = append(cc.matchedClasses, gc)
+
+	switch {
+	case cc.oldestClass == nil:
+		cc.oldestClass = gc
+	case gc.CreationTimestamp.Time.Before(cc.oldestClass.CreationTimestamp.Time):
+		cc.oldestClass = gc
+	case gc.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) && gc.Name < cc.oldestClass.Name:
+		// tie-breaker: first one in alphabetical order is considered oldest/accepted
+		cc.oldestClass = gc
+	}
+}
+
+func (cc *controlledClasses) acceptedClass() *gwapiv1b1.GatewayClass {
+	return cc.oldestClass
+}
+
+func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1b1.GatewayClass {
+	var res []*gwapiv1b1.GatewayClass
+	for _, gc := range cc.matchedClasses {
+		// skip the oldest one since it will be accepted.
+		if gc.Name != cc.oldestClass.Name {
+			res = append(res, gc)
+		}
+	}
+
+	return res
 }
