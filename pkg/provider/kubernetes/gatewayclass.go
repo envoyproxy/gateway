@@ -12,14 +12,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
 )
 
 type gatewayClassReconciler struct {
 	client     client.Client
-	controller gwapiv1a2.GatewayController
+	controller gwapiv1b1.GatewayController
 	log        logr.Logger
 }
 
@@ -29,7 +29,7 @@ type gatewayClassReconciler struct {
 func newGatewayClassController(mgr manager.Manager, cfg *config.Server) error {
 	r := &gatewayClassReconciler{
 		client:     mgr.GetClient(),
-		controller: gwapiv1a2.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		controller: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		log:        cfg.Logger,
 	}
 
@@ -41,7 +41,7 @@ func newGatewayClassController(mgr manager.Manager, cfg *config.Server) error {
 
 	// Only enqueue GatewayClass objects that match this Envoy Gateway's controller name.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.GatewayClass{}},
+		&source.Kind{Type: &gwapiv1b1.GatewayClass{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.hasMatchingController),
 	); err != nil {
@@ -58,7 +58,7 @@ func newGatewayClassController(mgr manager.Manager, cfg *config.Server) error {
 func (r *gatewayClassReconciler) hasMatchingController(obj client.Object) bool {
 	log := r.log.WithName(obj.GetName())
 
-	gc, ok := obj.(*gwapiv1a2.GatewayClass)
+	gc, ok := obj.(*gwapiv1b1.GatewayClass)
 	if !ok {
 		log.Info("bypassing reconciliation due to unexpected object type", "type", obj)
 		return false
@@ -76,7 +76,7 @@ func (r *gatewayClassReconciler) hasMatchingController(obj client.Object) bool {
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.WithName(request.Name).Info("reconciling gatewayclass")
 
-	var gatewayClasses gwapiv1a2.GatewayClassList
+	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(context.Background(), &gatewayClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %w", err)
 	}

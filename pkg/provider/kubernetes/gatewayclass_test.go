@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/pkg/log"
@@ -34,24 +34,24 @@ func TestHasMatchingController(t *testing.T) {
 	}{
 		{
 			name: "configured controllerName",
-			obj: &gwapiv1a2.GatewayClass{
+			obj: &gwapiv1b1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-gc",
 				},
-				Spec: gwapiv1a2.GatewayClassSpec{
-					ControllerName: gwapiv1a2.GatewayController(v1alpha1.GatewayControllerName),
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
 				},
 			},
 			expect: true,
 		},
 		{
 			name: "not configured controllerName",
-			obj: &gwapiv1a2.GatewayClass{
+			obj: &gwapiv1b1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-gc",
 				},
-				Spec: gwapiv1a2.GatewayClassSpec{
-					ControllerName: gwapiv1a2.GatewayController("not.configured/controller"),
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gwapiv1b1.GatewayController("not.configured/controller"),
 				},
 			},
 			expect: false,

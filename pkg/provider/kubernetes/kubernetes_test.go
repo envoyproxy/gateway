@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
@@ -73,12 +73,12 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 }
 
 func testGatewayClassReconciler(ctx context.Context, t *testing.T, cli client.Client) {
-	gc := &gwapiv1a2.GatewayClass{
+	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gc",
 		},
-		Spec: gwapiv1a2.GatewayClassSpec{
-			ControllerName: gwapiv1a2.GatewayController(v1alpha1.GatewayControllerName),
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
 		},
 	}
 	require.NoError(t, cli.Create(ctx, gc))
