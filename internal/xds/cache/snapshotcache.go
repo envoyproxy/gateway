@@ -32,6 +32,7 @@ var Hash = envoy_cache_v3.IDHash{}
 type SnapshotCacheWithCallbacks interface {
 	envoy_cache_v3.SnapshotCache
 	envoy_server_v3.Callbacks
+	GenerateNewSnapshot(types.XdsResources) error
 }
 
 type snapshotcache struct {
@@ -46,7 +47,7 @@ type snapshotcache struct {
 	snapshotVersion int64
 }
 
-func (s *snapshotcache) Generate(resources types.XdsResources) error {
+func (s *snapshotcache) GenerateNewSnapshot(resources types.XdsResources) error {
 
 	version := s.newSnapshotVersion()
 
@@ -132,6 +133,12 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 
 	s.streamIDNodeID[streamID] = nodeID
 
+	// If no snapshot has been generated yet, we can't do anything, so don't mess with this request.
+	// go-control-plane will respond with an empty response, then send an update when a snapshot is generated.
+	if s.lastSnapshot == nil {
+		return nil
+	}
+
 	_, err := s.GetSnapshot(nodeID)
 	if err != nil {
 		s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
@@ -188,6 +195,12 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 	nodeID := Hash.ID(req.Node)
 
 	s.streamIDNodeID[streamID] = nodeID
+
+	// If no snapshot has been generated yet, we can't do anything, so don't mess with this request.
+	// go-control-plane will respond with an empty response, then send an update when a snapshot is generated.
+	if s.lastSnapshot == nil {
+		return nil
+	}
 
 	_, err := s.GetSnapshot(nodeID)
 	if err != nil {
