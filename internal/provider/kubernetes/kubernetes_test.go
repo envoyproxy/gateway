@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -55,6 +56,7 @@ func TestProvider(t *testing.T) {
 	testcases := map[string]func(context.Context, *testing.T, client.Client){
 		"gatewayclass controller name": testGatewayClassController,
 		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
+		"gateway of gatewayclass":      testGatewayOfClass,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -123,4 +125,41 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, cli clien
 		}
 	}
 	assert.Equal(t, metav1.ConditionTrue, accepted.Status)
+}
+
+func testGatewayOfClass(ctx context.Context, t *testing.T, cli client.Client) {
+	gc := &gwapiv1b1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-gc-of-class",
+		},
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-gw-of-class",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1b1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
 }
