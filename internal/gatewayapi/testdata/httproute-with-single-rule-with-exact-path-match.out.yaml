@@ -1,0 +1,69 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: http
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+          attachedRoutes: 1
+          conditions:
+            - type: Ready
+              status: "True"
+              reason: Ready
+              message: Listener is ready
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+          - path:
+              type: Exact
+              value: "/exact"
+          backendRefs:
+            - name: service-1
+              port: 8080
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          # controllerName: envoyproxy.io/gateway-controller
+          conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Route is accepted
+ir:
+  http:
+    - name: envoy-gateway-gateway-1-http
+      address: 0.0.0.0
+      port: 80
+      routes:
+        - name: default-httproute-1-rule-0-match-0-*
+          pathMatch:
+            exact: "/exact"
+          destinations:
+            - host: 7.7.7.7
+              port: 8080
+              weight: 1
