@@ -1,5 +1,25 @@
 package ir
 
+import (
+	"errors"
+	"net"
+)
+
+var (
+	ErrXdsNameEmpty                = errors.New("Name must be specified.")
+	ErrHTTPListenerNameEmpty       = errors.New("Name must be specified.")
+	ErrHTTPListenerAddressInvalid  = errors.New("Address must be a valid IP address.")
+	ErrHTTPListenerPortInvalid     = errors.New("Port specified is invalid.")
+	ErrHTTPListenerHostnamesEmpty  = errors.New("Hostnames must be specified with atleast a single hostname entry.")
+	ErrTLSServerCertEmpty          = errors.New("ServerCertificate must be specified.")
+	ErrTLSPrivateKey               = errors.New("PrivateKey must be specified.")
+	ErrHTTPRouteNameEmpty          = errors.New("Name must be specified.")
+	ErrHTTPRouteMatchEmpty         = errors.New("Either PathMatch, HeaderMatches or QueryParamMatches fields must be specified.")
+	ErrRouteDestinationHostInvalid = errors.New("Address must be a valid IP address.")
+	ErrRouteDestinationPortInvalid = errors.New("Port specified is invalid.")
+	ErrStringMatchConditionInvalid = errors.New("Only one of the Exact, Prefix or SafeRegex fields must be specified.")
+)
+
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
 type Xds struct {
@@ -7,6 +27,19 @@ type Xds struct {
 	Name string
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
+}
+
+// Validate the fields within the Xds structure
+func (x *Xds) Validate() error {
+	if x.Name == "" {
+		return ErrXdsNameEmpty
+	}
+	for _, http := range x.HTTP {
+		if err := http.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // HTTPListener holds the listener configuration.
@@ -34,7 +67,51 @@ func (x *Xds) GetListener(name string) *HTTPListener {
 			return listener
 		}
 	}
+}
 
+// Validate the fields within the HTTPListener structure
+func (h *HTTPListener) Validate() error {
+	if h.Name == "" {
+		return ErrHTTPListenerNameEmpty
+	}
+	if ip := net.ParseIP(h.Address); ip == nil {
+		return ErrHTTPListenerAddressInvalid
+	}
+	if h.Port == 0 {
+		return ErrHTTPListenerPortInvalid
+	}
+	if len(h.Hostnames) == 0 {
+		return ErrHTTPListenerHostnamesEmpty
+	}
+	if h.TLS != nil {
+		if err := h.TLS.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, route := range h.Routes {
+		if err := route.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TLSListenerConfig holds the configuration for downstream TLS context.
+type TLSListenerConfig struct {
+	// ServerCertificate of the server.
+	ServerCertificate []byte
+	// PrivateKey for the server.
+	PrivateKey []byte
+}
+
+// Validate the fields within the TLSListenerConfig structure
+func (t *TLSListenerConfig) Validate() error {
+	if len(t.ServerCertificate) == 0 {
+		return ErrTLSServerCertEmpty
+	}
+	if len(t.PrivateKey) == 0 {
+		return ErrTLSPrivateKey
+	}
 	return nil
 }
 
@@ -52,6 +129,37 @@ type HTTPRoute struct {
 	Destinations []*RouteDestination
 }
 
+// Validate the fields within the HTTPRoute structure
+func (h *HTTPRoute) Validate() error {
+	if h.Name == "" {
+		return ErrHTTPRouteNameEmpty
+	}
+	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
+		return ErrHTTPRouteMatchEmpty
+	}
+	if h.PathMatch != nil {
+		if err := h.PathMatch.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, hMatch := range h.HeaderMatches {
+		if err := hMatch.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, qMatch := range h.QueryParamMatches {
+		if err := qMatch.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, dest := range h.Destinations {
+		if err := dest.Validate(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // RouteDestination holds the destination details associated with the route
 type RouteDestination struct {
 	// Host refers to the FQDN or IP address of the backend service.
@@ -62,12 +170,17 @@ type RouteDestination struct {
 	Weight uint32
 }
 
-// TLSListenerConfig holds the configuration for downstream TLS context.
-type TLSListenerConfig struct {
-	// ServerCertificate of the server.
-	ServerCertificate []byte
-	// PrivateKey for the server.
-	PrivateKey []byte
+// Validate the fields within the RouteDestination structure
+func (r *RouteDestination) Validate() error {
+	// Only support IP hosts for now
+	if ip := net.ParseIP(r.Host); ip == nil {
+		return ErrRouteDestinationHostInvalid
+	}
+	if r.Port == 0 {
+		return ErrRouteDestinationPortInvalid
+	}
+
+	return nil
 }
 
 // StringMatch holds the various match conditions.
@@ -81,4 +194,24 @@ type StringMatch struct {
 	Prefix *string
 	// SafeRegex match condition.
 	SafeRegex *string
+}
+
+// Validate the fields within the StringMatch structure
+func (s *StringMatch) Validate() error {
+	matchCount := 0
+	if s.Exact != nil {
+		matchCount++
+	}
+	if s.Prefix != nil {
+		matchCount++
+	}
+	if s.SafeRegex != nil {
+		matchCount++
+	}
+
+	if matchCount != 1 {
+		return ErrStringMatchConditionInvalid
+	}
+
+	return nil
 }
