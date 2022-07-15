@@ -338,14 +338,16 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 			var routeRoutes []*ir.HTTPRoute
 
 			// compute matches, filters, backends
-			for _, rule := range httpRoute.Spec.Rules {
+			for ruleIdx, rule := range httpRoute.Spec.Rules {
 				var ruleRoutes []*ir.HTTPRoute
 
 				// A rule is matched if any one of its matches
 				// is satisfied (i.e. a logical "OR"), so generate
 				// a unique IR HTTPRoute per match.
-				for _, match := range rule.Matches {
-					irRoute := &ir.HTTPRoute{}
+				for matchIdx, match := range rule.Matches {
+					irRoute := &ir.HTTPRoute{
+						Name: routeName(httpRoute, ruleIdx, matchIdx),
+					}
 
 					if match.Path != nil {
 						switch PathMatchTypeDerefOr(match.Path.Type, v1beta1.PathMatchPathPrefix) {
@@ -490,6 +492,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 					for _, routeRoute := range routeRoutes {
 						perHostRoutes = append(perHostRoutes, &ir.HTTPRoute{
+							Name:              fmt.Sprintf("%s-%s", routeRoute.Name, host),
 							PathMatch:         routeRoute.PathMatch,
 							HeaderMatches:     append(headerMatches, routeRoute.HeaderMatches...),
 							QueryParamMatches: routeRoute.QueryParamMatches,
@@ -532,4 +535,8 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
+}
+
+func routeName(httpRoute *HTTPRouteContext, ruleIdx, matchIdx int) string {
+	return fmt.Sprintf("%s-%s-rule-%d-match-%d", httpRoute.Namespace, httpRoute.Name, ruleIdx, matchIdx)
 }

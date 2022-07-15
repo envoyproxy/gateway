@@ -98,7 +98,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
             prefix: "/"
           destinations:
@@ -208,7 +208,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
             prefix: "/"
           destinations:
@@ -325,7 +325,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: envoy-gateway-httproute-1-rule-0-match-0-*
           pathMatch:
             prefix: "/"
           destinations:
@@ -559,7 +559,7 @@ ir:
       hostnames:
         - foo.com
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-foo.com
           pathMatch:
             prefix: "/"
           destinations:
@@ -572,7 +572,7 @@ ir:
       hostnames:
         - bar.com
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-bar.com
           pathMatch:
             prefix: "/"
           destinations:
@@ -715,7 +715,7 @@ ir:
       hostnames:
         - bar.com
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-bar.com
           pathMatch:
             prefix: "/"
           destinations:
@@ -830,7 +830,7 @@ ir:
       hostnames:
         - "*.envoyproxy.io"
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
           pathMatch:
             prefix: "/"
           headerMatches:
@@ -950,7 +950,7 @@ ir:
       hostnames:
         - "*.envoyproxy.io"
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
           pathMatch:
             prefix: "/"
           headerMatches:
@@ -960,7 +960,7 @@ ir:
             - host: 7.7.7.7
               port: 8080
               weight: 1
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-whales.envoyproxy.io
           pathMatch:
             prefix: "/"
           headerMatches:
@@ -1946,7 +1946,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
             prefix: "/pathprefix"
           headerMatches:
@@ -2060,7 +2060,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
             exact: "/exact"
           destinations:
@@ -2175,7 +2175,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
             prefix: "/"
           destinations:
@@ -2302,7 +2302,7 @@ ir:
       address: 0.0.0.0
       port: 80
       routes:
-        - name: ""
+        - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
             prefix: "/"
           destinations:
