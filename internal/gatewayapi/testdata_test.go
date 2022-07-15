@@ -250,6 +250,16 @@ httpRoutes:
         backendRefs:
           - name: service-1
             port: 8080
+services:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    namespace: envoy-gateway
+    name: service-1
+  spec:
+    clusterIP: 7.7.7.7
+    ports:
+    - port: 8080
 `
 
 const GatewayAllowsSameNamespaceWithAllowedHTTPRouteOut = `

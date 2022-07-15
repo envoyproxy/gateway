@@ -16,13 +16,33 @@ const (
 	KindService   = "Service"
 )
 
-// Cache is an interface that the Translator requires
-// for getting Gateway API and related resources.
-type Cache interface {
-	ListGateways() []*v1beta1.Gateway
-	ListHTTPRoutes() []*v1beta1.HTTPRoute
-	GetNamespace(name string) *v1.Namespace
-	GetService(namespace, name string) *v1.Service
+// Resources holds the Gateway API and related
+// resources that the translators needs as inputs.
+type Resources struct {
+	Gateways   []*v1beta1.Gateway
+	HTTPRoutes []*v1beta1.HTTPRoute
+	Namespaces []*v1.Namespace
+	Services   []*v1.Service
+}
+
+func (r *Resources) GetNamespace(name string) *v1.Namespace {
+	for _, ns := range r.Namespaces {
+		if ns.Name == name {
+			return ns
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetService(namespace, name string) *v1.Service {
+	for _, svc := range r.Services {
+		if svc.Namespace == namespace && svc.Name == name {
+			return svc
+		}
+	}
+
+	return nil
 }
 
 // Translator translates Gateway API resources to the IR,
@@ -52,17 +72,17 @@ func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteConte
 	return translateResult
 }
 
-func (t *Translator) Translate(cache Cache) *TranslateResult {
+func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	xdsIR := &ir.Xds{}
 
 	// Get Gateways belonging to our GatewayClass.
-	gateways := t.GetRelevantGateways(cache.ListGateways())
+	gateways := t.GetRelevantGateways(resources.Gateways)
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR)
 
 	// Process all relevant HTTPRoutes.
-	httpRoutes := t.ProcessHTTPRoutes(cache.ListHTTPRoutes(), gateways, cache, xdsIR)
+	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
 
 	return newTranslateResult(gateways, httpRoutes, xdsIR)
 }
@@ -257,7 +277,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds)
 	}
 }
 
-func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, cache Cache, xdsIR *ir.Xds) []*HTTPRouteContext {
+func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR *ir.Xds) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
 	for _, h := range httpRoutes {
@@ -285,7 +305,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 			var allowedListeners []*ListenerContext
 			for _, listener := range selectedListeners {
-				if listener.AllowsKind(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindHTTPRoute}) && listener.AllowsNamespace(cache.GetNamespace(httpRoute.Namespace)) {
+				if listener.AllowsKind(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindHTTPRoute}) && listener.AllowsNamespace(resources.GetNamespace(httpRoute.Namespace)) {
 					allowedListeners = append(allowedListeners, listener)
 				}
 			}
@@ -395,7 +415,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						continue
 					}
 
-					service := cache.GetService(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
+					service := resources.GetService(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
 					if service == nil {
 						parentRef.SetCondition(
 							v1beta1.RouteConditionResolvedRefs,
