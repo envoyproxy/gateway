@@ -52,7 +52,8 @@ func TestProvider(t *testing.T) {
 	}()
 
 	testcases := map[string]func(context.Context, *testing.T, client.Client){
-		"gateway controller name": testGatewayClassReconciler,
+		"gatewayclass controller name": testGatewayClassController,
+		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -74,13 +75,13 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
-func testGatewayClassReconciler(ctx context.Context, t *testing.T, cli client.Client) {
+func testGatewayClassController(ctx context.Context, t *testing.T, cli client.Client) {
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gc",
+			Name: "test-gc-controllername",
 		},
 		Spec: gwapiv1b1.GatewayClassSpec{
-			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+			ControllerName: v1alpha1.GatewayControllerName,
 		},
 	}
 	require.NoError(t, cli.Create(ctx, gc))
@@ -93,4 +94,32 @@ func testGatewayClassReconciler(ctx context.Context, t *testing.T, cli client.Cl
 		return cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc) == nil
 	}, defaultWait, defaultTick)
 	assert.Equal(t, gc.ObjectMeta.Generation, int64(1))
+}
+
+func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, cli client.Client) {
+	gc := &gwapiv1b1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-gc-accepted-status",
+		},
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: v1alpha1.GatewayControllerName,
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc) == nil
+	}, defaultWait, defaultTick)
+	var accepted metav1.Condition
+	for i := range gc.Status.Conditions {
+		cond := gc.Status.Conditions[i]
+		if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) {
+			accepted = cond
+		}
+	}
+	assert.Equal(t, metav1.ConditionTrue, accepted.Status)
 }
