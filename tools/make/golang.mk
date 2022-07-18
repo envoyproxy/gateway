@@ -48,7 +48,7 @@ go.clean: ## Clean the building output files
 go.tidy:
 	@$(LOG_TARGET)
 	@go mod tidy -compat=$(GO_VERSION)
-	@if git status -s | grep -E 'go(.mod)|go(.sum)' ; then \
+	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
 		git diff --exit-code go.sum; \
    		echo '\nError: ensure all changes have been committed!'; \
