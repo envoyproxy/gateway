@@ -13,7 +13,7 @@ generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopy
 
 .PHONY: kube-test
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 
