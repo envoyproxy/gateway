@@ -1,8 +1,11 @@
 package gatewayapi
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,123 +20,26 @@ func mustUnmarshal(t *testing.T, val string, out interface{}) {
 }
 
 func TestTranslate(t *testing.T) {
-	tests := map[string]struct {
-		resources string
-		want      string
-	}{
-		// Route-Gateway attachment
-		"Gateway with one HTTP Listener, HTTPRoute attaching to the Gateway": {
-			resources: BasicHTTPRouteAttachingToGatewayIn,
-			want:      BasicHTTPRouteAttachingToGatewayOut,
-		},
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
+	require.NoError(t, err)
 
-		"Gateway with one HTTP Listener, HTTPRoute attaching to the Listener": {
-			resources: BasicHTTPRouteAttachingToListenerIn,
-			want:      BasicHTTPRouteAttachingToListenerOut,
-		},
+	for _, inputFile := range inputFiles {
+		t.Run(testName(inputFile), func(t *testing.T) {
+			input, err := os.ReadFile(inputFile)
+			require.NoError(t, err)
 
-		"Gateway that allows HTTPRoutes from the same namespace, HTTPRoute in the same namespace": {
-			resources: GatewayAllowsSameNamespaceWithAllowedHTTPRouteIn,
-			want:      GatewayAllowsSameNamespaceWithAllowedHTTPRouteOut,
-		},
+			resources := &Resources{}
+			mustUnmarshal(t, string(input), resources)
 
-		"Gateway that allows HTTPRoutes from the same namespace, HTTPRoute not in the same namespace": {
-			resources: GatewayAllowsSameNamespaceWithDisallowedHTTPRouteIn,
-			want:      GatewayAllowsSameNamespaceWithDisallowedHTTPRouteOut,
-		},
+			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
+			require.NoError(t, err)
 
-		"Gateway with two HTTP Listeners, HTTPRoute attaching to the Gateway": {
-			resources: HTTPRouteAttachingToGatewayWithTwoListenersIn,
-			want:      HTTPRouteAttachingToGatewayWithTwoListenersOut,
-		},
+			want := &TranslateResult{}
+			mustUnmarshal(t, string(output), want)
 
-		"Gateway with two HTTP Listeners, HTTPRoute attaching to one Listener": {
-			resources: HTTPRouteAttachingToListenerOnGatewayWithTwoListenersIn,
-			want:      HTTPRouteAttachingToListenerOnGatewayWithTwoListenersOut,
-		},
-
-		"Gateway with one HTTP Listener with wildcard hostname, HTTPRoute attaching to the Gateway with matching specific hostname": {
-			resources: HTTPRouteWithSpecificHostnameAttachingToGatewayWithWildcardHostnameIn,
-			want:      HTTPRouteWithSpecificHostnameAttachingToGatewayWithWildcardHostnameOut,
-		},
-
-		"Gateway with one HTTP Listener with wildcard hostname, HTTPRoute attaching to the Gateway with two matching specific hostnames": {
-			resources: HTTPRouteWithTwoSpecificHostnamesAttachingToGatewayWithWildcardHostnameIn,
-			want:      HTTPRouteWithTwoSpecificHostnamesAttachingToGatewayWithWildcardHostnameOut,
-		},
-
-		"Gateway with one HTTP Listener with wildcard hostname, HTTPRoute attaching to the Gateway with non-matching specific hostname": {
-			resources: HTTPRouteWithNonMatchingSpecificHostnameAttachingToGatewayWithWildcardHostnameIn,
-			want:      HTTPRouteWithNonMatchingSpecificHostnameAttachingToGatewayWithWildcardHostnameOut,
-		},
-
-		// Gateway/Listener error cases
-		"Gateway with one Listener with protocol other than HTTP": {
-			resources: GatewayWithListenerWithNonHTTPProtocolIn,
-			want:      GatewayWithListenerWithNonHTTPProtocolOut,
-		},
-
-		"Gateway with one Listener with missing allowed namespaces selector": {
-			resources: GatewayWithListenerWithMissingAllowedNamespacesSelectorIn,
-			want:      GatewayWithListenerWithMissingAllowedNamespacesSelectorOut,
-		},
-
-		"Gateway with one Listener with invalid allowed namespaces selector": {
-			resources: GatewayWithListenerWithInvalidAllowedNamespacesSelectorIn,
-			want:      GatewayWithListenerWithInvalidAllowedNamespacesSelectorOut,
-		},
-
-		"Gateway with one Listener with invalid allowed routes group": {
-			resources: GatewayWithListenerWithInvalidAllowedRoutesGroupIn,
-			want:      GatewayWithListenerWithInvalidAllowedRoutesGroupOut,
-		},
-
-		"Gateway with one Listener with invalid allowed routes kind": {
-			resources: GatewayWithListenerWithInvalidAllowedRoutesKindIn,
-			want:      GatewayWithListenerWithInvalidAllowedRoutesKindOut,
-		},
-
-		"Gateway with two Listeners with the same port and hostname": {
-			resources: GatewayWithTwoListenersWithSamePortAndHostnameIn,
-			want:      GatewayWithTwoListenersWithSamePortAndHostnameOut,
-		},
-
-		"Gateway with two Listeners with the same port and incompatible protocols": {
-			resources: GatewayWithTwoListenersWithSamePortAndIncompatibleProtocolsIn,
-			want:      GatewayWithTwoListenersWithSamePortAndIncompatibleProtocolsOut,
-		},
-
-		// Route matches
-		"HTTPRoute with single rule with path prefix and exact header matches": {
-			resources: HTTPRouteWithSingleRuleWithPathPrefixAndExactHeaderMatchesIn,
-			want:      HTTPRouteWithSingleRuleWithPathPrefixAndExactHeaderMatchesOut,
-		},
-
-		"HTTPRoute with single rule with exact path match": {
-			resources: HTTPRouteWithSingleRuleWithExactPathMatchIn,
-			want:      HTTPRouteWithSingleRuleWithExactPathMatchOut,
-		},
-
-		// Route backends
-		"HTTPRoute rule with multiple backends, no weights explicitly specified": {
-			resources: HTTPRouteRuleWithMultipleBackendsAndNoWeightsIn,
-			want:      HTTPRouteRuleWithMultipleBackendsAndNoWeightsOut,
-		},
-
-		"HTTPRoute rule with multiple backends, weights explicitly specified": {
-			resources: HTTPRouteRuleWithMultipleBackendsAndWeightsIn,
-			want:      HTTPRouteRuleWithMultipleBackendsAndWeightsOut,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
 			translator := &Translator{
 				gatewayClassName: "envoy-gateway-class",
 			}
-
-			resources := &Resources{}
-			mustUnmarshal(t, tc.resources, resources)
 
 			// Add common test fixtures
 			for i := 1; i <= 3; i++ {
@@ -164,9 +70,6 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			want := &TranslateResult{}
-			mustUnmarshal(t, tc.want, want)
-
 			got := translator.Translate(resources)
 
 			sort.Slice(got.IR.HTTP, func(i, j int) bool { return got.IR.HTTP[i].Name < got.IR.HTTP[j].Name })
@@ -174,5 +77,9 @@ func TestTranslate(t *testing.T) {
 			assert.EqualValues(t, want, got)
 		})
 	}
+}
 
+func testName(inputFile string) string {
+	_, fileName := filepath.Split(inputFile)
+	return strings.TrimSuffix(fileName, ".in.yaml")
 }
