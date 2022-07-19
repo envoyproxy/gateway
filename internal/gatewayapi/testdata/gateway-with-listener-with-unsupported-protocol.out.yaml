@@ -7,21 +7,21 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: http
-          protocol: HTTPS
+        - name: unsupported
+          protocol: TCP
           port: 80
           allowedRoutes:
             namespaces:
               from: All
     status:
       listeners:
-        - name: http
+        - name: unsupported
           attachedRoutes: 0
           conditions:
             - type: Detached
               status: "True"
               reason: UnsupportedProtocol
-              message: Protocol must be HTTP
+              message: Protocol TCP is unsupported, must be HTTP or HTTPS.
             - type: Ready
               status: "False"
               reason: Invalid

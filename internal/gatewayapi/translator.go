@@ -14,6 +14,7 @@ const (
 	KindGateway   = "Gateway"
 	KindHTTPRoute = "HTTPRoute"
 	KindService   = "Service"
+	KindSecret    = "Secret"
 )
 
 // Resources holds the Gateway API and related
@@ -23,6 +24,7 @@ type Resources struct {
 	HTTPRoutes []*v1beta1.HTTPRoute
 	Namespaces []*v1.Namespace
 	Services   []*v1.Service
+	Secrets    []*v1.Secret
 }
 
 func (r *Resources) GetNamespace(name string) *v1.Namespace {
@@ -39,6 +41,16 @@ func (r *Resources) GetService(namespace, name string) *v1.Service {
 	for _, svc := range r.Services {
 		if svc.Namespace == namespace && svc.Name == name {
 			return svc
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
+	for _, secret := range r.Secrets {
+		if secret.Namespace == namespace && secret.Name == name {
+			return secret
 		}
 	}
 
@@ -79,7 +91,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	gateways := t.GetRelevantGateways(resources.Gateways)
 
 	// Process all Listeners for all relevant Gateways.
-	t.ProcessListeners(gateways, xdsIR)
+	t.ProcessListeners(gateways, xdsIR, resources)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
@@ -113,7 +125,7 @@ type portListeners struct {
 	hostnames map[string]int
 }
 
-func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds) {
+func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds, resources *Resources) {
 	portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
 
 	// Iterate through all listeners and collect info about protocols
@@ -183,7 +195,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds)
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
-			case v1beta1.HTTPProtocolType:
+			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
 				if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 					listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindHTTPRoute})
 				} else {
@@ -212,7 +224,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds)
 					v1beta1.ListenerConditionDetached,
 					metav1.ConditionTrue,
 					v1beta1.ListenerReasonUnsupportedProtocol,
-					"Protocol must be HTTP",
+					fmt.Sprintf("Protocol %s is unsupported, must be %s or %s.", listener.Protocol, v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType),
 				)
 			}
 
@@ -238,6 +250,115 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds)
 
 					listener.namespaceSelector = selector
 				}
+			}
+
+			// Process TLS configuration
+			switch listener.Protocol {
+			case v1beta1.HTTPProtocolType:
+				if listener.TLS != nil {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						fmt.Sprintf("Listener must not have TLS set when protocol is %s.", listener.Protocol),
+					)
+				}
+			case v1beta1.HTTPSProtocolType:
+				if listener.TLS == nil {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
+					)
+					break
+				}
+
+				if listener.TLS.Mode != nil && *listener.TLS.Mode == v1beta1.TLSModePassthrough {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						"UnsupportedTLSMode",
+						"TLS Passthrough mode is not supported, TLS mode must be Terminate.",
+					)
+					break
+				}
+
+				if len(listener.TLS.CertificateRefs) != 1 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						"Listener must have exactly 1 TLS certificate ref",
+					)
+					break
+				}
+
+				certificateRef := listener.TLS.CertificateRefs[0]
+
+				if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
+					listener.SetCondition(
+						v1beta1.ListenerConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalidCertificateRef,
+						"Listener's TLS certificate ref group must be unspecified/empty.",
+					)
+					break
+				}
+
+				if certificateRef.Kind != nil && string(*certificateRef.Kind) != KindSecret {
+					listener.SetCondition(
+						v1beta1.ListenerConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalidCertificateRef,
+						fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", KindSecret),
+					)
+					break
+				}
+
+				if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != listener.gateway.Namespace {
+					listener.SetCondition(
+						v1beta1.ListenerConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalidCertificateRef,
+						fmt.Sprintf("Listener's TLS certificate ref namespace must be empty or %s.", listener.gateway.Namespace),
+					)
+					break
+				}
+
+				secret := resources.GetSecret(listener.gateway.Namespace, string(certificateRef.Name))
+
+				if secret == nil {
+					listener.SetCondition(
+						v1beta1.ListenerConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalidCertificateRef,
+						fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
+					)
+					break
+				}
+
+				if secret.Type != v1.SecretTypeTLS {
+					listener.SetCondition(
+						v1beta1.ListenerConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalidCertificateRef,
+						fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, v1.SecretTypeTLS),
+					)
+					break
+				}
+
+				if len(secret.Data[v1.TLSCertKey]) == 0 || len(secret.Data[v1.TLSPrivateKeyKey]) == 0 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalidCertificateRef,
+						fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey),
+					)
+					break
+				}
+
+				listener.SetTLSSecret(secret)
 			}
 
 			// Any condition on the listener indicates an error,
@@ -268,6 +389,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds)
 				Name:    irListenerName(listener),
 				Address: "0.0.0.0",
 				Port:    uint32(listener.Port),
+				TLS:     irTLSConfig(listener.tlsSecret),
 			}
 			if listener.Hostname != nil {
 				irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
@@ -539,4 +661,15 @@ func irListenerName(listener *ListenerContext) string {
 
 func routeName(httpRoute *HTTPRouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%s-%s-rule-%d-match-%d", httpRoute.Namespace, httpRoute.Name, ruleIdx, matchIdx)
+}
+
+func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
+	if tlsSecret == nil {
+		return nil
+	}
+
+	return &ir.TLSListenerConfig{
+		ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
+		PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
+	}
 }
