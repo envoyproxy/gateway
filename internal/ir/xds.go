@@ -23,8 +23,6 @@ var (
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
 type Xds struct {
-	// Name of the Xds IR.
-	Name string
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
 }
