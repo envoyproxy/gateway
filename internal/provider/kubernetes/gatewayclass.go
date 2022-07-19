@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
 )
 
 type gatewayClassReconciler struct {

@@ -5,7 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/pkg/log"
+	"github.com/envoyproxy/gateway/internal/log"
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters

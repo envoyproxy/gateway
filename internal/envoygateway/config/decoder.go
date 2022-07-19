@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/pkg/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
 
 func Decode(cfgPath string) (*v1alpha1.EnvoyGateway, error) {

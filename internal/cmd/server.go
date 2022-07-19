@@ -4,10 +4,10 @@ import (
 	"os"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/spf13/cobra"
 
-	"github.com/envoyproxy/gateway/pkg/provider"
+	"github.com/envoyproxy/gateway/internal/provider"
 )
 
 var (
