@@ -4,7 +4,7 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 
-	"github.com/envoyproxy/gateway/pkg/ir"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {

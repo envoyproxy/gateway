@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 func TestStart(t *testing.T) {

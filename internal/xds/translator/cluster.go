@@ -9,7 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	"github.com/envoyproxy/gateway/pkg/ir"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func buildXdsCluster(httpRoute *ir.HTTPRoute) (*cluster.Cluster, error) {

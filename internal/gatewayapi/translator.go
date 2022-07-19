@@ -3,7 +3,7 @@ package gatewayapi
 import (
 	"fmt"
 
-	"github.com/envoyproxy/gateway/pkg/ir"
+	"github.com/envoyproxy/gateway/internal/ir"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
