@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/log"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -38,7 +38,16 @@ func getxDSTestCommand() *cobra.Command {
 // server serves Envoy Gateway.
 func xDSTest() error {
 
-	logger := logrus.StandardLogger()
+	logger, err := log.NewLogger()
+	if err != nil {
+		return err
+	}
+
+	// Set the logr Logger to debug.
+	// zap's logr impl requires negative levels.
+	logger = logger.V(-2)
+
+	cpLogger := log.NewLogrWrapper(logger)
 
 	ctx := signals.SetupSignalHandler()
 
@@ -95,6 +104,31 @@ func xDSTest() error {
 		},
 	}
 
+	ir3 := &ir.Xds{
+		Name: "xdstest",
+		HTTP: []*ir.HTTPListener{
+			{
+				Name:    "second-listener",
+				Address: "0.0.0.0",
+				Port:    10080,
+				Hostnames: []string{
+					"*",
+				},
+				Routes: []*ir.HTTPRoute{
+					{
+						Name: "second-route",
+						Destinations: []*ir.RouteDestination{
+							{
+								Host: "1.2.3.4",
+								Port: 50000,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	cacheVersion1, err := translator.TranslateXdsIR(ir1)
 	if err != nil {
 		return err
@@ -104,9 +138,15 @@ func xDSTest() error {
 	if err != nil {
 		return err
 	}
+
+	cacheVersion3, err := translator.TranslateXdsIR(ir3)
+	if err != nil {
+		return err
+	}
+
 	g := grpc.NewServer()
 
-	snapCache := cache.NewSnapshotCache(false, logger)
+	snapCache := cache.NewSnapshotCache(false, cpLogger)
 	// contour_xds_v3.NewRequestLoggingCallbacks(log)
 	RegisterServer(envoy_server_v3.NewServer(ctx, snapCache, snapCache), g)
 
@@ -130,14 +170,20 @@ func xDSTest() error {
 	}()
 
 	go func() {
-		log := logger.WithField("cacheupdate", "waiting")
-		log.Info("Sleeping for a bit before updating the cache")
-		time.Sleep(10 * time.Second)
-		log.Info("Updating the cache for ir1")
-		snapCache.GenerateNewSnapshot(cacheVersion1.GetXdsResources())
-		time.Sleep(10 * time.Second)
-		log.Info("Updating the cache for ir2")
-		snapCache.GenerateNewSnapshot(cacheVersion2.GetXdsResources())
+		// This little function sleeps 10 seconds then swaps
+		// betweeen various versions of the IR
+		logger.Info("Sleeping for a bit before updating the cache")
+		for {
+			time.Sleep(10 * time.Second)
+			logger.Info("Updating the cache for first-listener with first-route")
+			snapCache.GenerateNewSnapshot(cacheVersion1.GetXdsResources())
+			time.Sleep(10 * time.Second)
+			logger.Info("Updating the cache for first-listener with second-route")
+			snapCache.GenerateNewSnapshot(cacheVersion2.GetXdsResources())
+			time.Sleep(10 * time.Second)
+			logger.Info("Updating the cache for second-listener with second-route")
+			snapCache.GenerateNewSnapshot(cacheVersion3.GetXdsResources())
+		}
 	}()
 
 	return g.Serve(l)
