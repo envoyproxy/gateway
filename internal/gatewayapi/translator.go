@@ -274,12 +274,12 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 					break
 				}
 
-				if listener.TLS.Mode != nil && *listener.TLS.Mode == v1beta1.TLSModePassthrough {
+				if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModeTerminate {
 					listener.SetCondition(
 						v1beta1.ListenerConditionReady,
 						metav1.ConditionFalse,
 						"UnsupportedTLSMode",
-						"TLS Passthrough mode is not supported, TLS mode must be Terminate.",
+						fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Terminate.", *listener.TLS.Mode),
 					)
 					break
 				}
