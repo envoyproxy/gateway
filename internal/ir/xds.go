@@ -3,10 +3,11 @@ package ir
 import (
 	"errors"
 	"net"
+
+	"github.com/tetratelabs/multierror"
 )
 
 var (
-	ErrXdsNameEmpty                = errors.New("Name must be specified.")
 	ErrHTTPListenerNameEmpty       = errors.New("Name must be specified.")
 	ErrHTTPListenerAddressInvalid  = errors.New("Address must be a valid IP address.")
 	ErrHTTPListenerPortInvalid     = errors.New("Port specified is invalid.")
@@ -27,17 +28,15 @@ type Xds struct {
 	HTTP []*HTTPListener
 }
 
-// Validate the fields within the Xds structure
+// Validate the fields within the Xds structure.
 func (x *Xds) Validate() error {
-	if x.Name == "" {
-		return ErrXdsNameEmpty
-	}
+	var errs error
 	for _, http := range x.HTTP {
 		if err := http.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
-	return nil
+	return errs
 }
 
 // HTTPListener holds the listener configuration.
@@ -69,29 +68,30 @@ func (x *Xds) GetListener(name string) *HTTPListener {
 
 // Validate the fields within the HTTPListener structure
 func (h *HTTPListener) Validate() error {
+	var errs error
 	if h.Name == "" {
-		return ErrHTTPListenerNameEmpty
+		errs = multierror.Append(errs, ErrHTTPListenerNameEmpty)
 	}
 	if ip := net.ParseIP(h.Address); ip == nil {
-		return ErrHTTPListenerAddressInvalid
+		errs = multierror.Append(errs, ErrHTTPListenerAddressInvalid)
 	}
 	if h.Port == 0 {
-		return ErrHTTPListenerPortInvalid
+		errs = multierror.Append(errs, ErrHTTPListenerPortInvalid)
 	}
 	if len(h.Hostnames) == 0 {
-		return ErrHTTPListenerHostnamesEmpty
+		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
 		if err := h.TLS.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	for _, route := range h.Routes {
 		if err := route.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
-	return nil
+	return errs
 }
 
 // TLSListenerConfig holds the configuration for downstream TLS context.
@@ -104,13 +104,14 @@ type TLSListenerConfig struct {
 
 // Validate the fields within the TLSListenerConfig structure
 func (t *TLSListenerConfig) Validate() error {
+	var errs error
 	if len(t.ServerCertificate) == 0 {
-		return ErrTLSServerCertEmpty
+		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
 	}
 	if len(t.PrivateKey) == 0 {
-		return ErrTLSPrivateKey
+		errs = multierror.Append(errs, ErrTLSPrivateKey)
 	}
-	return nil
+	return errs
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
@@ -129,30 +130,31 @@ type HTTPRoute struct {
 
 // Validate the fields within the HTTPRoute structure
 func (h *HTTPRoute) Validate() error {
+	var errs error
 	if h.Name == "" {
-		return ErrHTTPRouteNameEmpty
+		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
 	}
 	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
-		return ErrHTTPRouteMatchEmpty
+		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
 	}
 	if h.PathMatch != nil {
 		if err := h.PathMatch.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	for _, hMatch := range h.HeaderMatches {
 		if err := hMatch.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	for _, qMatch := range h.QueryParamMatches {
 		if err := qMatch.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	for _, dest := range h.Destinations {
 		if err := dest.Validate(); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	return nil
@@ -170,15 +172,16 @@ type RouteDestination struct {
 
 // Validate the fields within the RouteDestination structure
 func (r *RouteDestination) Validate() error {
+	var errs error
 	// Only support IP hosts for now
 	if ip := net.ParseIP(r.Host); ip == nil {
-		return ErrRouteDestinationHostInvalid
+		errs = multierror.Append(errs, ErrRouteDestinationHostInvalid)
 	}
 	if r.Port == 0 {
-		return ErrRouteDestinationPortInvalid
+		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
 	}
 
-	return nil
+	return errs
 }
 
 // StringMatch holds the various match conditions.
@@ -196,6 +199,7 @@ type StringMatch struct {
 
 // Validate the fields within the StringMatch structure
 func (s *StringMatch) Validate() error {
+	var errs error
 	matchCount := 0
 	if s.Exact != nil {
 		matchCount++
@@ -208,8 +212,8 @@ func (s *StringMatch) Validate() error {
 	}
 
 	if matchCount != 1 {
-		return ErrStringMatchConditionInvalid
+		errs = multierror.Append(errs, ErrStringMatchConditionInvalid)
 	}
 
-	return nil
+	return errs
 }
