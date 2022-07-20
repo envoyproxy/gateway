@@ -539,15 +539,29 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						continue
 					}
 
-					if backendRef.Namespace != nil && string(*backendRef.Namespace) != httpRoute.Namespace {
-						// TODO implement ReferenceGrant
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonRefNotPermitted,
-							"Backend must be in the same namespace as the HTTPRoute",
-						)
-						continue
+					if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != httpRoute.Namespace {
+						if !isValidCrossNamespaceRef(
+							crossNamespaceFrom{
+								group:     v1beta1.GroupName,
+								kind:      KindHTTPRoute,
+								namespace: httpRoute.Namespace,
+							},
+							crossNamespaceTo{
+								group:     "",
+								kind:      KindService,
+								namespace: string(*backendRef.Namespace),
+								name:      string(backendRef.Name),
+							},
+							resources.ReferenceGrants,
+						) {
+							parentRef.SetCondition(
+								v1beta1.RouteConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.RouteReasonRefNotPermitted,
+								fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+							)
+							continue
+						}
 					}
 
 					if backendRef.Port == nil {
