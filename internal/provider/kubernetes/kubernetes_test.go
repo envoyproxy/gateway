@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package kubernetes
@@ -22,7 +23,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 const (

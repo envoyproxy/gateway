@@ -9,8 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/envoyproxy/gateway/pkg/envoygateway"
-	"github.com/envoyproxy/gateway/pkg/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies

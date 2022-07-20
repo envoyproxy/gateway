@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/pkg/ir"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 var (

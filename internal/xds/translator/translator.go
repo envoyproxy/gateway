@@ -9,7 +9,7 @@ import (
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
-	"github.com/envoyproxy/gateway/pkg/ir"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // TranslateXdsIR translates the XDS IR into xDS resources
