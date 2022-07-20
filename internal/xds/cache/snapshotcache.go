@@ -24,7 +24,7 @@ import (
 	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/sirupsen/logrus"
 
-	"github.com/envoyproxy/gateway/pkg/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 var Hash = envoy_cache_v3.IDHash{}

@@ -4,9 +4,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/envoyproxy/gateway/pkg/ir"
-	"github.com/envoyproxy/gateway/pkg/xds/cache"
-	"github.com/envoyproxy/gateway/pkg/xds/translator"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/cache"
+	"github.com/envoyproxy/gateway/internal/xds/translator"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
