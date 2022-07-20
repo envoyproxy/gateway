@@ -37,19 +37,18 @@ gateways:
               reason: Invalid
               message: Listener is invalid, see other Conditions for details.
         - name: http-2
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
           conditions:
             - type: Conflicted
               status: "True"
               reason: ProtocolConflict
               message: All listeners for a given port must use a compatible protocol
-            - type: Detached
-              status: "True"
-              reason: UnsupportedProtocol
-              message: Protocol must be HTTP
             - type: Ready
               status: "False"
               reason: Invalid
-              message: Listener is invalid, see other Conditions for details.
+              message: Listener must have TLS set when protocol is HTTPS.
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute
