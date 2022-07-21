@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -37,6 +38,11 @@ func Int32Ptr(val int32) *int32 {
 func PortNumPtr(val int32) *v1beta1.PortNumber {
 	portNum := v1beta1.PortNumber(val)
 	return &portNum
+}
+
+func ObjectNamePtr(val string) *v1alpha2.ObjectName {
+	objectName := v1alpha2.ObjectName(val)
+	return &objectName
 }
 
 func PathMatchTypeDerefOr(matchType *v1beta1.PathMatchType, defaultType v1beta1.PathMatchType) v1beta1.PathMatchType {

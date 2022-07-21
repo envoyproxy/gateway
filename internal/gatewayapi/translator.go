@@ -7,6 +7,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -20,11 +21,12 @@ const (
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
 type Resources struct {
-	Gateways   []*v1beta1.Gateway
-	HTTPRoutes []*v1beta1.HTTPRoute
-	Namespaces []*v1.Namespace
-	Services   []*v1.Service
-	Secrets    []*v1.Secret
+	Gateways        []*v1beta1.Gateway
+	HTTPRoutes      []*v1beta1.HTTPRoute
+	ReferenceGrants []*v1alpha2.ReferenceGrant
+	Namespaces      []*v1.Namespace
+	Services        []*v1.Service
+	Secrets         []*v1.Secret
 }
 
 func (r *Resources) GetNamespace(name string) *v1.Namespace {
@@ -316,17 +318,36 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 					break
 				}
 
-				if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != listener.gateway.Namespace {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalidCertificateRef,
-						fmt.Sprintf("Listener's TLS certificate ref namespace must be empty or %s.", listener.gateway.Namespace),
-					)
-					break
+				secretNamespace := listener.gateway.Namespace
+
+				if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
+					if !isValidCrossNamespaceRef(
+						crossNamespaceFrom{
+							group:     string(v1beta1.GroupName),
+							kind:      KindGateway,
+							namespace: listener.gateway.Namespace,
+						},
+						crossNamespaceTo{
+							group:     "",
+							kind:      KindSecret,
+							namespace: string(*certificateRef.Namespace),
+							name:      string(certificateRef.Name),
+						},
+						resources.ReferenceGrants,
+					) {
+						listener.SetCondition(
+							v1beta1.ListenerConditionResolvedRefs,
+							metav1.ConditionFalse,
+							v1beta1.ListenerReasonInvalidCertificateRef,
+							fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant", *certificateRef.Namespace, certificateRef.Name),
+						)
+						break
+					}
+
+					secretNamespace = string(*certificateRef.Namespace)
 				}
 
-				secret := resources.GetSecret(listener.gateway.Namespace, string(certificateRef.Name))
+				secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
 
 				if secret == nil {
 					listener.SetCondition(
@@ -518,15 +539,29 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						continue
 					}
 
-					if backendRef.Namespace != nil && string(*backendRef.Namespace) != httpRoute.Namespace {
-						// TODO implement ReferenceGrant
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonRefNotPermitted,
-							"Backend must be in the same namespace as the HTTPRoute",
-						)
-						continue
+					if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != httpRoute.Namespace {
+						if !isValidCrossNamespaceRef(
+							crossNamespaceFrom{
+								group:     v1beta1.GroupName,
+								kind:      KindHTTPRoute,
+								namespace: httpRoute.Namespace,
+							},
+							crossNamespaceTo{
+								group:     "",
+								kind:      KindService,
+								namespace: string(*backendRef.Namespace),
+								name:      string(backendRef.Name),
+							},
+							resources.ReferenceGrants,
+						) {
+							parentRef.SetCondition(
+								v1beta1.RouteConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.RouteReasonRefNotPermitted,
+								fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+							)
+							continue
+						}
 					}
 
 					if backendRef.Port == nil {
@@ -653,6 +688,60 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 	}
 
 	return relevantHTTPRoutes
+}
+
+type crossNamespaceFrom struct {
+	group     string
+	kind      string
+	namespace string
+}
+
+type crossNamespaceTo struct {
+	group     string
+	kind      string
+	namespace string
+	name      string
+}
+
+func isValidCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*v1alpha2.ReferenceGrant) bool {
+	for _, referenceGrant := range referenceGrants {
+		// The ReferenceGrant must be defined in the namespace of
+		// the "to" (the referent).
+		if referenceGrant.Namespace != to.namespace {
+			continue
+		}
+
+		// Check if the ReferenceGrant has a matching "from".
+		var fromAllowed bool
+		for _, refGrantFrom := range referenceGrant.Spec.From {
+			if string(refGrantFrom.Namespace) == from.namespace && string(refGrantFrom.Group) == from.group && string(refGrantFrom.Kind) == from.kind {
+				fromAllowed = true
+				break
+			}
+		}
+		if !fromAllowed {
+			continue
+		}
+
+		// Check if the ReferenceGrant has a matching "to".
+		var toAllowed bool
+		for _, refGrantTo := range referenceGrant.Spec.To {
+			if string(refGrantTo.Group) == to.group && string(refGrantTo.Kind) == to.kind && (refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
+				toAllowed = true
+				break
+			}
+		}
+		if !toAllowed {
+			continue
+		}
+
+		// If we got here, both the "from" and the "to" were allowed by this
+		// reference grant.
+		return true
+	}
+
+	// If we got here, no reference policy or reference grant allowed both the "from" and "to".
+	return false
 }
 
 func irListenerName(listener *ListenerContext) string {
