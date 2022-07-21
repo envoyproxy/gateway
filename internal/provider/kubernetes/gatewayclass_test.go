@@ -12,7 +12,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/log"
 )
 
-func TestHasMatchingController(t *testing.T) {
+func TestGatewayClassHasMatchingController(t *testing.T) {
 	testCases := []struct {
 		name   string
 		obj    client.Object
