@@ -8,17 +8,17 @@ import (
 )
 
 var (
-	ErrHTTPListenerNameEmpty       = errors.New("Name must be specified.")
-	ErrHTTPListenerAddressInvalid  = errors.New("Address must be a valid IP address.")
-	ErrHTTPListenerPortInvalid     = errors.New("Port specified is invalid.")
-	ErrHTTPListenerHostnamesEmpty  = errors.New("Hostnames must be specified with atleast a single hostname entry.")
-	ErrTLSServerCertEmpty          = errors.New("ServerCertificate must be specified.")
-	ErrTLSPrivateKey               = errors.New("PrivateKey must be specified.")
-	ErrHTTPRouteNameEmpty          = errors.New("Name must be specified.")
-	ErrHTTPRouteMatchEmpty         = errors.New("Either PathMatch, HeaderMatches or QueryParamMatches fields must be specified.")
-	ErrRouteDestinationHostInvalid = errors.New("Address must be a valid IP address.")
-	ErrRouteDestinationPortInvalid = errors.New("Port specified is invalid.")
-	ErrStringMatchConditionInvalid = errors.New("Only one of the Exact, Prefix or SafeRegex fields must be specified.")
+	ErrHTTPListenerNameEmpty       = errors.New("field Name must be specified")
+	ErrHTTPListenerAddressInvalid  = errors.New("field Address must be a valid IP address")
+	ErrHTTPListenerPortInvalid     = errors.New("field Port specified is invalid")
+	ErrHTTPListenerHostnamesEmpty  = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTLSServerCertEmpty          = errors.New("field ServerCertificate must be specified")
+	ErrTLSPrivateKey               = errors.New("field PrivateKey must be specified")
+	ErrHTTPRouteNameEmpty          = errors.New("field Name must be specified")
+	ErrHTTPRouteMatchEmpty         = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
+	ErrRouteDestinationHostInvalid = errors.New("field Address must be a valid IP address")
+	ErrRouteDestinationPortInvalid = errors.New("field Port specified is invalid")
+	ErrStringMatchConditionInvalid = errors.New("only one of the Exact, Prefix or SafeRegex fields must be specified")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
