@@ -113,14 +113,16 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, cli clien
 	}()
 
 	require.Eventually(t, func() bool {
-		return cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc) == nil
-	}, defaultWait, defaultTick)
-	var accepted metav1.Condition
-	for i := range gc.Status.Conditions {
-		cond := gc.Status.Conditions[i]
-		if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) {
-			accepted = cond
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
 		}
-	}
-	assert.Equal(t, metav1.ConditionTrue, accepted.Status)
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
 }
