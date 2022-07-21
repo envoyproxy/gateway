@@ -29,7 +29,7 @@ type Xds struct {
 }
 
 // Validate the fields within the Xds structure.
-func (x *Xds) Validate() error {
+func (x Xds) Validate() error {
 	var errs error
 	for _, http := range x.HTTP {
 		if err := http.Validate(); err != nil {
@@ -58,16 +58,17 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 }
 
-func (x *Xds) GetListener(name string) *HTTPListener {
+func (x Xds) GetListener(name string) *HTTPListener {
 	for _, listener := range x.HTTP {
 		if listener.Name == name {
 			return listener
 		}
 	}
+	return nil
 }
 
 // Validate the fields within the HTTPListener structure
-func (h *HTTPListener) Validate() error {
+func (h HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrHTTPListenerNameEmpty)
@@ -103,7 +104,7 @@ type TLSListenerConfig struct {
 }
 
 // Validate the fields within the TLSListenerConfig structure
-func (t *TLSListenerConfig) Validate() error {
+func (t TLSListenerConfig) Validate() error {
 	var errs error
 	if len(t.ServerCertificate) == 0 {
 		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
@@ -129,7 +130,7 @@ type HTTPRoute struct {
 }
 
 // Validate the fields within the HTTPRoute structure
-func (h *HTTPRoute) Validate() error {
+func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
@@ -157,7 +158,7 @@ func (h *HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	return nil
+	return errs
 }
 
 // RouteDestination holds the destination details associated with the route
@@ -171,7 +172,7 @@ type RouteDestination struct {
 }
 
 // Validate the fields within the RouteDestination structure
-func (r *RouteDestination) Validate() error {
+func (r RouteDestination) Validate() error {
 	var errs error
 	// Only support IP hosts for now
 	if ip := net.ParseIP(r.Host); ip == nil {
@@ -198,7 +199,7 @@ type StringMatch struct {
 }
 
 // Validate the fields within the StringMatch structure
-func (s *StringMatch) Validate() error {
+func (s StringMatch) Validate() error {
 	var errs error
 	matchCount := 0
 	if s.Exact != nil {
