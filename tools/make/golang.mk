@@ -47,10 +47,14 @@ go.clean: ## Clean the building output files
 .PHONY: go.tidy
 go.tidy:
 	@$(LOG_TARGET)
-	go mod tidy -compat=$(GO_VERSION)
-	## ensure all changes have been committed
-	git diff --exit-code go.mod
-	git diff --exit-code go.sum
+	@go mod tidy -compat=$(GO_VERSION)
+	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
+		git diff --exit-code go.mod; \
+		git diff --exit-code go.sum; \
+   		echo '\nError: ensure all changes have been committed!'; \
+	else \
+		echo 'Go module looks clean!'; \
+   	fi
 
 ##@ Golang
 
