@@ -188,18 +188,27 @@ func xDSTest() error {
 	// (SIGINT, SIGKILL etc).
 	go func() {
 		// This little function sleeps 10 seconds then swaps
-		// betweeen various versions of the IR
+		// between various versions of the IR
 		logger.Info("Sleeping for a bit before updating the cache")
 		for {
 			time.Sleep(10 * time.Second)
 			logger.Info("Updating the cache for first-listener with first-route")
-			snapCache.GenerateNewSnapshot(cacheVersion1.GetXdsResources())
+			err := snapCache.GenerateNewSnapshot(cacheVersion1.GetXdsResources())
+			if err != nil {
+				logger.Error(err, "Something went wrong with generating a snapshot")
+			}
 			time.Sleep(10 * time.Second)
 			logger.Info("Updating the cache for first-listener with second-route")
-			snapCache.GenerateNewSnapshot(cacheVersion2.GetXdsResources())
+			err = snapCache.GenerateNewSnapshot(cacheVersion2.GetXdsResources())
+			if err != nil {
+				logger.Error(err, "Something went wrong with generating a snapshot")
+			}
 			time.Sleep(10 * time.Second)
 			logger.Info("Updating the cache for second-listener with second-route")
-			snapCache.GenerateNewSnapshot(cacheVersion3.GetXdsResources())
+			err = snapCache.GenerateNewSnapshot(cacheVersion3.GetXdsResources())
+			if err != nil {
+				logger.Error(err, "Something went wrong with generating a snapshot")
+			}
 		}
 	}()
 
