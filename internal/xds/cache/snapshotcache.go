@@ -139,7 +139,7 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 
 	var nodeVersion string
 
-	var errorCode string
+	var errorCode int32
 	var errorMessage string
 
 	// If no snapshot has been generated yet, we can't do anything, so don't mess with this request.
@@ -150,7 +150,10 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 
 	_, err := s.GetSnapshot(nodeID)
 	if err != nil {
-		s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
+		err = s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
+		if err != nil {
+			return err
+		}
 	}
 
 	if req.Node != nil {
@@ -164,11 +167,11 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 	if status := req.ErrorDetail; status != nil {
 		// if Envoy rejected the last update log the details here.
 		// TODO(youngnick): Handle NACK properly
-		errorCode = string(status.Code)
+		errorCode = status.Code
 		errorMessage = status.Message
 	}
 
-	s.log.Debugf("handling v3 xDS resource request, version_info %s, response_nonce %s, nodeID %s, node_version %s, resource_names %v, type_url %s, errorCode %s, errorMessage %s",
+	s.log.Debugf("handling v3 xDS resource request, version_info %s, response_nonce %s, nodeID %s, node_version %s, resource_names %v, type_url %s, errorCode %d, errorMessage %s",
 		req.VersionInfo, req.ResponseNonce,
 		nodeID, nodeVersion, req.ResourceNames, req.GetTypeUrl(),
 		errorCode, errorMessage)
@@ -217,7 +220,11 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 
 	_, err := s.GetSnapshot(nodeID)
 	if err != nil {
-		s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
+		err = s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
+		if err != nil {
+			return err
+		}
+
 	}
 
 	if req.Node != nil {
@@ -237,7 +244,7 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 		errorMessage = status.Message
 	}
 
-	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %s, errorMessage %s",
+	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %d, errorMessage %s",
 		req.ResponseNonce,
 		nodeID, nodeVersion,
 		req.ResourceNamesSubscribe, req.ResourceNamesUnsubscribe,

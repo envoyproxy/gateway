@@ -15,23 +15,23 @@ type LogrWrapper struct {
 	logr logr.Logger
 }
 
-const DEBUG_LEVEL int = -2
-const INFO_LEVEL int = 0
-const WARN_LEVEL int = -1
+const LevelDebug int = -2
+const LevelInfo int = 0
+const LevelWarn int = -1
 
 func (l LogrWrapper) Debugf(template string, args ...interface{}) {
 
-	l.logr.V(DEBUG_LEVEL).Info(fmt.Sprintf(template, args...))
+	l.logr.V(LevelDebug).Info(fmt.Sprintf(template, args...))
 }
 
 func (l LogrWrapper) Infof(template string, args ...interface{}) {
 
-	l.logr.V(INFO_LEVEL).Info(fmt.Sprintf(template, args...))
+	l.logr.V(LevelInfo).Info(fmt.Sprintf(template, args...))
 }
 
 func (l LogrWrapper) Warnf(template string, args ...interface{}) {
 
-	l.logr.V(WARN_LEVEL).Info(fmt.Sprintf(template, args...))
+	l.logr.V(LevelWarn).Info(fmt.Sprintf(template, args...))
 }
 
 func (l LogrWrapper) Errorf(template string, args ...interface{}) {
