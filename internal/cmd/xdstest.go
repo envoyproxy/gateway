@@ -22,6 +22,13 @@ import (
 	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 )
 
+// The xdstest command is intended just to show how updating the IR can produce different
+// xDS output, including showing that Delta xDS works.
+// You'll need an xDS probe like the `contour cli` command to check.
+//
+// It's also intended that this get removed once we have a full loop implemented in
+// `gateway serve`.
+
 // getServerCommand returns the server cobra command to be executed.
 func getxDSTestCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -35,9 +42,12 @@ func getxDSTestCommand() *cobra.Command {
 	return cmd
 }
 
-// server serves Envoy Gateway.
+// xDSTest implements the command.
+// This is deliberately verbose and unoptimized, since the purpose
+// is just to illustrate how the flow will need to work.
 func xDSTest() error {
 
+	// Grab the logr.Logger.
 	logger, err := log.NewLogger()
 	if err != nil {
 		return err
@@ -47,6 +57,7 @@ func xDSTest() error {
 	// zap's logr impl requires negative levels.
 	logger = logger.V(-2)
 
+	// Set up the nasty wrapper hack.
 	cpLogger := log.NewLogrWrapper(logger)
 
 	ctx := signals.SetupSignalHandler()
@@ -54,6 +65,8 @@ func xDSTest() error {
 	logger.Info("Starting xDS Tester service")
 	defer logger.Info("Stopping xDS Tester service")
 
+	// Create three IR versions that we'll swap between, to
+	// generate xDS updates for the various methods.
 	ir1 := &ir.Xds{
 		Name: "xdstest",
 		HTTP: []*ir.HTTPListener{
@@ -129,6 +142,9 @@ func xDSTest() error {
 		},
 	}
 
+	// Now, we do the translation because everything is static.
+	// Normally, we'd do this in response to updates on the
+	// message bus.
 	cacheVersion1, err := translator.TranslateXdsIR(ir1)
 	if err != nil {
 		return err
@@ -144,21 +160,19 @@ func xDSTest() error {
 		return err
 	}
 
+	// Set up the gRPC server and register the xDS handler.
 	g := grpc.NewServer()
 
 	snapCache := cache.NewSnapshotCache(false, cpLogger)
-	// contour_xds_v3.NewRequestLoggingCallbacks(log)
 	RegisterServer(envoy_server_v3.NewServer(ctx, snapCache, snapCache), g)
 
-	// if err := provider.Start(cfg); err != nil {
-	// 	return err
-	// }
 	addr := net.JoinHostPort("0.0.0.0", "8001")
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 
+	// Handle the signals and stop when the signal context does.
 	go func() {
 		<-ctx.Done()
 
@@ -169,6 +183,9 @@ func xDSTest() error {
 		g.Stop()
 	}()
 
+	// Loop through the various configs, updating the SnapshotCache
+	// each time. This will run until the process is killed by signal
+	// (SIGINT, SIGKILL etc).
 	go func() {
 		// This little function sleeps 10 seconds then swaps
 		// betweeen various versions of the IR
@@ -189,6 +206,8 @@ func xDSTest() error {
 	return g.Serve(l)
 
 }
+
+// Some helper stuff that we'll need to put somewhere eventually.
 
 // Server is a collection of handlers for streaming discovery requests.
 type Server interface {

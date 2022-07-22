@@ -14,12 +14,12 @@ import (
 )
 
 // TranslateXdsIR translates the XDS IR into xDS resources
-func TranslateXdsIR(ir *ir.Xds) (*types.CacheVersion, error) {
+func TranslateXdsIR(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}
 
-	tCtx := new(types.CacheVersion)
+	tCtx := new(types.ResourceVersionTable)
 
 	for _, httpListener := range ir.HTTP {
 		// 1:1 between IR HTTPListener and xDS Listener
@@ -30,7 +30,7 @@ func TranslateXdsIR(ir *ir.Xds) (*types.CacheVersion, error) {
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
-			// Build downstream TLS types.CacheVersion.
+			// Build downstream TLS details.
 			tSocket, err := buildXdsDownstreamTLSSocket(httpListener.Name, httpListener.TLS)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds listener tls socket"))

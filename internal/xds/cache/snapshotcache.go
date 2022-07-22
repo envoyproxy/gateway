@@ -19,6 +19,15 @@ import (
 
 var Hash = envoy_cache_v3.IDHash{}
 
+// SnapshotCacheWithCallbacks uses the go-control-plane SimpleCache to store snapshots of
+// Envoy resources, sliced by Node ID so that we can do incremental xDS properly.
+// It does this by also implementing callbacks to make sure that the cache is kept
+// up to date for each new node.
+//
+// Having the cache also implement the callbacks is a little bit hacky, but it makes sure
+// that all the required bookkeeping happens.
+// TODO(youngnick): Talk to the go-control-plane maintainers and see if we can upstream
+// this in a better way.
 type SnapshotCacheWithCallbacks interface {
 	envoy_cache_v3.SnapshotCache
 	envoy_server_v3.Callbacks
@@ -37,6 +46,8 @@ type snapshotcache struct {
 	snapshotVersion int64
 }
 
+// GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
+// translator) and updates the snapshot version.
 func (s *snapshotcache) GenerateNewSnapshot(resources types.XdsResources) error {
 
 	version := s.newSnapshotVersion()
@@ -78,6 +89,9 @@ func (s *snapshotcache) newSnapshotVersion() string {
 	return strconv.FormatInt(s.snapshotVersion, 10)
 }
 
+// NewSnapshotCache gives you a fresh SnapshotCache.
+// It needs a logger that supports the go-control-plane
+// required interface (Debugf, Infof, Warnf, and Errorf).
 func NewSnapshotCache(ads bool, logger *log.LogrWrapper) SnapshotCacheWithCallbacks {
 	return &snapshotcache{
 		SnapshotCache:  envoy_cache_v3.NewSnapshotCache(ads, &Hash, logger),
@@ -100,6 +114,8 @@ func (s *snapshotcache) getNodeIDs() []string {
 
 }
 
+// OnStreamOpen and the other OnStream* functions implement the callbacks for the
+// state-of-the-world stream types.
 func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 
 	s.streamIDNodeID[streamID] = ""
@@ -166,6 +182,9 @@ func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, re
 	s.log.Debugf("Sending Response on stream %d to node %s", streamID, nodeID)
 }
 
+// OnDeltaStreamOpen and the other OnDeltaStream*/OnStreamDelta* functions implement
+// the callbacks for the incremental xDS versions.
+// Yes, the different ordering in the name is part of the go-control-plane interface.
 func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 
 	s.streamIDNodeID[streamID] = ""
