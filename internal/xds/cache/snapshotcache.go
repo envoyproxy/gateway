@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"sync"
 
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -44,11 +45,16 @@ type snapshotcache struct {
 	streamIDNodeID map[int64]string
 
 	snapshotVersion int64
+
+	mu sync.Mutex
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
 func (s *snapshotcache) GenerateNewSnapshot(resources types.XdsResources) error {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	version := s.newSnapshotVersion()
 
@@ -118,6 +124,9 @@ func (s *snapshotcache) getNodeIDs() []string {
 // state-of-the-world stream types.
 func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.streamIDNodeID[streamID] = ""
 
 	return nil
@@ -125,15 +134,32 @@ func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeUR
 
 func (s *snapshotcache) OnStreamClosed(streamID int64) {
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	delete(s.streamIDNodeID, streamID)
 
 }
 
 func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest) error {
 
-	nodeID := Hash.ID(req.Node)
+	s.mu.Lock()
+	// We could do this a little earlier than the defer, since the last half of this func is only logging
+	// but that seemed like a premature optimization.
+	defer s.mu.Unlock()
 
-	s.streamIDNodeID[streamID] = nodeID
+	// It's possible that only the first discovery request will have a node ID set.
+	// We also need to save the node ID to the node list anyway.
+	// So check if we have a nodeID for this stream already, then set it if not.
+	nodeID := s.streamIDNodeID[streamID]
+	if nodeID == "" {
+		nodeID = Hash.ID(req.Node)
+		if nodeID == "" {
+			return fmt.Errorf("couldn't hash the node ID from the first discovery request on stream %d", streamID)
+		}
+		s.log.Debugf("First discovery request on stream %d, got nodeID %s", streamID, nodeID)
+		s.streamIDNodeID[streamID] = nodeID
+	}
 
 	var nodeVersion string
 
@@ -178,7 +204,13 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 }
 
 func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
-	nodeID := Hash.ID(req.Node)
+
+	// No mutex lock required here because no writing to the cache.
+
+	nodeID := s.streamIDNodeID[streamID]
+	if nodeID == "" {
+		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
+	}
 
 	s.log.Debugf("Sending Response on stream %d to node %s", streamID, nodeID)
 }
@@ -188,6 +220,10 @@ func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, re
 // Yes, the different ordering in the name is part of the go-control-plane interface.
 func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Ensure that we're adding the streamID to the Node ID list.
 	s.streamIDNodeID[streamID] = ""
 
 	return nil
@@ -195,23 +231,41 @@ func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, t
 
 func (s *snapshotcache) OnDeltaStreamClosed(streamID int64) {
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	delete(s.streamIDNodeID, streamID)
 
 }
 
 func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_discovery_v3.DeltaDiscoveryRequest) error {
 
+	s.mu.Lock()
+	// We could do this a little earlier than with a defer, since the last half of this func is logging
+	// but that seemed like a premature optimization.
+	defer s.mu.Unlock()
+
 	var nodeVersion string
 
 	var errorCode int32
 	var errorMessage string
 
-	nodeID := Hash.ID(req.Node)
+	// It's possible that only the first incremental discovery request will have a node ID set.
+	// We also need to save the node ID to the node list anyway.
+	// So check if we have a nodeID for this stream already, then set it if not.
+	nodeID := s.streamIDNodeID[streamID]
+	if nodeID == "" {
+		nodeID = Hash.ID(req.Node)
+		if nodeID == "" {
+			return fmt.Errorf("couldn't hash the node ID from the first incremental discovery request on stream %d", streamID)
+		}
+		s.log.Debugf("First incremental discovery request on stream %d, got nodeID %s", streamID, nodeID)
+		s.streamIDNodeID[streamID] = nodeID
+	}
 
-	s.streamIDNodeID[streamID] = nodeID
-
-	// If no snapshot has been generated yet, we can't do anything, so don't mess with this request.
-	// go-control-plane will respond with an empty response, then send an update when a snapshot is generated.
+	// If no snapshot has been written into the snapshotcache yet, we can't do anything, so don't mess with
+	// this request. go-control-plane will respond with an empty response, then send an update when a
+	// snapshot is generated.
 	if s.lastSnapshot == nil {
 		return nil
 	}
@@ -254,7 +308,13 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 
 func (s *snapshotcache) OnStreamDeltaResponse(streamID int64, req *envoy_service_discovery_v3.DeltaDiscoveryRequest, resp *envoy_service_discovery_v3.DeltaDiscoveryResponse) {
 
-	nodeID := Hash.ID(req.Node)
+	// No mutex lock required here because no writing to the cache.
+
+	nodeID := s.streamIDNodeID[streamID]
+	if nodeID == "" {
+		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
+	}
+
 	s.log.Debugf("Sending Incremental Response on stream %d to node %s", streamID, nodeID)
 
 }
