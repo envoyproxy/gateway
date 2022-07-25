@@ -64,7 +64,7 @@ func (s *snapshotcache) GenerateNewSnapshot(resources types.XdsResources) error 
 	s.lastSnapshot = snapshot
 
 	for _, node := range s.getNodeIDs() {
-		fmt.Printf("Generating a snapshot with Node %s\n", node)
+		s.log.Debugf("Generating a snapshot with Node %s", node)
 		err := s.SetSnapshot(context.TODO(), node, snapshot)
 		if err != nil {
 			return err
@@ -124,8 +124,6 @@ func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeUR
 }
 
 func (s *snapshotcache) OnStreamClosed(streamID int64) {
-
-	// nodes := s.streamIDNodeID[streamID]
 
 	delete(s.streamIDNodeID, streamID)
 
