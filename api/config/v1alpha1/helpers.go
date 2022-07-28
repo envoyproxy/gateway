@@ -49,3 +49,7 @@ func DefaultProvider() *Provider {
 		Type: ProviderTypeKubernetes,
 	}
 }
+
+func ProviderTypePtr(p ProviderType) *ProviderType {
+	return &p
+}
