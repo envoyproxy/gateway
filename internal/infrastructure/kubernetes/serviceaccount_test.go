@@ -18,7 +18,7 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 	logger, err := log.NewLogger()
 	require.NoError(t, err)
 
-	kubeCtx := Context{Log: logger}
+	kubeCtx := Infra{Log: logger}
 
 	testCases := []struct {
 		name    string

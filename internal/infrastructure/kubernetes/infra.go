@@ -19,9 +19,9 @@ const (
 
 type Kind string
 
-// Context holds all the translated Infra IR resources and provides
+// Infra holds all the translated Infra IR resources and provides
 // the scaffolding for the managing Kubernetes infrastructure.
-type Context struct {
+type Infra struct {
 	Client    client.Client
 	Log       logr.Logger
 	Resources *Resources
@@ -32,9 +32,9 @@ type Resources struct {
 	ServiceAccount *corev1.ServiceAccount
 }
 
-// NewContext returns a new Context.
-func NewContext(cli client.Client, cfg *config.Server) *Context {
-	return &Context{
+// NewInfra returns a new Infra.
+func NewInfra(cli client.Client, cfg *config.Server) *Infra {
+	return &Infra{
 		Client: cli,
 		Log:    cfg.Logger,
 		Resources: &Resources{
@@ -43,11 +43,11 @@ func NewContext(cli client.Client, cfg *config.Server) *Context {
 	}
 }
 
-// addResource adds the resource to the context resources, using kind to
+// addResource adds the resource to the infra resources, using kind to
 // identify the object kind to add.
-func (c *Context) addResource(kind Kind, obj client.Object) error {
-	if c.Resources == nil {
-		c.Resources = new(Resources)
+func (i *Infra) addResource(kind Kind, obj client.Object) error {
+	if i.Resources == nil {
+		i.Resources = new(Resources)
 	}
 
 	switch kind {
@@ -56,7 +56,7 @@ func (c *Context) addResource(kind Kind, obj client.Object) error {
 		if !ok {
 			return fmt.Errorf("unexpected object kind %s", obj.GetObjectKind())
 		}
-		c.Resources.ServiceAccount = sa
+		i.Resources.ServiceAccount = sa
 	default:
 		return fmt.Errorf("unexpected object kind %s", obj.GetObjectKind())
 	}
@@ -64,8 +64,8 @@ func (c *Context) addResource(kind Kind, obj client.Object) error {
 	return nil
 }
 
-// CreateIfNeeded creates the managed kube infra if it doesn't exist.
-func (c *Context) CreateIfNeeded(ctx context.Context, infra *ir.Infra) error {
+// CreateInfra creates the managed kube infra if it doesn't exist.
+func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}
@@ -74,13 +74,13 @@ func (c *Context) CreateIfNeeded(ctx context.Context, infra *ir.Infra) error {
 		return errors.New("infra proxy ir is nil")
 	}
 
-	if c.Resources == nil {
-		c.Resources = &Resources{
+	if i.Resources == nil {
+		i.Resources = &Resources{
 			ServiceAccount: new(corev1.ServiceAccount),
 		}
 	}
 
-	if err := c.createServiceAccountIfNeeded(ctx, infra); err != nil {
+	if err := i.createServiceAccountIfNeeded(ctx, infra); err != nil {
 		return err
 	}
 

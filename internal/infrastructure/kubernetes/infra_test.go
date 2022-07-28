@@ -19,7 +19,7 @@ func TestCreateIfNeeded(t *testing.T) {
 	logger, err := log.NewLogger()
 	require.NoError(t, err)
 
-	kubeCtx := Context{Log: logger}
+	kube := Infra{Log: logger}
 
 	testCases := []struct {
 		name   string
@@ -87,13 +87,13 @@ func TestCreateIfNeeded(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			kubeCtx.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.out.ServiceAccount).Build()
-			err := kubeCtx.CreateIfNeeded(context.Background(), tc.in)
+			kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.out.ServiceAccount).Build()
+			err := kube.CreateInfra(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.out, kubeCtx.Resources)
+				require.Equal(t, tc.out, kube.Resources)
 			}
 		})
 	}
@@ -103,7 +103,7 @@ func TestAddResource(t *testing.T) {
 	logger, err := log.NewLogger()
 	require.NoError(t, err)
 
-	kubeCtx := Context{Log: logger}
+	kube := Infra{Log: logger}
 
 	testCases := []struct {
 		name string
@@ -133,10 +133,10 @@ func TestAddResource(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			kubeCtx.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
-			err := kubeCtx.addResource(tc.kind, tc.obj)
+			kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+			err := kube.addResource(tc.kind, tc.obj)
 			require.NoError(t, err)
-			require.Equal(t, tc.out, kubeCtx.Resources)
+			require.Equal(t, tc.out, kube.Resources)
 		})
 	}
 }
