@@ -13,8 +13,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-// TranslateXdsIR translates the XDS IR into xDS resources
-func TranslateXdsIR(ir *ir.Xds) (*types.ResourceVersionTable, error) {
+// TranslateXDSIR translates the XDS IR into xDS resources
+func TranslateXDSIR(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}

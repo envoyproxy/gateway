@@ -12,14 +12,14 @@ import (
 	"google.golang.org/grpc"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	envoy_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
-	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	envoy_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
-	envoy_service_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
-	envoy_service_route_v3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
-	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
-	envoy_service_secret_v3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
-	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	controlplane_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
+	controlplane_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	controlplane_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
+	controlplane_service_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
+	controlplane_service_route_v3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
+	controlplane_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
+	controlplane_service_secret_v3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
+	controlplane_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 )
 
 // The xdstest command is intended just to show how updating the IR can produce different
@@ -57,9 +57,6 @@ func xDSTest() error {
 	// zap's logr impl requires negative levels.
 	logger = logger.V(-2)
 
-	// Set up the nasty wrapper hack.
-	cpLogger := log.NewLogrWrapper(logger)
-
 	ctx := signals.SetupSignalHandler()
 
 	logger.Info("Starting xDS Tester service")
@@ -68,7 +65,6 @@ func xDSTest() error {
 	// Create three IR versions that we'll swap between, to
 	// generate xDS updates for the various methods.
 	ir1 := &ir.Xds{
-		Name: "xdstest",
 		HTTP: []*ir.HTTPListener{
 			{
 				Name:    "first-listener",
@@ -93,7 +89,6 @@ func xDSTest() error {
 	}
 
 	ir2 := &ir.Xds{
-		Name: "xdstest",
 		HTTP: []*ir.HTTPListener{
 			{
 				Name:    "first-listener",
@@ -118,7 +113,6 @@ func xDSTest() error {
 	}
 
 	ir3 := &ir.Xds{
-		Name: "xdstest",
 		HTTP: []*ir.HTTPListener{
 			{
 				Name:    "second-listener",
@@ -145,17 +139,17 @@ func xDSTest() error {
 	// Now, we do the translation because everything is static.
 	// Normally, we'd do this in response to updates on the
 	// message bus.
-	cacheVersion1, err := translator.TranslateXdsIR(ir1)
+	cacheVersion1, err := translator.TranslateXDSIR(ir1)
 	if err != nil {
 		return err
 	}
 
-	cacheVersion2, err := translator.TranslateXdsIR(ir2)
+	cacheVersion2, err := translator.TranslateXDSIR(ir2)
 	if err != nil {
 		return err
 	}
 
-	cacheVersion3, err := translator.TranslateXdsIR(ir3)
+	cacheVersion3, err := translator.TranslateXDSIR(ir3)
 	if err != nil {
 		return err
 	}
@@ -163,8 +157,8 @@ func xDSTest() error {
 	// Set up the gRPC server and register the xDS handler.
 	g := grpc.NewServer()
 
-	snapCache := cache.NewSnapshotCache(false, cpLogger)
-	RegisterServer(envoy_server_v3.NewServer(ctx, snapCache, snapCache), g)
+	snapCache := cache.NewSnapshotCache(false, logger)
+	RegisterServer(controlplane_server_v3.NewServer(ctx, snapCache, snapCache), g)
 
 	addr := net.JoinHostPort("0.0.0.0", "8001")
 	l, err := net.Listen("tcp", addr)
@@ -220,24 +214,24 @@ func xDSTest() error {
 
 // Server is a collection of handlers for streaming discovery requests.
 type Server interface {
-	envoy_service_cluster_v3.ClusterDiscoveryServiceServer
-	envoy_service_endpoint_v3.EndpointDiscoveryServiceServer
-	envoy_service_listener_v3.ListenerDiscoveryServiceServer
-	envoy_service_route_v3.RouteDiscoveryServiceServer
-	envoy_service_discovery_v3.AggregatedDiscoveryServiceServer
-	envoy_service_secret_v3.SecretDiscoveryServiceServer
-	envoy_service_runtime_v3.RuntimeDiscoveryServiceServer
+	controlplane_service_cluster_v3.ClusterDiscoveryServiceServer
+	controlplane_service_endpoint_v3.EndpointDiscoveryServiceServer
+	controlplane_service_listener_v3.ListenerDiscoveryServiceServer
+	controlplane_service_route_v3.RouteDiscoveryServiceServer
+	controlplane_service_discovery_v3.AggregatedDiscoveryServiceServer
+	controlplane_service_secret_v3.SecretDiscoveryServiceServer
+	controlplane_service_runtime_v3.RuntimeDiscoveryServiceServer
 }
 
 // RegisterServer registers the given xDS protocol Server with the gRPC
 // runtime.
 func RegisterServer(srv Server, g *grpc.Server) {
 	// register services
-	envoy_service_discovery_v3.RegisterAggregatedDiscoveryServiceServer(g, srv)
-	envoy_service_secret_v3.RegisterSecretDiscoveryServiceServer(g, srv)
-	envoy_service_cluster_v3.RegisterClusterDiscoveryServiceServer(g, srv)
-	envoy_service_endpoint_v3.RegisterEndpointDiscoveryServiceServer(g, srv)
-	envoy_service_listener_v3.RegisterListenerDiscoveryServiceServer(g, srv)
-	envoy_service_route_v3.RegisterRouteDiscoveryServiceServer(g, srv)
-	envoy_service_runtime_v3.RegisterRuntimeDiscoveryServiceServer(g, srv)
+	controlplane_service_discovery_v3.RegisterAggregatedDiscoveryServiceServer(g, srv)
+	controlplane_service_secret_v3.RegisterSecretDiscoveryServiceServer(g, srv)
+	controlplane_service_cluster_v3.RegisterClusterDiscoveryServiceServer(g, srv)
+	controlplane_service_endpoint_v3.RegisterEndpointDiscoveryServiceServer(g, srv)
+	controlplane_service_listener_v3.RegisterListenerDiscoveryServiceServer(g, srv)
+	controlplane_service_route_v3.RegisterRouteDiscoveryServiceServer(g, srv)
+	controlplane_service_runtime_v3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }

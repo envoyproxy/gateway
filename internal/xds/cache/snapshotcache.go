@@ -13,8 +13,8 @@ import (
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"github.com/go-logr/logr"
 
-	"github.com/envoyproxy/gateway/internal/log"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -40,7 +40,7 @@ type snapshotcache struct {
 
 	lastSnapshot *envoy_cache_v3.Snapshot
 
-	log *log.LogrWrapper
+	log *LogrWrapper
 
 	streamIDNodeID map[int64]string
 
@@ -98,10 +98,12 @@ func (s *snapshotcache) newSnapshotVersion() string {
 // NewSnapshotCache gives you a fresh SnapshotCache.
 // It needs a logger that supports the go-control-plane
 // required interface (Debugf, Infof, Warnf, and Errorf).
-func NewSnapshotCache(ads bool, logger *log.LogrWrapper) SnapshotCacheWithCallbacks {
+func NewSnapshotCache(ads bool, logger logr.Logger) SnapshotCacheWithCallbacks {
+	// Set up the nasty wrapper hack.
+	wrappedLogger := NewLogrWrapper(logger)
 	return &snapshotcache{
-		SnapshotCache:  envoy_cache_v3.NewSnapshotCache(ads, &Hash, logger),
-		log:            logger,
+		SnapshotCache:  envoy_cache_v3.NewSnapshotCache(ads, &Hash, wrappedLogger),
+		log:            wrappedLogger,
 		streamIDNodeID: make(map[int64]string),
 	}
 }

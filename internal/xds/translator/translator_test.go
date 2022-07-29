@@ -35,7 +35,7 @@ func TestTranslateXdsIR(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
-			tCtx, err := TranslateXdsIR(ir)
+			tCtx, err := TranslateXDSIR(ir)
 			require.NoError(t, err)
 			listeners := tCtx.XdsResources[resource.ListenerType]
 			routes := tCtx.XdsResources[resource.RouteType]
