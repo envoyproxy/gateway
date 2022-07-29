@@ -10,15 +10,16 @@ import (
 	"github.com/tetratelabs/multierror"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-// TranslateXdsIR translates the XDS IR into xDS resources
-func TranslateXdsIR(ir *ir.Xds) (*Context, error) {
+// TranslateXDSIR translates the XDS IR into xDS resources
+func TranslateXDSIR(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}
 
-	tCtx := new(Context)
+	tCtx := new(types.ResourceVersionTable)
 
 	for _, httpListener := range ir.HTTP {
 		// 1:1 between IR HTTPListener and xDS Listener
@@ -29,7 +30,7 @@ func TranslateXdsIR(ir *ir.Xds) (*Context, error) {
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
-			// Build downstream TLS context.
+			// Build downstream TLS details.
 			tSocket, err := buildXdsDownstreamTLSSocket(httpListener.Name, httpListener.TLS)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds listener tls socket"))
@@ -40,7 +41,7 @@ func TranslateXdsIR(ir *ir.Xds) (*Context, error) {
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds listener tls secret"))
 			}
-			tCtx.addXdsResource(resource.SecretType, secret)
+			tCtx.AddXdsResource(resource.SecretType, secret)
 		}
 
 		// Allocate virtual host for this httpListener.
@@ -64,7 +65,7 @@ func TranslateXdsIR(ir *ir.Xds) (*Context, error) {
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds cluster"))
 			}
-			tCtx.addXdsResource(resource.ClusterType, xdsCluster)
+			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		}
 
@@ -73,8 +74,8 @@ func TranslateXdsIR(ir *ir.Xds) (*Context, error) {
 		}
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
 
-		tCtx.addXdsResource(resource.ListenerType, xdsListener)
-		tCtx.addXdsResource(resource.RouteType, xdsRouteCfg)
+		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+		tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
 	}
 
 	return tCtx, nil
