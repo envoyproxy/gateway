@@ -29,10 +29,16 @@ type ProxyInfra struct {
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.
 type ProxyListener struct {
-	// Name is the name of the listener.
-	Name string
 	// Address is the address that the listener should listen on.
 	Address string
-	// Port is the network port that the listener should listen on.
+	// Ports define network ports of the listener.
+	Ports []ListenerPort
+}
+
+// ListenerPort defines a network port of a listener.
+type ListenerPort struct {
+	// Name is the name of the listener port.
+	Name string
+	// Port is the port number to listen on.
 	Port int32
 }
