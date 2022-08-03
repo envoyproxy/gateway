@@ -7,6 +7,7 @@ import (
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -21,7 +22,7 @@ func NewManager(infra *ir.Infra) (*Manager, error) {
 	mgr := new(Manager)
 
 	if *infra.GetProvider() == v1alpha1.ProviderTypeKubernetes {
-		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{})
+		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}

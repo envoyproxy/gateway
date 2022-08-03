@@ -12,12 +12,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-const (
-	KindServiceAccount Kind = "ServiceAccount"
-)
-
-type Kind string
-
 // Infra holds all the translated Infra IR resources and provides
 // the scaffolding for the managing Kubernetes infrastructure.
 type Infra struct {
@@ -42,22 +36,18 @@ func NewInfra(cli client.Client) *Infra {
 	}
 }
 
-// addResource adds the resource to the infra resources, using kind to
-// identify the object kind to add.
-func (i *Infra) addResource(kind Kind, obj client.Object) error {
+// addResource adds obj to the infra resources, using the object type
+// to identify the object kind to add.
+func (i *Infra) addResource(obj client.Object) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.Resources == nil {
 		i.Resources = new(Resources)
 	}
 
-	switch kind {
-	case KindServiceAccount:
-		sa, ok := obj.(*corev1.ServiceAccount)
-		if !ok {
-			return fmt.Errorf("unexpected object kind %s", obj.GetObjectKind())
-		}
-		i.Resources.ServiceAccount = sa
+	switch o := obj.(type) {
+	case *corev1.ServiceAccount:
+		i.Resources.ServiceAccount = o
 	default:
 		return fmt.Errorf("unexpected object kind %s", obj.GetObjectKind())
 	}

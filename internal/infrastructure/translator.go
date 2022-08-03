@@ -2,7 +2,6 @@ package infrastructure
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -15,10 +14,6 @@ import (
 func Translate(ctx context.Context, infra *ir.Infra) (*Manager, error) {
 	if err := ir.ValidateInfra(infra); err != nil {
 		return nil, err
-	}
-
-	if infra == nil {
-		return nil, errors.New("infra is nil")
 	}
 
 	mgr, err := NewManager(infra)

@@ -31,7 +31,7 @@ func (i *Infra) createServiceAccountIfNeeded(ctx context.Context, infra *ir.Infr
 			if err != nil {
 				return err
 			}
-			if err := i.addResource(KindServiceAccount, sa); err != nil {
+			if err := i.addResource(sa); err != nil {
 				return err
 			}
 			return nil
@@ -39,7 +39,7 @@ func (i *Infra) createServiceAccountIfNeeded(ctx context.Context, infra *ir.Infr
 		return err
 	}
 
-	if err := i.addResource(KindServiceAccount, current); err != nil {
+	if err := i.addResource(current); err != nil {
 		return err
 	}
 
@@ -65,10 +65,6 @@ func (i *Infra) getServiceAccount(ctx context.Context, infra *ir.Infra) (*corev1
 // expectedServiceAccount returns the expected proxy serviceAccount based on the provided infra.
 func (i *Infra) expectedServiceAccount(infra *ir.Infra) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: "v1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: infra.Proxy.Namespace,
 			Name:      infra.Proxy.ObjectName(),

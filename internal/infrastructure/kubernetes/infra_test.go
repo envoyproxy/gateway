@@ -77,13 +77,11 @@ func TestCreateIfNeeded(t *testing.T) {
 func TestAddResource(t *testing.T) {
 	testCases := []struct {
 		name string
-		kind Kind
 		obj  client.Object
 		out  *Resources
 	}{
 		{
 			name: "happy-path-sa",
-			kind: KindServiceAccount,
 			obj: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -108,7 +106,7 @@ func TestAddResource(t *testing.T) {
 				mu:     sync.Mutex{},
 				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 			}
-			err := kube.addResource(tc.kind, tc.obj)
+			err := kube.addResource(tc.obj)
 			require.NoError(t, err)
 			require.Equal(t, tc.out, kube.Resources)
 		})
