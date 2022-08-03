@@ -37,7 +37,7 @@ func TestStart(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := Start(tc.cfg)
+			err := Start(tc.cfg, new(ResourceTable))
 			if tc.expect {
 				require.NoError(t, err)
 			} else {

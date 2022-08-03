@@ -10,7 +10,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
-func Start(svr *config.Server) error {
+type ResourceTable = kubernetes.ResourceTable
+
+func Start(svr *config.Server, k8sTable *ResourceTable) error {
 	log := svr.Logger
 	if svr.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		log.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
@@ -18,7 +20,7 @@ func Start(svr *config.Server) error {
 		if err != nil {
 			return fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
-		provider, err := kubernetes.New(cfg, svr)
+		provider, err := kubernetes.New(cfg, svr, k8sTable)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
 		}
