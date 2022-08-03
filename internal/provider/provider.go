@@ -14,7 +14,10 @@ func Start(svr *config.Server) error {
 	log := svr.Logger
 	if svr.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		log.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
-		cfg := ctrl.GetConfigOrDie()
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			return fmt.Errorf("failed to get kubeconfig: %w", err)
+		}
 		provider, err := kubernetes.New(cfg, svr)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
