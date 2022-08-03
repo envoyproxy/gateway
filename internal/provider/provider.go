@@ -19,9 +19,10 @@ func Start(svr *config.Server) error {
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
 		}
-		if err := provider.Start(ctrl.SetupSignalHandler()); err != nil {
+		if err := provider.Start(ctrl.SetupSignalHandler()); err != nil { //lint:ignore SA4023 provider.Start currently never returns non-nil
 			return fmt.Errorf("failed to start provider %s", v1alpha1.ProviderTypeKubernetes)
 		}
+		return nil
 	}
 	// Unsupported provider.
 	return fmt.Errorf("unsupported provider type %v", svr.EnvoyGateway.Provider.Type)
