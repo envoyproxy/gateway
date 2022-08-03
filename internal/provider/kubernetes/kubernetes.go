@@ -43,8 +43,9 @@ func New(cfg *rest.Config, svr *config.Server) (*Provider, error) {
 	if err := newGatewayController(mgr, svr); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
-	// TODO: Add httproute controllers.
-	// xref: https://github.com/envoyproxy/gateway/issues/163
+	if err := newHTTPRouteController(mgr, svr); err != nil {
+		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
+	}
 
 	return &Provider{
 		manager: mgr,
