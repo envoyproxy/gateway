@@ -40,6 +40,9 @@ defined as Kubernetes resources that provide the following services:
 
 ### Components
 
+Envoy Gateway is made up of several components that communicate in-process; how this communication happens is described
+in [watching.md][].
+
 #### Provider
 A Provider is an infrastructure component that Envoy Gateway calls to establish its runtime configuration, resolve
 services, persist data, etc. Kubernetes and File are the only supported providers. However, other providers can be added
@@ -141,3 +144,4 @@ The draft for this document is [here][draft_design].
 [be]: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.BackendObjectReference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [issue_95]: https://github.com/envoyproxy/gateway/pull/95
+[watching.md]: ./watching.md

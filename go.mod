@@ -5,11 +5,12 @@ go 1.18
 require (
 	github.com/envoyproxy/go-control-plane v0.10.3
 	github.com/go-logr/zapr v1.2.0
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/spf13/cobra v1.4.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
+	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	go.uber.org/zap v1.19.1
-	google.golang.org/grpc v1.45.0
+	google.golang.org/grpc v1.46.2
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.2
@@ -65,18 +66,18 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
+	golang.org/x/net v0.0.0-20220526153639-5463443f8c37 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.3.8-0.20211105212822-18b340fc7af2 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20220329172620-7be39ac1afc7 // indirect
+	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.24.2 // indirect
 	k8s.io/component-base v0.24.2 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect
