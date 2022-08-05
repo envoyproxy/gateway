@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/go-logr/logr"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/log"
@@ -24,16 +23,7 @@ func NewDefaultServer() (*Server, error) {
 		return nil, err
 	}
 	return &Server{
-		EnvoyGateway: &v1alpha1.EnvoyGateway{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: v1alpha1.GroupVersion.String(),
-				Kind:       v1alpha1.KindEnvoyGateway,
-			},
-			EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-				Provider: v1alpha1.DefaultProvider(),
-				Gateway:  v1alpha1.DefaultGateway(),
-			},
-		},
-		Logger: logger,
+		EnvoyGateway: v1alpha1.DefaultEnvoyGateway(),
+		Logger:       logger,
 	}, nil
 }

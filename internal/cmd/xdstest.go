@@ -29,7 +29,7 @@ import (
 // It's also intended that this get removed once we have a full loop implemented in
 // `gateway serve`.
 
-// getServerCommand returns the server cobra command to be executed.
+// getxDSTestCommand returns the xdstest cobra command to be executed.
 func getxDSTestCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "xdstest",
