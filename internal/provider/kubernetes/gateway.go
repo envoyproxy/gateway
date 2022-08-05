@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,16 +28,21 @@ type gatewayReconciler struct {
 	// classController is the configured gatewayclass controller name.
 	classController gwapiv1b1.GatewayController
 	log             logr.Logger
+
+	initializeOnce sync.Once
+	resourceTable  *ResourceTable
 }
 
 // newGatewayController creates a gateway controller. The controller will watch for
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
-func newGatewayController(mgr manager.Manager, cfg *config.Server) error {
+func newGatewayController(mgr manager.Manager, cfg *config.Server, resourceTable *ResourceTable) error {
+	resourceTable.Initialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		log:             cfg.Logger,
+		resourceTable:   resourceTable,
 	}
 
 	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: r})
@@ -97,8 +103,9 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	if acceptedClass == nil {
 		r.log.Info("No accepted gatewayclass found for gateway", "namespace", request.Namespace,
 			"name", request.Name)
-		// TODO: Delete gateway from the IR.
-		// xref: https://github.com/envoyproxy/gateway/issues/38
+		for namespacedName := range r.resourceTable.Gateways.LoadAll() {
+			r.resourceTable.Gateways.Delete(namespacedName)
+		}
 		return reconcile.Result{}, nil
 	}
 
@@ -106,19 +113,29 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	if err := r.client.List(ctx, allGateways); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gateways")
 	}
+
 	// Get all the Gateways for the Accepted=true GatewayClass.
 	acceptedGateways := gatewaysOfClass(acceptedClass, allGateways)
 	if len(acceptedGateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
-		// TODO: Delete gateway from the IR.
-		// xref: https://github.com/envoyproxy/gateway/issues/34
-		// xref: https://github.com/envoyproxy/gateway/issues/38
-		return reconcile.Result{}, nil
+	}
+	found := false
+	for i := range acceptedGateways {
+		key := types.NamespacedName{
+			Name:      acceptedGateways[i].GetName(),
+			Namespace: acceptedGateways[i].GetNamespace(),
+		}
+		r.resourceTable.Gateways.Store(key, &acceptedGateways[i])
+		if key == request.NamespacedName {
+			found = true
+		}
+	}
+	if !found {
+		r.resourceTable.Gateways.Delete(request.NamespacedName)
 	}
 
-	// TODO: Add gateway to the IR.
-	// xref: https://github.com/envoyproxy/gateway/issues/34
-	// xref: https://github.com/envoyproxy/gateway/issues/38
+	// Once we've processed `allGateways`, record that we've fully initialized.
+	defer r.initializeOnce.Do(r.resourceTable.Initialized.Done)
 
 	return reconcile.Result{}, nil
 }

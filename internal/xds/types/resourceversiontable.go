@@ -6,7 +6,12 @@ import (
 )
 
 // XdsResources represents all the xds resources
-type XdsResources map[resource.Type][]types.Resource
+//
+// This is the type that
+// github.com/envoyproxy/go-control-plane/pkg/cache/v3.NewSnapshot
+// takes; if we decide that we want to change this type, then we'd
+// have to do conversion.
+type XdsResources = map[resource.Type][]types.Resource
 
 // ResourceVersionTable holds all the translated xds resources
 type ResourceVersionTable struct {

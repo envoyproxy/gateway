@@ -56,8 +56,12 @@ func server() error {
 		cfg.EnvoyGateway = eg
 	}
 
-	if err := provider.Start(cfg); err != nil {
+	k8sTable := new(provider.ResourceTable)
+	if err := provider.Start(cfg, k8sTable); err != nil {
 		return err
 	}
+	// TODO: while the provider.Start goroutine writes to the k8sTable, a (not-yet-existent)
+	// translator goroutine will read from it.
+
 	return nil
 }

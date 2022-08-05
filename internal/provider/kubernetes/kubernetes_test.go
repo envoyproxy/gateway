@@ -40,7 +40,7 @@ func TestProvider(t *testing.T) {
 	// Setup and start the kube provider.
 	svr, err := config.NewDefaultServer()
 	require.NoError(t, err)
-	provider, err := New(cliCfg, svr)
+	provider, err := New(cliCfg, svr, new(ResourceTable))
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
