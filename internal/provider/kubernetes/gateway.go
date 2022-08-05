@@ -94,7 +94,7 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.Info("reconciling gateway", "namespace", request.Namespace, "name", request.Name)
 
-	var allClasses *gwapiv1b1.GatewayClassList
+	allClasses := &gwapiv1b1.GatewayClassList{}
 	if err := r.client.List(ctx, allClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses")
 	}
@@ -109,7 +109,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		return reconcile.Result{}, nil
 	}
 
-	var allGateways *gwapiv1b1.GatewayList
+	allGateways := &gwapiv1b1.GatewayList{}
 	if err := r.client.List(ctx, allGateways); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gateways")
 	}
