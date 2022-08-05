@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	gatewayapi_v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -45,15 +45,15 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server) error {
 	}
 	r.log.Info("created httproute controller")
 
-	if err := c.Watch(&source.Kind{Type: &gatewayapi_v1beta1.HTTPRoute{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err := c.Watch(&source.Kind{Type: &gwapiv1b1.HTTPRoute{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
 	// Add indexing on HTTPRoute, for Service objects that are referenced in HTTPRoute objects
 	// via `.spec.rules.backendRefs`. This helps in querying for HTTPRoutes that are affected by
 	// a particular Service CRUD.
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &gatewayapi_v1beta1.HTTPRoute{}, serviceHTTPRouteIndex, func(rawObj client.Object) []string {
-		httpRoute := rawObj.(*gatewayapi_v1beta1.HTTPRoute)
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, func(rawObj client.Object) []string {
+		httpRoute := rawObj.(*gwapiv1b1.HTTPRoute)
 		var backendServices []string
 		for _, rule := range httpRoute.Spec.Rules {
 			for _, backend := range rule.BackendRefs {
@@ -89,7 +89,7 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server) error {
 // the Service using `.spec.rules.backendRefs`. The affected HTTPRoutes are then
 // pushed for reconciliation.
 func (r *httpRouteReconciler) getHTTPRoutesForService(obj client.Object) []reconcile.Request {
-	affectedHTTPRouteList := &gatewayapi_v1beta1.HTTPRouteList{}
+	affectedHTTPRouteList := &gwapiv1b1.HTTPRouteList{}
 
 	if err := r.client.List(context.Background(), affectedHTTPRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, NamespacedNameStr(obj)),
@@ -116,7 +116,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 	log.Info("reconciling httproute")
 
 	// Fetch the HTTPRoute from the cache.
-	httpRoute := &gatewayapi_v1beta1.HTTPRoute{}
+	httpRoute := &gwapiv1b1.HTTPRoute{}
 	err := r.client.Get(ctx, request.NamespacedName, httpRoute)
 	if errors.IsNotFound(err) {
 		log.Info("httproute not found, deleting it from the IR")
