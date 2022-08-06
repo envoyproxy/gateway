@@ -121,10 +121,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 	found := false
 	for i := range acceptedGateways {
-		key := types.NamespacedName{
-			Name:      acceptedGateways[i].GetName(),
-			Namespace: acceptedGateways[i].GetNamespace(),
-		}
+		key := NamespacedName(acceptedGateways[i].DeepCopy())
 		r.resourceTable.Gateways.Store(key, &acceptedGateways[i])
 		if key == request.NamespacedName {
 			found = true

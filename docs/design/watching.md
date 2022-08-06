@@ -37,7 +37,7 @@ doesn't have as much state to keep track of; it doesn't need to know "did I alre
 ### sub
 
 Meanwhile, the translator and other interested components subscribe to it with `table.Thing.Subscribe` (or
-`table.Thing.SubscrubeSubset` if they only care about a few "Thing"s).  So the translator goroutine might look like:
+`table.Thing.SubscribeSubset` if they only care about a few "Thing"s).  So the translator goroutine might look like:
 
    ```go
    func(ctx context.Context) error {

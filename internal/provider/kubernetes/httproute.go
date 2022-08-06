@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	"sync"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -30,15 +31,21 @@ const (
 type httpRouteReconciler struct {
 	client client.Client
 	log    logr.Logger
+
+	initializeOnce sync.Once
+	resourceTable  *ResourceTable
 }
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, cfg *config.Server) error {
+func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resourceTable *ResourceTable) error {
+	resourceTable.Initialized.Add(1)
 	r := &httpRouteReconciler{
-		client: mgr.GetClient(),
-		log:    cfg.Logger,
+		client:        mgr.GetClient(),
+		log:           cfg.Logger,
+		resourceTable: resourceTable,
 	}
+
 	c, err := controller.New("httproute", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
@@ -74,6 +81,7 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server) error {
 		return err
 	}
 
+	// Watch Service CRUDs and reconcile affected HTTPRoutes.
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
 		handler.EnqueueRequestsFromMapFunc(r.getHTTPRoutesForService),
@@ -92,7 +100,7 @@ func (r *httpRouteReconciler) getHTTPRoutesForService(obj client.Object) []recon
 	affectedHTTPRouteList := &gwapiv1b1.HTTPRouteList{}
 
 	if err := r.client.List(context.Background(), affectedHTTPRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, NamespacedNameStr(obj)),
+		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, NamespacedName(obj).String()),
 	}); err != nil {
 		return []reconcile.Request{}
 	}
@@ -100,10 +108,7 @@ func (r *httpRouteReconciler) getHTTPRoutesForService(obj client.Object) []recon
 	requests := make([]reconcile.Request, len(affectedHTTPRouteList.Items))
 	for i, item := range affectedHTTPRouteList.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: item.GetNamespace(),
-				Name:      item.GetName(),
-			},
+			NamespacedName: NamespacedName(item.DeepCopy()),
 		}
 	}
 
@@ -119,17 +124,14 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 	httpRoute := &gwapiv1b1.HTTPRoute{}
 	err := r.client.Get(ctx, request.NamespacedName, httpRoute)
 	if errors.IsNotFound(err) {
-		log.Info("httproute not found, deleting it from the IR")
-		// TODO: Delete httproute from the IR.
-		// xref: https://github.com/envoyproxy/gateway/issues/34
-		// xref: https://github.com/envoyproxy/gateway/issues/38
+		log.V(2).Info("httproute not found, deleting it from the ResourceTable")
+		r.resourceTable.HTTPRoutes.Delete(request.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 
-	log.Info("adding httproute to the IR")
-	// TODO: Add httproute to the IR.
-	// xref: https://github.com/envoyproxy/gateway/issues/34
-	// xref: https://github.com/envoyproxy/gateway/issues/38
+	log.V(2).Info("adding httproute to the ResourceTable")
+	r.resourceTable.HTTPRoutes.Store(request.NamespacedName, httpRoute.DeepCopy())
 
+	defer r.initializeOnce.Do(r.resourceTable.Initialized.Done)
 	return reconcile.Result{}, nil
 }

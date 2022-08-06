@@ -5,7 +5,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// NamespacedNameStr returns obj's <Namespace>/<Name> string representation.
-func NamespacedNameStr(obj client.Object) string {
-	return obj.GetNamespace() + string(types.Separator) + obj.GetName()
+// NamespacedName creates and returns object's NamespacedName.
+func NamespacedName(obj client.Object) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}
 }
