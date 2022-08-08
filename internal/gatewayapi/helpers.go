@@ -45,6 +45,10 @@ func ObjectNamePtr(val string) *v1alpha2.ObjectName {
 	return &objectName
 }
 
+func PathMatchTypePtr(pType v1beta1.PathMatchType) *v1beta1.PathMatchType {
+	return &pType
+}
+
 func PathMatchTypeDerefOr(matchType *v1beta1.PathMatchType, defaultType v1beta1.PathMatchType) v1beta1.PathMatchType {
 	if matchType != nil {
 		return *matchType

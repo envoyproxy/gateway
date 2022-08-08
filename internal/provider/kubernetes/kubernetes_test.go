@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -25,6 +24,7 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 const (
@@ -53,14 +53,15 @@ func TestProvider(t *testing.T) {
 		require.NoError(t, testEnv.Stop())
 	}()
 
-	testcases := map[string]func(context.Context, *testing.T, client.Client){
+	testcases := map[string]func(context.Context, *testing.T, *Provider){
 		"gatewayclass controller name": testGatewayClassController,
 		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
 		"gateway of gatewayclass":      testGatewayOfClass,
+		"httproute":                    testHTTPRoute,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			tc(ctx, t, provider.manager.GetClient())
+			tc(ctx, t, provider)
 		})
 	}
 }
@@ -78,7 +79,9 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
-func testGatewayClassController(ctx context.Context, t *testing.T, cli client.Client) {
+func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider) {
+	cli := provider.manager.GetClient()
+
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gc-controllername",
@@ -99,7 +102,9 @@ func testGatewayClassController(ctx context.Context, t *testing.T, cli client.Cl
 	assert.Equal(t, gc.ObjectMeta.Generation, int64(1))
 }
 
-func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, cli client.Client) {
+func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider) {
+	cli := provider.manager.GetClient()
+
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gc-accepted-status",
@@ -127,9 +132,16 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, cli clien
 
 		return false
 	}, defaultWait, defaultTick)
+
+	// Ensure the GatewayClass resource table is as expected.
+	assert.Equal(t, 1, provider.resourceTable.GatewayClasses.Len())
+	gcTable, _ := provider.resourceTable.GatewayClasses.Load(gc.Name)
+	assert.Equal(t, gc, gcTable)
 }
 
-func testGatewayOfClass(ctx context.Context, t *testing.T, cli client.Client) {
+func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider) {
+	cli := provider.manager.GetClient()
+
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gc-of-class",
@@ -140,10 +152,26 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, cli client.Client) {
 	}
 	require.NoError(t, cli.Create(ctx, gc))
 
+	// Ensure the GatewayClass reports ready.
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
 	}()
 
+	// Create the namespace for the Gateway under test.
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
@@ -164,4 +192,130 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, cli client.Client) {
 		},
 	}
 	require.NoError(t, cli.Create(ctx, gw))
+
+	// Ensure the number of Gateways in the Gateway resource table is as expected.
+	require.Eventually(t, func() bool {
+		return assert.Equal(t, 1, provider.resourceTable.Gateways.Len())
+	}, defaultWait, defaultTick)
+
+	// Ensure the test Gateway in the Gateway resource table is as expected.
+	key := types.NamespacedName{
+		Namespace: gw.Namespace,
+		Name:      gw.Name,
+	}
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, key, gw) == nil
+	}, defaultWait, defaultTick)
+	gwTable, _ := provider.resourceTable.Gateways.Load(key)
+	assert.Equal(t, gw, gwTable)
+}
+
+func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider) {
+	cli := provider.manager.GetClient()
+
+	gc := &gwapiv1b1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "httproute-test",
+		},
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gc))
+
+	// Ensure the GatewayClass reports ready.
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "httproute-test"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1b1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
+
+	hroute := &gwapiv1b1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+				ParentRefs: []gwapiv1b1.ParentReference{
+					{
+						Name: gwapiv1b1.ObjectName(gw.Name),
+					},
+				},
+			},
+			Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+			Rules: []gwapiv1b1.HTTPRouteRule{
+				{
+					Matches: []gwapiv1b1.HTTPRouteMatch{
+						{
+							Path: &gwapiv1b1.HTTPPathMatch{
+								Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+								Value: gatewayapi.StringPtr("/"),
+							},
+						},
+					},
+					BackendRefs: []gwapiv1b1.HTTPBackendRef{
+						{
+							BackendRef: gwapiv1b1.BackendRef{
+								BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									Name: gwapiv1b1.ObjectName(gw.Name),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, hroute))
+
+	// Ensure the number of HTTPRoutes in the HTTPRoute resource table is as expected.
+	require.Eventually(t, func() bool {
+		return assert.Equal(t, 1, provider.resourceTable.HTTPRoutes.Len())
+	}, defaultWait, defaultTick)
+
+	// Ensure the test HTTPRoute in the HTTPRoute resource table is as expected.
+	key := types.NamespacedName{
+		Namespace: hroute.Namespace,
+		Name:      hroute.Name,
+	}
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, key, hroute) == nil
+	}, defaultWait, defaultTick)
+	hrTable, _ := provider.resourceTable.HTTPRoutes.Load(key)
+	assert.Equal(t, hroute, hrTable)
 }
