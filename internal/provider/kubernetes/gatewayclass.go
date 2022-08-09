@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
 )
 
@@ -30,26 +30,26 @@ type gatewayClassReconciler struct {
 	log           logr.Logger
 
 	initializeOnce sync.Once
-	resourceTable  *ResourceTable
+	resources      *message.ProviderResources
 }
 
 // newGatewayClassController creates the gatewayclass controller. The controller
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
-func newGatewayClassController(mgr manager.Manager, cfg *config.Server, resourceTable *ResourceTable) error {
+func newGatewayClassController(name string, mgr manager.Manager, logger logr.Logger, resources *message.ProviderResources) error {
 	cli := mgr.GetClient()
-	uh := status.NewUpdateHandler(cfg.Logger, cli)
+	uh := status.NewUpdateHandler(logger, cli)
 	if err := mgr.Add(uh); err != nil {
 		return fmt.Errorf("failed to add status update handler %v", err)
 	}
 
-	resourceTable.Initialized.Add(1)
+	resources.Initialized.Add(1)
 	r := &gatewayClassReconciler{
 		client:        cli,
-		controller:    gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		controller:    gwapiv1b1.GatewayController(name),
 		statusUpdater: uh.Writer(),
-		log:           cfg.Logger,
-		resourceTable: resourceTable,
+		log:           logger,
+		resources:     resources,
 	}
 
 	c, err := controller.New("gatewayclass", mgr, controller.Options{Reconciler: r})
@@ -112,7 +112,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		}
 	}
 	if !found {
-		r.resourceTable.GatewayClasses.Delete(request.Name)
+		r.resources.GatewayClasses.Delete(request.Name)
 	}
 
 	// no controlled gatewayclasses, trigger a delete
@@ -122,7 +122,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	}
 
 	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
-		r.resourceTable.GatewayClasses.Store(gc.GetName(), gc)
+		r.resources.GatewayClasses.Store(gc.GetName(), gc)
 		if r.statusUpdater != nil {
 			r.statusUpdater.Send(status.Update{
 				NamespacedName: types.NamespacedName{Name: gc.Name},
@@ -157,7 +157,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, err
 	}
 	// Once we've iterated over all listed classes, mark that we've fully initialized.
-	r.initializeOnce.Do(r.resourceTable.Initialized.Done)
+	r.initializeOnce.Do(r.resources.Initialized.Done)
 
 	r.log.WithName(request.Name).Info("reconciled gatewayclass")
 	return reconcile.Result{}, nil

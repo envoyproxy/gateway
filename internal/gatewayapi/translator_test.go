@@ -39,7 +39,7 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, string(output), want)
 
 			translator := &Translator{
-				gatewayClassName: "envoy-gateway-class",
+				GatewayClassName: "envoy-gateway-class",
 			}
 
 			// Add common test fixtures

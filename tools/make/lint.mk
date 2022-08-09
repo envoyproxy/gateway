@@ -25,7 +25,7 @@ lint: lint.yamllint
 lint-deps: $(tools/yamllint)
 lint.yamllint: $(tools/yamllint)
 	@echo Running YAML linter ...
-	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint changelogs/ internal/provider/kubernetes/config/ internal/provider/testdata/in/ internal/envoygateway/config/testdata/decoder/in/ internal/gatewayapi/testdata/
+	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint changelogs/ internal/provider/kubernetes/config/ internal/provider/service/testdata/in/ internal/envoygateway/config/test data/decoder/in/ internal/gatewayapi/testdata
 
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
 .PHONY: lint.codespell

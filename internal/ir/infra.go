@@ -15,6 +15,7 @@ const (
 )
 
 // Infra defines managed infrastructure.
+// +k8s:deepcopy-gen=true
 type Infra struct {
 	// Provider provides infrastructure. If unset, defaults to "Kubernetes".
 	Provider *v1alpha1.ProviderType
@@ -23,6 +24,7 @@ type Infra struct {
 }
 
 // ProxyInfra defines managed proxy infrastructure.
+// +k8s:deepcopy-gen=true
 type ProxyInfra struct {
 	// TODO: Figure out how to represent metadata in the IR.
 	// xref: https://github.com/envoyproxy/gateway/issues/173
@@ -39,6 +41,7 @@ type ProxyInfra struct {
 }
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.
+// +k8s:deepcopy-gen=true
 type ProxyListener struct {
 	// Address is the address that the listener should listen on.
 	Address string

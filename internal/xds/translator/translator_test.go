@@ -23,7 +23,7 @@ var (
 	inFiles embed.FS
 )
 
-func TestTranslateXdsIR(t *testing.T) {
+func TestTranslate(t *testing.T) {
 	testCases := []struct {
 		name string
 	}{
@@ -35,7 +35,7 @@ func TestTranslateXdsIR(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
-			tCtx, err := TranslateXDSIR(ir)
+			tCtx, err := Translate(ir)
 			require.NoError(t, err)
 			listeners := tCtx.XdsResources[resource.ListenerType]
 			routes := tCtx.XdsResources[resource.RouteType]

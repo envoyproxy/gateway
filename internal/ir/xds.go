@@ -23,6 +23,7 @@ var (
 
 // Xds holds the intermediate representation of a Gateway and is
 // used by the xDS Translator to convert it into xDS resources.
+// +k8s:deepcopy-gen=true
 type Xds struct {
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
@@ -40,6 +41,7 @@ func (x Xds) Validate() error {
 }
 
 // HTTPListener holds the listener configuration.
+// +k8s:deepcopy-gen=true
 type HTTPListener struct {
 	// Name of the HttpListener
 	Name string
@@ -96,6 +98,7 @@ func (h HTTPListener) Validate() error {
 }
 
 // TLSListenerConfig holds the configuration for downstream TLS context.
+// +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
 	// ServerCertificate of the server.
 	ServerCertificate []byte
@@ -116,6 +119,7 @@ func (t TLSListenerConfig) Validate() error {
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
+// +k8s:deepcopy-gen=true
 type HTTPRoute struct {
 	// Name of the HTTPRoute
 	Name string
@@ -187,6 +191,7 @@ func (r RouteDestination) Validate() error {
 
 // StringMatch holds the various match conditions.
 // Only one of Exact, Prefix or SafeRegex can be set.
+// +k8s:deepcopy-gen=true
 type StringMatch struct {
 	// Name of the field to match on.
 	Name string
