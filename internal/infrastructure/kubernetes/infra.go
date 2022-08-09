@@ -15,8 +15,10 @@ import (
 // Infra holds all the translated Infra IR resources and provides
 // the scaffolding for the managing Kubernetes infrastructure.
 type Infra struct {
-	mu        sync.Mutex
-	Client    client.Client
+	mu     sync.Mutex
+	Client client.Client
+	// Namespace is the Namespace used for managed infra.
+	Namespace string
 	Resources *Resources
 }
 

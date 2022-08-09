@@ -35,6 +35,12 @@ spec:
         name: envoy-gateway
         securityContext:
           allowPrivilegeEscalation: false
+        env:
+          - name: ENVOY_GATEWAY_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
         livenessProbe:
           httpGet:
             path: /healthz

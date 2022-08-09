@@ -56,10 +56,20 @@ httpRoutes:
               status: "False"
               reason: NoMatchingListenerHostname
               message: There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).
-ir:
+xdsIR:
   http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
       port: 80
       hostnames:
         - "*.envoyproxy.io"
+infraIR:
+  provider: Kubernetes
+  proxy:
+    name: envoy-gateway-class
+    image: envoyproxy/envoy-dev:latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1
+            port: 80

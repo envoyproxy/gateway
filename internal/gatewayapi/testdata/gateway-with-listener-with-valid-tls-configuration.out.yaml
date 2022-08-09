@@ -57,7 +57,7 @@ httpRoutes:
               status: "True"
               reason: Accepted
               message: Route is accepted
-ir:
+xdsIR:
   http:
     - name: envoy-gateway-gateway-1-tls
       address: 0.0.0.0
@@ -73,3 +73,13 @@ ir:
             - host: 7.7.7.7
               port: 8080
               weight: 1
+infraIR:
+  provider: Kubernetes
+  proxy:
+    name: envoy-gateway-class
+    image: envoyproxy/envoy-dev:latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1
+            port: 443

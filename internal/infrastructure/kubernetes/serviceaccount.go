@@ -48,7 +48,7 @@ func (i *Infra) createServiceAccountIfNeeded(ctx context.Context, infra *ir.Infr
 
 // getServiceAccount gets the ServiceAccount from the kube api for the provided infra.
 func (i *Infra) getServiceAccount(ctx context.Context, infra *ir.Infra) (*corev1.ServiceAccount, error) {
-	ns := infra.Proxy.Namespace
+	ns := i.Namespace
 	name := infra.Proxy.Name
 	key := types.NamespacedName{
 		Namespace: ns,
@@ -66,7 +66,7 @@ func (i *Infra) getServiceAccount(ctx context.Context, infra *ir.Infra) (*corev1
 func (i *Infra) expectedServiceAccount(infra *ir.Infra) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: infra.Proxy.Namespace,
+			Namespace: i.Namespace,
 			Name:      infra.Proxy.ObjectName(),
 		},
 	}
