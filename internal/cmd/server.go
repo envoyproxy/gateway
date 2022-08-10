@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/provider"
 )
@@ -33,6 +32,7 @@ func getServerCommand() *cobra.Command {
 
 // server serves Envoy Gateway.
 func server() error {
+	// Initialize with default config parameters.
 	cfg, err := config.NewDefaultServer()
 	if err != nil {
 		return err
@@ -43,7 +43,6 @@ func server() error {
 	if cfgPath == "" {
 		// Use default config parameters
 		log.Info("No config file provided, using default parameters")
-		cfg.EnvoyGateway = v1alpha1.DefaultEnvoyGateway()
 	} else {
 		// Load the config file.
 		eg, err := config.Decode(cfgPath)

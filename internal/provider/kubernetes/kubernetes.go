@@ -17,7 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
-// ResourceTable is a listing of all of the Kubernetes resources bing
+// ResourceTable is a listing of all of the Kubernetes resources being
 // watched.
 type ResourceTable struct {
 	// Initialized.Wait() will return once each of the maps in the
@@ -26,6 +26,7 @@ type ResourceTable struct {
 
 	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
 	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
+	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
 }
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies
@@ -59,7 +60,7 @@ func New(cfg *rest.Config, svr *config.Server, resourceTable *ResourceTable) (*P
 	if err := newGatewayController(mgr, svr, resourceTable); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
-	if err := newHTTPRouteController(mgr, svr); err != nil {
+	if err := newHTTPRouteController(mgr, svr, resourceTable); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
 

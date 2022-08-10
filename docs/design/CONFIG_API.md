@@ -274,7 +274,7 @@ kind: GatewayClass
 metadata:
   name: example-class
 spec:
-  controllerName: gateway.envoyproxy.io/gateway-controller
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
@@ -299,7 +299,7 @@ kind: GatewayClass
 metadata:
   name: example-class
 spec:
-  controllerName: gateway.envoyproxy.io/gateway-controller
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
     name: example-config
     group: config.gateway.envoyproxy.io
