@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,16 +26,23 @@ type Infra struct {
 // Resources are managed Kubernetes resources.
 type Resources struct {
 	ServiceAccount *corev1.ServiceAccount
+	Deployment     *appsv1.Deployment
 }
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client) *Infra {
 	return &Infra{
-		mu:     sync.Mutex{},
-		Client: cli,
-		Resources: &Resources{
-			ServiceAccount: new(corev1.ServiceAccount),
-		},
+		mu:        sync.Mutex{},
+		Client:    cli,
+		Resources: newResources(),
+	}
+}
+
+// newResources returns a new Resources.
+func newResources() *Resources {
+	return &Resources{
+		ServiceAccount: new(corev1.ServiceAccount),
+		Deployment:     new(appsv1.Deployment),
 	}
 }
 
@@ -50,6 +58,8 @@ func (i *Infra) addResource(obj client.Object) error {
 	switch o := obj.(type) {
 	case *corev1.ServiceAccount:
 		i.Resources.ServiceAccount = o
+	case *appsv1.Deployment:
+		i.Resources.Deployment = o
 	default:
 		return fmt.Errorf("unexpected object kind %s", obj.GetObjectKind())
 	}
@@ -68,12 +78,14 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	if i.Resources == nil {
-		i.Resources = &Resources{
-			ServiceAccount: new(corev1.ServiceAccount),
-		}
+		i.Resources = newResources()
 	}
 
 	if err := i.createServiceAccountIfNeeded(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.createDeploymentIfNeeded(ctx, infra); err != nil {
 		return err
 	}
 
