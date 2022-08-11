@@ -17,6 +17,7 @@ import (
 func TestCreateServiceAccountIfNeeded(t *testing.T) {
 	testCases := []struct {
 		name    string
+		ns      string
 		in      *ir.Infra
 		current *corev1.ServiceAccount
 		out     *Resources
@@ -24,10 +25,10 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 	}{
 		{
 			name: "create-sa",
+			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
+					Name: "test",
 				},
 			},
 			out: &Resources{
@@ -47,10 +48,10 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 		},
 		{
 			name: "sa-exists",
+			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
+					Name: "test",
 				},
 			},
 			current: &corev1.ServiceAccount{
@@ -81,7 +82,8 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
-				mu: sync.Mutex{},
+				mu:        sync.Mutex{},
+				Namespace: tc.ns,
 			}
 			if tc.current != nil {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()

@@ -10,16 +10,13 @@ import (
 )
 
 const (
-	DefaultProxyName         = "default"
-	DefaultProxyNamespace    = "default"
-	DefaultProxyImage        = "envoyproxy/envoy-dev:latest"
-	DefaultHTTPListenerPort  = int32(80)
-	DefaultHTTPSListenerPort = int32(443)
+	DefaultProxyName  = "default"
+	DefaultProxyImage = "envoyproxy/envoy-dev:latest"
 )
 
 // Infra defines managed infrastructure.
 type Infra struct {
-	// Provider is the provider of the infrastructure.
+	// Provider provides infrastructure. If unset, defaults to "Kubernetes".
 	Provider *v1alpha1.ProviderType
 	// Proxy defines managed proxy infrastructure.
 	Proxy *ProxyInfra
@@ -32,9 +29,6 @@ type ProxyInfra struct {
 	//
 	// Name is the name used for managed proxy infrastructure.
 	Name string
-	// Namespace is the namespace used for managed proxy infrastructure.
-	// If unset, defaults to "default".
-	Namespace string
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *v1alpha1.EnvoyProxy
 	// Image is the container image used for the managed proxy infrastructure.
@@ -73,7 +67,6 @@ func NewInfra() *Infra {
 func NewProxyInfra() *ProxyInfra {
 	return &ProxyInfra{
 		Name:      DefaultProxyName,
-		Namespace: DefaultProxyNamespace,
 		Image:     DefaultProxyImage,
 		Listeners: NewProxyListeners(),
 	}
@@ -83,16 +76,7 @@ func NewProxyInfra() *ProxyInfra {
 func NewProxyListeners() []ProxyListener {
 	return []ProxyListener{
 		{
-			Ports: []ListenerPort{
-				{
-					Name: "http",
-					Port: DefaultHTTPListenerPort,
-				},
-				{
-					Name: "https",
-					Port: DefaultHTTPSListenerPort,
-				},
-			},
+			Ports: []ListenerPort{},
 		},
 	}
 }
@@ -109,23 +93,20 @@ func (i *Infra) GetProvider() *v1alpha1.ProviderType {
 // GetProxyInfra returns the ProxyInfra.
 func (i *Infra) GetProxyInfra() *ProxyInfra {
 	if i.Proxy == nil {
-		return NewProxyInfra()
-	}
-	p := new(ProxyInfra)
-	if len(i.Proxy.Namespace) == 0 {
-		p.Namespace = DefaultProxyNamespace
+		i.Proxy = NewProxyInfra()
+		return i.Proxy
 	}
 	if len(i.Proxy.Name) == 0 {
-		p.Name = DefaultProxyName
+		i.Proxy.Name = DefaultProxyName
 	}
 	if len(i.Proxy.Image) == 0 {
-		p.Image = DefaultProxyImage
+		i.Proxy.Image = DefaultProxyImage
 	}
 	if len(i.Proxy.Listeners) == 0 {
 		i.Proxy.Listeners = NewProxyListeners()
 	}
 
-	return p
+	return i.Proxy
 }
 
 // ValidateInfra validates the provided Infra.
@@ -151,10 +132,6 @@ func ValidateProxyInfra(pInfra *ProxyInfra) error {
 
 	if len(pInfra.Name) == 0 {
 		errs = append(errs, errors.New("name field required"))
-	}
-
-	if len(pInfra.Namespace) == 0 {
-		errs = append(errs, errors.New("namespace field required"))
 	}
 
 	if len(pInfra.Image) == 0 {

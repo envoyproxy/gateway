@@ -57,4 +57,14 @@ httpRoutes:
               status: "False"
               reason: NoReadyListeners
               message: There are no ready listeners for this parent ref
-ir: {}
+xdsIR: {}
+infraIR:
+  provider: Kubernetes
+  proxy:
+    name: envoy-gateway-class
+    image: envoyproxy/envoy-dev:latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1
+            port: 80

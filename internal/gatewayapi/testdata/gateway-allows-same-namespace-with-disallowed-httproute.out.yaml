@@ -53,8 +53,18 @@ httpRoutes:
               status: "False"
               reason: NotAllowedByListeners
               message: No listeners included by this parent ref allowed this attachment.
-ir:
+xdsIR:
   http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
       port: 80
+infraIR:
+  provider: Kubernetes
+  proxy:
+    name: envoy-gateway-class
+    image: envoyproxy/envoy-dev:latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1
+            port: 80

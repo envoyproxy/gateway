@@ -2,6 +2,7 @@ package infrastructure
 
 import (
 	"fmt"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -27,6 +28,12 @@ func NewManager(infra *ir.Infra) (*Manager, error) {
 			return nil, err
 		}
 		mgr.Kubernetes = kubernetes.NewInfra(cli)
+
+		// Set the namespace used for the managed infra.
+		ns, found := os.LookupEnv("ENVOY_GATEWAY_NAMESPACE")
+		if found {
+			mgr.Kubernetes.Namespace = ns
+		}
 	} else {
 		// Kube is the only supported provider type.
 		return nil, fmt.Errorf("unsupported provider type %v", infra.Provider)

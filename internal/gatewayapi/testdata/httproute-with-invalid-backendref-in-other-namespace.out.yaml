@@ -59,7 +59,7 @@ httpRoutes:
               status: "False"
               reason: RefNotPermitted
               message: Backend ref to service backends/service-1 not permitted by any ReferenceGrant
-ir:
+xdsIR:
   http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
@@ -70,3 +70,13 @@ ir:
             exact: "/exact"
           # TODO this should change when the correct behavior for invalid backend refs is implemented
           destinations: 
+infraIR:
+  provider: Kubernetes
+  proxy:
+    name: envoy-gateway-class
+    image: envoyproxy/envoy-dev:latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1
+            port: 80

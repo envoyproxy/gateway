@@ -17,26 +17,13 @@ func TestValidateInfra(t *testing.T) {
 		{
 			name:   "default",
 			infra:  NewInfra(),
-			expect: true,
+			expect: false,
 		},
 		{
 			name: "no-name",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name:      "",
-					Namespace: "test",
-					Image:     "image",
-					Listeners: NewProxyListeners(),
-				},
-			},
-			expect: false,
-		},
-		{
-			name: "no-namespace",
-			infra: &Infra{
-				Proxy: &ProxyInfra{
-					Name:      "test",
-					Namespace: "",
 					Image:     "image",
 					Listeners: NewProxyListeners(),
 				},
@@ -47,9 +34,8 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listeners",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
-					Image:     "image",
+					Name:  "test",
+					Image: "image",
 				},
 			},
 			expect: true,
@@ -58,9 +44,8 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-ports",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
-					Image:     "image",
+					Name:  "test",
+					Image: "image",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{},
@@ -74,14 +59,13 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-port-name",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
-					Image:     "image",
+					Name:  "test",
+					Image: "image",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{
 								{
-									Port: DefaultHTTPListenerPort,
+									Port: int32(80),
 								},
 							},
 						},
@@ -94,9 +78,8 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-port-number",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
-					Image:     "image",
+					Name:  "test",
+					Image: "image",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{
@@ -114,9 +97,8 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-image",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:      "test",
-					Namespace: "test",
-					Image:     "",
+					Name:  "test",
+					Image: "",
 				},
 			},
 			expect: false,
@@ -167,7 +149,6 @@ func TestNewProxyInfra(t *testing.T) {
 			name: "default infra",
 			expected: &ProxyInfra{
 				Name:      DefaultProxyName,
-				Namespace: DefaultProxyNamespace,
 				Image:     DefaultProxyImage,
 				Listeners: NewProxyListeners(),
 			},

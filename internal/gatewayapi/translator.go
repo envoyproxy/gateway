@@ -3,12 +3,13 @@ package gatewayapi
 import (
 	"fmt"
 
-	"github.com/envoyproxy/gateway/internal/ir"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -59,8 +60,8 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 	return nil
 }
 
-// Translator translates Gateway API resources to the IR,
-// and computes status for Gateway API resources.
+// Translator translates Gateway API resources to IRs and computes status
+// for Gateway API resources.
 type Translator struct {
 	gatewayClassName v1beta1.ObjectName
 }
@@ -68,12 +69,14 @@ type Translator struct {
 type TranslateResult struct {
 	Gateways   []*v1beta1.Gateway
 	HTTPRoutes []*v1beta1.HTTPRoute
-	IR         *ir.Xds
+	XdsIR      *ir.Xds
+	InfraIR    *ir.Infra
 }
 
-func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR *ir.Xds) *TranslateResult {
+func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR *ir.Xds, infraIR *ir.Infra) *TranslateResult {
 	translateResult := &TranslateResult{
-		IR: xdsIR,
+		XdsIR:   xdsIR,
+		InfraIR: infraIR,
 	}
 
 	for _, gateway := range gateways {
@@ -89,16 +92,19 @@ func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteConte
 func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	xdsIR := &ir.Xds{}
 
+	infraIR := ir.NewInfra()
+	infraIR.Proxy.Name = string(t.gatewayClassName)
+
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
 
 	// Process all Listeners for all relevant Gateways.
-	t.ProcessListeners(gateways, xdsIR, resources)
+	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, xdsIR)
+	return newTranslateResult(gateways, httpRoutes, xdsIR, infraIR)
 }
 
 func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {
@@ -127,8 +133,9 @@ type portListeners struct {
 	hostnames map[string]int
 }
 
-func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds, resources *Resources) {
+func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds, infraIR *ir.Infra, resources *Resources) {
 	portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
+	infraPorts := map[v1beta1.PortNumber]string{}
 
 	// Iterate through all listeners and collect info about protocols
 	// and hostnames per port.
@@ -159,7 +166,21 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			}
 
 			portListenerInfo[listener.Port].hostnames[hostname]++
+
+			// Setup Infra IR listeners.
+			if _, found := infraPorts[listener.Port]; !found {
+				infraPorts[listener.Port] = irInfraPortName(listener)
+			}
 		}
+	}
+
+	for port, name := range infraPorts {
+		// Add the listener to the Infra IR.
+		infraPort := ir.ListenerPort{
+			Name: name,
+			Port: int32(port),
+		}
+		infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
 	}
 
 	// Set Conflicted conditions for any listeners with conflicting specs.
@@ -192,7 +213,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
-	// to the IR.
+	// to the Xds IR.
 	for _, gateway := range gateways {
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -406,6 +427,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 
 			listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
 
+			// Add the listener to the Xds IR.
 			irListener := &ir.HTTPListener{
 				Name:    irListenerName(listener),
 				Address: "0.0.0.0",
@@ -486,7 +508,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 				// A rule is matched if any one of its matches
 				// is satisfied (i.e. a logical "OR"), so generate
-				// a unique IR HTTPRoute per match.
+				// a unique Xds IR HTTPRoute per match.
 				for matchIdx, match := range rule.Matches {
 					irRoute := &ir.HTTPRoute{
 						Name: routeName(httpRoute, ruleIdx, matchIdx),
@@ -746,6 +768,10 @@ func isValidCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, refe
 
 func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
+}
+
+func irInfraPortName(listener *ListenerContext) string {
+	return fmt.Sprintf("%s-%s", listener.gateway.Namespace, listener.gateway.Name)
 }
 
 func routeName(httpRoute *HTTPRouteContext, ruleIdx, matchIdx int) string {
