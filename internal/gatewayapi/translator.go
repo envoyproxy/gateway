@@ -135,7 +135,6 @@ type portListeners struct {
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds, infraIR *ir.Infra, resources *Resources) {
 	portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
-	infraPorts := map[v1beta1.PortNumber]string{}
 
 	// Iterate through all listeners and collect info about protocols
 	// and hostnames per port.
@@ -166,21 +165,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			}
 
 			portListenerInfo[listener.Port].hostnames[hostname]++
-
-			// Setup Infra IR listeners.
-			if _, found := infraPorts[listener.Port]; !found {
-				infraPorts[listener.Port] = irInfraPortName(listener)
-			}
 		}
-	}
-
-	for port, name := range infraPorts {
-		// Add the listener to the Infra IR.
-		infraPort := ir.ListenerPort{
-			Name: name,
-			Port: int32(port),
-		}
-		infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
 	}
 
 	// Set Conflicted conditions for any listeners with conflicting specs.
@@ -210,6 +195,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			}
 		}
 	}
+
+	// Infra IR proxy ports must be unique.
+	var foundPorts []v1beta1.PortNumber
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
@@ -438,6 +426,22 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 				irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 			}
 			xdsIR.HTTP = append(xdsIR.HTTP, irListener)
+
+			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
+			if !containsPortNum(foundPorts, listener.Port) {
+				foundPorts = append(foundPorts, listener.Port)
+				proto := ir.HTTPProtocolType
+				if listener.Protocol == v1beta1.HTTPSProtocolType {
+					proto = ir.HTTPSProtocolType
+				}
+				infraPort := ir.ListenerPort{
+					Name:     irInfraPortName(listener),
+					Protocol: proto,
+					Port:     int32(listener.Port),
+				}
+				// Only 1 listener is supported.
+				infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
+			}
 		}
 	}
 }

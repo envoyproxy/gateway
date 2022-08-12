@@ -82,4 +82,5 @@ infraIR:
       - address: ""
         ports:
           - name: envoy-gateway-gateway-1
+            protocol: "HTTPS"
             port: 443

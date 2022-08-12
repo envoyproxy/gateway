@@ -27,6 +27,7 @@ type Infra struct {
 type Resources struct {
 	ServiceAccount *corev1.ServiceAccount
 	Deployment     *appsv1.Deployment
+	Service        *corev1.Service
 }
 
 // NewInfra returns a new Infra.
@@ -43,6 +44,7 @@ func newResources() *Resources {
 	return &Resources{
 		ServiceAccount: new(corev1.ServiceAccount),
 		Deployment:     new(appsv1.Deployment),
+		Service:        new(corev1.Service),
 	}
 }
 
@@ -60,6 +62,8 @@ func (i *Infra) addResource(obj client.Object) error {
 		i.Resources.ServiceAccount = o
 	case *appsv1.Deployment:
 		i.Resources.Deployment = o
+	case *corev1.Service:
+		i.Resources.Service = o
 	default:
 		return fmt.Errorf("unexpected object kind %s", obj.GetObjectKind())
 	}
@@ -86,6 +90,10 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	if err := i.createDeploymentIfNeeded(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.createServiceIfNeeded(ctx, infra); err != nil {
 		return err
 	}
 
