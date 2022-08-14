@@ -3,9 +3,11 @@ package kubernetes
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	fakeclock "k8s.io/utils/clock/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -283,6 +285,136 @@ func TestGatewaysOfClass(t *testing.T) {
 			gwList := &gwapiv1b1.GatewayList{Items: tc.gws}
 			actual := gatewaysOfClass(gc, gwList)
 			require.Equal(t, tc.expect, len(actual))
+		})
+	}
+}
+
+func TestOldestGateway(t *testing.T) {
+	// Create a fake clock and set different times for gateway CreationTimestamp.
+	fakeClock := fakeclock.NewFakeClock(time.Time{})
+	now := fakeClock.Now()
+	later := now.Add(1 * time.Minute)
+	latest := now.Add(2 * time.Minute)
+
+	testCases := []struct {
+		name   string
+		in     []gwapiv1b1.Gateway
+		expect *gwapiv1b1.Gateway
+	}{
+		{
+			name: "one gateway",
+			in: []gwapiv1b1.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "first",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+			},
+			expect: &gwapiv1b1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "first",
+					Namespace: "test",
+				},
+			},
+		},
+		{
+			name: "two gateways with different times",
+			in: []gwapiv1b1.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "second",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(later),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "first",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+			},
+			expect: &gwapiv1b1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "first",
+					Namespace: "test",
+				},
+			},
+		},
+		{
+			name: "three gateways with different times",
+			in: []gwapiv1b1.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "first",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(latest),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "second",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(later),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "third",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+			},
+			expect: &gwapiv1b1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "third",
+					Namespace: "test",
+				},
+			},
+		},
+		{
+			name: "three gateways with same time",
+			in: []gwapiv1b1.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "third",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "second",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:              "first",
+						Namespace:         "test",
+						CreationTimestamp: metav1.NewTime(now),
+					},
+				},
+			},
+			expect: &gwapiv1b1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "first",
+					Namespace: "test",
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := oldestGateway(tc.in)
+			require.Equal(t, tc.expect.Name, actual.Name)
+			require.Equal(t, tc.expect.Namespace, actual.Namespace)
 		})
 	}
 }

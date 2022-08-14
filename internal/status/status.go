@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -139,6 +141,22 @@ func (u *UpdateWriter) Send(update Update) {
 //
 // Supported objects:
 //  GatewayClasses
+//  Gateway
 func isStatusEqual(objA, objB interface{}) bool {
-	return cmp.Equal(objA.(*gwapiv1b1.GatewayClass).Status, objB.(*gwapiv1b1.GatewayClass).Status)
+	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+	switch a := objA.(type) {
+	case *gwapiv1b1.GatewayClass:
+		if b, ok := objB.(*gwapiv1b1.GatewayClass); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1b1.Gateway:
+		if b, ok := objB.(*gwapiv1b1.Gateway); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	}
+	return false
 }

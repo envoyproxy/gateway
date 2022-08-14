@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilclock "k8s.io/utils/clock"
 	fakeclock "k8s.io/utils/clock/testing"
-	gatewayapi_v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 var clock utilclock.Clock = utilclock.RealClock{}
@@ -26,16 +26,16 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 			name:     "accepted gatewayclass",
 			accepted: true,
 			expect: metav1.Condition{
-				Type:   string(gatewayapi_v1beta1.GatewayClassConditionStatusAccepted),
+				Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 				Status: metav1.ConditionTrue,
-				Reason: string(gatewayapi_v1beta1.GatewayClassReasonAccepted),
+				Reason: string(gwapiv1b1.GatewayClassReasonAccepted),
 			},
 		},
 		{
 			name:     "not accepted gatewayclass",
 			accepted: false,
 			expect: metav1.Condition{
-				Type:   string(gatewayapi_v1beta1.GatewayClassConditionStatusAccepted),
+				Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 				Status: metav1.ConditionFalse,
 				Reason: string(ReasonOlderGatewayClassExists),
 			},
@@ -43,7 +43,7 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		gc := &gatewayapi_v1beta1.GatewayClass{
+		gc := &gwapiv1b1.GatewayClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Generation: 7,
 			},
@@ -55,6 +55,45 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 		assert.Equal(t, tc.expect.Status, got.Status)
 		assert.Equal(t, tc.expect.Reason, got.Reason)
 		assert.Equal(t, gc.Generation, got.ObservedGeneration)
+	}
+}
+
+func TestComputeGatewayScheduledCondition(t *testing.T) {
+	testCases := []struct {
+		name   string
+		oldest bool
+		expect metav1.Condition
+	}{
+		{
+			name:   "scheduled gateway",
+			oldest: true,
+			expect: metav1.Condition{
+				Type:   string(gwapiv1b1.GatewayConditionScheduled),
+				Status: metav1.ConditionTrue,
+			},
+		},
+		{
+			name:   "not scheduled gateway",
+			oldest: false,
+			expect: metav1.Condition{
+				Type:   string(gwapiv1b1.GatewayConditionScheduled),
+				Status: metav1.ConditionFalse,
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		gw := &gwapiv1b1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      "test",
+			},
+		}
+
+		got := computeGatewayScheduledCondition(gw, tc.oldest)
+
+		assert.Equal(t, tc.expect.Type, got.Type)
+		assert.Equal(t, tc.expect.Status, got.Status)
 	}
 }
 
@@ -79,12 +118,12 @@ func TestConditionChanged(t *testing.T) {
 			name:     "condition LastTransitionTime should be ignored",
 			expected: false,
 			a: metav1.Condition{
-				Type:               string(gatewayapi_v1beta1.GatewayClassConditionStatusAccepted),
+				Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				LastTransitionTime: metav1.Unix(0, 0),
 			},
 			b: metav1.Condition{
-				Type:               string(gatewayapi_v1beta1.GatewayClassConditionStatusAccepted),
+				Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				LastTransitionTime: metav1.Unix(1, 0),
 			},
@@ -93,12 +132,12 @@ func TestConditionChanged(t *testing.T) {
 			name:     "check condition reason differs",
 			expected: true,
 			a: metav1.Condition{
-				Type:   string(gatewayapi_v1beta1.GatewayConditionReady),
+				Type:   string(gwapiv1b1.GatewayConditionReady),
 				Status: metav1.ConditionFalse,
 				Reason: "foo",
 			},
 			b: metav1.Condition{
-				Type:   string(gatewayapi_v1beta1.GatewayConditionReady),
+				Type:   string(gwapiv1b1.GatewayConditionReady),
 				Status: metav1.ConditionFalse,
 				Reason: "bar",
 			},
@@ -107,11 +146,11 @@ func TestConditionChanged(t *testing.T) {
 			name:     "condition status differs",
 			expected: true,
 			a: metav1.Condition{
-				Type:   string(gatewayapi_v1beta1.GatewayClassConditionStatusAccepted),
+				Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 				Status: metav1.ConditionTrue,
 			},
 			b: metav1.Condition{
-				Type:   string(gatewayapi_v1beta1.GatewayClassConditionStatusAccepted),
+				Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 				Status: metav1.ConditionFalse,
 			},
 		},
@@ -136,6 +175,8 @@ func TestMergeConditions(t *testing.T) {
 	middle := start.Add(1 * time.Minute)
 	later := start.Add(2 * time.Minute)
 
+	gen := int64(1)
+
 	testCases := []struct {
 		name     string
 		current  []metav1.Condition
@@ -145,37 +186,37 @@ func TestMergeConditions(t *testing.T) {
 		{
 			name: "status updated",
 			current: []metav1.Condition{
-				newCondition("available", "false", "Reason", "Message", start),
+				newCondition("available", "false", "Reason", "Message", start, gen),
 			},
 			updates: []metav1.Condition{
-				newCondition("available", "true", "Reason", "Message", middle),
+				newCondition("available", "true", "Reason", "Message", middle, gen),
 			},
 			expected: []metav1.Condition{
-				newCondition("available", "true", "Reason", "Message", later),
+				newCondition("available", "true", "Reason", "Message", later, gen),
 			},
 		},
 		{
 			name: "reason updated",
 			current: []metav1.Condition{
-				newCondition("available", "false", "Reason", "Message", start),
+				newCondition("available", "false", "Reason", "Message", start, gen),
 			},
 			updates: []metav1.Condition{
-				newCondition("available", "false", "New Reason", "Message", middle),
+				newCondition("available", "false", "New Reason", "Message", middle, gen),
 			},
 			expected: []metav1.Condition{
-				newCondition("available", "false", "New Reason", "Message", start),
+				newCondition("available", "false", "New Reason", "Message", start, gen),
 			},
 		},
 		{
 			name: "message updated",
 			current: []metav1.Condition{
-				newCondition("available", "false", "Reason", "Message", start),
+				newCondition("available", "false", "Reason", "Message", start, gen),
 			},
 			updates: []metav1.Condition{
-				newCondition("available", "false", "Reason", "New Message", middle),
+				newCondition("available", "false", "Reason", "New Message", middle, gen),
 			},
 			expected: []metav1.Condition{
-				newCondition("available", "false", "Reason", "New Message", start),
+				newCondition("available", "false", "Reason", "New Message", start, gen),
 			},
 		},
 	}

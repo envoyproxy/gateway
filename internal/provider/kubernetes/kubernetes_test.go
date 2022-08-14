@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -58,7 +59,7 @@ func TestProvider(t *testing.T) {
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
 		"gatewayclass controller name": testGatewayClassController,
 		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
-		"gateway of gatewayclass":      testGatewayOfClass,
+		"gateway scheduled status":     testGatewayScheduledStatus,
 		"httproute":                    testHTTPRoute,
 	}
 	for name, tc := range testcases {
@@ -141,12 +142,12 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 	assert.Equal(t, gc, gcs)
 }
 
-func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gc-of-class",
+			Name: "gc-scheduled-status-test",
 		},
 		Spec: gwapiv1b1.GatewayClassSpec{
 			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
@@ -154,7 +155,7 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider, r
 	}
 	require.NoError(t, cli.Create(ctx, gc))
 
-	// Ensure the GatewayClass reports ready.
+	// Ensure the GatewayClass reports "Ready".
 	require.Eventually(t, func() bool {
 		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
 			return false
@@ -179,7 +180,7 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider, r
 
 	gw := &gwapiv1b1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gw-of-class",
+			Name:      "scheduled-status-test",
 			Namespace: ns.Name,
 		},
 		Spec: gwapiv1b1.GatewaySpec{
@@ -195,7 +196,28 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider, r
 	}
 	require.NoError(t, cli.Create(ctx, gw))
 
-	// Ensure the number of Gateways in the Gateway resources is as expected.
+	// Ensure the Gateway reports "Scheduled".
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, gw); err != nil {
+			return false
+		}
+
+		for _, cond := range gw.Status.Conditions {
+			fmt.Printf("Condition: %v", cond)
+			if cond.Type == string(gwapiv1b1.GatewayConditionScheduled) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		// Scheduled=True condition not found.
+		return false
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
 		return assert.Equal(t, 1, resources.Gateways.Len())
 	}, defaultWait, defaultTick)
