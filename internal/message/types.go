@@ -69,7 +69,7 @@ type XdsResources struct {
 }
 
 func (x *XdsResources) Get() *xdstypes.XdsResources {
-	// Itreate and return the first element
+	// Iterate and return the first element
 	for _, v := range x.LoadAll() {
 		return v
 	}
