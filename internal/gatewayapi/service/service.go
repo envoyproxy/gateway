@@ -57,6 +57,6 @@ func (s *Service) subscribeAndTranslate(ctx context.Context) {
 		// Publish the IR
 		// Use the service name as the key to ensure there is always
 		// one element in the map
-		s.XdsIR.Store(s.Name(), result.IR)
+		s.XdsIR.Store(s.Name(), result.XdsIR)
 	}
 }

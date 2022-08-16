@@ -94,7 +94,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	xdsIR := &ir.Xds{}
 
 	infraIR := ir.NewInfra()
-	infraIR.Proxy.Name = string(t.gatewayClassName)
+	infraIR.Proxy.Name = string(t.GatewayClassName)
 
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)

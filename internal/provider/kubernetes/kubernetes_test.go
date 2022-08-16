@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 const (
@@ -40,7 +41,8 @@ func TestProvider(t *testing.T) {
 	// Setup and start the kube provider.
 	svr, err := config.NewDefaultServer()
 	require.NoError(t, err)
-	provider, err := New(cliCfg, svr, new(ResourceTable))
+	resources := new(message.ProviderResources)
+	provider, err := New(cliCfg, svr.EnvoyGateway.Gateway.ControllerName, svr.Logger, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -53,7 +55,7 @@ func TestProvider(t *testing.T) {
 		require.NoError(t, testEnv.Stop())
 	}()
 
-	testcases := map[string]func(context.Context, *testing.T, *Provider){
+	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
 		"gatewayclass controller name": testGatewayClassController,
 		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
 		"gateway of gatewayclass":      testGatewayOfClass,
@@ -61,7 +63,7 @@ func TestProvider(t *testing.T) {
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
-			tc(ctx, t, provider)
+			tc(ctx, t, provider, resources)
 		})
 	}
 }
@@ -74,12 +76,12 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	}
 	cfg, err := env.Start()
 	if err != nil {
-		return nil, nil, err
+		return env, nil, err
 	}
 	return env, cfg, nil
 }
 
-func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider) {
+func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := &gwapiv1b1.GatewayClass{
@@ -102,7 +104,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 	assert.Equal(t, gc.ObjectMeta.Generation, int64(1))
 }
 
-func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider) {
+func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := &gwapiv1b1.GatewayClass{
@@ -133,13 +135,13 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		return false
 	}, defaultWait, defaultTick)
 
-	// Ensure the GatewayClass resource table is as expected.
-	assert.Equal(t, 1, provider.resourceTable.GatewayClasses.Len())
-	gcTable, _ := provider.resourceTable.GatewayClasses.Load(gc.Name)
-	assert.Equal(t, gc, gcTable)
+	// Ensure the GatewayClass resources is as expected.
+	assert.Equal(t, 1, resources.GatewayClasses.Len())
+	gcs, _ := resources.GatewayClasses.Load(gc.Name)
+	assert.Equal(t, gc, gcs)
 }
 
-func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider) {
+func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := &gwapiv1b1.GatewayClass{
@@ -193,12 +195,12 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider) {
 	}
 	require.NoError(t, cli.Create(ctx, gw))
 
-	// Ensure the number of Gateways in the Gateway resource table is as expected.
+	// Ensure the number of Gateways in the Gateway resources is as expected.
 	require.Eventually(t, func() bool {
-		return assert.Equal(t, 1, provider.resourceTable.Gateways.Len())
+		return assert.Equal(t, 1, resources.Gateways.Len())
 	}, defaultWait, defaultTick)
 
-	// Ensure the test Gateway in the Gateway resource table is as expected.
+	// Ensure the test Gateway in the Gateway resources is as expected.
 	key := types.NamespacedName{
 		Namespace: gw.Namespace,
 		Name:      gw.Name,
@@ -206,11 +208,11 @@ func testGatewayOfClass(ctx context.Context, t *testing.T, provider *Provider) {
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
-	gwTable, _ := provider.resourceTable.Gateways.Load(key)
-	assert.Equal(t, gw, gwTable)
+	gws, _ := resources.Gateways.Load(key)
+	assert.Equal(t, gw, gws)
 }
 
-func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider) {
+func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := &gwapiv1b1.GatewayClass{
@@ -303,12 +305,12 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider) {
 	}
 	require.NoError(t, cli.Create(ctx, hroute))
 
-	// Ensure the number of HTTPRoutes in the HTTPRoute resource table is as expected.
+	// Ensure the number of HTTPRoutes in the HTTPRoute resources is as expected.
 	require.Eventually(t, func() bool {
-		return assert.Equal(t, 1, provider.resourceTable.HTTPRoutes.Len())
+		return assert.Equal(t, 1, resources.HTTPRoutes.Len())
 	}, defaultWait, defaultTick)
 
-	// Ensure the test HTTPRoute in the HTTPRoute resource table is as expected.
+	// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
 	key := types.NamespacedName{
 		Namespace: hroute.Namespace,
 		Name:      hroute.Name,
@@ -316,6 +318,6 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider) {
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, key, hroute) == nil
 	}, defaultWait, defaultTick)
-	hrTable, _ := provider.resourceTable.HTTPRoutes.Load(key)
-	assert.Equal(t, hroute, hrTable)
+	hroutes, _ := resources.HTTPRoutes.Load(key)
+	assert.Equal(t, hroute, hroutes)
 }

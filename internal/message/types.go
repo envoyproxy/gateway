@@ -15,6 +15,7 @@ import (
 type ProviderResources struct {
 	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
 	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
+	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
 	// Initialized.Wait() will return once each of the maps in the
 	// structure have been initialized at startup.
 	Initialized sync.WaitGroup

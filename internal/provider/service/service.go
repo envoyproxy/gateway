@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -23,7 +25,11 @@ func (s *Service) Start(ctx context.Context) error {
 	s.Logger = s.Logger.WithValues("service", s.Name())
 	if s.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		s.Logger.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
-		p, err := kubernetes.New(s.EnvoyGateway.Gateway.ControllerName, s.Logger, s.ProviderResources)
+		cfg, err := ctrl.GetConfig()
+		if err != nil {
+			return fmt.Errorf("failed to get kubeconfig: %w", err)
+		}
+		p, err := kubernetes.New(cfg, s.EnvoyGateway.Gateway.ControllerName, s.Logger, s.ProviderResources)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
 		}

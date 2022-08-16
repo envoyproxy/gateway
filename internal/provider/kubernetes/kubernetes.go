@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -12,18 +13,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/message"
 )
-
-// ResourceTable is a listing of all of the Kubernetes resources being
-// watched.
-type ResourceTable struct {
-	// Initialized.Wait() will return once each of the maps in the
-	// table have been initialized at startup.
-	Initialized sync.WaitGroup
-
-	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
-	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
-	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
-}
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies
 // and defines the topology of the provider and its managed components, wiring
@@ -34,11 +23,7 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(controllerName string, logger logr.Logger, resources *message.ProviderResources) (*Provider, error) {
-	cfg, err := ctrl.GetConfig()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
-	}
+func New(cfg *rest.Config, controllerName string, logger logr.Logger, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:             envoygateway.GetScheme(),
@@ -59,7 +44,7 @@ func New(controllerName string, logger logr.Logger, resources *message.ProviderR
 	if err := newGatewayController(controllerName, mgr, logger, resources); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
-	if err := newHTTPRouteController(mgr, svr, resourceTable); err != nil {
+	if err := newHTTPRouteController(mgr, logger, resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
 
