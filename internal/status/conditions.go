@@ -37,14 +37,16 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass, 
 }
 
 // computeGatewayScheduledCondition computes the Gateway Scheduled status condition.
-func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, oldest bool) metav1.Condition {
-	switch oldest {
+func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) metav1.Condition {
+	switch scheduled {
 	case true:
-		return newCondition(string(gwapiv1b1.GatewayConditionScheduled), metav1.ConditionTrue, "OldestGateway",
-			"Oldest Gateway for the accepted GatewayClass", time.Now(), gw.Generation)
+		return newCondition(string(gwapiv1b1.GatewayConditionScheduled), metav1.ConditionTrue,
+			string(gwapiv1b1.GatewayReasonScheduled),
+			"The Gateway has been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	default:
-		return newCondition(string(gwapiv1b1.GatewayConditionScheduled), metav1.ConditionFalse, "OlderGatewayExists",
-			"An older Gateway exists for the accepted GatewayClass", time.Now(), gw.Generation)
+		return newCondition(string(gwapiv1b1.GatewayConditionScheduled), metav1.ConditionFalse,
+			string(gwapiv1b1.GatewayReasonScheduled),
+			"The Gateway has not been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	}
 }
 
@@ -75,8 +77,6 @@ func mergeConditions(conditions []metav1.Condition, updates ...metav1.Condition)
 	return conditions
 }
 
-// TODO: Pass the Generation so we can set ObservedGeneration.
-// xref: https://github.com/envoyproxy/gateway/issues/166
 func newCondition(t string, status metav1.ConditionStatus, reason, msg string, lt time.Time, og int64) metav1.Condition {
 	return metav1.Condition{
 		Type:               t,

@@ -61,20 +61,20 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 func TestComputeGatewayScheduledCondition(t *testing.T) {
 	testCases := []struct {
 		name   string
-		oldest bool
+		sched  bool
 		expect metav1.Condition
 	}{
 		{
-			name:   "scheduled gateway",
-			oldest: true,
+			name:  "scheduled gateway",
+			sched: true,
 			expect: metav1.Condition{
 				Type:   string(gwapiv1b1.GatewayConditionScheduled),
 				Status: metav1.ConditionTrue,
 			},
 		},
 		{
-			name:   "not scheduled gateway",
-			oldest: false,
+			name:  "not scheduled gateway",
+			sched: false,
 			expect: metav1.Condition{
 				Type:   string(gwapiv1b1.GatewayConditionScheduled),
 				Status: metav1.ConditionFalse,
@@ -90,7 +90,7 @@ func TestComputeGatewayScheduledCondition(t *testing.T) {
 			},
 		}
 
-		got := computeGatewayScheduledCondition(gw, tc.oldest)
+		got := computeGatewayScheduledCondition(gw, tc.sched)
 
 		assert.Equal(t, tc.expect.Type, got.Type)
 		assert.Equal(t, tc.expect.Status, got.Status)

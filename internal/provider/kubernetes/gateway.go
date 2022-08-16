@@ -117,10 +117,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	if err := r.client.List(ctx, allGateways); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gateways")
 	}
-	if len(allGateways.Items) == 0 {
-		r.log.Info("No gateways found for request", "namespace", request.Namespace, "name", request.Name)
-		return reconcile.Result{}, nil
-	}
 
 	// Get all the Gateways for the Accepted=true GatewayClass.
 	acceptedGateways := gatewaysOfClass(acceptedClass, allGateways)
@@ -139,17 +135,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		r.resources.Gateways.Delete(request.NamespacedName)
 	}
 
-	// Find the oldest Gateway, using alphabetical order	// as a tiebreaker.
-	oldestGateway := oldestGateway(acceptedGateways)
-
-	// Set the "Scheduled" condition to false for all gateways except the oldest.
-	// The oldest will have its status set by the Resource Translator, so don't set it here.
+	// Set the "Scheduled" condition to true for all accepted gateways.
 	for _, gw := range acceptedGateways {
-		oldest := false
-		if gw.Namespace == oldestGateway.Namespace && gw.Name == oldestGateway.Name {
-			oldest = true
-		}
-
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name},
 			Resource:       &gwapiv1b1.Gateway{},
@@ -159,7 +146,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 					panic(fmt.Sprintf("unsupported object type %T", obj))
 				}
 
-				return status.SetGatewayScheduled(gw.DeepCopy(), oldest)
+				return status.SetGatewayScheduled(gw.DeepCopy(), true)
 			}),
 		})
 	}
@@ -214,24 +201,4 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 		}
 	}
 	return ret
-}
-
-// oldestGateway finds the oldest Gateway from the provides list,
-// using alphabetical order as a tiebreaker.
-func oldestGateway(gateways []gwapiv1b1.Gateway) *gwapiv1b1.Gateway {
-	var oldest gwapiv1b1.Gateway
-	for i, gw := range gateways {
-		switch {
-		case i == 0:
-			oldest = gw
-		case gw.CreationTimestamp.Before(&oldest.CreationTimestamp):
-			oldest = gw
-		case gw.CreationTimestamp.Equal(&oldest.CreationTimestamp):
-			if fmt.Sprintf("%s/%s", gw.Namespace, gw.Name) < fmt.Sprintf("%s/%s", oldest.Namespace, oldest.Name) {
-				oldest = gw
-			}
-		}
-	}
-
-	return &oldest
 }
