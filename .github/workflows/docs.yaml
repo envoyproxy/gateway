@@ -1,0 +1,23 @@
+name: Docs
+on:
+  push:
+    branches:
+      - "main"
+      - "release-v*"
+    paths-ignore:
+      - "**/*.png"
+  pull_request:
+    branches:
+      - "main"
+      - "release-v*"
+    paths-ignore:
+      - "**/*.png"
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./tools/github-actions/setup-deps
+
+      # docs
+      - run: make docs

@@ -23,8 +23,9 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 # `pip install`-able things
 # =========================
 #
-tools/codespell = $(tools.bindir)/codespell
-tools/yamllint  = $(tools.bindir)/yamllint
+tools/codespell    = $(tools.bindir)/codespell
+tools/yamllint     = $(tools.bindir)/yamllint
+tools/sphinx-build = $(tools.bindir)/sphinx-build
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	mkdir -p $(@D)
 	python3 -m venv $@
