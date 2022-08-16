@@ -158,7 +158,7 @@ func ValidateProxyInfra(pInfra *ProxyInfra) error {
 	return utilerrors.NewAggregate(errs)
 }
 
-// ObjectName returns the name of proxy infrastructure objects.
+// ObjectName returns the name of the proxy infrastructure object.
 func (p *ProxyInfra) ObjectName() string {
 	if len(p.Name) == 0 {
 		return fmt.Sprintf("envoy-%s", DefaultProxyName)
