@@ -20,12 +20,15 @@ type Infra struct {
 	Client client.Client
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
-	Resources *Resources
+	// ConfigHash is a hash that is generated from the managed ConfigMap.
+	ConfigHash string
+	Resources  *Resources
 }
 
 // Resources are managed Kubernetes resources.
 type Resources struct {
 	ServiceAccount *corev1.ServiceAccount
+	ConfigMap      *corev1.ConfigMap
 	Deployment     *appsv1.Deployment
 	Service        *corev1.Service
 }
@@ -43,6 +46,7 @@ func NewInfra(cli client.Client) *Infra {
 func newResources() *Resources {
 	return &Resources{
 		ServiceAccount: new(corev1.ServiceAccount),
+		ConfigMap:      new(corev1.ConfigMap),
 		Deployment:     new(appsv1.Deployment),
 		Service:        new(corev1.Service),
 	}
@@ -60,6 +64,8 @@ func (i *Infra) addResource(obj client.Object) error {
 	switch o := obj.(type) {
 	case *corev1.ServiceAccount:
 		i.Resources.ServiceAccount = o
+	case *corev1.ConfigMap:
+		i.Resources.ConfigMap = o
 	case *appsv1.Deployment:
 		i.Resources.Deployment = o
 	case *corev1.Service:
@@ -86,6 +92,10 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	if err := i.createServiceAccountIfNeeded(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.createConfigMapIfNeeded(ctx, infra); err != nil {
 		return err
 	}
 

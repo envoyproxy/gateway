@@ -6,6 +6,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -59,6 +60,12 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, resourceTable
 	); err != nil {
 		return err
 	}
+
+	// Watch the Contour deployment and Envoy daemonset to properly surface Contour status conditions.
+	if err := c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForObject{}); err != nil {
+		return nil, err
+	}
+
 	r.log.Info("watching gateway objects")
 
 	return nil

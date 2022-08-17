@@ -84,6 +84,17 @@ func checkContainerImage(t *testing.T, container *corev1.Container, image string
 	t.Errorf("container is missing image %q", image)
 }
 
+func checkVolume(t *testing.T, deploy *appsv1.Deployment, name string) {
+	t.Helper()
+
+	for _, v := range deploy.Spec.Template.Spec.Volumes {
+		if v.Name == name {
+			return
+		}
+	}
+	t.Errorf("deployment is missing volume %q", name)
+}
+
 func TestExpectedDeployment(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
@@ -96,6 +107,7 @@ func TestExpectedDeployment(t *testing.T) {
 	checkEnvVar(t, deploy, envoyContainerName, envoyNsEnvVar)
 	checkEnvVar(t, deploy, envoyContainerName, envoyPodEnvVar)
 	checkLabels(t, deploy, deploy.Labels)
+	checkVolume(t, deploy, envoyCfgVolName)
 
 	// Check container ports for the deployment are as expected.
 	ports := []int32{envoyHTTPPort, envoyHTTPSPort}

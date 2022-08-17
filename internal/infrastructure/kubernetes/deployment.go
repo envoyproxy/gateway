@@ -27,7 +27,7 @@ const (
 	// envoyCfgVolMntDir is the directory name of the Envoy configuration volume.
 	envoyCfgVolMntDir = "config"
 	// envoyCfgFileName is the name of the Envoy configuration file.
-	envoyCfgFileName = "envoy.json"
+	envoyCfgFileName = "envoy.yaml"
 	// envoyHTTPPort is the container port number of Envoy's HTTP endpoint.
 	envoyHTTPPort = int32(8080)
 	// envoyHTTPSPort is the container port number of Envoy's HTTPS endpoint.
@@ -94,7 +94,8 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) *appsv1.Deployment {
 			Selector: EnvoyPodSelector(),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: EnvoyPodSelector().MatchLabels,
+					Labels:      EnvoyPodSelector().MatchLabels,
+					Annotations:
 				},
 				Spec: corev1.PodSpec{
 					Containers: containers,
@@ -102,7 +103,19 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) *appsv1.Deployment {
 						{
 							Name: envoyCfgVolName,
 							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: infra.GetProxyInfra().ObjectName(),
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  envoyCfgFileName,
+											Path: envoyCfgFileName,
+										},
+									},
+									DefaultMode: pointer.Int32Ptr(int32(420)),
+									Optional:    pointer.BoolPtr(false),
+								},
 							},
 						},
 					},
