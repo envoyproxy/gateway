@@ -15,9 +15,9 @@ import (
 
 const (
 	// envoyServiceHTTPPort is the HTTP port number of the Envoy service.
-	envoyServiceHTTPPort = int32(80)
+	envoyServiceHTTPPort = 80
 	// envoyServiceHTTPSPort is the HTTPS port number of the Envoy service.
-	envoyServiceHTTPSPort = int32(443)
+	envoyServiceHTTPSPort = 443
 )
 
 // createServiceIfNeeded creates a Service based on the provided infra, if
@@ -73,7 +73,7 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 			}
 			p := corev1.ServicePort{
 				Name:       port.Name,
-				Protocol:   "TCP",
+				Protocol:   corev1.ProtocolTCP,
 				Port:       port.Port,
 				TargetPort: target,
 			}

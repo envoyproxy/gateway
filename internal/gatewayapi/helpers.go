@@ -197,13 +197,3 @@ func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
 	wildcardMatch := strings.TrimSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*"))
 	return len(wildcardMatch) > 0
 }
-
-// containsPortNum tells whether a contains b.
-func containsPortNum(a []v1beta1.PortNumber, b v1beta1.PortNumber) bool {
-	for _, n := range a {
-		if b == n {
-			return true
-		}
-	}
-	return false
-}

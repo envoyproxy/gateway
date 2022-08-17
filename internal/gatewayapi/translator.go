@@ -3,6 +3,7 @@ package gatewayapi
 import (
 	"fmt"
 
+	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -428,7 +429,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			xdsIR.HTTP = append(xdsIR.HTTP, irListener)
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
-			if !containsPortNum(foundPorts, listener.Port) {
+			if !slices.Contains(foundPorts, listener.Port) {
 				foundPorts = append(foundPorts, listener.Port)
 				proto := ir.HTTPProtocolType
 				if listener.Protocol == v1beta1.HTTPSProtocolType {
