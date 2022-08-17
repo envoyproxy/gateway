@@ -50,9 +50,25 @@ type ProxyListener struct {
 type ListenerPort struct {
 	// Name is the name of the listener port.
 	Name string
+	// Protocol is the protocol that the listener port will listener for.
+	Protocol ProtocolType
 	// Port is the port number to listen on.
 	Port int32
 }
+
+// ProtocolType defines the application protocol accepted by a ListenerPort.
+//
+// Valid values include "HTTP" and "HTTPS".
+type ProtocolType string
+
+const (
+	// HTTPProtocolType accepts cleartext HTTP/1.1 sessions over TCP or HTTP/2
+	// over cleartext.
+	HTTPProtocolType ProtocolType = "HTTP"
+
+	// HTTPSProtocolType accepts HTTP/1.1 or HTTP/2 sessions over TLS.
+	HTTPSProtocolType ProtocolType = "HTTPS"
+)
 
 // NewInfra returns a new Infra with default parameters.
 func NewInfra() *Infra {
@@ -76,7 +92,7 @@ func NewProxyInfra() *ProxyInfra {
 func NewProxyListeners() []ProxyListener {
 	return []ProxyListener{
 		{
-			Ports: []ListenerPort{},
+			Ports: nil,
 		},
 	}
 }
@@ -136,6 +152,10 @@ func ValidateProxyInfra(pInfra *ProxyInfra) error {
 
 	if len(pInfra.Image) == 0 {
 		errs = append(errs, errors.New("image field required"))
+	}
+
+	if len(pInfra.Listeners) > 1 {
+		errs = append(errs, errors.New("no more than 1 listener is supported"))
 	}
 
 	if len(pInfra.Listeners) > 0 {

@@ -61,6 +61,3 @@ infraIR:
     image: envoyproxy/envoy-dev:latest
     listeners:
       - address: ""
-        ports:
-          - name: envoy-gateway-gateway-1
-            port: 80

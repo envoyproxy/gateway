@@ -83,4 +83,5 @@ infraIR:
       - address: ""
         ports:
           - name: envoy-gateway-gateway-1
+            protocol: "HTTP"
             port: 80
