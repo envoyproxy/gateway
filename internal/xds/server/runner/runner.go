@@ -88,7 +88,7 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for _ = range r.XdsResources.Subscribe(ctx) {
+	for range r.XdsResources.Subscribe(ctx) {
 		// Load all resources required for translation
 		xdsResources := r.XdsResources.Get()
 		// Update snapshot cache

@@ -38,7 +38,7 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for _ = range r.XdsIR.Subscribe(ctx) {
+	for range r.XdsIR.Subscribe(ctx) {
 		ir := r.XdsIR.Get()
 		// Translate to xds resources
 		result, err := translator.Translate(ir)

@@ -24,7 +24,7 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
-// Start starts the infrasturcture runner
+// Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) error {
 	log := r.Logger.WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
@@ -35,7 +35,7 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	for _ = range r.InfraIR.Subscribe(ctx) {
+	for range r.InfraIR.Subscribe(ctx) {
 		// s.InfraIR.Get()
 		// TODO: Provision infra
 		// infrastructure.Translate(ctx, ir)
