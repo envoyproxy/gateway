@@ -37,6 +37,14 @@ func (p *ProviderResources) GetGateways() []*gwapiv1b1.Gateway {
 	return res
 }
 
+func (p *ProviderResources) GetHTTPRoutes() []*gwapiv1b1.HTTPRoute {
+	res := make([]*gwapiv1b1.HTTPRoute, p.HTTPRoutes.Len())
+	for _, v := range p.HTTPRoutes.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
 // XdsIR message
 type XdsIR struct {
 	watchable.Map[string, *ir.Xds]

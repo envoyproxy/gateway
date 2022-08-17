@@ -1,4 +1,4 @@
-package service
+package runner
 
 import (
 	"context"
@@ -12,24 +12,33 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
-type Service struct {
+type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
 }
 
-func (s *Service) Name() string {
+type Runner struct {
+	Config
+}
+
+func New(cfg *Config) *Runner {
+	return &Runner{Config: *cfg}
+}
+
+func (r *Runner) Name() string {
 	return "provider"
 }
 
-func (s *Service) Start(ctx context.Context) error {
-	s.Logger = s.Logger.WithValues("service", s.Name())
-	if s.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
-		s.Logger.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
+// Start the provider runner
+func (r *Runner) Start(ctx context.Context) error {
+	r.Logger = r.Logger.WithValues("runner", r.Name())
+	if r.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
+		r.Logger.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
 		cfg, err := ctrl.GetConfig()
 		if err != nil {
 			return fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
-		p, err := kubernetes.New(cfg, s.EnvoyGateway.Gateway.ControllerName, s.Logger, s.ProviderResources)
+		p, err := kubernetes.New(cfg, r.EnvoyGateway.Gateway.ControllerName, r.Logger, r.ProviderResources)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
 		}
@@ -39,5 +48,5 @@ func (s *Service) Start(ctx context.Context) error {
 		return nil
 	}
 	// Unsupported provider.
-	return fmt.Errorf("unsupported provider type %v", s.EnvoyGateway.Provider.Type)
+	return fmt.Errorf("unsupported provider type %v", r.EnvoyGateway.Provider.Type)
 }

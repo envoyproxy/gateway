@@ -1,4 +1,4 @@
-package service
+package runner
 
 import (
 	"context"
@@ -10,53 +10,64 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
-type Service struct {
+type Config struct {
 	config.Server
 	ProviderResources *message.ProviderResources
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
 }
 
-func (s *Service) Name() string {
+type Runner struct {
+	Config
+}
+
+func New(cfg *Config) *Runner {
+	return &Runner{Config: *cfg}
+}
+
+func (r *Runner) Name() string {
 	return "gateway-api"
 }
 
-// Start starts the GatewayAPI service
-func (s *Service) Start(ctx context.Context) error {
-	s.Logger = s.Logger.WithValues("service", s.Name())
+// Start starts the GatewayAPI runner
+func (r *Runner) Start(ctx context.Context) error {
+	r.Logger = r.Logger.WithValues("runner", r.Name())
 	// Wait until provider resources have been initialized during startup
-	s.ProviderResources.Initialized.Wait()
-	go s.subscribeAndTranslate(ctx)
+	r.ProviderResources.Initialized.Wait()
+	go r.subscribeAndTranslate(ctx)
 
 	<-ctx.Done()
-	s.Logger.Info("shutting down")
+	r.Logger.Info("shutting down")
 	return nil
 }
 
-func (s *Service) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	gatewayClassesCh := s.ProviderResources.GatewayClasses.Subscribe(ctx)
-	gatewaysCh := s.ProviderResources.Gateways.Subscribe(ctx)
+	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
+	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
+	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
 	for ctx.Err() == nil {
-		var r gatewayapi.Resources
+		var in gatewayapi.Resources
 		// Receive subscribed resource notifications
 		select {
 		case <-gatewayClassesCh:
 		case <-gatewaysCh:
+		case <-httpRoutesCh:
 		}
 		// Load all resources required for translation
-		r.Gateways = s.ProviderResources.GetGateways()
-		gatewayClasses := s.ProviderResources.GetGatewayClasses()
+		in.Gateways = r.ProviderResources.GetGateways()
+		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()
+		gatewayClasses := r.ProviderResources.GetGatewayClasses()
 		// Fetch the first gateway class since there should be only 1
 		// gateway class linked to this controller
 		t := &gatewayapi.Translator{
 			GatewayClassName: v1beta1.ObjectName(gatewayClasses[0].GetName()),
 		}
 		// Translate to IR
-		result := t.Translate(&r)
+		result := t.Translate(&in)
 		// Publish the IR
 		// Use the service name as the key to ensure there is always
 		// one element in the map
-		s.XdsIR.Store(s.Name(), result.XdsIR)
+		r.XdsIR.Store(r.Name(), result.XdsIR)
 	}
 }

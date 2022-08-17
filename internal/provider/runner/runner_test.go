@@ -1,4 +1,4 @@
-package service
+package runner
 
 import (
 	"testing"
@@ -44,12 +44,14 @@ func TestStart(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := &Service{
-				Server:            *tc.cfg,
-				ProviderResources: new(message.ProviderResources),
+			runner := &Runner{
+				Config: Config{
+					Server:            *tc.cfg,
+					ProviderResources: new(message.ProviderResources),
+				},
 			}
 			ctx := ctrl.SetupSignalHandler()
-			err := svc.Start(ctx)
+			err := runner.Start(ctx)
 			if tc.expect {
 				require.NoError(t, err)
 			} else {

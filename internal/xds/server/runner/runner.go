@@ -1,4 +1,4 @@
-package service
+package runner
 
 import (
 	"context"
@@ -19,49 +19,57 @@ import (
 	controlplane_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 )
 
-type Service struct {
+type Config struct {
 	config.Server
 	XdsResources *message.XdsResources
 	grpc         *grpc.Server
 	cache        cache.SnapshotCacheWithCallbacks
 }
 
-func (s *Service) Name() string {
+type Runner struct {
+	Config
+}
+
+func New(cfg *Config) *Runner {
+	return &Runner{Config: *cfg}
+}
+
+func (r *Runner) Name() string {
 	return "xds-server"
 }
 
-// Start starts the GatewayAPI service
-func (s *Service) Start(ctx context.Context) error {
-	s.Logger = s.Logger.WithValues("service", s.Name())
-	go s.subscribeAndTranslate(ctx)
-	go s.setupXdsServer(ctx)
+// Start starts the xds-server runner
+func (r *Runner) Start(ctx context.Context) error {
+	r.Logger = r.Logger.WithValues("runner", r.Name())
+	go r.subscribeAndTranslate(ctx)
+	go r.setupXdsServer(ctx)
 
 	<-ctx.Done()
-	s.Logger.Info("shutting down")
+	r.Logger.Info("shutting down")
 	// We don't use GracefulStop here because envoy
 	// has long-lived hanging xDS requests. There's no
 	// mechanism to make those pending requests fail,
 	// so we forcibly terminate the TCP sessions.
-	s.grpc.Stop()
+	r.grpc.Stop()
 	return nil
 }
 
-func (s *Service) setupXdsServer(ctx context.Context) {
+func (r *Runner) setupXdsServer(ctx context.Context) {
 	// Set up the gRPC server and register the xDS handler.
-	s.grpc = grpc.NewServer()
+	r.grpc = grpc.NewServer()
 
-	s.cache = cache.NewSnapshotCache(false, s.Logger)
-	registerServer(controlplane_server_v3.NewServer(ctx, s.cache, s.cache), s.grpc)
+	r.cache = cache.NewSnapshotCache(false, r.Logger)
+	registerServer(controlplane_server_v3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// TODO: Make the listening address and port configurable
 	addr := net.JoinHostPort("0.0.0.0", "8001")
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		s.Logger.Error(err, "failed to listen on address", addr)
+		r.Logger.Error(err, "failed to listen on address", addr)
 	}
-	err = s.grpc.Serve(l)
+	err = r.grpc.Serve(l)
 	if err != nil {
-		s.Logger.Error(err, "failed to start grpc based xds server")
+		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
 }
 
@@ -78,18 +86,18 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 	controlplane_service_runtime_v3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (s *Service) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	xdsCh := s.XdsResources.Subscribe(ctx)
+	xdsCh := r.XdsResources.Subscribe(ctx)
 	for ctx.Err() == nil {
 		// Receive subscribed resource notifications
 		<-xdsCh
 		// Load all resources required for translation
-		xdsResources := s.XdsResources.Get()
+		xdsResources := r.XdsResources.Get()
 		// Update snapshot cache
-		err := s.cache.GenerateNewSnapshot(*xdsResources)
+		err := r.cache.GenerateNewSnapshot(*xdsResources)
 		if err != nil {
-			s.Logger.Error(err, "failed to generate a snapshot")
+			r.Logger.Error(err, "failed to generate a snapshot")
 		}
 	}
 }

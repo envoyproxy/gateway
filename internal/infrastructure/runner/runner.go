@@ -1,4 +1,4 @@
-package service
+package runner
 
 import (
 	"context"
@@ -7,28 +7,36 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
-type Service struct {
+type Config struct {
 	config.Server
 	InfraIR *message.InfraIR
 }
 
-func (s *Service) Name() string {
+type Runner struct {
+	Config
+}
+
+func (r *Runner) Name() string {
 	return "infrastructure"
 }
 
-// Start starts the GatewayAPI service
-func (s *Service) Start(ctx context.Context) error {
-	log := s.Logger.WithValues("service", s.Name())
-	go s.subscribeAndTranslate(ctx)
+func New(cfg *Config) *Runner {
+	return &Runner{Config: *cfg}
+}
+
+// Start starts the GatewayAPI runner
+func (r *Runner) Start(ctx context.Context) error {
+	log := r.Logger.WithValues("runner", r.Name())
+	go r.subscribeAndTranslate(ctx)
 
 	<-ctx.Done()
 	log.Info("shutting down")
 	return nil
 }
 
-func (s *Service) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	irCh := s.InfraIR.Subscribe(ctx)
+	irCh := r.InfraIR.Subscribe(ctx)
 	for ctx.Err() == nil {
 		// Receive subscribed resource notifications
 		<-irCh

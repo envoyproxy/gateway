@@ -5,12 +5,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	gatewayapisvc "github.com/envoyproxy/gateway/internal/gatewayapi/service"
-	infrasvc "github.com/envoyproxy/gateway/internal/infrastructure/service"
+	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
+	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
 	"github.com/envoyproxy/gateway/internal/message"
-	providersvc "github.com/envoyproxy/gateway/internal/provider/service"
-	xdsserversvc "github.com/envoyproxy/gateway/internal/xds/server/service"
-	xdstranslatorsvc "github.com/envoyproxy/gateway/internal/xds/translator/service"
+	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
+	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
+	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
 )
 
 var (
@@ -86,60 +86,60 @@ func setupServices(cfg *config.Server) error {
 	// Start the Provider Service
 	// It fetches the resources from the configured provider type
 	// and publishes it
-	providerSvc := &providersvc.Service{
+	providerRunner := providerrunner.New(&providerrunner.Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
-	}
-	if err := providerSvc.Start(ctx); err != nil {
+	})
+	if err := providerRunner.Start(ctx); err != nil {
 		return err
 	}
 
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
-	// Start the GatewayAPI Translator Service
+	// Start the GatewayAPI Translator Runner
 	// It subscribes to the provider resources, translates it to xDS IR
 	// and infra IR resources and publishes them.
-	gwSvc := &gatewayapisvc.Service{
+	gwRunner := gatewayapirunner.New(&gatewayapirunner.Config{
 		Server:            *cfg,
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-	}
-	if err := gwSvc.Start(ctx); err != nil {
+	})
+	if err := gwRunner.Start(ctx); err != nil {
 		return err
 	}
 
 	xResources := new(message.XdsResources)
 	// Start the Xds Translator Service
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
-	xdsTranslatorSvc := &xdstranslatorsvc.Service{
+	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
 		Server:       *cfg,
 		XdsIR:        xdsIR,
 		XdsResources: xResources,
-	}
-	if err := xdsTranslatorSvc.Start(ctx); err != nil {
+	})
+	if err := xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
 	}
 
-	// Start the Infra Manager Service
+	// Start the Infra Manager Runner
 	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 	// resources such as K8s deployment and services.
-	infraSvc := &infrasvc.Service{
+	infraRunner := infrarunner.New(&infrarunner.Config{
 		Server:  *cfg,
 		InfraIR: infraIR,
-	}
-	if err := infraSvc.Start(ctx); err != nil {
+	})
+	if err := infraRunner.Start(ctx); err != nil {
 		return err
 	}
 
 	// Start the xDS Server
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
 	// via the xDS Protocol
-	xdsServerSvc := &xdsserversvc.Service{
+	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
 		Server:       *cfg,
 		XdsResources: xResources,
-	}
-	if err := xdsServerSvc.Start(ctx); err != nil {
+	})
+	if err := xdsServerRunner.Start(ctx); err != nil {
 		return err
 	}
 

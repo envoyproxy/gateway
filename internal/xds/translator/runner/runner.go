@@ -1,4 +1,4 @@
-package service
+package runner
 
 import (
 	"context"
@@ -8,43 +8,51 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 )
 
-type Service struct {
+type Config struct {
 	config.Server
 	XdsIR        *message.XdsIR
 	XdsResources *message.XdsResources
 }
 
-func (s *Service) Name() string {
+type Runner struct {
+	Config
+}
+
+func New(cfg *Config) *Runner {
+	return &Runner{Config: *cfg}
+}
+
+func (r *Runner) Name() string {
 	return "xds-translator"
 }
 
-// Start starts the GatewayAPI service
-func (s *Service) Start(ctx context.Context) error {
-	log := s.Logger.WithValues("service", s.Name())
-	go s.subscribeAndTranslate(ctx)
+// Start starts the xds-translator runner
+func (r *Runner) Start(ctx context.Context) error {
+	log := r.Logger.WithValues("runner", r.Name())
+	go r.subscribeAndTranslate(ctx)
 
 	<-ctx.Done()
 	log.Info("shutting down")
 	return nil
 }
 
-func (s *Service) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	irCh := s.XdsIR.Subscribe(ctx)
+	irCh := r.XdsIR.Subscribe(ctx)
 	for ctx.Err() == nil {
 		// Receive subscribed resource notifications
 		<-irCh
-		ir := s.XdsIR.Get()
+		ir := r.XdsIR.Get()
 		// Translate to xds resources
 		result, err := translator.Translate(ir)
 		if err != nil {
-			s.Logger.Error(err, "failed to translate xds ir")
+			r.Logger.Error(err, "failed to translate xds ir")
 		} else {
 			// Publish
 			// There should always be a single element in the map
 			// Use the service name as the key for now
 			xdsResources := result.GetXdsResources()
-			s.XdsResources.Store(s.Name(), &xdsResources)
+			r.XdsResources.Store(r.Name(), &xdsResources)
 		}
 	}
 }
