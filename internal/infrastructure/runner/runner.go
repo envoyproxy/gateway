@@ -24,7 +24,7 @@ func New(cfg *Config) *Runner {
 	return &Runner{Config: *cfg}
 }
 
-// Start starts the GatewayAPI runner
+// Start starts the infrasturcture runner
 func (r *Runner) Start(ctx context.Context) error {
 	log := r.Logger.WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
@@ -35,11 +35,7 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	// Subscribe to resources
-	irCh := r.InfraIR.Subscribe(ctx)
-	for ctx.Err() == nil {
-		// Receive subscribed resource notifications
-		<-irCh
+	for _ = range r.InfraIR.Subscribe(ctx) {
 		// s.InfraIR.Get()
 		// TODO: Provision infra
 		// infrastructure.Translate(ctx, ir)

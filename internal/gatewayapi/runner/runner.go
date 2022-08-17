@@ -29,7 +29,7 @@ func (r *Runner) Name() string {
 	return "gateway-api"
 }
 
-// Start starts the GatewayAPI runner
+// Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
 	// Wait until provider resources have been initialized during startup
