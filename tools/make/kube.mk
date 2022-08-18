@@ -1,11 +1,14 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.24.1
+# GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
+# For more details, see https://gateway-api.sigs.k8s.io/v1alpha2/guides/getting-started/#installing-gateway-api-crds-manually
+GATEWAY_API_VERSION ?= 0.4.1
 
 ##@ Kubernetes Development
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=pkg/provider/kubernetes/config/crd/bases
+	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=internal/provider/kubernetes/config/crd/bases
 
 .PHONY: generate
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -22,12 +25,18 @@ ifndef ignore-not-found
 endif
 
 .PHONY: kube-install
-kube-install: manifests $(tools/kustomize) ## Install CRDs into the Kubernetes cluster specified in ~/.kube/config.
-	$(tools/kustomize) build pkg/provider/kubernetes/config/crd | kubectl apply -f -
+kube-install: manifests $(tools/kustomize)
+	## Install Envoy Gateway manifests into the Kubernetes cluster specified in ~/.kube/config.
+	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl apply -f -
+	## Install Gateway API CRDs into the K8s cluster specified in ~/.kube/config.
+	$(tools/kustomize) build github.com/kubernetes-sigs/gateway-api/config/crd?ref=v$(GATEWAY_API_VERSION) | kubectl apply -f -
 
 .PHONY: kube-uninstall
-kube-uninstall: manifests $(tools/kustomize) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(tools/kustomize) build pkg/provider/kubernetes/config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+kube-uninstall: manifests $(tools/kustomize) 
+	## Uninstall Envoy Gateway manifests from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	## Uninstall Gateway API CRDs from the K8s cluster specified in ~/.kube/config.
+	$(tools/kustomize) build github.com/kubernetes-sigs/gateway-api/config/crd?ref=v$(GATEWAY_API_VERSION) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -	
 
 .PHONY: run-kube-local ## Run EG locally.
 run-kube-local: kube-install

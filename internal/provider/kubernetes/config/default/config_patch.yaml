@@ -2,18 +2,18 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: system
+  namespace: envoy-gateway-system
 spec:
   template:
     spec:
       containers:
       - name: envoy-gateway
         args:
-        - "--config-path=/config/envoy-gateway.yaml"
+        - server        
+        - "--config-path=/config/config.yaml"
         volumeMounts:
         - name: envoy-gateway-config
           mountPath: /config
-          subPath: envoy-gateway.yaml
           readOnly: true
       volumes:
       - name: envoy-gateway-config

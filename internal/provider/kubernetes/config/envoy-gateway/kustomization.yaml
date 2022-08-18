@@ -7,4 +7,4 @@ generatorOptions:
 configMapGenerator:
 - name: envoy-gateway-config
   files:
-  - envoy-gateway.yaml
+  - config.yaml
