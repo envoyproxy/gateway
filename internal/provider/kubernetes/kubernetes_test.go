@@ -42,7 +42,7 @@ func TestProvider(t *testing.T) {
 	svr, err := config.NewDefaultServer()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr.EnvoyGateway.Gateway.ControllerName, svr.Logger, resources)
+	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -70,7 +70,7 @@ func TestProvider(t *testing.T) {
 
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-	crd := filepath.Join("..", "testdata", "in")
+	crd := filepath.Join(".", "testdata", "in")
 	env := &envtest.Environment{
 		CRDDirectoryPaths: []string{crd},
 	}
