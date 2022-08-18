@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -14,6 +15,7 @@ type Config struct {
 
 type Runner struct {
 	Config
+	mgr *infrastructure.Manager
 }
 
 func (r *Runner) Name() string {
@@ -26,7 +28,12 @@ func New(cfg *Config) *Runner {
 
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) error {
+	var err error
 	log := r.Logger.WithValues("runner", r.Name())
+	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
+	if err != nil {
+		log.Error(err, "failed to create new manager")
+	}
 	go r.subscribeAndTranslate(ctx)
 
 	<-ctx.Done()
@@ -35,9 +42,12 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+	// Subscribe to resources
 	for range r.InfraIR.Subscribe(ctx) {
-		// s.InfraIR.Get()
-		// TODO: Provision infra
-		// infrastructure.Translate(ctx, ir)
+		in := r.InfraIR.Get()
+		// Provision infra
+		if err := r.mgr.CreateInfra(ctx, in); err != nil {
+			r.Logger.Error(err, "failed to create new infra")
+		}
 	}
 }

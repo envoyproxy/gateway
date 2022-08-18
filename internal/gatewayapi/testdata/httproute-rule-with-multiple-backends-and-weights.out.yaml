@@ -80,7 +80,6 @@ xdsIR:
               port: 8080
               weight: 3
 infraIR:
-  provider: Kubernetes
   proxy:
     name: envoy-gateway-class
     image: envoyproxy/envoy-dev:latest

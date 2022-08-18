@@ -17,8 +17,6 @@ const (
 // Infra defines managed infrastructure.
 // +k8s:deepcopy-gen=true
 type Infra struct {
-	// Provider provides infrastructure. If unset, defaults to "Kubernetes".
-	Provider *v1alpha1.ProviderType
 	// Proxy defines managed proxy infrastructure.
 	Proxy *ProxyInfra
 }
@@ -76,9 +74,7 @@ const (
 // NewInfra returns a new Infra with default parameters.
 func NewInfra() *Infra {
 	return &Infra{
-		// Kube is the only supported provider type.
-		Provider: v1alpha1.ProviderTypePtr(v1alpha1.ProviderTypeKubernetes),
-		Proxy:    NewProxyInfra(),
+		Proxy: NewProxyInfra(),
 	}
 }
 
@@ -98,15 +94,6 @@ func NewProxyListeners() []ProxyListener {
 			Ports: nil,
 		},
 	}
-}
-
-// GetProvider returns the infra provider.
-func (i *Infra) GetProvider() *v1alpha1.ProviderType {
-	if i.Provider != nil {
-		return i.Provider
-	}
-	// Kube is the default infra provider.
-	return v1alpha1.ProviderTypePtr(v1alpha1.ProviderTypeKubernetes)
 }
 
 // GetProxyInfra returns the ProxyInfra.

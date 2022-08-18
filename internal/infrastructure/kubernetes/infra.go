@@ -73,6 +73,10 @@ func (i *Infra) addResource(obj client.Object) error {
 
 // CreateInfra creates the managed kube infra if it doesn't exist.
 func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
+	if err := ir.ValidateInfra(infra); err != nil {
+		return err
+	}
+
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}

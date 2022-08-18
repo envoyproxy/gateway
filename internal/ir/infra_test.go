@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 func TestValidateInfra(t *testing.T) {
@@ -125,9 +123,7 @@ func TestNewInfra(t *testing.T) {
 		{
 			name: "default infra",
 			expected: &Infra{
-				// Kube is the only supported provider type.
-				Provider: v1alpha1.ProviderTypePtr(v1alpha1.ProviderTypeKubernetes),
-				Proxy:    NewProxyInfra(),
+				Proxy: NewProxyInfra(),
 			},
 		},
 	}
