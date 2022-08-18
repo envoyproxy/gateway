@@ -25,18 +25,21 @@ ifndef ignore-not-found
 endif
 
 .PHONY: kube-install
-kube-install: manifests $(tools/kustomize)
-	## Install Envoy Gateway manifests into the Kubernetes cluster specified in ~/.kube/config.
-	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl apply -f -
-	## Install Gateway API CRDs into the K8s cluster specified in ~/.kube/config.
+kube-install: manifests $(tools/kustomize) ## Install Envoy Gateway CRDs into the Kubernetes cluster specified in ~/.kube/config.
+	$(tools/kustomize) build internal/provider/kubernetes/config/crd | kubectl apply -f -
 	$(tools/kustomize) build github.com/kubernetes-sigs/gateway-api/config/crd?ref=v$(GATEWAY_API_VERSION) | kubectl apply -f -
 
 .PHONY: kube-uninstall
-kube-uninstall: manifests $(tools/kustomize) 
-	## Uninstall Envoy Gateway manifests from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
-	## Uninstall Gateway API CRDs from the K8s cluster specified in ~/.kube/config.
+kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(tools/kustomize) build internal/provider/kubernetes/config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 	$(tools/kustomize) build github.com/kubernetes-sigs/gateway-api/config/crd?ref=v$(GATEWAY_API_VERSION) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -	
+.PHONY: kube-deploy
+kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
+	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl apply -f -
+
+.PHONY: kube-undeploy
+kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
+	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f - 
 
 .PHONY: run-kube-local ## Run EG locally.
 run-kube-local: kube-install
