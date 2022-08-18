@@ -36,8 +36,6 @@ func (r *Runner) Start(ctx context.Context) error {
 	}
 	go r.subscribeAndTranslate(ctx)
 
-	<-ctx.Done()
-	log.Info("shutting down")
 	return nil
 }
 
@@ -50,4 +48,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.Logger.Error(err, "failed to create new infra")
 		}
 	}
+
+	r.Logger.Info("subscriber shutting down")
 }

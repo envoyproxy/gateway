@@ -44,13 +44,6 @@ func (r *Runner) Start(ctx context.Context) error {
 	go r.subscribeAndTranslate(ctx)
 	go r.setupXdsServer(ctx)
 
-	<-ctx.Done()
-	r.Logger.Info("shutting down")
-	// We don't use GracefulStop here because envoy
-	// has long-lived hanging xDS requests. There's no
-	// mechanism to make those pending requests fail,
-	// so we forcibly terminate the TCP sessions.
-	r.grpc.Stop()
 	return nil
 }
 
@@ -71,6 +64,14 @@ func (r *Runner) setupXdsServer(ctx context.Context) {
 	if err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
+
+	<-ctx.Done()
+	r.Logger.Info("grpc server shutting down")
+	// We don't use GracefulStop here because envoy
+	// has long-lived hanging xDS requests. There's no
+	// mechanism to make those pending requests fail,
+	// so we forcibly terminate the TCP sessions.
+	r.grpc.Stop()
 }
 
 // registerServer registers the given xDS protocol Server with the gRPC
@@ -97,4 +98,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.Logger.Error(err, "failed to generate a snapshot")
 		}
 	}
+
+	r.Logger.Info("subscriber shutting down")
+
 }

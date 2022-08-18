@@ -93,7 +93,6 @@ func setupServices(cfg *config.Server) error {
 	if err := providerRunner.Start(ctx); err != nil {
 		return err
 	}
-
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
 	// Start the GatewayAPI Translator Runner
@@ -142,6 +141,18 @@ func setupServices(cfg *config.Server) error {
 	if err := xdsServerRunner.Start(ctx); err != nil {
 		return err
 	}
+
+	// Wait until done
+	<-ctx.Done()
+	// Close messages
+	pResources.GatewayClasses.Close()
+	pResources.Gateways.Close()
+	pResources.HTTPRoutes.Close()
+	xdsIR.Close()
+	infraIR.Close()
+	xResources.Close()
+
+	cfg.Logger.Info("shutting down")
 
 	return nil
 }

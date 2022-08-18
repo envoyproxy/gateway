@@ -28,11 +28,9 @@ func (r *Runner) Name() string {
 
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) error {
-	log := r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 
-	<-ctx.Done()
-	log.Info("shutting down")
 	return nil
 }
 
@@ -52,4 +50,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.XdsResources.Store(r.Name(), &xdsResources)
 		}
 	}
+
+	r.Logger.Info("subscriber shutting down")
 }

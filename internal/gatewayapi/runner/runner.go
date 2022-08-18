@@ -36,8 +36,6 @@ func (r *Runner) Start(ctx context.Context) error {
 	r.ProviderResources.Initialized.Wait()
 	go r.subscribeAndTranslate(ctx)
 
-	<-ctx.Done()
-	r.Logger.Info("shutting down")
 	return nil
 }
 
@@ -70,4 +68,5 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		// one element in the map
 		r.XdsIR.Store(r.Name(), result.XdsIR)
 	}
+	r.Logger.Info("shutting down")
 }
