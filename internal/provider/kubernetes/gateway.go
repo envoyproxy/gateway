@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -36,12 +37,12 @@ type gatewayReconciler struct {
 // newGatewayController creates a gateway controller. The controller will watch for
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
-func newGatewayController(name string, mgr manager.Manager, logger logr.Logger, resources *message.ProviderResources) error {
+func newGatewayController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
 	resources.Initialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
-		classController: gwapiv1b1.GatewayController(name),
-		log:             logger,
+		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		log:             cfg.Logger,
 		resources:       resources,
 	}
 

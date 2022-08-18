@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
 )
@@ -36,9 +37,9 @@ type gatewayClassReconciler struct {
 // newGatewayClassController creates the gatewayclass controller. The controller
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
-func newGatewayClassController(name string, mgr manager.Manager, logger logr.Logger, resources *message.ProviderResources) error {
+func newGatewayClassController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
 	cli := mgr.GetClient()
-	uh := status.NewUpdateHandler(logger, cli)
+	uh := status.NewUpdateHandler(cfg.Logger, cli)
 	if err := mgr.Add(uh); err != nil {
 		return fmt.Errorf("failed to add status update handler %v", err)
 	}
@@ -46,9 +47,9 @@ func newGatewayClassController(name string, mgr manager.Manager, logger logr.Log
 	resources.Initialized.Add(1)
 	r := &gatewayClassReconciler{
 		client:        cli,
-		controller:    gwapiv1b1.GatewayController(name),
+		controller:    gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		statusUpdater: uh.Writer(),
-		log:           logger,
+		log:           cfg.Logger,
 		resources:     resources,
 	}
 

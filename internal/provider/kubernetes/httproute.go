@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 )
@@ -38,11 +39,11 @@ type httpRouteReconciler struct {
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, logger logr.Logger, resources *message.ProviderResources) error {
+func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
 	resources.Initialized.Add(1)
 	r := &httpRouteReconciler{
 		client:    mgr.GetClient(),
-		log:       logger,
+		log:       cfg.Logger,
 		resources: resources,
 	}
 

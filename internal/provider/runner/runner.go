@@ -38,7 +38,7 @@ func (r *Runner) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
-		p, err := kubernetes.New(cfg, r.EnvoyGateway.Gateway.ControllerName, r.Logger, r.ProviderResources)
+		p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
 		}

@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -23,11 +23,11 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, controllerName string, logger logr.Logger, resources *message.ProviderResources) (*Provider, error) {
+func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:             envoygateway.GetScheme(),
-		Logger:             logger,
+		Logger:             svr.Logger,
 		LeaderElection:     false,
 		LeaderElectionID:   "5b9825d2.gateway.envoyproxy.io",
 		MetricsBindAddress: ":8080",
@@ -38,13 +38,13 @@ func New(cfg *rest.Config, controllerName string, logger logr.Logger, resources 
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayClassController(controllerName, mgr, logger, resources); err != nil {
+	if err := newGatewayClassController(mgr, svr, resources); err != nil {
 		return nil, fmt.Errorf("failed to create gatewayclass controller: %w", err)
 	}
-	if err := newGatewayController(controllerName, mgr, logger, resources); err != nil {
+	if err := newGatewayController(mgr, svr, resources); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
-	if err := newHTTPRouteController(mgr, logger, resources); err != nil {
+	if err := newHTTPRouteController(mgr, svr, resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
 
