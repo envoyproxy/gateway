@@ -42,7 +42,12 @@ func (r *Runner) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create provider %s: %w", v1alpha1.ProviderTypeKubernetes, err)
 		}
-		go p.Start(ctx)
+		go func() {
+			err := p.Start(ctx)
+			if err != nil {
+				r.Logger.Error(err, "unable to start provider")
+			}
+		}()
 		return nil
 	}
 	// Unsupported provider.
