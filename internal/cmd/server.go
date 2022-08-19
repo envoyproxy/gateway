@@ -93,6 +93,7 @@ func setupServices(cfg *config.Server) error {
 	if err := providerRunner.Start(ctx); err != nil {
 		return err
 	}
+
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
 	// Start the GatewayAPI Translator Runner

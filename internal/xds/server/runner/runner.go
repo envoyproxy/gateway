@@ -43,7 +43,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	go r.setupXdsServer(ctx)
-
+	r.Logger.Info("started")
 	return nil
 }
 
@@ -90,8 +90,13 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
 	for range r.XdsResources.Subscribe(ctx) {
+		r.Logger.Info("received a notification")
 		// Load all resources required for translation
 		xdsResources := r.XdsResources.Get()
+		if xdsResources == nil {
+			r.Logger.Info("xdsResources is nil, skipping")
+			continue
+		}
 		// Update snapshot cache
 		err := r.cache.GenerateNewSnapshot(*xdsResources)
 		if err != nil {

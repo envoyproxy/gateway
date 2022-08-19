@@ -40,11 +40,9 @@ func (r *Runner) Start(ctx context.Context) error {
 		}
 		p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
 		if err != nil {
-			return fmt.Errorf("failed to create provider %s", v1alpha1.ProviderTypeKubernetes)
+			return fmt.Errorf("failed to create provider %s: %w", v1alpha1.ProviderTypeKubernetes, err)
 		}
-		if err := p.Start(ctx); err != nil { //lint:ignore SA4023 provider.Start currently never returns non-nil
-			return fmt.Errorf("failed to start provider %s", v1alpha1.ProviderTypeKubernetes)
-		}
+		go p.Start(ctx)
 		return nil
 	}
 	// Unsupported provider.

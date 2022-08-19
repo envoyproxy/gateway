@@ -29,20 +29,25 @@ func New(cfg *Config) *Runner {
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) error {
 	var err error
-	log := r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithValues("runner", r.Name())
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
-		log.Error(err, "failed to create new manager")
+		r.Logger.Error(err, "failed to create new manager")
 	}
 	go r.subscribeAndTranslate(ctx)
-
+	r.Logger.Info("started")
 	return nil
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
 	for range r.InfraIR.Subscribe(ctx) {
+		r.Logger.Info("received a notification")
 		in := r.InfraIR.Get()
+		if in == nil {
+			r.Logger.Info("ir is nil, skipping")
+			continue
+		}
 		// Provision infra
 		if err := r.mgr.CreateInfra(ctx, in); err != nil {
 			r.Logger.Error(err, "failed to create new infra")

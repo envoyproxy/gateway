@@ -32,18 +32,22 @@ func (r *Runner) Name() string {
 // Start starts the gateway-api translator runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
-	// Wait until provider resources have been initialized during startup
-	r.ProviderResources.Initialized.Wait()
 	go r.subscribeAndTranslate(ctx)
-
+	r.Logger.Info("started")
 	return nil
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+	// Wait until provider resources have been initialized during startup
+	r.ProviderResources.Initialized.Wait()
+	r.Logger.Info("done initializing provider resources")
 	// Subscribe to resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
 	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
+
+	// Wait until provider resources have been initialized during startup
+	r.ProviderResources.Initialized.Wait()
 	for ctx.Err() == nil {
 		var in gatewayapi.Resources
 		// Receive subscribed resource notifications
@@ -52,6 +56,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		case <-gatewaysCh:
 		case <-httpRoutesCh:
 		}
+		r.Logger.Info("received a notification")
 		// Load all resources required for translation
 		in.Gateways = r.ProviderResources.GetGateways()
 		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()

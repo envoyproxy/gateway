@@ -30,14 +30,19 @@ func (r *Runner) Name() string {
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
-
+	r.Logger.Info("started")
 	return nil
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
 	for range r.XdsIR.Subscribe(ctx) {
+		r.Logger.Info("received a notification")
 		ir := r.XdsIR.Get()
+		if ir == nil {
+			r.Logger.Info("ir is nil, skipping")
+			continue
+		}
 		// Translate to xds resources
 		result, err := translator.Translate(ir)
 		if err != nil {
