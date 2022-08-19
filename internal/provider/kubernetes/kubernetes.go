@@ -55,7 +55,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 }
 
 // Start starts the Provider synchronously until a message is received from ctx.
-func (p *Provider) Start(ctx context.Context) error {
+func (p *Provider) Start(ctx context.Context) {
 	errChan := make(chan error)
 	go func() {
 		errChan <- p.manager.Start(ctx)
@@ -64,8 +64,9 @@ func (p *Provider) Start(ctx context.Context) error {
 	// Wait for the manager to exit or an explicit stop.
 	select {
 	case <-ctx.Done():
-		return nil
+		return
 	case err := <-errChan:
-		return err
+		p.manager.GetLogger().Error(err, "unable to start provider")
+		return
 	}
 }
