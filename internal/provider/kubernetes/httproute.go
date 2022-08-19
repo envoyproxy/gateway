@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/types"
+	//"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -21,7 +21,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	//"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -56,10 +56,10 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *
 	if err := c.Watch(&source.Kind{Type: &gwapiv1b1.HTTPRoute{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
-
 	// Add indexing on HTTPRoute, for Service objects that are referenced in HTTPRoute objects
 	// via `.spec.rules.backendRefs`. This helps in querying for HTTPRoutes that are affected by
 	// a particular Service CRUD.
+	/* FIXME https://github.com/envoyproxy/gateway/issues/189
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, func(rawObj client.Object) []string {
 		httpRoute := rawObj.(*gwapiv1b1.HTTPRoute)
 		var backendServices []string
@@ -81,6 +81,7 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *
 	}); err != nil {
 		return err
 	}
+	*/
 
 	// Watch Service CRUDs and reconcile affected HTTPRoutes.
 	if err := c.Watch(
