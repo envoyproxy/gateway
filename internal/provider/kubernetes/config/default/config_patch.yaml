@@ -10,7 +10,7 @@ spec:
       - name: envoy-gateway
         args:
         - server        
-        - "--config-path=/config/config.yaml"
+        - "--config-path=/config/envoy-gateway.yaml"
         volumeMounts:
         - name: envoy-gateway-config
           mountPath: /config

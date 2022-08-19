@@ -38,8 +38,6 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	// Wait until provider resources have been initialized during startup
-	r.ProviderResources.Initialized.Wait()
 	r.Logger.Info("done initializing provider resources")
 	// Subscribe to resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)

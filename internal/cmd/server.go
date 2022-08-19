@@ -41,7 +41,7 @@ func server() error {
 		return err
 	}
 
-	if err := setupServices(cfg); err != nil {
+	if err := setupRunners(cfg); err != nil {
 		return err
 	}
 
@@ -75,9 +75,9 @@ func getConfig() (*config.Server, error) {
 	return cfg, nil
 }
 
-// setupServices starts all the services required for the Envoy Gateway to
+// setupRunners starts all the runners required for the Envoy Gateway to
 // fulfill its tasks.
-func setupServices(cfg *config.Server) error {
+func setupRunners(cfg *config.Server) error {
 	// TODO - Setup a Config Manager
 	// https://github.com/envoyproxy/gateway/issues/43
 	ctx := ctrl.SetupSignalHandler()
