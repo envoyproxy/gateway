@@ -1,9 +1,11 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"path/filepath"
+	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,12 +29,101 @@ const (
 	// envoyCfgVolMntDir is the directory name of the Envoy configuration volume.
 	envoyCfgVolMntDir = "config"
 	// envoyCfgFileName is the name of the Envoy configuration file.
-	envoyCfgFileName = "envoy.json"
+	envoyCfgFileName = "bootstrap.yaml"
 	// envoyHTTPPort is the container port number of Envoy's HTTP endpoint.
 	envoyHTTPPort = int32(8080)
 	// envoyHTTPSPort is the container port number of Envoy's HTTPS endpoint.
 	envoyHTTPSPort = int32(8443)
 )
+
+var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(`
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 19000
+dynamic_resources:
+  cds_config:
+    resource_api_version: V3
+    api_config_source:
+      api_type: GRPC
+      transport_api_version: V3
+      grpc_services:
+      - envoy_grpc:
+          cluster_name: xds_cluster
+      set_node_on_first_message_only: true
+  lds_config:
+    resource_api_version: V3
+    api_config_source:
+      api_type: GRPC
+      transport_api_version: V3
+      grpc_services:
+      - envoy_grpc:
+          cluster_name: xds_cluster
+      set_node_on_first_message_only: true
+node:
+  cluster: envoy-gateway-system
+  id: envoy-default
+static_resources:
+  clusters:
+  - connect_timeout: 1s
+    load_assignment:
+      cluster_name: xds_cluster
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: {{ .XdsServerAddress }}
+                port_value: 18000
+    http2_protocol_options: {}
+    name: xds_cluster
+    type: STRICT_DNS
+layered_runtime:
+  layers:
+    - name: runtime-0
+      rtds_layer:
+        rtds_config:
+          resource_api_version: V3
+          api_config_source:
+            transport_api_version: V3
+            api_type: GRPC
+            grpc_services:
+              envoy_grpc:
+                cluster_name: xds_cluster
+        name: runtime-0
+`))
+
+var (
+	// envoyGatewayService is the name of the Envoy Gateway service.
+	envoyGatewayService = "envoy-gateway"
+)
+
+// envoyBootstrap defines the envoy Bootstrap configuration.
+type bootstrapConfig struct {
+	// parameters defines configurable bootstrap configuration parameters.
+	parameters bootstrapParameters
+	// rendered is the rendered bootstrap configuration.
+	rendered string
+}
+
+// envoyBootstrap defines the envoy Bootstrap configuration.
+type bootstrapParameters struct {
+	// XdsServerAddress is the address of the XDS Server that Envoy is managed by.
+	XdsServerAddress string
+}
+
+// render the stringified bootstrap config in yaml format.
+func (b *bootstrapConfig) render() error {
+	buf := new(bytes.Buffer)
+	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
+		return fmt.Errorf("failed to render bootstrap config: %v", err)
+	}
+	b.rendered = buf.String()
+
+	return nil
+}
 
 // createDeploymentIfNeeded creates a Deployment based on the provided infra, if
 // it doesn't exist in the kube api server.
@@ -76,8 +167,11 @@ func (i *Infra) getDeployment(ctx context.Context, infra *ir.Infra) (*appsv1.Dep
 }
 
 // expectedDeployment returns the expected Deployment based on the provided infra.
-func (i *Infra) expectedDeployment(infra *ir.Infra) *appsv1.Deployment {
-	containers := expectedContainers(infra)
+func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
+	containers, err := expectedContainers(infra)
+	if err != nil {
+		return nil, err
+	}
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -97,15 +191,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) *appsv1.Deployment {
 					Labels: EnvoyPodSelector().MatchLabels,
 				},
 				Spec: corev1.PodSpec{
-					Containers: containers,
-					Volumes: []corev1.Volume{
-						{
-							Name: envoyCfgVolName,
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-					},
+					Containers:                    containers,
 					ServiceAccountName:            infra.Proxy.ObjectName(),
 					AutomountServiceAccountToken:  pointer.BoolPtr(false),
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(300)),
@@ -117,10 +203,10 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) *appsv1.Deployment {
 		},
 	}
 
-	return deployment
+	return deployment, nil
 }
 
-func expectedContainers(infra *ir.Infra) []corev1.Container {
+func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "http",
@@ -132,6 +218,11 @@ func expectedContainers(infra *ir.Infra) []corev1.Container {
 			ContainerPort: envoyHTTPSPort,
 			Protocol:      corev1.ProtocolTCP,
 		},
+	}
+
+	cfg := bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService}}
+	if err := cfg.render(); err != nil {
+		return nil, err
 	}
 
 	containers := []corev1.Container{
@@ -147,6 +238,7 @@ func expectedContainers(infra *ir.Infra) []corev1.Container {
 				filepath.Join("/", envoyCfgVolMntDir, envoyCfgFileName),
 				fmt.Sprintf("--service-cluster $(%s)", envoyNsEnvVar),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
+				fmt.Sprintf("--config-yaml %s", cfg.rendered),
 				"--log-level info",
 			},
 			Env: []corev1.EnvVar{
@@ -182,15 +274,18 @@ func expectedContainers(infra *ir.Infra) []corev1.Container {
 		},
 	}
 
-	return containers
+	return containers, nil
 }
 
 // createDeployment creates a Deployment in the kube api server based on the provided
 // infra, if it doesn't exist.
 func (i *Infra) createDeployment(ctx context.Context, infra *ir.Infra) (*appsv1.Deployment, error) {
-	expected := i.expectedDeployment(infra)
-	err := i.Client.Create(ctx, expected)
+	expected, err := i.expectedDeployment(infra)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := i.Client.Create(ctx, expected); err != nil {
 		if kerrors.IsAlreadyExists(err) {
 			return expected, nil
 		}

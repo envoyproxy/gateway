@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -52,6 +53,17 @@ func checkContainer(t *testing.T, deploy *appsv1.Deployment, name string, expect
 	return nil
 }
 
+func checkContainerHasArg(t *testing.T, container *corev1.Container, arg string) {
+	t.Helper()
+
+	for _, a := range container.Args {
+		if a == arg {
+			return
+		}
+	}
+	t.Errorf("container is missing argument %q", arg)
+}
+
 func checkLabels(t *testing.T, deploy *appsv1.Deployment, expected map[string]string) {
 	t.Helper()
 
@@ -88,7 +100,8 @@ func TestExpectedDeployment(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
-	deploy := kube.expectedDeployment(infra)
+	deploy, err := kube.expectedDeployment(infra)
+	require.NoError(t, err)
 
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
@@ -96,6 +109,12 @@ func TestExpectedDeployment(t *testing.T) {
 	checkEnvVar(t, deploy, envoyContainerName, envoyNsEnvVar)
 	checkEnvVar(t, deploy, envoyContainerName, envoyPodEnvVar)
 	checkLabels(t, deploy, deploy.Labels)
+
+	// Create a bootstrap config, render it into an arg, and ensure it's as expected.
+	cfg := &bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService}}
+	err = cfg.render()
+	require.NoError(t, err)
+	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", cfg.rendered))
 
 	// Check container ports for the deployment are as expected.
 	ports := []int32{envoyHTTPPort, envoyHTTPSPort}
@@ -107,7 +126,8 @@ func TestExpectedDeployment(t *testing.T) {
 func TestCreateDeploymentIfNeeded(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
-	deploy := kube.expectedDeployment(infra)
+	deploy, err := kube.expectedDeployment(infra)
+	require.NoError(t, err)
 	deploy.ResourceVersion = "1"
 
 	testCases := []struct {
