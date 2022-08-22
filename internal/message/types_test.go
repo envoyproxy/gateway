@@ -102,7 +102,9 @@ func TestProviderResources(t *testing.T) {
 
 func TestXdsIR(t *testing.T) {
 	msg := new(XdsIR)
-	in := &ir.Xds{}
+	in := &ir.Xds{
+		HTTP: []*ir.HTTPListener{{Name: "test"}},
+	}
 	msg.Store("xds-ir", in)
 	out := msg.Get()
 	assert.Equal(t, out, in)
@@ -110,7 +112,9 @@ func TestXdsIR(t *testing.T) {
 
 func TestInfraIR(t *testing.T) {
 	msg := new(InfraIR)
-	in := &ir.Infra{}
+	in := &ir.Infra{
+		Proxy: &ir.ProxyInfra{Name: "test"},
+	}
 	msg.Store("infra-ir", in)
 	out := msg.Get()
 	assert.Equal(t, out, in)
