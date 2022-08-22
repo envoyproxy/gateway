@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 const (
@@ -33,17 +35,17 @@ type httpRouteReconciler struct {
 	log    logr.Logger
 
 	initializeOnce sync.Once
-	resourceTable  *ResourceTable
+	resources      *message.ProviderResources
 }
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resourceTable *ResourceTable) error {
-	resourceTable.Initialized.Add(1)
+func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
+	resources.Initialized.Add(1)
 	r := &httpRouteReconciler{
-		client:        mgr.GetClient(),
-		log:           cfg.Logger,
-		resourceTable: resourceTable,
+		client:    mgr.GetClient(),
+		log:       cfg.Logger,
+		resources: resources,
 	}
 
 	c, err := controller.New("httproute", mgr, controller.Options{Reconciler: r})
@@ -55,7 +57,6 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resourceTab
 	if err := c.Watch(&source.Kind{Type: &gwapiv1b1.HTTPRoute{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
-
 	// Add indexing on HTTPRoute, for Service objects that are referenced in HTTPRoute objects
 	// via `.spec.rules.backendRefs`. This helps in querying for HTTPRoutes that are affected by
 	// a particular Service CRUD.
@@ -125,13 +126,13 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 	err := r.client.Get(ctx, request.NamespacedName, httpRoute)
 	if errors.IsNotFound(err) {
 		log.V(2).Info("httproute not found, deleting it from the ResourceTable")
-		r.resourceTable.HTTPRoutes.Delete(request.NamespacedName)
+		r.resources.HTTPRoutes.Delete(request.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 
 	log.V(2).Info("adding httproute to the ResourceTable")
-	r.resourceTable.HTTPRoutes.Store(request.NamespacedName, httpRoute.DeepCopy())
+	r.resources.HTTPRoutes.Store(request.NamespacedName, httpRoute.DeepCopy())
 
-	defer r.initializeOnce.Do(r.resourceTable.Initialized.Done)
+	defer r.initializeOnce.Do(r.resources.Initialized.Done)
 	return reconcile.Result{}, nil
 }

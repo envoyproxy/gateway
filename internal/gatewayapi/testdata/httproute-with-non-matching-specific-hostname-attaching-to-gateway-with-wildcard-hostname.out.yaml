@@ -64,7 +64,6 @@ xdsIR:
       hostnames:
         - "*.envoyproxy.io"
 infraIR:
-  provider: Kubernetes
   proxy:
     name: envoy-gateway-class
     image: envoyproxy/envoy-dev:latest

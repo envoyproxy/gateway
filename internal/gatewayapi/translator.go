@@ -64,7 +64,7 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
-	gatewayClassName v1beta1.ObjectName
+	GatewayClassName v1beta1.ObjectName
 }
 
 type TranslateResult struct {
@@ -94,7 +94,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	xdsIR := &ir.Xds{}
 
 	infraIR := ir.NewInfra()
-	infraIR.Proxy.Name = string(t.gatewayClassName)
+	infraIR.Proxy.Name = string(t.GatewayClassName)
 
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
@@ -112,7 +112,7 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 	var relevant []*GatewayContext
 
 	for _, gateway := range gateways {
-		if gateway.Spec.GatewayClassName == t.gatewayClassName {
+		if gateway.Spec.GatewayClassName == t.GatewayClassName {
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
 			}

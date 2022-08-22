@@ -9,7 +9,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
-  namespace: system
+  namespace: envoy-gateway-system
   labels:
     control-plane: envoy-gateway
 spec:
@@ -27,11 +27,7 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - command:
-        - /envoy-gateway
-        args:
-        - --leader-elect
-        image: envoyproxy/gateway-dev:latest
+      - image: envoyproxy/gateway-dev:latest
         name: envoy-gateway
         securityContext:
           allowPrivilegeEscalation: false

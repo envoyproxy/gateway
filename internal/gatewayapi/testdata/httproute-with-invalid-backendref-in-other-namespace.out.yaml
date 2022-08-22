@@ -71,7 +71,6 @@ xdsIR:
           # TODO this should change when the correct behavior for invalid backend refs is implemented
           destinations: 
 infraIR:
-  provider: Kubernetes
   proxy:
     name: envoy-gateway-class
     image: envoyproxy/envoy-dev:latest

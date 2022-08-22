@@ -21,6 +21,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 type gatewayReconciler struct {
@@ -30,19 +31,19 @@ type gatewayReconciler struct {
 	log             logr.Logger
 
 	initializeOnce sync.Once
-	resourceTable  *ResourceTable
+	resources      *message.ProviderResources
 }
 
 // newGatewayController creates a gateway controller. The controller will watch for
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
-func newGatewayController(mgr manager.Manager, cfg *config.Server, resourceTable *ResourceTable) error {
-	resourceTable.Initialized.Add(1)
+func newGatewayController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
+	resources.Initialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		log:             cfg.Logger,
-		resourceTable:   resourceTable,
+		resources:       resources,
 	}
 
 	c, err := controller.New("gateway", mgr, controller.Options{Reconciler: r})
@@ -103,8 +104,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	if acceptedClass == nil {
 		r.log.Info("No accepted gatewayclass found for gateway", "namespace", request.Namespace,
 			"name", request.Name)
-		for namespacedName := range r.resourceTable.Gateways.LoadAll() {
-			r.resourceTable.Gateways.Delete(namespacedName)
+		for namespacedName := range r.resources.Gateways.LoadAll() {
+			r.resources.Gateways.Delete(namespacedName)
 		}
 		return reconcile.Result{}, nil
 	}
@@ -122,17 +123,17 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	found := false
 	for i := range acceptedGateways {
 		key := NamespacedName(acceptedGateways[i].DeepCopy())
-		r.resourceTable.Gateways.Store(key, &acceptedGateways[i])
+		r.resources.Gateways.Store(key, &acceptedGateways[i])
 		if key == request.NamespacedName {
 			found = true
 		}
 	}
 	if !found {
-		r.resourceTable.Gateways.Delete(request.NamespacedName)
+		r.resources.Gateways.Delete(request.NamespacedName)
 	}
 
 	// Once we've processed `allGateways`, record that we've fully initialized.
-	defer r.initializeOnce.Do(r.resourceTable.Initialized.Done)
+	defer r.initializeOnce.Do(r.resources.Initialized.Done)
 
 	return reconcile.Result{}, nil
 }

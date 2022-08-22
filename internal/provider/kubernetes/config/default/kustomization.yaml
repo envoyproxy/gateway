@@ -6,7 +6,7 @@ namespace: envoy-gateway-system
 # "wordpress" becomes "alices-wordpress".
 # Note that it should also match with the prefix (text before '-') of the namespace
 # field above.
-namePrefix: envoy-gateway-
+# namePrefix: envoy-gateway-
 
 # Labels to add to all resources and selectors.
 #commonLabels:
@@ -32,7 +32,7 @@ patchesStrategicMerge:
 
 # Mount the controller config file for loading manager configurations
 # through a ComponentConfig type
-#- config_patch.yaml
+- config_patch.yaml
 
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
 # crd/kustomization.yaml

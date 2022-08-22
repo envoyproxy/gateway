@@ -59,7 +59,6 @@ httpRoutes:
               message: There are no ready listeners for this parent ref
 xdsIR: {}
 infraIR:
-  provider: Kubernetes
   proxy:
     name: envoy-gateway-class
     image: envoyproxy/envoy-dev:latest

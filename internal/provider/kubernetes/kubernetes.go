@@ -3,43 +3,27 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 
-	"github.com/telepresenceio/watchable"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/message"
 )
-
-// ResourceTable is a listing of all of the Kubernetes resources being
-// watched.
-type ResourceTable struct {
-	// Initialized.Wait() will return once each of the maps in the
-	// table have been initialized at startup.
-	Initialized sync.WaitGroup
-
-	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
-	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
-	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
-}
 
 // Provider is the scaffolding for the Kubernetes provider. It sets up dependencies
 // and defines the topology of the provider and its managed components, wiring
 // them together.
 type Provider struct {
-	client        client.Client
-	manager       manager.Manager
-	resourceTable *ResourceTable
+	client  client.Client
+	manager manager.Manager
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *config.Server, resourceTable *ResourceTable) (*Provider, error) {
+func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:             envoygateway.GetScheme(),
@@ -54,20 +38,19 @@ func New(cfg *rest.Config, svr *config.Server, resourceTable *ResourceTable) (*P
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayClassController(mgr, svr, resourceTable); err != nil {
+	if err := newGatewayClassController(mgr, svr, resources); err != nil {
 		return nil, fmt.Errorf("failed to create gatewayclass controller: %w", err)
 	}
-	if err := newGatewayController(mgr, svr, resourceTable); err != nil {
+	if err := newGatewayController(mgr, svr, resources); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
-	if err := newHTTPRouteController(mgr, svr, resourceTable); err != nil {
+	if err := newHTTPRouteController(mgr, svr, resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
 
 	return &Provider{
-		manager:       mgr,
-		client:        mgr.GetClient(),
-		resourceTable: resourceTable,
+		manager: mgr,
+		client:  mgr.GetClient(),
 	}, nil
 }
 
@@ -85,10 +68,4 @@ func (p *Provider) Start(ctx context.Context) error {
 	case err := <-errChan:
 		return err
 	}
-}
-
-// Resources returns an updating table of all of the resources being
-// watched.
-func (p *Provider) Resources() *ResourceTable {
-	return p.resourceTable
 }
