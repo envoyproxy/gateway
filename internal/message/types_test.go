@@ -31,6 +31,11 @@ func TestProviderResources(t *testing.T) {
 		},
 	}
 
+	// Check init state
+	assert.Nil(t, resources.GetGatewayClasses())
+	assert.Nil(t, resources.GetGateways())
+	assert.Nil(t, resources.GetHTTPRoutes())
+
 	// Add resources
 	resources.GatewayClasses.Store("test-gc1", gc1)
 

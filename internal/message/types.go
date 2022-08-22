@@ -22,6 +22,10 @@ type ProviderResources struct {
 }
 
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
+	if p.GatewayClasses.Len() == 0 {
+		return nil
+	}
+
 	res := make([]*gwapiv1b1.GatewayClass, 0, p.GatewayClasses.Len())
 	for _, v := range p.GatewayClasses.LoadAll() {
 		res = append(res, v)
@@ -30,6 +34,9 @@ func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
 }
 
 func (p *ProviderResources) GetGateways() []*gwapiv1b1.Gateway {
+	if p.Gateways.Len() == 0 {
+		return nil
+	}
 	res := make([]*gwapiv1b1.Gateway, 0, p.Gateways.Len())
 	for _, v := range p.Gateways.LoadAll() {
 		res = append(res, v)
@@ -38,6 +45,9 @@ func (p *ProviderResources) GetGateways() []*gwapiv1b1.Gateway {
 }
 
 func (p *ProviderResources) GetHTTPRoutes() []*gwapiv1b1.HTTPRoute {
+	if p.HTTPRoutes.Len() == 0 {
+		return nil
+	}
 	res := make([]*gwapiv1b1.HTTPRoute, 0, p.HTTPRoutes.Len())
 	for _, v := range p.HTTPRoutes.LoadAll() {
 		res = append(res, v)
