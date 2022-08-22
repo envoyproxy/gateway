@@ -64,15 +64,25 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		gatewayClasses := r.ProviderResources.GetGatewayClasses()
 		// Fetch the first gateway class since there should be only 1
 		// gateway class linked to this controller
-		t := &gatewayapi.Translator{
-			GatewayClassName: v1beta1.ObjectName(gatewayClasses[0].GetName()),
+		switch {
+		case gatewayClasses == nil:
+			// No need to translate, publish empty IRs, e.g. delete operation.
+			r.XdsIR.Delete(r.Name())
+			r.InfraIR.Delete(r.Name())
+		case gatewayClasses[0] == nil:
+			panic("gatewayclass is nil")
+		default:
+			// Translate and publish IRs.
+			t := &gatewayapi.Translator{
+				GatewayClassName: v1beta1.ObjectName(gatewayClasses[0].GetName()),
+			}
+			// Translate to IR
+			result := t.Translate(&in)
+			// Publish the IRs. Use the service name as the key
+			// to ensure there is always one element in the map
+			r.XdsIR.Store(r.Name(), result.XdsIR)
+			r.InfraIR.Store(r.Name(), result.InfraIR)
 		}
-		// Translate to the IRs
-		result := t.Translate(&in)
-		// Publish the IRs. Use the service name as the key to ensure there
-		// is always one element in the map.
-		r.XdsIR.Store(r.Name(), result.XdsIR)
-		r.InfraIR.Store(r.Name(), result.InfraIR)
 	}
 	r.Logger.Info("shutting down")
 }
