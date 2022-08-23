@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/telepresenceio/watchable"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -16,6 +17,7 @@ type ProviderResources struct {
 	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
 	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+	Namespaces     watchable.Map[string, *corev1.Namespace]
 	// Initialized.Wait() will return once each of the maps in the
 	// structure have been initialized at startup.
 	Initialized sync.WaitGroup
@@ -50,6 +52,18 @@ func (p *ProviderResources) GetHTTPRoutes() []*gwapiv1b1.HTTPRoute {
 	}
 	res := make([]*gwapiv1b1.HTTPRoute, 0, p.HTTPRoutes.Len())
 	for _, v := range p.HTTPRoutes.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetNamespaces() []*corev1.Namespace {
+	if p.Namespaces.Len() == 0 {
+		return nil
+	}
+
+	res := make([]*corev1.Namespace, 0, p.Namespaces.Len())
+	for _, v := range p.Namespaces.LoadAll() {
 		res = append(res, v)
 	}
 	return res

@@ -288,6 +288,10 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	}
 	require.NoError(t, cli.Create(ctx, gw))
 
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
 	hroute := &gwapiv1b1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "httproute-test",
@@ -327,6 +331,10 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	}
 	require.NoError(t, cli.Create(ctx, hroute))
 
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, hroute))
+	}()
+
 	// Ensure the number of HTTPRoutes in the HTTPRoute resources is as expected.
 	require.Eventually(t, func() bool {
 		return assert.Equal(t, 1, resources.HTTPRoutes.Len())
@@ -342,4 +350,10 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	}, defaultWait, defaultTick)
 	hroutes, _ := resources.HTTPRoutes.Load(key)
 	assert.Equal(t, hroute, hroutes)
+
+	// Ensure the HTTPRoute Namespace is in the Namespace resource map.
+	require.Eventually(t, func() bool {
+		_, ok := resources.Namespaces.Load(hroute.Namespace)
+		return ok
+	}, defaultWait, defaultTick)
 }

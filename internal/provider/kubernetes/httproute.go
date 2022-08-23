@@ -5,6 +5,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -12,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -121,17 +121,62 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	log.Info("reconciling httproute")
 
-	// Fetch the HTTPRoute from the cache.
-	httpRoute := &gwapiv1b1.HTTPRoute{}
-	err := r.client.Get(ctx, request.NamespacedName, httpRoute)
-	if errors.IsNotFound(err) {
-		log.V(2).Info("httproute not found, deleting it from the ResourceTable")
-		r.resources.HTTPRoutes.Delete(request.NamespacedName)
-		return reconcile.Result{}, nil
+	// Fetch all HTTPRoutes from the cache.
+	routeList := &gwapiv1b1.HTTPRouteList{}
+	if err := r.client.List(ctx, routeList); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing httproutes")
 	}
 
-	log.V(2).Info("adding httproute to the ResourceTable")
-	r.resources.HTTPRoutes.Store(request.NamespacedName, httpRoute.DeepCopy())
+	found := false
+	for i := range routeList.Items {
+		// See if this route from the list matched the reconciled route.
+		route := routeList.Items[i]
+		routeKey := NamespacedName(&route)
+		if routeKey == request.NamespacedName {
+			found = true
+		}
+
+		// Store the httproute in the resource map.
+		r.resources.HTTPRoutes.Store(routeKey, &route)
+		log.Info("added httproute to resource map")
+
+		// Get the route's namespace from the cache.
+		nsKey := types.NamespacedName{Name: route.Namespace}
+		ns := new(corev1.Namespace)
+		if err := r.client.Get(ctx, nsKey, ns); err != nil {
+			if errors.IsNotFound(err) {
+				// The route's namespace doesn't exist in the cache, so remove it from
+				// the namespace resource map if it exists.
+				if _, ok := r.resources.Namespaces.Load(nsKey.Name); ok {
+					r.resources.Namespaces.Delete(nsKey.Name)
+					log.Info("deleted namespace from resource map")
+				}
+			}
+			return reconcile.Result{}, fmt.Errorf("failed to get namespace %s", nsKey.Name)
+		}
+
+		// The route's namespace exists, so add it to the resource map.
+		r.resources.Namespaces.Store(nsKey.Name, ns)
+		log.Info("added namespace to resource map")
+	}
+
+	if !found {
+		// Delete the httproute from the resource map.
+		r.resources.HTTPRoutes.Delete(request.NamespacedName)
+		log.Info("deleted httproute from resource map")
+
+		// Delete the namespace from the resource map if no other routes exist in the namespace.
+		routeList = &gwapiv1b1.HTTPRouteList{}
+		if err := r.client.List(ctx, routeList, &client.ListOptions{Namespace: request.Namespace}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing httproutes")
+		}
+		if len(routeList.Items) == 0 {
+			r.resources.Namespaces.Delete(request.Namespace)
+			log.Info("deleted namespace from resource map")
+		}
+	}
+
+	log.Info("reconciled httproute")
 
 	defer r.initializeOnce.Do(r.resources.Initialized.Done)
 	return reconcile.Result{}, nil
