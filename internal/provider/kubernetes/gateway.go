@@ -22,12 +22,14 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/status"
 )
 
 type gatewayReconciler struct {
 	client client.Client
 	// classController is the configured gatewayclass controller name.
 	classController gwapiv1b1.GatewayController
+	statusUpdater   status.Updater
 	log             logr.Logger
 
 	initializeOnce sync.Once
@@ -37,11 +39,12 @@ type gatewayReconciler struct {
 // newGatewayController creates a gateway controller. The controller will watch for
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
-func newGatewayController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
+func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
 	resources.Initialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		statusUpdater:   su,
 		log:             cfg.Logger,
 		resources:       resources,
 	}
@@ -132,8 +135,26 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		r.resources.Gateways.Delete(request.NamespacedName)
 	}
 
+	// Set the "Scheduled" condition to true for all accepted gateways.
+	for _, gw := range acceptedGateways {
+		r.statusUpdater.Send(status.Update{
+			NamespacedName: types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name},
+			Resource:       &gwapiv1b1.Gateway{},
+			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+				gw, ok := obj.(*gwapiv1b1.Gateway)
+				if !ok {
+					panic(fmt.Sprintf("unsupported object type %T", obj))
+				}
+
+				return status.SetGatewayScheduled(gw.DeepCopy(), true)
+			}),
+		})
+	}
+
 	// Once we've processed `allGateways`, record that we've fully initialized.
 	defer r.initializeOnce.Do(r.resources.Initialized.Done)
+
+	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
 
 	return reconcile.Result{}, nil
 }
