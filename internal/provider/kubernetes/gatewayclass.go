@@ -115,6 +115,10 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	if !found {
 		r.resources.GatewayClasses.Delete(request.Name)
 	}
+	acceptedGC := cc.acceptedClass()
+	if acceptedGC != nil {
+		r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
+	}
 
 	// no controlled gatewayclasses, trigger a delete
 	if len(cc.matchedClasses) == 0 {
@@ -123,7 +127,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	}
 
 	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
-		r.resources.GatewayClasses.Store(gc.GetName(), gc)
 		if r.statusUpdater != nil {
 			r.statusUpdater.Send(status.Update{
 				NamespacedName: types.NamespacedName{Name: gc.Name},
@@ -148,14 +151,16 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		return nil
 	}
 
+	// Update status for all gateway classes
 	for _, gc := range cc.notAcceptedClasses() {
 		if err := updater(gc, false); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
-
-	if err := updater(cc.acceptedClass(), true); err != nil {
-		return reconcile.Result{}, err
+	if acceptedGC != nil {
+		if err := updater(acceptedGC, true); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 	// Once we've iterated over all listed classes, mark that we've fully initialized.
 	r.initializeOnce.Do(r.resources.Initialized.Done)
