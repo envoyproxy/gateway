@@ -48,6 +48,7 @@ type ProxyListener struct {
 }
 
 // ListenerPort defines a network port of a listener.
+// +k8s:deepcopy-gen=true
 type ListenerPort struct {
 	// Name is the name of the listener port.
 	Name string
