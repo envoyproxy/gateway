@@ -10,8 +10,8 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR        *message.XdsIR
-	XdsResources *message.XdsResources
+	XdsIR *message.XdsIR
+	Xds   *message.Xds
 }
 
 type Runner struct {
@@ -51,10 +51,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Publish
 			// There should always be a single element in the map
 			// Use the service name as the key for now
-			xdsResources := result.GetXdsResources()
-			r.XdsResources.Store(r.Name(), &xdsResources)
+			r.Xds.Store(r.Name(), result)
 		}
 	}
-
 	r.Logger.Info("subscriber shutting down")
 }

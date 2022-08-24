@@ -21,9 +21,9 @@ import (
 
 type Config struct {
 	config.Server
-	XdsResources *message.XdsResources
-	grpc         *grpc.Server
-	cache        cache.SnapshotCacheWithCallbacks
+	Xds   *message.Xds
+	grpc  *grpc.Server
+	cache cache.SnapshotCacheWithCallbacks
 }
 
 type Runner struct {
@@ -89,16 +89,16 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for range r.XdsResources.Subscribe(ctx) {
+	for range r.Xds.Subscribe(ctx) {
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
-		xdsResources := r.XdsResources.Get()
-		if xdsResources == nil {
-			r.Logger.Info("xdsResources is nil, skipping")
+		xds := r.Xds.Get()
+		if xds == nil {
+			r.Logger.Info("xds is nil, skipping")
 			continue
 		}
 		// Update snapshot cache
-		err := r.cache.GenerateNewSnapshot(*xdsResources)
+		err := r.cache.GenerateNewSnapshot(xds.XdsResources)
 		if err != nil {
 			r.Logger.Error(err, "failed to generate a snapshot")
 		}

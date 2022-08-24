@@ -109,13 +109,13 @@ func setupRunners(cfg *config.Server) error {
 		return err
 	}
 
-	xResources := new(message.XdsResources)
+	xds := new(message.Xds)
 	// Start the Xds Translator Service
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
 	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server:       *cfg,
-		XdsIR:        xdsIR,
-		XdsResources: xResources,
+		Server: *cfg,
+		XdsIR:  xdsIR,
+		Xds:    xds,
 	})
 	if err := xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
@@ -136,8 +136,8 @@ func setupRunners(cfg *config.Server) error {
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
 	// via the xDS Protocol
 	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		Server:       *cfg,
-		XdsResources: xResources,
+		Server: *cfg,
+		Xds:    xds,
 	})
 	if err := xdsServerRunner.Start(ctx); err != nil {
 		return err
@@ -151,7 +151,7 @@ func setupRunners(cfg *config.Server) error {
 	pResources.HTTPRoutes.Close()
 	xdsIR.Close()
 	infraIR.Close()
-	xResources.Close()
+	xds.Close()
 
 	cfg.Logger.Info("shutting down")
 
