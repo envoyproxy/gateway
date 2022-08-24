@@ -45,3 +45,21 @@ kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the
 .PHONY: run-kube-local ## Run EG locally.
 run-kube-local: kube-install
 	hack/run-kube-local.sh
+
+.PHONY: conformance 
+conformance: create-conformance-cluster kube-deploy run-conformance delete-conformance-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+
+.PHONY: create-conformance-cluster
+create-conformance-cluster: ## Create a kind cluster suitable for running Gateway API conformance.
+	hack/create-conformance-cluster.sh
+
+.PHONY: run-conformance
+run-conformance: ## Run Gateway API conformance.
+	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
+	go test -tags conformance ./test/conformance --gateway-class=envoy-gateway
+
+.PHONY: delete-conformance-cluster
+delete-conformance-cluster: ## Delete conformance kind cluster.
+	kind delete cluster --name envoy-gateway-conformance
