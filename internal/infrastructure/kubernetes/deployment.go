@@ -1,10 +1,10 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -116,7 +116,7 @@ type bootstrapParameters struct {
 
 // render the stringified bootstrap config in yaml format.
 func (b *bootstrapConfig) render() error {
-	buf := new(bytes.Buffer)
+	buf := new(strings.Builder)
 	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
 		return fmt.Errorf("failed to render bootstrap config: %v", err)
 	}
