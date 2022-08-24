@@ -47,11 +47,11 @@ run-kube-local: kube-install
 	tools/hack/run-kube-local.sh
 
 .PHONY: conformance 
-conformance: create-conformance-cluster kube-deploy run-conformance delete-conformance-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+conformance: create-cluster kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
-.PHONY: create-conformance-cluster
-create-conformance-cluster: ## Create a kind cluster suitable for running Gateway API conformance.
-	tools/hack/create-conformance-cluster.sh
+.PHONY: create-cluster
+create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
+	tools/hack/create-cluster.sh
 
 .PHONY: run-conformance
 run-conformance: ## Run Gateway API conformance.
@@ -60,6 +60,6 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
 	go test -tags conformance ./test/conformance --gateway-class=envoy-gateway
 
-.PHONY: delete-conformance-cluster
-delete-conformance-cluster: ## Delete conformance kind cluster.
-	kind delete cluster --name envoy-gateway-conformance
+.PHONY: delete-cluster
+delete-cluster: $(tools/kind) ## Delete kind cluster.
+	$(tools/kind) delete cluster --name envoy-gateway
