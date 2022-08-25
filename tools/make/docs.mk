@@ -3,7 +3,7 @@ DOCS_OUTPUT_DIR := docs/html
 
 .PHONY: docs
 docs: $(tools/sphinx-build)
-	tools/bin/sphinx-build -b html $(DOCS_DIR) $(DOCS_OUTPUT_DIR)
+	$(tools/sphinx-build) -j auto -b html $(DOCS_DIR) $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs.clean
 docs.clean: ## Clean the built docs

@@ -1,6 +1,6 @@
 .DS_Store
 bin/
-docs/html
+/docs/html
 
 # Intellij
 *.iml

@@ -1,4 +1,4 @@
-Getting Involved
+Getting involved
 ================
 
 We welcome contributions from the community. Please carefully review the
