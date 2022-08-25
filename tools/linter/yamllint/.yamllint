@@ -46,4 +46,5 @@ rules:
     type: unix
   trailing-spaces: disable
   truthy:
+    check-keys: false   # GitHub Actions uses "on:" as a key
     level: warning
