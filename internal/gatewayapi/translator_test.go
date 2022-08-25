@@ -1,6 +1,7 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -83,6 +84,106 @@ func TestTranslate(t *testing.T) {
 func testName(inputFile string) string {
 	_, fileName := filepath.Split(inputFile)
 	return strings.TrimSuffix(fileName, ".in.yaml")
+}
+
+func TestIsValidHostname(t *testing.T) {
+	type testcase struct {
+		name     string
+		hostname string
+		expected bool
+		err      string
+	}
+
+	// Setting up a hostname that is 256+ characters for a test case that does not also trip the max label size
+	veryLongHostname := "a"
+	label := 0
+	for i := 0; i < 256; i++ {
+		if label > 10 {
+			veryLongHostname += "."
+			label = 0
+		} else {
+			veryLongHostname += string(veryLongHostname[0])
+		}
+		label++
+	}
+	veryLongHostname += ".com"
+
+	testcases := []*testcase{
+		{
+			name:     "good-hostname",
+			hostname: "example.test.com",
+			expected: true,
+			err:      "",
+		},
+		{
+			name:     "dot-prefix",
+			hostname: ".example.test.com",
+			expected: false,
+			err:      "Hostname cannot start with '.' or '-'",
+		},
+		{
+			name:     "dot-suffix",
+			hostname: "example.test.com.",
+			expected: false,
+			err:      "Hostname cannot end with '.' or '-'",
+		},
+		{
+			name:     "ip-address",
+			hostname: "192.168.254.254",
+			expected: false,
+			err:      "Hostname: '192.168.254.254' cannot be an ip address",
+		},
+		{
+			name:     "dash-prefix",
+			hostname: "-example.test.com",
+			expected: false,
+			err:      "Hostname cannot start with '.' or '-'",
+		},
+		{
+			name:     "dash-suffix",
+			hostname: "example.test.com-",
+			expected: false,
+			err:      "Hostname cannot end with '.' or '-'",
+		},
+		{
+			name:     "invalid-symbol",
+			hostname: "examp!e.test.com",
+			expected: false,
+			err:      "Invalid character: '!' in hostname: 'examp!e.test.com' at offset: 5",
+		},
+		{
+			name:     "long-label",
+			hostname: "example.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+			expected: false,
+			err:      "Label: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' in hostname 'example.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com' cannot exceed 63 characters",
+		},
+		{
+			name:     "way-too-long-hostname",
+			hostname: veryLongHostname,
+			expected: false,
+			err:      fmt.Sprintf("Hostname '%s' has a length of 261. cannot exceed 255", veryLongHostname),
+		},
+		{
+			name:     "empty-hostname",
+			hostname: "",
+			expected: false,
+			err:      "Hostname cannot be empty",
+		},
+		{
+			name:     "double-dot",
+			hostname: "example..test.com",
+			expected: false,
+			err:      "Invalid character: '.' in hostname: 'example..test.com' at offset: 8. hostname label cannot start with a '.'",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := isValidHostname(tc.hostname)
+			assert.Equal(t, tc.expected, actual)
+			assert.Equal(t, tc.err, err)
+		})
+	}
 }
 
 func TestIsValidCrossNamespaceRef(t *testing.T) {
