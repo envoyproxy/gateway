@@ -13,6 +13,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/ir"
+	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
 func checkEnvVar(t *testing.T, deploy *appsv1.Deployment, container, name string) {
@@ -111,8 +112,14 @@ func TestExpectedDeployment(t *testing.T) {
 	checkLabels(t, deploy, deploy.Labels)
 
 	// Create a bootstrap config, render it into an arg, and ensure it's as expected.
-	cfg := &bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService, XdsServerPort: envoyGatewayPort,
-		AdminServerAddress: envoyGatewayAdminService, AdminServerPort: envoyGatewayAdminPort}}
+	cfg := &bootstrapConfig{
+		parameters: bootstrapParameters{
+			XdsServerAddress:   envoyGatewayXdsServerHost,
+			XdsServerPort:      xdsrunner.XdsServerPort,
+			AdminServerAddress: envoyAdminAddress,
+			AdminServerPort:    envoyAdminPort,
+		},
+	}
 	err = cfg.render()
 	require.NoError(t, err)
 	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", cfg.rendered))

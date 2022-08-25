@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
 const (
@@ -35,23 +36,18 @@ const (
 	envoyHTTPPort = int32(8080)
 	// envoyHTTPSPort is the container port number of Envoy's HTTPS endpoint.
 	envoyHTTPSPort = int32(8443)
+	// envoyGatewayXdsServerHost is the address of the Xds Server within Envoy Gateway.
+	envoyGatewayXdsServerHost = "envoy-gateway"
+	// envoyAdminAddress is the listening address of the envoy admin interface.
+	envoyAdminAddress = "127.0.0.1"
+	// envoyAdminPort is the port used to expose admin interface.
+	envoyAdminPort = 19000
 )
 
 //go:embed bootstrap.yaml.tpl
 var bootstrapTmplStr string
 
 var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
-
-var (
-	// envoyGatewayService is the name of the Envoy Gateway service.
-	envoyGatewayService = "envoy-gateway"
-	// envoyGatewayPort is the port used to expose envoyGatewayService.
-	envoyGatewayPort = int32(18000)
-	// envoyGatewayAdminService is the host address of the envoy admin interface.
-	envoyGatewayAdminService = "127.0.0.1"
-	// envoyGatewayAdminPort is the port used to expose admin interface.
-	envoyGatewayAdminPort = int32(19000)
-)
 
 // envoyBootstrap defines the envoy Bootstrap configuration.
 type bootstrapConfig struct {
@@ -179,8 +175,14 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
-	cfg := bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService, XdsServerPort: envoyGatewayPort,
-		AdminServerAddress: envoyGatewayAdminService, AdminServerPort: envoyGatewayAdminPort}}
+	cfg := bootstrapConfig{
+		parameters: bootstrapParameters{
+			XdsServerAddress:   envoyGatewayXdsServerHost,
+			XdsServerPort:      xdsrunner.XdsServerPort,
+			AdminServerAddress: envoyAdminAddress,
+			AdminServerPort:    envoyAdminPort,
+		},
+	}
 	if err := cfg.render(); err != nil {
 		return nil, err
 	}
