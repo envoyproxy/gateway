@@ -81,12 +81,12 @@ func (i *InfraIR) Get() *ir.Infra {
 	return nil
 }
 
-// XdsResources message
-type XdsResources struct {
-	watchable.Map[string, *xdstypes.XdsResources]
+// Xds message
+type Xds struct {
+	watchable.Map[string, *xdstypes.ResourceVersionTable]
 }
 
-func (x *XdsResources) Get() *xdstypes.XdsResources {
+func (x *Xds) Get() *xdstypes.ResourceVersionTable {
 	// Iterate and return the first element
 	for _, v := range x.LoadAll() {
 		return v
