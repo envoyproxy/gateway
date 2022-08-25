@@ -2,61 +2,61 @@ name: Build and Test
 on:
   push:
     branches:
-      - "main"
-      - "release-v*"
+    - "main"
+    - "release-v*"
     paths-ignore:
-      - "**/*.png"
+    - "**/*.png"
   pull_request:
     branches:
-      - "main"
-      - "release-v*"
+    - "main"
+    - "release-v*"
     paths-ignore:
-      - "**/*.png"
+    - "**/*.png"
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./tools/github-actions/setup-deps
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
 
-      # lint
-      - run: make lint-deps
-      - run: make -k lint
+    # lint
+    - run: make lint-deps
+    - run: make -k lint
 
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./tools/github-actions/setup-deps
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
 
-      # test
-      - run: make go.test.coverage
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v2
-        with:
-          fail_ci_if_error: true
-          files: ./coverage.xml
-          name: codecov-envoy-gateway
-          verbose: true
+    # test
+    - run: make go.test.coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        name: codecov-envoy-gateway
+        verbose: true
 
-      # build
-      - run: make build-multiarch
-        if: github.event_name == 'pull_request'
+    # build
+    - run: make build-multiarch
+      if: github.event_name == 'pull_request'
 
-      # build and push image
-      - name: Login to DockerHub
-        if: github.event_name == 'push'
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+    # build and push image
+    - name: Login to DockerHub
+      if: github.event_name == 'push'
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and Push EG Commit Image
-        if: github.event_name == 'push'
-        # tag is set to the short SHA of the commit
-        run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64"
+    - name: Build and Push EG Commit Image
+      if: github.event_name == 'push'
+      # tag is set to the short SHA of the commit
+      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64"
 
-      - name: Build and Push EG Latest Image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # tag is set to `latest` when pushing to main branch
-        run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64"
+    - name: Build and Push EG Latest Image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      # tag is set to `latest` when pushing to main branch
+      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64"
