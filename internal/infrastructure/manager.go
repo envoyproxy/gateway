@@ -34,6 +34,8 @@ func NewManager(cfg *config.Server) (*Manager, error) {
 		ns, found := os.LookupEnv("ENVOY_GATEWAY_NAMESPACE")
 		if found {
 			mgr.Infra.Namespace = ns
+		} else {
+			mgr.Infra.Namespace = "envoy-gateway-system"
 		}
 	} else {
 		// Kube is the only supported provider type.

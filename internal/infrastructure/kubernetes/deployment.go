@@ -4,7 +4,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -25,10 +24,6 @@ const (
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
-	// envoyCfgVolName is the name of the Envoy configuration volume.
-	envoyCfgVolName = "envoy-config"
-	// envoyCfgVolMntDir is the directory name of the Envoy configuration volume.
-	envoyCfgVolMntDir = "config"
 	// envoyCfgFileName is the name of the Envoy configuration file.
 	envoyCfgFileName = "bootstrap.yaml"
 	// envoyHTTPPort is the container port number of Envoy's HTTP endpoint.
@@ -181,8 +176,6 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 				"envoy",
 			},
 			Args: []string{
-				"--config-path",
-				filepath.Join("/", envoyCfgVolMntDir, envoyCfgFileName),
 				fmt.Sprintf("--service-cluster $(%s)", envoyNsEnvVar),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 				fmt.Sprintf("--config-yaml %s", cfg.rendered),
@@ -208,14 +201,7 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 					},
 				},
 			},
-			Ports: ports,
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      envoyCfgVolName,
-					MountPath: filepath.Join("/", envoyCfgVolMntDir),
-					ReadOnly:  true,
-				},
-			},
+			Ports:                    ports,
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
