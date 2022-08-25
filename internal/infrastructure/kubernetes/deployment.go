@@ -45,6 +45,12 @@ var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrap
 var (
 	// envoyGatewayService is the name of the Envoy Gateway service.
 	envoyGatewayService = "envoy-gateway"
+	// envoyGatewayPort is the port used to expose envoyGatewayService.
+	envoyGatewayPort = int32(18000)
+	// envoyGatewayAdminService is the host address of the envoy admin interface.
+	envoyGatewayAdminService = "127.0.0.1"
+	// envoyGatewayAdminPort is the port used to expose admin interface.
+	envoyGatewayAdminPort = int32(19000)
 )
 
 // envoyBootstrap defines the envoy Bootstrap configuration.
@@ -59,6 +65,12 @@ type bootstrapConfig struct {
 type bootstrapParameters struct {
 	// XdsServerAddress is the address of the XDS Server that Envoy is managed by.
 	XdsServerAddress string
+	// XdsServerPort is the port of the XDS Server that Envoy is managed by.
+	XdsServerPort int32
+	// AdminServerAddress is the address of the Envoy admin interface.
+	AdminServerAddress string
+	// AdminServerPort is the port of the Envoy admin interface.
+	AdminServerPort int32
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -167,7 +179,8 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
-	cfg := bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService}}
+	cfg := bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService, XdsServerPort: envoyGatewayPort,
+		AdminServerAddress: envoyGatewayAdminService, AdminServerPort: envoyGatewayAdminPort}}
 	if err := cfg.render(); err != nil {
 		return nil, err
 	}
