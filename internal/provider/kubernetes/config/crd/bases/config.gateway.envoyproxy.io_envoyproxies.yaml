@@ -34,6 +34,18 @@ spec:
             type: object
           spec:
             description: EnvoyProxySpec defines the desired state of EnvoyProxy.
+            properties:
+              xdsServer:
+                description: XDSServer defines the xDS Server configuration of EnvoyProxy.
+                  If unspecified, default configuration parameters will be used.
+                properties:
+                  address:
+                    description: Address defines the IPv4 address or DNS name of the
+                      server used for xDS configuration. If unspecified, defaults
+                      to the DNS name "envoy-gateway". Address must be a valid IPv4
+                      host address or RFC 1123 Label Name.
+                    type: string
+                type: object
             type: object
           status:
             description: EnvoyProxyStatus defines the observed state of EnvoyProxy

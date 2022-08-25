@@ -1,23 +1,15 @@
 package v1alpha1
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+const (
+	// EnvoyGatewayServiceName is the Kubernetes service name of Envoy Gateway.
+	EnvoyGatewayServiceName = "envoy-gateway"
 )
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
 func DefaultEnvoyGateway() *EnvoyGateway {
-	gw := DefaultGateway()
-	p := DefaultProvider()
-	return &EnvoyGateway{
-		metav1.TypeMeta{
-			Kind:       KindEnvoyGateway,
-			APIVersion: GroupVersion.String(),
-		},
-		EnvoyGatewaySpec{
-			Gateway:  gw,
-			Provider: p,
-		},
-	}
+	eg := new(EnvoyGateway)
+	eg.SetDefaults()
+	return eg
 }
 
 // SetDefaults sets default EnvoyGateway configuration parameters.
@@ -50,6 +42,29 @@ func DefaultProvider() *Provider {
 	}
 }
 
-func ProviderTypePtr(p ProviderType) *ProviderType {
-	return &p
+// DefaultEnvoyProxy returns a new EnvoyProxy with default configuration parameters.
+func DefaultEnvoyProxy() *EnvoyProxy {
+	ep := new(EnvoyProxy)
+	ep.SetDefaults()
+	return ep
+}
+
+// SetDefaults sets default EnvoyProxy configuration parameters.
+func (e *EnvoyProxy) SetDefaults() {
+	if e.TypeMeta.Kind == "" {
+		e.TypeMeta.Kind = KindEnvoyProxy
+	}
+	if e.TypeMeta.APIVersion == "" {
+		e.TypeMeta.APIVersion = GroupVersion.String()
+	}
+	if e.Spec.XDSServer == nil {
+		e.Spec.XDSServer = DefaultXDSServer()
+	}
+}
+
+// DefaultXDSServer returns a new XDSServer with default configuration parameters.
+func DefaultXDSServer() *XDSServer {
+	return &XDSServer{
+		Address: EnvoyGatewayServiceName,
+	}
 }

@@ -4,6 +4,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// KindEnvoyProxy is the name of the EnvoyProxy kind.
+	KindEnvoyProxy = "EnvoyProxy"
+)
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
@@ -18,8 +23,21 @@ type EnvoyProxy struct {
 
 // EnvoyProxySpec defines the desired state of EnvoyProxy.
 type EnvoyProxySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - define desired state of cluster.
-	// Important: Run "make" to regenerate code after modifying this file.
+	// XDSServer defines the xDS Server configuration of EnvoyProxy.
+	// If unspecified, default configuration parameters will be used.
+	//
+	// +optional
+	XDSServer *XDSServer `json:"xdsServer,omitempty"`
+}
+
+// XDSServer defines the desired xDS Server configuration of EnvoyProxy.
+type XDSServer struct {
+	// Address defines the IPv4 address or DNS name of the server used for xDS
+	// configuration. If unspecified, defaults to the DNS name "envoy-gateway".
+	// Address must be a valid IPv4 host address or RFC 1123 Label Name.
+	//
+	// +optional
+	Address string `json:"address,omitempty"`
 }
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy

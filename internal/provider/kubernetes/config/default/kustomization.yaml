@@ -1,4 +1,5 @@
 # Adds namespace to all resources.
+# Update EnvoyGatewayNamespace variable when changing this value.
 namespace: envoy-gateway-system
 
 # Value of this field is prepended to the
