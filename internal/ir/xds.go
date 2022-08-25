@@ -131,6 +131,10 @@ type HTTPRoute struct {
 	QueryParamMatches []*StringMatch
 	// Destinations associated with this matched route.
 	Destinations []*RouteDestination
+	// Redirections to be returned for this route. Takes precedence over Destinations
+	Redirect *Redirect
+	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect
+	DirectResponse *DirectResponse
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -173,6 +177,40 @@ type RouteDestination struct {
 	Port uint32
 	// Weight associated with this destination.
 	Weight uint32
+}
+
+// Direct response holds the details for returning a body and status code for a route.
+// +k8s:deepcopy-gen=true
+type DirectResponse struct {
+	// Body configures the body of the direct response. Currently only a string response
+	// is supported, but in the future a config.core.v3.DataSource may replace it.
+	Body *string
+	// StatusCode will be used for the direct response's status code.
+	StatusCode uint32
+}
+
+// Redirect holds the details for how and where to redirect a request
+// +k8s:deepcopy-gen=true
+type Redirect struct {
+	// Scheme configures the replacement of the request's scheme.
+	Scheme *string
+	// Hostname configures the replacement of the request's hostname.
+	Hostname *string
+	// Path contains config for rewriting the path of the request.
+	Path *HTTPPathModifier
+	// Port configures the replacement of the request's port.
+	Port *uint32
+	// Status code configures the redirection response's status code.
+	StatusCode *int32
+}
+
+// HTTPPathModifier holds instructions for how to modify the path of a request on a redirect response
+// +k8s:deepcopy-gen=true
+type HTTPPathModifier struct {
+	// FullReplace provides a string to replace the full path of the request.
+	FullReplace *string
+	// PrefixMatchReplace provides a string to replace the matched prefix of the request.
+	PrefixMatchReplace *string
 }
 
 // Validate the fields within the RouteDestination structure
