@@ -111,7 +111,7 @@ func TestExpectedDeployment(t *testing.T) {
 	checkLabels(t, deploy, deploy.Labels)
 
 	// Create a bootstrap config, render it into an arg, and ensure it's as expected.
-	cfg := &bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService}}
+	cfg := &bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService, XdsServerPort: 18000, AdminServerAddress: "127.0.0.1", AdminServerPort: 19000}}
 	err = cfg.render()
 	require.NoError(t, err)
 	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", cfg.rendered))
