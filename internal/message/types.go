@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -16,6 +17,7 @@ type ProviderResources struct {
 	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
 	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+	EnvoyProxy     watchable.Map[types.NamespacedName, *configv1a1.EnvoyProxy]
 	// Initialized.Wait() will return once each of the maps in the
 	// structure have been initialized at startup.
 	Initialized sync.WaitGroup
@@ -51,6 +53,17 @@ func (p *ProviderResources) GetHTTPRoutes() []*gwapiv1b1.HTTPRoute {
 	res := make([]*gwapiv1b1.HTTPRoute, 0, p.HTTPRoutes.Len())
 	for _, v := range p.HTTPRoutes.LoadAll() {
 		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetEnvoyProxy() *configv1a1.EnvoyProxy {
+	if p.EnvoyProxy.Len() == 0 {
+		return nil
+	}
+	res := new(configv1a1.EnvoyProxy)
+	for _, v := range p.EnvoyProxy.LoadAll() {
+		res = v
 	}
 	return res
 }

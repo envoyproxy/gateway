@@ -7,6 +7,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/log"
 )
 
+var (
+	// EnvoyGatewayNamespace is the Kubernetes Namespace that Envoy Gateway runs in.
+	EnvoyGatewayNamespace = "envoy-gateway-system"
+)
+
 // Server wraps the EnvoyGateway configuration and additional parameters
 // used by Envoy Gateway server.
 type Server struct {

@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
@@ -96,67 +97,90 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	}
 
 	var cc controlledClasses
-
 	found := false
 	for i := range gatewayClasses.Items {
-		if gatewayClasses.Items[i].Spec.ControllerName == r.controller {
-			cc.addMatch(&gatewayClasses.Items[i])
-			if gatewayClasses.Items[i].GetName() == request.Name {
+		gc := gatewayClasses.Items[i]
+		if gc.Spec.ControllerName == r.controller {
+			cc.addMatch(&gc)
+			if gc.GetName() == request.Name {
 				found = true
 			}
 		}
 	}
+	// The reconciled gatewayclass is not found in the list, so delete it
+	// and any EnvoyProxy parametersRef from the resource maps.
 	if !found {
 		r.resources.GatewayClasses.Delete(request.Name)
-	}
-	acceptedGC := cc.acceptedClass()
-	if acceptedGC != nil {
-		r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
+		for k := range r.resources.EnvoyProxy.LoadAll() {
+			r.resources.EnvoyProxy.Delete(k)
+		}
 	}
 
-	// no controlled gatewayclasses, trigger a delete
+	// No controlled gatewayclasses, so return.
 	if len(cc.matchedClasses) == 0 {
-		r.log.Info("failed to find gatewayclass", "name", request.Name)
+		r.log.Info("failed to find any controlled gatewayclasses")
 		return reconcile.Result{}, nil
 	}
 
-	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
-		if r.statusUpdater != nil {
-			r.statusUpdater.Send(status.Update{
-				NamespacedName: types.NamespacedName{Name: gc.Name},
-				Resource:       &gwapiv1b1.GatewayClass{},
-				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					gc, ok := obj.(*gwapiv1b1.GatewayClass)
-					if !ok {
-						panic(fmt.Sprintf("unsupported object type %T", obj))
-					}
+	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool, reason, msg string) error {
+		r.statusUpdater.Send(status.Update{
+			NamespacedName: types.NamespacedName{Name: gc.Name},
+			Resource:       &gwapiv1b1.GatewayClass{},
+			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+				gc, ok := obj.(*gwapiv1b1.GatewayClass)
+				if !ok {
+					panic(fmt.Sprintf("unsupported object type %T", obj))
+				}
 
-					return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
-				}),
-			})
-		} else {
-			// this branch makes testing easier by not going through the status.Updater.
-			copy := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
-
-			if err := r.client.Status().Update(ctx, copy); err != nil {
-				return fmt.Errorf("error updating status of gatewayclass %s: %w", copy.Name, err)
-			}
-		}
+				return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
+			}),
+		})
 		return nil
 	}
 
-	// Update status for all gateway classes
-	for _, gc := range cc.notAcceptedClasses() {
-		if err := updater(gc, false); err != nil {
-			return reconcile.Result{}, err
-		}
-	}
+	// Process the accepted gatewayclass.
+	acceptedReason := string(gwapiv1b1.GatewayClassReasonAccepted)
+	acceptedGC := cc.acceptedClass()
 	if acceptedGC != nil {
-		if err := updater(acceptedGC, true); err != nil {
+		if acceptedGC.Spec.ParametersRef != nil {
+			// Validate the parametersRef of the accepted gatewayclass.
+			if err := validateParametersRef(acceptedGC.Spec.ParametersRef); err != nil {
+				// The parametersRef is invalid, so update status and return.
+				invalidParamsMsg := fmt.Sprintf("invalid gatewayclass: %v", err)
+				if err := updater(acceptedGC, false, acceptedReason, invalidParamsMsg); err != nil {
+					return reconcile.Result{}, err
+				}
+			}
+			// ParametersRef is valid, so get the referenced EnvoyProxy from the cache.
+			ep := new(v1alpha1.EnvoyProxy)
+			key := types.NamespacedName{
+				Namespace: string(*acceptedGC.Spec.ParametersRef.Namespace),
+				Name:      acceptedGC.Spec.ParametersRef.Name,
+			}
+			err := r.client.Get(ctx, key, ep)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+			// The parametersRef has been validated, so store it in the resource map.
+			r.resources.EnvoyProxy.Store(key, ep)
+		}
+		// The accepted GatewayClass has no parametersRef, so update its status
+		// and store in the resource map.
+		if err := updater(acceptedGC, true, acceptedReason, "Valid GatewayClass"); err != nil {
+			return reconcile.Result{}, err
+		}
+		r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
+	}
+
+	// Update status for all controlled GatewayClasses that are not accepted.
+	for _, gc := range cc.notAcceptedClasses() {
+		olderClassMsg := "Invalid GatewayClass: another older GatewayClass with the same Spec.Controller exists"
+		if err := updater(gc, false, acceptedReason, olderClassMsg); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
-	// Once we've iterated over all listed classes, mark that we've fully initialized.
+
+	// Once we've iterated over all listed gatewayclasses, mark that we've fully initialized.
 	r.initializeOnce.Do(r.resources.Initialized.Done)
 
 	r.log.WithName(request.Name).Info("reconciled gatewayclass")
@@ -196,4 +220,21 @@ func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1b1.GatewayClass {
 	}
 
 	return res
+}
+
+func validateParametersRef(params *gwapiv1b1.ParametersReference) error {
+	switch {
+	case params == nil:
+		return nil
+	case params.Group != gwapiv1b1.Group(v1alpha1.GroupVersion.Group):
+		return fmt.Errorf("invalid parametersRef group; must be %q", v1alpha1.GroupVersion.Group)
+	case params.Kind != v1alpha1.KindEnvoyProxy:
+		return fmt.Errorf("invalid parametersRef kind; must be %q", v1alpha1.KindEnvoyProxy)
+	case len(params.Name) == 0:
+		return fmt.Errorf("invalid parametersRef name")
+	case params.Namespace == nil:
+		return fmt.Errorf("invalid parametersRef; namespace must be %q", config.EnvoyGatewayNamespace)
+	}
+
+	return nil
 }

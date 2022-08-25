@@ -167,7 +167,7 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
-	cfg := bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: envoyGatewayService}}
+	cfg := bootstrapConfig{parameters: bootstrapParameters{XdsServerAddress: infra.GetProxyXdsServerAddress()}}
 	if err := cfg.render(); err != nil {
 		return nil, err
 	}

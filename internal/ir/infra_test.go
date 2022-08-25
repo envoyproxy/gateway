@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 func TestValidateInfra(t *testing.T) {
@@ -34,6 +36,19 @@ func TestValidateInfra(t *testing.T) {
 				Proxy: &ProxyInfra{
 					Name:  "test",
 					Image: "image",
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "infra-with-valid-proxy-config",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name:  "test",
+					Image: "image",
+					Config: &configv1a1.EnvoyProxySpec{
+						XDSServer: &configv1a1.XDSServer{Address: "1.2.3.4"},
+					},
 				},
 			},
 			expect: true,
@@ -193,6 +208,40 @@ func TestObjectName(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := tc.infra.Proxy.ObjectName()
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestGetProxyXdsServerAddress(t *testing.T) {
+	testCases := []struct {
+		name     string
+		infra    *Infra
+		expected string
+	}{
+		{
+			name:     "default infra",
+			infra:    NewInfra(),
+			expected: configv1a1.EnvoyGatewayServiceName,
+		},
+		{
+			name: "user provided infra",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name:  "test",
+					Image: "image",
+					Config: &configv1a1.EnvoyProxySpec{
+						XDSServer: &configv1a1.XDSServer{Address: "1.2.3.4"},
+					},
+				},
+			},
+			expected: "1.2.3.4",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := tc.infra.GetProxyXdsServerAddress()
 			require.Equal(t, tc.expected, actual)
 		})
 	}

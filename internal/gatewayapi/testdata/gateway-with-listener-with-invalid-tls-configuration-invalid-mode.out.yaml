@@ -64,3 +64,6 @@ infraIR:
     image: envoyproxy/envoy-dev:latest
     listeners:
       - address: ""
+    config:
+      xdsServer:
+        address: 1.2.3.4

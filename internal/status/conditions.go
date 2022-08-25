@@ -13,14 +13,14 @@ import (
 const ReasonOlderGatewayClassExists gwapiv1b1.GatewayClassConditionReason = "OlderGatewayClassExists"
 
 // computeGatewayClassAcceptedCondition computes the GatewayClass Accepted status condition.
-func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass, accepted bool) metav1.Condition {
+func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass, accepted bool, reason, msg string) metav1.Condition {
 	switch accepted {
 	case true:
 		return metav1.Condition{
 			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(gwapiv1b1.GatewayClassReasonAccepted),
-			Message:            "Valid GatewayClass",
+			Reason:             reason,
+			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 		}
@@ -28,8 +28,8 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass, 
 		return metav1.Condition{
 			Type:               string(gwapiv1b1.GatewayClassConditionStatusAccepted),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(ReasonOlderGatewayClassExists),
-			Message:            "Invalid GatewayClass: another older GatewayClass with the same Spec.Controller exists",
+			Reason:             reason,
+			Message:            msg,
 			ObservedGeneration: gatewayClass.Generation,
 			LastTransitionTime: metav1.NewTime(time.Now()),
 		}

@@ -14,6 +14,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
+
+	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 func mustUnmarshal(t *testing.T, val string, out interface{}) {
@@ -71,6 +74,21 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
+			resources.EnvoyProxy = &configv1a1.EnvoyProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       configv1a1.KindEnvoyProxy,
+					APIVersion: configv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "test",
+				},
+				Spec: configv1a1.EnvoyProxySpec{
+					XDSServer: &configv1a1.XDSServer{
+						Address: "1.2.3.4"},
+				},
+			}
+
 			got := translator.Translate(resources)
 
 			sort.Slice(got.XdsIR.HTTP, func(i, j int) bool { return got.XdsIR.HTTP[i].Name < got.XdsIR.HTTP[j].Name })
@@ -102,7 +120,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 			from: crossNamespaceFrom{
 				group:     "gateway.networking.k8s.io",
 				kind:      "Gateway",
-				namespace: "envoy-gateway-system",
+				namespace: config.EnvoyGatewayNamespace,
 			},
 			to: crossNamespaceTo{
 				group:     "",
@@ -120,7 +138,7 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 						{
 							Group:     "gateway.networking.k8s.io",
 							Kind:      "Gateway",
-							Namespace: "envoy-gateway-system",
+							Namespace: v1alpha2.Namespace(config.EnvoyGatewayNamespace),
 						},
 					},
 					To: []v1alpha2.ReferenceGrantTo{

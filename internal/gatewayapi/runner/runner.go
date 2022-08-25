@@ -41,6 +41,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("done initializing provider resources")
 	// Subscribe to resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
+	envoyProxyCh := r.ProviderResources.EnvoyProxy.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
 	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
 
@@ -51,11 +52,13 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		// Receive subscribed resource notifications
 		select {
 		case <-gatewayClassesCh:
+		case <-envoyProxyCh:
 		case <-gatewaysCh:
 		case <-httpRoutesCh:
 		}
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
+		in.EnvoyProxy = r.ProviderResources.GetEnvoyProxy()
 		in.Gateways = r.ProviderResources.GetGateways()
 		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()
 		gatewayClasses := r.ProviderResources.GetGatewayClasses()
@@ -70,6 +73,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		// Use the service name as the key to ensure there is always
 		// one element in the map
 		r.XdsIR.Store(r.Name(), result.XdsIR)
+		r.InfraIR.Store(r.Name(), result.InfraIR)
 	}
 	r.Logger.Info("shutting down")
 }

@@ -138,7 +138,7 @@ func (in *ProxyInfra) DeepCopyInto(out *ProxyInfra) {
 	*out = *in
 	if in.Config != nil {
 		in, out := &in.Config, &out.Config
-		*out = new(v1alpha1.EnvoyProxy)
+		*out = new(v1alpha1.EnvoyProxySpec)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.Listeners != nil {

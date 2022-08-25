@@ -4,3 +4,5 @@ package kubernetes
 // +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;httproutes/status,verbs=update
 
 // +kubebuilder:rbac:groups="",resources=secrets;services;namespaces,verbs=get;list;watch
+
+// +kubebuilder:rbac:groups="config.gateway.envoyproxy.io",resources=envoyproxies,verbs=get;list;watch

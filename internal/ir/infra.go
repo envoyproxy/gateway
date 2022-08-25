@@ -3,8 +3,10 @@ package ir
 import (
 	"errors"
 	"fmt"
+	"net"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
@@ -29,8 +31,8 @@ type ProxyInfra struct {
 	//
 	// Name is the name used for managed proxy infrastructure.
 	Name string
-	// Config defines user-facing configuration of the managed proxy infrastructure.
-	Config *v1alpha1.EnvoyProxy
+	// Config defines the desired configuration of the managed proxy infrastructure.
+	Config *v1alpha1.EnvoyProxySpec
 	// Image is the container image used for the managed proxy infrastructure.
 	// If unset, defaults to "envoyproxy/envoy-dev:latest".
 	Image string
@@ -116,6 +118,19 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 	return i.Proxy
 }
 
+// GetProxyXdsServerAddress returns the Proxy XDSServerAddress.
+// If unspecified, the default xDS server address is returned.
+func (i *Infra) GetProxyXdsServerAddress() string {
+	if i.Proxy == nil ||
+		i.Proxy.Config == nil ||
+		i.Proxy.Config.XDSServer == nil ||
+		len(i.Proxy.Config.XDSServer.Address) == 0 {
+		return v1alpha1.EnvoyGatewayServiceName
+	}
+
+	return i.Proxy.Config.XDSServer.Address
+}
+
 // ValidateInfra validates the provided Infra.
 func ValidateInfra(infra *Infra) error {
 	if infra == nil {
@@ -161,6 +176,21 @@ func ValidateProxyInfra(pInfra *ProxyInfra) error {
 				}
 				if listener.Ports[j].Port < 1 || listener.Ports[j].Port > 65353 {
 					errs = append(errs, errors.New("listener port must be a valid port number"))
+				}
+			}
+		}
+	}
+
+	if pInfra.Config != nil {
+		addr := pInfra.Config.XDSServer.Address
+		if pInfra.Config.XDSServer != nil && len(addr) == 0 {
+			// XDSServer must be a valid IP address or DNS 1123 label name.
+			ip := net.ParseIP(addr)
+			if ip == nil {
+				if lblErrs := validation.IsDNS1123Label(addr); len(lblErrs) > 0 {
+					for i := range lblErrs {
+						errs = append(errs, errors.New(lblErrs[i]))
+					}
 				}
 			}
 		}

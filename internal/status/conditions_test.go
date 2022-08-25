@@ -26,18 +26,20 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 			name:     "accepted gatewayclass",
 			accepted: true,
 			expect: metav1.Condition{
-				Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
-				Status: metav1.ConditionTrue,
-				Reason: string(gwapiv1b1.GatewayClassReasonAccepted),
+				Type:    string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(gwapiv1b1.GatewayClassReasonAccepted),
+				Message: "GatewayClass accepted by Envoy Gateway",
 			},
 		},
 		{
 			name:     "not accepted gatewayclass",
 			accepted: false,
 			expect: metav1.Condition{
-				Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
-				Status: metav1.ConditionFalse,
-				Reason: string(ReasonOlderGatewayClassExists),
+				Type:    string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+				Status:  metav1.ConditionFalse,
+				Reason:  string(ReasonOlderGatewayClassExists),
+				Message: "An older GatewayClass has been accepted by Envoy Gateway",
 			},
 		},
 	}
@@ -49,11 +51,12 @@ func TestComputeGatewayClassAcceptedCondition(t *testing.T) {
 			},
 		}
 
-		got := computeGatewayClassAcceptedCondition(gc, tc.accepted)
+		got := computeGatewayClassAcceptedCondition(gc, tc.accepted, tc.expect.Reason, tc.expect.Message)
 
 		assert.Equal(t, tc.expect.Type, got.Type)
 		assert.Equal(t, tc.expect.Status, got.Status)
 		assert.Equal(t, tc.expect.Reason, got.Reason)
+		assert.Equal(t, tc.expect.Message, got.Message)
 		assert.Equal(t, gc.Generation, got.ObservedGeneration)
 	}
 }

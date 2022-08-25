@@ -109,3 +109,6 @@ infraIR:
           - name: envoy-gateway-gateway-1
             protocol: "HTTP"
             port: 80
+    config:
+      xdsServer:
+        address: 1.2.3.4

@@ -57,10 +57,10 @@ func TestProvider(t *testing.T) {
 	}()
 
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
-		"gatewayclass controller name": testGatewayClassController,
-		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
-		"gateway scheduled status":     testGatewayScheduledStatus,
-		"httproute":                    testHTTPRoute,
+		"gatewayclass controller name":  testGatewayClassController,
+		"gatewayclass accepted status":  testGatewayClassAcceptedStatus,
+		"gatewayclass scheduled status": testGatewayClassScheduledStatus,
+		"httproute":                     testHTTPRoute,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -71,9 +71,10 @@ func TestProvider(t *testing.T) {
 
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-	crd := filepath.Join(".", "testdata", "in")
+	gwApiCrds := filepath.Join(".", "testdata", "in")
+	egCrds := filepath.Join(".", "config", "crd", "bases")
 	env := &envtest.Environment{
-		CRDDirectoryPaths: []string{crd},
+		CRDDirectoryPaths: []string{gwApiCrds, egCrds},
 	}
 	cfg, err := env.Start()
 	if err != nil {
@@ -142,15 +143,37 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 	assert.Equal(t, gc, gcs)
 }
 
-func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayClassScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
+	// Create the namespace for the EnvoyProxy (referenced by the GatewayClass) under test.
+	epNs := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: config.EnvoyGatewayNamespace}}
+	require.NoError(t, cli.Create(ctx, epNs))
+
+	ep := &v1alpha1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: config.EnvoyGatewayNamespace,
+			Name:      "test",
+		},
+		Spec: v1alpha1.EnvoyProxySpec{
+			XDSServer: v1alpha1.DefaultXDSServer(),
+		},
+	}
+	require.NoError(t, cli.Create(ctx, ep))
+
+	paramRefNs := gwapiv1b1.Namespace(config.EnvoyGatewayNamespace)
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "gc-scheduled-status-test",
 		},
 		Spec: gwapiv1b1.GatewayClassSpec{
 			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+			ParametersRef: &gwapiv1b1.ParametersReference{
+				Group:     gwapiv1b1.Group(v1alpha1.GroupVersion.Group),
+				Kind:      v1alpha1.KindEnvoyProxy,
+				Name:      "test",
+				Namespace: &paramRefNs,
+			},
 		},
 	}
 	require.NoError(t, cli.Create(ctx, gc))
@@ -173,6 +196,17 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
 	}()
+
+	// Ensure the test EnvoyProxy in the resource map is as expected.
+	epKey := types.NamespacedName{
+		Namespace: ep.Namespace,
+		Name:      ep.Name,
+	}
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, epKey, ep) == nil
+	}, defaultWait, defaultTick)
+	epResource, _ := resources.EnvoyProxy.Load(epKey)
+	assert.Equal(t, ep, epResource)
 
 	// Create the namespace for the Gateway under test.
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}

@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -29,6 +30,7 @@ type Resources struct {
 	Namespaces      []*v1.Namespace
 	Services        []*v1.Service
 	Secrets         []*v1.Secret
+	EnvoyProxy      *configv1a1.EnvoyProxy
 }
 
 func (r *Resources) GetNamespace(name string) *v1.Namespace {
@@ -95,6 +97,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	infraIR := ir.NewInfra()
 	infraIR.Proxy.Name = string(t.GatewayClassName)
+	if resources.EnvoyProxy != nil {
+		infraIR.Proxy.Config = &resources.EnvoyProxy.Spec
+	}
 
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
