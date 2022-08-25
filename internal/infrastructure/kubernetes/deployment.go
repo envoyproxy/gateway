@@ -37,7 +37,7 @@ const (
 	envoyHTTPSPort = int32(8443)
 )
 
-//go:embed bootstrap.yaml
+//go:embed bootstrap.yaml.tpl
 var bootstrapTmplStr string
 
 var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
