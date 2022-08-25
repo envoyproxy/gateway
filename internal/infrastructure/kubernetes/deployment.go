@@ -36,7 +36,8 @@ const (
 	envoyHTTPPort = int32(8080)
 	// envoyHTTPSPort is the container port number of Envoy's HTTPS endpoint.
 	envoyHTTPSPort = int32(8443)
-	// envoyGatewayXdsServerHost is the address of the Xds Server within Envoy Gateway.
+	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
+	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
 	// envoyAdminAddress is the listening address of the envoy admin interface.
 	envoyAdminAddress = "127.0.0.1"
