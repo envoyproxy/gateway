@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	defaultWait = time.Second * 10
+	defaultWait = time.Second * 60
 	defaultTick = time.Millisecond * 20
 )
 
@@ -219,7 +219,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
-		return assert.Equal(t, 1, resources.Gateways.Len())
+		return resources.Gateways.Len() == 1
 	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
@@ -356,13 +356,71 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	}
 	require.NoError(t, cli.Create(ctx, hroute))
 
+	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
+	redirectPort := gwapiv1b1.PortNumber(8443)
+	redirectStatus := 301
+	redirectRoute := &gwapiv1b1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-redirect-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+				ParentRefs: []gwapiv1b1.ParentReference{
+					{
+						Name: gwapiv1b1.ObjectName(gw.Name),
+					},
+				},
+			},
+			Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+			Rules: []gwapiv1b1.HTTPRouteRule{
+				{
+					Matches: []gwapiv1b1.HTTPRouteMatch{
+						{
+							Path: &gwapiv1b1.HTTPPathMatch{
+								Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+								Value: gatewayapi.StringPtr("/redirect/"),
+							},
+						},
+					},
+					BackendRefs: []gwapiv1b1.HTTPBackendRef{
+						{
+							BackendRef: gwapiv1b1.BackendRef{
+								BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									Name: "test",
+								},
+							},
+						},
+					},
+					Filters: []gwapiv1b1.HTTPRouteFilter{
+						{
+							Type: gwapiv1b1.HTTPRouteFilterType("RequestRedirect"),
+							RequestRedirect: &gwapiv1b1.HTTPRequestRedirectFilter{
+								Scheme:   gatewayapi.StringPtr("https"),
+								Hostname: &redirectHostname,
+								Path: &gwapiv1b1.HTTPPathModifier{
+									Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
+									ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+								},
+								Port:       &redirectPort,
+								StatusCode: &redirectStatus,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, redirectRoute))
+
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, hroute))
+		require.NoError(t, cli.Delete(ctx, redirectRoute))
 	}()
 
 	// Ensure the number of HTTPRoutes in the HTTPRoute resources is as expected.
 	require.Eventually(t, func() bool {
-		return assert.Equal(t, 1, resources.HTTPRoutes.Len())
+		return resources.HTTPRoutes.Len() == 1
 	}, defaultWait, defaultTick)
 
 	// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
@@ -386,6 +444,23 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	svcKey := NamespacedName(svc)
 	require.Eventually(t, func() bool {
 		_, ok := resources.Services.Load(svcKey)
+		return ok
+	}, defaultWait, defaultTick)
+
+	// Ensure the test HTTPRoute with a redirect filter in the HTTPRoute resources is as expected.
+	key = types.NamespacedName{
+		Namespace: redirectRoute.Namespace,
+		Name:      redirectRoute.Name,
+	}
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, key, redirectRoute) == nil
+	}, defaultWait, defaultTick)
+	redirectRoutes, _ := resources.HTTPRoutes.Load(key)
+	assert.Equal(t, redirectRoute, redirectRoutes)
+
+	// Ensure the redirect HTTPRoute Namespace is in the Namespace resource map.
+	require.Eventually(t, func() bool {
+		_, ok := resources.Namespaces.Load(redirectRoute.Namespace)
 		return ok
 	}, defaultWait, defaultTick)
 }
