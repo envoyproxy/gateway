@@ -31,7 +31,6 @@ kube-install: manifests $(tools/kustomize) ## Install Envoy Gateway CRDs into th
 
 .PHONY: kube-uninstall
 kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(tools/kustomize) build internal/provider/kubernetes/config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
 
 .PHONY: kube-deploy
