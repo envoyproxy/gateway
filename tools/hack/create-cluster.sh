@@ -5,13 +5,13 @@ set -euo pipefail
 # Setup default values
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.12.1"}
-NODE_IMAGE=${NODE_IMAGE:-"kindest/node:v1.24.0"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"kindest/node:v1.24.0"}
 
 ## Create kind cluster.
-if [[ -z "${NODE_IMAGE}" ]]; then
+if [[ -z "${KIND_NODE_TAG}" ]]; then
   tools/bin/kind create cluster --name "${CLUSTER_NAME}"
 else
-  tools/bin/kind create cluster --image "${NODE_IMAGE}" --name "${CLUSTER_NAME}"
+  tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}"
 fi
 
 ## Install metallb.
