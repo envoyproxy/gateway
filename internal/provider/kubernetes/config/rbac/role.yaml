@@ -10,10 +10,32 @@ rules:
   resources:
   - namespaces
   - secrets
-  - services
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
