@@ -9,4 +9,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: envoy-gateway
-  namespace: system
+  namespace: envoy-gateway-system

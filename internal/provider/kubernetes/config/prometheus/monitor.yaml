@@ -5,7 +5,7 @@ metadata:
   labels:
     control-plane: envoy-gateway
   name: envoy-gateway-metrics-monitor
-  namespace: system
+  namespace: envoy-gateway-system
 spec:
   endpoints:
     - path: /metrics
