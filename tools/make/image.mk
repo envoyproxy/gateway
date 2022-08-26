@@ -46,7 +46,7 @@ image.build: $(addprefix image.build.$(IMAGE_PLAT)., $(IMAGES))
 image.build.%: go.build.% image.verify
 	$(eval IMAGES := $(COMMAND))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
-	@$(call log, "Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)"
+	@$(call log, "Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)")
 	$(eval BUILD_SUFFIX := --pull -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
 	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) for $(ARCH)")
 	$(DOCKER) build --platform $(IMAGE_PLAT) $(BUILD_SUFFIX)
