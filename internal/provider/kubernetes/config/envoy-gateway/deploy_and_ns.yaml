@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   labels:
     control-plane: envoy-gateway
-  name: system
+  name: envoy-gateway-system
 ---
 apiVersion: apps/v1
 kind: Deployment
