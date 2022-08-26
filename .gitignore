@@ -1,2 +1,10 @@
 .DS_Store
 bin/
+
+# Intellij
+*.iml
+.idea/
+.run/
+
+# Visual Studio Code
+.vscode/
