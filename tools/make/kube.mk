@@ -52,6 +52,10 @@ conformance: create-cluster kube-deploy run-conformance delete-cluster ## Create
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
 	tools/hack/create-cluster.sh
 
+.PHONY: kube-install-image
+kube-install-image: $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
+
 .PHONY: run-conformance
 run-conformance: ## Run Gateway API conformance.
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
