@@ -90,10 +90,6 @@ endef
 define USAGE_OPTIONS
 
 Options:
-  \033[36mMAKE_IN_DOCKER\033[0m	
-		 Run make inside a Docker container which has all the preinstalled tools needed to support all the make targets
-		 This option is available to all cmds.
-		 Example: \033[36mmake build MAKE_IN_DOCKER=1\033[0m
   \033[36mBINS\033[0m       
 		 The binaries to build. Default is all of cmd.
 		 This option is available when using: make build|build-multiarch
