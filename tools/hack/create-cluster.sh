@@ -2,17 +2,24 @@
 
 set -euo pipefail
 
-## Create kind cluster.
-tools/bin/kind create cluster \
-    --name envoy-gateway 
+# Setup default values
+CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
+METALLB_VERSION=${METALLB_VERSION:-"v0.12.1"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"kindest/node:v1.24.0"}
 
+## Create kind cluster.
+if [[ -z "${KIND_NODE_TAG}" ]]; then
+  tools/bin/kind create cluster --name "${CLUSTER_NAME}"
+else
+  tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}"
+fi
 
 ## Install metallb.
-kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/namespace.yaml
 if ! kubectl get secret -n metallb-system memberlist; then
     kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
 fi
-kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/metallb.yaml
+kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/${METALLB_VERSION}/manifests/metallb.yaml
 # Apply config with addresses based on docker network IPAM
 subnet=$(docker network inspect kind | jq -r '.[].IPAM.Config[].Subnet | select(contains(":") | not)')
 # Assume default kind network subnet prefix of 16, and choose addresses in that range.
