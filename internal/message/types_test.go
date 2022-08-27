@@ -43,12 +43,19 @@ func TestProviderResources(t *testing.T) {
 			Namespace: "test",
 		},
 	}
+	s1 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service1",
+			Namespace: "test",
+		},
+	}
 
 	// Check init state
 	assert.Nil(t, resources.GetNamespaces())
 	assert.Nil(t, resources.GetGatewayClasses())
 	assert.Nil(t, resources.GetGateways())
 	assert.Nil(t, resources.GetHTTPRoutes())
+	assert.Nil(t, resources.GetServices())
 
 	// Add resources
 	resources.Namespaces.Store("test-ns1", ns1)
@@ -66,6 +73,12 @@ func TestProviderResources(t *testing.T) {
 	}
 	resources.HTTPRoutes.Store(r1Key, r1)
 
+	s1Key := types.NamespacedName{
+		Namespace: s1.GetNamespace(),
+		Name:      s1.GetName(),
+	}
+	resources.Services.Store(s1Key, s1)
+
 	// Test
 	namespaces := resources.GetNamespaces()
 	assert.Equal(t, len(namespaces), 1)
@@ -78,6 +91,9 @@ func TestProviderResources(t *testing.T) {
 
 	hrs := resources.GetHTTPRoutes()
 	assert.Equal(t, len(hrs), 1)
+
+	svcs := resources.GetServices()
+	assert.Equal(t, len(svcs), 1)
 
 	// Add more resources
 	ns2 := &corev1.Namespace{
@@ -103,6 +119,12 @@ func TestProviderResources(t *testing.T) {
 			Namespace: "test",
 		},
 	}
+	s2 := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service2",
+			Namespace: "test",
+		},
+	}
 
 	resources.Namespaces.Store("test-ns2", ns2)
 	resources.GatewayClasses.Store("test-gc2", gc2)
@@ -118,6 +140,12 @@ func TestProviderResources(t *testing.T) {
 	}
 	resources.HTTPRoutes.Store(r2Key, r2)
 
+	s2Key := types.NamespacedName{
+		Namespace: s2.GetNamespace(),
+		Name:      s2.GetName(),
+	}
+	resources.Services.Store(s2Key, s2)
+
 	// Test contents
 	namespaces = resources.GetNamespaces()
 	assert.ElementsMatch(t, namespaces, []*corev1.Namespace{ns1, ns2})
@@ -130,6 +158,9 @@ func TestProviderResources(t *testing.T) {
 
 	hrs = resources.GetHTTPRoutes()
 	assert.ElementsMatch(t, hrs, []*gwapiv1b1.HTTPRoute{r1, r2})
+
+	svcs = resources.GetServices()
+	assert.ElementsMatch(t, svcs, []*corev1.Service{s1, s2})
 }
 
 func TestXdsIR(t *testing.T) {

@@ -43,6 +43,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
 	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
+	servicesCh := r.ProviderResources.Services.Subscribe(ctx)
 	namespacesCh := r.ProviderResources.Namespaces.Subscribe(ctx)
 
 	// Wait until provider resources have been initialized during startup
@@ -54,12 +55,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		case <-gatewayClassesCh:
 		case <-gatewaysCh:
 		case <-httpRoutesCh:
+		case <-servicesCh:
 		case <-namespacesCh:
 		}
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
 		in.Gateways = r.ProviderResources.GetGateways()
 		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()
+		in.Services = r.ProviderResources.GetServices()
 		in.Namespaces = r.ProviderResources.GetNamespaces()
 		gatewayClasses := r.ProviderResources.GetGatewayClasses()
 		// Fetch the first gateway class since there should be only 1

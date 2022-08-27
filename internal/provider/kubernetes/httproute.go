@@ -158,6 +158,37 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		// The route's namespace exists, so add it to the resource map.
 		r.resources.Namespaces.Store(nsKey.Name, ns)
 		log.Info("added namespace to resource map")
+
+		// Get the route's backendRefs from the cache. Note that a Service is the
+		// only supported kind.
+		for i := range route.Spec.Rules {
+			for j := range route.Spec.Rules[i].BackendRefs {
+				ref := route.Spec.Rules[i].BackendRefs[j]
+				if err := validateBackendRef(&ref); err != nil {
+					return reconcile.Result{}, fmt.Errorf("invalid backendRef: %w", err)
+				}
+
+				// The backendRef is valid, so get the referenced service from the cache.
+				svcKey := types.NamespacedName{Namespace: route.Namespace, Name: string(ref.Name)}
+				svc := new(corev1.Service)
+				if err := r.client.Get(ctx, svcKey, svc); err != nil {
+					if errors.IsNotFound(err) {
+						// The ref's service doesn't exist in the cache, so remove it from
+						// the resource map if it exists.
+						if _, ok := r.resources.Services.Load(svcKey); ok {
+							r.resources.Services.Delete(svcKey)
+							log.Info("deleted service from resource map")
+						}
+					}
+					return reconcile.Result{}, fmt.Errorf("failed to get service %s/%s",
+						svcKey.Namespace, svcKey.Name)
+				}
+
+				// The backendRef Service exists, so add it to the resource map.
+				r.resources.Services.Store(svcKey, svc)
+				log.Info("added service to resource map")
+			}
+		}
 	}
 
 	if !found {
@@ -165,7 +196,8 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		r.resources.HTTPRoutes.Delete(request.NamespacedName)
 		log.Info("deleted httproute from resource map")
 
-		// Delete the namespace from the resource map if no other routes exist in the namespace.
+		// Delete the Namespace and Service from the resource maps if no other
+		// routes exist in the namespace.
 		routeList = &gwapiv1b1.HTTPRouteList{}
 		if err := r.client.List(ctx, routeList, &client.ListOptions{Namespace: request.Namespace}); err != nil {
 			return reconcile.Result{}, fmt.Errorf("error listing httproutes")
@@ -173,6 +205,8 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		if len(routeList.Items) == 0 {
 			r.resources.Namespaces.Delete(request.Namespace)
 			log.Info("deleted namespace from resource map")
+			r.resources.Services.Delete(request.NamespacedName)
+			log.Info("deleted service from resource map")
 		}
 	}
 
@@ -180,4 +214,26 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	defer r.initializeOnce.Do(r.resources.Initialized.Done)
 	return reconcile.Result{}, nil
+}
+
+// validateBackendRef validates that ref is a reference to a local Service.
+// TODO: Add support for:
+//   - Validating weights.
+//   - Validating ports.
+//   - Referencing HTTPRoutes.
+//   - Referencing Services/HTTPRoutes from other namespaces using ReferenceGrant.
+func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
+	switch {
+	case ref == nil:
+		return nil
+	case ref.Group != nil && *ref.Group != corev1.GroupName:
+		return fmt.Errorf("invalid group; must be nil or empty string")
+	case ref.Kind != nil && *ref.Kind != gatewayapi.KindService:
+		return fmt.Errorf("invalid kind %q; must be %q",
+			*ref.BackendRef.BackendObjectReference.Kind, gatewayapi.KindService)
+	case ref.Namespace != nil:
+		return fmt.Errorf("invalid namespace; must be nil")
+	}
+
+	return nil
 }
