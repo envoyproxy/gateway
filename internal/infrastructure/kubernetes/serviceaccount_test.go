@@ -39,7 +39,7 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
-						Name:            "test",
+						Name:            "envoy",
 						ResourceVersion: "1",
 					},
 				},
@@ -57,7 +57,7 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 			current: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:       "test",
-					Name:            "test",
+					Name:            "envoy",
 					ResourceVersion: "34",
 				},
 			},
@@ -69,7 +69,7 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
-						Name:            "test",
+						Name:            "envoy",
 						ResourceVersion: "34",
 					},
 				},
@@ -97,6 +97,31 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, *tc.out.ServiceAccount, *kube.Resources.ServiceAccount)
 			}
+		})
+	}
+}
+
+func TestDeleteServiceAccount(t *testing.T) {
+	testCases := []struct {
+		name   string
+		expect bool
+	}{
+		{
+			name:   "delete service account",
+			expect: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			kube := &Infra{
+				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+				mu:        sync.Mutex{},
+				Namespace: "test",
+			}
+			err := kube.deleteServiceAccount(context.Background())
+			require.NoError(t, err)
 		})
 	}
 }

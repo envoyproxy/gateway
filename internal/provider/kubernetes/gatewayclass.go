@@ -114,9 +114,10 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 	}
 
-	// no controlled gatewayclasses, trigger a delete
+	// No controlled gatewayclasses. Store a nil gatewayclass to trigger a delete.
 	if len(cc.matchedClasses) == 0 {
 		r.log.Info("failed to find gatewayclass", "name", request.Name)
+		r.resources.GatewayClasses.Store(request.Name, nil)
 		return reconcile.Result{}, nil
 	}
 

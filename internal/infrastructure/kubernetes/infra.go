@@ -82,7 +82,7 @@ func (i *Infra) addResource(obj client.Object) error {
 	return nil
 }
 
-// CreateInfra creates the managed kube infra if it doesn't exist.
+// CreateInfra creates the managed kube infra, if it doesn't exist.
 func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
@@ -105,6 +105,27 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	if err := i.createServiceIfNeeded(ctx, infra); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteInfra removes the managed kube infra, if it doesn't exist.
+func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
+	if infra == nil {
+		return errors.New("infra ir is nil")
+	}
+
+	if err := i.deleteService(ctx); err != nil {
+		return err
+	}
+
+	if err := i.deleteDeployment(ctx); err != nil {
+		return err
+	}
+
+	if err := i.deleteServiceAccount(ctx); err != nil {
 		return err
 	}
 

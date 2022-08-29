@@ -44,13 +44,22 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	for range r.InfraIR.Subscribe(ctx) {
 		r.Logger.Info("received a notification")
 		in := r.InfraIR.Get()
-		if in == nil {
-			r.Logger.Info("ir is nil, skipping")
+		switch {
+		case in == nil:
+			// The resource map is nil at startup.
+			r.Logger.Info("infra ir is nil, skipping")
 			continue
-		}
-		// Provision infra
-		if err := r.mgr.CreateInfra(ctx, in); err != nil {
-			r.Logger.Error(err, "failed to create new infra")
+		case in.Proxy != nil:
+			// Manage the proxy infra.
+			if in.Proxy.Listeners != nil {
+				if err := r.mgr.CreateInfra(ctx, in); err != nil {
+					r.Logger.Error(err, "failed to create new infra")
+				}
+			} else {
+				if err := r.mgr.DeleteInfra(ctx, in); err != nil {
+					r.Logger.Error(err, "failed to delete infra")
+				}
+			}
 		}
 	}
 
