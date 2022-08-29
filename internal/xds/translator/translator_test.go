@@ -30,6 +30,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "http-route",
 		},
+		{
+			name: "empty-hostnames",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -52,6 +52,10 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			Domains: httpListener.Hostnames,
 		}
 
+		if len(vHost.Domains) == 0 {
+			vHost.Domains = []string{"*"}
+		}
+
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute, err := buildXdsRoute(httpRoute)
