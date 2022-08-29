@@ -112,6 +112,9 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 	var relevant []*GatewayContext
 
 	for _, gateway := range gateways {
+		if gateway == nil {
+			panic("received nil gateway")
+		}
 		if gateway.Spec.GatewayClassName == t.GatewayClassName {
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
@@ -451,6 +454,9 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 	var relevantHTTPRoutes []*HTTPRouteContext
 
 	for _, h := range httpRoutes {
+		if h == nil {
+			panic("received nil httproute")
+		}
 		httpRoute := &HTTPRouteContext{HTTPRoute: h}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
