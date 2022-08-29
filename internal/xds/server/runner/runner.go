@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"net"
+	"strconv"
 
 	"google.golang.org/grpc"
 
@@ -17,6 +18,13 @@ import (
 	controlplane_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	controlplane_service_secret_v3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	controlplane_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+)
+
+const (
+	// XdsServerAddress is the listening address of the xds-server.
+	XdsServerAddress = "0.0.0.0"
+	// XdsServerPort is the listening port of the xds-server.
+	XdsServerPort = 18000
 )
 
 type Config struct {
@@ -54,8 +62,7 @@ func (r *Runner) setupXdsServer(ctx context.Context) {
 	r.cache = cache.NewSnapshotCache(false, r.Logger)
 	registerServer(controlplane_server_v3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
-	// TODO: Make the listening address and port configurable
-	addr := net.JoinHostPort("0.0.0.0", "8001")
+	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(XdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		r.Logger.Error(err, "failed to listen on address", addr)
