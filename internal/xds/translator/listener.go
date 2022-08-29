@@ -5,6 +5,7 @@ import (
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -17,6 +18,12 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 	if httpListener == nil {
 		return nil, errors.New("http listener is nil")
 	}
+
+	routerAny, err := anypb.New(&router.Router{})
+	if err != nil {
+		return nil, err
+	}
+
 	// HTTP filter configuration
 	mgr := &hcm.HttpConnectionManager{
 		CodecType:  hcm.HttpConnectionManager_AUTO,
@@ -30,7 +37,8 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 		},
 		// Use only router.
 		HttpFilters: []*hcm.HttpFilter{{
-			Name: wellknown.Router,
+			Name:       wellknown.Router,
+			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
 		}},
 	}
 
