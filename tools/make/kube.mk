@@ -66,3 +66,7 @@ run-conformance: ## Run Gateway API conformance.
 .PHONY: delete-cluster
 delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
+
+.PHONY: build-install-yaml
+build-install-yaml:
+	tools/hack/build-install-yaml.sh $(GATEWAY_API_VERSION)

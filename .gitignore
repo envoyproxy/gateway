@@ -8,3 +8,6 @@ bin/
 
 # Visual Studio Code
 .vscode/
+
+# Release artifacts
+release/
