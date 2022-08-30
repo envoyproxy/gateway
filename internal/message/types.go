@@ -18,6 +18,7 @@ type ProviderResources struct {
 	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
 	Namespaces     watchable.Map[string, *corev1.Namespace]
+	Services       watchable.Map[types.NamespacedName, *corev1.Service]
 	// Initialized.Wait() will return once each of the maps in the
 	// structure have been initialized at startup.
 	Initialized sync.WaitGroup
@@ -64,6 +65,17 @@ func (p *ProviderResources) GetNamespaces() []*corev1.Namespace {
 
 	res := make([]*corev1.Namespace, 0, p.Namespaces.Len())
 	for _, v := range p.Namespaces.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetServices() []*corev1.Service {
+	if p.Services.Len() == 0 {
+		return nil
+	}
+	res := make([]*corev1.Service, 0, p.Services.Len())
+	for _, v := range p.Services.LoadAll() {
 		res = append(res, v)
 	}
 	return res

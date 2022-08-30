@@ -292,6 +292,31 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      "test",
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name: "http",
+					Port: 80,
+				},
+				{
+					Name: "https",
+					Port: 443,
+				},
+			},
+		},
+	}
+
+	require.NoError(t, cli.Create(ctx, svc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, svc))
+	}()
+
 	hroute := &gwapiv1b1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "httproute-test",
@@ -320,7 +345,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 						{
 							BackendRef: gwapiv1b1.BackendRef{
 								BackendObjectReference: gwapiv1b1.BackendObjectReference{
-									Name: gwapiv1b1.ObjectName(gw.Name),
+									Name: "test",
 								},
 							},
 						},
@@ -354,6 +379,13 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 	require.Eventually(t, func() bool {
 		_, ok := resources.Namespaces.Load(hroute.Namespace)
+		return ok
+	}, defaultWait, defaultTick)
+
+	// Ensure the Service is in the resource map.
+	svcKey := NamespacedName(svc)
+	require.Eventually(t, func() bool {
+		_, ok := resources.Services.Load(svcKey)
 		return ok
 	}, defaultWait, defaultTick)
 }
