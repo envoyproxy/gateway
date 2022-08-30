@@ -258,5 +258,5 @@ func EnvoyPodSelector() *metav1.LabelSelector {
 
 // envoyLabels returns the labels used for Envoy.
 func envoyLabels() map[string]string {
-	return map[string]string{"control-plane": "envoy-gateway"}
+	return map[string]string{"app": "envoy"}
 }
