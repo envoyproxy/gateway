@@ -108,3 +108,7 @@ push: image.push
 .PHONY: push-multiarch
 push-multiarch: ## Push docker images for multiple platforms to registry.
 push-multiarch: image.push.multiarch
+
+.PHONY: image-release
+image-release: ## Release docker images with latest tag for multiple platforms to registry.
+	make image.push.multiarch TAG=${VERSION}
