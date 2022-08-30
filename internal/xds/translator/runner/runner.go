@@ -44,7 +44,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			continue
 		}
 		// Translate to xds resources
-		result, err := translator.Translate(ir)
+		result, err := translator.Translate(r.Logger, ir)
 		if err != nil {
 			r.Logger.Error(err, "failed to translate xds ir")
 		} else {

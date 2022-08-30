@@ -7,6 +7,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/go-logr/logr"
 	"github.com/tetratelabs/multierror"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -14,10 +15,11 @@ import (
 )
 
 // Translate translates the XDS IR into xDS resources
-func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
+func Translate(log logr.Logger, ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}
+	log.Info("translating xds ir", "ir", *ir)
 
 	tCtx := new(types.ResourceVersionTable)
 

@@ -139,17 +139,17 @@ func xDSTest() error {
 	// Now, we do the translation because everything is static.
 	// Normally, we'd do this in response to updates on the
 	// message bus.
-	cacheVersion1, err := translator.Translate(ir1)
+	cacheVersion1, err := translator.Translate(logger, ir1)
 	if err != nil {
 		return err
 	}
 
-	cacheVersion2, err := translator.Translate(ir2)
+	cacheVersion2, err := translator.Translate(logger, ir2)
 	if err != nil {
 		return err
 	}
 
-	cacheVersion3, err := translator.Translate(ir3)
+	cacheVersion3, err := translator.Translate(logger, ir3)
 	if err != nil {
 		return err
 	}
