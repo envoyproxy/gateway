@@ -53,7 +53,7 @@ create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gate
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
-kube-install-image: $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
 .PHONY: run-conformance

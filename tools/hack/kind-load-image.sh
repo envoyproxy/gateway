@@ -7,9 +7,6 @@ set -o pipefail
 readonly KIND=${KIND:-tools/bin/kind}
 readonly CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 
-readonly HERE=$(cd $(dirname $0) && pwd)
-readonly REPO=$(cd ${HERE}/../.. && pwd)
-
 # Docker variables
 readonly IMAGE="$1"
 readonly TAG="$2"
@@ -37,9 +34,6 @@ if ! kind::cluster::exists "$CLUSTER_NAME" ; then
     echo "cluster $CLUSTER_NAME does not exist"
     exit 2
 fi
-
-# Build the current version of Envoy Gateway.
-make -C ${REPO} image.build
 
 # Update the image pull policy in the Envoy Gateway deployment manifest so
 # the image is served by the kind cluster.
