@@ -116,16 +116,16 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 	return i.Proxy
 }
 
-// ValidateInfra validates the provided Infra.
-func ValidateInfra(infra *Infra) error {
-	if infra == nil {
+// Validate validates the provided Infra.
+func (i *Infra) Validate() error {
+	if i == nil {
 		return errors.New("infra ir is nil")
 	}
 
 	var errs []error
 
-	if infra.Proxy != nil {
-		if err := ValidateProxyInfra(infra.Proxy); err != nil {
+	if i.Proxy != nil {
+		if err := i.Proxy.Validate(); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -133,25 +133,25 @@ func ValidateInfra(infra *Infra) error {
 	return utilerrors.NewAggregate(errs)
 }
 
-// ValidateProxyInfra validates the provided ProxyInfra.
-func ValidateProxyInfra(pInfra *ProxyInfra) error {
+// Validate validates the provided ProxyInfra.
+func (p *ProxyInfra) Validate() error {
 	var errs []error
 
-	if len(pInfra.Name) == 0 {
+	if len(p.Name) == 0 {
 		errs = append(errs, errors.New("name field required"))
 	}
 
-	if len(pInfra.Image) == 0 {
+	if len(p.Image) == 0 {
 		errs = append(errs, errors.New("image field required"))
 	}
 
-	if len(pInfra.Listeners) > 1 {
+	if len(p.Listeners) > 1 {
 		errs = append(errs, errors.New("no more than 1 listener is supported"))
 	}
 
-	if len(pInfra.Listeners) > 0 {
-		for i := range pInfra.Listeners {
-			listener := pInfra.Listeners[i]
+	if len(p.Listeners) > 0 {
+		for i := range p.Listeners {
+			listener := p.Listeners[i]
 			if len(listener.Ports) == 0 {
 				errs = append(errs, errors.New("listener ports field required"))
 			}

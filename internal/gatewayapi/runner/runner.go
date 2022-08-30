@@ -81,10 +81,21 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			// Translate to IR
 			result := t.Translate(&in)
+
 			// Publish the IRs. Use the service name as the key
-			// to ensure there is always one element in the map
-			r.XdsIR.Store(r.Name(), result.XdsIR)
-			r.InfraIR.Store(r.Name(), result.InfraIR)
+			// to ensure there is always one element in the map.
+			// Also validate the ir before sending it.
+			if err := result.XdsIR.Validate(); err != nil {
+				r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+			} else {
+				r.XdsIR.Store(r.Name(), result.XdsIR)
+			}
+
+			if err := result.InfraIR.Validate(); err != nil {
+				r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+			} else {
+				r.InfraIR.Store(r.Name(), result.InfraIR)
+			}
 		}
 	}
 	r.Logger.Info("shutting down")
