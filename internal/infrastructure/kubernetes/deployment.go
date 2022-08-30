@@ -38,6 +38,8 @@ const (
 	envoyAdminAddress = "127.0.0.1"
 	// envoyAdminPort is the port used to expose admin interface.
 	envoyAdminPort = 19000
+	// envoyAdminAccessLogPath is the path used to expose admin access log.
+	envoyAdminAccessLogPath = "/dev/null"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -55,14 +57,26 @@ type bootstrapConfig struct {
 
 // envoyBootstrap defines the envoy Bootstrap configuration.
 type bootstrapParameters struct {
-	// XdsServerAddress is the address of the XDS Server that Envoy is managed by.
-	XdsServerAddress string
-	// XdsServerPort is the port of the XDS Server that Envoy is managed by.
-	XdsServerPort int32
-	// AdminServerAddress is the address of the Envoy admin interface.
-	AdminServerAddress string
-	// AdminServerPort is the port of the Envoy admin interface.
-	AdminServerPort int32
+	// XdsServer defines the configuration of the XDS server.
+	XdsServer xdsServerParameters
+	// AdminServer defines the configuration of the Envoy admin interface.
+	AdminServer adminServerParameters
+}
+
+type xdsServerParameters struct {
+	// Address is the address of the XDS Server that Envoy is managed by.
+	Address string
+	// Port is the port of the XDS Server that Envoy is managed by.
+	Port int32
+}
+
+type adminServerParameters struct {
+	// Address is the address of the Envoy admin interface.
+	Address string
+	// Port is the port of the Envoy admin interface.
+	Port int32
+	// AccessLogPath is the path of the Envoy admin access log.
+	AccessLogPath string
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -173,10 +187,15 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 
 	cfg := bootstrapConfig{
 		parameters: bootstrapParameters{
-			XdsServerAddress:   envoyGatewayXdsServerHost,
-			XdsServerPort:      xdsrunner.XdsServerPort,
-			AdminServerAddress: envoyAdminAddress,
-			AdminServerPort:    envoyAdminPort,
+			XdsServer: xdsServerParameters{
+				Address: envoyGatewayXdsServerHost,
+				Port:    xdsrunner.XdsServerPort,
+			},
+			AdminServer: adminServerParameters{
+				Address:       envoyAdminAddress,
+				Port:          envoyAdminPort,
+				AccessLogPath: envoyAdminAccessLogPath,
+			},
 		},
 	}
 	if err := cfg.render(); err != nil {

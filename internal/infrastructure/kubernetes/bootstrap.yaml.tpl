@@ -1,9 +1,9 @@
 admin:
-  access_log_path: /dev/null
+  access_log_path: {{ .AdminServer.AccessLogPath }}
   address:
     socket_address:
-      address: {{ .AdminServerAddress }}
-      port_value: {{ .AdminServerPort }}
+      address: {{ .AdminServer.Address }}
+      port_value: {{ .AdminServer.Port }}
 dynamic_resources:
   cds_config:
     resource_api_version: V3
@@ -36,8 +36,8 @@ static_resources:
         - endpoint:
             address:
               socket_address:
-                address: {{ .XdsServerAddress }}
-                port_value: {{ .XdsServerPort }}
+                address: {{ .XdsServer.Address }}
+                port_value: {{ .XdsServer.Port }}
     http2_protocol_options: {}
     name: xds_cluster
     type: STRICT_DNS

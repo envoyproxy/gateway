@@ -114,10 +114,15 @@ func TestExpectedDeployment(t *testing.T) {
 	// Create a bootstrap config, render it into an arg, and ensure it's as expected.
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
-			XdsServerAddress:   envoyGatewayXdsServerHost,
-			XdsServerPort:      xdsrunner.XdsServerPort,
-			AdminServerAddress: envoyAdminAddress,
-			AdminServerPort:    envoyAdminPort,
+			XdsServer: xdsServerParameters{
+				Address: envoyGatewayXdsServerHost,
+				Port:    xdsrunner.XdsServerPort,
+			},
+			AdminServer: adminServerParameters{
+				Address:       envoyAdminAddress,
+				Port:          envoyAdminPort,
+				AccessLogPath: envoyAdminAccessLogPath,
+			},
 		},
 	}
 	err = cfg.render()
