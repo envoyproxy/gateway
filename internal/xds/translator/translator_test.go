@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/log"
 )
 
 var (
@@ -35,7 +36,9 @@ func TestTranslate(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
-			tCtx, err := Translate(ir)
+			logger, err := log.NewLogger()
+			require.NoError(t, err)
+			tCtx, err := Translate(logger, ir)
 			require.NoError(t, err)
 			listeners := tCtx.XdsResources[resource.ListenerType]
 			routes := tCtx.XdsResources[resource.RouteType]
