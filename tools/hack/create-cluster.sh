@@ -6,12 +6,16 @@ set -euo pipefail
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
 METALLB_VERSION=${METALLB_VERSION:-"v0.12.1"}
 KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.24.0"}
+readonly HERE=$(cd "$(dirname "$0")" && pwd)
+readonly REPO=$(cd "${HERE}/../.." && pwd)
+readonly CONFIG_FILE="${REPO}/tools/hack/kind-expose-ports.yaml"
+
 
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then
-  tools/bin/kind create cluster --name "${CLUSTER_NAME}"
+  tools/bin/kind create cluster --name "${CLUSTER_NAME}" --config "${CONFIG_FILE}"
 else
-  tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}"
+  tools/bin/kind create cluster --image "kindest/node:${KIND_NODE_TAG}" --name "${CLUSTER_NAME}" --config "${CONFIG_FILE}"
 fi
 
 ## Install metallb.
