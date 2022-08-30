@@ -692,6 +692,9 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irListener := xdsIR.GetListener(irListenerName(listener))
+				if len(irListener.Hostnames) == 0 {
+					irListener.Hostnames = hosts
+				}
 				irListener.Routes = append(irListener.Routes, perHostRoutes...)
 
 				// Theoretically there should only be one parent ref per
