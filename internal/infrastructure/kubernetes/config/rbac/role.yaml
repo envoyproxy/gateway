@@ -1,0 +1,24 @@
+# Management of this role should be automated.
+# xref: https://github.com/envoyproxy/gateway/issues/289
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: envoy-gateway-infra-manager
+  namespace: system
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+      - services
+    verbs:
+      - create
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - create
+      - get

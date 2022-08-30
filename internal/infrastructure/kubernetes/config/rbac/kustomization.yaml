@@ -1,0 +1,7 @@
+# Adds namespace to all resources.
+
+namespace: envoy-gateway-system
+
+resources:
+  - role.yaml
+  - role_binding.yaml
