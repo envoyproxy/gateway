@@ -5,45 +5,34 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:        
       - "v*.*.*"
-
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./tools/github-actions/setup-deps
-
-      # lint
-      - run: make lint-deps
-      - run: make -k lint
-
   release:
     runs-on: ubuntu-latest
-    needs: [ lint ]
     steps:
       - uses: actions/checkout@v3
-      - uses: ./tools/github-actions/setup-deps
 
-      - name: Extract Tag value
-        id: tag_env
+      - name: Extract Release Tag and Commit SHA
+        id: vars
         shell: bash
         run: |
-          echo "##[set-output name=version;]$(echo ${GITHUB_REF##*/})"
+          echo "##[set-output name=release_tag;]$(echo ${GITHUB_REF##*/})"
+          echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
-      # test
-      - run: make go.test.unit
-
-      # build and push image
       - name: Login to DockerHub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-
-      - name: Build and Push EG Image
-        env:
-          EG_TAG_VERSION: ${{ steps.tag_env.outputs.version}}
-        run: make image.push.multiarch TAG=${EG_TAG_VERSION} IMAGE_NAME=gateway PLATFORMS="linux_amd64 linux_arm64"
+      # pull, retag gateway-dev image and push
+      - name: Pull gateway-dev image
+        run: |
+          docker pull envoyproxy/gateway-dev:${{ steps.vars.outputs.sha_short }}
+      - name: Retag image
+        run: |
+          docker tag envoyproxy/gateway-dev:${{ steps.vars.outputs.sha_short }} envoyproxy/gateway:${{ steps.vars.outputs.release_tag }}
+      - name: Push image to envoyproxy/gateway
+        run: |
+          docker push envoyproxy/gateway:${{ steps.vars.outputs.release_tag }}
 
       - name: Generate Release Manifests
         env:
