@@ -6,32 +6,34 @@ set -o pipefail
 
 readonly KUSTOMIZE=${KUSTOMIZE:-tools/bin/kustomize}
 readonly GATEWAY_API_VERSION="$1"
-readonly TAG="$2"
+readonly TAG="[[ $# == 2 ]]"
 
-mkdir -p release/
+mkdir -p release-artifacts/
 
 # Wrap sed to deal with GNU and BSD sed flags.
 run::sed() {
-    local -r vers="$(sed --version < /dev/null 2>&1 | grep -q GNU && echo gnu || echo bsd)"
-    case "$vers" in
-        gnu) sed -i "$@" ;;
-        *) sed -i '' "$@" ;;
-    esac
+  if sed --version </dev/null 2>&1 | grep -q GNU; then
+    # GNU sed
+    sed -i "$@"
+  else
+    # assume BSD sed
+    sed -i '' "$@"
+  fi
 }
 
 # Download the supported Gateway API CRDs that will be supported by the release.
-curl -sLo release/gatewayapi-crds.yaml https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+curl -sLo release-artifacts/gatewayapi-crds.yaml https://github.com/kubernetes-sigs/gateway-api/releases/download/"${GATEWAY_API_VERSION}"/experimental-install.yaml
 
-echo "Added:" release/gatewayapi-crds.yaml
+echo "Added:" release-artifacts/gatewayapi-crds.yaml
 
 # Generate the envoy gateway installation manifest supported by the release.
-${KUSTOMIZE} build internal/provider/kubernetes/config/default > release/install.yaml
+${KUSTOMIZE} build internal/provider/kubernetes/config/default > release-artifacts/install.yaml
 
-echo "Generated:" release/install.yaml
+echo "Generated:" release-artifacts/install.yaml
 
 # Update the image in the Envoy Gateway deployment manifest.
 run::sed \
   "-es|image: envoyproxy/gateway-dev:.*$|image: envoyproxy/gateway:${TAG}|" \
-  "release/install.yaml"
+  "release-artifacts/install.yaml"
 
-echo "Updated the envoy gateway image:" release/install.yaml
+echo "Updated the envoy gateway image:" release-artifacts/install.yaml

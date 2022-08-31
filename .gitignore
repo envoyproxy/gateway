@@ -10,4 +10,4 @@ bin/
 .vscode/
 
 # Release artifacts
-release/
+release-artifacts/
