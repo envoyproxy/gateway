@@ -19,23 +19,23 @@ kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-
 
 Run the example app:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
 ```
 
 Due to [Issue 301][issue_301], Gateway API resources must be created in the following order. First, create the
 GatewayClass:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/gatewayclass.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/gatewayclass.yaml
 ```
 
 Create the Gateway:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/gateway.yaml
 ```
 
 Create the HTTPRoute to route traffic through Envoy proxy to the example app:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httproute.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httproute.yaml
 ```
 
 ### For Kind Clusters
@@ -85,7 +85,7 @@ kubectl delete gc/eg
 
 Uninstall the example app:
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
+kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
 ```
 
 Uninstall Envoy Gateway:
