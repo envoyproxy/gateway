@@ -39,6 +39,10 @@ jobs:
           name: codecov-envoy-gateway
           verbose: true
 
+      # build
+      - run: make build-multiarch
+        if: github.event_name == 'pull_request'
+
       # build and push image
       - name: Login to DockerHub
         if: github.event_name == 'push'
