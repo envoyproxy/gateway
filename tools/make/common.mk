@@ -30,12 +30,6 @@ ifeq ($(origin OUTPUT_DIR),undefined)
 OUTPUT_DIR := $(ROOT_DIR)/bin
 endif
 
-# Set the version number. you should not need to do this
-# for the majority of scenarios.
-ifeq ($(origin VERSION), undefined)
-VERSION := $(shell git describe --abbrev=0 --dirty --always --tags | sed 's/-/./g')
-endif
-
 # REV is the short git sha of latest commit.
 REV=$(shell git rev-parse --short HEAD)
 

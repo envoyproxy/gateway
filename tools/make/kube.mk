@@ -69,4 +69,4 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 
 .PHONY: release-manifests
 release-manifests: $(tools/kustomize)
-	tools/hack/release-manifests.sh $(GATEWAY_API_VERSION) $(VERSION)
+	tools/hack/release-manifests.sh $(GATEWAY_API_VERSION) $(TAG)
