@@ -10,6 +10,7 @@ Kubernetes-based application gateway.
 
 * [Blog][blog] introducing Envoy Gateway.
 * [Goals](GOALS.md)
+* [Quickstart](./docs/user/QUICKSTART.MD) to use Envoy Gateway in a few simple steps.
 
 ## Contact
 
@@ -18,8 +19,9 @@ Kubernetes-based application gateway.
 
 ## Contributing
 
-* [Contributing guide](CONTRIBUTING.md)
 * [Code of conduct](CODE_OF_CONDUCT.md)
+* [Contributing guide](CONTRIBUTING.md)
+* [Developer guide](DEVELOPER.md)
 
 ## Community Meeting
 
