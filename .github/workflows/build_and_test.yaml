@@ -42,24 +42,14 @@ jobs:
           name: codecov-envoy-gateway
           verbose: true
 
-      # push
+      # build and push image
       - name: Login to DockerHub
         if: github.event_name == 'push'
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      - run: make push-multiarch
+
+      - name: Build and Push EG Dev Image
         if: github.event_name == 'push'
-      - name: Push to :latest
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        # TODO(lukeshu): Switch this to be a Make target
-        uses: docker/build-push-action@v3
-        with:
-          file: ./tools/docker/envoy-gateway/Dockerfile
-          context: bin
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: docker.io/envoyproxy/gateway-dev:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: make image.push.multiarch TAG=latest IMAGE_NAME=gateway-dev PLATFORMS="linux_amd64 linux_arm64"
