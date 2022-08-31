@@ -26,8 +26,38 @@ Envoy Gateway is built using a [make][make]-based build system. Our CI is based 
   separately.
 
 ## Quick start
+* Run `make help` to see all the available targets to build, test and run `envoy-gateway`.
 
-Run `make help` to see all the available targets to build, test and run `envoy-gateway`.
+### Building the `envoy-gateway` binary
+* Run `make build` to build the binary that gets generated in the `bin/` directory
+
+### Running tests
+* Run `make test` to run the golang tests.
+
+### Running code linters
+* Run `make lint` to make sure your code passes all the linter checks.
+
+### Building and Pushing the Image
+* Run `IMAGE=foo/bar make image` to build the docker image.
+* Run `IMAGE=foo/bar make push-multiarch` to build and push the multi-arch docker image.
+
+**_NOTE:_**  Replace `IMAGE` with your registry's image name.
+
+### Deploying Envoy Gateway in Kubernetes
+* Run `make kube-deploy` to deploy Envoy Gateway resources as well as the Gateway API
+CRDs into a Kubernetes cluster (linked to the current kube context).
+* Run `make kube-undeploy` to delete the resources from the cluster created using `kube-deploy`.
+
+**_NOTE:_**  Above command deploys the `envoyproxy/gateway-dev:latest` image into your cluster.
+Once https://github.com/envoyproxy/gateway/issues/323 is resolved, you should be able to deploy
+your custom image into the cluster.
+
+### Run Gateway API Conformance Tests
+* Run `make conformance` to run Gateway API Conformance tests using `envoy-gateway` in a
+local Kind cluster. Go [here](https://gateway-api.sigs.k8s.io/concepts/conformance/) to learn
+more about the tests.
+
+**_NOTE:_**  This command is currently Work in Progress. :construction::construction::construction::construction:
 
 [make]: https://www.gnu.org/software/make/
 [gha]: https://docs.github.com/en/actions
