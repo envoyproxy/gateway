@@ -54,22 +54,24 @@ func TestDesiredService(t *testing.T) {
 	infra := ir.NewInfra()
 	infra.Proxy.Listeners[0].Ports = []ir.ListenerPort{
 		{
-			Name:     "gateway-system-gateway-1",
-			Protocol: ir.HTTPProtocolType,
-			Port:     80,
+			Name:          "gateway-system-gateway-1",
+			Protocol:      ir.HTTPProtocolType,
+			ServicePort:   80,
+			ContainerPort: 2080,
 		},
 		{
-			Name:     "gateway-system-gateway-1",
-			Protocol: ir.HTTPSProtocolType,
-			Port:     443,
+			Name:          "gateway-system-gateway-1",
+			Protocol:      ir.HTTPSProtocolType,
+			ServicePort:   443,
+			ContainerPort: 2443,
 		},
 	}
 	svc := kube.expectedService(infra)
 
-	checkServiceHasPort(t, svc, envoyServiceHTTPPort)
-	checkServiceHasPort(t, svc, envoyServiceHTTPSPort)
-	checkServiceHasTargetPort(t, svc, envoyHTTPPort)
-	checkServiceHasTargetPort(t, svc, envoyHTTPSPort)
+	checkServiceHasPort(t, svc, 80)
+	checkServiceHasPort(t, svc, 443)
+	checkServiceHasTargetPort(t, svc, 2080)
+	checkServiceHasTargetPort(t, svc, 2443)
 
 	for _, port := range infra.Proxy.Listeners[0].Ports {
 		checkServiceHasPortName(t, svc, port.Name)

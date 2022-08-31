@@ -61,8 +61,10 @@ type ListenerPort struct {
 	Name string
 	// Protocol is the protocol that the listener port will listener for.
 	Protocol ProtocolType
-	// Port is the port number to listen on.
-	Port int32
+	// ServicePort is the port number the proxy service is listening on.
+	ServicePort int32
+	// ContainerPort is the port number the proxy container is listening on.
+	ContainerPort int32
 }
 
 // ProtocolType defines the application protocol accepted by a ListenerPort.
@@ -177,8 +179,11 @@ func (p *ProxyInfra) Validate() error {
 				if len(listener.Ports[j].Name) == 0 {
 					errs = append(errs, errors.New("listener name field required"))
 				}
-				if listener.Ports[j].Port < 1 || listener.Ports[j].Port > 65353 {
-					errs = append(errs, errors.New("listener port must be a valid port number"))
+				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
+					errs = append(errs, errors.New("listener service port must be a valid port number"))
+				}
+				if listener.Ports[j].ContainerPort < 1024 || listener.Ports[j].ContainerPort > 65353 {
+					errs = append(errs, errors.New("listener container port must be a valid ephemeral port number"))
 				}
 			}
 		}
