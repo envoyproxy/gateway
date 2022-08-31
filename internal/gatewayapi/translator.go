@@ -428,6 +428,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			}
 			if listener.Hostname != nil {
 				irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+			} else {
+				// Hostname specifies the virtual hostname to match for protocol types that define this concept.
+				// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
+				// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
+				irListener.Hostnames = append(irListener.Hostnames, "*")
 			}
 			xdsIR.HTTP = append(xdsIR.HTTP, irListener)
 
@@ -692,9 +697,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irListener := xdsIR.GetListener(irListenerName(listener))
-				if len(irListener.Hostnames) == 0 {
-					irListener.Hostnames = hosts
-				}
 				irListener.Routes = append(irListener.Routes, perHostRoutes...)
 
 				// Theoretically there should only be one parent ref per
