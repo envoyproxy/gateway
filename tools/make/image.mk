@@ -6,11 +6,9 @@
 # REGISTRY is the image registry to use for build and push image targets.
 REGISTRY ?= docker.io/envoyproxy
 # IMAGE_NAME is the name of EG image
-# Use IMAGE_DEV_NAME in default when developing
-# Use IMAGE_RELEASE_NAME when releasing an image.
-IMAGE_DEV_NAME ?= gateway-dev
-IMAGE_RELEASE_NAME ?= gateway
-IMAGE_NAME ?= ${IMAGE_DEV_NAME}
+# Use gateway-dev in default when developing
+# Use gateway when releasing an image.
+IMAGE_NAME ?= gateway-dev
 # IMAGE is the image URL for build and push image targets.
 IMAGE ?= ${REGISTRY}/${IMAGE_NAME}
 # Tag is the tag to use for build and push image targets.
@@ -115,6 +113,3 @@ push: image.push
 push-multiarch: ## Push docker images for multiple platforms to registry.
 push-multiarch: image.push.multiarch
 
-.PHONY: image-release
-image-release: ## Release docker images with latest tag for multiple platforms to registry.
-	make image.push.multiarch TAG=${VERSION} IMAGE_NAME=${IMAGE_RELEASE_NAME}
