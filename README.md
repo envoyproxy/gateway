@@ -19,8 +19,9 @@ Kubernetes-based application gateway.
 
 ## Contributing
 
-* [Contributing guide](CONTRIBUTING.md)
 * [Code of conduct](CODE_OF_CONDUCT.md)
+* [Contributing guide](CONTRIBUTING.md)
+* [Developer guide](DEVELOPER.md)
 
 ## Community Meeting
 

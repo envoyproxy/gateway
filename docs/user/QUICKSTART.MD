@@ -1,4 +1,4 @@
-# Introduction
+## Introduction
 This guide will help you get started with Envoy Gateway in a few simple steps.
 
 ## Prerequisites
@@ -19,13 +19,13 @@ kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-
 
 Run the example app:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
 ```
 
 Due to [Issue 301][issue_301], Gateway API resources must be created in the following order. First, create the
 GatewayClass:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/gatewayclass.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/gatewayclass.yaml
 ```
 
 Create the Gateway:
@@ -35,7 +35,7 @@ kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/tree/v0.2
 
 Create the HTTPRoute to route traffic through Envoy proxy to the example app:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httproute.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httproute.yaml
 ```
 
 ### For Kind Clusters
@@ -46,8 +46,9 @@ kubectl -n envoy-gateway-system port-forward service/envoy-eg 8888:8080
 
 Curl the example app through Envoy proxy:
 ```shell
-curl --verbose --header "Host: www.example.com" http://localhost:8888/
+curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
+You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
 
 ### For Kubernetes Clusters
 Get the external IP of the Envoy service:
@@ -60,8 +61,46 @@ In certain environments, the load balancer may be exposed using a hostname, inst
 
 Curl the example app through Envoy proxy:
 ```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST:8888/
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST:8888/get
 ```
+You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
+
+## Clean-Up
+Use the steps in this section to uninstall everything from the quickstart guide.
+
+Delete the HTTPRoute:
+```shell
+kubectl delete httproute/httpbin
+```
+
+Delete the Gateway:
+```shell
+kubectl delete gateway/eg
+```
+
+Delete the GatewayClass:
+```shell
+kubectl delete gc/eg
+```
+
+Uninstall the example app:
+```shell
+kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/tree/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
+```
+
+Uninstall Envoy Gateway:
+```shell
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc1/install.yaml
+```
+
+Uninstall Gateway API CRDs:
+```shell
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc1/gatewayapi-crds.yaml
+```
+
+## Next Steps
+Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.
 
 [issue_301]: https://github.com/envoyproxy/gateway/issues/301
 [kind]: https://kind.sigs.k8s.io/
+[httpbin_methods]: https://httpbin.org/#/HTTP_Methods
