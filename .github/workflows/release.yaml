@@ -45,4 +45,14 @@ jobs:
           EG_TAG_VERSION: ${{ steps.tag_env.outputs.version}}
         run: make image.push.multiarch TAG=${EG_TAG_VERSION} IMAGE_NAME=gateway PLATFORMS="linux_amd64 linux_arm64"
 
+      - name: Generate Release Manifests
+        run: make release-manifests
+
+      - name: Upload Release Manifests
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: release/*
+          tag: ${{ github.ref }}
+
         
