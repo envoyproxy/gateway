@@ -1,5 +1,3 @@
-# RELEASE_VERSION refers to the version of Envoy Gateway,
-RELEASE_VERSION ?= v0.2.0-rc1
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION ?= 1.24.1
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
@@ -71,4 +69,4 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 
 .PHONY: release-manifests
 release-manifests:
-	tools/hack/release-manifests.sh $(GATEWAY_API_VERSION) $(RELEASE_VERSION)
+	tools/hack/release-manifests.sh $(GATEWAY_API_VERSION) $(VERSION)
