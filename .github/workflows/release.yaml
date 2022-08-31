@@ -45,4 +45,14 @@ jobs:
           EG_TAG_VERSION: ${{ steps.tag_env.outputs.version}}
         run: make image.push.multiarch TAG=${EG_TAG_VERSION} IMAGE_NAME=gateway PLATFORMS="linux_amd64 linux_arm64"
 
+      - name: Generate Release Manifests
+        run: make release-manifests
+
+      - name: Upload Release Manifests
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release/gatewayapi-crds.yaml
+            release/install.yaml
+
         
