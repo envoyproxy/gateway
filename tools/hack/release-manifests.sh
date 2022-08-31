@@ -6,7 +6,7 @@ set -o pipefail
 
 readonly KUSTOMIZE=${KUSTOMIZE:-tools/bin/kustomize}
 readonly GATEWAY_API_VERSION="$1"
-readonly TAG="[[ $# == 2 ]]"
+readonly TAG="$2"
 
 mkdir -p release-artifacts/
 
@@ -32,7 +32,7 @@ ${KUSTOMIZE} build internal/provider/kubernetes/config/default > release-artifac
 echo "Generated:" release-artifacts/install.yaml
 
 # Update the image in the Envoy Gateway deployment manifest.
-run::sed \
+[[ -n "${TAG}" ]] && run::sed \
   "-es|image: envoyproxy/gateway-dev:.*$|image: envoyproxy/gateway:${TAG}|" \
   "release-artifacts/install.yaml"
 
