@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:        
+      - v*
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./tools/github-actions/setup-deps
+
+      # lint
+      - run: make lint-deps
+      - run: make -k lint
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [ lint ]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./tools/github-actions/setup-deps
+
+      - name: Extract Tag value
+        id: tag_env
+        shell: bash
+        run: |
+          echo "##[set-output name=version;]$(echo ${GITHUB_REF##*/})"
+
+      # test
+      - run: make go.test.unit
+
+      # build and push image
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and Push EG Image
+        env:
+          EG_TAG_VERSION: ${{ steps.tag_env.outputs.version}}
+        run: make image.push.multiarch TAG=${EG_TAG_VERSION} IMAGE_NAME=gateway PLATFORMS="linux_amd64 linux_arm64"
+
+        
