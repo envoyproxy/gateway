@@ -15,7 +15,7 @@ jobs:
         id: vars
         shell: bash
         run: |
-          echo "##[set-output name=release_tag;]$(echo ${GITHUB_REF##*/})"
+          echo "::set-output name=release_tag::$(echo ${GITHUB_REF##*/})"
           echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Login to DockerHub
@@ -23,21 +23,12 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
-      # pull, retag gateway-dev image and push
-      - name: Pull gateway-dev image
+      - name: Retag and push existing gateway-dev image
         run: |
-          docker pull envoyproxy/gateway-dev:${{ steps.vars.outputs.sha_short }}
-      - name: Retag image
-        run: |
-          docker tag envoyproxy/gateway-dev:${{ steps.vars.outputs.sha_short }} envoyproxy/gateway:${{ steps.vars.outputs.release_tag }}
-      - name: Push image to envoyproxy/gateway
-        run: |
-          docker push envoyproxy/gateway:${{ steps.vars.outputs.release_tag }}
+          skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ steps.vars.outputs.sha_short }} docker://docker.io/envoyproxy/gateway:${{ steps.vars.outputs.release_tag }}
 
       - name: Generate Release Manifests
-        env:
-          EG_TAG_VERSION: ${{ steps.tag_env.outputs.version}}
-        run: make release-manifests TAG=${EG_TAG_VERSION}
+        run: make release-manifests TAG=${{ steps.tag_env.outputs.version}}
 
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@v1
