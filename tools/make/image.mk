@@ -77,7 +77,7 @@ image.multiarch.verify:
 image.multiarch.emulate: $(EMULATE_TARGETS)
 $(EMULATE_TARGETS): image.multiarch.emulate.%:
 # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
-	docker run --rm --privileged tonistiigi/binfmt --install linux/$* 
+	docker run --rm --privileged tonistiigi/binfmt --install linux/$*
 
 .PHONY: image.multiarch.setup
 image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
