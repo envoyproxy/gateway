@@ -38,10 +38,14 @@ Envoy Gateway is built using a [make][make]-based build system. Our CI is based 
 * Run `make lint` to make sure your code passes all the linter checks.
 
 ### Building and Pushing the Image
-* Run `IMAGE=foo/bar make image` to build the docker image.
-* Run `IMAGE=foo/bar make push-multiarch` to build and push the multi-arch docker image.
+* Run `IMAGE=docker.io/you/gateway-dev make image` to build the docker image.
+* Run `IMAGE=docker.io/you/gateway-dev make push-multiarch` to build and push the multi-arch docker image.
 
 **_NOTE:_**  Replace `IMAGE` with your registry's image name.
+
+### Creating a Kind Cluster to deploy Envoy Gateway
+* Run `make create-cluster` to create a Kind cluster and `make kube-install-image` to build a image and load
+it into the Kind cluster.
 
 ### Deploying Envoy Gateway in Kubernetes
 * Run `make kube-deploy` to deploy Envoy Gateway resources as well as the Gateway API
