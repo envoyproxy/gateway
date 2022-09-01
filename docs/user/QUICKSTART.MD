@@ -53,7 +53,7 @@ You can replace `get` with any of the supported [httpbin methods][httpbin_method
 ### For Kubernetes Clusters
 Get the external IP of the Envoy service:
 ```shell
-export GATEWAY_HOST=$(kubectl svc/envoy-eg -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export GATEWAY_HOST=$(kubectl get svc/envoy-eg -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
 In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
