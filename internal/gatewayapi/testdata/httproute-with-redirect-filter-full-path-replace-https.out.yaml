@@ -10,6 +10,7 @@ gateways:
         - name: http
           protocol: HTTP
           port: 80
+          hostname: "*.envoyproxy.io"
           allowedRoutes:
             namespaces:
               from: All
@@ -32,6 +33,8 @@ httpRoutes:
       namespace: default
       name: httproute-1
     spec:
+      hostnames:
+      - gateway.envoyproxy.io
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
@@ -68,10 +71,15 @@ xdsIR:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
       port: 80
+      hostnames:
+      - "*.envoyproxy.io"
       routes:
-        - name: default-httproute-1-rule-0-match-0-*
+        - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
           pathMatch:
             prefix: "/"
+          headerMatches:
+            - name: ":authority"
+              exact: gateway.envoyproxy.io
           destinations:
             - host: 7.7.7.7
               port: 8080
