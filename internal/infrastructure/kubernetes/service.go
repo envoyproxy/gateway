@@ -81,17 +81,18 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 		}
 	}
 
+	podSelector := EnvoyPodSelector(infra.GetProxyInfra().Name)
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 
 			Namespace: i.Namespace,
 			Name:      infra.Proxy.ObjectName(),
-			Labels:    envoyLabels(),
+			Labels:    podSelector.MatchLabels,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:            corev1.ServiceTypeLoadBalancer,
 			Ports:           ports,
-			Selector:        EnvoyPodSelector().MatchLabels,
+			Selector:        podSelector.MatchLabels,
 			SessionAffinity: corev1.ServiceAffinityNone,
 			// Preserve the client source IP and avoid a second hop for LoadBalancer.
 			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
