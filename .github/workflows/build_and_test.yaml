@@ -47,6 +47,10 @@ jobs:
     # build
     - run: make build-multiarch
 
+    # conformance
+    - name: Run Conformance Tests
+      run: make conformance
+
     # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
