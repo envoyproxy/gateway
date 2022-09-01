@@ -36,16 +36,16 @@ httpRoutes:
         - namespace: envoy-gateway
           name: gateway-1
       rules:
-      - matches:
-          - path:
-              value: "/"
-        backendRefs:
-          - name: service-1
-            port: 8080
-          - name: service-2
-            port: 8080
-          - name: service-3
-            port: 8080
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+            - name: service-2
+              port: 8080
+            - name: service-3
+              port: 8080
     status:
       parents:
         - parentRef:
@@ -63,7 +63,7 @@ xdsIR:
       address: 0.0.0.0
       port: 80
       hostnames:
-      - "*"
+        - "*"
       routes:
         - name: default-httproute-1-rule-0-match-0-*
           pathMatch:

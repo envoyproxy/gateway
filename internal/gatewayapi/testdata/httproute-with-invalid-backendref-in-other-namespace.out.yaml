@@ -37,9 +37,9 @@ httpRoutes:
           name: gateway-1
       rules:
         - matches:
-          - path:
-              type: Exact
-              value: "/exact"
+            - path:
+                type: Exact
+                value: "/exact"
           backendRefs:
             - name: service-1
               namespace: backends
@@ -65,7 +65,7 @@ xdsIR:
       address: 0.0.0.0
       port: 80
       hostnames:
-      - "*"
+        - "*"
       routes:
         - name: default-httproute-1-rule-0-match-0-*
           pathMatch:

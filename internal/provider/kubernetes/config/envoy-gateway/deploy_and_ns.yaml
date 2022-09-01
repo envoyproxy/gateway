@@ -27,25 +27,25 @@ spec:
       securityContext:
         runAsNonRoot: true
       containers:
-      - name: envoy-gateway
-        image: envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
-        securityContext:
-          allowPrivilegeEscalation: false
-        env:
-          - name: ENVOY_GATEWAY_NAMESPACE
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: metadata.namespace
-        # TODO(user): Configure the resources accordingly based on the project requirements.
-        # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-        resources:
-          limits:
-            cpu: 500m
-            memory: 128Mi
-          requests:
-            cpu: 10m
-            memory: 64Mi
+        - name: envoy-gateway
+          image: envoyproxy/gateway-dev:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+          env:
+            - name: ENVOY_GATEWAY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+          # TODO(user): Configure the resources accordingly based on the project requirements.
+          # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10

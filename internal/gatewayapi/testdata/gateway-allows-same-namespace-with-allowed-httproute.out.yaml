@@ -59,7 +59,7 @@ xdsIR:
       address: 0.0.0.0
       port: 80
       hostnames:
-      - "*"
+        - "*"
       routes:
         - name: envoy-gateway-httproute-1-rule-0-match-0-*
           pathMatch:
@@ -75,6 +75,6 @@ infraIR:
     listeners:
       - address: ""
         ports:
-        - name: envoy-gateway-gateway-1
-          protocol: "HTTP"
-          port: 80
+          - name: envoy-gateway-gateway-1
+            protocol: "HTTP"
+            port: 80

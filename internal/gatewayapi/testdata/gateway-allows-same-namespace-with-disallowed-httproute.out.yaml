@@ -58,7 +58,7 @@ xdsIR:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
       hostnames:
-      - "*"
+        - "*"
       port: 80
 infraIR:
   proxy:
