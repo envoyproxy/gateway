@@ -11,7 +11,7 @@ import (
 
 const (
 	DefaultProxyName  = "default"
-	DefaultProxyImage = "envoyproxy/envoy-dev:latest"
+	DefaultProxyImage = "envoyproxy/envoy:v1.23-latest"
 )
 
 // Infra defines managed infrastructure.
