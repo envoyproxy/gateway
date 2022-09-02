@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -84,6 +85,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			// Translate to IR
 			result := t.Translate(&in)
+			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
+			r.Logger.Info(string(yamlXdsIR))
+			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
+			r.Logger.Info(string(yamlInfraIR))
 
 			// Publish the IRs. Use the service name as the key
 			// to ensure there is always one element in the map.
