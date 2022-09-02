@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/env"
 )
 
 const (
@@ -45,13 +45,7 @@ func NewInfra(cli client.Client) *Infra {
 	}
 
 	// Set the namespace used for the managed infra.
-	ns, found := os.LookupEnv("ENVOY_GATEWAY_NAMESPACE")
-
-	if found {
-		infra.Namespace = ns
-	} else {
-		infra.Namespace = envoyGatewayNamespace
-	}
+	infra.Namespace = env.Lookup("ENVOY_GATEWAY_NAMESPACE", envoyGatewayNamespace)
 
 	return infra
 }
