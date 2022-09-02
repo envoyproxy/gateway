@@ -2,7 +2,7 @@
 This guide will help you get started with Envoy Gateway in a few simple steps.
 
 ## Prerequisites
-A Kubernetes cluster with support for services of type `LoadBalancer` or a [Kind][kind] cluster.
+A Kubernetes cluster.
 
 __Note:__ Envoy Gateway is tested against Kubernetes v1.24.1.
 
@@ -38,10 +38,10 @@ Create the HTTPRoute to route traffic through Envoy proxy to the example app:
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httproute.yaml
 ```
 
-### For Kind Clusters
-In a separate terminal, port forward the Envoy service:
+### Testing the configuration
+Port forward to the Envoy service:
 ```shell
-kubectl -n envoy-gateway-system port-forward service/envoy-eg 8888:8080
+kubectl -n envoy-gateway-system port-forward service/envoy-eg 8888:8080 &
 ```
 
 Curl the example app through Envoy proxy:
@@ -50,8 +50,9 @@ curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
 
-### For Kubernetes Clusters
-Get the external IP of the Envoy service:
+### For clusters with External Loadbalancer support
+You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
+Envoy service, run:
 ```shell
 export GATEWAY_HOST=$(kubectl get svc/envoy-eg -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
