@@ -181,3 +181,27 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvoyPodSelector(t *testing.T) {
+	cases := []struct {
+		name        string
+		gatewayName string
+		expected    map[string]string
+	}{
+		{
+			name:        "default",
+			gatewayName: "eg",
+			expected: map[string]string{
+				"gatewayName": "eg",
+				"app":         "envoy",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := EnvoyPodSelector(tc.gatewayName)
+			require.Equal(t, tc.expected, got.MatchLabels)
+		})
+	}
+}
