@@ -10,7 +10,7 @@ type Var interface {
 	string | int | time.Duration
 }
 
-// Lookup get specific value by env key, default value will be used when not found and invaid convert.
+// Lookup get specific value by env key, default value will be used when not found and invalid convert.
 func Lookup[T Var](key string, defaultValue T) T {
 	value, ok := os.LookupEnv(key)
 	if !ok {
