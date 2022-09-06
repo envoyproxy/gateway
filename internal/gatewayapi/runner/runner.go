@@ -76,8 +76,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// No need to translate, publish empty IRs, e.g. delete operation.
 			r.XdsIR.Delete(r.Name())
 			// A nil ProxyInfra tells the Infra Manager to delete the managed proxy infra.
-			infra := &ir.Infra{Proxy: new(ir.ProxyInfra)}
-			r.InfraIR.Store(r.Name(), infra)
+			r.InfraIR.Store(r.Name(), &ir.Infra{Proxy: nil})
 		default:
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{

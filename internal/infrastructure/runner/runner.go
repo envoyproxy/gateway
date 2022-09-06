@@ -49,16 +49,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// The resource map is nil at startup.
 			r.Logger.Info("infra ir is nil, skipping")
 			continue
-		case in.Proxy != nil:
+		case in.Proxy == nil:
+			if err := r.mgr.DeleteInfra(ctx, in); err != nil {
+				r.Logger.Error(err, "failed to delete infra")
+			}
+		default:
 			// Manage the proxy infra.
-			if in.Proxy.Listeners != nil {
-				if err := r.mgr.CreateInfra(ctx, in); err != nil {
-					r.Logger.Error(err, "failed to create new infra")
-				}
-			} else {
-				if err := r.mgr.DeleteInfra(ctx, in); err != nil {
-					r.Logger.Error(err, "failed to delete infra")
-				}
+			if err := r.mgr.CreateInfra(ctx, in); err != nil {
+				r.Logger.Error(err, "failed to create new infra")
 			}
 		}
 	}

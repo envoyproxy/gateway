@@ -97,29 +97,22 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 
 	var cc controlledClasses
 
-	found := false
 	for i := range gatewayClasses.Items {
 		if gatewayClasses.Items[i].Spec.ControllerName == r.controller {
 			cc.addMatch(&gatewayClasses.Items[i])
-			if gatewayClasses.Items[i].GetName() == request.Name {
-				found = true
-			}
 		}
 	}
-	if !found {
-		r.resources.GatewayClasses.Delete(request.Name)
-	}
-	acceptedGC := cc.acceptedClass()
-	if acceptedGC != nil {
-		r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
-	}
 
-	// No controlled gatewayclasses. Store a nil gatewayclass to trigger a delete.
-	if len(cc.matchedClasses) == 0 {
-		r.log.Info("failed to find gatewayclass", "name", request.Name)
+	acceptedGC := cc.acceptedClass()
+	if acceptedGC == nil {
+		// A nil gatewayclass removes managed proxy infra, if it exists.
+		r.log.Info("failed to find an accepted gatewayclass")
 		r.resources.GatewayClasses.Store(request.Name, nil)
 		return reconcile.Result{}, nil
 	}
+
+	// Store the accepted gatewayclass in the resource map.
+	r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 
 	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
 		if r.statusUpdater != nil {
