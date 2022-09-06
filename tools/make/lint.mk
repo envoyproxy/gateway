@@ -57,3 +57,10 @@ lint-deps: $(tools/whitenoise)
 lint.whitenoise: $(tools/whitenoise)
 	@echo Running WhiteNoise linter ...
 	$(tools/whitenoise)
+
+# GitHub has shellcheck pre-installed
+.PHONY: lint.shellcheck
+lint: lint.shellcheck
+lint.shellcheck:
+	@echo Running Shellcheck linter ...
+	@shellcheck tools/hack/*.sh
