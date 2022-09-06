@@ -88,13 +88,12 @@ image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emula
 	docker buildx rm $(BUILDX_CONTEXT) || :
 	docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
-
 .PHONY: image.build.multiarch
-image.build.multiarch: image.multiarch.setup go.build.multiarch
+image.build.multiarch:
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.push.multiarch
-image.push.multiarch: image.multiarch.setup go.build.multiarch
+image.push.multiarch:
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --push
 
 ##@ Image
@@ -105,7 +104,7 @@ image: image.build
 
 .PHONY: image-multiarch
 image-multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
-image-multiarch: image.build.multiarch
+image-multiarch: image.multiarch.setup go.build.multiarch image.build.multiarch
 
 .PHONY: push
 push: ## Push docker images to registry.
@@ -113,5 +112,5 @@ push: image.push
 
 .PHONY: push-multiarch
 push-multiarch: ## Push docker images for multiple platforms to registry.
-push-multiarch: image.push.multiarch
+push-multiarch: image.multiarch.setup go.build.multiarch image.push.multiarch
 
