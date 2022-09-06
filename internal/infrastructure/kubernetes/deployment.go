@@ -252,16 +252,16 @@ func (i *Infra) createDeployment(ctx context.Context, infra *ir.Infra) (*appsv1.
 //
 // TODO: Update k/v pair to use gatewayclass controller name to distinguish between
 //       multiple Envoy Gateways.
-func EnvoyPodSelector(gatewayName string) *metav1.LabelSelector {
+func EnvoyPodSelector(gcName string) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
-		MatchLabels: envoyLabels(gatewayName),
+		MatchLabels: envoyLabels(gcName),
 	}
 }
 
 // envoyLabels returns the labels used for Envoy.
-func envoyLabels(gatewayName string) map[string]string {
+func envoyLabels(gcName string) map[string]string {
 	return map[string]string{
-		"gatewayName": gatewayName,
-		"app":         "envoy",
+		"gatewayClass": gcName,
+		"app":          "envoy",
 	}
 }
