@@ -32,3 +32,15 @@ project = f'Envoy Gateway {version}'
 author = 'Envoy Gateway Project Authors'
 
 copyright = '2022 Envoy Gateway Project Authors | ' + fullversion
+
+envoyVersion = os.environ["ENVOY_VERSION"]
+gatewayAPIVersion = os.environ["GATEWAYAPI_VERSION"]
+
+variables_to_export = [
+    "envoyVersion",
+    "gatewayAPIVersion",
+]
+
+frozen_locals = dict(locals())
+rst_epilog = '\n'.join(map(lambda x: f".. |{x}| replace:: {frozen_locals[x]}", variables_to_export))
+del frozen_locals

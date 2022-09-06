@@ -28,6 +28,7 @@ func GetRootCommand() *cobra.Command {
 
 	cmd.AddCommand(getServerCommand())
 	cmd.AddCommand(getxDSTestCommand())
+	cmd.AddCommand(getVersionsCommand())
 
 	return cmd
 }
