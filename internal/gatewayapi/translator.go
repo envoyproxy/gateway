@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/netip"
 	"regexp"
+	"strings"
 
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
@@ -548,7 +549,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						}
 					}
 
-					// TODO: implement header modifier filter
+					// Process the filters for this route rule
 					for _, filter := range rule.Filters {
 						if irRoute.DirectResponse != nil {
 							// If an invalid filter type has been configured then an error direct response must be returned
@@ -651,6 +652,185 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 
 								irRoute.Redirect = irRedirect
+							}
+						case "RequestHeaderModifier":
+							// TODO: if the route already has add/remove request headers should we consolidate them or throw an error
+							// Make sure the header modifier config actually exists
+							if headerModifier := filter.RequestHeaderModifier; headerModifier != nil {
+								var addedHeaders []ir.AddHeader
+
+								// Check if any request headers were already configured by a previous filter
+								if irRoute.AddRequestHeaders != nil {
+									addedHeaders = *irRoute.AddRequestHeaders
+								}
+
+								// Add request headers
+								if headersToAdd := headerModifier.Add; headersToAdd != nil {
+
+									for _, addHeader := range headersToAdd {
+										if addHeader.Name == "" {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												"RequestHeaderModifier Filter cannot add a header with an empty name",
+											)
+											// try to process the rest of the headers and produce a valid config.
+											continue
+										}
+										if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: '%s'", string(addHeader.Name)),
+											)
+											continue
+										}
+										// Check if the header to be set has already been configured
+										headerKey := string(addHeader.Name)
+										canAddHeader := true
+										for _, h := range addedHeaders {
+											if strings.EqualFold(h.Name, headerKey) {
+												canAddHeader = false
+												break
+											}
+										}
+
+										if !canAddHeader {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added, ignoring second entry", headerKey),
+											)
+											continue
+										}
+
+										newHeader := ir.AddHeader{
+											Name:   headerKey,
+											Append: true,
+											Value:  addHeader.Value,
+										}
+
+										if addHeader.Value == "" {
+											newHeader.AllowEmpty = true
+										}
+
+										addedHeaders = append(addedHeaders, newHeader)
+									}
+								}
+
+								// Set headers
+								if headersToSet := headerModifier.Set; headersToSet != nil {
+									for _, setHeader := range headersToSet {
+										if setHeader.Name == "" {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												"RequestHeaderModifier Filter cannot set a header with an empty name",
+											)
+											continue
+										}
+										if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
+											)
+											continue
+										}
+
+										// Check if the header to be set has already been configured
+										headerKey := string(setHeader.Name)
+										canAddHeader := true
+										for _, h := range addedHeaders {
+											if strings.EqualFold(h.Name, headerKey) {
+												canAddHeader = false
+												break
+											}
+										}
+										if !canAddHeader {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added/set, ignoring second entry", headerKey),
+											)
+											continue
+										}
+										newHeader := ir.AddHeader{
+											Name:   string(setHeader.Name),
+											Append: false,
+											Value:  setHeader.Value,
+										}
+
+										if setHeader.Value == "" {
+											newHeader.AllowEmpty = true
+										}
+
+										addedHeaders = append(addedHeaders, newHeader)
+									}
+								}
+								if len(addedHeaders) > 0 {
+									irRoute.AddRequestHeaders = &addedHeaders
+								}
+
+								// Remove request headers
+								// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
+								// headers to remove. It will remove the original header if present and then add/set the header after.
+								if headersToRemove := headerModifier.Remove; headersToRemove != nil {
+									var removedHeaders []string
+									// Check if any removed headers were configured by a previous filter
+									if irRoute.RemoveRequestHeaders != nil {
+										removedHeaders = *irRoute.RemoveRequestHeaders
+									}
+									for _, removedHeader := range headersToRemove {
+										if removedHeader == "" {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												"RequestHeaderModifier Filter cannot remove a header with an empty name",
+											)
+											continue
+										}
+
+										canRemHeader := true
+										for _, h := range removedHeaders {
+											if strings.EqualFold(h, removedHeader) {
+												canRemHeader = false
+												break
+											}
+										}
+										if !canRemHeader {
+											parentRef.SetCondition(
+												v1beta1.RouteConditionResolvedRefs,
+												metav1.ConditionFalse,
+												v1beta1.RouteReasonUnsupportedValue,
+												fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be removed, ignoring second entry", removedHeader),
+											)
+											continue
+										}
+
+										removedHeaders = append(removedHeaders, removedHeader)
+
+									}
+									if len(removedHeaders) > 0 {
+										irRoute.RemoveRequestHeaders = &removedHeaders
+									}
+								}
+
+								if irRoute.AddRequestHeaders == nil && irRoute.RemoveRequestHeaders == nil {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										"RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
+									)
+								}
 							}
 						default:
 							// "If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
@@ -802,13 +982,15 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 					for _, routeRoute := range routeRoutes {
 						perHostRoutes = append(perHostRoutes, &ir.HTTPRoute{
-							Name:              fmt.Sprintf("%s-%s", routeRoute.Name, host),
-							PathMatch:         routeRoute.PathMatch,
-							HeaderMatches:     append(headerMatches, routeRoute.HeaderMatches...),
-							QueryParamMatches: routeRoute.QueryParamMatches,
-							Destinations:      routeRoute.Destinations,
-							Redirect:          routeRoute.Redirect,
-							DirectResponse:    routeRoute.DirectResponse,
+							Name:                 fmt.Sprintf("%s-%s", routeRoute.Name, host),
+							PathMatch:            routeRoute.PathMatch,
+							HeaderMatches:        append(headerMatches, routeRoute.HeaderMatches...),
+							QueryParamMatches:    routeRoute.QueryParamMatches,
+							Destinations:         routeRoute.Destinations,
+							Redirect:             routeRoute.Redirect,
+							DirectResponse:       routeRoute.DirectResponse,
+							AddRequestHeaders:    routeRoute.AddRequestHeaders,
+							RemoveRequestHeaders: routeRoute.RemoveRequestHeaders,
 						})
 					}
 				}

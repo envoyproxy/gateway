@@ -135,6 +135,10 @@ type HTTPRoute struct {
 	Redirect *Redirect
 	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect
 	DirectResponse *DirectResponse
+
+	AddRequestHeaders *[]AddHeader
+
+	RemoveRequestHeaders *[]string
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -177,6 +181,14 @@ type RouteDestination struct {
 	Port uint32
 	// Weight associated with this destination.
 	Weight uint32
+}
+
+// +k8s:deepcopy-gen=true
+type AddHeader struct {
+	Name       string
+	Value      string
+	Append     bool
+	AllowEmpty bool
 }
 
 // +k8s:deepcopy-gen=true
