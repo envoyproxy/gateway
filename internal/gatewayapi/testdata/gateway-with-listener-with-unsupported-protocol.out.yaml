@@ -58,6 +58,6 @@ xdsIR: {}
 infraIR:
   proxy:
     name: envoy-gateway-class
-    image: envoyproxy/envoy-dev:latest
+    image: envoyproxy/envoy:v1.23-latest
     listeners:
       - address: ""
