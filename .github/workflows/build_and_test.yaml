@@ -41,7 +41,6 @@ jobs:
 
       # build
       - run: make build-multiarch
-        if: github.event_name == 'pull_request'
 
       # build and push image
       - name: Login to DockerHub
@@ -50,6 +49,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - run: make image.multiarch.setup
 
       - name: Build and Push EG Commit Image
         if: github.event_name == 'push'
