@@ -37,7 +37,7 @@ rules:
     max-spaces-after: 1
   indentation:
     spaces: 2
-    indent-sequences: consistent
+    indent-sequences: consistent  # be consistent: don't mix indentation styles in one file.
     check-multi-line-strings: false
   key-duplicates: enable
   key-ordering: disable
