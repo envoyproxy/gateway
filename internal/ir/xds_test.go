@@ -70,6 +70,42 @@ var (
 			StatusCode: uint32(500),
 		},
 	}
+	badStatus                   = int32(305)
+	badScheme                   = "err"
+	redirectFilterInvalidStatus = HTTPRoute{
+		Name:      "redirect-bad-status-scheme-nopat",
+		PathMatch: &redirectStringMatch,
+		Redirect: &Redirect{
+			Scheme:     &badScheme,
+			Hostname:   &redirectHostname,
+			Path:       &HTTPPathModifier{},
+			Port:       &redirectPort,
+			StatusCode: &badStatus,
+		},
+	}
+	redirectFilterBadPath = HTTPRoute{
+		Name:      "redirect",
+		PathMatch: &redirectStringMatch,
+		Redirect: &Redirect{
+			Scheme:   &redirectScheme,
+			Hostname: &redirectHostname,
+			Path: &HTTPPathModifier{
+				FullReplace:        &redirectPath,
+				PrefixMatchReplace: &redirectPath,
+			},
+			Port:       &redirectPort,
+			StatusCode: &redirectStatus,
+		},
+	}
+
+	directResponseBadStatus = HTTPRoute{
+		Name:      "redirect",
+		PathMatch: &redirectStringMatch,
+		DirectResponse: &DirectResponse{
+			Body:       &errorBody,
+			StatusCode: uint32(799),
+		},
+	}
 
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
@@ -271,6 +307,21 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "filter-error-httproute",
 			input: invalidFilterHTTPRoute,
 			want:  nil,
+		},
+		{
+			name:  "redirect-bad-status-scheme-nopath",
+			input: redirectFilterInvalidStatus,
+			want:  []error{ErrRedirectUnsupportedStatus, ErrRedirectUnsupportedScheme, ErrHTTPPathModifierNoReplace},
+		},
+		{
+			name:  "redirect-bad-path",
+			input: redirectFilterBadPath,
+			want:  []error{ErrHTTPPathModifierDoubleReplace},
+		},
+		{
+			name:  "direct-response-bad-status",
+			input: directResponseBadStatus,
+			want:  []error{ErrDirectResponseStatusInvalid},
 		},
 	}
 	for _, test := range tests {

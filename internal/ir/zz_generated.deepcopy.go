@@ -120,6 +120,16 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			}
 		}
 	}
+	if in.DirectResponse != nil {
+		in, out := &in.DirectResponse, &out.DirectResponse
+		*out = new(DirectResponse)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.Redirect != nil {
+		in, out := &in.Redirect, &out.Redirect
+		*out = new(Redirect)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Destinations != nil {
 		in, out := &in.Destinations, &out.Destinations
 		*out = make([]*RouteDestination, len(*in))
@@ -130,16 +140,6 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 				**out = **in
 			}
 		}
-	}
-	if in.Redirect != nil {
-		in, out := &in.Redirect, &out.Redirect
-		*out = new(Redirect)
-		(*in).DeepCopyInto(*out)
-	}
-	if in.DirectResponse != nil {
-		in, out := &in.DirectResponse, &out.DirectResponse
-		*out = new(DirectResponse)
-		(*in).DeepCopyInto(*out)
 	}
 }
 

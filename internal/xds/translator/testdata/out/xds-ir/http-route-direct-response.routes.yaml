@@ -1,0 +1,12 @@
+- name: route_first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: route_first-listener
+    routes:
+    - directResponse:
+        body:
+          inlineString: 'Unknown custom filter type: UnsupportedType'
+        status: 500
+      match:
+        prefix: /
