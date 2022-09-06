@@ -71,6 +71,45 @@ var (
 		},
 	}
 
+	addHeaderPath = "/addheader"
+	remHeaderPath = "/remheader"
+	headersToAdd  = []AddHeader{
+		{
+			Name:       "example-header",
+			Value:      "example-value",
+			Append:     true,
+			AllowEmpty: false,
+		},
+		{
+			Name:       "example-header-2",
+			Value:      "exmaple-value-2",
+			Append:     false,
+			AllowEmpty: false,
+		},
+		{
+			Name:       "empty-header",
+			Value:      "",
+			Append:     false,
+			AllowEmpty: true,
+		},
+	}
+	addHeaderHTTPRoute = HTTPRoute{
+		Name:              "addheader",
+		PathMatch:         &addHeaderStringMatch,
+		AddRequestHeaders: &headersToAdd,
+	}
+
+	headersToRemove = []string{
+		"x-request-header",
+		"example-header",
+		"another-header",
+	}
+	removeHeaderHTTPRoute = HTTPRoute{
+		Name:                 "remheader",
+		PathMatch:            &remHeaderStringMatch,
+		RemoveRequestHeaders: &headersToRemove,
+	}
+
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Host: "10.11.12.13",
@@ -91,6 +130,14 @@ var (
 	redirectStr         = "redirect"
 	redirectStringMatch = StringMatch{
 		Exact: &redirectStr,
+	}
+	addHeaderStr         = "addheader"
+	addHeaderStringMatch = StringMatch{
+		Exact: &addHeaderStr,
+	}
+	remHeaderStr         = "remheader"
+	remHeaderStringMatch = StringMatch{
+		Exact: &remHeaderStr,
 	}
 
 	filterErrorStr         = "filter-error"
@@ -270,6 +317,16 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name:  "filter-error-httproute",
 			input: invalidFilterHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "add-request-headers-httproute",
+			input: addHeaderHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "remove-request-headers-httproute",
+			input: removeHeaderHTTPRoute,
 			want:  nil,
 		},
 	}

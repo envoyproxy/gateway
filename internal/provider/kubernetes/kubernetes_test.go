@@ -317,150 +317,260 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
-	hroute := &gwapiv1b1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "httproute-test",
-			Namespace: ns.Name,
-		},
-		Spec: gwapiv1b1.HTTPRouteSpec{
-			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-				ParentRefs: []gwapiv1b1.ParentReference{
-					{
-						Name: gwapiv1b1.ObjectName(gw.Name),
-					},
-				},
-			},
-			Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-			Rules: []gwapiv1b1.HTTPRouteRule{
-				{
-					Matches: []gwapiv1b1.HTTPRouteMatch{
-						{
-							Path: &gwapiv1b1.HTTPPathMatch{
-								Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-								Value: gatewayapi.StringPtr("/"),
-							},
-						},
-					},
-					BackendRefs: []gwapiv1b1.HTTPBackendRef{
-						{
-							BackendRef: gwapiv1b1.BackendRef{
-								BackendObjectReference: gwapiv1b1.BackendObjectReference{
-									Name: "test",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	require.NoError(t, cli.Create(ctx, hroute))
-
 	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
 	redirectPort := gwapiv1b1.PortNumber(8443)
 	redirectStatus := 301
-	redirectRoute := &gwapiv1b1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "httproute-redirect-test",
-			Namespace: ns.Name,
-		},
-		Spec: gwapiv1b1.HTTPRouteSpec{
-			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-				ParentRefs: []gwapiv1b1.ParentReference{
-					{
-						Name: gwapiv1b1.ObjectName(gw.Name),
-					},
+	var testRoutes = []struct {
+		name  string
+		route gwapiv1b1.HTTPRoute
+	}{
+		{
+			name: "destination-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-test",
+					Namespace: ns.Name,
 				},
-			},
-			Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-			Rules: []gwapiv1b1.HTTPRouteRule{
-				{
-					Matches: []gwapiv1b1.HTTPRouteMatch{
-						{
-							Path: &gwapiv1b1.HTTPPathMatch{
-								Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-								Value: gatewayapi.StringPtr("/redirect/"),
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
 							},
 						},
 					},
-					BackendRefs: []gwapiv1b1.HTTPBackendRef{
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
 						{
-							BackendRef: gwapiv1b1.BackendRef{
-								BackendObjectReference: gwapiv1b1.BackendObjectReference{
-									Name: "test",
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/"),
+									},
 								},
 							},
-						},
-					},
-					Filters: []gwapiv1b1.HTTPRouteFilter{
-						{
-							Type: gwapiv1b1.HTTPRouteFilterType("RequestRedirect"),
-							RequestRedirect: &gwapiv1b1.HTTPRequestRedirectFilter{
-								Scheme:   gatewayapi.StringPtr("https"),
-								Hostname: &redirectHostname,
-								Path: &gwapiv1b1.HTTPPathModifier{
-									Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
-									ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
 								},
-								Port:       &redirectPort,
-								StatusCode: &redirectStatus,
 							},
 						},
 					},
 				},
 			},
 		},
+		{
+			name: "redirect-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-redirect-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/redirect/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterType("RequestRedirect"),
+									RequestRedirect: &gwapiv1b1.HTTPRequestRedirectFilter{
+										Scheme:   gatewayapi.StringPtr("https"),
+										Hostname: &redirectHostname,
+										Path: &gwapiv1b1.HTTPPathModifier{
+											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
+											ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+										},
+										Port:       &redirectPort,
+										StatusCode: &redirectStatus,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "addheader-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-addheader-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/addheader/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
+									RequestHeaderModifier: &gwapiv1b1.HTTPRequestHeaderFilter{
+										Add: []gwapiv1b1.HTTPHeader{
+											{
+												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
+												Value: "value-1",
+											},
+											{
+												Name:  gwapiv1b1.HTTPHeaderName("header-2"),
+												Value: "value-2",
+											},
+										},
+										Set: []gwapiv1b1.HTTPHeader{
+											{
+												Name:  gwapiv1b1.HTTPHeaderName("header-3"),
+												Value: "value-3",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "remheader-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-remheader-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/remheader/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
+									RequestHeaderModifier: &gwapiv1b1.HTTPRequestHeaderFilter{
+										Remove: []string{
+											"example-header-1",
+											"test-header",
+											"example",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
-	require.NoError(t, cli.Create(ctx, redirectRoute))
 
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, hroute))
-		require.NoError(t, cli.Delete(ctx, redirectRoute))
-	}()
+	for _, testCase := range testRoutes {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.NoError(t, cli.Create(ctx, &testCase.route))
+			defer func() {
+				require.NoError(t, cli.Delete(ctx, &testCase.route))
+			}()
 
-	// Ensure the number of HTTPRoutes in the HTTPRoute resources is as expected.
-	require.Eventually(t, func() bool {
-		return resources.HTTPRoutes.Len() == 1
-	}, defaultWait, defaultTick)
+			require.Eventually(t, func() bool {
+				return resources.HTTPRoutes.Len() == 1
+			}, defaultWait, defaultTick)
 
-	// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-	key := types.NamespacedName{
-		Namespace: hroute.Namespace,
-		Name:      hroute.Name,
+			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
+			key := types.NamespacedName{
+				Namespace: testCase.route.Namespace,
+				Name:      testCase.route.Name,
+			}
+			require.Eventually(t, func() bool {
+				return cli.Get(ctx, key, &testCase.route) == nil
+			}, defaultWait, defaultTick)
+			hroutes, _ := resources.HTTPRoutes.Load(key)
+			assert.Equal(t, &testCase.route, hroutes)
+
+			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
+			require.Eventually(t, func() bool {
+				_, ok := resources.Namespaces.Load(testCase.route.Namespace)
+				return ok
+			}, defaultWait, defaultTick)
+
+			// Ensure the Service is in the resource map.
+			svcKey := NamespacedName(svc)
+			require.Eventually(t, func() bool {
+				_, ok := resources.Services.Load(svcKey)
+				return ok
+			}, defaultWait, defaultTick)
+
+		})
 	}
-	require.Eventually(t, func() bool {
-		return cli.Get(ctx, key, hroute) == nil
-	}, defaultWait, defaultTick)
-	hroutes, _ := resources.HTTPRoutes.Load(key)
-	assert.Equal(t, hroute, hroutes)
-
-	// Ensure the HTTPRoute Namespace is in the Namespace resource map.
-	require.Eventually(t, func() bool {
-		_, ok := resources.Namespaces.Load(hroute.Namespace)
-		return ok
-	}, defaultWait, defaultTick)
-
-	// Ensure the Service is in the resource map.
-	svcKey := NamespacedName(svc)
-	require.Eventually(t, func() bool {
-		_, ok := resources.Services.Load(svcKey)
-		return ok
-	}, defaultWait, defaultTick)
-
-	// Ensure the test HTTPRoute with a redirect filter in the HTTPRoute resources is as expected.
-	key = types.NamespacedName{
-		Namespace: redirectRoute.Namespace,
-		Name:      redirectRoute.Name,
-	}
-	require.Eventually(t, func() bool {
-		return cli.Get(ctx, key, redirectRoute) == nil
-	}, defaultWait, defaultTick)
-	redirectRoutes, _ := resources.HTTPRoutes.Load(key)
-	assert.Equal(t, redirectRoute, redirectRoutes)
-
-	// Ensure the redirect HTTPRoute Namespace is in the Namespace resource map.
-	require.Eventually(t, func() bool {
-		_, ok := resources.Namespaces.Load(redirectRoute.Namespace)
-		return ok
-	}, defaultWait, defaultTick)
 }
