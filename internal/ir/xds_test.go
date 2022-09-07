@@ -111,6 +111,80 @@ var (
 		},
 	}
 
+	addHeaderHTTPRoute = HTTPRoute{
+		Name: "addheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("addheader"),
+		},
+		AddRequestHeaders: []AddHeader{
+			{
+				Name:   "example-header",
+				Value:  "example-value",
+				Append: true,
+			},
+			{
+				Name:   "example-header-2",
+				Value:  "example-value-2",
+				Append: false,
+			},
+			{
+				Name:   "empty-header",
+				Value:  "",
+				Append: false,
+			},
+		},
+	}
+
+	removeHeaderHTTPRoute = HTTPRoute{
+		Name: "remheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("remheader"),
+		},
+		RemoveRequestHeaders: []string{
+			"x-request-header",
+			"example-header",
+			"another-header",
+		},
+	}
+
+	addRemoveHeadersDupeHTTPRoute = HTTPRoute{
+		Name: "duplicateheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("duplicateheader"),
+		},
+		AddRequestHeaders: []AddHeader{
+			{
+				Name:   "example-header",
+				Value:  "example-value",
+				Append: true,
+			},
+			{
+				Name:   "example-header",
+				Value:  "example-value-2",
+				Append: false,
+			},
+		},
+		RemoveRequestHeaders: []string{
+			"x-request-header",
+			"example-header",
+			"example-header",
+		},
+	}
+
+	addHeaderEmptyHTTPRoute = HTTPRoute{
+		Name: "addemptyheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("addemptyheader"),
+		},
+		AddRequestHeaders: []AddHeader{
+			{
+				Name:   "",
+				Value:  "example-value",
+				Append: true,
+			},
+		},
+	}
+
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Host: "10.11.12.13",
@@ -315,6 +389,26 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "direct-response-bad-status",
 			input: directResponseBadStatus,
 			want:  []error{ErrDirectResponseStatusInvalid},
+		},
+		{
+			name:  "add-request-headers-httproute",
+			input: addHeaderHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "remove-request-headers-httproute",
+			input: removeHeaderHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "add-remove-headers-duplicate",
+			input: addRemoveHeadersDupeHTTPRoute,
+			want:  []error{ErrAddHeaderDuplicate, ErrRemoveHeaderDuplicate},
+		},
+		{
+			name:  "add-header-empty",
+			input: addHeaderEmptyHTTPRoute,
+			want:  []error{ErrAddHeaderEmptyName},
 		},
 	}
 	for _, test := range tests {
