@@ -12,3 +12,6 @@ bin/
 
 # Release artifacts
 release-artifacts/
+
+# Outputs
+cover.out
