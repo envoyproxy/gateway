@@ -1,0 +1,14 @@
+- name: route_first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: route_first-listener
+    routes:
+    - match:
+        prefix: /
+      redirect:
+        hostRedirect: redirected.com
+        portRedirect: 8443
+        prefixRewrite: /redirected
+        responseCode: FOUND
+        schemeRedirect: https

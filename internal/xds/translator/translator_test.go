@@ -30,6 +30,12 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "http-route",
 		},
+		{
+			name: "http-route-redirect",
+		},
+		{
+			name: "http-route-direct-response",
+		},
 	}
 
 	for _, tc := range testCases {

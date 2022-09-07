@@ -1,6 +1,7 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -83,6 +84,102 @@ func TestTranslate(t *testing.T) {
 func testName(inputFile string) string {
 	_, fileName := filepath.Split(inputFile)
 	return strings.TrimSuffix(fileName, ".in.yaml")
+}
+
+func TestIsValidHostname(t *testing.T) {
+	type testcase struct {
+		name     string
+		hostname string
+		err      string
+	}
+
+	// Setting up a hostname that is 256+ characters for a test case that does not also trip the max label size
+	veryLongHostname := "a"
+	label := 0
+	for i := 0; i < 256; i++ {
+		if label > 10 {
+			veryLongHostname += "."
+			label = 0
+		} else {
+			veryLongHostname += string(veryLongHostname[0])
+		}
+		label++
+	}
+	veryLongHostname += ".com"
+
+	testcases := []*testcase{
+		{
+			name:     "good-hostname",
+			hostname: "example.test.com",
+			err:      "",
+		},
+		{
+			name:     "dot-prefix",
+			hostname: ".example.test.com",
+			err:      "hostname \".example.test.com\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+		{
+			name:     "dot-suffix",
+			hostname: "example.test.com.",
+			err:      "hostname \"example.test.com.\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+		{
+			name:     "ip-address",
+			hostname: "192.168.254.254",
+			err:      "hostname: \"192.168.254.254\" cannot be an ip address",
+		},
+		{
+			name:     "dash-prefix",
+			hostname: "-example.test.com",
+			err:      "hostname \"-example.test.com\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+		{
+			name:     "dash-suffix",
+			hostname: "example.test.com-",
+			err:      "hostname \"example.test.com-\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+		{
+			name:     "invalid-symbol",
+			hostname: "examp!e.test.com",
+			err:      "hostname \"examp!e.test.com\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+		{
+			name:     "long-label",
+			hostname: "example.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com",
+			err:      "label: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\" in hostname \"example.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.com\" cannot exceed 63 characters",
+		},
+		{
+			name:     "long-label-last-index",
+			hostname: "example.abc.commmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm",
+			err:      "label: \"commmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm\" in hostname \"example.abc.commmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm\" cannot exceed 63 characters",
+		},
+		{
+			name:     "way-too-long-hostname",
+			hostname: veryLongHostname,
+			err:      fmt.Sprintf("hostname %q is invalid for a redirect filter: [must be no more than 253 characters]", veryLongHostname),
+		},
+		{
+			name:     "empty-hostname",
+			hostname: "",
+			err:      "hostname \"\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+		{
+			name:     "double-dot",
+			hostname: "example..test.com",
+			err:      "hostname \"example..test.com\" is invalid for a redirect filter: [a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')]",
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := isValidHostname(tc.hostname)
+			if tc.err == "" {
+				assert.Nil(t, err)
+			} else {
+				assert.EqualError(t, err, tc.err)
+			}
+		})
+	}
 }
 
 func TestIsValidCrossNamespaceRef(t *testing.T) {

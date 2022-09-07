@@ -1,6 +1,7 @@
 package translator
 
 import (
+	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 
@@ -8,10 +9,19 @@ import (
 )
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
-	return &route.Route{
-		Match:  buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
-		Action: &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)},
-	}, nil
+	ret := &route.Route{
+		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
+	}
+	switch {
+	case httpRoute.DirectResponse != nil:
+		ret.Action = &route.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
+	case httpRoute.Redirect != nil:
+		ret.Action = &route.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+	default:
+		ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)}
+	}
+
+	return ret, nil
 }
 
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *route.RouteMatch {
@@ -114,4 +124,52 @@ func buildXdsRouteAction(routeName string) *route.RouteAction {
 			Cluster: getXdsClusterName(routeName),
 		},
 	}
+}
+
+func buildXdsRedirectAction(redirection *ir.Redirect) *route.RedirectAction {
+	ret := &route.RedirectAction{}
+
+	if redirection.Scheme != nil {
+		ret.SchemeRewriteSpecifier = &route.RedirectAction_SchemeRedirect{
+			SchemeRedirect: *redirection.Scheme,
+		}
+	}
+	if redirection.Path != nil {
+		if redirection.Path.FullReplace != nil {
+			ret.PathRewriteSpecifier = &route.RedirectAction_PathRedirect{
+				PathRedirect: *redirection.Path.FullReplace,
+			}
+		} else if redirection.Path.PrefixMatchReplace != nil {
+			ret.PathRewriteSpecifier = &route.RedirectAction_PrefixRewrite{
+				PrefixRewrite: *redirection.Path.PrefixMatchReplace,
+			}
+		}
+	}
+	if redirection.Hostname != nil {
+		ret.HostRedirect = *redirection.Hostname
+	}
+	if redirection.Port != nil {
+		ret.PortRedirect = *redirection.Port
+	}
+	if redirection.StatusCode != nil {
+		if *redirection.StatusCode == 302 {
+			ret.ResponseCode = route.RedirectAction_FOUND
+		} // no need to check for 301 since Envoy will use 301 as the default if the field is not configured
+	}
+
+	return ret
+}
+
+func buildXdsDirectResponseAction(res *ir.DirectResponse) *route.DirectResponseAction {
+	ret := &route.DirectResponseAction{Status: res.StatusCode}
+
+	if res.Body != nil {
+		ret.Body = &core.DataSource{
+			Specifier: &core.DataSource_InlineString{
+				InlineString: *res.Body,
+			},
+		}
+	}
+
+	return ret
 }

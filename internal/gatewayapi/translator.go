@@ -2,11 +2,13 @@ package gatewayapi
 
 import (
 	"fmt"
+	"net/netip"
 
 	"golang.org/x/exp/slices"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -522,6 +524,129 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 			for ruleIdx, rule := range httpRoute.Spec.Rules {
 				var ruleRoutes []*ir.HTTPRoute
 
+				// First see if there are any filters in the rules. Then apply those filters to any irRoutes.
+				var directResponse *ir.DirectResponse
+				var redirectResponse *ir.Redirect
+
+				// TODO: implement header modifier filter
+				for _, filter := range rule.Filters {
+					if directResponse != nil {
+						break // If an invalid filter type has been configured then skip processing any more filters
+					}
+					switch filter.Type {
+					case v1beta1.HTTPRouteFilterRequestRedirect:
+						// Can't have two redirects for the same route
+						if redirectResponse != nil {
+							parentRef.SetCondition(
+								v1beta1.RouteConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.RouteReasonUnsupportedValue,
+								"Cannot configure multiple requestRedirect filters for a single HTTPRouteRule",
+							)
+							continue
+						}
+
+						if redirect := filter.RequestRedirect; redirect != nil {
+							redir := &ir.Redirect{}
+							if redirect.Scheme != nil {
+								// Note that gateway API may support additional schemes in the future, but unknown values
+								// must result in an UnsupportedValue status
+								if *redirect.Scheme == "http" || *redirect.Scheme == "https" {
+									redir.Scheme = redirect.Scheme
+								} else {
+									errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										errMsg,
+									)
+									continue
+								}
+							}
+
+							if redirect.Hostname != nil {
+								if err := isValidHostname(string(*redirect.Hostname)); err != nil {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										err.Error(),
+									)
+									continue
+								} else {
+									redirectHost := string(*redirect.Hostname)
+									redir.Hostname = &redirectHost
+								}
+							}
+
+							if redirect.Path != nil {
+								switch redirect.Path.Type {
+								case v1beta1.FullPathHTTPPathModifier:
+									if redirect.Path.ReplaceFullPath != nil {
+										redir.Path = &ir.HTTPPathModifier{
+											FullReplace: redirect.Path.ReplaceFullPath,
+										}
+									}
+								case v1beta1.PrefixMatchHTTPPathModifier:
+									if redirect.Path.ReplacePrefixMatch != nil {
+										redir.Path = &ir.HTTPPathModifier{
+											PrefixMatchReplace: redirect.Path.ReplacePrefixMatch,
+										}
+									}
+								default:
+									errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										errMsg,
+									)
+									continue
+								}
+							}
+
+							if redirect.StatusCode != nil {
+								redirectCode := int32(*redirect.StatusCode)
+								// Envoy supports 302, 303, 307, and 308, but gateway API only includes 301 and 302
+								if redirectCode == 301 || redirectCode == 302 {
+									redir.StatusCode = &redirectCode
+								} else {
+									errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										errMsg,
+									)
+									continue
+								}
+							}
+
+							if redirect.Port != nil {
+								redirectPort := uint32(*redirect.Port)
+								redir.Port = &redirectPort
+							}
+
+							redirectResponse = redir
+						}
+					default:
+						// "If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
+						// Instead, requests that would have been processed by that filter MUST receive a HTTP error response."
+						errMsg := fmt.Sprintf("Unknown custom filter type: %s", filter.Type)
+						parentRef.SetCondition(
+							v1beta1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							v1beta1.RouteReasonUnsupportedValue,
+							errMsg,
+						)
+						directResponse = &ir.DirectResponse{
+							Body:       &errMsg,
+							StatusCode: 500,
+						}
+					}
+				}
+
 				// A rule is matched if any one of its matches
 				// is satisfied (i.e. a logical "OR"), so generate
 				// a unique Xds IR HTTPRoute per match.
@@ -551,10 +676,15 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						}
 					}
 
+					// Add the redirect filter or direct response that were created earlier to all the irRoutes
+					if redirectResponse != nil {
+						irRoute.Redirect = redirectResponse
+					}
+					if directResponse != nil {
+						irRoute.DirectResponse = directResponse
+					}
 					ruleRoutes = append(ruleRoutes, irRoute)
 				}
-
-				// TODO implement core filters (header modifier, redirect)
 
 				for _, backendRef := range rule.BackendRefs {
 					if backendRef.Group != nil && *backendRef.Group != "" {
@@ -692,6 +822,8 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							HeaderMatches:     append(headerMatches, routeRoute.HeaderMatches...),
 							QueryParamMatches: routeRoute.QueryParamMatches,
 							Destinations:      routeRoute.Destinations,
+							Redirect:          routeRoute.Redirect,
+							DirectResponse:    routeRoute.DirectResponse,
 						})
 					}
 				}
@@ -780,6 +912,36 @@ func isValidCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, refe
 
 	// If we got here, no reference policy or reference grant allowed both the "from" and "to".
 	return false
+}
+
+// Checks if a hostname is valid according to RFC 1123 and gateway API's requirement that it not be an IP address
+func isValidHostname(hostname string) error {
+
+	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
+		return fmt.Errorf("hostname %q is invalid for a redirect filter: %v", hostname, errs)
+	}
+
+	// IP addresses are not allowed so parsing the hostname as an address needs to fail
+	if _, err := netip.ParseAddr(hostname); err == nil {
+		return fmt.Errorf("hostname: %q cannot be an ip address", hostname)
+	}
+
+	labelIdx := 0
+	for i := range hostname {
+		if hostname[i] == '.' {
+
+			if i-labelIdx > 63 {
+				return fmt.Errorf("label: %q in hostname %q cannot exceed 63 characters", hostname[labelIdx:i], hostname)
+			}
+			labelIdx = i + 1
+		}
+	}
+	// Check the last label
+	if len(hostname)-labelIdx > 63 {
+		return fmt.Errorf("label: %q in hostname %q cannot exceed 63 characters", hostname[labelIdx:], hostname)
+	}
+
+	return nil
 }
 
 func irListenerName(listener *ListenerContext) string {
