@@ -70,10 +70,12 @@ func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) erro
 		if kerrors.IsAlreadyExists(err) {
 			// Update service if its exists
 			if err := i.Client.Update(ctx, svc); err != nil {
-				return err
+				return fmt.Errorf("failed to update service %s/%s: %w",
+					svc.Namespace, svc.Name, err)
 			}
 		} else {
-			return err
+			return fmt.Errorf("failed to create service %s/%s: %w",
+				svc.Namespace, svc.Name, err)
 		}
 	}
 

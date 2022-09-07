@@ -36,7 +36,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, _ *ir.Infra) e
 	err := i.Client.Create(ctx, svcAccount)
 	if err != nil {
 		if kerrors.IsAlreadyExists(err) {
-			// Update service account if it doesnt exist
+			// Update service account if it does not exist
 			if err := i.Client.Update(ctx, svcAccount); err != nil {
 				return fmt.Errorf("failed to update serviceaccount %s/%s: %w",
 					svcAccount.Namespace, svcAccount.Name, err)

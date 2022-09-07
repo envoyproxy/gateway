@@ -137,12 +137,17 @@ func TestExpectedDeployment(t *testing.T) {
 	}
 }
 
-func TestCreateDeploymentIfNeeded(t *testing.T) {
+func deploymentWithResourceVersion(deploy *appsv1.Deployment, version string) *appsv1.Deployment {
+	dCopy := deploy.DeepCopy()
+	dCopy.ResourceVersion = version
+	return dCopy
+}
+
+func TestCreateOrUpdateDeployment(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
-	deploy.ResourceVersion = "1"
 
 	testCases := []struct {
 		name    string
@@ -155,16 +160,16 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 			name: "create deployment",
 			in:   infra,
 			out: &Resources{
-				Deployment: deploy,
+				Deployment: deploymentWithResourceVersion(deploy, "1"),
 			},
 			expect: true,
 		},
 		{
 			name:    "deployment exists",
 			in:      infra,
-			current: deploy,
+			current: deploymentWithResourceVersion(deploy, "1"),
 			out: &Resources{
-				Deployment: deploy,
+				Deployment: deploymentWithResourceVersion(deploy, "2"),
 			},
 			expect: true,
 		},
@@ -178,7 +183,7 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createDeploymentIfNeeded(context.Background(), tc.in)
+			err := kube.createOrUpdateDeployment(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)
 			} else {

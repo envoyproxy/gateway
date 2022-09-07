@@ -219,10 +219,12 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 		if kerrors.IsAlreadyExists(err) {
 			// Update deployment if it exists.
 			if err := i.Client.Update(ctx, deploy); err != nil {
-				return err
+				return fmt.Errorf("failed to update deployment %s/%s: %w",
+					deploy.Namespace, deploy.Name, err)
 			}
 		} else {
-			return err
+			return fmt.Errorf("failed to create deployment %s/%s: %w",
+				deploy.Namespace, deploy.Name, err)
 		}
 	}
 

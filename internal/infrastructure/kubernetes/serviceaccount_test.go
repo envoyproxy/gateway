@@ -14,7 +14,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestCreateServiceAccountIfNeeded(t *testing.T) {
+func TestCreateOrUpdateServiceAccount(t *testing.T) {
 	testCases := []struct {
 		name    string
 		ns      string
@@ -55,6 +55,10 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 				},
 			},
 			current: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:       "test",
 					Name:            "envoy",
@@ -70,7 +74,7 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "test",
 						Name:            "envoy",
-						ResourceVersion: "34",
+						ResourceVersion: "35",
 					},
 				},
 			},
@@ -91,7 +95,7 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createServiceAccountIfNeeded(context.Background(), tc.in)
+			err := kube.createOrUpdateServiceAccount(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)
 			} else {
