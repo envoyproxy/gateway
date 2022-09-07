@@ -24,6 +24,9 @@ var (
 	ErrRedirectUnsupportedScheme     = errors.New("only http and https are supported for the scheme in redirect filters")
 	ErrHTTPPathModifierDoubleReplace = errors.New("redirect filter cannot have a path modifier that supplies both fullPathReplace and prefixMatchReplace")
 	ErrHTTPPathModifierNoReplace     = errors.New("redirect filter cannot have a path modifier that does not supply either fullPathReplace or prefixMatchReplace")
+	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
+	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
+	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -134,9 +137,13 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch
-	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect
+	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
+	AddRequestHeaders []AddHeader
+	// RemoveRequestHeaders defines a list of headers to be removed from requests.
+	RemoveRequestHeaders []string
+	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect.
 	DirectResponse *DirectResponse
-	// Redirections to be returned for this route. Takes precedence over Destinations
+	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect
 	// Destinations associated with this matched route.
 	Destinations []*RouteDestination
@@ -181,6 +188,31 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	if len(h.AddRequestHeaders) > 0 {
+		occurred := map[string]bool{}
+		for _, header := range h.AddRequestHeaders {
+			if err := header.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			if !occurred[header.Name] {
+				occurred[header.Name] = true
+			} else {
+				errs = multierror.Append(errs, ErrAddHeaderDuplicate)
+				break
+			}
+		}
+	}
+	if len(h.RemoveRequestHeaders) > 0 {
+		occurred := map[string]bool{}
+		for _, header := range h.RemoveRequestHeaders {
+			if !occurred[header] {
+				occurred[header] = true
+			} else {
+				errs = multierror.Append(errs, ErrRemoveHeaderDuplicate)
+				break
+			}
+		}
+	}
 	return errs
 }
 
@@ -192,6 +224,24 @@ type RouteDestination struct {
 	Port uint32
 	// Weight associated with this destination.
 	Weight uint32
+}
+
+// Add header configures a headder to be added to a request.
+// +k8s:deepcopy-gen=true
+type AddHeader struct {
+	Name   string
+	Value  string
+	Append bool
+}
+
+// Validate the fields within the AddHeader structure
+func (h AddHeader) Validate() error {
+	var errs error
+	if h.Name == "" {
+		errs = multierror.Append(errs, ErrAddHeaderEmptyName)
+	}
+
+	return errs
 }
 
 // Direct response holds the details for returning a body and status code for a route.
