@@ -273,8 +273,7 @@ func (i *Infra) deleteDeployment(ctx context.Context) error {
 		},
 	}
 
-	err := i.Client.Delete(ctx, deploy)
-	if err != nil {
+	if err := i.Client.Delete(ctx, deploy); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}

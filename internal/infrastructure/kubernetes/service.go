@@ -119,18 +119,19 @@ func (i *Infra) createService(ctx context.Context, infra *ir.Infra) (*corev1.Ser
 
 // deleteService deletes the Envoy Service in the kube api server, if it exists.
 func (i *Infra) deleteService(ctx context.Context) error {
-	svc := new(corev1.Service)
-	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      envoyServiceName,
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      envoyServiceName,
+		},
 	}
-	err := i.Client.Get(ctx, key, svc)
-	if err != nil {
+
+	if err := i.Client.Delete(ctx, svc); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to get service %s/%s: %w", key.Namespace, key.Name, err)
+		return fmt.Errorf("failed to delete service %s/%s: %w", svc.Namespace, svc.Name, err)
 	}
 
-	return i.Client.Delete(ctx, svc)
+	return nil
 }

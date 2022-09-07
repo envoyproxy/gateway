@@ -94,18 +94,18 @@ func (i *Infra) createServiceAccount(ctx context.Context) (*corev1.ServiceAccoun
 // deleteServiceAccount deletes the Envoy ServiceAccount in the kube api server,
 // if it exists.
 func (i *Infra) deleteServiceAccount(ctx context.Context) error {
-	sa := new(corev1.ServiceAccount)
-	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      envoyServiceAccountName,
+	sa := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      envoyServiceAccountName,
+		},
 	}
-	err := i.Client.Get(ctx, key, sa)
-	if err != nil {
+	if err := i.Client.Delete(ctx, sa); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
-		return fmt.Errorf("failed to get serviceaccount %s/%s: %w", key.Namespace, key.Name, err)
+		return fmt.Errorf("failed to delete serviceaccount %s/%s: %w", sa.Namespace, sa.Name, err)
 	}
 
-	return i.Client.Delete(ctx, sa)
+	return nil
 }
