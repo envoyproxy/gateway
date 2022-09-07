@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -183,6 +184,31 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.out.Deployment, kube.Resources.Deployment)
 			}
+		})
+	}
+}
+
+func TestDeleteDeployment(t *testing.T) {
+	testCases := []struct {
+		name   string
+		expect bool
+	}{
+		{
+			name:   "delete deployment",
+			expect: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			kube := &Infra{
+				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+				mu:        sync.Mutex{},
+				Namespace: "test",
+			}
+			err := kube.deleteDeployment(context.Background())
+			require.NoError(t, err)
 		})
 	}
 }

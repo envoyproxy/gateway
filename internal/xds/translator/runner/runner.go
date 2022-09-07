@@ -40,7 +40,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		r.Logger.Info("received a notification")
 		ir := r.XdsIR.Get()
 		if ir == nil {
-			r.Logger.Info("ir is nil, skipping")
+			r.Logger.Info("xds ir is nil, skipping")
 			continue
 		}
 		// Translate to xds resources

@@ -1,8 +1,11 @@
 package kubernetes
 
 import (
+	"context"
+	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -70,5 +73,30 @@ func TestDesiredService(t *testing.T) {
 
 	for _, port := range infra.Proxy.Listeners[0].Ports {
 		checkServiceHasPortName(t, svc, port.Name)
+	}
+}
+
+func TestDeleteService(t *testing.T) {
+	testCases := []struct {
+		name   string
+		expect bool
+	}{
+		{
+			name:   "delete service",
+			expect: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			kube := &Infra{
+				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+				mu:        sync.Mutex{},
+				Namespace: "test",
+			}
+			err := kube.deleteService(context.Background())
+			require.NoError(t, err)
+		})
 	}
 }

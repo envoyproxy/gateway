@@ -14,6 +14,8 @@ import (
 )
 
 const (
+	// envoyServiceName is the name of the Envoy Service resource.
+	envoyServiceName = "envoy"
 	// envoyServiceHTTPPort is the HTTP port number of the Envoy service.
 	envoyServiceHTTPPort = 80
 	// envoyServiceHTTPSPort is the HTTPS port number of the Envoy service.
@@ -23,7 +25,7 @@ const (
 // createServiceIfNeeded creates a Service based on the provided infra, if
 // it doesn't exist in the kube api server.
 func (i *Infra) createServiceIfNeeded(ctx context.Context, infra *ir.Infra) error {
-	current, err := i.getService(ctx, infra)
+	current, err := i.getService(ctx)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			svc, err := i.createService(ctx, infra)
@@ -46,16 +48,14 @@ func (i *Infra) createServiceIfNeeded(ctx context.Context, infra *ir.Infra) erro
 }
 
 // getService gets the Service from the kube api for the provided infra.
-func (i *Infra) getService(ctx context.Context, infra *ir.Infra) (*corev1.Service, error) {
-	ns := i.Namespace
-	name := infra.Proxy.ObjectName()
+func (i *Infra) getService(ctx context.Context) (*corev1.Service, error) {
 	key := types.NamespacedName{
-		Namespace: ns,
-		Name:      name,
+		Namespace: i.Namespace,
+		Name:      envoyServiceName,
 	}
 	svc := new(corev1.Service)
 	if err := i.Client.Get(ctx, key, svc); err != nil {
-		return nil, fmt.Errorf("failed to get service %s/%s: %w", ns, name, err)
+		return nil, fmt.Errorf("failed to get service %s/%s: %w", i.Namespace, envoyServiceName, err)
 	}
 
 	return svc, nil
@@ -85,7 +85,7 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 
 			Namespace: i.Namespace,
-			Name:      infra.Proxy.ObjectName(),
+			Name:      envoyServiceName,
 			Labels:    envoyLabels(),
 		},
 		Spec: corev1.ServiceSpec{
@@ -115,4 +115,23 @@ func (i *Infra) createService(ctx context.Context, infra *ir.Infra) (*corev1.Ser
 	}
 
 	return expected, nil
+}
+
+// deleteService deletes the Envoy Service in the kube api server, if it exists.
+func (i *Infra) deleteService(ctx context.Context) error {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      envoyServiceName,
+		},
+	}
+
+	if err := i.Client.Delete(ctx, svc); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to delete service %s/%s: %w", svc.Namespace, svc.Name, err)
+	}
+
+	return nil
 }

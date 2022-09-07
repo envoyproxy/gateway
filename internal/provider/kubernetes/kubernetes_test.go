@@ -136,8 +136,7 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		return false
 	}, defaultWait, defaultTick)
 
-	// Ensure the GatewayClass resources is as expected.
-	assert.Equal(t, 1, resources.GatewayClasses.Len())
+	// Ensure the GatewayClass resource map contains the gatewayclass under test.
 	gcs, _ := resources.GatewayClasses.Load(gc.Name)
 	assert.Equal(t, gc, gcs)
 }
