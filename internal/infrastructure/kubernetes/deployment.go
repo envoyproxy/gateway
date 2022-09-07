@@ -138,6 +138,8 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		return nil, err
 	}
 
+	podSelector := EnvoyPodSelector(infra.GetProxyInfra().Name)
+
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -146,14 +148,14 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      envoyDeploymentName,
-			Labels:    envoyLabels(),
+			Labels:    podSelector.MatchLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32(1),
-			Selector: EnvoyPodSelector(),
+			Selector: podSelector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: EnvoyPodSelector().MatchLabels,
+					Labels: podSelector.MatchLabels,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
@@ -288,13 +290,16 @@ func (i *Infra) deleteDeployment(ctx context.Context) error {
 //
 // TODO: Update k/v pair to use gatewayclass controller name to distinguish between
 //       multiple Envoy Gateways.
-func EnvoyPodSelector() *metav1.LabelSelector {
+func EnvoyPodSelector(gcName string) *metav1.LabelSelector {
 	return &metav1.LabelSelector{
-		MatchLabels: envoyLabels(),
+		MatchLabels: envoyLabels(gcName),
 	}
 }
 
 // envoyLabels returns the labels used for Envoy.
-func envoyLabels() map[string]string {
-	return map[string]string{"app": "envoy"}
+func envoyLabels(gcName string) map[string]string {
+	return map[string]string{
+		"gatewayClass": gcName,
+		"app":          "envoy",
+	}
 }
