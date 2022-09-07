@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -90,45 +89,6 @@ func (b *bootstrapConfig) render() error {
 	b.rendered = buf.String()
 
 	return nil
-}
-
-// createDeploymentIfNeeded creates a Deployment based on the provided infra, if
-// it doesn't exist in the kube api server.
-func (i *Infra) createDeploymentIfNeeded(ctx context.Context, infra *ir.Infra) error {
-	current, err := i.getDeployment(ctx)
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			deploy, err := i.createDeployment(ctx, infra)
-			if err != nil {
-				return err
-			}
-			if err := i.addResource(deploy); err != nil {
-				return err
-			}
-			return nil
-		}
-		return err
-	}
-
-	if err := i.addResource(current); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// getDeployment gets the Deployment from the kube api server.
-func (i *Infra) getDeployment(ctx context.Context) (*appsv1.Deployment, error) {
-	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      envoyDeploymentName,
-	}
-	deploy := new(appsv1.Deployment)
-	if err := i.Client.Get(ctx, key, deploy); err != nil {
-		return nil, fmt.Errorf("failed to get deployment %s/%s: %w", i.Namespace, envoyDeploymentName, err)
-	}
-
-	return deploy, nil
 }
 
 // expectedDeployment returns the expected Deployment based on the provided infra.
@@ -248,22 +208,29 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 }
 
 // createDeployment creates a Deployment in the kube api server based on the provided
-// infra, if it doesn't exist.
-func (i *Infra) createDeployment(ctx context.Context, infra *ir.Infra) (*appsv1.Deployment, error) {
-	expected, err := i.expectedDeployment(infra)
+// infra, if it doesn't exist and updates it if it does.
+func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) error {
+	deploy, err := i.expectedDeployment(infra)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err := i.Client.Create(ctx, expected); err != nil {
+	if err := i.Client.Create(ctx, deploy); err != nil {
 		if kerrors.IsAlreadyExists(err) {
-			return expected, nil
+			// Update deployment if it exists.
+			if err := i.Client.Update(ctx, deploy); err != nil {
+				return err
+			}
+		} else {
+			return err
 		}
-		return nil, fmt.Errorf("failed to create deployment %s/%s: %w",
-			expected.Namespace, expected.Name, err)
 	}
 
-	return expected, nil
+	if err := i.updateResource(deploy); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // deleteService deletes the Envoy Deployment in the kube api server, if it exists.

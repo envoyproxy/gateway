@@ -7,7 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -21,45 +20,6 @@ const (
 	// envoyServiceHTTPSPort is the HTTPS port number of the Envoy service.
 	envoyServiceHTTPSPort = 443
 )
-
-// createServiceIfNeeded creates a Service based on the provided infra, if
-// it doesn't exist in the kube api server.
-func (i *Infra) createServiceIfNeeded(ctx context.Context, infra *ir.Infra) error {
-	current, err := i.getService(ctx)
-	if err != nil {
-		if kerrors.IsNotFound(err) {
-			svc, err := i.createService(ctx, infra)
-			if err != nil {
-				return err
-			}
-			if err := i.addResource(svc); err != nil {
-				return err
-			}
-			return nil
-		}
-		return err
-	}
-
-	if err := i.addResource(current); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// getService gets the Service from the kube api for the provided infra.
-func (i *Infra) getService(ctx context.Context) (*corev1.Service, error) {
-	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      envoyServiceName,
-	}
-	svc := new(corev1.Service)
-	if err := i.Client.Get(ctx, key, svc); err != nil {
-		return nil, fmt.Errorf("failed to get service %s/%s: %w", i.Namespace, envoyServiceName, err)
-	}
-
-	return svc, nil
-}
 
 // expectedService returns the expected Service based on the provided infra.
 func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
@@ -101,20 +61,27 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 	return svc
 }
 
-// createService creates a Service in the kube api server based on the provided infra,
-// if it doesn't exist.
-func (i *Infra) createService(ctx context.Context, infra *ir.Infra) (*corev1.Service, error) {
-	expected := i.expectedService(infra)
-	err := i.Client.Create(ctx, expected)
+// createOrUpdateService creates a Service in the kube api server based on the provided infra,
+// if it doesn't exist or updates it if it does.
+func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) error {
+	svc := i.expectedService(infra)
+	err := i.Client.Create(ctx, svc)
 	if err != nil {
 		if kerrors.IsAlreadyExists(err) {
-			return expected, nil
+			// Update service if its exists
+			if err := i.Client.Update(ctx, svc); err != nil {
+				return err
+			}
+		} else {
+			return err
 		}
-		return nil, fmt.Errorf("failed to create service %s/%s: %w",
-			expected.Namespace, expected.Name, err)
 	}
 
-	return expected, nil
+	if err := i.updateResource(svc); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // deleteService deletes the Envoy Service in the kube api server, if it exists.

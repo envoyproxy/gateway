@@ -59,9 +59,9 @@ func newResources() *Resources {
 	}
 }
 
-// addResource adds obj to the infra resources, using the object type
+// updateResource updates the obj to the infra resources, using the object type
 // to identify the object kind to add.
-func (i *Infra) addResource(obj client.Object) error {
+func (i *Infra) updateResource(obj client.Object) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.Resources == nil {
@@ -96,15 +96,15 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 		i.Resources = newResources()
 	}
 
-	if err := i.createServiceAccountIfNeeded(ctx, infra); err != nil {
+	if err := i.createOrUpdateServiceAccount(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.createDeploymentIfNeeded(ctx, infra); err != nil {
+	if err := i.createOrUpdateDeployment(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.createServiceIfNeeded(ctx, infra); err != nil {
+	if err := i.createOrUpdateService(ctx, infra); err != nil {
 		return err
 	}
 
