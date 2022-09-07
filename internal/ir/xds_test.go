@@ -33,8 +33,10 @@ var (
 
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
-		Name:         "happy",
-		PathMatch:    &happyStringMatch,
+		Name: "happy",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("example"),
+		},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	emptyMatchHTTPRoute = HTTPRoute{
@@ -42,67 +44,69 @@ var (
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
-	redirectScheme    = "https"
-	redirectHostname  = "redirect.example.com"
-	redirectPath      = "/redirect"
-	redirectPort      = uint32(8443)
-	redirectStatus    = int32(301)
 	redirectHTTPRoute = HTTPRoute{
-		Name:      "redirect",
-		PathMatch: &redirectStringMatch,
+		Name: "redirect",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("redirect"),
+		},
 		Redirect: &Redirect{
-			Scheme:   &redirectScheme,
-			Hostname: &redirectHostname,
+			Scheme:   ptrTo("https"),
+			Hostname: ptrTo("redirect.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace: &redirectPath,
+				FullReplace: ptrTo("/redirect"),
 			},
-			Port:       &redirectPort,
-			StatusCode: &redirectStatus,
+			Port:       ptrTo(uint32(8443)),
+			StatusCode: ptrTo(int32(301)),
 		},
 	}
 	// A direct response error is used when an invalid filter type is supplied
-	errorBody              = "invalid filter type"
 	invalidFilterHTTPRoute = HTTPRoute{
-		Name:      "filter-error",
-		PathMatch: &filterErrorStringMatch,
+		Name: "filter-error",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("filter-error"),
+		},
 		DirectResponse: &DirectResponse{
-			Body:       &errorBody,
+			Body:       ptrTo("invalid filter type"),
 			StatusCode: uint32(500),
 		},
 	}
-	badStatus                   = int32(305)
-	badScheme                   = "err"
+
 	redirectFilterInvalidStatus = HTTPRoute{
-		Name:      "redirect-bad-status-scheme-nopat",
-		PathMatch: &redirectStringMatch,
+		Name: "redirect-bad-status-scheme-nopat",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("redirect"),
+		},
 		Redirect: &Redirect{
-			Scheme:     &badScheme,
-			Hostname:   &redirectHostname,
+			Scheme:     ptrTo("err"),
+			Hostname:   ptrTo("redirect.example.com"),
 			Path:       &HTTPPathModifier{},
-			Port:       &redirectPort,
-			StatusCode: &badStatus,
+			Port:       ptrTo(uint32(8443)),
+			StatusCode: ptrTo(int32(305)),
 		},
 	}
 	redirectFilterBadPath = HTTPRoute{
-		Name:      "redirect",
-		PathMatch: &redirectStringMatch,
+		Name: "redirect",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("redirect"),
+		},
 		Redirect: &Redirect{
-			Scheme:   &redirectScheme,
-			Hostname: &redirectHostname,
+			Scheme:   ptrTo("https"),
+			Hostname: ptrTo("redirect.example.com"),
 			Path: &HTTPPathModifier{
-				FullReplace:        &redirectPath,
-				PrefixMatchReplace: &redirectPath,
+				FullReplace:        ptrTo("/redirect"),
+				PrefixMatchReplace: ptrTo("/redirect"),
 			},
-			Port:       &redirectPort,
-			StatusCode: &redirectStatus,
+			Port:       ptrTo(uint32(8443)),
+			StatusCode: ptrTo(int32(301)),
 		},
 	}
-
 	directResponseBadStatus = HTTPRoute{
-		Name:      "redirect",
-		PathMatch: &redirectStringMatch,
+		Name: "redirect",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("redirect"),
+		},
 		DirectResponse: &DirectResponse{
-			Body:       &errorBody,
+			Body:       ptrTo("invalid filter type"),
 			StatusCode: uint32(799),
 		},
 	}
@@ -112,28 +116,12 @@ var (
 		Host: "10.11.12.13",
 		Port: 8080,
 	}
-	invalidHostRouteDestination = RouteDestination{
-		Host: "example.com",
-		Port: 8080,
-	}
-
-	// StringMatch
-	matchStr         = "example"
-	happyStringMatch = StringMatch{
-		Exact: &matchStr,
-	}
-	emptyStringMatch = StringMatch{}
-
-	redirectStr         = "redirect"
-	redirectStringMatch = StringMatch{
-		Exact: &redirectStr,
-	}
-
-	filterErrorStr         = "filter-error"
-	filterErrorStringMatch = StringMatch{
-		Exact: &filterErrorStr,
-	}
 )
+
+// Creates a pointer to any type
+func ptrTo[T any](x T) *T {
+	return &x
+}
 
 func TestValidateXds(t *testing.T) {
 	tests := []struct {
@@ -283,7 +271,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "invalid name",
 			input: HTTPRoute{
-				PathMatch:    &happyStringMatch,
+				PathMatch: &StringMatch{
+					Exact: ptrTo("example"),
+				},
 				Destinations: []*RouteDestination{&happyRouteDestination},
 			},
 			want: []error{ErrHTTPRouteNameEmpty},
@@ -296,7 +286,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "empty name and invalid match",
 			input: HTTPRoute{
-				HeaderMatches: []*StringMatch{&emptyStringMatch},
+				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
 				Destinations:  []*RouteDestination{&happyRouteDestination},
 			},
 			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
@@ -354,9 +344,12 @@ func TestValidateRouteDestination(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name:  "invalid ip",
-			input: invalidHostRouteDestination,
-			want:  ErrRouteDestinationHostInvalid,
+			name: "invalid ip",
+			input: RouteDestination{
+				Host: "example.com",
+				Port: 8080,
+			},
+			want: ErrRouteDestinationHostInvalid,
 		},
 		{
 			name: "invalid port",
@@ -387,21 +380,21 @@ func TestValidateStringMatch(t *testing.T) {
 		{
 			name: "happy",
 			input: StringMatch{
-				Exact: &matchStr,
+				Exact: ptrTo("example"),
 			},
 			want: nil,
 		},
 		{
 			name:  "no fields set",
-			input: emptyStringMatch,
+			input: StringMatch{},
 			want:  ErrStringMatchConditionInvalid,
 		},
 		{
 			name: "multiple fields set",
 			input: StringMatch{
-				Exact:  &matchStr,
-				Name:   matchStr,
-				Prefix: &matchStr,
+				Exact:  ptrTo("example"),
+				Name:   "example",
+				Prefix: ptrTo("example"),
 			},
 			want: ErrStringMatchConditionInvalid,
 		},
