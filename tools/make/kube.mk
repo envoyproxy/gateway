@@ -36,6 +36,7 @@ kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs fro
 .PHONY: kube-deploy
 kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
 	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl apply -f -
+	$(tools/kustomize) build internal/infrastructure/kubernetes/config/rbac | kubectl apply -f -
 
 .PHONY: kube-undeploy
 kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.

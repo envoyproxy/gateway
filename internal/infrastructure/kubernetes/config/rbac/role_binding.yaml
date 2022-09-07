@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: infra-manager
+  namespace: envoy-gateway-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: infra-manager
+subjects:
+  - kind: ServiceAccount
+    name: envoy-gateway
+    namespace: envoy-gateway-system
