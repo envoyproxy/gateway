@@ -73,8 +73,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Envoy Gateway startup.
 			continue
 		case gatewayClasses[0] == nil:
-			// No need to translate, publish empty IRs, e.g. delete operation.
-			r.XdsIR.Delete(r.Name())
+			// No need to translate, publish empty IRs to trigger a delete operation.
+			r.XdsIR.Store(r.Name(), &ir.Xds{})
 			// A nil ProxyInfra tells the Infra Manager to delete the managed proxy infra.
 			r.InfraIR.Store(r.Name(), &ir.Infra{Proxy: nil})
 		default:
