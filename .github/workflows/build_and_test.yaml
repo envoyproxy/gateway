@@ -41,7 +41,6 @@ jobs:
 
       # build
       - run: make build-multiarch
-        if: github.event_name == 'pull_request'
 
       # build and push image
       - name: Login to DockerHub
@@ -51,6 +50,14 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-      - name: Build and Push EG Dev Image
+      - run: make image.multiarch.setup
+
+      - name: Build and Push EG Commit Image
         if: github.event_name == 'push'
-        run: make image.push.multiarch TAG=latest IMAGE_NAME=gateway-dev PLATFORMS="linux_amd64 linux_arm64"
+        # tag is set to the short SHA of the commit
+        run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64"
+
+      - name: Build and Push EG Latest Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # tag is set to `latest` when pushing to main branch
+        run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64"

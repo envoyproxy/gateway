@@ -19,6 +19,8 @@ import (
 )
 
 const (
+	// envoyDeploymentName is the name of the Envoy Deployment resource.
+	envoyDeploymentName = "envoy"
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
 	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
@@ -38,6 +40,8 @@ const (
 	envoyAdminAddress = "127.0.0.1"
 	// envoyAdminPort is the port used to expose admin interface.
 	envoyAdminPort = 19000
+	// envoyAdminAccessLogPath is the path used to expose admin access log.
+	envoyAdminAccessLogPath = "/dev/null"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -55,14 +59,26 @@ type bootstrapConfig struct {
 
 // envoyBootstrap defines the envoy Bootstrap configuration.
 type bootstrapParameters struct {
-	// XdsServerAddress is the address of the XDS Server that Envoy is managed by.
-	XdsServerAddress string
-	// XdsServerPort is the port of the XDS Server that Envoy is managed by.
-	XdsServerPort int32
-	// AdminServerAddress is the address of the Envoy admin interface.
-	AdminServerAddress string
-	// AdminServerPort is the port of the Envoy admin interface.
-	AdminServerPort int32
+	// XdsServer defines the configuration of the XDS server.
+	XdsServer xdsServerParameters
+	// AdminServer defines the configuration of the Envoy admin interface.
+	AdminServer adminServerParameters
+}
+
+type xdsServerParameters struct {
+	// Address is the address of the XDS Server that Envoy is managed by.
+	Address string
+	// Port is the port of the XDS Server that Envoy is managed by.
+	Port int32
+}
+
+type adminServerParameters struct {
+	// Address is the address of the Envoy admin interface.
+	Address string
+	// Port is the port of the Envoy admin interface.
+	Port int32
+	// AccessLogPath is the path of the Envoy admin access log.
+	AccessLogPath string
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -79,7 +95,7 @@ func (b *bootstrapConfig) render() error {
 // createDeploymentIfNeeded creates a Deployment based on the provided infra, if
 // it doesn't exist in the kube api server.
 func (i *Infra) createDeploymentIfNeeded(ctx context.Context, infra *ir.Infra) error {
-	current, err := i.getDeployment(ctx, infra)
+	current, err := i.getDeployment(ctx)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
 			deploy, err := i.createDeployment(ctx, infra)
@@ -101,17 +117,15 @@ func (i *Infra) createDeploymentIfNeeded(ctx context.Context, infra *ir.Infra) e
 	return nil
 }
 
-// getDeployment gets the Deployment for the provided infra from the kube api.
-func (i *Infra) getDeployment(ctx context.Context, infra *ir.Infra) (*appsv1.Deployment, error) {
-	ns := i.Namespace
-	name := infra.Proxy.Name
+// getDeployment gets the Deployment from the kube api server.
+func (i *Infra) getDeployment(ctx context.Context) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
-		Namespace: ns,
-		Name:      infra.GetProxyInfra().ObjectName(),
+		Namespace: i.Namespace,
+		Name:      envoyDeploymentName,
 	}
 	deploy := new(appsv1.Deployment)
 	if err := i.Client.Get(ctx, key, deploy); err != nil {
-		return nil, fmt.Errorf("failed to get deployment %s/%s: %w", ns, name, err)
+		return nil, fmt.Errorf("failed to get deployment %s/%s: %w", i.Namespace, envoyDeploymentName, err)
 	}
 
 	return deploy, nil
@@ -133,7 +147,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      infra.GetProxyInfra().ObjectName(),
+			Name:      envoyDeploymentName,
 			Labels:    podSelector.MatchLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -145,7 +159,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            infra.Proxy.ObjectName(),
+					ServiceAccountName:            envoyServiceAccountName,
 					AutomountServiceAccountToken:  pointer.BoolPtr(false),
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -175,10 +189,15 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 
 	cfg := bootstrapConfig{
 		parameters: bootstrapParameters{
-			XdsServerAddress:   envoyGatewayXdsServerHost,
-			XdsServerPort:      xdsrunner.XdsServerPort,
-			AdminServerAddress: envoyAdminAddress,
-			AdminServerPort:    envoyAdminPort,
+			XdsServer: xdsServerParameters{
+				Address: envoyGatewayXdsServerHost,
+				Port:    xdsrunner.XdsServerPort,
+			},
+			AdminServer: adminServerParameters{
+				Address:       envoyAdminAddress,
+				Port:          envoyAdminPort,
+				AccessLogPath: envoyAdminAccessLogPath,
+			},
 		},
 	}
 	if err := cfg.render(); err != nil {
@@ -245,6 +264,25 @@ func (i *Infra) createDeployment(ctx context.Context, infra *ir.Infra) (*appsv1.
 	}
 
 	return expected, nil
+}
+
+// deleteService deletes the Envoy Deployment in the kube api server, if it exists.
+func (i *Infra) deleteDeployment(ctx context.Context) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      envoyDeploymentName,
+		},
+	}
+
+	if err := i.Client.Delete(ctx, deploy); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to delete deployment %s/%s: %w", deploy.Namespace, deploy.Name, err)
+	}
+
+	return nil
 }
 
 // EnvoyPodSelector returns a label selector using "control-plane: envoy-gateway" as the

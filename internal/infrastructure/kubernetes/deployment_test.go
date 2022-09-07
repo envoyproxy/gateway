@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -114,10 +115,15 @@ func TestExpectedDeployment(t *testing.T) {
 	// Create a bootstrap config, render it into an arg, and ensure it's as expected.
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
-			XdsServerAddress:   envoyGatewayXdsServerHost,
-			XdsServerPort:      xdsrunner.XdsServerPort,
-			AdminServerAddress: envoyAdminAddress,
-			AdminServerPort:    envoyAdminPort,
+			XdsServer: xdsServerParameters{
+				Address: envoyGatewayXdsServerHost,
+				Port:    xdsrunner.XdsServerPort,
+			},
+			AdminServer: adminServerParameters{
+				Address:       envoyAdminAddress,
+				Port:          envoyAdminPort,
+				AccessLogPath: envoyAdminAccessLogPath,
+			},
 		},
 	}
 	err = cfg.render()
@@ -202,6 +208,31 @@ func TestEnvoyPodSelector(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			got := EnvoyPodSelector(tc.gcName)
 			require.Equal(t, tc.expected, got.MatchLabels)
+		})
+	}
+}
+
+func TestDeleteDeployment(t *testing.T) {
+	testCases := []struct {
+		name   string
+		expect bool
+	}{
+		{
+			name:   "delete deployment",
+			expect: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			kube := &Infra{
+				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+				mu:        sync.Mutex{},
+				Namespace: "test",
+			}
+			err := kube.deleteDeployment(context.Background())
+			require.NoError(t, err)
 		})
 	}
 }

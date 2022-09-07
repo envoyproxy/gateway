@@ -15,7 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestCreateIfNeeded(t *testing.T) {
+func TestCreateInfra(t *testing.T) {
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
@@ -69,6 +69,41 @@ func TestCreateIfNeeded(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, *tc.out.ServiceAccount, *kube.Resources.ServiceAccount)
+			}
+		})
+	}
+}
+
+func TestDeleteInfra(t *testing.T) {
+	testCases := []struct {
+		name   string
+		in     *ir.Infra
+		expect bool
+	}{
+		{
+			name:   "nil infra",
+			in:     nil,
+			expect: false,
+		},
+		{
+			name:   "default infra",
+			in:     ir.NewInfra(),
+			expect: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			kube := &Infra{
+				mu:     sync.Mutex{},
+				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+			}
+			err := kube.DeleteInfra(context.Background(), tc.in)
+			if !tc.expect {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}

@@ -71,28 +71,29 @@ image.push.%: image.build.%
 
 .PHONY: image.multiarch.verify
 image.multiarch.verify:
-	$(eval pass := $(shell ))
-	docker buildx --help | grep -qw "docker buildx" || { \
-		echo "Cannot find `docker buildx`, please install first"; \
-		exit 1; }
+	$(eval PASS := $(shell docker buildx --help | grep "docker buildx" ))
+	@if [ -z "$(PASS)" ]; then \
+		echo "Cannot find docker buildx, please install first"; \
+		exit 1;\
+	fi
 
 .PHONY: image.multiarch.emulate $(EMULATE_TARGETS)
 image.multiarch.emulate: $(EMULATE_TARGETS)
 $(EMULATE_TARGETS): image.multiarch.emulate.%:
-	docker run --rm --privileged tonistiigi/binfmt --install linux/$* # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
+# Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
+	docker run --rm --privileged tonistiigi/binfmt --install linux/$*
 
 .PHONY: image.multiarch.setup
 image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
 	docker buildx rm $(BUILDX_CONTEXT) || :
 	docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
-
 .PHONY: image.build.multiarch
-image.build.multiarch: image.multiarch.setup go.build.multiarch
+image.build.multiarch:
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.push.multiarch
-image.push.multiarch: image.multiarch.setup go.build.multiarch
+image.push.multiarch:
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --push
 
 ##@ Image
@@ -103,7 +104,7 @@ image: image.build
 
 .PHONY: image-multiarch
 image-multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
-image-multiarch: image.build.multiarch
+image-multiarch: image.multiarch.setup go.build.multiarch image.build.multiarch
 
 .PHONY: push
 push: ## Push docker images to registry.
@@ -111,5 +112,5 @@ push: image.push
 
 .PHONY: push-multiarch
 push-multiarch: ## Push docker images for multiple platforms to registry.
-push-multiarch: image.push.multiarch
+push-multiarch: image.multiarch.setup go.build.multiarch image.push.multiarch
 

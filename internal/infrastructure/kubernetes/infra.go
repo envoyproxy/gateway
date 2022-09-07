@@ -11,6 +11,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/env"
+)
+
+const (
+	// envoyGatewayNamespace is the namespace where envoy-gateway is running.
+	envoyGatewayNamespace = "envoy-gateway-system"
 )
 
 // Infra holds all the translated Infra IR resources and provides
@@ -32,11 +38,16 @@ type Resources struct {
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client) *Infra {
-	return &Infra{
+	infra := &Infra{
 		mu:        sync.Mutex{},
 		Client:    cli,
 		Resources: newResources(),
 	}
+
+	// Set the namespace used for the managed infra.
+	infra.Namespace = env.Lookup("ENVOY_GATEWAY_NAMESPACE", envoyGatewayNamespace)
+
+	return infra
 }
 
 // newResources returns a new Resources.
@@ -71,7 +82,7 @@ func (i *Infra) addResource(obj client.Object) error {
 	return nil
 }
 
-// CreateInfra creates the managed kube infra if it doesn't exist.
+// CreateInfra creates the managed kube infra, if it doesn't exist.
 func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
@@ -94,6 +105,27 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	if err := i.createServiceIfNeeded(ctx, infra); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteInfra removes the managed kube infra, if it doesn't exist.
+func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
+	if infra == nil {
+		return errors.New("infra ir is nil")
+	}
+
+	if err := i.deleteService(ctx); err != nil {
+		return err
+	}
+
+	if err := i.deleteDeployment(ctx); err != nil {
+		return err
+	}
+
+	if err := i.deleteServiceAccount(ctx); err != nil {
 		return err
 	}
 
