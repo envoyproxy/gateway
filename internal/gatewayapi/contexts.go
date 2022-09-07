@@ -133,6 +133,9 @@ func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 }
 
 func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
+	if namespace == nil {
+		return false
+	}
 	switch *l.AllowedRoutes.Namespaces.From {
 	case v1beta1.NamespacesFromAll:
 		return true
