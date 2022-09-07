@@ -144,6 +144,7 @@ func TestNewProxyInfra(t *testing.T) {
 		{
 			name: "default infra",
 			expected: &ProxyInfra{
+				Metadata:  NewInfraMetadata(),
 				Name:      DefaultProxyName,
 				Image:     DefaultProxyImage,
 				Listeners: NewProxyListeners(),
