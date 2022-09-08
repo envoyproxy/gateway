@@ -30,9 +30,9 @@ const (
 
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
-	// privilegedPortShift is the constant added to the privileged port
+	// wellKnownPortShift is the constant added to the well known port (1-1023)
 	// to convert it into an ephemeral port.
-	privilegedPortShift = 10000
+	wellKnownPortShift = 10000
 )
 
 // Resources holds the Gateway API and related
@@ -490,7 +490,7 @@ func servicePortToContainerPort(servicePort int32) int32 {
 	// This allows the container to bind to the port without needing a
 	// CAP_NET_BIND_SERVICE capability.
 	if servicePort < minEphemeralPort {
-		return servicePort + privilegedPortShift
+		return servicePort + wellKnownPortShift
 	}
 	return servicePort
 }
