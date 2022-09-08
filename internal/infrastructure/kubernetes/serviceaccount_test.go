@@ -5,6 +5,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +41,8 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "envoy",
-						ResourceVersion: "1",
+						Namespace: "test",
+						Name:      "envoy",
 					},
 				},
 			},
@@ -60,9 +62,8 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					APIVersion: "v1",
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:       "test",
-					Name:            "envoy",
-					ResourceVersion: "34",
+					Namespace: "test",
+					Name:      "envoy",
 				},
 			},
 			out: &Resources{
@@ -72,9 +73,8 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "envoy",
-						ResourceVersion: "35",
+						Namespace: "test",
+						Name:      "envoy",
 					},
 				},
 			},
@@ -100,7 +100,8 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, *tc.out.ServiceAccount, *kube.Resources.ServiceAccount)
+				opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+				assert.Equal(t, true, cmp.Equal(tc.out.ServiceAccount, kube.Resources.ServiceAccount, opts))
 			}
 		})
 	}

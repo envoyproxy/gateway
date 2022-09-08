@@ -3,10 +3,12 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -65,17 +67,28 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 // if it doesn't exist or updates it if it does.
 func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) error {
 	svc := i.expectedService(infra)
-	err := i.Client.Create(ctx, svc)
-	if err != nil {
-		if kerrors.IsAlreadyExists(err) {
-			// Update service if its exists
+
+	current := &corev1.Service{}
+	key := types.NamespacedName{
+		Namespace: i.Namespace,
+		Name:      envoyServiceName,
+	}
+
+	if err := i.Client.Get(ctx, key, current); err != nil {
+		// Create if not found.
+		if kerrors.IsNotFound(err) {
+			if err := i.Client.Create(ctx, svc); err != nil {
+				return fmt.Errorf("failed to create service %s/%s: %w",
+					svc.Namespace, svc.Name, err)
+			}
+		}
+	} else {
+		// Update if current value is different.
+		if !reflect.DeepEqual(svc.Spec, current.Spec) {
 			if err := i.Client.Update(ctx, svc); err != nil {
 				return fmt.Errorf("failed to update service %s/%s: %w",
 					svc.Namespace, svc.Name, err)
 			}
-		} else {
-			return fmt.Errorf("failed to create service %s/%s: %w",
-				svc.Namespace, svc.Name, err)
 		}
 	}
 

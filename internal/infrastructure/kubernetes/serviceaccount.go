@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -32,22 +35,34 @@ func (i *Infra) expectedServiceAccount() *corev1.ServiceAccount {
 // createOrUpdateServiceAccount creates the Envoy ServiceAccount in the kube api server,
 // if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, _ *ir.Infra) error {
-	svcAccount := i.expectedServiceAccount()
-	err := i.Client.Create(ctx, svcAccount)
-	if err != nil {
-		if kerrors.IsAlreadyExists(err) {
-			// Update service account if it does not exist
-			if err := i.Client.Update(ctx, svcAccount); err != nil {
-				return fmt.Errorf("failed to update serviceaccount %s/%s: %w",
-					svcAccount.Namespace, svcAccount.Name, err)
+	sa := i.expectedServiceAccount()
+
+	current := &corev1.ServiceAccount{}
+	key := types.NamespacedName{
+		Namespace: i.Namespace,
+		Name:      envoyServiceAccountName,
+	}
+
+	if err := i.Client.Get(ctx, key, current); err != nil {
+		if kerrors.IsNotFound(err) {
+			// Create if it does not exist.
+			if err := i.Client.Create(ctx, sa); err != nil {
+				return fmt.Errorf("failed to create serviceaccount %s/%s: %w",
+					sa.Namespace, sa.Name, err)
 			}
-		} else {
-			return fmt.Errorf("failed to create serviceaccount %s/%s: %w",
-				svcAccount.Namespace, svcAccount.Name, err)
+		}
+	} else {
+		opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+		// update if current value is different.
+		if !cmp.Equal(sa, current, opts) {
+			if err := i.Client.Update(ctx, sa); err != nil {
+				return fmt.Errorf("failed to update serviceaccount %s/%s: %w",
+					sa.Namespace, sa.Name, err)
+			}
 		}
 	}
 
-	if err := i.updateResource(svcAccount); err != nil {
+	if err := i.updateResource(sa); err != nil {
 		return err
 	}
 

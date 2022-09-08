@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -215,16 +217,27 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 		return err
 	}
 
-	if err := i.Client.Create(ctx, deploy); err != nil {
-		if kerrors.IsAlreadyExists(err) {
-			// Update deployment if it exists.
+	current := &appsv1.Deployment{}
+	key := types.NamespacedName{
+		Namespace: i.Namespace,
+		Name:      envoyDeploymentName,
+	}
+
+	if err := i.Client.Get(ctx, key, current); err != nil {
+		// Create if not found.
+		if kerrors.IsNotFound(err) {
+			if err := i.Client.Create(ctx, deploy); err != nil {
+				return fmt.Errorf("failed to create deployment %s/%s: %w",
+					deploy.Namespace, deploy.Name, err)
+			}
+		}
+	} else {
+		// Update if current value is different.
+		if !reflect.DeepEqual(deploy.Spec, current.Spec) {
 			if err := i.Client.Update(ctx, deploy); err != nil {
 				return fmt.Errorf("failed to update deployment %s/%s: %w",
 					deploy.Namespace, deploy.Name, err)
 			}
-		} else {
-			return fmt.Errorf("failed to create deployment %s/%s: %w",
-				deploy.Namespace, deploy.Name, err)
 		}
 	}
 

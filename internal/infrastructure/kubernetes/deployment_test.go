@@ -137,12 +137,6 @@ func TestExpectedDeployment(t *testing.T) {
 	}
 }
 
-func deploymentWithResourceVersion(deploy *appsv1.Deployment, version string) *appsv1.Deployment {
-	dCopy := deploy.DeepCopy()
-	dCopy.ResourceVersion = version
-	return dCopy
-}
-
 func TestCreateOrUpdateDeployment(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
@@ -160,16 +154,16 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 			name: "create deployment",
 			in:   infra,
 			out: &Resources{
-				Deployment: deploymentWithResourceVersion(deploy, "1"),
+				Deployment: deploy,
 			},
 			expect: true,
 		},
 		{
 			name:    "deployment exists",
 			in:      infra,
-			current: deploymentWithResourceVersion(deploy, "1"),
+			current: deploy,
 			out: &Resources{
-				Deployment: deploymentWithResourceVersion(deploy, "2"),
+				Deployment: deploy,
 			},
 			expect: true,
 		},
@@ -188,7 +182,7 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.out.Deployment, kube.Resources.Deployment)
+				require.Equal(t, tc.out.Deployment.Spec, kube.Resources.Deployment.Spec)
 			}
 		})
 	}
