@@ -5,6 +5,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,10 +94,8 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			}
 			err := kube.createOrUpdateServiceAccount(context.Background(), tc.in)
 			require.NoError(t, err)
-			// Clear ResourceVersion before the equality test.
-			tc.out.ServiceAccount.ResourceVersion = ""
-			kube.Resources.ServiceAccount.ResourceVersion = ""
-			require.Equal(t, tc.out.ServiceAccount, kube.Resources.ServiceAccount)
+			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+			assert.Equal(t, true, cmp.Equal(tc.out.ServiceAccount, kube.Resources.ServiceAccount, opts))
 		})
 	}
 }
