@@ -28,6 +28,9 @@ func TestTranslate(t *testing.T) {
 		name string
 	}{
 		{
+			name: "empty",
+		},
+		{
 			name: "http-route",
 		},
 		{
