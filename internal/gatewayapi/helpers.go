@@ -49,6 +49,10 @@ func PathMatchTypePtr(pType v1beta1.PathMatchType) *v1beta1.PathMatchType {
 	return &pType
 }
 
+func GatewayAddressTypePtr(addr v1beta1.AddressType) *v1beta1.AddressType {
+	return &addr
+}
+
 func PathMatchTypeDerefOr(matchType *v1beta1.PathMatchType, defaultType v1beta1.PathMatchType) v1beta1.PathMatchType {
 	if matchType != nil {
 		return *matchType

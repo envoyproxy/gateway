@@ -10,13 +10,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/env"
-)
-
-const (
-	// envoyGatewayNamespace is the namespace where envoy-gateway is running.
-	envoyGatewayNamespace = "envoy-gateway-system"
 )
 
 // Infra holds all the translated Infra IR resources and provides
@@ -45,7 +41,7 @@ func NewInfra(cli client.Client) *Infra {
 	}
 
 	// Set the namespace used for the managed infra.
-	infra.Namespace = env.Lookup("ENVOY_GATEWAY_NAMESPACE", envoyGatewayNamespace)
+	infra.Namespace = env.Lookup("ENVOY_GATEWAY_NAMESPACE", config.EnvoyGatewayNamespace)
 
 	return infra
 }

@@ -205,31 +205,6 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 	}
 }
 
-func TestEnvoyPodSelector(t *testing.T) {
-	cases := []struct {
-		name     string
-		gcName   string
-		expected map[string]string
-	}{
-		{
-			name:   "default",
-			gcName: "eg",
-			expected: map[string]string{
-				"gatewayClass": "eg",
-				"app":          "envoy",
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		tc := tc
-		t.Run("", func(t *testing.T) {
-			got := EnvoyPodSelector(tc.gcName)
-			require.Equal(t, tc.expected, got.MatchLabels)
-		})
-	}
-}
-
 func TestDeleteDeployment(t *testing.T) {
 	testCases := []struct {
 		name   string

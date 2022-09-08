@@ -12,10 +12,17 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestCreateInfra(t *testing.T) {
+	expected := ir.NewInfra()
+	// Apply the expected labels to the proxy infra.
+	expected.GetProxyInfra().GetProxyMetadata().Labels = envoyLabels()
+	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "test-ns"
+	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
+
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
@@ -25,6 +32,25 @@ func TestCreateInfra(t *testing.T) {
 		{
 			name: "default infra",
 			in:   ir.NewInfra(),
+			out: &Resources{
+				ServiceAccount: &corev1.ServiceAccount{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ServiceAccount",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:       "default",
+						Name:            "envoy",
+						ResourceVersion: "1",
+					},
+				},
+			},
+			// Gateway owning labels are required to create the Envoy service.
+			expect: false,
+		},
+		{
+			name: "infra-with-expected-labels",
+			in:   expected,
 			out: &Resources{
 				ServiceAccount: &corev1.ServiceAccount{
 					TypeMeta: metav1.TypeMeta{
@@ -65,6 +91,7 @@ func TestCreateInfra(t *testing.T) {
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 				Namespace: "default",
 			}
+			// Create the proxy infra.
 			err := kube.CreateInfra(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)

@@ -9,6 +9,8 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +23,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
 )
@@ -65,6 +68,12 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 	}
 	r.log.Info("watching gateway objects")
 
+	// Trigger gateway reconciliation when the Envoy service,
+	// managed by Infra Manager, has changed.
+	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGateway()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -91,6 +100,28 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 	}
 
 	return true
+}
+
+// enqueueRequestForOwningGateway returns an event handler that maps events to
+// objects containing Gateway ns/name owner labels.
+func (r *gatewayReconciler) enqueueRequestForOwningGateway() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+		labels := a.GetLabels()
+		ns, nsFound := labels[gatewayapi.OwningGatewayNamespaceLabel]
+		name, nameFound := labels[gatewayapi.OwningGatewayNameLabel]
+		if nsFound && nameFound {
+			r.log.Info("queueing gateway", "namespace", ns, "name", name)
+			return []reconcile.Request{
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: ns,
+						Name:      name,
+					},
+				},
+			}
+		}
+		return []reconcile.Request{}
+	})
 }
 
 // Reconcile finds all the Gateways for the GatewayClass with an "Accepted: true" condition
@@ -135,24 +166,30 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		r.resources.Gateways.Delete(request.NamespacedName)
 	}
 
-	// Set the "Scheduled" condition to true for all accepted gateways.
-	for _, gw := range acceptedGateways {
+	// Set status conditions for all accepted gateways.
+	for i := range acceptedGateways {
+		gw := acceptedGateways[i]
+		// Get the status address of the Gateway's associated Service.
+		svc, err := r.serviceForGateway(ctx, &gw)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name},
-			Resource:       &gwapiv1b1.Gateway{},
+			Resource:       new(gwapiv1b1.Gateway),
 			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 				gw, ok := obj.(*gwapiv1b1.Gateway)
 				if !ok {
 					panic(fmt.Sprintf("unsupported object type %T", obj))
 				}
 
-				return status.SetGatewayScheduled(gw.DeepCopy(), true)
+				return status.SetGatewayStatus(gw.DeepCopy(), true, svc)
 			}),
 		})
 	}
 
 	// Once we've processed `allGateways`, record that we've fully initialized.
-	defer r.initializeOnce.Do(r.resources.Initialized.Done)
+	r.initializeOnce.Do(r.resources.Initialized.Done)
 
 	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
 
@@ -201,4 +238,21 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 		}
 	}
 	return ret
+}
+
+// serviceForGateway returns the service for the provided gateway, returning nil if
+// the service doesn't exist.
+func (r *gatewayReconciler) serviceForGateway(ctx context.Context, gw *gwapiv1b1.Gateway) (*corev1.Service, error) {
+	key := types.NamespacedName{
+		Namespace: config.EnvoyGatewayNamespace,
+		Name:      config.EnvoyServiceName,
+	}
+	svc := new(corev1.Service)
+	if err := r.client.Get(ctx, key, svc); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return svc, nil
 }

@@ -50,6 +50,22 @@ func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) met
 	}
 }
 
+// computeGatewayReadyCondition computes the Gateway Ready status condition.
+// TODO: Ready condition should surface true when the Envoy Deployment status is ready.
+//       xref: https://github.com/envoyproxy/gateway/issues/345.
+func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway) metav1.Condition {
+	switch len(gw.Status.Addresses) {
+	case 0:
+		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,
+			string(gwapiv1b1.GatewayReasonAddressNotAssigned),
+			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
+	default:
+		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionTrue,
+			string(gwapiv1b1.GatewayReasonReady),
+			"Address assigned to the Gateway", time.Now(), gw.Generation)
+	}
+}
+
 // mergeConditions adds or updates matching conditions, and updates the transition
 // time if details of a condition have changed. Returns the updated condition array.
 func mergeConditions(conditions []metav1.Condition, updates ...metav1.Condition) []metav1.Condition {

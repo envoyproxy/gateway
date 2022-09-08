@@ -100,7 +100,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		return nil, err
 	}
 
-	podSelector := EnvoyPodSelector(infra.GetProxyInfra().Name)
+	podSelector := envoyPodSelector(infra.GetProxyInfra().Name)
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -265,23 +265,4 @@ func (i *Infra) deleteDeployment(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// EnvoyPodSelector returns a label selector using "control-plane: envoy-gateway" as the
-// key/value pair.
-//
-// TODO: Update k/v pair to use gatewayclass controller name to distinguish between
-//       multiple Envoy Gateways.
-func EnvoyPodSelector(gcName string) *metav1.LabelSelector {
-	return &metav1.LabelSelector{
-		MatchLabels: envoyLabels(gcName),
-	}
-}
-
-// envoyLabels returns the labels used for Envoy.
-func envoyLabels(gcName string) map[string]string {
-	return map[string]string{
-		"gatewayClass": gcName,
-		"app":          "envoy",
-	}
 }

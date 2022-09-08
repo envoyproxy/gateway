@@ -11,16 +11,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-const (
-	// envoyServiceName is the name of the Envoy Service resource.
-	envoyServiceName = "envoy"
-)
-
 // expectedService returns the expected Service based on the provided infra.
-func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
+func (i *Infra) expectedService(infra *ir.Infra) (*corev1.Service, error) {
 	var ports []corev1.ServicePort
 	for _, listener := range infra.Proxy.Listeners {
 		for _, port := range listener.Ports {
@@ -35,12 +32,24 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 		}
 	}
 
-	podSelector := EnvoyPodSelector(infra.GetProxyInfra().Name)
+	podSelector := envoyPodSelector(infra.GetProxyInfra().Name)
+
+	svcLabels := envoyLabels()
+	for k, v := range infra.GetProxyInfra().GetProxyMetadata().Labels {
+		if k == gatewayapi.OwningGatewayNamespaceLabel || k == gatewayapi.OwningGatewayNameLabel {
+			svcLabels[k] = v
+		}
+	}
+	// Gateway ns/name labels are required for the gateway controller to watch this service.
+	if len(svcLabels) < 3 {
+		return nil, fmt.Errorf("missing owning gateway labels")
+	}
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      envoyServiceName,
-			Labels:    podSelector.MatchLabels,
+			Name:      config.EnvoyServiceName,
+			Labels:    svcLabels,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:            corev1.ServiceTypeLoadBalancer,
@@ -52,18 +61,21 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 		},
 	}
 
-	return svc
+	return svc, nil
 }
 
 // createOrUpdateService creates a Service in the kube api server based on the provided infra,
 // if it doesn't exist or updates it if it does.
 func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) error {
-	svc := i.expectedService(infra)
+	svc, err := i.expectedService(infra)
+	if err != nil {
+		return fmt.Errorf("failed to generate expected service: %w", err)
+	}
 
 	current := &corev1.Service{}
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
-		Name:      envoyServiceName,
+		Name:      config.EnvoyServiceName,
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
@@ -96,7 +108,7 @@ func (i *Infra) deleteService(ctx context.Context) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      envoyServiceName,
+			Name:      config.EnvoyServiceName,
 		},
 	}
 
