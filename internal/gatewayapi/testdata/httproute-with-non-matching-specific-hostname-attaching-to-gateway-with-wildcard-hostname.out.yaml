@@ -62,7 +62,7 @@ xdsIR:
     address: 0.0.0.0
     port: 10080
     hostnames:
-        - "*.envoyproxy.io"
+    - "*.envoyproxy.io"
 infraIR:
   proxy:
     metadata:
@@ -74,9 +74,7 @@ infraIR:
     listeners:
     - address: ""
       ports:
-      - address: ""
-        ports:
-          - name: envoy-gateway-gateway-1
-            protocol: "HTTP"
-            servicePort: 80
-            containerPort: 10080
+      - name: envoy-gateway-gateway-1
+        protocol: "HTTP"
+        containerPort: 10080
+        servicePort: 80
