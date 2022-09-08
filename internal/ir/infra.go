@@ -24,9 +24,8 @@ type Infra struct {
 // ProxyInfra defines managed proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type ProxyInfra struct {
-	// TODO: Figure out how to represent metadata in the IR.
-	// xref: https://github.com/envoyproxy/gateway/issues/173
-	//
+	// Metadata defines metadata for the managed proxy infrastructure.
+	Metadata *InfraMetadata
 	// Name is the name used for managed proxy infrastructure.
 	Name string
 	// Config defines user-facing configuration of the managed proxy infrastructure.
@@ -36,6 +35,14 @@ type ProxyInfra struct {
 	Image string
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []ProxyListener
+}
+
+// InfraMetadata defines metadata for the managed proxy infrastructure.
+// +k8s:deepcopy-gen=true
+type InfraMetadata struct {
+	// Labels define a map of string keys and values that can be used to organize
+	// and categorize proxy infrastructure objects.
+	Labels map[string]string
 }
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.
@@ -82,6 +89,7 @@ func NewInfra() *Infra {
 // NewProxyInfra returns a new ProxyInfra with default parameters.
 func NewProxyInfra() *ProxyInfra {
 	return &ProxyInfra{
+		Metadata:  NewInfraMetadata(),
 		Name:      DefaultProxyName,
 		Image:     DefaultProxyImage,
 		Listeners: NewProxyListeners(),
@@ -94,6 +102,13 @@ func NewProxyListeners() []ProxyListener {
 		{
 			Ports: nil,
 		},
+	}
+}
+
+// NewInfraMetadata returns a new InfraMetadata.
+func NewInfraMetadata() *InfraMetadata {
+	return &InfraMetadata{
+		Labels: map[string]string{},
 	}
 }
 
@@ -111,6 +126,9 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 	}
 	if len(i.Proxy.Listeners) == 0 {
 		i.Proxy.Listeners = NewProxyListeners()
+	}
+	if i.Proxy.Metadata == nil {
+		i.Proxy.Metadata = NewInfraMetadata()
 	}
 
 	return i.Proxy
