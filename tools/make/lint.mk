@@ -64,3 +64,7 @@ lint: lint.shellcheck
 lint.shellcheck:
 	@echo Running Shellcheck linter ...
 	@shellcheck tools/hack/*.sh
+
+.PHONY: gen-check
+gen-check: generate manifests
+	tools/hack/gen-check.sh

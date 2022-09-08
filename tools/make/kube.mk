@@ -14,10 +14,6 @@ manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(tools/controller-gen) object paths="./..."
 
-.PHONY: gen-check
-gen-check: generate manifests
-	tools/hack/gen-check.sh
-
 .PHONY: kube-test
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration ./... -coverprofile cover.out
