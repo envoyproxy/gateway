@@ -5,6 +5,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,14 +17,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestCreateServiceAccountIfNeeded(t *testing.T) {
+func TestCreateOrUpdateServiceAccount(t *testing.T) {
 	testCases := []struct {
 		name    string
 		ns      string
 		in      *ir.Infra
 		current *corev1.ServiceAccount
 		out     *Resources
-		expect  bool
 	}{
 		{
 			name: "create-sa",
@@ -38,13 +40,11 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "envoy",
-						ResourceVersion: "1",
+						Namespace: "test",
+						Name:      "envoy",
 					},
 				},
 			},
-			expect: true,
 		},
 		{
 			name: "sa-exists",
@@ -55,10 +55,13 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 				},
 			},
 			current: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:       "test",
-					Name:            "envoy",
-					ResourceVersion: "34",
+					Namespace: "test",
+					Name:      "envoy",
 				},
 			},
 			out: &Resources{
@@ -68,13 +71,11 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 						APIVersion: "v1",
 					},
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "test",
-						Name:            "envoy",
-						ResourceVersion: "34",
+						Namespace: "test",
+						Name:      "envoy",
 					},
 				},
 			},
-			expect: true,
 		},
 	}
 
@@ -91,13 +92,10 @@ func TestCreateServiceAccountIfNeeded(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createServiceAccountIfNeeded(context.Background(), tc.in)
-			if !tc.expect {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, *tc.out.ServiceAccount, *kube.Resources.ServiceAccount)
-			}
+			err := kube.createOrUpdateServiceAccount(context.Background(), tc.in)
+			require.NoError(t, err)
+			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+			assert.Equal(t, true, cmp.Equal(tc.out.ServiceAccount, kube.Resources.ServiceAccount, opts))
 		})
 	}
 }

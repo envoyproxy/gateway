@@ -112,7 +112,7 @@ func TestDeleteInfra(t *testing.T) {
 	}
 }
 
-func TestAddResource(t *testing.T) {
+func TestUpdateResource(t *testing.T) {
 	testCases := []struct {
 		name string
 		obj  client.Object
@@ -145,7 +145,7 @@ func TestAddResource(t *testing.T) {
 				mu:     sync.Mutex{},
 				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 			}
-			err := kube.addResource(tc.obj)
+			err := kube.updateResource(tc.obj)
 			require.NoError(t, err)
 			require.Equal(t, tc.out, kube.Resources)
 		})

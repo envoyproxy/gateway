@@ -137,19 +137,27 @@ func TestExpectedDeployment(t *testing.T) {
 	}
 }
 
-func TestCreateDeploymentIfNeeded(t *testing.T) {
+func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
+	dCopy := deploy.DeepCopy()
+	for i, c := range dCopy.Spec.Template.Spec.Containers {
+		if c.Name == envoyContainerName {
+			dCopy.Spec.Template.Spec.Containers[i].Image = image
+		}
+	}
+	return dCopy
+}
+
+func TestCreateOrUpdateDeployment(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
-	deploy.ResourceVersion = "1"
 
 	testCases := []struct {
 		name    string
 		in      *ir.Infra
 		current *appsv1.Deployment
 		out     *Resources
-		expect  bool
 	}{
 		{
 			name: "create deployment",
@@ -157,7 +165,6 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 			out: &Resources{
 				Deployment: deploy,
 			},
-			expect: true,
 		},
 		{
 			name:    "deployment exists",
@@ -166,7 +173,20 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 			out: &Resources{
 				Deployment: deploy,
 			},
-			expect: true,
+		},
+		{
+			name: "update deployment image",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name:      ir.DefaultProxyName,
+					Image:     "envoyproxy/gateway-dev:v1.2.3",
+					Listeners: ir.NewProxyListeners(),
+				},
+			},
+			current: deploy,
+			out: &Resources{
+				Deployment: deploymentWithImage(deploy, "envoyproxy/gateway-dev:v1.2.3"),
+			},
 		},
 	}
 
@@ -178,13 +198,9 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createDeploymentIfNeeded(context.Background(), tc.in)
-			if !tc.expect {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.out.Deployment, kube.Resources.Deployment)
-			}
+			err := kube.createOrUpdateDeployment(context.Background(), tc.in)
+			require.NoError(t, err)
+			require.Equal(t, tc.out.Deployment.Spec, kube.Resources.Deployment.Spec)
 		})
 	}
 }

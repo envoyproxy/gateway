@@ -78,12 +78,10 @@ func TestDesiredService(t *testing.T) {
 
 func TestDeleteService(t *testing.T) {
 	testCases := []struct {
-		name   string
-		expect bool
+		name string
 	}{
 		{
-			name:   "delete service",
-			expect: false,
+			name: "delete service",
 		},
 	}
 
