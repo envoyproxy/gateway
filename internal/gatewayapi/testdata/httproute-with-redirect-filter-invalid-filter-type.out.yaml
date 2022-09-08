@@ -92,6 +92,10 @@ xdsIR:
         statusCode: 500
 infraIR:
   proxy:
+    metadata:
+      labels:
+        gateway.envoyproxy.io/owning-gateway-name: gateway-1
+        gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
     name: envoy-gateway-class
     image: envoyproxy/envoy:v1.23-latest
     listeners:
