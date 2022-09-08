@@ -171,6 +171,7 @@ func TestCreateDeploymentIfNeeded(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.current != nil {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
@@ -205,6 +206,7 @@ func TestEnvoyPodSelector(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tc := tc
 		t.Run("", func(t *testing.T) {
 			got := EnvoyPodSelector(tc.gcName)
 			require.Equal(t, tc.expected, got.MatchLabels)
@@ -224,6 +226,7 @@ func TestDeleteDeployment(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{

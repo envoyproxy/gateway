@@ -105,6 +105,7 @@ func TestGatewayHasMatchingController(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(match, nonMatch, tc.obj).Build()
 			actual := r.hasMatchingController(tc.obj)
@@ -186,6 +187,7 @@ func TestIsAccepted(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			actual := isAccepted(tc.gc)
 			require.Equal(t, tc.expect, actual)
@@ -279,6 +281,7 @@ func TestGatewaysOfClass(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			gwList := &gwapiv1b1.GatewayList{Items: tc.gws}
 			actual := gatewaysOfClass(gc, gwList)

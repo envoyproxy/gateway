@@ -53,6 +53,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.hasMatchingController(tc.obj)
 			require.Equal(t, tc.expect, res)
