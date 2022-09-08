@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,13 +50,11 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, _ *ir.Infra) e
 			}
 		}
 	} else {
-		opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-		// update if current value is different.
-		if !cmp.Equal(sa, current, opts) {
-			if err := i.Client.Update(ctx, sa); err != nil {
-				return fmt.Errorf("failed to update serviceaccount %s/%s: %w",
-					sa.Namespace, sa.Name, err)
-			}
+		// Since the ServiceAccount does not have a specific Spec field to compare
+		// just perform an update for now.
+		if err := i.Client.Update(ctx, sa); err != nil {
+			return fmt.Errorf("failed to update serviceaccount %s/%s: %w",
+				sa.Namespace, sa.Name, err)
 		}
 	}
 
