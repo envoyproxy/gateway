@@ -24,7 +24,6 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 		in      *ir.Infra
 		current *corev1.ServiceAccount
 		out     *Resources
-		expect  bool
 	}{
 		{
 			name: "create-sa",
@@ -46,7 +45,6 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					},
 				},
 			},
-			expect: true,
 		},
 		{
 			name: "sa-exists",
@@ -78,7 +76,6 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					},
 				},
 			},
-			expect: true,
 		},
 	}
 
@@ -96,13 +93,9 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
 			err := kube.createOrUpdateServiceAccount(context.Background(), tc.in)
-			if !tc.expect {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-				assert.Equal(t, true, cmp.Equal(tc.out.ServiceAccount, kube.Resources.ServiceAccount, opts))
-			}
+			require.NoError(t, err)
+			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+			assert.Equal(t, true, cmp.Equal(tc.out.ServiceAccount, kube.Resources.ServiceAccount, opts))
 		})
 	}
 }
