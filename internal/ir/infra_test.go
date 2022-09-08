@@ -104,6 +104,7 @@ func TestValidateInfra(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.infra.Validate()
 			if !tc.expect {
@@ -129,6 +130,7 @@ func TestNewInfra(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			actual := NewInfra()
 			require.Equal(t, tc.expected, actual)
@@ -153,6 +155,7 @@ func TestNewProxyInfra(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			actual := NewProxyInfra()
 			require.Equal(t, tc.expected, actual)
@@ -192,6 +195,7 @@ func TestObjectName(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			actual := tc.infra.Proxy.ObjectName()
 			require.Equal(t, tc.expected, actual)

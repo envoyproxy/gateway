@@ -9,6 +9,7 @@ linters:
     - revive
     - gosec
     - misspell
+    - scopelint
     - unconvert
     - unparam
     - goheader
@@ -31,3 +32,6 @@ issues:
     - path: test/e2e
       linters:
         - bodyclose
+  # Show the complete output
+  max-issues-per-linter: 0
+  max-same-issues: 0

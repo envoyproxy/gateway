@@ -157,6 +157,7 @@ func TestValidateXds(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -212,6 +213,7 @@ func TestValidateHTTPListener(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -255,6 +257,7 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -325,6 +328,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -363,6 +367,7 @@ func TestValidateRouteDestination(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
@@ -402,6 +407,7 @@ func TestValidateStringMatch(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
