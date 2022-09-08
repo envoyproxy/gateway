@@ -81,5 +81,10 @@ func (i *Infra) deleteServiceAccount(ctx context.Context) error {
 		return fmt.Errorf("failed to delete serviceaccount %s/%s: %w", sa.Namespace, sa.Name, err)
 	}
 
+	// remove resource
+	if err := i.updateResource((*corev1.ServiceAccount)(nil)); err != nil {
+		return err
+	}
+
 	return nil
 }

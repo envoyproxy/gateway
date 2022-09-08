@@ -115,5 +115,10 @@ func (i *Infra) deleteService(ctx context.Context) error {
 		return fmt.Errorf("failed to delete service %s/%s: %w", svc.Namespace, svc.Name, err)
 	}
 
+	// remove resource
+	if err := i.updateResource((*corev1.Service)(nil)); err != nil {
+		return err
+	}
+
 	return nil
 }

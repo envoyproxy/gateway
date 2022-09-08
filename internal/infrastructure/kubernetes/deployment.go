@@ -264,6 +264,11 @@ func (i *Infra) deleteDeployment(ctx context.Context) error {
 		return fmt.Errorf("failed to delete deployment %s/%s: %w", deploy.Namespace, deploy.Name, err)
 	}
 
+	// remove resource
+	if err := i.updateResource((*appsv1.Deployment)(nil)); err != nil {
+		return err
+	}
+
 	return nil
 }
 

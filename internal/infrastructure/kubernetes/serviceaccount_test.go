@@ -111,6 +111,7 @@ func TestDeleteServiceAccount(t *testing.T) {
 		},
 	}
 
+	infra := ir.NewInfra()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -119,8 +120,12 @@ func TestDeleteServiceAccount(t *testing.T) {
 				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
-			err := kube.deleteServiceAccount(context.Background())
+			err := kube.createOrUpdateServiceAccount(context.Background(), infra)
 			require.NoError(t, err)
+			require.NotEqual(t, (*corev1.ServiceAccount)(nil), kube.Resources.ServiceAccount)
+			err = kube.deleteServiceAccount(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, (*corev1.ServiceAccount)(nil), kube.Resources.ServiceAccount)
 		})
 	}
 }

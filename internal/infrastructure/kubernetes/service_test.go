@@ -85,6 +85,7 @@ func TestDeleteService(t *testing.T) {
 		},
 	}
 
+	infra := ir.NewInfra()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -93,8 +94,12 @@ func TestDeleteService(t *testing.T) {
 				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
-			err := kube.deleteService(context.Background())
+			err := kube.createOrUpdateService(context.Background(), infra)
 			require.NoError(t, err)
+			require.NotEqual(t, (*corev1.Service)(nil), kube.Resources.Service)
+			err = kube.deleteService(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, (*corev1.Service)(nil), kube.Resources.Service)
 		})
 	}
 }

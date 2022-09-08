@@ -241,6 +241,7 @@ func TestDeleteDeployment(t *testing.T) {
 		},
 	}
 
+	infra := ir.NewInfra()
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -250,8 +251,12 @@ func TestDeleteDeployment(t *testing.T) {
 				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
-			err := kube.deleteDeployment(context.Background())
+			err := kube.createOrUpdateDeployment(context.Background(), infra)
 			require.NoError(t, err)
+			require.NotEqual(t, (*appsv1.Deployment)(nil), kube.Resources.Deployment)
+			err = kube.deleteDeployment(context.Background())
+			require.NoError(t, err)
+			require.Equal(t, (*appsv1.Deployment)(nil), kube.Resources.Deployment)
 		})
 	}
 }
