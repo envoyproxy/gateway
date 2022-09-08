@@ -37,7 +37,7 @@ rules:
     max-spaces-after: 1
   indentation:
     spaces: 2
-    indent-sequences: whatever
+    indent-sequences: consistent  # be consistent: don't mix indentation styles in one file.
     check-multi-line-strings: false
   key-duplicates: enable
   key-ordering: disable
@@ -46,4 +46,5 @@ rules:
     type: unix
   trailing-spaces: disable
   truthy:
+    check-keys: false   # GitHub Actions uses "on:" as a key
     level: warning

@@ -14,6 +14,7 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 #
 tools/controller-gen = $(tools.bindir)/controller-gen
 tools/golangci-lint  = $(tools.bindir)/golangci-lint
+tools/goversion      = $(tools.bindir)/goversion
 tools/kustomize      = $(tools.bindir)/kustomize
 tools/kind           = $(tools.bindir)/kind
 tools/setup-envtest  = $(tools.bindir)/setup-envtest
@@ -23,8 +24,9 @@ $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 # `pip install`-able things
 # =========================
 #
-tools/codespell = $(tools.bindir)/codespell
-tools/yamllint  = $(tools.bindir)/yamllint
+tools/codespell    = $(tools.bindir)/codespell
+tools/yamllint     = $(tools.bindir)/yamllint
+tools/sphinx-build = $(tools.bindir)/sphinx-build
 $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	mkdir -p $(@D)
 	python3 -m venv $@

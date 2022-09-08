@@ -72,6 +72,7 @@ include tools/make/golang.mk
 include tools/make/image.mk
 include tools/make/lint.mk
 include tools/make/kube.mk
+include tools/make/docs.mk
 
 # Log the running target
 LOG_TARGET = echo "===========> Running $@..."

@@ -37,13 +37,13 @@ httpRoutes:
           name: gateway-1
       rules:
         - matches:
-          - path:
-              value: "/pathprefix"
-            headers:
-              - name: Header-1
-                value: Val-1
-              - name: Header-2
-                value: Val-2
+            - path:
+                value: "/pathprefix"
+              headers:
+                - name: Header-1
+                  value: Val-1
+                - name: Header-2
+                  value: Val-2
           backendRefs:
             - name: service-1
               port: 8080
@@ -64,7 +64,7 @@ xdsIR:
       address: 0.0.0.0
       port: 80
       hostnames:
-      - "*"
+        - "*"
       routes:
         - name: default-httproute-1-rule-0-match-0-*
           pathMatch:
