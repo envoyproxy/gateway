@@ -67,4 +67,7 @@ lint.shellcheck:
 
 .PHONY: gen-check
 gen-check: generate manifests
-	tools/hack/gen-check.sh
+	@if [ ! -z "`git status --porcelain`" ]; then \
+		@echo "ERROR: Some files need to be updated, please run 'make generate' and `make manifests` to include any changed files to your PR"; \
+		git diff --exit-code; \
+	fi
