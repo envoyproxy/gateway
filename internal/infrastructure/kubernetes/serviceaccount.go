@@ -68,6 +68,10 @@ func (i *Infra) getServiceAccount(ctx context.Context) (*corev1.ServiceAccount, 
 // expectedServiceAccount returns the expected proxy serviceAccount.
 func (i *Infra) expectedServiceAccount() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      envoyServiceAccountName,

@@ -33,7 +33,7 @@ func TestCreateInfra(t *testing.T) {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "default",
-						Name:            "envoy-default",
+						Name:            "envoy",
 						ResourceVersion: "1",
 					},
 				},
@@ -61,8 +61,9 @@ func TestCreateInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
-				mu:     sync.Mutex{},
-				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+				mu:        sync.Mutex{},
+				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
+				Namespace: "default",
 			}
 			err := kube.CreateInfra(context.Background(), tc.in)
 			if !tc.expect {
