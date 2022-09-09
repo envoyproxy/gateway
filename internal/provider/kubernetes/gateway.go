@@ -26,7 +26,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
+
+const gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
 
 type gatewayReconciler struct {
 	client client.Client
@@ -156,7 +159,23 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	acceptedGateways := gatewaysOfClass(acceptedClass, allGateways)
 	if len(acceptedGateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
+		// If needed, remove the finalizer from the accepted GatewayClass.
+		if gatewayClassFinalized(acceptedClass) {
+			if err := r.removeFinalizer(ctx, acceptedClass); err != nil {
+				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w",
+					acceptedClass.Name, err)
+			}
+		}
 	}
+
+	// If needed, finalize the accepted GatewayClass.
+	if !gatewayClassFinalized(acceptedClass) {
+		if err := r.addFinalizer(ctx, acceptedClass); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed adding finalizer to gatewayclass %s: %w",
+				acceptedClass.Name, err)
+		}
+	}
+
 	found := false
 	for i := range acceptedGateways {
 		key := NamespacedName(acceptedGateways[i].DeepCopy())
@@ -258,4 +277,38 @@ func (r *gatewayReconciler) serviceForGateway(ctx context.Context) (*corev1.Serv
 		return nil, err
 	}
 	return svc, nil
+}
+
+// gatewayClassFinalized returns true if the provided gc is finalized.
+func gatewayClassFinalized(gc *gwapiv1b1.GatewayClass) bool {
+	for _, f := range gc.Finalizers {
+		if f == gatewayClassFinalizer {
+			return true
+		}
+	}
+	return false
+}
+
+// addFinalizer adds the gatewayclass finalizer to the provided gc.
+func (r *gatewayReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
+	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+		updated := gc.DeepCopy()
+		updated.Finalizers = append(updated.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Update(ctx, updated); err != nil {
+			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
+		}
+	}
+	return nil
+}
+
+// removeFinalizer removes the gatewayclass finalizer from the provided gc.
+func (r *gatewayReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
+	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+		updated := gc.DeepCopy()
+		updated.Finalizers = slice.RemoveString(updated.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Update(ctx, updated); err != nil {
+			return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
+		}
+	}
+	return nil
 }

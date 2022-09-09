@@ -26,6 +26,7 @@ rules:
   verbs:
   - get
   - list
+  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
