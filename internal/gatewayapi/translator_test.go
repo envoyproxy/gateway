@@ -301,3 +301,32 @@ func TestIsValidCrossNamespaceRef(t *testing.T) {
 		})
 	}
 }
+
+func TestServicePortToContainerPort(t *testing.T) {
+	testCases := []struct {
+		servicePort   int32
+		containerPort int32
+	}{
+		{
+			servicePort:   99,
+			containerPort: 10099,
+		},
+		{
+			servicePort:   1023,
+			containerPort: 11023,
+		},
+		{
+			servicePort:   1024,
+			containerPort: 1024,
+		},
+		{
+			servicePort:   8080,
+			containerPort: 8080,
+		},
+	}
+
+	for _, tc := range testCases {
+		got := servicePortToContainerPort(tc.servicePort)
+		assert.Equal(t, tc.containerPort, got)
+	}
+}

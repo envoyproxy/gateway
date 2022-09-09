@@ -17,10 +17,6 @@ import (
 const (
 	// envoyServiceName is the name of the Envoy Service resource.
 	envoyServiceName = "envoy"
-	// envoyServiceHTTPPort is the HTTP port number of the Envoy service.
-	envoyServiceHTTPPort = 80
-	// envoyServiceHTTPSPort is the HTTPS port number of the Envoy service.
-	envoyServiceHTTPSPort = 443
 )
 
 // expectedService returns the expected Service based on the provided infra.
@@ -28,15 +24,11 @@ func (i *Infra) expectedService(infra *ir.Infra) *corev1.Service {
 	var ports []corev1.ServicePort
 	for _, listener := range infra.Proxy.Listeners {
 		for _, port := range listener.Ports {
-			// Set the target port based on the protocol of the IR port.
-			target := intstr.IntOrString{IntVal: envoyHTTPPort}
-			if port.Protocol == ir.HTTPSProtocolType {
-				target = intstr.IntOrString{IntVal: envoyHTTPSPort}
-			}
+			target := intstr.IntOrString{IntVal: port.ContainerPort}
 			p := corev1.ServicePort{
 				Name:       port.Name,
 				Protocol:   corev1.ProtocolTCP,
-				Port:       port.Port,
+				Port:       port.ServicePort,
 				TargetPort: target,
 			}
 			ports = append(ports, p)

@@ -27,6 +27,12 @@ const (
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
 	// The value should be the namespace of the Gateway used to CRUD the Service.
 	OwningGatewayNamespaceLabel = "gateway.envoyproxy.io/owning-gateway-namespace"
+
+	// minEphemeralPort is the first port in the ephemeral port range.
+	minEphemeralPort = 1024
+	// wellKnownPortShift is the constant added to the well known port (1-1023)
+	// to convert it into an ephemeral port.
+	wellKnownPortShift = 10000
 )
 
 // Resources holds the Gateway API and related
@@ -219,7 +225,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 	}
 
 	// Infra IR proxy ports must be unique.
-	var foundPorts []v1beta1.PortNumber
+	var foundPorts []int32
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
@@ -437,11 +443,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 
 			listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
 
+			servicePort := int32(listener.Port)
+			containerPort := servicePortToContainerPort(servicePort)
 			// Add the listener to the Xds IR.
 			irListener := &ir.HTTPListener{
 				Name:    irListenerName(listener),
 				Address: "0.0.0.0",
-				Port:    uint32(listener.Port),
+				Port:    uint32(containerPort),
 				TLS:     irTLSConfig(listener.tlsSecret),
 			}
 			if listener.Hostname != nil {
@@ -455,22 +463,36 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			xdsIR.HTTP = append(xdsIR.HTTP, irListener)
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
-			if !slices.Contains(foundPorts, listener.Port) {
-				foundPorts = append(foundPorts, listener.Port)
+			if !slices.Contains(foundPorts, servicePort) {
+				foundPorts = append(foundPorts, servicePort)
 				proto := ir.HTTPProtocolType
 				if listener.Protocol == v1beta1.HTTPSProtocolType {
 					proto = ir.HTTPSProtocolType
 				}
 				infraPort := ir.ListenerPort{
-					Name:     irInfraPortName(listener),
-					Protocol: proto,
-					Port:     int32(listener.Port),
+					Name:          irInfraPortName(listener),
+					Protocol:      proto,
+					ServicePort:   servicePort,
+					ContainerPort: containerPort,
 				}
 				// Only 1 listener is supported.
 				infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
 			}
 		}
 	}
+}
+
+// servicePortToContainerPort translates a service port into an ephemeral
+// container port.
+func servicePortToContainerPort(servicePort int32) int32 {
+	// If the service port is a privileged port (1-1023)
+	// add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a
+	// CAP_NET_BIND_SERVICE capability.
+	if servicePort < minEphemeralPort {
+		return servicePort + wellKnownPortShift
+	}
+	return servicePort
 }
 
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR *ir.Xds) []*HTTPRouteContext {

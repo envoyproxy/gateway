@@ -63,7 +63,8 @@ func TestValidateInfra(t *testing.T) {
 						{
 							Ports: []ListenerPort{
 								{
-									Port: int32(80),
+									ServicePort:   int32(80),
+									ContainerPort: int32(8080),
 								},
 							},
 						},
@@ -73,7 +74,7 @@ func TestValidateInfra(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "no-listener-port-number",
+			name: "no-listener-service-port-number",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name:  "test",
@@ -82,7 +83,8 @@ func TestValidateInfra(t *testing.T) {
 						{
 							Ports: []ListenerPort{
 								{
-									Name: "http",
+									Name:          "http",
+									ContainerPort: int32(8080),
 								},
 							},
 						},
@@ -91,6 +93,27 @@ func TestValidateInfra(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "no-listener-container-port-number",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name:  "test",
+					Image: "image",
+					Listeners: []ProxyListener{
+						{
+							Ports: []ListenerPort{
+								{
+									Name:        "http",
+									ServicePort: int32(80),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+
 		{
 			name: "no-image",
 			infra: &Infra{

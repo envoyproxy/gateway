@@ -77,12 +77,12 @@ xdsIR:
   http:
     - name: envoy-gateway-gateway-1-http-1
       address: 0.0.0.0
-      port: 80
+      port: 10080
       hostnames:
         - foo.com
     - name: envoy-gateway-gateway-1-http-2
       address: 0.0.0.0
-      port: 80
+      port: 10080
       hostnames:
         - bar.com
       routes:
@@ -106,4 +106,5 @@ infraIR:
         ports:
           - name: envoy-gateway-gateway-1
             protocol: "HTTP"
-            port: 80
+            servicePort: 80
+            containerPort: 10080
