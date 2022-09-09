@@ -64,3 +64,10 @@ lint: lint.shellcheck
 lint.shellcheck:
 	@echo Running Shellcheck linter ...
 	@shellcheck tools/hack/*.sh
+
+.PHONY: gen-check
+gen-check: generate manifests
+	@if [ ! -z "`git status --porcelain`" ]; then \
+		@echo "ERROR: Some files need to be updated, please run 'make generate' and `make manifests` to include any changed files to your PR"; \
+		git diff --exit-code; \
+	fi
