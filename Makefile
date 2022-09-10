@@ -15,6 +15,6 @@
 # everything else run $(MAKE) directly, since that'd end up running
 # multiple sub-Makes if you give multiple targets on the CLI.
 _run:
-	$(MAKE) --warn-undefined-variables -f tools/make/common.mk $(MAKECMDGOALS)
+	@$(MAKE) --warn-undefined-variables -f tools/make/common.mk $(MAKECMDGOALS)
 .PHONY: _run
 $(if $(MAKECMDGOALS),$(MAKECMDGOALS): %: _run)
