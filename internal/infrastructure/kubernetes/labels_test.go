@@ -9,14 +9,14 @@ import (
 func TestEnvoyPodSelector(t *testing.T) {
 	cases := []struct {
 		name     string
-		gcName   string
+		in       map[string]string
 		expected map[string]string
 	}{
 		{
-			name:   "default",
-			gcName: "eg",
+			name: "default",
+			in:   map[string]string{"foo": "bar"},
 			expected: map[string]string{
-				"gatewayClass":                   "eg",
+				"foo":                            "bar",
 				"app.gateway.envoyproxy.io/name": "envoy",
 			},
 		},
@@ -25,7 +25,7 @@ func TestEnvoyPodSelector(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run("", func(t *testing.T) {
-			got := envoyPodSelector(tc.gcName)
+			got := envoySelector(tc.in)
 			require.Equal(t, tc.expected, got.MatchLabels)
 		})
 	}

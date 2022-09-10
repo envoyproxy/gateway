@@ -13,6 +13,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
@@ -102,6 +103,7 @@ func TestExpectedDeployment(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "test-gc"
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
 
@@ -150,6 +152,7 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 func TestCreateOrUpdateDeployment(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "test-gc"
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
 
@@ -178,6 +181,9 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 			name: "update deployment image",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{gatewayapi.OwningGatewayClassLabel: "test-gc"},
+					},
 					Name:      ir.DefaultProxyName,
 					Image:     "envoyproxy/gateway-dev:v1.2.3",
 					Listeners: ir.NewProxyListeners(),

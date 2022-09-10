@@ -68,9 +68,8 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 	}
 	r.log.Info("watching gateway objects")
 
-	// Trigger gateway reconciliation when the Envoy service,
-	// managed by Infra Manager, has changed.
-	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGateway()); err != nil {
+	// Trigger gateway reconciliation when the Envoy service has changed.
+	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGatewayClass()); err != nil {
 		return err
 	}
 
@@ -102,23 +101,27 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 	return true
 }
 
-// enqueueRequestForOwningGateway returns an event handler that maps events to
-// objects containing Gateway ns/name owner labels.
-func (r *gatewayReconciler) enqueueRequestForOwningGateway() handler.EventHandler {
+// enqueueRequestForOwningGatewayClass returns an event handler that maps events with
+// the GatewayCLass owning label to Gateway objects.
+func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
 		labels := a.GetLabels()
-		ns, nsFound := labels[gatewayapi.OwningGatewayNamespaceLabel]
-		name, nameFound := labels[gatewayapi.OwningGatewayNameLabel]
-		if nsFound && nameFound {
-			r.log.Info("queueing gateway", "namespace", ns, "name", name)
-			return []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{
-						Namespace: ns,
-						Name:      name,
-					},
-				},
+		gcName, found := labels[gatewayapi.OwningGatewayClassLabel]
+		if found {
+			var reqs []reconcile.Request
+			for _, gw := range r.resources.Gateways.LoadAll() {
+				if gw != nil && gw.Spec.GatewayClassName == gwapiv1b1.ObjectName(gcName) {
+					req := reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: gw.Namespace,
+							Name:      gw.Name,
+						},
+					}
+					reqs = append(reqs, req)
+					r.log.Info("queueing gateway", "namespace", gw.Namespace, "name", gw.Name)
+				}
 			}
+			return reqs
 		}
 		return []reconcile.Request{}
 	})
@@ -170,9 +173,10 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	for i := range acceptedGateways {
 		gw := acceptedGateways[i]
 		// Get the status address of the Gateway's associated Service.
-		svc, err := r.serviceForGateway(ctx, &gw)
+		svc, err := r.serviceForGateway(ctx)
 		if err != nil {
-			return reconcile.Result{}, err
+			r.log.Info("failed to get service for gateway",
+				"namespace", gw.Namespace, "name", gw.Name)
 		}
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name},
@@ -240,9 +244,8 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 	return ret
 }
 
-// serviceForGateway returns the service for the provided gateway, returning nil if
-// the service doesn't exist.
-func (r *gatewayReconciler) serviceForGateway(ctx context.Context, gw *gwapiv1b1.Gateway) (*corev1.Service, error) {
+// serviceForGateway returns the Envoy service, returning nil if the service doesn't exist.
+func (r *gatewayReconciler) serviceForGateway(ctx context.Context) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
 		Name:      config.EnvoyServiceName,

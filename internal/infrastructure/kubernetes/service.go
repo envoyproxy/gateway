@@ -32,29 +32,22 @@ func (i *Infra) expectedService(infra *ir.Infra) (*corev1.Service, error) {
 		}
 	}
 
-	podSelector := envoyPodSelector(infra.GetProxyInfra().Name)
-
-	svcLabels := envoyLabels()
-	for k, v := range infra.GetProxyInfra().GetProxyMetadata().Labels {
-		if k == gatewayapi.OwningGatewayNamespaceLabel || k == gatewayapi.OwningGatewayNameLabel {
-			svcLabels[k] = v
-		}
-	}
-	// Gateway ns/name labels are required for the gateway controller to watch this service.
-	if len(svcLabels) < 3 {
-		return nil, fmt.Errorf("missing owning gateway labels")
+	// Set the labels based on the owning gatewayclass name.
+	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
+	if _, ok := labels[gatewayapi.OwningGatewayClassLabel]; !ok {
+		return nil, fmt.Errorf("missing owning gatewayclass label")
 	}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      config.EnvoyServiceName,
-			Labels:    svcLabels,
+			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:            corev1.ServiceTypeLoadBalancer,
 			Ports:           ports,
-			Selector:        podSelector.MatchLabels,
+			Selector:        envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels).MatchLabels,
 			SessionAffinity: corev1.ServiceAffinityNone,
 			// Preserve the client source IP and avoid a second hop for LoadBalancer.
 			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
