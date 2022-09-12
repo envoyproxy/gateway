@@ -21,12 +21,9 @@ const (
 	KindService   = "Service"
 	KindSecret    = "Secret"
 
-	// OwningGatewayNameLabel is the owner reference label used for managed infra.
-	// The value should be the name of the Gateway used to CRUD the Service.
-	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
-	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
-	// The value should be the namespace of the Gateway used to CRUD the Service.
-	OwningGatewayNamespaceLabel = "gateway.envoyproxy.io/owning-gateway-namespace"
+	// OwningGatewayClassLabel is the owner reference label used for managed infra.
+	// The value should be the name of the accepted Envoy GatewayClass.
+	OwningGatewayClassLabel = "gateway.envoyproxy.io/owning-gatewayclass"
 
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
@@ -110,15 +107,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	infraIR := ir.NewInfra()
 	infraIR.Proxy.Name = string(t.GatewayClassName)
-
-	// Apply Infra IR metadata.
-	if resources != nil {
-		for i := range resources.Gateways {
-			if resources.Gateways[i] != nil {
-				infraIR.Proxy.Metadata.Labels = GatewayOwnerLabels(resources.Gateways[i])
-			}
-		}
-	}
+	infraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
 
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
@@ -1005,10 +994,8 @@ func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
 	}
 }
 
-// GatewayOwnerLabels returns owner labels for the provided Gateway.
-func GatewayOwnerLabels(gw *v1beta1.Gateway) map[string]string {
-	return map[string]string{
-		OwningGatewayNameLabel:      gw.Name,
-		OwningGatewayNamespaceLabel: gw.Namespace,
-	}
+// GatewayClassOwnerLabel returns the GatewayCLass Owner label using
+// the provided name as the value.
+func GatewayClassOwnerLabel(name string) map[string]string {
+	return map[string]string{OwningGatewayClassLabel: name}
 }

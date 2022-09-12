@@ -7,6 +7,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/log"
 )
 
+const (
+	// EnvoyGatewayNamespace is the namespace where envoy-gateway is running.
+	EnvoyGatewayNamespace = "envoy-gateway-system"
+	// EnvoyServiceName is the name of the Envoy Service.
+	EnvoyServiceName = "envoy"
+)
+
 // Server wraps the EnvoyGateway configuration and additional parameters
 // used by Envoy Gateway server.
 type Server struct {

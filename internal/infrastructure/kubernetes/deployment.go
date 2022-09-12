@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
@@ -100,7 +101,11 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		return nil, err
 	}
 
-	podSelector := EnvoyPodSelector(infra.GetProxyInfra().Name)
+	// Set the labels based on the owning gatewayclass name.
+	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
+	if _, ok := labels[gatewayapi.OwningGatewayClassLabel]; !ok {
+		return nil, fmt.Errorf("missing owning gatewayclass label")
+	}
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -110,14 +115,14 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      envoyDeploymentName,
-			Labels:    podSelector.MatchLabels,
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32(1),
-			Selector: podSelector,
+			Selector: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: podSelector.MatchLabels,
+					Labels: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels).MatchLabels,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
@@ -265,23 +270,4 @@ func (i *Infra) deleteDeployment(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// EnvoyPodSelector returns a label selector using "control-plane: envoy-gateway" as the
-// key/value pair.
-//
-// TODO: Update k/v pair to use gatewayclass controller name to distinguish between
-//       multiple Envoy Gateways.
-func EnvoyPodSelector(gcName string) *metav1.LabelSelector {
-	return &metav1.LabelSelector{
-		MatchLabels: envoyLabels(gcName),
-	}
-}
-
-// envoyLabels returns the labels used for Envoy.
-func envoyLabels(gcName string) map[string]string {
-	return map[string]string{
-		"gatewayClass": gcName,
-		"app":          "envoy",
-	}
 }

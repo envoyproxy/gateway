@@ -136,6 +136,15 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 	return i.Proxy
 }
 
+// GetProxyMetadata returns the InfraMetadata.
+func (p *ProxyInfra) GetProxyMetadata() *InfraMetadata {
+	if p.Metadata == nil {
+		p.Metadata = NewInfraMetadata()
+	}
+
+	return p.Metadata
+}
+
 // Validate validates the provided Infra.
 func (i *Infra) Validate() error {
 	if i == nil {
