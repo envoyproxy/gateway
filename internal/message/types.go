@@ -24,6 +24,13 @@ type ProviderResources struct {
 	Initialized sync.WaitGroup
 }
 
+func (p *ProviderResources) DeleteGatewayClasses() {
+	for k, _ := range p.GatewayClasses.LoadAll() {
+		p.GatewayClasses.Delete(k)
+	}
+	return
+}
+
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
 	if p.GatewayClasses.Len() == 0 {
 		return nil
