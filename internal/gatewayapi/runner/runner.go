@@ -41,13 +41,13 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslateInfra(ctx context.Context) {
-	r.Logger.Info("done initializing provider infra resources")
 	// Subscribe to infra resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
 
 	// Wait until provider infra resources have been initialized during startup.
-	r.ProviderResources.Initialized.Wait()
+	r.ProviderResources.InitializedInfraIR.Wait()
+	r.Logger.Info("done initializing provider infra resources")
 	for ctx.Err() == nil {
 		var in gatewayapi.Resources
 		// Receive subscribed resource notifications.
@@ -93,7 +93,6 @@ func (r *Runner) subscribeAndTranslateInfra(ctx context.Context) {
 }
 
 func (r *Runner) subscribeAndTranslateXds(ctx context.Context) {
-	r.Logger.Info("done initializing provider xds resources")
 	// Subscribe to resources.
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
@@ -102,7 +101,8 @@ func (r *Runner) subscribeAndTranslateXds(ctx context.Context) {
 	namespacesCh := r.ProviderResources.Namespaces.Subscribe(ctx)
 
 	// Wait until provider resources have been initialized during startup.
-	r.ProviderResources.Initialized.Wait()
+	r.ProviderResources.InitializedXdsIR.Wait()
+	r.Logger.Info("done initializing provider xds resources")
 	for ctx.Err() == nil {
 		var in gatewayapi.Resources
 		// Receive subscribed resource notifications
