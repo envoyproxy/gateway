@@ -79,32 +79,45 @@ type Translator struct {
 	GatewayClassName v1beta1.ObjectName
 }
 
-type TranslateResult struct {
+type TranslateInfraResult struct {
+	Gateways []*v1beta1.Gateway
+	InfraIR  *ir.Infra
+}
+
+type TranslateXdsResult struct {
 	Gateways   []*v1beta1.Gateway
 	HTTPRoutes []*v1beta1.HTTPRoute
 	XdsIR      *ir.Xds
-	InfraIR    *ir.Infra
 }
 
-func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR *ir.Xds, infraIR *ir.Infra) *TranslateResult {
-	translateResult := &TranslateResult{
-		XdsIR:   xdsIR,
+func newTranslateInfraResult(gateways []*GatewayContext, infraIR *ir.Infra) *TranslateInfraResult {
+	ret := &TranslateInfraResult{
 		InfraIR: infraIR,
 	}
 
 	for _, gateway := range gateways {
-		translateResult.Gateways = append(translateResult.Gateways, gateway.Gateway)
-	}
-	for _, httpRoute := range httpRoutes {
-		translateResult.HTTPRoutes = append(translateResult.HTTPRoutes, httpRoute.HTTPRoute)
+		ret.Gateways = append(ret.Gateways, gateway.Gateway)
 	}
 
-	return translateResult
+	return ret
 }
 
-func (t *Translator) Translate(resources *Resources) *TranslateResult {
-	xdsIR := &ir.Xds{}
+func newTranslateXdsResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR *ir.Xds) *TranslateXdsResult {
+	ret := &TranslateXdsResult{
+		XdsIR: xdsIR,
+	}
 
+	for _, gateway := range gateways {
+		ret.Gateways = append(ret.Gateways, gateway.Gateway)
+	}
+	for _, httpRoute := range httpRoutes {
+		ret.HTTPRoutes = append(ret.HTTPRoutes, httpRoute.HTTPRoute)
+	}
+
+	return ret
+}
+
+func (t *Translator) TranslateInfra(resources *Resources) *TranslateInfraResult {
 	infraIR := ir.NewInfra()
 	infraIR.Proxy.Name = string(t.GatewayClassName)
 	infraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
@@ -113,12 +126,24 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	gateways := t.GetRelevantGateways(resources.Gateways)
 
 	// Process all Listeners for all relevant Gateways.
-	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
+	t.ProcessListeners(gateways, nil, infraIR, resources)
+
+	return newTranslateInfraResult(gateways, infraIR)
+}
+
+func (t *Translator) TranslateXds(resources *Resources) *TranslateXdsResult {
+	xdsIR := &ir.Xds{}
+
+	// Get Gateways belonging to our GatewayClass.
+	gateways := t.GetRelevantGateways(resources.Gateways)
+
+	// Process all Listeners for all relevant Gateways.
+	t.ProcessListeners(gateways, xdsIR, nil, resources)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, xdsIR, infraIR)
+	return newTranslateXdsResult(gateways, httpRoutes, xdsIR)
 }
 
 func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {
@@ -449,7 +474,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 				// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
 				irListener.Hostnames = append(irListener.Hostnames, "*")
 			}
-			xdsIR.HTTP = append(xdsIR.HTTP, irListener)
+			if xdsIR != nil {
+				xdsIR.HTTP = append(xdsIR.HTTP, irListener)
+			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
 			if !slices.Contains(foundPorts, servicePort) {
@@ -465,7 +492,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 					ContainerPort: containerPort,
 				}
 				// Only 1 listener is supported.
-				infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
+				if infraIR != nil {
+					infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
+				}
 			}
 		}
 	}

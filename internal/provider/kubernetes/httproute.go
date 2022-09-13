@@ -6,7 +6,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -31,17 +30,14 @@ const (
 )
 
 type httpRouteReconciler struct {
-	client client.Client
-	log    logr.Logger
-
-	initializeOnce sync.Once
-	resources      *message.ProviderResources
+	client    client.Client
+	log       logr.Logger
+	resources *message.ProviderResources
 }
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
 func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
-	resources.Initialized.Add(1)
 	r := &httpRouteReconciler{
 		client:    mgr.GetClient(),
 		log:       cfg.Logger,
@@ -212,7 +208,6 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	log.Info("reconciled httproute")
 
-	defer r.initializeOnce.Do(r.resources.Initialized.Done)
 	return reconcile.Result{}, nil
 }
 

@@ -1,0 +1,40 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: Same
+    status:
+      listeners:
+        - name: http
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+          conditions:
+            - type: Ready
+              status: "True"
+              reason: Ready
+              message: Listener is ready
+infraIR:
+  proxy:
+    metadata:
+      labels:
+        gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+    name: envoy-gateway-class
+    image: envoyproxy/envoy:v1.23-latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1
+            protocol: "HTTP"
+            servicePort: 80
+            containerPort: 10080

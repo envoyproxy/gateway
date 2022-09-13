@@ -1,0 +1,80 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http-1
+          protocol: HTTP
+          port: 80
+          hostname: foo.com
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: http-2
+          protocol: HTTPS
+          port: 80
+          hostname: bar.com
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: http-1
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+          conditions:
+            - type: Conflicted
+              status: "True"
+              reason: ProtocolConflict
+              message: All listeners for a given port must use a compatible protocol
+            - type: Ready
+              status: "False"
+              reason: Invalid
+              message: Listener is invalid, see other Conditions for details.
+        - name: http-2
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+          conditions:
+            - type: Conflicted
+              status: "True"
+              reason: ProtocolConflict
+              message: All listeners for a given port must use a compatible protocol
+            - type: Ready
+              status: "False"
+              reason: Invalid
+              message: Listener must have TLS set when protocol is HTTPS.
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          # controllerName: envoyproxy.io/gateway-controller
+          conditions:
+            - type: Accepted
+              status: "False"
+              reason: NoReadyListeners
+              message: There are no ready listeners for this parent ref
+xdsIR: {}

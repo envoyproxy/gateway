@@ -21,8 +21,8 @@ func mustUnmarshal(t *testing.T, val string, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict([]byte(val), out, yaml.DisallowUnknownFields))
 }
 
-func TestTranslate(t *testing.T) {
-	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
+func TestTranslateInfra(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "infra", "*.in.yaml"))
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
@@ -37,7 +37,37 @@ func TestTranslate(t *testing.T) {
 			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
 			require.NoError(t, err)
 
-			want := &TranslateResult{}
+			want := &TranslateInfraResult{}
+			mustUnmarshal(t, string(output), want)
+
+			translator := &Translator{
+				GatewayClassName: "envoy-gateway-class",
+			}
+
+			got := translator.TranslateInfra(resources)
+
+			assert.EqualValues(t, want, got)
+		})
+	}
+}
+
+func TestTranslateXds(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "xds", "*.in.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFile := inputFile
+		t.Run(testName(inputFile), func(t *testing.T) {
+			input, err := os.ReadFile(inputFile)
+			require.NoError(t, err)
+
+			resources := &Resources{}
+			mustUnmarshal(t, string(input), resources)
+
+			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
+			require.NoError(t, err)
+
+			want := &TranslateXdsResult{}
 			mustUnmarshal(t, string(output), want)
 
 			translator := &Translator{
@@ -73,7 +103,7 @@ func TestTranslate(t *testing.T) {
 				},
 			})
 
-			got := translator.Translate(resources)
+			got := translator.TranslateXds(resources)
 
 			sort.Slice(got.XdsIR.HTTP, func(i, j int) bool { return got.XdsIR.HTTP[i].Name < got.XdsIR.HTTP[j].Name })
 

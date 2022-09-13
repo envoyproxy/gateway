@@ -1,0 +1,62 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: Selector
+              selector:
+                matchExpressions:
+                  - key: foo
+                    operator: Exists
+                    values:
+                      - bar
+    status:
+      listeners:
+        - name: http
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+          attachedRoutes: 0
+          conditions:
+            - type: Ready
+              status: "False"
+              reason: Invalid
+              message: "The allowedRoutes.namespaces.selector could not be parsed: values: Invalid value: []string{\"bar\"}: values set must be empty for exists and does not exist."
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          # controllerName: envoyproxy.io/gateway-controller
+          conditions:
+            - type: Accepted
+              status: "False"
+              reason: NoReadyListeners
+              message: There are no ready listeners for this parent ref
+xdsIR: {}
