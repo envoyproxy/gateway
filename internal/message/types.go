@@ -25,10 +25,9 @@ type ProviderResources struct {
 }
 
 func (p *ProviderResources) DeleteGatewayClasses() {
-	for k, _ := range p.GatewayClasses.LoadAll() {
+	for k := range p.GatewayClasses.LoadAll() {
 		p.GatewayClasses.Delete(k)
 	}
-	return
 }
 
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
