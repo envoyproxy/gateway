@@ -104,14 +104,15 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	}
 
 	acceptedGC := cc.acceptedClass()
+	// Reset gatewayclasses since this Reconcile function never performs a Delete and
+	// we are only interested in the first element.
+	r.resources.DeleteGatewayClasses()
 	if acceptedGC == nil {
 		// A nil gatewayclass removes managed proxy infra, if it exists.
 		r.log.Info("failed to find an accepted gatewayclass")
-		r.resources.DeleteGatewayClasses()
 		r.resources.GatewayClasses.Store(request.Name, nil)
 		return reconcile.Result{}, nil
 	}
-
 	// Store the accepted gatewayclass in the resource map.
 	r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 
