@@ -26,7 +26,11 @@ endif
 
 .PHONY: kube-install
 kube-install: manifests $(tools/kustomize) ## Install Envoy Gateway CRDs into the Kubernetes cluster specified in ~/.kube/config.
-	$(tools/kustomize) build internal/provider/kubernetes/config/crd | kubectl apply -f -
+	mkdir -pv $(OUTPUT_DIR)/kube
+	cp -r $(KUBE_DIR) $(OUTPUT_DIR)/kube
+	mkdir -pv $(OUTPUT_DIR)/infra
+	cp -r $(INFRA_DIR) $(OUTPUT_DIR)/infra
+	$(tools/kustomize) build $(OUTPUT_DIR)/kube/config/crd | kubectl apply -f -
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
 
 .PHONY: kube-uninstall
@@ -35,12 +39,15 @@ kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs fro
 
 .PHONY: kube-deploy
 kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
-	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl apply -f -
-	$(tools/kustomize) build internal/infrastructure/kubernetes/config/rbac | kubectl apply -f -
+	cd $(OUTPUT_DIR)/kube/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
+	$(tools/kustomize) build $(OUTPUT_DIR)/kube/config/default | kubectl apply -f -
+	$(tools/kustomize) build $(OUTPUT_DIR)/infra/config/rbac | kubectl apply -f -
 
 .PHONY: kube-undeploy
 kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
-	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f - 
+	$(tools/kustomize) build $(OUTPUT_DIR)/kube/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f - 
+	rm -rf $(OUTPUT_DIR)/kube
+	rm -rf $(OUTPUT_DIR)/infra
 
 .PHONY: run-kube-local ## Run EG locally.
 run-kube-local: kube-install

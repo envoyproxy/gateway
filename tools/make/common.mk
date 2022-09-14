@@ -30,6 +30,16 @@ ifeq ($(origin OUTPUT_DIR),undefined)
 OUTPUT_DIR := $(ROOT_DIR)/bin
 endif
 
+# Set Kubernetes Resources Directory Path
+ifeq ($(origin KUBE_DIR),undefined)
+KUBE_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
+endif
+
+# Set Infra Resources Directory Path
+ifeq ($(origin INFRA_DIR),undefined)
+INFRA_DIR := $(ROOT_DIR)/internal/infrastructure/kubernetes/config
+endif
+
 # REV is the short git sha of latest commit.
 REV=$(shell git rev-parse --short HEAD)
 
