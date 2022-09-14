@@ -54,13 +54,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		// Receive subscribed resource notifications
 		select {
 		case <-gatewayClassesCh:
-			r.waitUntilInitialized()
+			r.waitUntilGCAndGatewaysInitialized()
 		case <-gatewaysCh:
-			r.waitUntilInitialized()
+			r.waitUntilGCAndGatewaysInitialized()
 		case <-httpRoutesCh:
-			// Wait until httproute have been initialized during startup
-			r.ProviderResources.HTTPRoutesInitialized.Wait()
-			r.Logger.Info("done initializing httproute resources")
+			r.waitUntilAllGAPIInitialized()
 			// Now that the httproute resources have been initialized,
 			// allow the runner to publish the translated xdsIR.
 			xdsIRReady = true
@@ -121,9 +119,16 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("shutting down")
 }
 
-// WwaitUntilInitialized waits until gateway classes and
+// waitUntilGCAndGatewaysInitialized waits until gateway classes and
 // gateways have been initialized during startup
-func (r *Runner) waitUntilInitialized() {
+func (r *Runner) waitUntilGCAndGatewaysInitialized() {
 	r.ProviderResources.GatewayClassesInitialized.Wait()
 	r.ProviderResources.GatewaysInitialized.Wait()
+}
+
+// waitUntilAllGAPIInitialized waits until gateway classes,
+// gateways and httproutes have been initialized during startup
+func (r *Runner) waitUntilAllGAPIInitialized() {
+	r.waitUntilGCAndGatewaysInitialized()
+	r.ProviderResources.HTTPRoutesInitialized.Wait()
 }
