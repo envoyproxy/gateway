@@ -76,9 +76,10 @@ infraIR:
     name: envoy-gateway-class
     image: envoyproxy/envoy:v1.23-latest
     listeners:
-      - address: ""
+      - name: envoy-gateway-gateway-1
+        address: ""
         ports:
-          - name: envoy-gateway-gateway-1
+          - name: http
             protocol: "HTTP"
             servicePort: 80
             containerPort: 10080

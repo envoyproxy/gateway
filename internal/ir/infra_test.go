@@ -18,7 +18,7 @@ func TestValidateInfra(t *testing.T) {
 			expect: false,
 		},
 		{
-			name: "no-name",
+			name: "no-proxy-infra-name",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name:      "",
@@ -46,12 +46,94 @@ func TestValidateInfra(t *testing.T) {
 					Image: "image",
 					Listeners: []ProxyListener{
 						{
-							Ports: []ListenerPort{},
+							Name:    "test",
+							Ports:   []ListenerPort{},
+							Address: "1.2.3.4",
 						},
 					},
 				},
 			},
 			expect: false,
+		},
+		{
+			name: "no-listener-name",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name:  "test",
+					Image: "image",
+					Listeners: []ProxyListener{
+						{
+							Ports: []ListenerPort{
+								{
+									ServicePort:   int32(80),
+									ContainerPort: int32(8080),
+								},
+							},
+							Address: "1.2.3.4",
+						},
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "one-listener-two-ports",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name:  "test",
+					Image: "image",
+					Listeners: []ProxyListener{
+						{
+							Name: "gateway-1",
+							Ports: []ListenerPort{
+								{
+									Name:          "http-1",
+									ServicePort:   int32(80),
+									ContainerPort: int32(8080),
+								},
+								{
+									Name:          "http-2",
+									ServicePort:   int32(81),
+									ContainerPort: int32(8081),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "two-listeners",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name:  "test",
+					Image: "image",
+					Listeners: []ProxyListener{
+						{
+							Name: "gateway-1",
+							Ports: []ListenerPort{
+								{
+									Name:          "http-1",
+									ServicePort:   int32(80),
+									ContainerPort: int32(8080),
+								},
+							},
+						},
+						{
+							Name: "gateway-2",
+							Ports: []ListenerPort{
+								{
+									Name:          "http-1",
+									ServicePort:   int32(81),
+									ContainerPort: int32(8081),
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
 		},
 		{
 			name: "no-listener-port-name",

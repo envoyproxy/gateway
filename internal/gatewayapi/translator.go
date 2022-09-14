@@ -216,10 +216,17 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 	// Infra IR proxy ports must be unique.
 	var foundPorts []int32
 
+	// An Infra IR proxy listener is created per Gateway.
+	var infraListeners []ir.ProxyListener
+
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 	for _, gateway := range gateways {
+		// Create the Infra IR proxy listener for the Gateway.
+		infraListener := ir.ProxyListener{Name: infraListenerName(gateway)}
+		// Gateway listeners map to Infra IR listener ports.
+		var infraPorts []ir.ListenerPort
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
@@ -459,16 +466,18 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 					proto = ir.HTTPSProtocolType
 				}
 				infraPort := ir.ListenerPort{
-					Name:          irInfraPortName(listener),
+					Name:          string(listener.Name),
 					Protocol:      proto,
 					ServicePort:   servicePort,
 					ContainerPort: containerPort,
 				}
-				// Only 1 listener is supported.
-				infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
+				infraPorts = append(infraPorts, infraPort)
 			}
 		}
+		infraListener.Ports = infraPorts
+		infraListeners = append(infraListeners, infraListener)
 	}
+	infraIR.Proxy.Listeners = infraListeners
 }
 
 // servicePortToContainerPort translates a service port into an ephemeral
@@ -975,8 +984,8 @@ func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
-func irInfraPortName(listener *ListenerContext) string {
-	return fmt.Sprintf("%s-%s", listener.gateway.Namespace, listener.gateway.Name)
+func infraListenerName(gateway *GatewayContext) string {
+	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
 }
 
 func routeName(httpRoute *HTTPRouteContext, ruleIdx, matchIdx int) string {

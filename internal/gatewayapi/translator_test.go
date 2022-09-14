@@ -76,6 +76,15 @@ func TestTranslate(t *testing.T) {
 			got := translator.Translate(resources)
 
 			sort.Slice(got.XdsIR.HTTP, func(i, j int) bool { return got.XdsIR.HTTP[i].Name < got.XdsIR.HTTP[j].Name })
+			sort.Slice(got.InfraIR.Proxy.Listeners, func(i, j int) bool {
+				return got.InfraIR.Proxy.Listeners[i].Name < got.InfraIR.Proxy.Listeners[j].Name
+			})
+			for i := range got.InfraIR.Proxy.Listeners {
+				listener := got.InfraIR.Proxy.Listeners[i]
+				sort.Slice(listener.Ports, func(j, k int) bool {
+					return listener.Ports[j].Name < listener.Ports[k].Name
+				})
+			}
 
 			assert.EqualValues(t, want, got)
 		})

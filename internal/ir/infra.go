@@ -48,6 +48,9 @@ type InfraMetadata struct {
 // ProxyListener defines the listener configuration of the proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type ProxyListener struct {
+	// Name is the name of the listener and must be unique within a list of listeners.
+	// Required.
+	Name string
 	// Address is the address that the listener should listen on.
 	Address string
 	// Ports define network ports of the listener.
@@ -98,7 +101,7 @@ func NewProxyInfra() *ProxyInfra {
 	}
 }
 
-// NewProxyListeners returns a new slice of ProxyListener with default parameters.
+// NewProxyListeners returns a new slice of ProxyListener.
 func NewProxyListeners() []ProxyListener {
 	return []ProxyListener{
 		{
@@ -145,6 +148,15 @@ func (p *ProxyInfra) GetProxyMetadata() *InfraMetadata {
 	return p.Metadata
 }
 
+// GetProxyListeners returns a slice of ProxyListener.
+func (p *ProxyInfra) GetProxyListeners() []ProxyListener {
+	if len(p.Listeners) == 0 {
+		p.Listeners = NewProxyListeners()
+	}
+
+	return p.Listeners
+}
+
 // Validate validates the provided Infra.
 func (i *Infra) Validate() error {
 	if i == nil {
@@ -174,19 +186,19 @@ func (p *ProxyInfra) Validate() error {
 		errs = append(errs, errors.New("image field required"))
 	}
 
-	if len(p.Listeners) > 1 {
-		errs = append(errs, errors.New("no more than 1 listener is supported"))
-	}
-
 	if len(p.Listeners) > 0 {
 		for i := range p.Listeners {
 			listener := p.Listeners[i]
+			if len(listener.Name) == 0 {
+				// TODO: Validate name uniqueness across listeners.
+				errs = append(errs, errors.New("listener name field required"))
+			}
 			if len(listener.Ports) == 0 {
 				errs = append(errs, errors.New("listener ports field required"))
 			}
 			for j := range listener.Ports {
 				if len(listener.Ports[j].Name) == 0 {
-					errs = append(errs, errors.New("listener name field required"))
+					errs = append(errs, errors.New("listener port name field required"))
 				}
 				if listener.Ports[j].ServicePort < 1 || listener.Ports[j].ServicePort > 65353 {
 					errs = append(errs, errors.New("listener service port must be a valid port number"))
