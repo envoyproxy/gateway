@@ -42,8 +42,8 @@ kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernete
 kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
 	$(tools/kustomize) build internal/provider/kubernetes/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f - 
 
-.PHONY: run-kube-local ## Run EG locally.
-run-kube-local: kube-install
+.PHONY: run-kube-local
+run-kube-local: build kube-install ## Run Envoy Gateway locally.
 	tools/hack/run-kube-local.sh
 
 .PHONY: conformance 

@@ -4,17 +4,10 @@ set -euo pipefail
 
 GOARCH=$(go env GOARCH)
 GOOS=$(go env GOOS)
-KUBECONFIG="${KUBECONFIG:-$HOME/.kube/config}"
 
 # Check that kubectl is installed.
 if ! [ "$(command -v kubectl)" ] ; then
     echo "kubectl not installed"
-    exit 1
-fi
-
-# Check the kubectl config file.
-if ! [ "$(stat "${KUBECONFIG}")" ] ; then
-    echo "kubeconfig not set"
     exit 1
 fi
 
