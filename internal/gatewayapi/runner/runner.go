@@ -40,7 +40,8 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	r.Logger.Info("done initializing provider resources")
+	var xdsIRReady bool
+
 	// Subscribe to resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
@@ -48,15 +49,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	servicesCh := r.ProviderResources.Services.Subscribe(ctx)
 	namespacesCh := r.ProviderResources.Namespaces.Subscribe(ctx)
 
-	// Wait until provider resources have been initialized during startup
-	r.ProviderResources.Initialized.Wait()
 	for ctx.Err() == nil {
 		var in gatewayapi.Resources
 		// Receive subscribed resource notifications
 		select {
 		case <-gatewayClassesCh:
+			r.waitUntilGCAndGatewaysInitialized()
 		case <-gatewaysCh:
+			r.waitUntilGCAndGatewaysInitialized()
 		case <-httpRoutesCh:
+			r.waitUntilAllGAPIInitialized()
+			// Now that the httproute resources have been initialized,
+			// allow the runner to publish the translated xdsIR.
+			xdsIRReady = true
 		case <-servicesCh:
 		case <-namespacesCh:
 		}
@@ -93,18 +98,37 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Publish the IRs. Use the service name as the key
 			// to ensure there is always one element in the map.
 			// Also validate the ir before sending it.
-			if err := result.XdsIR.Validate(); err != nil {
-				r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
-			} else {
-				r.XdsIR.Store(r.Name(), result.XdsIR)
-			}
-
 			if err := result.InfraIR.Validate(); err != nil {
 				r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 			} else {
 				r.InfraIR.Store(r.Name(), result.InfraIR)
 			}
+
+			// Wait until all HTTPRoutes have been reconciled , else the translation
+			// result will be incomplete, and might cause churn in the data plane.
+			if xdsIRReady {
+				if err := result.XdsIR.Validate(); err != nil {
+					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+				} else {
+					r.XdsIR.Store(r.Name(), result.XdsIR)
+				}
+			}
+
 		}
 	}
 	r.Logger.Info("shutting down")
+}
+
+// waitUntilGCAndGatewaysInitialized waits until gateway classes and
+// gateways have been initialized during startup
+func (r *Runner) waitUntilGCAndGatewaysInitialized() {
+	r.ProviderResources.GatewayClassesInitialized.Wait()
+	r.ProviderResources.GatewaysInitialized.Wait()
+}
+
+// waitUntilAllGAPIInitialized waits until gateway classes,
+// gateways and httproutes have been initialized during startup
+func (r *Runner) waitUntilAllGAPIInitialized() {
+	r.waitUntilGCAndGatewaysInitialized()
+	r.ProviderResources.HTTPRoutesInitialized.Wait()
 }

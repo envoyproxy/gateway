@@ -38,7 +38,7 @@ type gatewayClassReconciler struct {
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
 func newGatewayClassController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
-	resources.Initialized.Add(1)
+	resources.GatewayClassesInitialized.Add(1)
 	r := &gatewayClassReconciler{
 		client:        mgr.GetClient(),
 		controller:    gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
@@ -153,7 +153,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		}
 	}
 	// Once we've iterated over all listed classes, mark that we've fully initialized.
-	r.initializeOnce.Do(r.resources.Initialized.Done)
+	r.initializeOnce.Do(r.resources.GatewayClassesInitialized.Done)
 
 	r.log.WithName(request.Name).Info("reconciled gatewayclass")
 	return reconcile.Result{}, nil

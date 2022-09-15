@@ -43,7 +43,7 @@ type gatewayReconciler struct {
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
 func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
-	resources.Initialized.Add(1)
+	resources.GatewaysInitialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
@@ -193,7 +193,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 
 	// Once we've processed `allGateways`, record that we've fully initialized.
-	r.initializeOnce.Do(r.resources.Initialized.Done)
+	r.initializeOnce.Do(r.resources.GatewaysInitialized.Done)
 
 	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
 

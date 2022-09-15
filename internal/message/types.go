@@ -19,9 +19,10 @@ type ProviderResources struct {
 	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
 	Namespaces     watchable.Map[string, *corev1.Namespace]
 	Services       watchable.Map[types.NamespacedName, *corev1.Service]
-	// Initialized.Wait() will return once each of the maps in the
-	// structure have been initialized at startup.
-	Initialized sync.WaitGroup
+
+	GatewayClassesInitialized sync.WaitGroup
+	GatewaysInitialized       sync.WaitGroup
+	HTTPRoutesInitialized     sync.WaitGroup
 }
 
 func (p *ProviderResources) DeleteGatewayClasses() {
