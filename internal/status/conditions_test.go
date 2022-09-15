@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilclock "k8s.io/utils/clock"
 	fakeclock "k8s.io/utils/clock/testing"
@@ -230,5 +232,66 @@ func TestMergeConditions(t *testing.T) {
 		if conditionChanged(tc.expected[0], got[0]) {
 			assert.Equal(t, tc.expected, got, tc.name)
 		}
+	}
+}
+
+func TestGatewayReadyCondition(t *testing.T) {
+	testCases := []struct {
+		name             string
+		serviceAddress   bool
+		deploymentStatus appsv1.DeploymentStatus
+		expect           metav1.Condition
+	}{
+		{
+			name:             "ready gateway",
+			serviceAddress:   true,
+			deploymentStatus: appsv1.DeploymentStatus{UnavailableReplicas: 0},
+			expect: metav1.Condition{
+				Status: metav1.ConditionTrue,
+				Reason: string(gwapiv1b1.GatewayReasonReady),
+			},
+		},
+		{
+			name:             "not ready gateway without address",
+			serviceAddress:   false,
+			deploymentStatus: appsv1.DeploymentStatus{UnavailableReplicas: 0},
+			expect: metav1.Condition{
+				Status: metav1.ConditionFalse,
+				Reason: string(gwapiv1b1.GatewayReasonAddressNotAssigned),
+			},
+		},
+		{
+			name:             "not ready gateway with address unavailable pods",
+			serviceAddress:   true,
+			deploymentStatus: appsv1.DeploymentStatus{UnavailableReplicas: 1},
+			expect: metav1.Condition{
+				Status: metav1.ConditionFalse,
+				Reason: string(gwapiv1b1.GatewayReasonNoResources),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gtw := &gwapiv1b1.Gateway{}
+			if tc.serviceAddress {
+				gtw.Status = gwapiv1b1.GatewayStatus{
+					Addresses: []gwapiv1b1.GatewayAddress{
+						{
+							Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
+							Value: "1.1.1.1",
+						},
+					},
+				}
+			}
+
+			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
+			got := computeGatewayReadyCondition(gtw, deployment)
+
+			assert.Equal(t, string(gwapiv1b1.GatewayConditionReady), got.Type)
+			assert.Equal(t, tc.expect.Status, got.Status)
+			assert.Equal(t, tc.expect.Reason, got.Reason)
+		})
 	}
 }
