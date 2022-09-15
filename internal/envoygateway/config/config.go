@@ -12,6 +12,8 @@ const (
 	EnvoyGatewayNamespace = "envoy-gateway-system"
 	// EnvoyServiceName is the name of the Envoy Service.
 	EnvoyServiceName = "envoy"
+	// EnvoyDeploymentName is the name of the Envoy Deployment.
+	EnvoyDeploymentName = "envoy"
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters

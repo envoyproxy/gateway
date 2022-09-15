@@ -6,6 +6,7 @@ package status
 import (
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
@@ -51,19 +52,25 @@ func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) met
 }
 
 // computeGatewayReadyCondition computes the Gateway Ready status condition.
-// TODO: Ready condition should surface true when the Envoy Deployment status is ready.
-//       xref: https://github.com/envoyproxy/gateway/issues/345.
-func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway) metav1.Condition {
-	switch len(gw.Status.Addresses) {
-	case 0:
+// Ready condition surfaces true when the Envoy Deployment status is ready.
+func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
+	if len(gw.Status.Addresses) == 0 {
 		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonAddressNotAssigned),
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
-	default:
-		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionTrue,
-			string(gwapiv1b1.GatewayReasonReady),
-			"Address assigned to the Gateway", time.Now(), gw.Generation)
 	}
+
+	// If there are any unavailable replicas for the Envoy Deployment, donot
+	// mark the Gateway as ready yet.
+	if deployment.Status.UnavailableReplicas > 0 {
+		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,
+			string(gwapiv1b1.GatewayReasonNoResources),
+			"Deployment replicas unavailable", time.Now(), gw.Generation)
+	}
+
+	return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionTrue,
+		string(gwapiv1b1.GatewayReasonReady),
+		"Address assigned to the Gateway", time.Now(), gw.Generation)
 }
 
 // mergeConditions adds or updates matching conditions, and updates the transition

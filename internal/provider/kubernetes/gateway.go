@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,8 +72,11 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 	}
 	r.log.Info("watching gateway objects")
 
-	// Trigger gateway reconciliation when the Envoy service has changed.
+	// Trigger gateway reconciliation when the Envoy Service or Deployment has changed.
 	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGatewayClass()); err != nil {
+		return err
+	}
+	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, r.enqueueRequestForOwningGatewayClass()); err != nil {
 		return err
 	}
 
@@ -105,7 +109,7 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 }
 
 // enqueueRequestForOwningGatewayClass returns an event handler that maps events with
-// the GatewayCLass owning label to Gateway objects.
+// the GatewayClass owning label to Gateway objects.
 func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
 		labels := a.GetLabels()
@@ -187,12 +191,21 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	// Set status conditions for all accepted gateways.
 	for i := range acceptedGateways {
 		gw := acceptedGateways[i]
-		// Get the status address of the Gateway's associated Service.
-		svc, err := r.serviceForGateway(ctx)
+
+		// Get the status of the Gateway's associated Envoy Deployment.
+		deployment, err := r.envoyDeploymentForGateway(ctx)
+		if err != nil {
+			r.log.Info("failed to get deployment for gatteway",
+				"namespace", gw.Namespace, "name", gw.Name)
+		}
+
+		// Get the status address of the Gateway's associated Envoy Service.
+		svc, err := r.envoyServiceForGateway(ctx)
 		if err != nil {
 			r.log.Info("failed to get service for gateway",
 				"namespace", gw.Namespace, "name", gw.Name)
 		}
+
 		r.statusUpdater.Send(status.Update{
 			NamespacedName: types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name},
 			Resource:       new(gwapiv1b1.Gateway),
@@ -202,7 +215,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 					panic(fmt.Sprintf("unsupported object type %T", obj))
 				}
 
-				return status.SetGatewayStatus(gw.DeepCopy(), true, svc)
+				return status.SetGatewayStatus(gw.DeepCopy(), true, svc, deployment)
 			}),
 		})
 	}
@@ -259,8 +272,8 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 	return ret
 }
 
-// serviceForGateway returns the Envoy service, returning nil if the service doesn't exist.
-func (r *gatewayReconciler) serviceForGateway(ctx context.Context) (*corev1.Service, error) {
+// envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
+func (r *gatewayReconciler) envoyServiceForGateway(ctx context.Context) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
 		Name:      config.EnvoyServiceName,
@@ -297,4 +310,20 @@ func (r *gatewayReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.G
 		}
 	}
 	return nil
+}
+
+// envoyDeploymentForGateway returns the Envoy service, returning nil if the service doesn't exist.
+func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context) (*appsv1.Deployment, error) {
+	key := types.NamespacedName{
+		Namespace: config.EnvoyGatewayNamespace,
+		Name:      config.EnvoyDeploymentName,
+	}
+	deployment := new(appsv1.Deployment)
+	if err := r.client.Get(ctx, key, deployment); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return deployment, nil
 }

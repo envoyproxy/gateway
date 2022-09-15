@@ -258,7 +258,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 			}
 
 			// Validate allowed namespaces
-			if listener.AllowedRoutes != nil && listener.AllowedRoutes.Namespaces != nil && listener.AllowedRoutes.Namespaces.From != nil && *listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector {
+			if listener.AllowedRoutes != nil &&
+				listener.AllowedRoutes.Namespaces != nil &&
+				listener.AllowedRoutes.Namespaces.From != nil &&
+				*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector {
 				if listener.AllowedRoutes.Namespaces.Selector == nil {
 					listener.SetCondition(
 						v1beta1.ListenerConditionReady,
