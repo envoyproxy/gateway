@@ -4,6 +4,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	wrappers "github.com/golang/protobuf/ptypes/wrappers"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -12,6 +13,14 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 	ret := &route.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}
+
+	if len(httpRoute.AddRequestHeaders) > 0 {
+		ret.RequestHeadersToAdd = buildXdsAddedRequestHeaders(httpRoute.AddRequestHeaders)
+	}
+	if len(httpRoute.RemoveRequestHeaders) > 0 {
+		ret.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
+	}
+
 	switch {
 	case httpRoute.DirectResponse != nil:
 		ret.Action = &route.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
@@ -168,6 +177,27 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *route.DirectResponseA
 			Specifier: &core.DataSource_InlineString{
 				InlineString: *res.Body,
 			},
+		}
+	}
+
+	return ret
+}
+
+func buildXdsAddedRequestHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
+	ret := make([]*core.HeaderValueOption, len(headersToAdd))
+
+	for i, header := range headersToAdd {
+		ret[i] = &core.HeaderValueOption{
+			Header: &core.HeaderValue{
+				Key:   header.Name,
+				Value: header.Value,
+			},
+			Append: &wrappers.BoolValue{Value: header.Append},
+		}
+
+		// Allow empty headers to be set, but don't add the config to do so unless necessary
+		if header.Value == "" {
+			ret[i].KeepEmptyValue = true
 		}
 	}
 

@@ -1,0 +1,40 @@
+- name: route_first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: route_first-listener
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: cluster_request-header-route
+    request_headers_to_add:
+    - header:
+        key: "some-header"
+        value: "some-value"
+      append: true
+      keep_empty_value: false
+    - header:
+        key: "some-header-2"
+        value: "some-value"
+      append: true
+      keep_empty_value: false
+    - header:
+        key: "some-header-3"
+        value: "some-value"
+      append: false
+      keep_empty_value: false
+    - header:
+        key: "some-header-4"
+        value: "some-value"
+      append: false
+      keep_empty_value: false
+    - header:
+        key: "empty-header"
+        value: ""
+      append: false
+      keep_empty_value: true
+    request_headers_to_remove:
+    - "some-header5"
+    - "some-header6"
+
