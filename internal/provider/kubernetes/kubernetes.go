@@ -50,7 +50,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	if err := newGatewayController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
-	if err := newHTTPRouteController(mgr, svr, resources); err != nil {
+	if err := newHTTPRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
 

@@ -8,21 +8,18 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-// SetGatewayStatus adds or updates status for the provided Gateway.
-func SetGatewayStatus(gw *gwapiv1b1.Gateway, scheduled bool, svc *corev1.Service, deployment *appsv1.Deployment) *gwapiv1b1.Gateway {
-	computeGatewayStatusAddrs(gw, svc)
-	gw.Status.Conditions = mergeConditions(
-		gw.Status.Conditions,
-		computeGatewayScheduledCondition(gw, scheduled),
-		computeGatewayReadyCondition(gw, deployment),
-	)
+// UpdateGatewayScheduledCondition updates the status condition for the provided Gateway based on the scheduled state.
+func UpdateGatewayStatusScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) *gwapiv1b1.Gateway {
+	gw.Status.Conditions = mergeConditions(gw.Status.Conditions, computeGatewayScheduledCondition(gw, scheduled))
 	return gw
 }
 
-// computeGatewayStatusAddrs computes status addresses for the provided gateway
-// based on the status IP/Hostname of svc.
-func computeGatewayStatusAddrs(gw *gwapiv1b1.Gateway, svc *corev1.Service) {
+// UpdateGatewayStatusAddrs updates the status addresses for the provided gateway
+// based on the status IP/Hostname of svc and updates the Ready condition based on the
+// service and deployment state.
+func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment) {
 	var addrs, hostnames []string
+	// Update the status addresses field.
 	if svc != nil {
 		for i := range svc.Status.LoadBalancer.Ingress {
 			switch {
@@ -32,24 +29,26 @@ func computeGatewayStatusAddrs(gw *gwapiv1b1.Gateway, svc *corev1.Service) {
 				hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 			}
 		}
-	}
 
-	var gwAddrs []gwapiv1b1.GatewayAddress
-	for i := range addrs {
-		addr := gwapiv1b1.GatewayAddress{
-			Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
-			Value: addrs[i],
+		var gwAddrs []gwapiv1b1.GatewayAddress
+		for i := range addrs {
+			addr := gwapiv1b1.GatewayAddress{
+				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
+				Value: addrs[i],
+			}
+			gwAddrs = append(gwAddrs, addr)
 		}
-		gwAddrs = append(gwAddrs, addr)
-	}
 
-	for i := range hostnames {
-		addr := gwapiv1b1.GatewayAddress{
-			Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.HostnameAddressType),
-			Value: hostnames[i],
+		for i := range hostnames {
+			addr := gwapiv1b1.GatewayAddress{
+				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.HostnameAddressType),
+				Value: hostnames[i],
+			}
+			gwAddrs = append(gwAddrs, addr)
 		}
-		gwAddrs = append(gwAddrs, addr)
-	}
 
-	gw.Status.Addresses = gwAddrs
+		gw.Status.Addresses = gwAddrs
+	}
+	// Update the ready condition.
+	gw.Status.Conditions = mergeConditions(gw.Status.Conditions, computeGatewayReadyCondition(gw, deployment))
 }

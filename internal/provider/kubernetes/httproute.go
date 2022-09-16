@@ -24,6 +24,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/status"
 )
 
 const (
@@ -31,8 +33,9 @@ const (
 )
 
 type httpRouteReconciler struct {
-	client client.Client
-	log    logr.Logger
+	client        client.Client
+	log           logr.Logger
+	statusUpdater status.Updater
 
 	initializeOnce sync.Once
 	resources      *message.ProviderResources
@@ -40,12 +43,13 @@ type httpRouteReconciler struct {
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
+func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
 	resources.HTTPRoutesInitialized.Add(1)
 	r := &httpRouteReconciler{
-		client:    mgr.GetClient(),
-		log:       cfg.Logger,
-		resources: resources,
+		client:        mgr.GetClient(),
+		log:           cfg.Logger,
+		statusUpdater: su,
+		resources:     resources,
 	}
 
 	c, err := controller.New("httproute", mgr, controller.Options{Reconciler: r})
@@ -57,6 +61,10 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *
 	if err := c.Watch(&source.Kind{Type: &gwapiv1b1.HTTPRoute{}}, &handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
+
+	// Subscribe to status updates
+	go r.subscribeAndUpdateStatus(context.Background())
+
 	// Add indexing on HTTPRoute, for Service objects that are referenced in HTTPRoute objects
 	// via `.spec.rules.backendRefs`. This helps in querying for HTTPRoutes that are affected by
 	// a particular Service CRUD.
@@ -101,15 +109,16 @@ func (r *httpRouteReconciler) getHTTPRoutesForService(obj client.Object) []recon
 	affectedHTTPRouteList := &gwapiv1b1.HTTPRouteList{}
 
 	if err := r.client.List(context.Background(), affectedHTTPRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, NamespacedName(obj).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, utils.NamespacedName(obj).String()),
 	}); err != nil {
 		return []reconcile.Request{}
 	}
 
 	requests := make([]reconcile.Request, len(affectedHTTPRouteList.Items))
 	for i, item := range affectedHTTPRouteList.Items {
+		item := item
 		requests[i] = reconcile.Request{
-			NamespacedName: NamespacedName(item.DeepCopy()),
+			NamespacedName: utils.NamespacedName(&item),
 		}
 	}
 
@@ -131,7 +140,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 	for i := range routeList.Items {
 		// See if this route from the list matched the reconciled route.
 		route := routeList.Items[i]
-		routeKey := NamespacedName(&route)
+		routeKey := utils.NamespacedName(&route)
 		if routeKey == request.NamespacedName {
 			found = true
 		}
@@ -236,4 +245,30 @@ func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
 	}
 
 	return nil
+}
+
+// subscribeAndUpdateStatus subscribes to httproute status updates and writes it into the
+// Kubernetes API Server
+func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
+	// Subscribe to resources
+	for snapshot := range r.resources.HTTPRouteStatuses.Subscribe(ctx) {
+		r.log.Info("received a status notification")
+		statuses := snapshot.State
+		for key, o := range statuses {
+			o := o
+			r.statusUpdater.Send(status.Update{
+				NamespacedName: key,
+				Resource:       new(gwapiv1b1.HTTPRoute),
+				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					if _, ok := obj.(*gwapiv1b1.HTTPRoute); !ok {
+						panic(fmt.Sprintf("unsupported object type %T", obj))
+					}
+					return o
+				}),
+			})
+			// Delete to prevent multiple rewrites
+			r.resources.HTTPRouteStatuses.Delete(key)
+		}
+	}
+	r.log.Info("status subscriber shutting down")
 }

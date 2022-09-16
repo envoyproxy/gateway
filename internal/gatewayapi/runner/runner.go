@@ -10,6 +10,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 type Config struct {
@@ -112,6 +113,16 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				} else {
 					r.XdsIR.Store(r.Name(), result.XdsIR)
 				}
+			}
+
+			// Update Status
+			for _, gateway := range result.Gateways {
+				key := utils.NamespacedName(gateway)
+				r.ProviderResources.GatewayStatuses.Store(key, gateway)
+			}
+			for _, httpRoute := range result.HTTPRoutes {
+				key := utils.NamespacedName(httpRoute)
+				r.ProviderResources.HTTPRouteStatuses.Store(key, httpRoute)
 			}
 
 		}
