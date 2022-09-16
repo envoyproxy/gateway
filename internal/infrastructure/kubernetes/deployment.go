@@ -131,6 +131,38 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
+					Volumes: []corev1.Volume{
+						{
+							Name: "certs",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "envoy",
+								},
+							},
+						},
+						{
+							Name: "sds",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: config.EnvoyConfigMapName,
+									},
+									Items: []corev1.KeyToPath{
+										{
+											Key:  sdsCAFilename,
+											Path: sdsCAFilename,
+										},
+										{
+											Key:  sdsCertFilename,
+											Path: sdsCertFilename,
+										},
+									},
+									DefaultMode: pointer.Int32Ptr(int32(420)),
+									Optional:    pointer.BoolPtr(false),
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -204,7 +236,18 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 					},
 				},
 			},
-			Ports:                    ports,
+			Ports: ports,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      "certs",
+					MountPath: "/certs",
+					ReadOnly:  true,
+				},
+				{
+					Name:      "sds",
+					MountPath: "/sds",
+				},
+			},
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},

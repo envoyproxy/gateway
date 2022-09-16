@@ -41,6 +41,25 @@ static_resources:
     http2_protocol_options: {}
     name: xds_cluster
     type: STRICT_DNS
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        common_tls_context:
+          tls_params:
+            tls_maximum_protocol_version: TLSv1_3
+          tls_certificate_sds_secret_configs:
+          - name: xds_certificate
+            sds_config:
+              path_config_source:
+                path: "/sds/xds-certificate.json"
+              resource_api_version: V3
+          validation_context_sds_secret_config:
+            name: xds_trusted_ca
+            sds_config:
+              path_config_source:
+                path: "/sds/xds-trusted-ca.json"
+              resource_api_version: V3
 layered_runtime:
   layers:
     - name: runtime-0

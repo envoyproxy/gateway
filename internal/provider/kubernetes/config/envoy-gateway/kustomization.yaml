@@ -1,4 +1,5 @@
 resources:
+- certgen-job.yaml
 - deploy_and_ns.yaml
 - service.yaml
 

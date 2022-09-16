@@ -96,6 +96,10 @@ func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
 		return err
 	}
 
+	if _, err := i.createOrUpdateConfigMap(ctx); err != nil {
+		return err
+	}
+
 	if err := i.createOrUpdateDeployment(ctx, infra); err != nil {
 		return err
 	}
@@ -118,6 +122,10 @@ func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	if err := i.deleteDeployment(ctx); err != nil {
+		return err
+	}
+
+	if err := i.deleteConfigMap(ctx); err != nil {
 		return err
 	}
 
