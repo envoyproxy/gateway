@@ -60,7 +60,7 @@ func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Depl
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
 	}
 
-	// If there are any unavailable replicas for the Envoy Deployment, donot
+	// If there are any unavailable replicas for the Envoy Deployment, don't
 	// mark the Gateway as ready yet.
 	if deployment.Status.UnavailableReplicas > 0 {
 		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,

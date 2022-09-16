@@ -195,7 +195,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		// Get the status of the Gateway's associated Envoy Deployment.
 		deployment, err := r.envoyDeploymentForGateway(ctx)
 		if err != nil {
-			r.log.Info("failed to get deployment for gatteway",
+			r.log.Info("failed to get deployment for gateway",
 				"namespace", gw.Namespace, "name", gw.Name)
 		}
 
@@ -312,7 +312,7 @@ func (r *gatewayReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.G
 	return nil
 }
 
-// envoyDeploymentForGateway returns the Envoy service, returning nil if the service doesn't exist.
+// envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
 func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
