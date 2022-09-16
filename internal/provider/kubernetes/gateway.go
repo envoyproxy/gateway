@@ -160,20 +160,16 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	if len(acceptedGateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
 		// If needed, remove the finalizer from the accepted GatewayClass.
-		if gatewayClassFinalized(acceptedClass) {
-			if err := r.removeFinalizer(ctx, acceptedClass); err != nil {
-				return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w",
-					acceptedClass.Name, err)
-			}
+		if err := r.removeFinalizer(ctx, acceptedClass); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w",
+				acceptedClass.Name, err)
 		}
 	}
 
 	// If needed, finalize the accepted GatewayClass.
-	if !gatewayClassFinalized(acceptedClass) {
-		if err := r.addFinalizer(ctx, acceptedClass); err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed adding finalizer to gatewayclass %s: %w",
-				acceptedClass.Name, err)
-		}
+	if err := r.addFinalizer(ctx, acceptedClass); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed adding finalizer to gatewayclass %s: %w",
+			acceptedClass.Name, err)
 	}
 
 	found := false
@@ -279,17 +275,7 @@ func (r *gatewayReconciler) serviceForGateway(ctx context.Context) (*corev1.Serv
 	return svc, nil
 }
 
-// gatewayClassFinalized returns true if the provided gc is finalized.
-func gatewayClassFinalized(gc *gwapiv1b1.GatewayClass) bool {
-	for _, f := range gc.Finalizers {
-		if f == gatewayClassFinalizer {
-			return true
-		}
-	}
-	return false
-}
-
-// addFinalizer adds the gatewayclass finalizer to the provided gc.
+// addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
 func (r *gatewayReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
 	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		updated := gc.DeepCopy()
@@ -301,7 +287,7 @@ func (r *gatewayReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.Gate
 	return nil
 }
 
-// removeFinalizer removes the gatewayclass finalizer from the provided gc.
+// removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
 func (r *gatewayReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
 	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		updated := gc.DeepCopy()
