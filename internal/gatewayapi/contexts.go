@@ -1,6 +1,8 @@
 package gatewayapi
 
 import (
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -17,10 +19,12 @@ type GatewayContext struct {
 
 func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType, status metav1.ConditionStatus, reason v1beta1.GatewayConditionReason, message string) {
 	cond := metav1.Condition{
-		Type:    string(conditionType),
-		Status:  status,
-		Reason:  string(reason),
-		Message: message,
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: g.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1
@@ -93,10 +97,12 @@ type ListenerContext struct {
 
 func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
 	cond := metav1.Condition{
-		Type:    string(conditionType),
-		Status:  status,
-		Reason:  string(reason),
-		Message: message,
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: l.gateway.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1
@@ -232,10 +238,12 @@ func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 
 func (r *RouteParentContext) SetCondition(conditionType v1beta1.RouteConditionType, status metav1.ConditionStatus, reason v1beta1.RouteConditionReason, message string) {
 	cond := metav1.Condition{
-		Type:    string(conditionType),
-		Status:  status,
-		Reason:  string(reason),
-		Message: message,
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: r.route.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1

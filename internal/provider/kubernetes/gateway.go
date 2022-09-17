@@ -143,6 +143,9 @@ func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventH
 func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.Info("reconciling gateway", "namespace", request.Namespace, "name", request.Name)
 
+	// Once we've processed `allGateways`, record that we've fully initialized.
+	defer r.initializeOnce.Do(r.resources.GatewaysInitialized.Done)
+
 	allClasses := &gwapiv1b1.GatewayClassList{}
 	if err := r.client.List(ctx, allClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses")
@@ -218,9 +221,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		key := utils.NamespacedName(&gw)
 		r.resources.GatewayStatuses.Store(key, &gw)
 	}
-
-	// Once we've processed `allGateways`, record that we've fully initialized.
-	r.initializeOnce.Do(r.resources.GatewaysInitialized.Done)
 
 	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
 

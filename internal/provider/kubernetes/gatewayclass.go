@@ -91,6 +91,9 @@ func (r *gatewayClassReconciler) hasMatchingController(obj client.Object) bool {
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.WithName(request.Name).Info("reconciling gatewayclass")
 
+	// Once we've iterated over all listed classes, mark that we've fully initialized.
+	defer r.initializeOnce.Do(r.resources.GatewayClassesInitialized.Done)
+
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
@@ -163,8 +166,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 			return reconcile.Result{}, err
 		}
 	}
-	// Once we've iterated over all listed classes, mark that we've fully initialized.
-	r.initializeOnce.Do(r.resources.GatewayClassesInitialized.Done)
 
 	r.log.WithName(request.Name).Info("reconciled gatewayclass")
 	return reconcile.Result{}, nil

@@ -130,6 +130,8 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	log.Info("reconciling httproute")
 
+	defer r.initializeOnce.Do(r.resources.HTTPRoutesInitialized.Done)
+
 	// Fetch all HTTPRoutes from the cache.
 	routeList := &gwapiv1b1.HTTPRouteList{}
 	if err := r.client.List(ctx, routeList); err != nil {
@@ -221,7 +223,6 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	log.Info("reconciled httproute")
 
-	r.initializeOnce.Do(r.resources.HTTPRoutesInitialized.Done)
 	return reconcile.Result{}, nil
 }
 
