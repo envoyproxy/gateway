@@ -245,7 +245,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 		{
 			name:             "ready gateway",
 			serviceAddress:   true,
-			deploymentStatus: appsv1.DeploymentStatus{UnavailableReplicas: 0},
+			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expect: metav1.Condition{
 				Status: metav1.ConditionTrue,
 				Reason: string(gwapiv1b1.GatewayReasonReady),
@@ -254,7 +254,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 		{
 			name:             "not ready gateway without address",
 			serviceAddress:   false,
-			deploymentStatus: appsv1.DeploymentStatus{UnavailableReplicas: 0},
+			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expect: metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(gwapiv1b1.GatewayReasonAddressNotAssigned),
@@ -263,7 +263,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 		{
 			name:             "not ready gateway with address unavailable pods",
 			serviceAddress:   true,
-			deploymentStatus: appsv1.DeploymentStatus{UnavailableReplicas: 1},
+			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 0},
 			expect: metav1.Condition{
 				Status: metav1.ConditionFalse,
 				Reason: string(gwapiv1b1.GatewayReasonNoResources),
