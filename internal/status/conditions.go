@@ -4,6 +4,7 @@
 package status
 
 import (
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -68,9 +69,10 @@ func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Depl
 			"Deployment replicas unavailable", time.Now(), gw.Generation)
 	}
 
+	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
+		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
 	return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionTrue,
-		string(gwapiv1b1.GatewayReasonReady),
-		"Address assigned to the Gateway", time.Now(), gw.Generation)
+		string(gwapiv1b1.GatewayReasonReady), message, time.Now(), gw.Generation)
 }
 
 // mergeConditions adds or updates matching conditions, and updates the transition
