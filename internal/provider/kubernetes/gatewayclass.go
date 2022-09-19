@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
 
 type gatewayClassReconciler struct {
@@ -103,13 +104,23 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		}
 	}
 
+	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	acceptedGC := cc.acceptedClass()
 	// Reset gatewayclasses since this Reconcile function never performs a Delete and
 	// we are only interested in the first element.
 	r.resources.DeleteGatewayClasses()
 	if acceptedGC == nil {
-		// A nil gatewayclass removes managed proxy infra, if it exists.
 		r.log.Info("failed to find an accepted gatewayclass")
+		// A nil gatewayclass removes managed proxy infra, if it exists.
+		r.resources.GatewayClasses.Store(request.Name, nil)
+		return reconcile.Result{}, nil
+	}
+
+	// The gatewayclass was marked for deletion and the finalizer removed,
+	// so clean-up dependents.
+	if !acceptedGC.DeletionTimestamp.IsZero() && !slice.ContainsString(acceptedGC.Finalizers, gatewayClassFinalizer) {
+		r.log.Info("gatewayclass marked for deletion")
+		// A nil gatewayclass removes managed proxy infra, if it exists.
 		r.resources.GatewayClasses.Store(request.Name, nil)
 		return reconcile.Result{}, nil
 	}
