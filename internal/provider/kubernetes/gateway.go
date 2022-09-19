@@ -164,12 +164,12 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 			return reconcile.Result{}, fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w",
 				acceptedClass.Name, err)
 		}
-	}
-
-	// If needed, finalize the accepted GatewayClass.
-	if err := r.addFinalizer(ctx, acceptedClass); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed adding finalizer to gatewayclass %s: %w",
-			acceptedClass.Name, err)
+	} else {
+		// If needed, finalize the accepted GatewayClass.
+		if err := r.addFinalizer(ctx, acceptedClass); err != nil {
+			return reconcile.Result{}, fmt.Errorf("failed adding finalizer to gatewayclass %s: %w",
+				acceptedClass.Name, err)
+		}
 	}
 
 	found := false
