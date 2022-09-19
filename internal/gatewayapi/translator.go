@@ -576,243 +576,248 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							continue
 						}
 
-						if redirect := filter.RequestRedirect; redirect != nil {
-							redir := &ir.Redirect{}
-							if redirect.Scheme != nil {
-								// Note that gateway API may support additional schemes in the future, but unknown values
-								// must result in an UnsupportedValue status
-								if *redirect.Scheme == "http" || *redirect.Scheme == "https" {
-									redir.Scheme = redirect.Scheme
-								} else {
-									errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
-									parentRef.SetCondition(
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										errMsg,
-									)
-									continue
-								}
-							}
-
-							if redirect.Hostname != nil {
-								if err := isValidHostname(string(*redirect.Hostname)); err != nil {
-									parentRef.SetCondition(
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										err.Error(),
-									)
-									continue
-								} else {
-									redirectHost := string(*redirect.Hostname)
-									redir.Hostname = &redirectHost
-								}
-							}
-
-							if redirect.Path != nil {
-								switch redirect.Path.Type {
-								case v1beta1.FullPathHTTPPathModifier:
-									if redirect.Path.ReplaceFullPath != nil {
-										redir.Path = &ir.HTTPPathModifier{
-											FullReplace: redirect.Path.ReplaceFullPath,
-										}
-									}
-								case v1beta1.PrefixMatchHTTPPathModifier:
-									if redirect.Path.ReplacePrefixMatch != nil {
-										redir.Path = &ir.HTTPPathModifier{
-											PrefixMatchReplace: redirect.Path.ReplacePrefixMatch,
-										}
-									}
-								default:
-									errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
-									parentRef.SetCondition(
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										errMsg,
-									)
-									continue
-								}
-							}
-
-							if redirect.StatusCode != nil {
-								redirectCode := int32(*redirect.StatusCode)
-								// Envoy supports 302, 303, 307, and 308, but gateway API only includes 301 and 302
-								if redirectCode == 301 || redirectCode == 302 {
-									redir.StatusCode = &redirectCode
-								} else {
-									errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
-									parentRef.SetCondition(
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										errMsg,
-									)
-									continue
-								}
-							}
-
-							if redirect.Port != nil {
-								redirectPort := uint32(*redirect.Port)
-								redir.Port = &redirectPort
-							}
-
-							redirectResponse = redir
+						redirect := filter.RequestRedirect
+						if redirect == nil {
+							break
 						}
-					case v1beta1.HTTPRouteFilterRequestHeaderModifier:
-						// Make sure the header modifier config actually exists
-						if headerModifier := filter.RequestHeaderModifier; headerModifier != nil {
 
-							// Add request headers
-							if headersToAdd := headerModifier.Add; headersToAdd != nil {
-
-								for _, addHeader := range headersToAdd {
-									if addHeader.Name == "" {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											"RequestHeaderModifier Filter cannot add a header with an empty name",
-										)
-										// try to process the rest of the headers and produce a valid config.
-										continue
-									}
-									if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
-										)
-										continue
-									}
-									// Check if the header is a duplicate
-									headerKey := string(addHeader.Name)
-									canAddHeader := true
-									for _, h := range addRequestHeaders {
-										if strings.EqualFold(h.Name, headerKey) {
-											canAddHeader = false
-											break
-										}
-									}
-
-									if !canAddHeader {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added, ignoring second entry", headerKey),
-										)
-										continue
-									}
-
-									newHeader := ir.AddHeader{
-										Name:   headerKey,
-										Append: true,
-										Value:  addHeader.Value,
-									}
-
-									addRequestHeaders = append(addRequestHeaders, newHeader)
-								}
-							}
-
-							// Set headers
-							if headersToSet := headerModifier.Set; headersToSet != nil {
-								for _, setHeader := range headersToSet {
-									if setHeader.Name == "" {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											"RequestHeaderModifier Filter cannot set a header with an empty name",
-										)
-										continue
-									}
-									if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
-										)
-										continue
-									}
-
-									// Check if the header to be set has already been configured
-									headerKey := string(setHeader.Name)
-									canAddHeader := true
-									for _, h := range addRequestHeaders {
-										if strings.EqualFold(h.Name, headerKey) {
-											canAddHeader = false
-											break
-										}
-									}
-									if !canAddHeader {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added/set, ignoring second entry", headerKey),
-										)
-										continue
-									}
-									newHeader := ir.AddHeader{
-										Name:   string(setHeader.Name),
-										Append: false,
-										Value:  setHeader.Value,
-									}
-
-									addRequestHeaders = append(addRequestHeaders, newHeader)
-								}
-							}
-
-							// Remove request headers
-							// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
-							// headers to remove. It will remove the original header if present and then add/set the header after.
-							if headersToRemove := headerModifier.Remove; headersToRemove != nil {
-								for _, removedHeader := range headersToRemove {
-									if removedHeader == "" {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											"RequestHeaderModifier Filter cannot remove a header with an empty name",
-										)
-										continue
-									}
-
-									canRemHeader := true
-									for _, h := range removeRequestHeaders {
-										if strings.EqualFold(h, removedHeader) {
-											canRemHeader = false
-											break
-										}
-									}
-									if !canRemHeader {
-										parentRef.SetCondition(
-											v1beta1.RouteConditionResolvedRefs,
-											metav1.ConditionFalse,
-											v1beta1.RouteReasonUnsupportedValue,
-											fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be removed, ignoring second entry", removedHeader),
-										)
-										continue
-									}
-
-									removeRequestHeaders = append(removeRequestHeaders, removedHeader)
-
-								}
-							}
-
-							// Update the status if the filter failed to configure any valid headers to add/remove
-							if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 {
+						redir := &ir.Redirect{}
+						if redirect.Scheme != nil {
+							// Note that gateway API may support additional schemes in the future, but unknown values
+							// must result in an UnsupportedValue status
+							if *redirect.Scheme == "http" || *redirect.Scheme == "https" {
+								redir.Scheme = redirect.Scheme
+							} else {
+								errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
 								parentRef.SetCondition(
 									v1beta1.RouteConditionResolvedRefs,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
-									"RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
+									errMsg,
 								)
+								continue
 							}
+						}
+
+						if redirect.Hostname != nil {
+							if err := isValidHostname(string(*redirect.Hostname)); err != nil {
+								parentRef.SetCondition(
+									v1beta1.RouteConditionResolvedRefs,
+									metav1.ConditionFalse,
+									v1beta1.RouteReasonUnsupportedValue,
+									err.Error(),
+								)
+								continue
+							} else {
+								redirectHost := string(*redirect.Hostname)
+								redir.Hostname = &redirectHost
+							}
+						}
+
+						if redirect.Path != nil {
+							switch redirect.Path.Type {
+							case v1beta1.FullPathHTTPPathModifier:
+								if redirect.Path.ReplaceFullPath != nil {
+									redir.Path = &ir.HTTPPathModifier{
+										FullReplace: redirect.Path.ReplaceFullPath,
+									}
+								}
+							case v1beta1.PrefixMatchHTTPPathModifier:
+								if redirect.Path.ReplacePrefixMatch != nil {
+									redir.Path = &ir.HTTPPathModifier{
+										PrefixMatchReplace: redirect.Path.ReplacePrefixMatch,
+									}
+								}
+							default:
+								errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
+								parentRef.SetCondition(
+									v1beta1.RouteConditionResolvedRefs,
+									metav1.ConditionFalse,
+									v1beta1.RouteReasonUnsupportedValue,
+									errMsg,
+								)
+								continue
+							}
+						}
+
+						if redirect.StatusCode != nil {
+							redirectCode := int32(*redirect.StatusCode)
+							// Envoy supports 302, 303, 307, and 308, but gateway API only includes 301 and 302
+							if redirectCode == 301 || redirectCode == 302 {
+								redir.StatusCode = &redirectCode
+							} else {
+								errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
+								parentRef.SetCondition(
+									v1beta1.RouteConditionResolvedRefs,
+									metav1.ConditionFalse,
+									v1beta1.RouteReasonUnsupportedValue,
+									errMsg,
+								)
+								continue
+							}
+						}
+
+						if redirect.Port != nil {
+							redirectPort := uint32(*redirect.Port)
+							redir.Port = &redirectPort
+						}
+
+						redirectResponse = redir
+					case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+						// Make sure the header modifier config actually exists
+						headerModifier := filter.RequestHeaderModifier
+						if headerModifier == nil {
+							break
+						}
+
+						// Add request headers
+						if headersToAdd := headerModifier.Add; headersToAdd != nil {
+
+							for _, addHeader := range headersToAdd {
+								if addHeader.Name == "" {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										"RequestHeaderModifier Filter cannot add a header with an empty name",
+									)
+									// try to process the rest of the headers and produce a valid config.
+									continue
+								}
+								if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
+									)
+									continue
+								}
+								// Check if the header is a duplicate
+								headerKey := string(addHeader.Name)
+								canAddHeader := true
+								for _, h := range addRequestHeaders {
+									if strings.EqualFold(h.Name, headerKey) {
+										canAddHeader = false
+										break
+									}
+								}
+
+								if !canAddHeader {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added, ignoring second entry", headerKey),
+									)
+									continue
+								}
+
+								newHeader := ir.AddHeader{
+									Name:   headerKey,
+									Append: true,
+									Value:  addHeader.Value,
+								}
+
+								addRequestHeaders = append(addRequestHeaders, newHeader)
+							}
+						}
+
+						// Set headers
+						if headersToSet := headerModifier.Set; headersToSet != nil {
+							for _, setHeader := range headersToSet {
+								if setHeader.Name == "" {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										"RequestHeaderModifier Filter cannot set a header with an empty name",
+									)
+									continue
+								}
+								if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
+									)
+									continue
+								}
+
+								// Check if the header to be set has already been configured
+								headerKey := string(setHeader.Name)
+								canAddHeader := true
+								for _, h := range addRequestHeaders {
+									if strings.EqualFold(h.Name, headerKey) {
+										canAddHeader = false
+										break
+									}
+								}
+								if !canAddHeader {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added/set, ignoring second entry", headerKey),
+									)
+									continue
+								}
+								newHeader := ir.AddHeader{
+									Name:   string(setHeader.Name),
+									Append: false,
+									Value:  setHeader.Value,
+								}
+
+								addRequestHeaders = append(addRequestHeaders, newHeader)
+							}
+						}
+
+						// Remove request headers
+						// As far as Envoy is concerned, it is ok to configure a header to be added/set and also in the list of
+						// headers to remove. It will remove the original header if present and then add/set the header after.
+						if headersToRemove := headerModifier.Remove; headersToRemove != nil {
+							for _, removedHeader := range headersToRemove {
+								if removedHeader == "" {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										"RequestHeaderModifier Filter cannot remove a header with an empty name",
+									)
+									continue
+								}
+
+								canRemHeader := true
+								for _, h := range removeRequestHeaders {
+									if strings.EqualFold(h, removedHeader) {
+										canRemHeader = false
+										break
+									}
+								}
+								if !canRemHeader {
+									parentRef.SetCondition(
+										v1beta1.RouteConditionResolvedRefs,
+										metav1.ConditionFalse,
+										v1beta1.RouteReasonUnsupportedValue,
+										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be removed, ignoring second entry", removedHeader),
+									)
+									continue
+								}
+
+								removeRequestHeaders = append(removeRequestHeaders, removedHeader)
+
+							}
+						}
+
+						// Update the status if the filter failed to configure any valid headers to add/remove
+						if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 {
+							parentRef.SetCondition(
+								v1beta1.RouteConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.RouteReasonUnsupportedValue,
+								"RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
+							)
 						}
 					default:
 						// "If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
