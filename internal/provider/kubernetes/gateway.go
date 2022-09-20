@@ -348,7 +348,7 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					if _, ok := obj.(*gwapiv1b1.Gateway); !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return val
+					return val.DeepCopy()
 				}),
 			})
 		}
