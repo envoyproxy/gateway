@@ -14,4 +14,4 @@ bin/
 release-artifacts/
 
 # Outputs
-cover.out
+coverage.xml
