@@ -49,14 +49,9 @@ httpRoutes:
       filters:
       - type: RequestHeaderModifier
         requestHeaderModifier:
-          set: 
-          - name: "example:1"
-            value: "some-value"
-          - name: "good-header"
-            value: "some-value"
           add:
-          - name: "example/2"
-            value: "some-value"
+          set:
+          remove:
   status:
     parents:
     - parentRef:
@@ -69,10 +64,6 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
-      - type: ResolvedRefs
-        status: "False"
-        reason: UnsupportedValue
-        message: "RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: 'example:1'"
 xdsIR:
   http:
   - name: envoy-gateway-gateway-1-http
@@ -91,10 +82,6 @@ xdsIR:
       - host: 7.7.7.7
         port: 8080
         weight: 1
-      addRequestHeaders:
-      - name: "good-header"
-        value: "some-value"
-        append: false
 infraIR:
   proxy:
     metadata:
