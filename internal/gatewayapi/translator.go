@@ -412,27 +412,32 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 				listener.SetTLSSecret(secret)
 			}
 
-			// Any condition on the listener indicates an error,
-			// so set "Ready: false" if it's not set already.
-			if len(listener.GetConditions()) > 0 {
-				var hasReadyCond bool
-				for _, existing := range listener.GetConditions() {
-					if existing.Type == string(v1beta1.ListenerConditionReady) {
-						hasReadyCond = true
-						break
+			lConditions := listener.GetConditions()
+			if len(lConditions) == 0 {
+				listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
+			} else {
+				// Any condition on the listener apart from Ready=true indicates an error.
+				if !(lConditions[0].Type == string(v1beta1.ListenerConditionReady) && lConditions[0].Status == metav1.ConditionTrue) {
+					// set "Ready: false" if it's not set already.
+					var hasReadyCond bool
+					for _, existing := range lConditions {
+						if existing.Type == string(v1beta1.ListenerConditionReady) {
+							hasReadyCond = true
+							break
+						}
 					}
-				}
-				if !hasReadyCond {
-					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						"Listener is invalid, see other Conditions for details.",
-					)
+					if !hasReadyCond {
+						listener.SetCondition(
+							v1beta1.ListenerConditionReady,
+							metav1.ConditionFalse,
+							v1beta1.ListenerReasonInvalid,
+							"Listener is invalid, see other Conditions for details.",
+						)
+					}
+					// skip computing IR
 					continue
 				}
 			}
-			listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
 
 			servicePort := int32(listener.Port)
 			containerPort := servicePortToContainerPort(servicePort)
