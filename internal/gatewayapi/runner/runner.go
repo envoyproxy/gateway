@@ -91,10 +91,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			// Translate to IR
 			result := t.Translate(&in)
+
 			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			r.Logger.Info(string(yamlXdsIR))
+			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
-			r.Logger.Info(string(yamlInfraIR))
+			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
 			// Publish the IRs. Use the service name as the key
 			// to ensure there is always one element in the map.
@@ -124,7 +125,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(httpRoute)
 				r.ProviderResources.HTTPRouteStatuses.Store(key, httpRoute)
 			}
-
 		}
 	}
 	r.Logger.Info("shutting down")

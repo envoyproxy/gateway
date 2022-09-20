@@ -429,11 +429,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 						v1beta1.ListenerReasonInvalid,
 						"Listener is invalid, see other Conditions for details.",
 					)
+					continue
 				}
-
-				continue
 			}
-
 			listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
 
 			servicePort := int32(listener.Port)
@@ -1024,8 +1022,9 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irListener := xdsIR.GetListener(irListenerName(listener))
-				irListener.Routes = append(irListener.Routes, perHostRoutes...)
-
+				if irListener != nil {
+					irListener.Routes = append(irListener.Routes, perHostRoutes...)
+				}
 				// Theoretically there should only be one parent ref per
 				// Route that attaches to a given Listener, so fine to just increment here, but we
 				// might want to check to ensure we're not double-counting.

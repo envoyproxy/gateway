@@ -254,9 +254,14 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
 	for snapshot := range r.resources.HTTPRouteStatuses.Subscribe(ctx) {
 		r.log.Info("received a status notification")
-		statuses := snapshot.State
-		for key, o := range statuses {
-			o := o
+		updates := snapshot.Updates
+		for _, update := range updates {
+			// skip delete updates.
+			if update.Delete {
+				continue
+			}
+			key := update.Key
+			value := update.Value
 			r.statusUpdater.Send(status.Update{
 				NamespacedName: key,
 				Resource:       new(gwapiv1b1.HTTPRoute),
@@ -264,11 +269,9 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					if _, ok := obj.(*gwapiv1b1.HTTPRoute); !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return o
+					return value
 				}),
 			})
-			// Delete to prevent multiple rewrites
-			r.resources.HTTPRouteStatuses.Delete(key)
 		}
 	}
 	r.log.Info("status subscriber shutting down")

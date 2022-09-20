@@ -333,9 +333,14 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
 	for snapshot := range r.resources.GatewayStatuses.Subscribe(ctx) {
 		r.log.Info("received a status notification")
-		statuses := snapshot.State
-		for key, o := range statuses {
-			o := o
+		updates := snapshot.Updates
+		for _, update := range updates {
+			// skip delete updates.
+			if update.Delete {
+				continue
+			}
+			key := update.Key
+			val := update.Value
 			r.statusUpdater.Send(status.Update{
 				NamespacedName: key,
 				Resource:       new(gwapiv1b1.Gateway),
@@ -343,11 +348,9 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					if _, ok := obj.(*gwapiv1b1.Gateway); !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return o
+					return val
 				}),
 			})
-			// Delete to prevent multiple rewrites
-			r.resources.GatewayStatuses.Delete(key)
 		}
 	}
 	r.log.Info("status subscriber shutting down")

@@ -1,12 +1,15 @@
 package gatewayapi
 
 import (
+	"reflect"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -201,13 +204,18 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 
 	routeParentStatusIdx := -1
 	for i := range h.Status.Parents {
-		if h.Status.Parents[i].ParentRef == forParentRef {
+		if reflect.DeepEqual(h.Status.Parents[i].ParentRef, forParentRef) {
 			routeParentStatusIdx = i
 			break
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		h.Status.Parents = append(h.Status.Parents, v1beta1.RouteParentStatus{ParentRef: forParentRef})
+		rParentStatus := v1beta1.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      forParentRef,
+		}
+		h.Status.Parents = append(h.Status.Parents, rParentStatus)
 		routeParentStatusIdx = len(h.Status.Parents) - 1
 	}
 
