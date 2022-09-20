@@ -15,14 +15,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
 const (
-	// envoyDeploymentName is the name of the Envoy Deployment resource.
-	envoyDeploymentName = "envoy"
 	// envoyContainerName is the name of the Envoy container.
 	envoyContainerName = "envoy"
 	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
@@ -114,7 +113,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      envoyDeploymentName,
+			Name:      config.EnvoyDeploymentName,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -225,7 +224,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 	current := &appsv1.Deployment{}
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
-		Name:      envoyDeploymentName,
+		Name:      config.EnvoyDeploymentName,
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
@@ -258,7 +257,7 @@ func (i *Infra) deleteDeployment(ctx context.Context) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      envoyDeploymentName,
+			Name:      config.EnvoyDeploymentName,
 		},
 	}
 
