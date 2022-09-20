@@ -63,7 +63,8 @@ func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Depl
 
 	// If there are no available replicas for the Envoy Deployment, don't
 	// mark the Gateway as ready yet.
-	if deployment.Status.AvailableReplicas == 0 {
+
+	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
 		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonNoResources),
 			"Deployment replicas unavailable", time.Now(), gw.Generation)
