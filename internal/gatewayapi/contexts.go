@@ -149,6 +149,9 @@ func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
 	case v1beta1.NamespacesFromAll:
 		return true
 	case v1beta1.NamespacesFromSelector:
+		if l.namespaceSelector == nil {
+			return false
+		}
 		return l.namespaceSelector.Matches(labels.Set(namespace.Labels))
 	default:
 		// NamespacesFromSame is the default

@@ -79,7 +79,7 @@ func TestTranslate(t *testing.T) {
 
 			sort.Slice(got.XdsIR.HTTP, func(i, j int) bool { return got.XdsIR.HTTP[i].Name < got.XdsIR.HTTP[j].Name })
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
-			assert.Equal(t, true, cmp.Equal(want, got, opts))
+			require.Empty(t, cmp.Diff(want, got, opts))
 		})
 	}
 }
