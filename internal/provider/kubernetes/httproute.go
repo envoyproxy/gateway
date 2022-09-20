@@ -269,7 +269,7 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					if _, ok := obj.(*gwapiv1b1.HTTPRoute); !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return value
+					return value.DeepCopy()
 				}),
 			})
 		}
