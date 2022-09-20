@@ -688,12 +688,13 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									// try to process the rest of the headers and produce a valid config.
 									continue
 								}
+								// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 								if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
 									parentRef.SetCondition(
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
+										fmt.Sprintf("RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
 									)
 									continue
 								}
@@ -743,12 +744,13 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									)
 									continue
 								}
+								// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 								if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
 									parentRef.SetCondition(
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter cannot set a headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
+										fmt.Sprintf("RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
 									)
 									continue
 								}
