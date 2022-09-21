@@ -32,7 +32,13 @@ func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType
 
 	idx := -1
 	for i, existing := range g.Status.Conditions {
-		if existing.Type == string(conditionType) {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
 			idx = i
 			break
 		}
@@ -110,7 +116,13 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 
 	idx := -1
 	for i, existing := range l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions {
-		if existing.Type == string(conditionType) {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
 			idx = i
 			break
 		}
@@ -125,6 +137,11 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...v1beta1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
+}
+
+func (l *ListenerContext) ResetAttachedRoutes() {
+	// Reset attached route count since it will be recomputed during translation.
+	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes = 0
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
@@ -259,7 +276,13 @@ func (r *RouteParentContext) SetCondition(conditionType v1beta1.RouteConditionTy
 
 	idx := -1
 	for i, existing := range r.route.Status.Parents[r.routeParentStatusIdx].Conditions {
-		if existing.Type == string(conditionType) {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
 			idx = i
 			break
 		}

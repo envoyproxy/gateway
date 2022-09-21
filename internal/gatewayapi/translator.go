@@ -135,7 +135,9 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 			}
 
 			for _, listener := range gateway.Spec.Listeners {
-				gc.GetListenerContext(listener.Name)
+				l := gc.GetListenerContext(listener.Name)
+				// Reset attached route count since it will be recomputed during translation.
+				l.ResetAttachedRoutes()
 			}
 
 			relevant = append(relevant, gc)
