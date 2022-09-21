@@ -11,12 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/envoyproxy/gateway/internal/ir"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
-	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	xdscachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 func TestProviderResources(t *testing.T) {
@@ -165,37 +159,4 @@ func TestProviderResources(t *testing.T) {
 	// Delete gatewayclasses
 	resources.DeleteGatewayClasses()
 	assert.Nil(t, resources.GetGatewayClasses())
-}
-
-func TestXdsIR(t *testing.T) {
-	msg := new(XdsIR)
-	assert.Nil(t, msg.Get())
-	in := &ir.Xds{
-		HTTP: []*ir.HTTPListener{{Name: "test"}},
-	}
-	msg.Store("xds-ir", in)
-	assert.Equal(t, msg.Get(), in)
-}
-
-func TestInfraIR(t *testing.T) {
-	msg := new(InfraIR)
-	assert.Nil(t, msg.Get())
-	in := &ir.Infra{
-		Proxy: &ir.ProxyInfra{Name: "test"},
-	}
-	msg.Store("infra-ir", in)
-	assert.Equal(t, msg.Get(), in)
-}
-
-func TestXds(t *testing.T) {
-	msg := new(Xds)
-	assert.Nil(t, msg.Get())
-	in := &xdstypes.ResourceVersionTable{
-		XdsResources: xdstypes.XdsResources{
-			resourcev3.ListenerType: []xdscachetypes.Resource{&listenerv3.Listener{Name: "test"}},
-		},
-	}
-	msg.Store("xds", in)
-	diff := cmp.Diff(in, msg.Get(), protocmp.Transform())
-	require.Empty(t, diff)
 }

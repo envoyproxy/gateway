@@ -117,7 +117,7 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
 		labels := a.GetLabels()
-		gcName, found := labels[gatewayapi.OwningGatewayClassLabel]
+		gcName, found := labels[gatewayapi.OwningGatewayLabel]
 		if found {
 			var reqs []reconcile.Request
 			for _, gw := range r.resources.Gateways.LoadAll() {

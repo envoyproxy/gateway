@@ -64,6 +64,8 @@ type bootstrapParameters struct {
 	XdsServer xdsServerParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
+	// NodeId defined the node ID of the Envoy instance.
+	NodeId string
 }
 
 type xdsServerParameters struct {
@@ -102,7 +104,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
-	if _, ok := labels[gatewayapi.OwningGatewayClassLabel]; !ok {
+	if _, ok := labels[gatewayapi.OwningGatewayLabel]; !ok {
 		return nil, fmt.Errorf("missing owning gatewayclass label")
 	}
 
@@ -196,6 +198,7 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 				Port:          envoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
+			NodeId: infra.Proxy.Name,
 		},
 	}
 	if err := cfg.render(); err != nil {

@@ -38,20 +38,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
 	for range r.XdsIR.Subscribe(ctx) {
 		r.Logger.Info("received a notification")
-		ir := r.XdsIR.Get()
-		if ir == nil {
-			r.Logger.Info("xds ir is nil, skipping")
-			continue
-		}
-		// Translate to xds resources
-		result, err := translator.Translate(ir)
-		if err != nil {
-			r.Logger.Error(err, "failed to translate xds ir")
-		} else {
-			// Publish
-			// There should always be a single element in the map
-			// Use the service name as the key for now
-			r.Xds.Store(r.Name(), result)
+		for key, ir := range r.XdsIR.LoadAll() {
+			if ir == nil {
+				r.Logger.Info("xds ir is nil, skipping")
+				continue
+			}
+			// Translate to xds resources
+			result, err := translator.Translate(ir)
+			if err != nil {
+				r.Logger.Error(err, "failed to translate xds ir")
+			} else {
+				// Publish
+				r.Xds.Store(key, result)
+			}
 		}
 	}
 	r.Logger.Info("subscriber shutting down")
