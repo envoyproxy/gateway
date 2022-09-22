@@ -64,8 +64,6 @@ type bootstrapParameters struct {
 	XdsServer xdsServerParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
-	// NodeId defined the node ID of the Envoy instance.
-	NodeId string
 }
 
 type xdsServerParameters struct {
@@ -202,7 +200,6 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 				Port:          envoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
 			},
-			NodeId: infra.Proxy.Name,
 		},
 	}
 	if err := cfg.render(); err != nil {
@@ -218,7 +215,8 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 				"envoy",
 			},
 			Args: []string{
-				fmt.Sprintf("--service-cluster $(%s)", envoyNsEnvVar),
+				fmt.Sprintf("--service-cluster $(%s)", infra.Proxy.Name),
+				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 				fmt.Sprintf("--config-yaml %s", cfg.rendered),
 				"--log-level info",
 			},
