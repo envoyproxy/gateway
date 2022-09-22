@@ -4,7 +4,7 @@ metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1086
     gateway.networking.k8s.io/bundle-version: v0.6.0-dev
-    gateway.networking.k8s.io/channel: standard
+    gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -77,19 +77,29 @@ spec:
                   have specified hostnames, and none match with the criteria above,
                   then the HTTPRoute is not accepted. The implementation must raise
                   an 'Accepted' Condition with a status of `False` in the corresponding
-                  RouteParentStatus. \n Support: Core"
+                  RouteParentStatus. \n If a Route (A) of type HTTPRoute or GRPCRoute
+                  is attached to a Listener and that listener already has another
+                  Route (B) of the other type attached and the intersection of the
+                  hostnames of A and B is non-empty, then the implementation MUST
+                  accept exactly one of these two routes, determined by the following
+                  criteria, in order: \n * The oldest Route based on creation timestamp.
+                  * The Route appearing first in alphabetical order by   \"{namespace}/{name}\".
+                  \n The rejected Route MUST raise an 'Accepted' condition with a
+                  status of 'False' in the corresponding RouteParentStatus. \n Support:
+                  Core"
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
                     2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard    label
-                    must appear by itself as the first label. \n Hostname can be \"precise\"
-                    which is a domain name without the terminating dot of a network
-                    host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
-                    name prefixed with a single wildcard label (e.g. `*.example.com`).
-                    \n Note that as per RFC1035 and RFC1123, a *label* must consist
-                    of lower case alphanumeric characters or '-', and must start and
-                    end with an alphanumeric character. No other punctuation is allowed."
+                    may be prefixed with a wildcard label (`*.`). The wildcard \n
+                    \tlabel must appear by itself as the first label. \n Hostname
+                    can be \"precise\" which is a domain name without the terminating
+                    dot of a network host (e.g. \"foo.example.com\") or \"wildcard\",
+                    which is a domain name prefixed with a single wildcard label (e.g.
+                    `*.example.com`). \n Note that as per RFC1035 and RFC1123, a *label*
+                    must consist of lower case alphanumeric characters or '-', and
+                    must start and end with an alphanumeric character. No other punctuation
+                    is allowed."
                   maxLength: 253
                   minLength: 1
                   pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -144,12 +154,38 @@ spec:
                       type: string
                     namespace:
                       description: "Namespace is the namespace of the referent. When
-                        unspecified, this refers to the local namespace of the Route.
-                        \n Support: Core"
+                        unspecified (or empty string), this refers to the local namespace
+                        of the Route. \n Support: Core"
                       maxLength: 63
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
+                    port:
+                      description: "Port is the network port this Route targets. It
+                        can be interpreted differently based on the type of parent
+                        resource. \n When the parent resource is a Gateway, this targets
+                        all listeners listening on the specified port that also support
+                        this kind of Route(and select this Route). It's not recommended
+                        to set `Port` unless the networking behaviors specified in
+                        a Route must apply to a specific port as opposed to a listener(s)
+                        whose port(s) may be changed. When both Port and SectionName
+                        are specified, the name and port of the selected listener
+                        must match both specified values. \n Implementations MAY choose
+                        to support other parent resources. Implementations supporting
+                        other types of parent resources MUST clearly document how/if
+                        Port is interpreted. \n For the purpose of status, an attachment
+                        is considered successful as long as the parent resource accepts
+                        it partially. For example, Gateway listeners can restrict
+                        which Routes can attach to them by Route kind, namespace,
+                        or hostname. If 1 of 2 Gateway listeners accept attachment
+                        from the referencing Route, the Route MUST be considered successfully
+                        attached. If no Gateway listeners accept attachment from this
+                        Route, the Route MUST be considered detached from the Gateway.
+                        \n Support: Extended \n <gateway:experimental>"
+                      format: int32
+                      maximum: 65535
+                      minimum: 1
+                      type: integer
                     sectionName:
                       description: "SectionName is the name of a section within the
                         target resource. In the following resources, SectionName is
@@ -424,8 +460,9 @@ spec:
                                           description: "Namespace is the namespace
                                             of the backend. When unspecified, the
                                             local namespace is inferred. \n Note that
-                                            when a namespace is specified, a ReferenceGrant
-                                            object is required in the referent namespace
+                                            when a different namespace is specified,
+                                            a ReferenceGrant object with ReferenceGrantTo.Kind=Service
+                                            is required in the referent namespace
                                             to allow that namespace's owner to accept
                                             the reference. See the ReferenceGrant
                                             documentation for details. \n Support:
@@ -438,9 +475,7 @@ spec:
                                           description: Port specifies the destination
                                             port number to use for this resource.
                                             Port is required when the referent is
-                                            a Kubernetes Service. In this case, the
-                                            port number is the service port number,
-                                            not the target port. For other resources,
+                                            a Kubernetes Service. For other resources,
                                             destination port might be derived from
                                             the referent resource or this field.
                                           format: int32
@@ -467,6 +502,57 @@ spec:
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                       type: string
+                                    path:
+                                      description: "Path defines parameters used to
+                                        modify the path of the incoming request. The
+                                        modified path is then used to construct the
+                                        `Location` header. When empty, the request
+                                        path is used as-is. \n Support: Extended \n
+                                        <gateway:experimental>"
+                                      properties:
+                                        replaceFullPath:
+                                          description: "ReplaceFullPath specifies
+                                            the value with which to replace the full
+                                            path of a request during a rewrite or
+                                            redirect. \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        replacePrefixMatch:
+                                          description: "ReplacePrefixMatch specifies
+                                            the value with which to replace the prefix
+                                            match of a request during a rewrite or
+                                            redirect. For example, a request to \"/foo/bar\"
+                                            with a prefix match of \"/foo\" would
+                                            be modified to \"/bar\". \n Note that
+                                            this matches the behavior of the PathPrefix
+                                            match type. This matches full path elements.
+                                            A path element refers to the list of labels
+                                            in the path split by the `/` separator.
+                                            When specified, a trailing `/` is ignored.
+                                            For example, the paths `/abc`, `/abc/`,
+                                            and `/abc/def` would all match the prefix
+                                            `/abc`, but the path `/abcd` would not.
+                                            \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        type:
+                                          description: "Type defines the type of path
+                                            modifier. Additional types may be added
+                                            in a future release of the API. \n Note
+                                            that values may be added to this enum,
+                                            implementations must ensure that unknown
+                                            values will not cause a crash. \n Unknown
+                                            values here must result in the implementation
+                                            setting the Attached Condition for the
+                                            Route to `status: False`, with a Reason
+                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                          enum:
+                                          - ReplaceFullPath
+                                          - ReplacePrefixMatch
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
                                     port:
                                       description: "Port is the port to be used in
                                         the value of the `Location` header in the
@@ -542,8 +628,70 @@ spec:
                                   - RequestHeaderModifier
                                   - RequestMirror
                                   - RequestRedirect
+                                  - URLRewrite
                                   - ExtensionRef
                                   type: string
+                                urlRewrite:
+                                  description: "URLRewrite defines a schema for a
+                                    filter that modifies a request during forwarding.
+                                    \n Support: Extended \n <gateway:experimental>"
+                                  properties:
+                                    hostname:
+                                      description: "Hostname is the value to be used
+                                        to replace the Host header value during forwarding.
+                                        \n Support: Extended \n <gateway:experimental>"
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
+                                    path:
+                                      description: "Path defines a path rewrite. \n
+                                        Support: Extended \n <gateway:experimental>"
+                                      properties:
+                                        replaceFullPath:
+                                          description: "ReplaceFullPath specifies
+                                            the value with which to replace the full
+                                            path of a request during a rewrite or
+                                            redirect. \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        replacePrefixMatch:
+                                          description: "ReplacePrefixMatch specifies
+                                            the value with which to replace the prefix
+                                            match of a request during a rewrite or
+                                            redirect. For example, a request to \"/foo/bar\"
+                                            with a prefix match of \"/foo\" would
+                                            be modified to \"/bar\". \n Note that
+                                            this matches the behavior of the PathPrefix
+                                            match type. This matches full path elements.
+                                            A path element refers to the list of labels
+                                            in the path split by the `/` separator.
+                                            When specified, a trailing `/` is ignored.
+                                            For example, the paths `/abc`, `/abc/`,
+                                            and `/abc/def` would all match the prefix
+                                            `/abc`, but the path `/abcd` would not.
+                                            \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        type:
+                                          description: "Type defines the type of path
+                                            modifier. Additional types may be added
+                                            in a future release of the API. \n Note
+                                            that values may be added to this enum,
+                                            implementations must ensure that unknown
+                                            values will not cause a crash. \n Unknown
+                                            values here must result in the implementation
+                                            setting the Attached Condition for the
+                                            Route to `status: False`, with a Reason
+                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                          enum:
+                                          - ReplaceFullPath
+                                          - ReplacePrefixMatch
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                  type: object
                               required:
                               - type
                               type: object
@@ -574,11 +722,11 @@ spec:
                           namespace:
                             description: "Namespace is the namespace of the backend.
                               When unspecified, the local namespace is inferred. \n
-                              Note that when a namespace is specified, a ReferenceGrant
-                              object is required in the referent namespace to allow
-                              that namespace's owner to accept the reference. See
-                              the ReferenceGrant documentation for details. \n Support:
-                              Core"
+                              Note that when a different namespace is specified, a
+                              ReferenceGrant object with ReferenceGrantTo.Kind=Service
+                              is required in the referent namespace to allow that
+                              namespace's owner to accept the reference. See the ReferenceGrant
+                              documentation for details. \n Support: Core"
                             maxLength: 63
                             minLength: 1
                             pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -586,10 +734,9 @@ spec:
                           port:
                             description: Port specifies the destination port number
                               to use for this resource. Port is required when the
-                              referent is a Kubernetes Service. In this case, the
-                              port number is the service port number, not the target
-                              port. For other resources, destination port might be
-                              derived from the referent resource or this field.
+                              referent is a Kubernetes Service. For other resources,
+                              destination port might be derived from the referent
+                              resource or this field.
                             format: int32
                             maximum: 65535
                             minimum: 1
@@ -828,11 +975,12 @@ spec:
                                   namespace:
                                     description: "Namespace is the namespace of the
                                       backend. When unspecified, the local namespace
-                                      is inferred. \n Note that when a namespace is
-                                      specified, a ReferenceGrant object is required
-                                      in the referent namespace to allow that namespace's
-                                      owner to accept the reference. See the ReferenceGrant
-                                      documentation for details. \n Support: Core"
+                                      is inferred. \n Note that when a different namespace
+                                      is specified, a ReferenceGrant object with ReferenceGrantTo.Kind=Service
+                                      is required in the referent namespace to allow
+                                      that namespace's owner to accept the reference.
+                                      See the ReferenceGrant documentation for details.
+                                      \n Support: Core"
                                     maxLength: 63
                                     minLength: 1
                                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -840,11 +988,9 @@ spec:
                                   port:
                                     description: Port specifies the destination port
                                       number to use for this resource. Port is required
-                                      when the referent is a Kubernetes Service. In
-                                      this case, the port number is the service port
-                                      number, not the target port. For other resources,
-                                      destination port might be derived from the referent
-                                      resource or this field.
+                                      when the referent is a Kubernetes Service. For
+                                      other resources, destination port might be derived
+                                      from the referent resource or this field.
                                     format: int32
                                     maximum: 65535
                                     minimum: 1
@@ -869,6 +1015,52 @@ spec:
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                 type: string
+                              path:
+                                description: "Path defines parameters used to modify
+                                  the path of the incoming request. The modified path
+                                  is then used to construct the `Location` header.
+                                  When empty, the request path is used as-is. \n Support:
+                                  Extended \n <gateway:experimental>"
+                                properties:
+                                  replaceFullPath:
+                                    description: "ReplaceFullPath specifies the value
+                                      with which to replace the full path of a request
+                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  replacePrefixMatch:
+                                    description: "ReplacePrefixMatch specifies the
+                                      value with which to replace the prefix match
+                                      of a request during a rewrite or redirect. For
+                                      example, a request to \"/foo/bar\" with a prefix
+                                      match of \"/foo\" would be modified to \"/bar\".
+                                      \n Note that this matches the behavior of the
+                                      PathPrefix match type. This matches full path
+                                      elements. A path element refers to the list
+                                      of labels in the path split by the `/` separator.
+                                      When specified, a trailing `/` is ignored. For
+                                      example, the paths `/abc`, `/abc/`, and `/abc/def`
+                                      would all match the prefix `/abc`, but the path
+                                      `/abcd` would not. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  type:
+                                    description: "Type defines the type of path modifier.
+                                      Additional types may be added in a future release
+                                      of the API. \n Note that values may be added
+                                      to this enum, implementations must ensure that
+                                      unknown values will not cause a crash. \n Unknown
+                                      values here must result in the implementation
+                                      setting the Attached Condition for the Route
+                                      to `status: False`, with a Reason of `UnsupportedValue`.
+                                      \n <gateway:experimental>"
+                                    enum:
+                                    - ReplaceFullPath
+                                    - ReplacePrefixMatch
+                                    type: string
+                                required:
+                                - type
+                                type: object
                               port:
                                 description: "Port is the port to be used in the value
                                   of the `Location` header in the response. When empty,
@@ -939,8 +1131,66 @@ spec:
                             - RequestHeaderModifier
                             - RequestMirror
                             - RequestRedirect
+                            - URLRewrite
                             - ExtensionRef
                             type: string
+                          urlRewrite:
+                            description: "URLRewrite defines a schema for a filter
+                              that modifies a request during forwarding. \n Support:
+                              Extended \n <gateway:experimental>"
+                            properties:
+                              hostname:
+                                description: "Hostname is the value to be used to
+                                  replace the Host header value during forwarding.
+                                  \n Support: Extended \n <gateway:experimental>"
+                                maxLength: 253
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                              path:
+                                description: "Path defines a path rewrite. \n Support:
+                                  Extended \n <gateway:experimental>"
+                                properties:
+                                  replaceFullPath:
+                                    description: "ReplaceFullPath specifies the value
+                                      with which to replace the full path of a request
+                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  replacePrefixMatch:
+                                    description: "ReplacePrefixMatch specifies the
+                                      value with which to replace the prefix match
+                                      of a request during a rewrite or redirect. For
+                                      example, a request to \"/foo/bar\" with a prefix
+                                      match of \"/foo\" would be modified to \"/bar\".
+                                      \n Note that this matches the behavior of the
+                                      PathPrefix match type. This matches full path
+                                      elements. A path element refers to the list
+                                      of labels in the path split by the `/` separator.
+                                      When specified, a trailing `/` is ignored. For
+                                      example, the paths `/abc`, `/abc/`, and `/abc/def`
+                                      would all match the prefix `/abc`, but the path
+                                      `/abcd` would not. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  type:
+                                    description: "Type defines the type of path modifier.
+                                      Additional types may be added in a future release
+                                      of the API. \n Note that values may be added
+                                      to this enum, implementations must ensure that
+                                      unknown values will not cause a crash. \n Unknown
+                                      values here must result in the implementation
+                                      setting the Attached Condition for the Route
+                                      to `status: False`, with a Reason of `UnsupportedValue`.
+                                      \n <gateway:experimental>"
+                                    enum:
+                                    - ReplaceFullPath
+                                    - ReplacePrefixMatch
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            type: object
                         required:
                         - type
                         type: object
@@ -976,11 +1226,10 @@ spec:
                         Route based on creation timestamp. * The Route appearing first
                         in alphabetical order by   \"{namespace}/{name}\". \n If ties
                         still exist within the Route that has been given precedence,
-                        matching precedence MUST be granted to the FIRST matching
-                        rule (in list order) meeting the above criteria. \n When no
-                        rules matching a request have been successfully attached to
-                        the parent a request is coming from, a HTTP 404 status code
-                        MUST be returned."
+                        matching precedence MUST be granted to the first matching
+                        rule meeting the above criteria. \n When no rules matching
+                        a request have been successfully attached to the parent a
+                        request is coming from, a HTTP 404 status code MUST be returned."
                       items:
                         description: "HTTPRouteMatch defines the predicate used to
                           match requests to a given action. Multiple match types are
@@ -1105,17 +1354,7 @@ spec:
                                     param names, only the first entry with an equivalent
                                     name MUST be considered for a match. Subsequent
                                     entries with an equivalent query param name MUST
-                                    be ignored. \n If a query param is repeated in
-                                    an HTTP request, the behavior is purposely left
-                                    undefined, since different data planes have different
-                                    capabilities. However, it's *recommended* that
-                                    implementations should match against the first
-                                    value of the param if the data plane supports
-                                    it, as this behavior is expected in other load
-                                    balancing contexts outside of the Gateway API.
-                                    Users should not route traffic based on repeated
-                                    query params to guard themselves against potential
-                                    differences in the implementations."
+                                    be ignored."
                                   maxLength: 256
                                   minLength: 1
                                   type: string
@@ -1311,12 +1550,40 @@ spec:
                           type: string
                         namespace:
                           description: "Namespace is the namespace of the referent.
-                            When unspecified, this refers to the local namespace of
-                            the Route. \n Support: Core"
+                            When unspecified (or empty string), this refers to the
+                            local namespace of the Route. \n Support: Core"
                           maxLength: 63
                           minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
+                        port:
+                          description: "Port is the network port this Route targets.
+                            It can be interpreted differently based on the type of
+                            parent resource. \n When the parent resource is a Gateway,
+                            this targets all listeners listening on the specified
+                            port that also support this kind of Route(and select this
+                            Route). It's not recommended to set `Port` unless the
+                            networking behaviors specified in a Route must apply to
+                            a specific port as opposed to a listener(s) whose port(s)
+                            may be changed. When both Port and SectionName are specified,
+                            the name and port of the selected listener must match
+                            both specified values. \n Implementations MAY choose to
+                            support other parent resources. Implementations supporting
+                            other types of parent resources MUST clearly document
+                            how/if Port is interpreted. \n For the purpose of status,
+                            an attachment is considered successful as long as the
+                            parent resource accepts it partially. For example, Gateway
+                            listeners can restrict which Routes can attach to them
+                            by Route kind, namespace, or hostname. If 1 of 2 Gateway
+                            listeners accept attachment from the referencing Route,
+                            the Route MUST be considered successfully attached. If
+                            no Gateway listeners accept attachment from this Route,
+                            the Route MUST be considered detached from the Gateway.
+                            \n Support: Extended \n <gateway:experimental>"
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
                         sectionName:
                           description: "SectionName is the name of a section within
                             the target resource. In the following resources, SectionName
@@ -1356,8 +1623,8 @@ spec:
         required:
         - spec
         type: object
-    served: false
-    storage: false
+    served: true
+    storage: true
     subresources:
       status: {}
   - additionalPrinterColumns:
@@ -1486,12 +1753,38 @@ spec:
                       type: string
                     namespace:
                       description: "Namespace is the namespace of the referent. When
-                        unspecified, this refers to the local namespace of the Route.
-                        \n Support: Core"
+                        unspecified (or empty string), this refers to the local namespace
+                        of the Route. \n Support: Core"
                       maxLength: 63
                       minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
+                    port:
+                      description: "Port is the network port this Route targets. It
+                        can be interpreted differently based on the type of parent
+                        resource. \n When the parent resource is a Gateway, this targets
+                        all listeners listening on the specified port that also support
+                        this kind of Route(and select this Route). It's not recommended
+                        to set `Port` unless the networking behaviors specified in
+                        a Route must apply to a specific port as opposed to a listener(s)
+                        whose port(s) may be changed. When both Port and SectionName
+                        are specified, the name and port of the selected listener
+                        must match both specified values. \n Implementations MAY choose
+                        to support other parent resources. Implementations supporting
+                        other types of parent resources MUST clearly document how/if
+                        Port is interpreted. \n For the purpose of status, an attachment
+                        is considered successful as long as the parent resource accepts
+                        it partially. For example, Gateway listeners can restrict
+                        which Routes can attach to them by Route kind, namespace,
+                        or hostname. If 1 of 2 Gateway listeners accept attachment
+                        from the referencing Route, the Route MUST be considered successfully
+                        attached. If no Gateway listeners accept attachment from this
+                        Route, the Route MUST be considered detached from the Gateway.
+                        \n Support: Extended \n <gateway:experimental>"
+                      format: int32
+                      maximum: 65535
+                      minimum: 1
+                      type: integer
                     sectionName:
                       description: "SectionName is the name of a section within the
                         target resource. In the following resources, SectionName is
@@ -1780,9 +2073,7 @@ spec:
                                           description: Port specifies the destination
                                             port number to use for this resource.
                                             Port is required when the referent is
-                                            a Kubernetes Service. In this case, the
-                                            port number is the service port number,
-                                            not the target port. For other resources,
+                                            a Kubernetes Service. For other resources,
                                             destination port might be derived from
                                             the referent resource or this field.
                                           format: int32
@@ -1809,6 +2100,57 @@ spec:
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                       type: string
+                                    path:
+                                      description: "Path defines parameters used to
+                                        modify the path of the incoming request. The
+                                        modified path is then used to construct the
+                                        `Location` header. When empty, the request
+                                        path is used as-is. \n Support: Extended \n
+                                        <gateway:experimental>"
+                                      properties:
+                                        replaceFullPath:
+                                          description: "ReplaceFullPath specifies
+                                            the value with which to replace the full
+                                            path of a request during a rewrite or
+                                            redirect. \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        replacePrefixMatch:
+                                          description: "ReplacePrefixMatch specifies
+                                            the value with which to replace the prefix
+                                            match of a request during a rewrite or
+                                            redirect. For example, a request to \"/foo/bar\"
+                                            with a prefix match of \"/foo\" would
+                                            be modified to \"/bar\". \n Note that
+                                            this matches the behavior of the PathPrefix
+                                            match type. This matches full path elements.
+                                            A path element refers to the list of labels
+                                            in the path split by the `/` separator.
+                                            When specified, a trailing `/` is ignored.
+                                            For example, the paths `/abc`, `/abc/`,
+                                            and `/abc/def` would all match the prefix
+                                            `/abc`, but the path `/abcd` would not.
+                                            \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        type:
+                                          description: "Type defines the type of path
+                                            modifier. Additional types may be added
+                                            in a future release of the API. \n Note
+                                            that values may be added to this enum,
+                                            implementations must ensure that unknown
+                                            values will not cause a crash. \n Unknown
+                                            values here must result in the implementation
+                                            setting the Attached Condition for the
+                                            Route to `status: False`, with a Reason
+                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                          enum:
+                                          - ReplaceFullPath
+                                          - ReplacePrefixMatch
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
                                     port:
                                       description: "Port is the port to be used in
                                         the value of the `Location` header in the
@@ -1884,8 +2226,70 @@ spec:
                                   - RequestHeaderModifier
                                   - RequestMirror
                                   - RequestRedirect
+                                  - URLRewrite
                                   - ExtensionRef
                                   type: string
+                                urlRewrite:
+                                  description: "URLRewrite defines a schema for a
+                                    filter that modifies a request during forwarding.
+                                    \n Support: Extended \n <gateway:experimental>"
+                                  properties:
+                                    hostname:
+                                      description: "Hostname is the value to be used
+                                        to replace the Host header value during forwarding.
+                                        \n Support: Extended \n <gateway:experimental>"
+                                      maxLength: 253
+                                      minLength: 1
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                      type: string
+                                    path:
+                                      description: "Path defines a path rewrite. \n
+                                        Support: Extended \n <gateway:experimental>"
+                                      properties:
+                                        replaceFullPath:
+                                          description: "ReplaceFullPath specifies
+                                            the value with which to replace the full
+                                            path of a request during a rewrite or
+                                            redirect. \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        replacePrefixMatch:
+                                          description: "ReplacePrefixMatch specifies
+                                            the value with which to replace the prefix
+                                            match of a request during a rewrite or
+                                            redirect. For example, a request to \"/foo/bar\"
+                                            with a prefix match of \"/foo\" would
+                                            be modified to \"/bar\". \n Note that
+                                            this matches the behavior of the PathPrefix
+                                            match type. This matches full path elements.
+                                            A path element refers to the list of labels
+                                            in the path split by the `/` separator.
+                                            When specified, a trailing `/` is ignored.
+                                            For example, the paths `/abc`, `/abc/`,
+                                            and `/abc/def` would all match the prefix
+                                            `/abc`, but the path `/abcd` would not.
+                                            \n <gateway:experimental>"
+                                          maxLength: 1024
+                                          type: string
+                                        type:
+                                          description: "Type defines the type of path
+                                            modifier. Additional types may be added
+                                            in a future release of the API. \n Note
+                                            that values may be added to this enum,
+                                            implementations must ensure that unknown
+                                            values will not cause a crash. \n Unknown
+                                            values here must result in the implementation
+                                            setting the Attached Condition for the
+                                            Route to `status: False`, with a Reason
+                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                          enum:
+                                          - ReplaceFullPath
+                                          - ReplacePrefixMatch
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                  type: object
                               required:
                               - type
                               type: object
@@ -1928,10 +2332,9 @@ spec:
                           port:
                             description: Port specifies the destination port number
                               to use for this resource. Port is required when the
-                              referent is a Kubernetes Service. In this case, the
-                              port number is the service port number, not the target
-                              port. For other resources, destination port might be
-                              derived from the referent resource or this field.
+                              referent is a Kubernetes Service. For other resources,
+                              destination port might be derived from the referent
+                              resource or this field.
                             format: int32
                             maximum: 65535
                             minimum: 1
@@ -2182,11 +2585,9 @@ spec:
                                   port:
                                     description: Port specifies the destination port
                                       number to use for this resource. Port is required
-                                      when the referent is a Kubernetes Service. In
-                                      this case, the port number is the service port
-                                      number, not the target port. For other resources,
-                                      destination port might be derived from the referent
-                                      resource or this field.
+                                      when the referent is a Kubernetes Service. For
+                                      other resources, destination port might be derived
+                                      from the referent resource or this field.
                                     format: int32
                                     maximum: 65535
                                     minimum: 1
@@ -2211,6 +2612,52 @@ spec:
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                 type: string
+                              path:
+                                description: "Path defines parameters used to modify
+                                  the path of the incoming request. The modified path
+                                  is then used to construct the `Location` header.
+                                  When empty, the request path is used as-is. \n Support:
+                                  Extended \n <gateway:experimental>"
+                                properties:
+                                  replaceFullPath:
+                                    description: "ReplaceFullPath specifies the value
+                                      with which to replace the full path of a request
+                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  replacePrefixMatch:
+                                    description: "ReplacePrefixMatch specifies the
+                                      value with which to replace the prefix match
+                                      of a request during a rewrite or redirect. For
+                                      example, a request to \"/foo/bar\" with a prefix
+                                      match of \"/foo\" would be modified to \"/bar\".
+                                      \n Note that this matches the behavior of the
+                                      PathPrefix match type. This matches full path
+                                      elements. A path element refers to the list
+                                      of labels in the path split by the `/` separator.
+                                      When specified, a trailing `/` is ignored. For
+                                      example, the paths `/abc`, `/abc/`, and `/abc/def`
+                                      would all match the prefix `/abc`, but the path
+                                      `/abcd` would not. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  type:
+                                    description: "Type defines the type of path modifier.
+                                      Additional types may be added in a future release
+                                      of the API. \n Note that values may be added
+                                      to this enum, implementations must ensure that
+                                      unknown values will not cause a crash. \n Unknown
+                                      values here must result in the implementation
+                                      setting the Attached Condition for the Route
+                                      to `status: False`, with a Reason of `UnsupportedValue`.
+                                      \n <gateway:experimental>"
+                                    enum:
+                                    - ReplaceFullPath
+                                    - ReplacePrefixMatch
+                                    type: string
+                                required:
+                                - type
+                                type: object
                               port:
                                 description: "Port is the port to be used in the value
                                   of the `Location` header in the response. When empty,
@@ -2281,8 +2728,66 @@ spec:
                             - RequestHeaderModifier
                             - RequestMirror
                             - RequestRedirect
+                            - URLRewrite
                             - ExtensionRef
                             type: string
+                          urlRewrite:
+                            description: "URLRewrite defines a schema for a filter
+                              that modifies a request during forwarding. \n Support:
+                              Extended \n <gateway:experimental>"
+                            properties:
+                              hostname:
+                                description: "Hostname is the value to be used to
+                                  replace the Host header value during forwarding.
+                                  \n Support: Extended \n <gateway:experimental>"
+                                maxLength: 253
+                                minLength: 1
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                type: string
+                              path:
+                                description: "Path defines a path rewrite. \n Support:
+                                  Extended \n <gateway:experimental>"
+                                properties:
+                                  replaceFullPath:
+                                    description: "ReplaceFullPath specifies the value
+                                      with which to replace the full path of a request
+                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  replacePrefixMatch:
+                                    description: "ReplacePrefixMatch specifies the
+                                      value with which to replace the prefix match
+                                      of a request during a rewrite or redirect. For
+                                      example, a request to \"/foo/bar\" with a prefix
+                                      match of \"/foo\" would be modified to \"/bar\".
+                                      \n Note that this matches the behavior of the
+                                      PathPrefix match type. This matches full path
+                                      elements. A path element refers to the list
+                                      of labels in the path split by the `/` separator.
+                                      When specified, a trailing `/` is ignored. For
+                                      example, the paths `/abc`, `/abc/`, and `/abc/def`
+                                      would all match the prefix `/abc`, but the path
+                                      `/abcd` would not. \n <gateway:experimental>"
+                                    maxLength: 1024
+                                    type: string
+                                  type:
+                                    description: "Type defines the type of path modifier.
+                                      Additional types may be added in a future release
+                                      of the API. \n Note that values may be added
+                                      to this enum, implementations must ensure that
+                                      unknown values will not cause a crash. \n Unknown
+                                      values here must result in the implementation
+                                      setting the Attached Condition for the Route
+                                      to `status: False`, with a Reason of `UnsupportedValue`.
+                                      \n <gateway:experimental>"
+                                    enum:
+                                    - ReplaceFullPath
+                                    - ReplacePrefixMatch
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            type: object
                         required:
                         - type
                         type: object
@@ -2318,11 +2823,10 @@ spec:
                         Route based on creation timestamp. * The Route appearing first
                         in alphabetical order by   \"{namespace}/{name}\". \n If ties
                         still exist within the Route that has been given precedence,
-                        matching precedence MUST be granted to the FIRST matching
-                        rule (in list order) meeting the above criteria. \n When no
-                        rules matching a request have been successfully attached to
-                        the parent a request is coming from, a HTTP 404 status code
-                        MUST be returned."
+                        matching precedence MUST be granted to the first matching
+                        rule meeting the above criteria. \n When no rules matching
+                        a request have been successfully attached to the parent a
+                        request is coming from, a HTTP 404 status code MUST be returned."
                       items:
                         description: "HTTPRouteMatch defines the predicate used to
                           match requests to a given action. Multiple match types are
@@ -2447,17 +2951,7 @@ spec:
                                     param names, only the first entry with an equivalent
                                     name MUST be considered for a match. Subsequent
                                     entries with an equivalent query param name MUST
-                                    be ignored. \n If a query param is repeated in
-                                    an HTTP request, the behavior is purposely left
-                                    undefined, since different data planes have different
-                                    capabilities. However, it's *recommended* that
-                                    implementations should match against the first
-                                    value of the param if the data plane supports
-                                    it, as this behavior is expected in other load
-                                    balancing contexts outside of the Gateway API.
-                                    Users should not route traffic based on repeated
-                                    query params to guard themselves against potential
-                                    differences in the implementations."
+                                    be ignored."
                                   maxLength: 256
                                   minLength: 1
                                   type: string
@@ -2653,12 +3147,40 @@ spec:
                           type: string
                         namespace:
                           description: "Namespace is the namespace of the referent.
-                            When unspecified, this refers to the local namespace of
-                            the Route. \n Support: Core"
+                            When unspecified (or empty string), this refers to the
+                            local namespace of the Route. \n Support: Core"
                           maxLength: 63
                           minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
+                        port:
+                          description: "Port is the network port this Route targets.
+                            It can be interpreted differently based on the type of
+                            parent resource. \n When the parent resource is a Gateway,
+                            this targets all listeners listening on the specified
+                            port that also support this kind of Route(and select this
+                            Route). It's not recommended to set `Port` unless the
+                            networking behaviors specified in a Route must apply to
+                            a specific port as opposed to a listener(s) whose port(s)
+                            may be changed. When both Port and SectionName are specified,
+                            the name and port of the selected listener must match
+                            both specified values. \n Implementations MAY choose to
+                            support other parent resources. Implementations supporting
+                            other types of parent resources MUST clearly document
+                            how/if Port is interpreted. \n For the purpose of status,
+                            an attachment is considered successful as long as the
+                            parent resource accepts it partially. For example, Gateway
+                            listeners can restrict which Routes can attach to them
+                            by Route kind, namespace, or hostname. If 1 of 2 Gateway
+                            listeners accept attachment from the referencing Route,
+                            the Route MUST be considered successfully attached. If
+                            no Gateway listeners accept attachment from this Route,
+                            the Route MUST be considered detached from the Gateway.
+                            \n Support: Extended \n <gateway:experimental>"
+                          format: int32
+                          maximum: 65535
+                          minimum: 1
+                          type: integer
                         sectionName:
                           description: "SectionName is the name of a section within
                             the target resource. In the following resources, SectionName
@@ -2699,7 +3221,7 @@ spec:
         - spec
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
 status:
