@@ -62,6 +62,7 @@ func TestProvider(t *testing.T) {
 		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
 		"gateway scheduled status":     testGatewayScheduledStatus,
 		"httproute":                    testHTTPRoute,
+		"tlsroute":                     testTLSRoute,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -83,17 +84,40 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
+func getGatewayClass(name string) *gwapiv1b1.GatewayClass {
+	return &gwapiv1b1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+		},
+	}
+}
+
+func getService(name, namespace string, ports map[string]int) *corev1.Service {
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{},
+		},
+	}
+	for name, port := range ports {
+		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
+			Name: name,
+			Port: port,
+		})
+	}
+	return service
+}
+
 func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := &gwapiv1b1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gc-controllername",
-		},
-		Spec: gwapiv1b1.GatewayClassSpec{
-			ControllerName: v1alpha1.GatewayControllerName,
-		},
-	}
+	gc := getGatewayClass("test-gc-controllername")
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -109,14 +133,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := &gwapiv1b1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gc-accepted-status",
-		},
-		Spec: gwapiv1b1.GatewayClassSpec{
-			ControllerName: v1alpha1.GatewayControllerName,
-		},
-	}
+	gc := getGatewayClass("test-gc-accepted-status")
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -145,14 +162,7 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := &gwapiv1b1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "gc-scheduled-status-test",
-		},
-		Spec: gwapiv1b1.GatewayClassSpec{
-			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
-		},
-	}
+	gc := getGatewayClass("gc-scheduled-status-test")
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -241,14 +251,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := &gwapiv1b1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "httproute-test",
-		},
-		Spec: gwapiv1b1.GatewayClassSpec{
-			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
-		},
-	}
+	gc := getGatewayClass("httproute-test")
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -296,24 +299,10 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "test",
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: "http",
-					Port: 80,
-				},
-				{
-					Name: "https",
-					Port: 443,
-				},
-			},
-		},
-	}
+	svc := getService(ns.Name, "test", map[string]int{
+		"http": 80,
+		"https": 443
+	})
 
 	require.NoError(t, cli.Create(ctx, svc))
 
@@ -576,6 +565,128 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 				return ok
 			}, defaultWait, defaultTick)
 
+		})
+	}
+}
+
+func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	gc := getGatewayClass("tlsroute-test")
+	require.NoError(t, cli.Create(ctx, gc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "tlsroute-test"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tlsroute-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1b1.TLSProtocolType,
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	svc := getService(ns.Name, "test", map[string]int{
+		"tls": 90,
+	})
+
+	require.NoError(t, cli.Create(ctx, svc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, svc))
+	}()
+
+	var testCases = []struct {
+		name  string
+		route gwapiv1a2.TLSRoute
+	}{
+		{
+			name: "tlsroute",
+			route: gwapiv1a2.TLSRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tlsroute-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1a2.TLSRouteSpec{
+					CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+						ParentRefs: []gwapiv1a2.ParentReference{
+							{
+								Name: gwapiv1a2.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1a2.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1a2.TLSRouteRule{
+						{
+							BackendRefs: []gwapiv1a2.TLSBackendRef{
+								{
+									BackendRef: gwapiv1a2.BackendRef{
+										BackendObjectReference: gwapiv1a2.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.NoError(t, cli.Create(ctx, &testCase.route))
+			defer func() {
+				require.NoError(t, cli.Delete(ctx, &testCase.route))
+			}()
+
+			require.Eventually(t, func() bool {
+				return resources.TLSRoutes.Len() == 1
+			}, defaultWait, defaultTick)
+
+			// Ensure the test TLSRoute in the TLSRoute resources is as expected.
+			key := types.NamespacedName{
+				Namespace: testCase.route.Namespace,
+				Name:      testCase.route.Name,
+			}
+			require.Eventually(t, func() bool {
+				return cli.Get(ctx, key, &testCase.route) == nil
+			}, defaultWait, defaultTick)
+			troutes, _ := resources.TLSRoutes.Load(key)
+			assert.Equal(t, &testCase.route, troutes)
+
+			// Ensure the TLSRoute Namespace is in the Namespace resource map.
+			require.Eventually(t, func() bool {
+				_, ok := resources.Namespaces.Load(testCase.route.Namespace)
+				return ok
+			}, defaultWait, defaultTick)
+
+			// Ensure the Service is in the resource map.
+			svcKey := NamespacedName(svc)
+			require.Eventually(t, func() bool {
+				_, ok := resources.Services.Load(svcKey)
+				return ok
+			}, defaultWait, defaultTick)
 		})
 	}
 }
