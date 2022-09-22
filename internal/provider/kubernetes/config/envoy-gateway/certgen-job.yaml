@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: certgen
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: certgen
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: certgen
+subjects:
+- kind: ServiceAccount
+  name: certgen
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: certgen
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: certgen
+spec:
+  ttlSecondsAfterFinished: 0
+  template:
+    metadata:
+      labels:
+        app: "certgen"
+    spec:
+      containers:
+      - name: envoy-gateway-certgen
+        image: envoyproxy/gateway-dev:latest
+        imagePullPolicy: Always
+        command:
+        - envoy-gateway
+        - certgen
+      restartPolicy: Never
+      serviceAccountName: certgen
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+  parallelism: 1
+  completions: 1
+  backoffLimit: 1

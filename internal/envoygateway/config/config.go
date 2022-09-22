@@ -10,10 +10,14 @@ import (
 const (
 	// EnvoyGatewayNamespace is the namespace where envoy-gateway is running.
 	EnvoyGatewayNamespace = "envoy-gateway-system"
+	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
+	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyServiceName is the name of the Envoy Service.
 	EnvoyServiceName = "envoy"
 	// EnvoyDeploymentName is the name of the Envoy Deployment.
 	EnvoyDeploymentName = "envoy"
+	// EnvoyConfigMapName is the name of the Envoy ConfigMap.
+	EnvoyConfigMapName = "envoy"
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters

@@ -38,6 +38,10 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.namespace
+          volumeMounts:
+            - name: certs
+              mountPath: /certs
+              readOnly: true
           # TODO(user): Configure the resources accordingly based on the project requirements.
           # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           resources:
@@ -47,5 +51,9 @@ spec:
             requests:
               cpu: 10m
               memory: 64Mi
+      volumes:
+        - name: certs
+          secret:
+            secretName: envoy-gateway
       serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10

@@ -50,6 +50,9 @@ func DefaultProvider() *Provider {
 	}
 }
 
-func ProviderTypePtr(p ProviderType) *ProviderType {
-	return &p
+func (e *EnvoyGateway) GetProvider() *Provider {
+	if e.Provider != nil {
+		return e.Provider
+	}
+	return DefaultProvider()
 }
