@@ -275,7 +275,7 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 func (r *gatewayReconciler) envoyServiceForGateway(ctx context.Context) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
-		Name:      config.EnvoyServiceName,
+		Name:      config.EnvoyServicePrefix,
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
@@ -315,7 +315,7 @@ func (r *gatewayReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.G
 func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
-		Name:      config.EnvoyDeploymentName,
+		Name:      config.EnvoyDeploymentPrefix,
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {

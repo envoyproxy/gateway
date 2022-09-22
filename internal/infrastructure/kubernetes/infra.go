@@ -117,11 +117,11 @@ func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
 		return errors.New("infra ir is nil")
 	}
 
-	if err := i.deleteService(ctx); err != nil {
+	if err := i.deleteService(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.deleteDeployment(ctx); err != nil {
+	if err := i.deleteDeployment(ctx, infra); err != nil {
 		return err
 	}
 
@@ -129,7 +129,7 @@ func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
 		return err
 	}
 
-	if err := i.deleteServiceAccount(ctx); err != nil {
+	if err := i.deleteServiceAccount(ctx, infra); err != nil {
 		return err
 	}
 

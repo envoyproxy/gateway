@@ -13,11 +13,15 @@ import (
 )
 
 const (
-	envoyServiceAccountName = "envoy"
+	envoyServiceAccountPrefix = "envoy"
 )
 
+func expectedServiceAccountName(proxyName string) string {
+	return fmt.Sprintf("%s-%s", envoyServiceAccountPrefix, proxyName)
+}
+
 // expectedServiceAccount returns the expected proxy serviceAccount.
-func (i *Infra) expectedServiceAccount() *corev1.ServiceAccount {
+func (i *Infra) expectedServiceAccount(infra *ir.Infra) *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
@@ -25,20 +29,20 @@ func (i *Infra) expectedServiceAccount() *corev1.ServiceAccount {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      envoyServiceAccountName,
+			Name:      expectedServiceAccountName(infra.Proxy.Name),
 		},
 	}
 }
 
 // createOrUpdateServiceAccount creates the Envoy ServiceAccount in the kube api server,
 // if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, _ *ir.Infra) error {
-	sa := i.expectedServiceAccount()
+func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, infra *ir.Infra) error {
+	sa := i.expectedServiceAccount(infra)
 
 	current := &corev1.ServiceAccount{}
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
-		Name:      envoyServiceAccountName,
+		Name:      expectedServiceAccountName(infra.Proxy.Name),
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
@@ -67,11 +71,11 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, _ *ir.Infra) e
 
 // deleteServiceAccount deletes the Envoy ServiceAccount in the kube api server,
 // if it exists.
-func (i *Infra) deleteServiceAccount(ctx context.Context) error {
+func (i *Infra) deleteServiceAccount(ctx context.Context, infra *ir.Infra) error {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      envoyServiceAccountName,
+			Name:      expectedServiceAccountName(infra.Proxy.Name),
 		},
 	}
 	if err := i.Client.Delete(ctx, sa); err != nil {

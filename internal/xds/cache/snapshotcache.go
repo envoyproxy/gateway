@@ -151,9 +151,9 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 	// So check if we have a nodeID for this stream already, then set it if not.
 	nodeID := s.streamIDNodeID[streamID]
 	if nodeID == "" {
-		nodeID = Hash.ID(req.Node)
+		nodeID = req.Node.Id
 		if nodeID == "" {
-			return fmt.Errorf("couldn't hash the node ID from the first discovery request on stream %d", streamID)
+			return fmt.Errorf("couldn't get the node ID from the first discovery request on stream %d", streamID)
 		}
 		s.log.Debugf("First discovery request on stream %d, got nodeID %s", streamID, nodeID)
 		s.streamIDNodeID[streamID] = nodeID
@@ -253,9 +253,9 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 	// So check if we have a nodeID for this stream already, then set it if not.
 	nodeID := s.streamIDNodeID[streamID]
 	if nodeID == "" {
-		nodeID = Hash.ID(req.Node)
+		nodeID = req.Node.Id
 		if nodeID == "" {
-			return fmt.Errorf("couldn't hash the node ID from the first incremental discovery request on stream %d", streamID)
+			return fmt.Errorf("couldn't get the node ID from the first incremental discovery request on stream %d", streamID)
 		}
 		s.log.Debugf("First incremental discovery request on stream %d, got nodeID %s", streamID, nodeID)
 		s.streamIDNodeID[streamID] = nodeID
