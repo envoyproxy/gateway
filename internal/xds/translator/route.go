@@ -4,7 +4,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
-	wrappers "github.com/golang/protobuf/ptypes/wrappers"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -192,7 +192,7 @@ func buildXdsAddedRequestHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValu
 				Key:   header.Name,
 				Value: header.Value,
 			},
-			Append: &wrappers.BoolValue{Value: header.Append},
+			Append: &wrapperspb.BoolValue{Value: header.Append},
 		}
 
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
