@@ -216,8 +216,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 		}
 	}
-	// Infra IR proxy ports must be unique.
-	var foundPorts []int32
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
@@ -232,6 +230,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
+
+		// Infra IR proxy ports must be unique.
+		var foundPorts []int32
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
