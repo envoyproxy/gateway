@@ -96,7 +96,7 @@ func getGatewayClass(name string) *gwapiv1b1.GatewayClass {
 	}
 }
 
-func getService(name, namespace string, ports map[string]int) *corev1.Service {
+func getService(name, namespace string, ports map[string]int32) *corev1.Service {
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -300,7 +300,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := getService(ns.Name, "test", map[string]int{
+	svc := getService("test", ns.Name, map[string]int32{
 		"http":  80,
 		"https": 443,
 	})
@@ -606,7 +606,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := getService(ns.Name, "test", map[string]int{
+	svc := getService("test", ns.Name, map[string]int32{
 		"tls": 90,
 	})
 
@@ -638,12 +638,10 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					Hostnames: []gwapiv1a2.Hostname{"test.hostname.local"},
 					Rules: []gwapiv1a2.TLSRouteRule{
 						{
-							BackendRefs: []gwapiv1a2.TLSBackendRef{
+							BackendRefs: []gwapiv1a2.BackendRef{
 								{
-									BackendRef: gwapiv1a2.BackendRef{
-										BackendObjectReference: gwapiv1a2.BackendObjectReference{
-											Name: "test",
-										},
+									BackendObjectReference: gwapiv1a2.BackendObjectReference{
+										Name: "test",
 									},
 								},
 							},
