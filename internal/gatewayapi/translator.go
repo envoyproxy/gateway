@@ -556,9 +556,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
 			if !slices.Contains(foundPorts, servicePort) {
 				foundPorts = append(foundPorts, servicePort)
-				proto := ir.HTTPProtocolType
-				if listener.Protocol == v1beta1.HTTPSProtocolType {
+				var proto ir.ProtocolType
+				switch listener.Protocol {
+				case v1beta1.HTTPProtocolType:
+					proto = ir.HTTPProtocolType
+				case v1beta1.HTTPSProtocolType:
 					proto = ir.HTTPSProtocolType
+				case v1beta1.TLSProtocolType:
+					proto = ir.TLSProtocolType
 				}
 				infraPort := ir.ListenerPort{
 					Name:          string(listener.Name),
@@ -1145,8 +1150,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 
 				for _, backendRef := range rule.BackendRefs {
 					if backendRef.Group != nil && *backendRef.Group != "" {
-						parentRef.SetCondition(
-							tlsRoute,
+						parentRef.SetCondition(tlsRoute,
 							v1beta1.RouteConditionResolvedRefs,
 							metav1.ConditionFalse,
 							v1beta1.RouteReasonInvalidKind,
@@ -1156,8 +1160,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 					}
 
 					if backendRef.Kind != nil && *backendRef.Kind != KindService {
-						parentRef.SetCondition(
-							tlsRoute,
+						parentRef.SetCondition(tlsRoute,
 							v1beta1.RouteConditionResolvedRefs,
 							metav1.ConditionFalse,
 							v1beta1.RouteReasonInvalidKind,
@@ -1205,8 +1208,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 					serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
 					service := resources.GetService(serviceNamespace, string(backendRef.Name))
 					if service == nil {
-						parentRef.SetCondition(
-							tlsRoute,
+						parentRef.SetCondition(tlsRoute,
 							v1beta1.RouteConditionResolvedRefs,
 							metav1.ConditionFalse,
 							v1beta1.RouteReasonBackendNotFound,
@@ -1224,8 +1226,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 					}
 
 					if !portFound {
-						parentRef.SetCondition(
-							tlsRoute,
+						parentRef.SetCondition(tlsRoute,
 							v1beta1.RouteConditionResolvedRefs,
 							metav1.ConditionFalse,
 							"PortNotFound",

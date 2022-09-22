@@ -1,0 +1,83 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls
+          protocol: TLS
+          port: 90
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: tls
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: TLSRoute
+          attachedRoutes: 1
+          conditions:
+            - type: Ready
+              status: "True"
+              reason: Ready
+              message: Listener is ready
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      namespace: default
+      name: tlsroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8080
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          # controllerName: envoyproxy.io/gateway-controller
+          conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Route is accepted
+xdsIR:
+  http:
+    - name: envoy-gateway-gateway-1-tls
+      address: 0.0.0.0
+      port: 10090
+      hostnames:
+        - "*"
+      tls:
+        tlsMode: Passthrough
+      routes:
+        - name: default-tlsroute-1-rule-0-match-0-*
+          destinations:
+            - host: 7.7.7.7
+              port: 8080
+              weight: 1
+infraIR:
+  proxy:
+    metadata:
+      labels:
+        gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
+    name: envoy-gateway-class
+    image: envoyproxy/envoy:v1.23-latest
+    listeners:
+      - address: ""
+        ports:
+          - name: envoy-gateway-gateway-1-90
+            protocol: "TLS"
+            servicePort: 90
+            containerPort: 10090

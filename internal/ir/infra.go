@@ -79,6 +79,9 @@ const (
 
 	// HTTPSProtocolType accepts HTTP/1.1 or HTTP/2 sessions over TLS.
 	HTTPSProtocolType ProtocolType = "HTTPS"
+
+	// Accepts TLS sessions over TCP.
+	TLSProtocolType ProtocolType = "TLS"
 )
 
 // NewInfra returns a new Infra with default parameters.
