@@ -1,0 +1,10 @@
+- name: route_tls-passthrough
+  virtualHosts:
+  - domains:
+    - '*'
+    name: route_tls-passthrough
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: cluster_first-route

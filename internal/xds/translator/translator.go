@@ -38,7 +38,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		}
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
-		if httpListener.TLS != nil {
+		if httpListener.TLS != nil && httpListener.TLS.TLSMode != v1beta1.TLSModePassthrough {
 			// Build downstream TLS details.
 			tSocket, err := buildXdsDownstreamTLSSocket(httpListener.Name, httpListener.TLS)
 			if err != nil {
