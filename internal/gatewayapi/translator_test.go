@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -75,6 +76,16 @@ func TestTranslate(t *testing.T) {
 			})
 
 			got := translator.Translate(resources)
+
+			envoyGatewayNsName := "envoy-gateway-gateway-1"
+			sort.Slice(got.XdsIR[envoyGatewayNsName].HTTP, func(i, j int) bool {
+				return got.XdsIR[envoyGatewayNsName].HTTP[i].Name < got.XdsIR[envoyGatewayNsName].HTTP[j].Name
+			})
+			// Only 1 listener is supported
+			sort.Slice(got.InfraIR[envoyGatewayNsName].Proxy.Listeners[0].Ports,
+				func(i, j int) bool {
+					return got.InfraIR[envoyGatewayNsName].Proxy.Listeners[0].Ports[i].Name < got.InfraIR[envoyGatewayNsName].Proxy.Listeners[0].Ports[j].Name
+				})
 
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))

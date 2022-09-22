@@ -144,11 +144,11 @@ infraIR:
     listeners:
       - address: ""
         ports:
-          - name: envoy-gateway-gateway-1-90
-            protocol: "TLS"
-            servicePort: 90
-            containerPort: 10090
           - name: envoy-gateway-gateway-1-443
             protocol: "HTTPS"
             servicePort: 443
             containerPort: 10443
+          - name: envoy-gateway-gateway-1-90
+            protocol: "TLS"
+            servicePort: 90
+            containerPort: 10090
