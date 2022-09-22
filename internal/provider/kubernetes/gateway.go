@@ -200,14 +200,14 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		gw := acceptedGateways[i]
 
 		// Get the status of the Gateway's associated Envoy Deployment.
-		deployment, err := r.envoyDeploymentForGateway(ctx)
+		deployment, err := r.envoyDeploymentForGateway(ctx, &gw)
 		if err != nil {
 			r.log.Info("failed to get deployment for gateway",
 				"namespace", gw.Namespace, "name", gw.Name)
 		}
 
 		// Get the status address of the Gateway's associated Envoy Service.
-		svc, err := r.envoyServiceForGateway(ctx)
+		svc, err := r.envoyServiceForGateway(ctx, &gw)
 		if err != nil {
 			r.log.Info("failed to get service for gateway",
 				"namespace", gw.Namespace, "name", gw.Name)
@@ -272,10 +272,10 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 }
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
-func (r *gatewayReconciler) envoyServiceForGateway(ctx context.Context) (*corev1.Service, error) {
+func (r *gatewayReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
-		Name:      config.EnvoyServicePrefix,
+		Name:      infraServiceName(gateway),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
@@ -312,10 +312,10 @@ func (r *gatewayReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.G
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
-func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context) (*appsv1.Deployment, error) {
+func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: config.EnvoyGatewayNamespace,
-		Name:      config.EnvoyDeploymentPrefix,
+		Name:      infraDeploymentName(gateway),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -359,4 +359,12 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		}
 	}
 	r.log.Info("status subscriber shutting down")
+}
+
+func infraServiceName(gateway *gwapiv1b1.Gateway) string {
+	return fmt.Sprintf("%s-%s-%s", config.EnvoyServicePrefix, gateway.Namespace, gateway.Name)
+}
+
+func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
+	return fmt.Sprintf("%s-%s-%s", config.EnvoyDeploymentPrefix, gateway.Namespace, gateway.Name)
 }
