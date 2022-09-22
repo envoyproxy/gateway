@@ -155,12 +155,11 @@ type portListeners struct {
 }
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
-	portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
 
 	// Iterate through all listeners and collect info about protocols
 	// and hostnames per port.
 	for _, gateway := range gateways {
-
+		portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
@@ -188,36 +187,35 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 			portListenerInfo[listener.Port].hostnames[hostname]++
 		}
-	}
 
-	// Set Conflicted conditions for any listeners with conflicting specs.
-	for _, info := range portListenerInfo {
-		for _, listener := range info.listeners {
-			if len(info.protocols) > 1 {
-				listener.SetCondition(
-					v1beta1.ListenerConditionConflicted,
-					metav1.ConditionTrue,
-					v1beta1.ListenerReasonProtocolConflict,
-					"All listeners for a given port must use a compatible protocol",
-				)
-			}
+		// Set Conflicted conditions for any listeners with conflicting specs.
+		for _, info := range portListenerInfo {
+			for _, listener := range info.listeners {
+				if len(info.protocols) > 1 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						v1beta1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a compatible protocol",
+					)
+				}
 
-			var hostname string
-			if listener.Hostname != nil {
-				hostname = string(*listener.Hostname)
-			}
+				var hostname string
+				if listener.Hostname != nil {
+					hostname = string(*listener.Hostname)
+				}
 
-			if info.hostnames[hostname] > 1 {
-				listener.SetCondition(
-					v1beta1.ListenerConditionConflicted,
-					metav1.ConditionTrue,
-					v1beta1.ListenerReasonHostnameConflict,
-					"All listeners for a given port must use a unique hostname",
-				)
+				if info.hostnames[hostname] > 1 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						v1beta1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+				}
 			}
 		}
 	}
-
 	// Infra IR proxy ports must be unique.
 	var foundPorts []int32
 
