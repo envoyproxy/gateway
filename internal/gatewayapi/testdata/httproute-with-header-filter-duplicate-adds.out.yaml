@@ -77,7 +77,7 @@ httpRoutes:
         namespace: envoy-gateway
         name: gateway-1
         sectionName: http
-      # controllerName: envoyproxy.io/gateway-controller
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
         status: "True"

@@ -135,7 +135,9 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 			}
 
 			for _, listener := range gateway.Spec.Listeners {
-				gc.GetListenerContext(listener.Name)
+				l := gc.GetListenerContext(listener.Name)
+				// Reset attached route count since it will be recomputed during translation.
+				l.ResetAttachedRoutes()
 			}
 
 			relevant = append(relevant, gc)
@@ -412,11 +414,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 				listener.SetTLSSecret(secret)
 			}
 
-			// Any condition on the listener indicates an error,
-			// so set "Ready: false" if it's not set already.
-			if len(listener.GetConditions()) > 0 {
+			lConditions := listener.GetConditions()
+			if len(lConditions) == 0 {
+				listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
+				// Any condition on the listener apart from Ready=true indicates an error.
+			} else if !(lConditions[0].Type == string(v1beta1.ListenerConditionReady) && lConditions[0].Status == metav1.ConditionTrue) {
+				// set "Ready: false" if it's not set already.
 				var hasReadyCond bool
-				for _, existing := range listener.GetConditions() {
+				for _, existing := range lConditions {
 					if existing.Type == string(v1beta1.ListenerConditionReady) {
 						hasReadyCond = true
 						break
@@ -430,11 +435,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds,
 						"Listener is invalid, see other Conditions for details.",
 					)
 				}
-
+				// skip computing IR
 				continue
 			}
-
-			listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
 
 			servicePort := int32(listener.Port)
 			containerPort := servicePortToContainerPort(servicePort)
@@ -1024,8 +1027,9 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irListener := xdsIR.GetListener(irListenerName(listener))
-				irListener.Routes = append(irListener.Routes, perHostRoutes...)
-
+				if irListener != nil {
+					irListener.Routes = append(irListener.Routes, perHostRoutes...)
+				}
 				// Theoretically there should only be one parent ref per
 				// Route that attaches to a given Listener, so fine to just increment here, but we
 				// might want to check to ensure we're not double-counting.

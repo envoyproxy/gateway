@@ -49,7 +49,7 @@ httpRoutes:
         - parentRef:
             namespace: envoy-gateway
             name: gateway-1
-          # controllerName: envoyproxy.io/gateway-controller
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
           conditions:
             - type: Accepted
               status: "False"

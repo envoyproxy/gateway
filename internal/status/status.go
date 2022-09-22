@@ -142,6 +142,7 @@ func (u *UpdateWriter) Send(update Update) {
 // Supported objects:
 //  GatewayClasses
 //  Gateway
+//  HTTPRoute
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -153,6 +154,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *gwapiv1b1.Gateway:
 		if b, ok := objB.(*gwapiv1b1.Gateway); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1b1.HTTPRoute:
+		if b, ok := objB.(*gwapiv1b1.HTTPRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}

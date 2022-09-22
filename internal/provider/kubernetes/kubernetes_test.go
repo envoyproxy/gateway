@@ -27,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -569,7 +570,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}, defaultWait, defaultTick)
 
 			// Ensure the Service is in the resource map.
-			svcKey := NamespacedName(svc)
+			svcKey := utils.NamespacedName(svc)
 			require.Eventually(t, func() bool {
 				_, ok := resources.Services.Load(svcKey)
 				return ok

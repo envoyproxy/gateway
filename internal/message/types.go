@@ -20,6 +20,9 @@ type ProviderResources struct {
 	Namespaces     watchable.Map[string, *corev1.Namespace]
 	Services       watchable.Map[types.NamespacedName, *corev1.Service]
 
+	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
+	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+
 	GatewayClassesInitialized sync.WaitGroup
 	GatewaysInitialized       sync.WaitGroup
 	HTTPRoutesInitialized     sync.WaitGroup

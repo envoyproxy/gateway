@@ -10,6 +10,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 type Config struct {
@@ -90,10 +91,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			// Translate to IR
 			result := t.Translate(&in)
+
 			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			r.Logger.Info(string(yamlXdsIR))
+			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
-			r.Logger.Info(string(yamlInfraIR))
+			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
 			// Publish the IRs. Use the service name as the key
 			// to ensure there is always one element in the map.
@@ -114,6 +116,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			}
 
+			// Update Status
+			for _, gateway := range result.Gateways {
+				key := utils.NamespacedName(gateway)
+				r.ProviderResources.GatewayStatuses.Store(key, gateway)
+			}
+			for _, httpRoute := range result.HTTPRoutes {
+				key := utils.NamespacedName(httpRoute)
+				r.ProviderResources.HTTPRouteStatuses.Store(key, httpRoute)
+			}
 		}
 	}
 	r.Logger.Info("shutting down")

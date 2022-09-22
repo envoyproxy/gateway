@@ -1,10 +1,15 @@
 package gatewayapi
 
 import (
+	"reflect"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -17,15 +22,23 @@ type GatewayContext struct {
 
 func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType, status metav1.ConditionStatus, reason v1beta1.GatewayConditionReason, message string) {
 	cond := metav1.Condition{
-		Type:    string(conditionType),
-		Status:  status,
-		Reason:  string(reason),
-		Message: message,
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: g.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1
 	for i, existing := range g.Status.Conditions {
-		if existing.Type == string(conditionType) {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
 			idx = i
 			break
 		}
@@ -93,15 +106,23 @@ type ListenerContext struct {
 
 func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
 	cond := metav1.Condition{
-		Type:    string(conditionType),
-		Status:  status,
-		Reason:  string(reason),
-		Message: message,
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: l.gateway.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1
 	for i, existing := range l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions {
-		if existing.Type == string(conditionType) {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
 			idx = i
 			break
 		}
@@ -116,6 +137,11 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 
 func (l *ListenerContext) SetSupportedKinds(kinds ...v1beta1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
+}
+
+func (l *ListenerContext) ResetAttachedRoutes() {
+	// Reset attached route count since it will be recomputed during translation.
+	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes = 0
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
@@ -140,6 +166,9 @@ func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
 	case v1beta1.NamespacesFromAll:
 		return true
 	case v1beta1.NamespacesFromSelector:
+		if l.namespaceSelector == nil {
+			return false
+		}
 		return l.namespaceSelector.Matches(labels.Set(namespace.Labels))
 	default:
 		// NamespacesFromSame is the default
@@ -195,13 +224,18 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 
 	routeParentStatusIdx := -1
 	for i := range h.Status.Parents {
-		if h.Status.Parents[i].ParentRef == forParentRef {
+		if reflect.DeepEqual(h.Status.Parents[i].ParentRef, forParentRef) {
 			routeParentStatusIdx = i
 			break
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		h.Status.Parents = append(h.Status.Parents, v1beta1.RouteParentStatus{ParentRef: forParentRef})
+		rParentStatus := v1beta1.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      forParentRef,
+		}
+		h.Status.Parents = append(h.Status.Parents, rParentStatus)
 		routeParentStatusIdx = len(h.Status.Parents) - 1
 	}
 
@@ -232,15 +266,23 @@ func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 
 func (r *RouteParentContext) SetCondition(conditionType v1beta1.RouteConditionType, status metav1.ConditionStatus, reason v1beta1.RouteConditionReason, message string) {
 	cond := metav1.Condition{
-		Type:    string(conditionType),
-		Status:  status,
-		Reason:  string(reason),
-		Message: message,
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: r.route.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1
 	for i, existing := range r.route.Status.Parents[r.routeParentStatusIdx].Conditions {
-		if existing.Type == string(conditionType) {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
 			idx = i
 			break
 		}

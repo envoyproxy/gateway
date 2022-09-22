@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -76,8 +78,8 @@ func TestTranslate(t *testing.T) {
 			got := translator.Translate(resources)
 
 			sort.Slice(got.XdsIR.HTTP, func(i, j int) bool { return got.XdsIR.HTTP[i].Name < got.XdsIR.HTTP[j].Name })
-
-			assert.EqualValues(t, want, got)
+			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+			require.Empty(t, cmp.Diff(want, got, opts))
 		})
 	}
 }

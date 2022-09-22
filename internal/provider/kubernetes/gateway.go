@@ -26,6 +26,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
@@ -61,6 +62,9 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 		return err
 	}
 	r.log.Info("created gateway controller")
+
+	// Subscribe to status updates
+	go r.subscribeAndUpdateStatus(context.Background())
 
 	// Only enqueue Gateway objects that match this Envoy Gateway's controller name.
 	if err := c.Watch(
@@ -139,6 +143,9 @@ func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventH
 func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.Info("reconciling gateway", "namespace", request.Namespace, "name", request.Name)
 
+	// Once we've processed `allGateways`, record that we've fully initialized.
+	defer r.initializeOnce.Do(r.resources.GatewaysInitialized.Done)
+
 	allClasses := &gwapiv1b1.GatewayClassList{}
 	if err := r.client.List(ctx, allClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses")
@@ -178,7 +185,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 
 	found := false
 	for i := range acceptedGateways {
-		key := NamespacedName(acceptedGateways[i].DeepCopy())
+		key := utils.NamespacedName(&acceptedGateways[i])
 		r.resources.Gateways.Store(key, &acceptedGateways[i])
 		if key == request.NamespacedName {
 			found = true
@@ -206,22 +213,14 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 				"namespace", gw.Namespace, "name", gw.Name)
 		}
 
-		r.statusUpdater.Send(status.Update{
-			NamespacedName: types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name},
-			Resource:       new(gwapiv1b1.Gateway),
-			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-				gw, ok := obj.(*gwapiv1b1.Gateway)
-				if !ok {
-					panic(fmt.Sprintf("unsupported object type %T", obj))
-				}
-
-				return status.SetGatewayStatus(gw.DeepCopy(), true, svc, deployment)
-			}),
-		})
+		// update scheduled condition
+		status.UpdateGatewayStatusScheduledCondition(&gw, true)
+		// update address field and ready condition
+		status.UpdateGatewayStatusReadyCondition(&gw, svc, deployment)
+		// publish status
+		key := utils.NamespacedName(&gw)
+		r.resources.GatewayStatuses.Store(key, &gw)
 	}
-
-	// Once we've processed `allGateways`, record that we've fully initialized.
-	r.initializeOnce.Do(r.resources.GatewaysInitialized.Done)
 
 	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
 
@@ -326,4 +325,33 @@ func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context) (*app
 		return nil, err
 	}
 	return deployment, nil
+}
+
+// subscribeAndUpdateStatus subscribes to gateway status updates and writes it into the
+// Kubernetes API Server
+func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
+	// Subscribe to resources
+	for snapshot := range r.resources.GatewayStatuses.Subscribe(ctx) {
+		r.log.Info("received a status notification")
+		updates := snapshot.Updates
+		for _, update := range updates {
+			// skip delete updates.
+			if update.Delete {
+				continue
+			}
+			key := update.Key
+			val := update.Value
+			r.statusUpdater.Send(status.Update{
+				NamespacedName: key,
+				Resource:       new(gwapiv1b1.Gateway),
+				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					if _, ok := obj.(*gwapiv1b1.Gateway); !ok {
+						panic(fmt.Sprintf("unsupported object type %T", obj))
+					}
+					return val.DeepCopy()
+				}),
+			})
+		}
+	}
+	r.log.Info("status subscriber shutting down")
 }
