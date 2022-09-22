@@ -300,8 +300,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	}()
 
 	svc := getService(ns.Name, "test", map[string]int{
-		"http": 80,
-		"https": 443
+		"http":  80,
+		"https": 443,
 	})
 
 	require.NoError(t, cli.Create(ctx, svc))

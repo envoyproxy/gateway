@@ -365,6 +365,13 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			},
 			want: ErrTLSPrivateKey,
 		},
+		{
+			name: "passthrough",
+			input: TLSListenerConfig{
+				TLSMode: "Passthrough",
+			},
+			want: nil,
+		},
 	}
 	for _, test := range tests {
 		test := test
