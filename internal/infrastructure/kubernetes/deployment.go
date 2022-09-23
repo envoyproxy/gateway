@@ -215,7 +215,7 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 				"envoy",
 			},
 			Args: []string{
-				fmt.Sprintf("--service-cluster $(%s)", infra.Proxy.Name),
+				fmt.Sprintf("--service-cluster %s", infra.Proxy.Name),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 				fmt.Sprintf("--config-yaml %s", cfg.rendered),
 				"--log-level info",
