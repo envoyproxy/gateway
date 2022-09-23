@@ -47,7 +47,7 @@ func TestGenerateCerts(t *testing.T) {
 	run(t, "no configuration - use defaults", testcase{
 		certConfig:              &Configuration{},
 		wantEnvoyGatewayDNSName: "envoy-gateway",
-		wantEnvoyDNSName:        "envoy",
+		wantEnvoyDNSName:        "*.envoy-gateway-system",
 	})
 }
 
