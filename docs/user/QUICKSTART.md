@@ -62,7 +62,7 @@ In certain environments, the load balancer may be exposed using a hostname, inst
 
 Curl the example app through Envoy proxy:
 ```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST:8888/get
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST:8080/get
 ```
 You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
 
