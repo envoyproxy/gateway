@@ -36,10 +36,10 @@ endif
 
 .PHONY: kube-install
 kube-install: manifests $(tools/kustomize) ## Install Envoy Gateway CRDs into the Kubernetes cluster specified in ~/.kube/config.
-	@mkdir -pv $(OUTPUT_DIR)/manifests/provider
-	@cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
-	@mkdir -pv $(OUTPUT_DIR)/manifests/infra
-	@cp -r $(KUBE_INFRA_DIR) $(OUTPUT_DIR)/manifests/infra
+	mkdir -pv $(OUTPUT_DIR)/manifests/provider
+	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
+	mkdir -pv $(OUTPUT_DIR)/manifests/infra
+	cp -r $(KUBE_INFRA_DIR) $(OUTPUT_DIR)/manifests/infra
 	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/crd | kubectl apply -f -
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
 
@@ -49,15 +49,15 @@ kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs fro
 
 .PHONY: kube-deploy
 kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
-	@cd $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
+	cd $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
 	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default | kubectl apply -f -
 	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/infra/config/rbac | kubectl apply -f -
 
 .PHONY: kube-undeploy
 kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
 	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f - 
-	@rm -rf $(OUTPUT_DIR)/manifests/provider
-	@rm -rf $(OUTPUT_DIR)/manifests/infra
+	rm -rf $(OUTPUT_DIR)/manifests/provider
+	rm -rf $(OUTPUT_DIR)/manifests/infra
 
 .PHONY: run-kube-local
 run-kube-local: build kube-install ## Run Envoy Gateway locally.

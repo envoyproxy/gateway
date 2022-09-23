@@ -48,16 +48,11 @@ Envoy Gateway is built using a [make][make]-based build system. Our CI is based 
 it into the Kind cluster.
 
 ### Deploying Envoy Gateway in Kubernetes
-* Run `make kube-deploy TAG=latest` to deploy Envoy Gateway resources with the latest Envoy Gateway Dev Image
-as well as the Gateway API CRDs into a Kubernetes cluster (linked to the current kube context).
-* Run `make kube-deploy IMAGE=envoyproxy/gateway TAG=xxx`, like `make kube-deploy IMAGE=envoyproxy/gateway TAG=v0.2.0-rc1`, 
-to deploy Envoy Gateway resources with the Released Envoy Gateway Image 
-as well as the Gateway API CRDs into a Kubernetes cluster (linked to the current kube context).
-* Run `make kube-deploy IMAGE=xxx TAG=xxx`, like `make kube-deploy IMAGE=foo/bar TAG=my-feature`, 
-to deploy Envoy Gateway resources with your custom image into the cluster 
-as well as the Gateway API CRDs into a Kubernetes cluster (linked to the current kube context).
+* Run `IMAGE=envoyproxy/gateway-dev TAG=latest make kube-deploy` to deploy Envoy Gateway resources, including the Gateway API CRDs,
+with the `envoyproxy/gateway-dev:latest` Envoy Gateway image into a Kubernetes cluster (linked to the current kube context).
 * Run `make kube-undeploy` to delete the resources from the cluster created using `kube-deploy`.
 
+**_NOTE:_**  Replace `IMAGE` with your registry's image name.
 
 ### Run Gateway API Conformance Tests
 * Run `make conformance` to run Gateway API Conformance tests using `envoy-gateway` in a
