@@ -149,6 +149,8 @@ func setupRunners(cfg *config.Server) error {
 	pResources.GatewayClasses.Close()
 	pResources.Gateways.Close()
 	pResources.HTTPRoutes.Close()
+	pResources.Services.Close()
+	pResources.Namespaces.Close()
 	pResources.GatewayStatuses.Close()
 	pResources.HTTPRouteStatuses.Close()
 	xdsIR.Close()
