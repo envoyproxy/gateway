@@ -14,8 +14,20 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
+
+func TestExpectedServiceAccount(t *testing.T) {
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	kube := NewInfra(cli)
+	infra := ir.NewInfra()
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+	sa := kube.expectedServiceAccount(infra)
+
+	// Check the serviceaccount name is as expected.
+	assert.Equal(t, sa.Name, expectedServiceAccountName(infra.Proxy.Name))
+}
 
 func TestCreateOrUpdateServiceAccount(t *testing.T) {
 	testCases := []struct {
@@ -41,7 +53,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
-						Name:      "envoy",
+						Name:      "envoy-test",
 					},
 				},
 			},
@@ -61,7 +73,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy",
+					Name:      "envoy-test",
 				},
 			},
 			out: &Resources{
@@ -72,7 +84,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
-						Name:      "envoy",
+						Name:      "envoy-test",
 					},
 				},
 			},
@@ -119,7 +131,8 @@ func TestDeleteServiceAccount(t *testing.T) {
 				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
-			err := kube.deleteServiceAccount(context.Background())
+			infra := ir.NewInfra()
+			err := kube.deleteServiceAccount(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

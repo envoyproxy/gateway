@@ -212,9 +212,9 @@ func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, re
 	node := s.streamIDNodeInfo[streamID]
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
+	} else {
+		s.log.Debugf("Sending Response on stream %d to node %s", streamID, node.Id)
 	}
-
-	s.log.Debugf("Sending Response on stream %d to node %s", streamID, node.Id)
 }
 
 // OnDeltaStreamOpen and the other OnDeltaStream*/OnStreamDelta* functions implement
@@ -308,8 +308,9 @@ func (s *snapshotcache) OnStreamDeltaResponse(streamID int64, req *envoy_service
 	node := s.streamIDNodeInfo[streamID]
 	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
+	} else {
+		s.log.Debugf("Sending Incremental Response on stream %d to node %s", streamID, node.Id)
 	}
-	s.log.Debugf("Sending Incremental Response on stream %d to node %s", streamID, node.Id)
 }
 
 func (s *snapshotcache) OnFetchRequest(ctx context.Context, req *envoy_service_discovery_v3.DiscoveryRequest) error {

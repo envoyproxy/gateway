@@ -39,7 +39,7 @@ func (i *Infra) expectedService(infra *ir.Infra) (*corev1.Service, error) {
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if _, ok := labels[gatewayapi.OwningGatewayLabel]; !ok {
-		return nil, fmt.Errorf("missing owning gatewayclass label")
+		return nil, fmt.Errorf("missing owning gateway label")
 	}
 
 	svc := &corev1.Service{

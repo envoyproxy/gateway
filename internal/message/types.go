@@ -34,6 +34,12 @@ func (p *ProviderResources) DeleteGatewayClasses() {
 	}
 }
 
+func (p *ProviderResources) DeleteGateways() {
+	for k := range p.Gateways.LoadAll() {
+		p.Gateways.Delete(k)
+	}
+}
+
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
 	if p.GatewayClasses.Len() == 0 {
 		return nil

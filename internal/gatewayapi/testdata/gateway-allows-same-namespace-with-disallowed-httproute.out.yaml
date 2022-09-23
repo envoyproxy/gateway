@@ -54,23 +54,25 @@ httpRoutes:
         reason: NotAllowedByListeners
         message: No listeners included by this parent ref allowed this attachment.
 xdsIR:
-  http:
-  - name: envoy-gateway-gateway-1-http
-    address: 0.0.0.0
-    hostnames:
-    - "*"
-    port: 10080
+  envoy-gateway-gateway-1:
+    http:
+    - name: envoy-gateway-gateway-1-http
+      address: 0.0.0.0
+      hostnames:
+      - "*"
+      port: 10080
 infraIR:
-  proxy:
-    metadata:
-      labels:
-        gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
-    name: envoy-gateway-class
-    image: envoyproxy/envoy:v1.23-latest
-    listeners:
-    - address: ""
-      ports:
-      - name: envoy-gateway-gateway-1
-        protocol: "HTTP"
-        servicePort: 80
-        containerPort: 10080
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway: gateway-1
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:v1.23-latest
+      listeners:
+      - address: ""
+        ports:
+        - name: envoy-gateway-gateway-1
+          protocol: "HTTP"
+          servicePort: 80
+          containerPort: 10080
