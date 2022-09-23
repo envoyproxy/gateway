@@ -65,7 +65,7 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 	kubectl apply -f examples/kubernetes/gatewayclass.yaml
 	kubectl apply -f examples/kubernetes/gateway.yaml
 	kubectl apply -f examples/kubernetes/httproute.yaml
-	@echo "\nPort forward to the Envoy service using the commane below"
+	@echo "\nPort forward to the Envoy service using the command below"
 	@echo "kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:8080 &"
 	@echo "\nCurl the app through Envoy proxy using the command below"
 	@echo "curl --verbose --header \"Host: www.example.com\" http://localhost:8888/get\n"
