@@ -45,6 +45,22 @@ var (
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
 
+	// TLSListener
+	happyTLSListener = TLSListener{
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*TLSRoute{&happyTLSRoute},
+	}
+	invalidAddrTLSListener = TLSListener{
+		Name:      "invalid-addr",
+		Address:   "1.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*TLSRoute{&happyTLSRoute},
+	}
+
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
 		Name: "happy",
@@ -219,6 +235,12 @@ var (
 		},
 	}
 
+	// TLSRoute
+	happyTLSRoute = TLSRoute{
+		Name:         "happy",
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Host: "10.11.12.13",
@@ -241,6 +263,13 @@ func TestValidateXds(t *testing.T) {
 			name: "happy",
 			input: Xds{
 				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+			want: nil,
+		},
+		{
+			name: "happy tls",
+			input: Xds{
+				TLS: []*TLSListener{&happyTLSListener},
 			},
 			want: nil,
 		},
@@ -337,6 +366,57 @@ func TestValidateHTTPListener(t *testing.T) {
 	}
 }
 
+func TestValidateTLSListener(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TLSListener
+		want  []error
+	}{
+		{
+			name:  "happy",
+			input: happyTLSListener,
+			want:  nil,
+		},
+		{
+			name: "invalid name",
+			input: TLSListener{
+				Address:   "0.0.0.0",
+				Port:      80,
+				Hostnames: []string{"example.com"},
+				Routes:    []*TLSRoute{&happyTLSRoute},
+			},
+			want: []error{ErrListenerNameEmpty},
+		},
+		{
+			name:  "invalid addr",
+			input: invalidAddrTLSListener,
+			want:  []error{ErrListenerAddressInvalid},
+		},
+		{
+			name: "invalid port and hostnames",
+			input: TLSListener{
+				Name:    "invalid-port-and-hostnames",
+				Address: "1.0.0",
+				Routes:  []*TLSRoute{&happyTLSRoute},
+			},
+			want: []error{ErrListenerPortInvalid, ErrListenerHostnamesEmpty},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
 func TestValidateTLSListenerConfig(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -397,7 +477,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Destinations: []*RouteDestination{&happyRouteDestination},
 			},
-			want: []error{ErrHTTPRouteNameEmpty},
+			want: []error{ErrRouteNameEmpty},
 		},
 		{
 			name:  "empty match",
@@ -420,7 +500,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
 				Destinations:  []*RouteDestination{&happyRouteDestination},
 			},
-			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
+			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
 		{
 			name:  "redirect-httproute",
@@ -466,6 +546,40 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "add-header-empty",
 			input: addHeaderEmptyHTTPRoute,
 			want:  []error{ErrAddHeaderEmptyName},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTLSRoute(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TLSRoute
+		want  []error
+	}{
+		{
+			name:  "happy",
+			input: happyTLSRoute,
+			want:  nil,
+		},
+		{
+			name: "invalid name",
+			input: TLSRoute{
+				Destinations: []*RouteDestination{&happyRouteDestination},
+			},
+			want: []error{ErrRouteNameEmpty},
 		},
 	}
 	for _, test := range tests {

@@ -14,7 +14,7 @@ var (
 	ErrListenerHostnamesEmpty        = errors.New("field Hostnames must be specified with at least a single hostname entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
+	ErrRouteNameEmpty                = errors.New("field Name must be specified")
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
 	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
 	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
@@ -172,7 +172,7 @@ type HTTPRoute struct {
 func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
+		errs = multierror.Append(errs, ErrRouteNameEmpty)
 	}
 	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
 		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
@@ -243,6 +243,20 @@ type RouteDestination struct {
 	Port uint32
 	// Weight associated with this destination.
 	Weight uint32
+}
+
+// Validate the fields within the RouteDestination structure
+func (r RouteDestination) Validate() error {
+	var errs error
+	// Only support IP hosts for now
+	if ip := net.ParseIP(r.Host); ip == nil {
+		errs = multierror.Append(errs, ErrRouteDestinationHostInvalid)
+	}
+	if r.Port == 0 {
+		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
+	}
+
+	return errs
 }
 
 // Add header configures a headder to be added to a request.
@@ -347,20 +361,6 @@ func (r HTTPPathModifier) Validate() error {
 	return errs
 }
 
-// Validate the fields within the RouteDestination structure
-func (r RouteDestination) Validate() error {
-	var errs error
-	// Only support IP hosts for now
-	if ip := net.ParseIP(r.Host); ip == nil {
-		errs = multierror.Append(errs, ErrRouteDestinationHostInvalid)
-	}
-	if r.Port == 0 {
-		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
-	}
-
-	return errs
-}
-
 // StringMatch holds the various match conditions.
 // Only one of Exact, Prefix or SafeRegex can be set.
 // +k8s:deepcopy-gen=true
@@ -450,7 +450,7 @@ type TLSRoute struct {
 func (h TLSRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
+		errs = multierror.Append(errs, ErrRouteNameEmpty)
 	}
 	for _, dest := range h.Destinations {
 		if err := dest.Validate(); err != nil {
