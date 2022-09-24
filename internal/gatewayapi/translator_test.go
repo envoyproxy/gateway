@@ -24,7 +24,7 @@ func mustUnmarshal(t *testing.T, val string, out interface{}) {
 }
 
 func TestTranslate(t *testing.T) {
-	inputFiles, err := filepath.Glob(filepath.Join("testdata", "httproute-with-non-matching-specific-hostname-attaching-to-gateway-with-wildcard-hostname.in.yaml"))
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
