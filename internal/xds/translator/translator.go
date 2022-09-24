@@ -5,11 +5,9 @@ import (
 	"fmt"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -25,20 +23,13 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	for _, httpListener := range ir.HTTP {
 		// 1:1 between IR HTTPListener and xDS Listener
-		var xdsListener *listener.Listener
-		var err error
-		tlsPassthrough := httpListener.TLS != nil && httpListener.TLS.TLSMode == v1beta1.TLSModePassthrough
-		if tlsPassthrough {
-			xdsListener, err = buildXdsPassthroughListener(httpListener)
-		} else {
-			xdsListener, err = buildXdsListener(httpListener)
-		}
+		xdsListener, err := buildXdsListener(httpListener)
 		if err != nil {
 			return nil, multierror.Append(err, errors.New("error building xds listener"))
 		}
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
-		if httpListener.TLS != nil && httpListener.TLS.TLSMode != v1beta1.TLSModePassthrough {
+		if httpListener.TLS != nil {
 			// Build downstream TLS details.
 			tSocket, err := buildXdsDownstreamTLSSocket(httpListener.Name, httpListener.TLS)
 			if err != nil {
@@ -63,7 +54,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute, err := buildXdsRoute(httpRoute, tlsPassthrough)
+			xdsRoute, err := buildXdsRoute(httpRoute)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds route"))
 			}
@@ -90,6 +81,46 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
 	}
 
+	for _, tlsListener := range ir.TLS {
+		// 1:1 between IR TLSListener and xDS Listener
+		xdsListener, err := buildXdsPassthroughListener(tlsListener)
+		if err != nil {
+			return nil, multierror.Append(err, errors.New("error building xds listener"))
+		}
+
+		// Allocate virtual host for this tlsListener.
+		// 1:1 between IR TLSListener and xDS VirtualHost
+		routeName := getXdsRouteName(tlsListener.Name)
+		vHost := &route.VirtualHost{
+			Name:    routeName,
+			Domains: tlsListener.Hostnames,
+		}
+
+		for _, tlsListener := range tlsListener.Routes {
+			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
+			xdsRoute, err := buildXdsPassthroughRoute(tlsListener)
+			if err != nil {
+				return nil, multierror.Append(err, errors.New("error building xds route"))
+			}
+			vHost.Routes = append(vHost.Routes, xdsRoute)
+
+			// 1:1 between IR TLSRoute and xDS Cluster
+			xdsCluster, err := buildXdsCluster(tlsListener.Name, tlsListener.Destinations)
+			if err != nil {
+				return nil, multierror.Append(err, errors.New("error building xds cluster"))
+			}
+			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+
+		}
+
+		xdsRouteCfg := &route.RouteConfiguration{
+			Name: routeName,
+		}
+		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
+
+		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+		tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
+	}
 	return tCtx, nil
 }
 

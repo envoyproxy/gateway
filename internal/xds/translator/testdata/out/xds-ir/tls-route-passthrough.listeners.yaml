@@ -4,39 +4,12 @@
       portValue: 10080
   filterChains:
   - filters:
-    - name: envoy.filters.network.http_connection_manager
+    - name: envoy.filters.network.tcp_proxy
       typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        httpFilters:
-        - name: envoy.filters.http.router
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-        rds:
-          configSource:
-            apiConfigSource:
-              apiType: GRPC
-              grpcServices:
-              - envoyGrpc:
-                  clusterName: xds_cluster
-              setNodeOnFirstMessageOnly: true
-              transportApiVersion: V3
-            resourceApiVersion: V3
-          routeConfigName: route_tls-passthrough
-        statPrefix: http
-    transportSocket:
-      name: envoy.transport_sockets.tls
-      typedConfig:
-        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-        commonTlsContext:
-          tlsCertificateSdsSecretConfigs:
-          - name: secret_tls-passthrough
-            sdsConfig:
-              apiConfigSource:
-                apiType: GRPC
-                grpcServices:
-                - envoyGrpc:
-                    clusterName: xds_cluster
-                setNodeOnFirstMessageOnly: true
-                transportApiVersion: V3
-              resourceApiVersion: V3
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        statPrefix: passthrough
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: listener_tls-passthrough_10080

@@ -46,21 +46,19 @@ tlsRoutes:
         - parentRef:
             namespace: envoy-gateway
             name: gateway-1
-          # controllerName: envoyproxy.io/gateway-controller
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
           conditions:
             - type: Accepted
               status: "True"
               reason: Accepted
               message: Route is accepted
 xdsIR:
-  http:
+  tls:
     - name: envoy-gateway-gateway-1-tls
       address: 0.0.0.0
       port: 10090
       hostnames:
         - "*"
-      tls:
-        tlsMode: Passthrough
       routes:
         - name: default-tlsroute-1-rule-0-match-0-*
           destinations:

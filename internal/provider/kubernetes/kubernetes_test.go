@@ -681,7 +681,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 
 			// Ensure the Service is in the resource map.
-			svcKey := NamespacedName(svc)
+			svcKey := utils.NamespacedName(svc)
 			require.Eventually(t, func() bool {
 				_, ok := resources.Services.Load(svcKey)
 				return ok

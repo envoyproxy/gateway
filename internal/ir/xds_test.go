@@ -249,7 +249,7 @@ func TestValidateXds(t *testing.T) {
 			input: Xds{
 				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
 			},
-			want: []error{ErrHTTPListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
+			want: []error{ErrListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
 		},
 		{
 			name: "invalid backend",
@@ -300,12 +300,12 @@ func TestValidateHTTPListener(t *testing.T) {
 				Hostnames: []string{"example.com"},
 				Routes:    []*HTTPRoute{&happyHTTPRoute},
 			},
-			want: []error{ErrHTTPListenerNameEmpty},
+			want: []error{ErrListenerNameEmpty},
 		},
 		{
 			name:  "invalid addr",
 			input: invalidAddrHTTPListener,
-			want:  []error{ErrHTTPListenerAddressInvalid},
+			want:  []error{ErrListenerAddressInvalid},
 		},
 		{
 			name: "invalid port and hostnames",
@@ -314,7 +314,7 @@ func TestValidateHTTPListener(t *testing.T) {
 				Address: "1.0.0",
 				Routes:  []*HTTPRoute{&happyHTTPRoute},
 			},
-			want: []error{ErrHTTPListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
+			want: []error{ErrListenerPortInvalid, ErrListenerHostnamesEmpty},
 		},
 		{
 			name:  "invalid route match",
@@ -365,13 +365,6 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			},
 			want: ErrTLSPrivateKey,
 		},
-		{
-			name: "passthrough",
-			input: TLSListenerConfig{
-				TLSMode: "Passthrough",
-			},
-			want: nil,
-		},
 	}
 	for _, test := range tests {
 		test := test
@@ -383,7 +376,6 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -480,9 +472,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate(nil))
+				require.NoError(t, test.input.Validate())
 			} else {
-				got := test.input.Validate(nil)
+				got := test.input.Validate()
 				for _, w := range test.want {
 					assert.ErrorContains(t, got, w.Error())
 				}

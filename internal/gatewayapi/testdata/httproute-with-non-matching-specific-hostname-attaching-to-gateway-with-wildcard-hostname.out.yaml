@@ -55,7 +55,7 @@ httpRoutes:
       - type: Accepted
         status: "False"
         reason: NoMatchingListenerHostname
-        message: There were no hostname intersections between the Route and this parent ref's Listener(s).
+        message: There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).
 xdsIR:
   envoy-gateway-gateway-1:
     http:

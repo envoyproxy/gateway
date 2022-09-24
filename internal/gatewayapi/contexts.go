@@ -53,10 +53,10 @@ func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType
 	}
 }
 
-// GetListenerContext returns the ListenerContext with its name matching
-// listenerName from GatewayContext. If the listener exists in the Gateway Spec
-// but NOT yet in the GatewayContext, this creates a new ListenerContext for the
-// listener and attaches it to the GatewayContext.
+// GetListenerContext returns the ListenerContext with listenerName.
+// If the listener exists in the Gateway Spec but NOT yet in the GatewayContext,
+// this creates a new ListenerContext for the listener and attaches it to the
+// GatewayContext.
 func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *ListenerContext {
 	if g.listeners == nil {
 		g.listeners = make(map[v1beta1.SectionName]*ListenerContext)
@@ -107,12 +107,7 @@ type ListenerContext struct {
 	gateway           *v1beta1.Gateway
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
-	tls               listenerContextTLSConfig
-}
-
-type listenerContextTLSConfig struct {
-	mode   v1beta1.TLSModeType
-	secret *v1.Secret
+	tlsSecret         *v1.Secret
 }
 
 func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
@@ -205,10 +200,6 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
-func (l *ListenerContext) SetTLSConfig(mode v1beta1.TLSModeType, secret *v1.Secret) {
-	l.tls = listenerContextTLSConfig{mode, secret}
-}
-
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
 // that can reference Gateway objects.
 type RouteContext interface {
@@ -285,12 +276,11 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		rParentStatus := v1beta1.RouteParentStatus{
+		h.Status.Parents = append(h.Status.Parents, v1beta1.RouteParentStatus{
+			ParentRef: forParentRef,
 			// TODO: get this value from the config
 			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
-			ParentRef:      forParentRef,
-		}
-		h.Status.Parents = append(h.Status.Parents, rParentStatus)
+		})
 		routeParentStatusIdx = len(h.Status.Parents) - 1
 	}
 
@@ -362,7 +352,11 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		t.Status.Parents = append(t.Status.Parents, v1alpha2.RouteParentStatus{ParentRef: DowngradeParentReference(forParentRef)})
+		t.Status.Parents = append(t.Status.Parents, v1alpha2.RouteParentStatus{
+			ParentRef: DowngradeParentReference(forParentRef),
+			// TODO: get this value from the config
+			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+		})
 		routeParentStatusIdx = len(t.Status.Parents) - 1
 	}
 

@@ -23,6 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -98,7 +99,7 @@ func (r *tlsRouteReconciler) getTLSRoutesForService(obj client.Object) []reconci
 	affectedTLSRouteList := &gwapiv1a2.TLSRouteList{}
 
 	if err := r.client.List(context.Background(), affectedTLSRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, NamespacedName(obj).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, utils.NamespacedName(obj).String()),
 	}); err != nil {
 		return []reconcile.Request{}
 	}
@@ -106,7 +107,7 @@ func (r *tlsRouteReconciler) getTLSRoutesForService(obj client.Object) []reconci
 	requests := make([]reconcile.Request, len(affectedTLSRouteList.Items))
 	for i, item := range affectedTLSRouteList.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: NamespacedName(item.DeepCopy()),
+			NamespacedName: utils.NamespacedName(item.DeepCopy()),
 		}
 	}
 
@@ -118,6 +119,8 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 
 	log.Info("reconciling tlsroute")
 
+	defer r.resources.RouteInitializedOnce.Do(r.resources.RoutesInitialized.Done)
+
 	// Fetch all TLSRoutes from the cache.
 	routeList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, routeList); err != nil {
@@ -128,7 +131,7 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 	for i := range routeList.Items {
 		// See if this route from the list matched the reconciled route.
 		route := routeList.Items[i]
-		routeKey := NamespacedName(&route)
+		routeKey := utils.NamespacedName(&route)
 		if routeKey == request.NamespacedName {
 			found = true
 		}
@@ -209,7 +212,6 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 
 	log.Info("reconciled tlsroute")
 
-	r.resources.RouteInitializedOnce.Do(r.resources.RoutesInitialized.Done)
 	return reconcile.Result{}, nil
 }
 

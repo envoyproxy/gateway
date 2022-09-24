@@ -73,8 +73,8 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 	}, nil
 }
 
-func buildXdsPassthroughListener(httpListener *ir.HTTPListener) (*listener.Listener, error) {
-	if httpListener == nil {
+func buildXdsPassthroughListener(tlsListener *ir.TLSListener) (*listener.Listener, error) {
+	if tlsListener == nil {
 		return nil, errors.New("http listener is nil")
 	}
 
@@ -91,14 +91,14 @@ func buildXdsPassthroughListener(httpListener *ir.HTTPListener) (*listener.Liste
 	}
 
 	return &listener.Listener{
-		Name: getXdsListenerName(httpListener.Name, httpListener.Port),
+		Name: getXdsListenerName(tlsListener.Name, tlsListener.Port),
 		Address: &core.Address{
 			Address: &core.Address_SocketAddress{
 				SocketAddress: &core.SocketAddress{
 					Protocol: core.SocketAddress_TCP,
-					Address:  httpListener.Address,
+					Address:  tlsListener.Address,
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: httpListener.Port,
+						PortValue: tlsListener.Port,
 					},
 				},
 			},

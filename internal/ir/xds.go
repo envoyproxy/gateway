@@ -5,14 +5,13 @@ import (
 	"net"
 
 	"github.com/tetratelabs/multierror"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 var (
-	ErrHTTPListenerNameEmpty         = errors.New("field Name must be specified")
-	ErrHTTPListenerAddressInvalid    = errors.New("field Address must be a valid IP address")
-	ErrHTTPListenerPortInvalid       = errors.New("field Port specified is invalid")
-	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrListenerNameEmpty             = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
+	ErrListenerHostnamesEmpty        = errors.New("field Hostnames must be specified with at least a single hostname entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
@@ -36,6 +35,8 @@ var (
 type Xds struct {
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
+	// TLS Listeners exposed by the gateway.
+	TLS []*TLSListener
 }
 
 // Validate the fields within the Xds structure.
@@ -47,6 +48,24 @@ func (x Xds) Validate() error {
 		}
 	}
 	return errs
+}
+
+func (x Xds) GetListener(name string) *HTTPListener {
+	for _, listener := range x.HTTP {
+		if listener.Name == name {
+			return listener
+		}
+	}
+	return nil
+}
+
+func (x Xds) GetTLSListener(name string) *TLSListener {
+	for _, listener := range x.TLS {
+		if listener.Name == name {
+			return listener
+		}
+	}
+	return nil
 }
 
 // HTTPListener holds the listener configuration.
@@ -69,29 +88,20 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 }
 
-func (x Xds) GetListener(name string) *HTTPListener {
-	for _, listener := range x.HTTP {
-		if listener.Name == name {
-			return listener
-		}
-	}
-	return nil
-}
-
 // Validate the fields within the HTTPListener structure
 func (h HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrHTTPListenerNameEmpty)
+		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
 	if ip := net.ParseIP(h.Address); ip == nil {
-		errs = multierror.Append(errs, ErrHTTPListenerAddressInvalid)
+		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
-		errs = multierror.Append(errs, ErrHTTPListenerPortInvalid)
+		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
 	if len(h.Hostnames) == 0 {
-		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
+		errs = multierror.Append(errs, ErrListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
 		if err := h.TLS.Validate(); err != nil {
@@ -99,7 +109,7 @@ func (h HTTPListener) Validate() error {
 		}
 	}
 	for _, route := range h.Routes {
-		if err := route.Validate(h.TLS); err != nil {
+		if err := route.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -109,9 +119,6 @@ func (h HTTPListener) Validate() error {
 // TLSListenerConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
-	// TLSMode could either be Terminate or Passthrough. If the TLS mode
-	// is Passthrough, certificate and private key information is not required.
-	TLSMode v1beta1.TLSModeType
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.
@@ -121,9 +128,6 @@ type TLSListenerConfig struct {
 // Validate the fields within the TLSListenerConfig structure
 func (t TLSListenerConfig) Validate() error {
 	var errs error
-	if t.TLSMode == v1beta1.TLSModePassthrough {
-		return errs
-	}
 	if len(t.ServerCertificate) == 0 {
 		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
 	}
@@ -165,16 +169,13 @@ type HTTPRoute struct {
 }
 
 // Validate the fields within the HTTPRoute structure
-func (h HTTPRoute) Validate(tls *TLSListenerConfig) error {
+func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
 	}
-	if tls == nil || tls.TLSMode != v1beta1.TLSModePassthrough {
-		// These fields could be nil in case of TLSModePassthrough.
-		if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
-			errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
-		}
+	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
+		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
 	}
 	if h.PathMatch != nil {
 		if err := h.PathMatch.Validate(); err != nil {
@@ -392,5 +393,69 @@ func (s StringMatch) Validate() error {
 		errs = multierror.Append(errs, ErrStringMatchConditionInvalid)
 	}
 
+	return errs
+}
+
+// TLSListener holds the listener configuration.
+// +k8s:deepcopy-gen=true
+type TLSListener struct {
+	// Name of the TLSListener
+	Name string
+	// Address that the listener should listen on.
+	Address string
+	// Port on which the service can be expected to be accessed by clients.
+	Port uint32
+	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
+	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
+	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
+	// for more info.
+	Hostnames []string
+	// Routes associated with TLS passthrough traffic to the service.
+	Routes []*TLSRoute
+}
+
+// Validate the fields within the TLSListener structure
+func (h TLSListener) Validate() error {
+	var errs error
+	if h.Name == "" {
+		errs = multierror.Append(errs, ErrListenerNameEmpty)
+	}
+	if ip := net.ParseIP(h.Address); ip == nil {
+		errs = multierror.Append(errs, ErrListenerAddressInvalid)
+	}
+	if h.Port == 0 {
+		errs = multierror.Append(errs, ErrListenerPortInvalid)
+	}
+	if len(h.Hostnames) == 0 {
+		errs = multierror.Append(errs, ErrListenerHostnamesEmpty)
+	}
+	for _, route := range h.Routes {
+		if err := route.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// TLSRoute holds the route information associated with the HTTP Route
+// +k8s:deepcopy-gen=true
+type TLSRoute struct {
+	// Name of the TLSRoute
+	Name string
+	// Destinations associated with this matched route.
+	Destinations []*RouteDestination
+}
+
+// Validate the fields within the TLSRoute structure
+func (h TLSRoute) Validate() error {
+	var errs error
+	if h.Name == "" {
+		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
+	}
+	for _, dest := range h.Destinations {
+		if err := dest.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
 	return errs
 }

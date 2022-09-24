@@ -24,7 +24,7 @@ func mustUnmarshal(t *testing.T, val string, out interface{}) {
 }
 
 func TestTranslate(t *testing.T) {
-	inputFiles, err := filepath.Glob(filepath.Join("testdata", "*.in.yaml"))
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "httproute-with-non-matching-specific-hostname-attaching-to-gateway-with-wildcard-hostname.in.yaml"))
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
@@ -80,6 +80,9 @@ func TestTranslate(t *testing.T) {
 			envoyGatewayNsName := "envoy-gateway-gateway-1"
 			sort.Slice(got.XdsIR[envoyGatewayNsName].HTTP, func(i, j int) bool {
 				return got.XdsIR[envoyGatewayNsName].HTTP[i].Name < got.XdsIR[envoyGatewayNsName].HTTP[j].Name
+			})
+			sort.Slice(got.XdsIR[envoyGatewayNsName].TLS, func(i, j int) bool {
+				return got.XdsIR[envoyGatewayNsName].TLS[i].Name < got.XdsIR[envoyGatewayNsName].TLS[j].Name
 			})
 			// Only 1 listener is supported
 			sort.Slice(got.InfraIR[envoyGatewayNsName].Proxy.Listeners[0].Ports,

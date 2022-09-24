@@ -472,7 +472,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					break
 				}
 
-				listener.SetTLSConfig(v1beta1.TLSModeTerminate, secret)
+				listener.tlsSecret = secret
 			case v1beta1.TLSProtocolType:
 				if listener.TLS == nil {
 					listener.SetCondition(
@@ -503,8 +503,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					)
 					break
 				}
-
-				listener.SetTLSConfig(v1beta1.TLSModePassthrough, nil)
 			}
 
 			lConditions := listener.GetConditions()
@@ -532,24 +530,38 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				continue
 			}
 
+			// Add the listener to the Xds IR.
 			servicePort := int32(listener.Port)
 			containerPort := servicePortToContainerPort(servicePort)
-			// Add the listener to the Xds IR.
-			irListener := &ir.HTTPListener{
-				Name:    irListenerName(listener),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-			}
-			if listener.TLS != nil {
-				irListener.TLS = irTLSConfig(listener.tls.mode, listener.tls.secret)
-			}
-			if listener.Hostname != nil {
-				irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
-			} else {
-				// Hostname specifies the virtual hostname to match for protocol types that define this concept.
-				// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
-				// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
-				irListener.Hostnames = append(irListener.Hostnames, "*")
+			switch listener.Protocol {
+			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
+				irListener := &ir.HTTPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+					TLS:     irTLSConfig(listener.tlsSecret),
+				}
+				if listener.Hostname != nil {
+					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+				} else {
+					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
+					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
+					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
+					irListener.Hostnames = append(irListener.Hostnames, "*")
+				}
+				xdsIR.HTTP = append(xdsIR.HTTP, irListener)
+			case v1beta1.TLSProtocolType:
+				irListener := &ir.TLSListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+				}
+				if listener.Hostname != nil {
+					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+				} else {
+					irListener.Hostnames = append(irListener.Hostnames, "*")
+				}
+				xdsIR.TLS = append(xdsIR.TLS, irListener)
 			}
 			gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 
@@ -1105,7 +1117,69 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				routeRoutes = append(routeRoutes, ruleRoutes...)
 			}
 
-			addRoutesToListener(httpRoute, parentRef, routeRoutes, xdsIR)
+			var hasHostnameIntersection bool
+			for _, listener := range parentRef.listeners {
+				hosts := computeHosts(httpRoute.GetHostnames(), listener.Hostname)
+				if len(hosts) == 0 {
+					continue
+				}
+				hasHostnameIntersection = true
+
+				var perHostRoutes []*ir.HTTPRoute
+				for _, host := range hosts {
+					var headerMatches []*ir.StringMatch
+
+					// If the intersecting host is more specific than the Listener's hostname,
+					// add an additional header match to all of the routes for it
+					if host != "*" && (listener.Hostname == nil || string(*listener.Hostname) != host) {
+						headerMatches = append(headerMatches, &ir.StringMatch{
+							Name:  ":authority",
+							Exact: StringPtr(host),
+						})
+					}
+
+					for _, routeRoute := range routeRoutes {
+						perHostRoutes = append(perHostRoutes, &ir.HTTPRoute{
+							Name:                 fmt.Sprintf("%s-%s", routeRoute.Name, host),
+							PathMatch:            routeRoute.PathMatch,
+							HeaderMatches:        append(headerMatches, routeRoute.HeaderMatches...),
+							QueryParamMatches:    routeRoute.QueryParamMatches,
+							AddRequestHeaders:    routeRoute.AddRequestHeaders,
+							RemoveRequestHeaders: routeRoute.RemoveRequestHeaders,
+							Destinations:         routeRoute.Destinations,
+							Redirect:             routeRoute.Redirect,
+							DirectResponse:       routeRoute.DirectResponse,
+						})
+					}
+				}
+
+				irListener := xdsIR.GetListener(irListenerName(listener))
+				if irListener != nil {
+					irListener.Routes = append(irListener.Routes, perHostRoutes...)
+				}
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				if len(routeRoutes) > 0 {
+					listener.IncrementAttachedRoutes()
+				}
+			}
+
+			if !hasHostnameIntersection {
+				parentRef.SetCondition(httpRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonNoMatchingListenerHostname,
+					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				)
+			} else {
+				parentRef.SetCondition(httpRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionTrue,
+					v1beta1.RouteReasonAccepted,
+					"Route is accepted",
+				)
+			}
 		}
 	}
 
@@ -1256,87 +1330,55 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 				routeRoutes = append(routeRoutes, ruleRoute)
 			}
 
-			addRoutesToListener(tlsRoute, parentRef, routeRoutes, xdsIR)
+			var hasHostnameIntersection bool
+			for _, listener := range parentRef.listeners {
+				hosts := computeHosts(tlsRoute.GetHostnames(), listener.Hostname)
+				if len(hosts) == 0 {
+					continue
+				}
+				hasHostnameIntersection = true
+
+				var perHostRoutes []*ir.TLSRoute
+				for _, host := range hosts {
+					for _, routeRoute := range routeRoutes {
+						perHostRoutes = append(perHostRoutes, &ir.TLSRoute{
+							Name:         fmt.Sprintf("%s-%s", routeRoute.Name, host),
+							Destinations: routeRoute.Destinations,
+						})
+					}
+				}
+
+				irListener := xdsIR.GetTLSListener(irListenerName(listener))
+				if irListener != nil {
+					irListener.Routes = append(irListener.Routes, perHostRoutes...)
+				}
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				if len(routeRoutes) > 0 {
+					listener.IncrementAttachedRoutes()
+				}
+			}
+
+			if !hasHostnameIntersection {
+				parentRef.SetCondition(tlsRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonNoMatchingListenerHostname,
+					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				)
+			} else {
+				parentRef.SetCondition(tlsRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionTrue,
+					v1beta1.RouteReasonAccepted,
+					"Route is accepted",
+				)
+			}
 		}
 	}
 
 	return relevantTLSRoutes
-}
-
-func addRoutesToListener(routeContext RouteContext, parentRef *RouteParentContext, routeRoutes []*ir.HTTPRoute, xdsIR XdsIRMap) {
-	var hasHostnameIntersection bool
-	for _, listener := range parentRef.listeners {
-		hosts := computeHosts(routeContext.GetHostnames(), listener.Hostname)
-		if len(hosts) == 0 {
-			continue
-		}
-		hasHostnameIntersection = true
-
-		var perHostRoutes []*ir.HTTPRoute
-		for _, host := range hosts {
-			var headerMatches []*ir.StringMatch
-			if routeContext.GetRouteType() == KindHTTPRoute {
-				// If the intersecting host is more specific than the Listener's hostname,
-				// add an additional header match to all of the routes for it
-				if host != "*" && (listener.Hostname == nil || string(*listener.Hostname) != host) {
-					headerMatches = append(headerMatches, &ir.StringMatch{
-						Name:  ":authority",
-						Exact: StringPtr(host),
-					})
-				}
-			}
-
-			for _, routeRoute := range routeRoutes {
-				perHostRoute := &ir.HTTPRoute{
-					Name:         fmt.Sprintf("%s-%s", routeRoute.Name, host),
-					Destinations: routeRoute.Destinations,
-				}
-
-				// For TLSRoutes, all would be nil except Name and Destinations.
-				if routeContext.GetRouteType() == KindHTTPRoute {
-					headerMatches = append(headerMatches, routeRoute.HeaderMatches...)
-
-					perHostRoute.AddRequestHeaders = routeRoute.AddRequestHeaders
-					perHostRoute.RemoveRequestHeaders = routeRoute.RemoveRequestHeaders
-					perHostRoute.Destinations = routeRoute.Destinations
-					perHostRoute.PathMatch = routeRoute.PathMatch
-					perHostRoute.HeaderMatches = headerMatches
-					perHostRoute.QueryParamMatches = routeRoute.QueryParamMatches
-					perHostRoute.Redirect = routeRoute.Redirect
-					perHostRoute.DirectResponse = routeRoute.DirectResponse
-				}
-
-				perHostRoutes = append(perHostRoutes, perHostRoute)
-			}
-		}
-
-		irListener := xdsIR.GetListener(irListenerName(listener))
-		if irListener != nil {
-			irListener.Routes = append(irListener.Routes, perHostRoutes...)
-		}
-		// Theoretically there should only be one parent ref per
-		// Route that attaches to a given Listener, so fine to just increment here, but we
-		// might want to check to ensure we're not double-counting.
-		if len(routeRoutes) > 0 {
-			listener.IncrementAttachedRoutes()
-		}
-	}
-
-	if !hasHostnameIntersection {
-		parentRef.SetCondition(routeContext,
-			v1beta1.RouteConditionAccepted,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonNoMatchingListenerHostname,
-			"There were no hostname intersections between the Route and this parent ref's Listener(s).",
-		)
-	} else {
-		parentRef.SetCondition(routeContext,
-			v1beta1.RouteConditionAccepted,
-			metav1.ConditionTrue,
-			v1beta1.RouteReasonAccepted,
-			"Route is accepted",
-		)
-	}
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
@@ -1455,7 +1497,6 @@ func isValidCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, refe
 
 // Checks if a hostname is valid according to RFC 1123 and gateway API's requirement that it not be an IP address
 func isValidHostname(hostname string) error {
-
 	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
 		return fmt.Errorf("hostname %q is invalid for a redirect filter: %v", hostname, errs)
 	}
@@ -1495,17 +1536,15 @@ func routeName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%s-%s-rule-%d-match-%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
 }
 
-func irTLSConfig(tlsMode v1beta1.TLSModeType, tlsSecret *v1.Secret) *ir.TLSListenerConfig {
-	tlsListenerConfig := &ir.TLSListenerConfig{
-		TLSMode: tlsMode,
+func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
+	if tlsSecret == nil {
+		return nil
 	}
 
-	if tlsSecret != nil {
-		tlsListenerConfig.ServerCertificate = tlsSecret.Data[v1.TLSCertKey]
-		tlsListenerConfig.PrivateKey = tlsSecret.Data[v1.TLSPrivateKeyKey]
+	return &ir.TLSListenerConfig{
+		ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
+		PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
 	}
-
-	return tlsListenerConfig
 }
 
 // GatewayOwnerLabels returns the Gateway Owner labels using
