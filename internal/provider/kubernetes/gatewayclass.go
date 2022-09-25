@@ -211,7 +211,7 @@ func (cc *controlledClasses) removeMatch(gc *gwapiv1b1.GatewayClass) {
 
 	// If the oldestClass is removed, find the new oldestClass candidate
 	// from matchedClasses.
-	if cc.oldestClass.Name == gc.Name {
+	if cc.oldestClass != nil && cc.oldestClass.Name == gc.Name {
 		if len(cc.matchedClasses) == 0 {
 			cc.oldestClass = nil
 			return
