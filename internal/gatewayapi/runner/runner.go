@@ -62,7 +62,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		case <-servicesCh:
 			r.waitUntilAllGAPIInitialized()
 		case <-namespacesCh:
-			r.waitUntilAllGAPIInitialized()
+			r.waitUntilGCAndGatewaysInitialized()
 		}
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
