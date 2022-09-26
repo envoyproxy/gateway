@@ -70,6 +70,13 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 	@echo "\nCurl the app through Envoy proxy using the command below"
 	@echo "curl --verbose --header \"Host: www.example.com\" http://localhost:8888/get\n"
 
+.PHONY: kube-demo-undeploy
+kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kub-demo` command.
+	kubectl delete -f examples/kubernetes/httproute.yaml
+	kubectl delete -f examples/kubernetes/gateway.yaml
+	kubectl delete -f examples/kubernetes/gatewayclass.yaml
+	kubectl delete -f examples/kubernetes/httpbin.yaml
+
 .PHONY: run-kube-local
 run-kube-local: build kube-install ## Run Envoy Gateway locally.
 	tools/hack/run-kube-local.sh
