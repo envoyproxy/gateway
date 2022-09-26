@@ -39,16 +39,20 @@ fi
 
 # Update the image pull policy in the Envoy Gateway deployment manifest so
 # the image is served by the kind cluster.
-echo "setting \"imagePullPolicy: IfNotPresent\" for Envoy Gateway deployment"
-run::sed \
-  "-es|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" \
-  "./internal/provider/kubernetes/config/envoy-gateway/deploy_and_ns.yaml"
+for file in internal/provider/kubernetes/config/envoy-gateway/deploy_and_ns.yaml internal/provider/kubernetes/config/envoy-gateway/certgen-job.yaml ; do
+  echo "setting \"imagePullPolicy: IfNotPresent\" for $file"
+  run::sed \
+    "-es|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" \
+    "$file"
+done
 
 # Update the image in the Envoy Gateway deployment manifest.
-echo "setting \"image: ${IMAGE}:${TAG}\" for Envoy Gateway deployment"
-run::sed \
-  "-es|image: envoyproxy/gateway-dev:.*$|image: ${IMAGE}:${TAG}|" \
-  "./internal/provider/kubernetes/config/envoy-gateway/deploy_and_ns.yaml"
+for file in internal/provider/kubernetes/config/envoy-gateway/deploy_and_ns.yaml internal/provider/kubernetes/config/envoy-gateway/certgen-job.yaml ; do
+  echo "setting \"image: ${IMAGE}:${TAG}\" for $file"
+  run::sed \
+    "-es|image: envoyproxy/gateway-dev:.*$|image: ${IMAGE}:${TAG}|" \
+    "$file"
+done
 
 # Push the Envoy Gateway image to the kind cluster.
 echo "Loading image ${IMAGE}:${TAG} to kind cluster ${CLUSTER_NAME}..."
