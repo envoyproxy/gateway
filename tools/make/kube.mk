@@ -79,7 +79,7 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
-	go test -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --cleanup-base-resources=false
+	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
 
 .PHONY: delete-cluster
 delete-cluster: $(tools/kind) ## Delete kind cluster.
