@@ -71,7 +71,7 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 	@echo "curl --verbose --header \"Host: www.example.com\" http://localhost:8888/get\n"
 
 .PHONY: kube-demo-undeploy
-kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kub-demo` command.
+kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
 	kubectl delete -f examples/kubernetes/httproute.yaml
 	kubectl delete -f examples/kubernetes/gateway.yaml
 	kubectl delete -f examples/kubernetes/gatewayclass.yaml
