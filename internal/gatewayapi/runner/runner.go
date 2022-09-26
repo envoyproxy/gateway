@@ -22,6 +22,7 @@ type Config struct {
 
 type Runner struct {
 	Config
+	xdsIRReady bool
 }
 
 func New(cfg *Config) *Runner {
@@ -41,8 +42,6 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	var xdsIRReady bool
-
 	// Subscribe to resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
@@ -60,11 +59,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.waitUntilGCAndGatewaysInitialized()
 		case <-httpRoutesCh:
 			r.waitUntilAllGAPIInitialized()
-			// Now that the httproute resources have been initialized,
-			// allow the runner to publish the translated xdsIR.
-			xdsIRReady = true
 		case <-servicesCh:
+			r.waitUntilAllGAPIInitialized()
 		case <-namespacesCh:
+			r.waitUntilAllGAPIInitialized()
 		}
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
@@ -108,7 +106,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 			// Wait until all HTTPRoutes have been reconciled , else the translation
 			// result will be incomplete, and might cause churn in the data plane.
-			if xdsIRReady {
+			if r.xdsIRReady {
 				if err := result.XdsIR.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 				} else {
@@ -142,4 +140,7 @@ func (r *Runner) waitUntilGCAndGatewaysInitialized() {
 func (r *Runner) waitUntilAllGAPIInitialized() {
 	r.waitUntilGCAndGatewaysInitialized()
 	r.ProviderResources.HTTPRoutesInitialized.Wait()
+	// Now that the httproute resources have been initialized,
+	// allow the runner to publish the translated xdsIR.
+	r.xdsIRReady = true
 }
