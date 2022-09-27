@@ -26,6 +26,11 @@ func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Servic
 			case len(svc.Status.LoadBalancer.Ingress[i].IP) > 0:
 				addrs = append(addrs, svc.Status.LoadBalancer.Ingress[i].IP)
 			case len(svc.Status.LoadBalancer.Ingress[i].Hostname) > 0:
+				// Remove when the following supports the hostname address type:
+				// https://github.com/kubernetes-sigs/gateway-api/blob/v0.5.0/conformance/utils/kubernetes/helpers.go#L201-L207
+				if svc.Status.LoadBalancer.Ingress[i].Hostname == "localhost" {
+					addrs = append(addrs, "127.0.0.1")
+				}
 				hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 			}
 		}
