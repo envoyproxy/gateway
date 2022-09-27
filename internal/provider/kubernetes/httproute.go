@@ -281,7 +281,7 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				continue
 			}
 			key := update.Key
-			value := update.Value
+			val := update.Value
 			r.statusUpdater.Send(status.Update{
 				NamespacedName: key,
 				Resource:       new(gwapiv1b1.HTTPRoute),
@@ -289,7 +289,7 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					if _, ok := obj.(*gwapiv1b1.HTTPRoute); !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return value.DeepCopy()
+					return val
 				}),
 			})
 		}

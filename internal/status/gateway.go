@@ -10,7 +10,7 @@ import (
 
 // UpdateGatewayScheduledCondition updates the status condition for the provided Gateway based on the scheduled state.
 func UpdateGatewayStatusScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) *gwapiv1b1.Gateway {
-	gw.Status.Conditions = mergeConditions(gw.Status.Conditions, computeGatewayScheduledCondition(gw, scheduled))
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayScheduledCondition(gw, scheduled))
 	return gw
 }
 
@@ -55,5 +55,5 @@ func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Servic
 		gw.Status.Addresses = gwAddrs
 	}
 	// Update the ready condition.
-	gw.Status.Conditions = mergeConditions(gw.Status.Conditions, computeGatewayReadyCondition(gw, deployment))
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayReadyCondition(gw, deployment))
 }

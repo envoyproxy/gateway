@@ -345,10 +345,16 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				NamespacedName: key,
 				Resource:       new(gwapiv1b1.Gateway),
 				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					if _, ok := obj.(*gwapiv1b1.Gateway); !ok {
+					g, ok := obj.(*gwapiv1b1.Gateway)
+					if !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return val.DeepCopy()
+					gCopy := g.DeepCopy()
+					gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, val.Status.Conditions...)
+					if len(val.Status.Listeners) > 0 {
+						gCopy.Status.Listeners = val.Status.Listeners
+					}
+					return gCopy
 				}),
 			})
 		}

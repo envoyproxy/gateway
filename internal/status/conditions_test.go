@@ -228,7 +228,7 @@ func TestMergeConditions(t *testing.T) {
 	fakeClock.SetTime(later)
 
 	for _, tc := range testCases {
-		got := mergeConditions(tc.current, tc.updates...)
+		got := MergeConditions(tc.current, tc.updates...)
 		if conditionChanged(tc.expected[0], got[0]) {
 			assert.Equal(t, tc.expected, got, tc.name)
 		}
