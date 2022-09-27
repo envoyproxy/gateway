@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -26,10 +25,9 @@ import (
 )
 
 type gatewayClassReconciler struct {
-	client        client.Client
-	controller    gwapiv1b1.GatewayController
-	statusUpdater status.Updater
-	log           logr.Logger
+	client     client.Client
+	controller gwapiv1b1.GatewayController
+	log        logr.Logger
 
 	initializeOnce sync.Once
 	resources      *message.ProviderResources
@@ -38,14 +36,13 @@ type gatewayClassReconciler struct {
 // newGatewayClassController creates the gatewayclass controller. The controller
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
-func newGatewayClassController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+func newGatewayClassController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
 	resources.GatewayClassesInitialized.Add(1)
 	r := &gatewayClassReconciler{
-		client:        mgr.GetClient(),
-		controller:    gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		statusUpdater: su,
-		log:           cfg.Logger,
-		resources:     resources,
+		client:     mgr.GetClient(),
+		controller: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		log:        cfg.Logger,
+		resources:  resources,
 	}
 
 	c, err := controller.New("gatewayclass", mgr, controller.Options{Reconciler: r})
@@ -130,39 +127,22 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 	// Store the accepted gatewayclass in the resource map.
 	r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 
-	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
-		if r.statusUpdater != nil {
-			r.statusUpdater.Send(status.Update{
-				NamespacedName: types.NamespacedName{Name: gc.Name},
-				Resource:       &gwapiv1b1.GatewayClass{},
-				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					gc, ok := obj.(*gwapiv1b1.GatewayClass)
-					if !ok {
-						panic(fmt.Sprintf("unsupported object type %T", obj))
-					}
-
-					return status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
-				}),
-			})
-		} else {
-			// this branch makes testing easier by not going through the status.Updater.
-			copy := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
-
-			if err := r.client.Status().Update(ctx, copy); err != nil {
-				return fmt.Errorf("error updating status of gatewayclass %s: %w", copy.Name, err)
-			}
+	updateStatus := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
+		gc = status.SetGatewayClassAccepted(gc, accepted)
+		if err := status.UpdateStatus(r.client, gc); err != nil {
+			return fmt.Errorf("error updating status of gatewayclass %s: %w", gc.Name, err)
 		}
 		return nil
 	}
 
 	// Update status for all gateway classes
 	for _, gc := range cc.notAcceptedClasses() {
-		if err := updater(gc, false); err != nil {
+		if err := updateStatus(gc, false); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 	if acceptedGC != nil {
-		if err := updater(acceptedGC, true); err != nil {
+		if err := updateStatus(acceptedGC, true); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

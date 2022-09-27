@@ -35,7 +35,6 @@ const (
 type httpRouteReconciler struct {
 	client          client.Client
 	log             logr.Logger
-	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
 
 	initializeOnce sync.Once
@@ -44,13 +43,12 @@ type httpRouteReconciler struct {
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
 	resources.HTTPRoutesInitialized.Add(1)
 	r := &httpRouteReconciler{
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		statusUpdater:   su,
 		resources:       resources,
 	}
 
@@ -280,18 +278,9 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			if update.Delete {
 				continue
 			}
-			key := update.Key
-			value := update.Value
-			r.statusUpdater.Send(status.Update{
-				NamespacedName: key,
-				Resource:       new(gwapiv1b1.HTTPRoute),
-				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					if _, ok := obj.(*gwapiv1b1.HTTPRoute); !ok {
-						panic(fmt.Sprintf("unsupported object type %T", obj))
-					}
-					return value.DeepCopy()
-				}),
-			})
+			if err := status.UpdateStatus(r.client, update.Value); err != nil {
+				r.log.Error(err, "unable to update httproute status")
+			}
 		}
 	}
 	r.log.Info("status subscriber shutting down")

@@ -37,7 +37,6 @@ type gatewayReconciler struct {
 	client client.Client
 	// classController is the configured gatewayclass controller name.
 	classController gwapiv1b1.GatewayController
-	statusUpdater   status.Updater
 	log             logr.Logger
 
 	initializeOnce sync.Once
@@ -47,12 +46,11 @@ type gatewayReconciler struct {
 // newGatewayController creates a gateway controller. The controller will watch for
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
-func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+func newGatewayController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
 	resources.GatewaysInitialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		statusUpdater:   su,
 		log:             cfg.Logger,
 		resources:       resources,
 	}
@@ -339,18 +337,9 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			if update.Delete {
 				continue
 			}
-			key := update.Key
-			val := update.Value
-			r.statusUpdater.Send(status.Update{
-				NamespacedName: key,
-				Resource:       new(gwapiv1b1.Gateway),
-				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					if _, ok := obj.(*gwapiv1b1.Gateway); !ok {
-						panic(fmt.Sprintf("unsupported object type %T", obj))
-					}
-					return val.DeepCopy()
-				}),
-			})
+			if err := status.UpdateStatus(r.client, update.Value); err != nil {
+				r.log.Error(err, "failed to update gateway status")
+			}
 		}
 	}
 	r.log.Info("status subscriber shutting down")
