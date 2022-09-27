@@ -135,8 +135,9 @@ func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeUR
 	return nil
 }
 
-func (s *snapshotcache) OnStreamClosed(streamID int64) {
+func (s *snapshotcache) OnStreamClosed(streamID int64, node *envoy_config_core_v3.Node) {
 
+	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -231,8 +232,9 @@ func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, t
 	return nil
 }
 
-func (s *snapshotcache) OnDeltaStreamClosed(streamID int64) {
+func (s *snapshotcache) OnDeltaStreamClosed(streamID int64, node *envoy_config_core_v3.Node) {
 
+	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

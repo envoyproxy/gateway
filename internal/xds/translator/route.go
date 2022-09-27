@@ -27,7 +27,12 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 	case httpRoute.Redirect != nil:
 		ret.Action = &route.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	default:
-		ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)}
+		if httpRoute.BackendWeights.Invalid != 0 {
+			// If there are invalid backends then a weighted cluster is required for the route
+			ret.Action = &route.Route_Route{Route: buildXdsWeightedRouteAction(httpRoute)}
+		} else {
+			ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)}
+		}
 	}
 
 	return ret, nil
@@ -131,6 +136,30 @@ func buildXdsRouteAction(routeName string) *route.RouteAction {
 	return &route.RouteAction{
 		ClusterSpecifier: &route.RouteAction_Cluster{
 			Cluster: getXdsClusterName(routeName),
+		},
+	}
+}
+
+func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
+	totalWeight := httpRoute.BackendWeights.Valid + httpRoute.BackendWeights.Invalid
+	clusters := []*route.WeightedCluster_ClusterWeight{
+		{
+			Name:   "invalid-backend-cluster",
+			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
+		},
+		{
+			Name:   getXdsClusterName(httpRoute.Name),
+			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
+		},
+	}
+	return &route.RouteAction{
+		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
+		ClusterNotFoundResponseCode: route.RouteAction_INTERNAL_SERVER_ERROR,
+		ClusterSpecifier: &route.RouteAction_WeightedClusters{
+			WeightedClusters: &route.WeightedCluster{
+				TotalWeight: &wrapperspb.UInt32Value{Value: totalWeight},
+				Clusters:    clusters,
+			},
 		},
 	}
 }

@@ -3,7 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.18
 
 require (
-	github.com/envoyproxy/go-control-plane v0.10.3
+	github.com/envoyproxy/go-control-plane v0.10.3-0.20220719090109-b024c36d9935
 	github.com/go-logr/zapr v1.2.0
 	github.com/google/go-cmp v0.5.8
 	github.com/spf13/cobra v1.4.0

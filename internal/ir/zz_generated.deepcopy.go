@@ -135,6 +135,7 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			}
 		}
 	}
+	out.BackendWeights = in.BackendWeights
 	if in.AddRequestHeaders != nil {
 		in, out := &in.AddRequestHeaders, &out.AddRequestHeaders
 		*out = make([]AddHeader, len(*in))

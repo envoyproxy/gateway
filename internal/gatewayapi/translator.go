@@ -505,6 +505,111 @@ func servicePortToContainerPort(servicePort int32) int32 {
 	return servicePort
 }
 
+// buildRuleRouteDest takes a backendRef and translates it into a destination or sets error statuses and
+// returns the weight for the backend so that 500 error responses can be returned for invalid backends in
+// the same proportion as the backend would have otherwise received
+func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
+	parentRef *RouteParentContext,
+	httpRoute *HTTPRouteContext,
+	resources *Resources) (destination *ir.RouteDestination, backendWeight uint32) {
+
+	weight := uint32(1)
+	if backendRef.Weight != nil {
+		weight = uint32(*backendRef.Weight)
+	}
+
+	if backendRef.Group != nil && *backendRef.Group != "" {
+		parentRef.SetCondition(
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonInvalidKind,
+			"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+		)
+		return nil, weight
+	}
+
+	if backendRef.Kind != nil && *backendRef.Kind != KindService {
+		parentRef.SetCondition(
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonInvalidKind,
+			"Kind is invalid, only Service is supported",
+		)
+		return nil, weight
+	}
+
+	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != httpRoute.Namespace {
+		if !isValidCrossNamespaceRef(
+			crossNamespaceFrom{
+				group:     v1beta1.GroupName,
+				kind:      KindHTTPRoute,
+				namespace: httpRoute.Namespace,
+			},
+			crossNamespaceTo{
+				group:     "",
+				kind:      KindService,
+				namespace: string(*backendRef.Namespace),
+				name:      string(backendRef.Name),
+			},
+			resources.ReferenceGrants,
+		) {
+			parentRef.SetCondition(
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.RouteReasonRefNotPermitted,
+				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+			)
+			return nil, weight
+		}
+	}
+
+	if backendRef.Port == nil {
+		parentRef.SetCondition(
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"PortNotSpecified",
+			"A valid port number corresponding to a port on the Service must be specified",
+		)
+		return nil, weight
+	}
+
+	service := resources.GetService(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
+	if service == nil {
+		parentRef.SetCondition(
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonBackendNotFound,
+			fmt.Sprintf("Service %s/%s not found", NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
+		)
+		return nil, weight
+	}
+
+	var portFound bool
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			portFound = true
+			break
+		}
+	}
+
+	if !portFound {
+		parentRef.SetCondition(
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"PortNotFound",
+			fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
+		)
+		return nil, weight
+	}
+
+	return &ir.RouteDestination{
+		Host:   service.Spec.ClusterIP,
+		Port:   uint32(*backendRef.Port),
+		Weight: weight,
+	}, weight
+
+}
+
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
@@ -915,108 +1020,35 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				for _, backendRef := range rule.BackendRefs {
-					if backendRef.Group != nil && *backendRef.Group != "" {
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonInvalidKind,
-							"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
-						)
-						continue
-					}
 
-					if backendRef.Kind != nil && *backendRef.Kind != KindService {
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonInvalidKind,
-							"Kind is invalid, only Service is supported",
-						)
-						continue
-					}
-
-					if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != httpRoute.Namespace {
-						if !isValidCrossNamespaceRef(
-							crossNamespaceFrom{
-								group:     v1beta1.GroupName,
-								kind:      KindHTTPRoute,
-								namespace: httpRoute.Namespace,
-							},
-							crossNamespaceTo{
-								group:     "",
-								kind:      KindService,
-								namespace: string(*backendRef.Namespace),
-								name:      string(backendRef.Name),
-							},
-							resources.ReferenceGrants,
-						) {
-							parentRef.SetCondition(
-								v1beta1.RouteConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.RouteReasonRefNotPermitted,
-								fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
-							)
-							continue
-						}
-					}
-
-					if backendRef.Port == nil {
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							"PortNotSpecified",
-							"A valid port number corresponding to a port on the Service must be specified",
-						)
-						continue
-					}
-
-					service := resources.GetService(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
-					if service == nil {
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonBackendNotFound,
-							fmt.Sprintf("Service %s/%s not found", NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
-						)
-						continue
-					}
-
-					var portFound bool
-					for _, port := range service.Spec.Ports {
-						if port.Port == int32(*backendRef.Port) {
-							portFound = true
-							break
-						}
-					}
-
-					if !portFound {
-						parentRef.SetCondition(
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							"PortNotFound",
-							fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
-						)
-						continue
-					}
-
-					weight := uint32(1)
-					if backendRef.Weight != nil {
-						weight = uint32(*backendRef.Weight)
-					}
-
+					destination, backendWeight := buildRuleRouteDest(backendRef, parentRef, httpRoute, resources)
 					for _, route := range ruleRoutes {
-						route.Destinations = append(route.Destinations, &ir.RouteDestination{
-							Host:   service.Spec.ClusterIP,
-							Port:   uint32(*backendRef.Port),
-							Weight: weight,
-						})
+						// If the route already has a direct response or redirect configured, then it was from a filter so skip
+						// processing any destinations for this route.
+						if route.DirectResponse == nil && route.Redirect == nil {
+							if destination != nil {
+								route.Destinations = append(route.Destinations, destination)
+								route.BackendWeights.Valid += backendWeight
+
+							} else {
+								route.BackendWeights.Invalid += backendWeight
+							}
+						}
+					}
+
+				}
+
+				// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
+				for _, ruleRoute := range ruleRoutes {
+					if ruleRoute.BackendWeights.Invalid > 0 && len(ruleRoute.Destinations) == 0 {
+						ruleRoute.DirectResponse = &ir.DirectResponse{
+							StatusCode: 500,
+						}
 					}
 				}
 
 				// TODO handle:
-				//	- no valid backend refs
 				//	- sum of weights for valid backend refs is 0
-				//	- returning 500's for invalid backend refs
 				//	- etc.
 
 				routeRoutes = append(routeRoutes, ruleRoutes...)
@@ -1044,7 +1076,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					}
 
 					for _, routeRoute := range routeRoutes {
-						perHostRoutes = append(perHostRoutes, &ir.HTTPRoute{
+						hostRoute := &ir.HTTPRoute{
 							Name:                 fmt.Sprintf("%s-%s", routeRoute.Name, host),
 							PathMatch:            routeRoute.PathMatch,
 							HeaderMatches:        append(headerMatches, routeRoute.HeaderMatches...),
@@ -1054,7 +1086,12 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							Destinations:         routeRoute.Destinations,
 							Redirect:             routeRoute.Redirect,
 							DirectResponse:       routeRoute.DirectResponse,
-						})
+						}
+						// Don't bother copying over the weights unless the route has invalid backends.
+						if routeRoute.BackendWeights.Invalid > 0 {
+							hostRoute.BackendWeights = routeRoute.BackendWeights
+						}
+						perHostRoutes = append(perHostRoutes, hostRoute)
 					}
 				}
 
