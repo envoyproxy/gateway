@@ -76,9 +76,9 @@ func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Depl
 		string(gwapiv1b1.GatewayReasonReady), message, time.Now(), gw.Generation)
 }
 
-// mergeConditions adds or updates matching conditions, and updates the transition
+// MergeConditions adds or updates matching conditions, and updates the transition
 // time if details of a condition have changed. Returns the updated condition array.
-func mergeConditions(conditions []metav1.Condition, updates ...metav1.Condition) []metav1.Condition {
+func MergeConditions(conditions []metav1.Condition, updates ...metav1.Condition) []metav1.Condition {
 	var additions []metav1.Condition
 	for i, update := range updates {
 		add := true

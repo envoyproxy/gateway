@@ -10,6 +10,6 @@ import (
 // SetGatewayClassAccepted inserts or updates the Accepted condition
 // for the provided GatewayClass.
 func SetGatewayClassAccepted(gc *gwapiv1b1.GatewayClass, accepted bool) *gwapiv1b1.GatewayClass {
-	gc.Status.Conditions = mergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted))
+	gc.Status.Conditions = MergeConditions(gc.Status.Conditions, computeGatewayClassAcceptedCondition(gc, accepted))
 	return gc
 }
