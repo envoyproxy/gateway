@@ -38,7 +38,15 @@ func TestGatewayAPIConformance(t *testing.T) {
 		},
 	})
 	cSuite.Setup(t)
-	egTests := []suite.ConformanceTest{tests.HTTPRouteSimpleSameNamespace}
+	egTests := []suite.ConformanceTest{
+		tests.HTTPRouteSimpleSameNamespace,
+		tests.HTTPRouteRequestHeaderModifier,
+		tests.HTTPRouteQueryParamMatching,
+		tests.HTTPRouteInvalidCrossNamespaceParentRef,
+		tests.HTTPExactPathMatching,
+		tests.HTTPRouteCrossNamespace,
+		tests.HTTPRouteMatchingAcrossRoutes,
+	}
 	cSuite.Run(t, egTests)
 
 }
