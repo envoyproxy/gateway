@@ -103,11 +103,18 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 
 	for i := range gatewayClasses.Items {
 		if gatewayClasses.Items[i].Spec.ControllerName == r.controller {
-			if !gatewayClasses.Items[i].DeletionTimestamp.IsZero() {
+			// The gatewayclass was marked for deletion and the finalizer removed,
+			// so clean-up dependents.
+			if !gatewayClasses.Items[i].DeletionTimestamp.IsZero() &&
+				!slice.ContainsString(gatewayClasses.Items[i].Finalizers, gatewayClassFinalizer) {
+				r.log.Info("gatewayclass marked for deletion")
 				cc.removeMatch(&gatewayClasses.Items[i])
-			} else {
-				cc.addMatch(&gatewayClasses.Items[i])
+				// A nil gatewayclass removes managed proxy infra, if it exists.
+				r.resources.GatewayClasses.Store(request.Name, nil)
+				continue
 			}
+
+			cc.addMatch(&gatewayClasses.Items[i])
 		}
 	}
 
@@ -123,14 +130,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, nil
 	}
 
-	// The gatewayclass was marked for deletion and the finalizer removed,
-	// so clean-up dependents.
-	if !acceptedGC.DeletionTimestamp.IsZero() && !slice.ContainsString(acceptedGC.Finalizers, gatewayClassFinalizer) {
-		r.log.Info("gatewayclass marked for deletion")
-		// A nil gatewayclass removes managed proxy infra, if it exists.
-		r.resources.GatewayClasses.Store(request.Name, nil)
-		return reconcile.Result{}, nil
-	}
 	// Store the accepted gatewayclass in the resource map.
 	r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 
