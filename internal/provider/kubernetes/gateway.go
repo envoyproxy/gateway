@@ -351,9 +351,8 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					}
 					gCopy := g.DeepCopy()
 					gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, val.Status.Conditions...)
-					if len(val.Status.Listeners) > 0 {
-						gCopy.Status.Listeners = val.Status.Listeners
-					}
+					gCopy.Status.Addresses = val.Status.Addresses
+					gCopy.Status.Listeners = val.Status.Listeners
 					return gCopy
 				}),
 			})
