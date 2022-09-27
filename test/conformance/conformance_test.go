@@ -29,8 +29,16 @@ func TestGatewayAPIConformance(t *testing.T) {
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts: []v1alpha2.PortNumber{
+			v1alpha2.PortNumber(int32(80)),
+			v1alpha2.PortNumber(int32(81)),
+			v1alpha2.PortNumber(int32(82)),
+			v1alpha2.PortNumber(int32(83)),
+			v1alpha2.PortNumber(int32(84)),
+		},
 	})
 	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
+	egTests := []suite.ConformanceTest{tests.HTTPRouteSimpleSameNamespace}
+	cSuite.Run(t, egTests)
 
 }
