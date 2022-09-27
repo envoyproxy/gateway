@@ -84,10 +84,6 @@ xdsIR:
           exact: gateway.envoyproxy.io
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
         directResponse:
           body: "Unknown custom filter type: UnsupportedType"
           statusCode: 500

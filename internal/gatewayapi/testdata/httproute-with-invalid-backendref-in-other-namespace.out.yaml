@@ -71,8 +71,9 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-*
             pathMatch:
               exact: "/exact"
-            # TODO this should change when the correct behavior for invalid backend refs is implemented
-            destinations:
+          InvalidBackends: 1
+          DirectResponse:
+            StatusCode: 500
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
