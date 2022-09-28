@@ -65,6 +65,9 @@ func TestRunner(t *testing.T) {
 		if out == nil {
 			return false
 		}
+		if out["test"] == nil {
+			return false
+		}
 		// Ensure an xds listener is created
 		return len(out["test"].XdsResources[resourcev3.ListenerType]) == 1
 	}, time.Second*1, time.Millisecond*20)
