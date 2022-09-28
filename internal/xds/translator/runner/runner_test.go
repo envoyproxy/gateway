@@ -70,7 +70,7 @@ func TestRunner(t *testing.T) {
 		}
 		// Ensure an xds listener is created
 		return len(out["test"].XdsResources[resourcev3.ListenerType]) == 1
-	}, time.Second*2, time.Millisecond*20)
+	}, time.Second*3, time.Millisecond*50)
 
 	// Delete the IR triggering an xds delete
 	xdsIR.Delete("test")
@@ -78,6 +78,6 @@ func TestRunner(t *testing.T) {
 		out := xds.LoadAll()
 		// Ensure that xds has no key, value pairs
 		return len(out) == 0
-	}, time.Second*2, time.Millisecond*20)
+	}, time.Second*3, time.Millisecond*50)
 
 }
