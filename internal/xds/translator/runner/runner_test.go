@@ -70,17 +70,17 @@ func TestRunner(t *testing.T) {
 		}
 		// Ensure an xds listener is created
 		return len(out["test"].XdsResources[resourcev3.ListenerType]) == 1
-	}, time.Second*1, time.Millisecond*20)
+	}, time.Second*2, time.Millisecond*20)
 
-	// Update with an empty IR triggering a delete
-	xdsIR.Store("test", &ir.Xds{})
+	// Delete the IR triggering an xds delete
+	xdsIR.Delete("test")
 	require.Eventually(t, func() bool {
 		out := xds.LoadAll()
-		if out == nil {
+		if len(out) != 0 {
 			return false
 		}
-		// Ensure no xds listener exists
-		return len(out["test"].XdsResources[resourcev3.ListenerType]) == 0
-	}, time.Second*1, time.Millisecond*20)
+		// Ensure that xds has no key, value pairs
+		return true
+	}, time.Second*2, time.Millisecond*20)
 
 }
