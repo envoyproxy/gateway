@@ -1,8 +1,6 @@
 package message
 
 import (
-	"sync"
-
 	"github.com/telepresenceio/watchable"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,10 +20,6 @@ type ProviderResources struct {
 
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
-
-	GatewayClassesInitialized sync.WaitGroup
-	GatewaysInitialized       sync.WaitGroup
-	HTTPRoutesInitialized     sync.WaitGroup
 }
 
 func (p *ProviderResources) DeleteGatewayClasses() {

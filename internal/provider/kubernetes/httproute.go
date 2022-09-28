@@ -6,7 +6,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -38,14 +37,12 @@ type httpRouteReconciler struct {
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
 
-	initializeOnce sync.Once
-	resources      *message.ProviderResources
+	resources *message.ProviderResources
 }
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
 func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
-	resources.HTTPRoutesInitialized.Add(1)
 	r := &httpRouteReconciler{
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
@@ -181,8 +178,6 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 	log := r.log.WithValues("namespace", request.Namespace, "name", request.Name)
 
 	log.Info("reconciling httproute")
-
-	defer r.initializeOnce.Do(r.resources.HTTPRoutesInitialized.Done)
 
 	// Fetch all HTTPRoutes from the cache.
 	routeList := &gwapiv1b1.HTTPRouteList{}
