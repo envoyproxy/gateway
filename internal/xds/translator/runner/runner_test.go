@@ -76,11 +76,8 @@ func TestRunner(t *testing.T) {
 	xdsIR.Delete("test")
 	require.Eventually(t, func() bool {
 		out := xds.LoadAll()
-		if len(out) != 0 {
-			return false
-		}
 		// Ensure that xds has no key, value pairs
-		return true
+		return len(out) == 0
 	}, time.Second*2, time.Millisecond*20)
 
 }
