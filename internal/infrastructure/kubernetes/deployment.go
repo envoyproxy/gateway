@@ -93,6 +93,10 @@ func (b *bootstrapConfig) render() error {
 	return nil
 }
 
+func expectedDeploymentName(proxyName string) string {
+	return fmt.Sprintf("%s-%s", config.EnvoyDeploymentPrefix, proxyName)
+}
+
 // expectedDeployment returns the expected Deployment based on the provided infra.
 func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
 	containers, err := expectedContainers(infra)
@@ -102,8 +106,8 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
-	if _, ok := labels[gatewayapi.OwningGatewayClassLabel]; !ok {
-		return nil, fmt.Errorf("missing owning gatewayclass label")
+	if _, ok := labels[gatewayapi.OwningGatewayLabel]; !ok {
+		return nil, fmt.Errorf("missing owning gateway label")
 	}
 
 	deployment := &appsv1.Deployment{
@@ -113,7 +117,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      config.EnvoyDeploymentName,
+			Name:      expectedDeploymentName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -125,7 +129,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            envoyServiceAccountName,
+					ServiceAccountName:            expectedServiceAccountName(infra.Proxy.Name),
 					AutomountServiceAccountToken:  pointer.BoolPtr(false),
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -211,7 +215,7 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 				"envoy",
 			},
 			Args: []string{
-				fmt.Sprintf("--service-cluster $(%s)", envoyNsEnvVar),
+				fmt.Sprintf("--service-cluster %s", infra.Proxy.Name),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 				fmt.Sprintf("--config-yaml %s", cfg.rendered),
 				"--log-level info",
@@ -267,7 +271,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 	current := &appsv1.Deployment{}
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
-		Name:      config.EnvoyDeploymentName,
+		Name:      expectedDeploymentName(infra.Proxy.Name),
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
@@ -295,12 +299,12 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 	return nil
 }
 
-// deleteService deletes the Envoy Deployment in the kube api server, if it exists.
-func (i *Infra) deleteDeployment(ctx context.Context) error {
+// deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
+func (i *Infra) deleteDeployment(ctx context.Context, infra *ir.Infra) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      config.EnvoyDeploymentName,
+			Name:      expectedDeploymentName(infra.Proxy.Name),
 		},
 	}
 

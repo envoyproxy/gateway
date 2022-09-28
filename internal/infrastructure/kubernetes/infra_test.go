@@ -20,7 +20,7 @@ func TestCreateInfra(t *testing.T) {
 	expected := ir.NewInfra()
 	// Apply the expected labels to the proxy infra.
 	expected.GetProxyInfra().GetProxyMetadata().Labels = envoyAppLabel()
-	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "test-gc"
+	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = "test-gw"
 
 	testCases := []struct {
 		name   string
@@ -58,7 +58,7 @@ func TestCreateInfra(t *testing.T) {
 					},
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "default",
-						Name:            "envoy",
+						Name:            "envoy-default",
 						ResourceVersion: "1",
 					},
 				},

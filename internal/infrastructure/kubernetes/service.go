@@ -16,6 +16,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func expectedServiceName(proxyName string) string {
+	return fmt.Sprintf("%s-%s", config.EnvoyServicePrefix, proxyName)
+}
+
 // expectedService returns the expected Service based on the provided infra.
 func (i *Infra) expectedService(infra *ir.Infra) (*corev1.Service, error) {
 	var ports []corev1.ServicePort
@@ -34,14 +38,14 @@ func (i *Infra) expectedService(infra *ir.Infra) (*corev1.Service, error) {
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
-	if _, ok := labels[gatewayapi.OwningGatewayClassLabel]; !ok {
-		return nil, fmt.Errorf("missing owning gatewayclass label")
+	if _, ok := labels[gatewayapi.OwningGatewayLabel]; !ok {
+		return nil, fmt.Errorf("missing owning gateway label")
 	}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      config.EnvoyServiceName,
+			Name:      expectedServiceName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
@@ -68,7 +72,7 @@ func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) erro
 	current := &corev1.Service{}
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
-		Name:      config.EnvoyServiceName,
+		Name:      expectedServiceName(infra.Proxy.Name),
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
@@ -97,11 +101,11 @@ func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) erro
 }
 
 // deleteService deletes the Envoy Service in the kube api server, if it exists.
-func (i *Infra) deleteService(ctx context.Context) error {
+func (i *Infra) deleteService(ctx context.Context, infra *ir.Infra) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      config.EnvoyServiceName,
+			Name:      expectedServiceName(infra.Proxy.Name),
 		},
 	}
 

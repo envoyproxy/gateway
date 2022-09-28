@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -103,9 +104,12 @@ func TestExpectedDeployment(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "test-gc"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
+
+	// Check the deployment name is as expected.
+	assert.Equal(t, deploy.Name, expectedDeploymentName(infra.Proxy.Name))
 
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
@@ -152,7 +156,7 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 func TestCreateOrUpdateDeployment(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "test-gc"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
 
@@ -182,7 +186,7 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
-						Labels: map[string]string{gatewayapi.OwningGatewayClassLabel: "test-gc"},
+						Labels: map[string]string{gatewayapi.OwningGatewayLabel: infra.Proxy.Name},
 					},
 					Name:      ir.DefaultProxyName,
 					Image:     "envoyproxy/gateway-dev:v1.2.3",
@@ -231,7 +235,8 @@ func TestDeleteDeployment(t *testing.T) {
 				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
-			err := kube.deleteDeployment(context.Background())
+			infra := ir.NewInfra()
+			err := kube.deleteDeployment(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

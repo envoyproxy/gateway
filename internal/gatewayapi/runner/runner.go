@@ -95,22 +95,24 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
 			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
-			// Publish the IRs. Use the service name as the key
-			// to ensure there is always one element in the map.
+			// Publish the IRs.
 			// Also validate the ir before sending it.
-			if err := result.InfraIR.Validate(); err != nil {
-				r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
-			} else {
-				r.InfraIR.Store(r.Name(), result.InfraIR)
+			for key, val := range result.InfraIR {
+				if err := val.Validate(); err != nil {
+					r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+				} else {
+					r.InfraIR.Store(key, val)
+				}
 			}
-
 			// Wait until all HTTPRoutes have been reconciled , else the translation
 			// result will be incomplete, and might cause churn in the data plane.
 			if r.xdsIRReady {
-				if err := result.XdsIR.Validate(); err != nil {
-					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
-				} else {
-					r.XdsIR.Store(r.Name(), result.XdsIR)
+				for key, val := range result.XdsIR {
+					if err := val.Validate(); err != nil {
+						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+					} else {
+						r.XdsIR.Store(key, val)
+					}
 				}
 			}
 

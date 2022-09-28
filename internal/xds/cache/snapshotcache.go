@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"sync"
 
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	envoy_cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
@@ -32,26 +33,25 @@ var Hash = envoy_cache_v3.IDHash{}
 type SnapshotCacheWithCallbacks interface {
 	envoy_cache_v3.SnapshotCache
 	envoy_server_v3.Callbacks
-	GenerateNewSnapshot(types.XdsResources) error
+	GenerateNewSnapshot(string, types.XdsResources) error
 }
+
+type snapshotMap map[string]*envoy_cache_v3.Snapshot
+
+type nodeInfoMap map[int64]*envoy_config_core_v3.Node
 
 type snapshotcache struct {
 	envoy_cache_v3.SnapshotCache
-
-	lastSnapshot *envoy_cache_v3.Snapshot
-
-	log *LogrWrapper
-
-	streamIDNodeID map[int64]string
-
-	snapshotVersion int64
-
-	mu sync.Mutex
+	streamIDNodeInfo nodeInfoMap
+	snapshotVersion  int64
+	lastSnapshot     snapshotMap
+	log              *LogrWrapper
+	mu               sync.Mutex
 }
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-func (s *snapshotcache) GenerateNewSnapshot(resources types.XdsResources) error {
+func (s *snapshotcache) GenerateNewSnapshot(irKey string, resources types.XdsResources) error {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -67,9 +67,9 @@ func (s *snapshotcache) GenerateNewSnapshot(resources types.XdsResources) error 
 		return err
 	}
 
-	s.lastSnapshot = snapshot
+	s.lastSnapshot[irKey] = snapshot
 
-	for _, node := range s.getNodeIDs() {
+	for _, node := range s.getNodeIDs(irKey) {
 		s.log.Debugf("Generating a snapshot with Node %s", node)
 		err := s.SetSnapshot(context.TODO(), node, snapshot)
 		if err != nil {
@@ -102,20 +102,21 @@ func NewSnapshotCache(ads bool, logger logr.Logger) SnapshotCacheWithCallbacks {
 	// Set up the nasty wrapper hack.
 	wrappedLogger := NewLogrWrapper(logger)
 	return &snapshotcache{
-		SnapshotCache:  envoy_cache_v3.NewSnapshotCache(ads, &Hash, wrappedLogger),
-		log:            wrappedLogger,
-		streamIDNodeID: make(map[int64]string),
+		SnapshotCache:    envoy_cache_v3.NewSnapshotCache(ads, &Hash, wrappedLogger),
+		log:              wrappedLogger,
+		lastSnapshot:     make(snapshotMap),
+		streamIDNodeInfo: make(nodeInfoMap),
 	}
 }
 
-func (s *snapshotcache) getNodeIDs() []string {
-
+// getNodeIDs retrieves the node ids from the node info map whose
+// cluster field matches the ir key
+func (s *snapshotcache) getNodeIDs(irKey string) []string {
 	var nodeIDs []string
-
-	for _, node := range s.streamIDNodeID {
-
-		nodeIDs = append(nodeIDs, node)
-
+	for _, node := range s.streamIDNodeInfo {
+		if node.Cluster == irKey {
+			nodeIDs = append(nodeIDs, node.Id)
+		}
 	}
 
 	return nodeIDs
@@ -129,7 +130,7 @@ func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeUR
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.streamIDNodeID[streamID] = ""
+	s.streamIDNodeInfo[streamID] = nil
 
 	return nil
 }
@@ -139,7 +140,7 @@ func (s *snapshotcache) OnStreamClosed(streamID int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.streamIDNodeID, streamID)
+	delete(s.streamIDNodeInfo, streamID)
 
 }
 
@@ -153,15 +154,15 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 	// It's possible that only the first discovery request will have a node ID set.
 	// We also need to save the node ID to the node list anyway.
 	// So check if we have a nodeID for this stream already, then set it if not.
-	nodeID := s.streamIDNodeID[streamID]
-	if nodeID == "" {
-		nodeID = Hash.ID(req.Node)
-		if nodeID == "" {
-			return fmt.Errorf("couldn't hash the node ID from the first discovery request on stream %d", streamID)
+	if s.streamIDNodeInfo[streamID] == nil {
+		if req.Node.Id == "" {
+			return fmt.Errorf("couldn't get the node ID from the first discovery request on stream %d", streamID)
 		}
-		s.log.Debugf("First discovery request on stream %d, got nodeID %s", streamID, nodeID)
-		s.streamIDNodeID[streamID] = nodeID
+		s.log.Debugf("First discovery request on stream %d, got nodeID %s", streamID, req.Node.Id)
+		s.streamIDNodeInfo[streamID] = req.Node
 	}
+	nodeID := s.streamIDNodeInfo[streamID].Id
+	cluster := s.streamIDNodeInfo[streamID].Cluster
 
 	var nodeVersion string
 
@@ -170,13 +171,13 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 
 	// If no snapshot has been generated yet, we can't do anything, so don't mess with this request.
 	// go-control-plane will respond with an empty response, then send an update when a snapshot is generated.
-	if s.lastSnapshot == nil {
+	if s.lastSnapshot[cluster] == nil {
 		return nil
 	}
 
 	_, err := s.GetSnapshot(nodeID)
 	if err != nil {
-		err = s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
+		err = s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot[cluster])
 		if err != nil {
 			return err
 		}
@@ -208,13 +209,12 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
 
 	// No mutex lock required here because no writing to the cache.
-
-	nodeID := s.streamIDNodeID[streamID]
-	if nodeID == "" {
+	node := s.streamIDNodeInfo[streamID]
+	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
+	} else {
+		s.log.Debugf("Sending Response on stream %d to node %s", streamID, node.Id)
 	}
-
-	s.log.Debugf("Sending Response on stream %d to node %s", streamID, nodeID)
 }
 
 // OnDeltaStreamOpen and the other OnDeltaStream*/OnStreamDelta* functions implement
@@ -226,7 +226,7 @@ func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, t
 	defer s.mu.Unlock()
 
 	// Ensure that we're adding the streamID to the Node ID list.
-	s.streamIDNodeID[streamID] = ""
+	s.streamIDNodeInfo[streamID] = nil
 
 	return nil
 }
@@ -236,53 +236,50 @@ func (s *snapshotcache) OnDeltaStreamClosed(streamID int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	delete(s.streamIDNodeID, streamID)
+	delete(s.streamIDNodeInfo, streamID)
 
 }
 
 func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_discovery_v3.DeltaDiscoveryRequest) error {
-
 	s.mu.Lock()
 	// We could do this a little earlier than with a defer, since the last half of this func is logging
 	// but that seemed like a premature optimization.
 	defer s.mu.Unlock()
 
 	var nodeVersion string
-
 	var errorCode int32
 	var errorMessage string
 
 	// It's possible that only the first incremental discovery request will have a node ID set.
 	// We also need to save the node ID to the node list anyway.
 	// So check if we have a nodeID for this stream already, then set it if not.
-	nodeID := s.streamIDNodeID[streamID]
-	if nodeID == "" {
-		nodeID = Hash.ID(req.Node)
-		if nodeID == "" {
-			return fmt.Errorf("couldn't hash the node ID from the first incremental discovery request on stream %d", streamID)
+	node := s.streamIDNodeInfo[streamID]
+	if node == nil {
+		if req.Node.Id == "" {
+			return fmt.Errorf("couldn't get the node ID from the first incremental discovery request on stream %d", streamID)
 		}
-		s.log.Debugf("First incremental discovery request on stream %d, got nodeID %s", streamID, nodeID)
-		s.streamIDNodeID[streamID] = nodeID
+		s.log.Debugf("First incremental discovery request on stream %d, got nodeID %s", streamID, req.Node.Id)
+		s.streamIDNodeInfo[streamID] = req.Node
 	}
+	nodeID := s.streamIDNodeInfo[streamID].Id
+	cluster := s.streamIDNodeInfo[streamID].Cluster
 
 	// If no snapshot has been written into the snapshotcache yet, we can't do anything, so don't mess with
 	// this request. go-control-plane will respond with an empty response, then send an update when a
 	// snapshot is generated.
-	if s.lastSnapshot == nil {
+	if s.lastSnapshot[cluster] == nil {
 		return nil
 	}
 
 	_, err := s.GetSnapshot(nodeID)
 	if err != nil {
-		err = s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot)
+		err = s.SetSnapshot(context.TODO(), nodeID, s.lastSnapshot[cluster])
 		if err != nil {
 			return err
 		}
-
 	}
 
 	if req.Node != nil {
-
 		if bv := req.Node.GetUserAgentBuildVersion(); bv != nil && bv.Version != nil {
 			nodeVersion = fmt.Sprintf("v%d.%d.%d", bv.Version.MajorNumber, bv.Version.MinorNumber, bv.Version.Patch)
 		}
@@ -290,14 +287,12 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 
 	s.log.Debugf("Got a new request, response_nonce %s, nodeID %s, node_version %s",
 		req.ResponseNonce, nodeID, nodeVersion)
-
 	if status := req.ErrorDetail; status != nil {
 		// if Envoy rejected the last update log the details here.
 		// TODO(youngnick): Handle NACK properly
 		errorCode = status.Code
 		errorMessage = status.Message
 	}
-
 	s.log.Debugf("handling v3 xDS resource request, response_nonce %s, nodeID %s, node_version %s, resource_names_subscribe %v, resource_names_unsubscribe %v, type_url %s, errorCode %d, errorMessage %s",
 		req.ResponseNonce,
 		nodeID, nodeVersion,
@@ -309,23 +304,18 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 }
 
 func (s *snapshotcache) OnStreamDeltaResponse(streamID int64, req *envoy_service_discovery_v3.DeltaDiscoveryRequest, resp *envoy_service_discovery_v3.DeltaDiscoveryResponse) {
-
 	// No mutex lock required here because no writing to the cache.
-
-	nodeID := s.streamIDNodeID[streamID]
-	if nodeID == "" {
+	node := s.streamIDNodeInfo[streamID]
+	if node == nil {
 		s.log.Errorf("Tried to send a response to a node we haven't seen yet on stream %d", streamID)
+	} else {
+		s.log.Debugf("Sending Incremental Response on stream %d to node %s", streamID, node.Id)
 	}
-
-	s.log.Debugf("Sending Incremental Response on stream %d to node %s", streamID, nodeID)
-
 }
 
 func (s *snapshotcache) OnFetchRequest(ctx context.Context, req *envoy_service_discovery_v3.DiscoveryRequest) error {
-
 	return nil
 }
 
 func (s *snapshotcache) OnFetchResponse(req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
-
 }

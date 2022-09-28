@@ -187,19 +187,19 @@ func xDSTest() error {
 		for {
 			time.Sleep(10 * time.Second)
 			logger.Info("Updating the cache for first-listener with first-route")
-			err := snapCache.GenerateNewSnapshot(cacheVersion1.GetXdsResources())
+			err := snapCache.GenerateNewSnapshot("", cacheVersion1.GetXdsResources())
 			if err != nil {
 				logger.Error(err, "Something went wrong with generating a snapshot")
 			}
 			time.Sleep(10 * time.Second)
 			logger.Info("Updating the cache for first-listener with second-route")
-			err = snapCache.GenerateNewSnapshot(cacheVersion2.GetXdsResources())
+			err = snapCache.GenerateNewSnapshot("", cacheVersion2.GetXdsResources())
 			if err != nil {
 				logger.Error(err, "Something went wrong with generating a snapshot")
 			}
 			time.Sleep(10 * time.Second)
 			logger.Info("Updating the cache for second-listener with second-route")
-			err = snapCache.GenerateNewSnapshot(cacheVersion3.GetXdsResources())
+			err = snapCache.GenerateNewSnapshot("", cacheVersion3.GetXdsResources())
 			if err != nil {
 				logger.Error(err, "Something went wrong with generating a snapshot")
 			}

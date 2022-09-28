@@ -34,6 +34,12 @@ func (p *ProviderResources) DeleteGatewayClasses() {
 	}
 }
 
+func (p *ProviderResources) DeleteGateways() {
+	for k := range p.Gateways.LoadAll() {
+		p.Gateways.Delete(k)
+	}
+}
+
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
 	if p.GatewayClasses.Len() == 0 {
 		return nil
@@ -96,36 +102,12 @@ type XdsIR struct {
 	watchable.Map[string, *ir.Xds]
 }
 
-func (x *XdsIR) Get() *ir.Xds {
-	// Iterate and return the first element
-	for _, v := range x.LoadAll() {
-		return v
-	}
-	return nil
-}
-
 // InfraIR message
 type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
 }
 
-func (i *InfraIR) Get() *ir.Infra {
-	// Iterate and return the first element
-	for _, v := range i.LoadAll() {
-		return v
-	}
-	return nil
-}
-
 // Xds message
 type Xds struct {
 	watchable.Map[string, *xdstypes.ResourceVersionTable]
-}
-
-func (x *Xds) Get() *xdstypes.ResourceVersionTable {
-	// Iterate and return the first element
-	for _, v := range x.LoadAll() {
-		return v
-	}
-	return nil
 }

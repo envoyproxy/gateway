@@ -60,29 +60,31 @@ httpRoutes:
               reason: RefNotPermitted
               message: Backend ref to service backends/service-1 not permitted by any ReferenceGrant
 xdsIR:
-  http:
-    - name: envoy-gateway-gateway-1-http
-      address: 0.0.0.0
-      port: 10080
-      hostnames:
-        - "*"
-      routes:
-        - name: default-httproute-1-rule-0-match-0-*
-          pathMatch:
-            exact: "/exact"
-          # TODO this should change when the correct behavior for invalid backend refs is implemented
-          destinations: 
+  envoy-gateway-gateway-1:
+    http:
+      - name: envoy-gateway-gateway-1-http
+        address: 0.0.0.0
+        port: 10080
+        hostnames:
+          - "*"
+        routes:
+          - name: default-httproute-1-rule-0-match-0-*
+            pathMatch:
+              exact: "/exact"
+            # TODO this should change when the correct behavior for invalid backend refs is implemented
+            destinations:
 infraIR:
-  proxy:
-    metadata:
-      labels:
-        gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
-    name: envoy-gateway-class
-    image: envoyproxy/envoy:v1.23-latest
-    listeners:
-      - address: ""
-        ports:
-          - name: envoy-gateway-gateway-1
-            protocol: "HTTP"
-            servicePort: 80
-            containerPort: 10080
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway: gateway-1
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:v1.23-latest
+      listeners:
+        - address: ""
+          ports:
+            - name: envoy-gateway-gateway-1
+              protocol: "HTTP"
+              servicePort: 80
+              containerPort: 10080
