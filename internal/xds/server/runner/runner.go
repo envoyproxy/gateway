@@ -115,16 +115,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	for range r.Xds.Subscribe(ctx) {
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
-		for key, xds := range r.Xds.LoadAll() {
-			if xds == nil {
-				r.Logger.Info("xds is nil, skipping")
-				continue
-			}
-			// Update snapshot cache
-			err := r.cache.GenerateNewSnapshot(key, xds.XdsResources)
-			if err != nil {
-				r.Logger.Error(err, "failed to generate a snapshot")
-			}
+		xds := r.Xds.Get()
+		if xds == nil {
+			r.Logger.Info("xds is nil, skipping")
+			continue
+		}
+		// Update snapshot cache
+		err := r.cache.GenerateNewSnapshot(xds.XdsResources)
+		if err != nil {
+			r.Logger.Error(err, "failed to generate a snapshot")
 		}
 	}
 

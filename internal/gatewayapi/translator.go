@@ -3,7 +3,6 @@ package gatewayapi
 import (
 	"fmt"
 	"net/netip"
-	"sort"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -23,9 +22,9 @@ const (
 	KindService   = "Service"
 	KindSecret    = "Secret"
 
-	// OwningGatewayLabel is the owner reference label used for managed infra.
-	// The value should be the name of the accepted Envoy Gateway.
-	OwningGatewayLabel = "gateway.envoyproxy.io/owning-gateway"
+	// OwningGatewayClassLabel is the owner reference label used for managed infra.
+	// The value should be the name of the accepted Envoy GatewayClass.
+	OwningGatewayClassLabel = "gateway.envoyproxy.io/owning-gatewayclass"
 
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
@@ -33,9 +32,6 @@ const (
 	// to convert it into an ephemeral port.
 	wellKnownPortShift = 10000
 )
-
-type XdsIRMap map[string]*ir.Xds
-type InfraIRMap map[string]*ir.Infra
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
@@ -87,11 +83,11 @@ type Translator struct {
 type TranslateResult struct {
 	Gateways   []*v1beta1.Gateway
 	HTTPRoutes []*v1beta1.HTTPRoute
-	XdsIR      XdsIRMap
-	InfraIR    InfraIRMap
+	XdsIR      *ir.Xds
+	InfraIR    *ir.Infra
 }
 
-func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
+func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR *ir.Xds, infraIR *ir.Infra) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
 		InfraIR: infraIR,
@@ -108,8 +104,11 @@ func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteConte
 }
 
 func (t *Translator) Translate(resources *Resources) *TranslateResult {
-	xdsIR := make(XdsIRMap)
-	infraIR := make(InfraIRMap)
+	xdsIR := &ir.Xds{}
+
+	infraIR := ir.NewInfra()
+	infraIR.Proxy.Name = string(t.GatewayClassName)
+	infraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
 
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
@@ -130,7 +129,6 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 		if gateway == nil {
 			panic("received nil gateway")
 		}
-
 		if gateway.Spec.GatewayClassName == t.GatewayClassName {
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
@@ -155,12 +153,12 @@ type portListeners struct {
 	hostnames map[string]int
 }
 
-func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
+func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR *ir.Xds, infraIR *ir.Infra, resources *Resources) {
+	portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
 
 	// Iterate through all listeners and collect info about protocols
 	// and hostnames per port.
 	for _, gateway := range gateways {
-		portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
 			if portListenerInfo[listener.Port] == nil {
 				portListenerInfo[listener.Port] = &portListeners{
@@ -188,53 +186,43 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 			portListenerInfo[listener.Port].hostnames[hostname]++
 		}
+	}
 
-		// Set Conflicted conditions for any listeners with conflicting specs.
-		for _, info := range portListenerInfo {
-			for _, listener := range info.listeners {
-				if len(info.protocols) > 1 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						v1beta1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol",
-					)
-				}
+	// Set Conflicted conditions for any listeners with conflicting specs.
+	for _, info := range portListenerInfo {
+		for _, listener := range info.listeners {
+			if len(info.protocols) > 1 {
+				listener.SetCondition(
+					v1beta1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					v1beta1.ListenerReasonProtocolConflict,
+					"All listeners for a given port must use a compatible protocol",
+				)
+			}
 
-				var hostname string
-				if listener.Hostname != nil {
-					hostname = string(*listener.Hostname)
-				}
+			var hostname string
+			if listener.Hostname != nil {
+				hostname = string(*listener.Hostname)
+			}
 
-				if info.hostnames[hostname] > 1 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						v1beta1.ListenerReasonHostnameConflict,
-						"All listeners for a given port must use a unique hostname",
-					)
-				}
+			if info.hostnames[hostname] > 1 {
+				listener.SetCondition(
+					v1beta1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					v1beta1.ListenerReasonHostnameConflict,
+					"All listeners for a given port must use a unique hostname",
+				)
 			}
 		}
 	}
+
+	// Infra IR proxy ports must be unique.
+	var foundPorts []int32
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 	for _, gateway := range gateways {
-		// init IR per gateway
-		irKey := irStringKey(gateway.Gateway)
-		gwXdsIR := &ir.Xds{}
-		gwInfraIR := ir.NewInfra()
-		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabel(gateway.Name)
-		// save the IR references in the map before the translation starts
-		xdsIR[irKey] = gwXdsIR
-		infraIR[irKey] = gwInfraIR
-
-		// Infra IR proxy ports must be unique.
-		var foundPorts []int32
-
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
@@ -468,7 +456,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
 				irListener.Hostnames = append(irListener.Hostnames, "*")
 			}
-			gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
+			xdsIR.HTTP = append(xdsIR.HTTP, irListener)
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
 			if !slices.Contains(foundPorts, servicePort) {
@@ -484,11 +472,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					ContainerPort: containerPort,
 				}
 				// Only 1 listener is supported.
-				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
+				infraIR.Proxy.Listeners[0].Ports = append(infraIR.Proxy.Listeners[0].Ports, infraPort)
 			}
 		}
-		// sort result to ensure translation does not change across reboots.
-		sort.Slice(xdsIR[irKey].HTTP, func(i, j int) bool { return xdsIR[irKey].HTTP[i].Name < xdsIR[irKey].HTTP[j].Name })
 	}
 }
 
@@ -505,7 +491,7 @@ func servicePortToContainerPort(servicePort int32) int32 {
 	return servicePort
 }
 
-func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext {
+func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR *ir.Xds) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
 	for _, h := range httpRoutes {
@@ -1058,8 +1044,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					}
 				}
 
-				irKey := irStringKey(listener.gateway)
-				irListener := xdsIR[irKey].GetListener(irListenerName(listener))
+				irListener := xdsIR.GetListener(irListenerName(listener))
 				if irListener != nil {
 					irListener.Routes = append(irListener.Routes, perHostRoutes...)
 				}
@@ -1176,10 +1161,6 @@ func isValidHostname(hostname string) error {
 	return nil
 }
 
-func irStringKey(gateway *v1beta1.Gateway) string {
-	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
-}
-
 func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
@@ -1203,8 +1184,8 @@ func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
 	}
 }
 
-// GatewayOwnerLabel returns the Gateway Owner label using
+// GatewayClassOwnerLabel returns the GatewayCLass Owner label using
 // the provided name as the value.
-func GatewayOwnerLabel(name string) map[string]string {
-	return map[string]string{OwningGatewayLabel: name}
+func GatewayClassOwnerLabel(name string) map[string]string {
+	return map[string]string{OwningGatewayClassLabel: name}
 }

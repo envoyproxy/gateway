@@ -21,7 +21,7 @@ const (
 	DefaultEnvoyGatewayDNSPrefix = config.EnvoyGatewayServiceName
 
 	// DefaultEnvoyDNSPrefix defines the default Envoy DNS prefix.
-	DefaultEnvoyDNSPrefix = "*"
+	DefaultEnvoyDNSPrefix = config.EnvoyServiceName
 
 	// DefaultNamespace is the default Namespace name where Envoy Gateway is running.
 	DefaultNamespace = config.EnvoyGatewayNamespace
@@ -112,7 +112,7 @@ func GenerateCerts(egCfg *v1alpha1.EnvoyGateway) (*Certificates, error) {
 		switch egProvider {
 		case v1alpha1.ProviderTypeKubernetes:
 			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, DefaultNamespace, DefaultDNSSuffix)
-			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", DefaultNamespace))
+			envoyDNSNames = kubeServiceNames(DefaultEnvoyDNSPrefix, DefaultNamespace, DefaultDNSSuffix)
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
 			return nil, fmt.Errorf("unsupported provider type %v", egProvider)

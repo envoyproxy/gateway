@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -33,22 +32,21 @@ func TestRunner(t *testing.T) {
 	require.NoError(t, err)
 
 	// IR is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
-	require.Equal(t, map[string]*ir.Infra{}, infraIR.LoadAll())
+	require.Equal(t, (*ir.Xds)(nil), xdsIR.Get())
+	require.Equal(t, (*ir.Infra)(nil), infraIR.Get())
 
 	// TODO: pass valid provider resources
 
-	// Reset gateway slice and update with a nil gateway to trigger a delete.
-	pResources.DeleteGateways()
-	key := types.NamespacedName{Namespace: "test", Name: "test"}
-	pResources.Gateways.Store(key, nil)
+	// Reset gatewayclass slice and update with a nil gatewayclass to trigger a delete
+	pResources.DeleteGatewayClasses()
+	pResources.GatewayClasses.Store("test", nil)
 	require.Eventually(t, func() bool {
-		out := xdsIR.LoadAll()
+		out := xdsIR.Get()
 		if out == nil {
 			return false
 		}
 		// Ensure ir is empty
-		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
+		return (reflect.DeepEqual(*xdsIR.Get(), ir.Xds{})) && (reflect.DeepEqual(*infraIR.Get(), ir.Infra{Proxy: nil}))
 	}, time.Second*1, time.Millisecond*20)
 
 }

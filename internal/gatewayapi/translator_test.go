@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -76,6 +77,7 @@ func TestTranslate(t *testing.T) {
 
 			got := translator.Translate(resources)
 
+			sort.Slice(got.XdsIR.HTTP, func(i, j int) bool { return got.XdsIR.HTTP[i].Name < got.XdsIR.HTTP[j].Name })
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))
 		})

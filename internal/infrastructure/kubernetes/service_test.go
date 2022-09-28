@@ -5,7 +5,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -65,7 +64,7 @@ func TestDesiredService(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayClassLabel] = "test-gc"
 	infra.Proxy.Listeners[0].Ports = []ir.ListenerPort{
 		{
 			Name:          "gateway-system-gateway-1",
@@ -83,9 +82,6 @@ func TestDesiredService(t *testing.T) {
 	svc, err := kube.expectedService(infra)
 	require.NoError(t, err)
 
-	// Check the service name is as expected.
-	assert.Equal(t, svc.Name, expectedDeploymentName(infra.Proxy.Name))
-
 	checkServiceHasPort(t, svc, 80)
 	checkServiceHasPort(t, svc, 443)
 	checkServiceHasTargetPort(t, svc, 2080)
@@ -93,7 +89,7 @@ func TestDesiredService(t *testing.T) {
 
 	// Ensure the Envoy service has the expected labels.
 	lbls := envoyAppLabel()
-	lbls[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+	lbls[gatewayapi.OwningGatewayClassLabel] = "test-gc"
 	checkServiceHasLabels(t, svc, lbls)
 
 	for _, port := range infra.Proxy.Listeners[0].Ports {
@@ -118,8 +114,7 @@ func TestDeleteService(t *testing.T) {
 				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
-			infra := ir.NewInfra()
-			err := kube.deleteService(context.Background(), infra)
+			err := kube.deleteService(context.Background())
 			require.NoError(t, err)
 		})
 	}

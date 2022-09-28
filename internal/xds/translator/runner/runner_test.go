@@ -10,6 +10,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
@@ -31,7 +32,7 @@ func TestRunner(t *testing.T) {
 	require.NoError(t, err)
 
 	// xDS is nil at start
-	require.Equal(t, map[string]*ir.Xds{}, xdsIR.LoadAll())
+	require.Equal(t, (*xdstypes.ResourceVersionTable)(nil), xds.Get())
 
 	// test translation
 	path := "example"
@@ -61,23 +62,23 @@ func TestRunner(t *testing.T) {
 	}
 	xdsIR.Store("test", &res)
 	require.Eventually(t, func() bool {
-		out := xds.LoadAll()
+		out := xds.Get()
 		if out == nil {
 			return false
 		}
 		// Ensure an xds listener is created
-		return len(out["test"].XdsResources[resourcev3.ListenerType]) == 1
+		return len(out.XdsResources[resourcev3.ListenerType]) == 1
 	}, time.Second*1, time.Millisecond*20)
 
 	// Update with an empty IR triggering a delete
 	xdsIR.Store("test", &ir.Xds{})
 	require.Eventually(t, func() bool {
-		out := xds.LoadAll()
+		out := xds.Get()
 		if out == nil {
 			return false
 		}
 		// Ensure no xds listener exists
-		return len(out["test"].XdsResources[resourcev3.ListenerType]) == 0
+		return len(out.XdsResources[resourcev3.ListenerType]) == 0
 	}, time.Second*1, time.Millisecond*20)
 
 }
