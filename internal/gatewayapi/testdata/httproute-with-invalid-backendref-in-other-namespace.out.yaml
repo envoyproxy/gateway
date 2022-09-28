@@ -58,7 +58,7 @@ httpRoutes:
             - type: ResolvedRefs
               status: "False"
               reason: RefNotPermitted
-              message: Backend ref to service backends/service-1 not permitted by any ReferenceGrant
+              message: "Backend ref to service backends/service-1 not permitted by any ReferenceGrant"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -71,9 +71,10 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-*
             pathMatch:
               exact: "/exact"
-          InvalidBackends: 1
-          DirectResponse:
-            StatusCode: 500
+            backendWeights: 
+              invalid: 1
+            directResponse:
+              statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

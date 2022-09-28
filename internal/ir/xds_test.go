@@ -30,6 +30,20 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
 	}
+	invalidBackendHTTPListener = HTTPListener{
+		Name:      "invalid-backend-match",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&invalidBackendHTTPRoute},
+	}
+	weightedInvalidBackendsHTTPListener = HTTPListener{
+		Name:      "weighted-invalid-backends-match",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
+	}
 
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
@@ -42,6 +56,21 @@ var (
 	emptyMatchHTTPRoute = HTTPRoute{
 		Name:         "empty-match",
 		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidBackendHTTPRoute = HTTPRoute{
+		Name: "invalid-backend",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("invalid-backend"),
+		},
+		InvalidBackends: 1,
+	}
+	weightedInvalidBackendsHTTPRoute = HTTPRoute{
+		Name: "weighted-invalid-backends",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("invalid-backends"),
+		},
+		Destinations:    []*RouteDestination{&happyRouteDestination},
+		InvalidBackends: 1,
 	}
 
 	redirectHTTPRoute = HTTPRoute{
@@ -356,6 +385,16 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "empty match",
 			input: emptyMatchHTTPRoute,
 			want:  []error{ErrHTTPRouteMatchEmpty},
+		},
+		{
+			name:  "invalid backend",
+			input: invalidBackendHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "weighted invalid backends",
+			input: weightedInvalidBackendsHTTPRoute,
+			want:  nil,
 		},
 		{
 			name: "empty name and invalid match",
