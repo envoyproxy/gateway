@@ -22,7 +22,6 @@ type Config struct {
 
 type Runner struct {
 	Config
-	xdsIRReady bool
 }
 
 func New(cfg *Config) *Runner {
@@ -54,15 +53,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		// Receive subscribed resource notifications
 		select {
 		case <-gatewayClassesCh:
-			r.waitUntilGCAndGatewaysInitialized()
 		case <-gatewaysCh:
-			r.waitUntilGCAndGatewaysInitialized()
 		case <-httpRoutesCh:
-			r.waitUntilAllGAPIInitialized()
 		case <-servicesCh:
-			r.waitUntilAllGAPIInitialized()
 		case <-namespacesCh:
-			r.waitUntilGCAndGatewaysInitialized()
 		}
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
@@ -104,15 +98,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.InfraIR.Store(key, val)
 				}
 			}
-			// Wait until all HTTPRoutes have been reconciled , else the translation
-			// result will be incomplete, and might cause churn in the data plane.
-			if r.xdsIRReady {
-				for key, val := range result.XdsIR {
-					if err := val.Validate(); err != nil {
-						r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
-					} else {
-						r.XdsIR.Store(key, val)
-					}
+			for key, val := range result.XdsIR {
+				if err := val.Validate(); err != nil {
+					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+				} else {
+					r.XdsIR.Store(key, val)
 				}
 			}
 
@@ -128,21 +118,4 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		}
 	}
 	r.Logger.Info("shutting down")
-}
-
-// waitUntilGCAndGatewaysInitialized waits until gateway classes and
-// gateways have been initialized during startup
-func (r *Runner) waitUntilGCAndGatewaysInitialized() {
-	r.ProviderResources.GatewayClassesInitialized.Wait()
-	r.ProviderResources.GatewaysInitialized.Wait()
-}
-
-// waitUntilAllGAPIInitialized waits until gateway classes,
-// gateways and httproutes have been initialized during startup
-func (r *Runner) waitUntilAllGAPIInitialized() {
-	r.waitUntilGCAndGatewaysInitialized()
-	r.ProviderResources.HTTPRoutesInitialized.Wait()
-	// Now that the httproute resources have been initialized,
-	// allow the runner to publish the translated xdsIR.
-	r.xdsIRReady = true
 }

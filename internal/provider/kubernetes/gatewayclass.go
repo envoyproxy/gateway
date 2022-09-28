@@ -6,7 +6,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,15 +30,13 @@ type gatewayClassReconciler struct {
 	statusUpdater status.Updater
 	log           logr.Logger
 
-	initializeOnce sync.Once
-	resources      *message.ProviderResources
+	resources *message.ProviderResources
 }
 
 // newGatewayClassController creates the gatewayclass controller. The controller
 // will be pre-configured to watch for cluster-scoped GatewayClass objects with
 // a controller field that matches name.
 func newGatewayClassController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
-	resources.GatewayClassesInitialized.Add(1)
 	r := &gatewayClassReconciler{
 		client:        mgr.GetClient(),
 		controller:    gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
@@ -90,9 +87,6 @@ func (r *gatewayClassReconciler) hasMatchingController(obj client.Object) bool {
 
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.WithName(request.Name).Info("reconciling gatewayclass")
-
-	// Once we've iterated over all listed classes, mark that we've fully initialized.
-	defer r.initializeOnce.Do(r.resources.GatewayClassesInitialized.Done)
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {

@@ -6,7 +6,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -40,15 +39,13 @@ type gatewayReconciler struct {
 	statusUpdater   status.Updater
 	log             logr.Logger
 
-	initializeOnce sync.Once
-	resources      *message.ProviderResources
+	resources *message.ProviderResources
 }
 
 // newGatewayController creates a gateway controller. The controller will watch for
 // Gateway objects across all namespaces and reconcile those that match the configured
 // gatewayclass controller name.
 func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
-	resources.GatewaysInitialized.Add(1)
 	r := &gatewayReconciler{
 		client:          mgr.GetClient(),
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
@@ -142,9 +139,6 @@ func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventH
 // and passes all Gateways for the configured GatewayClass to the IR for processing.
 func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	r.log.Info("reconciling gateway", "namespace", request.Namespace, "name", request.Name)
-
-	// Once we've processed `allGateways`, record that we've fully initialized.
-	defer r.initializeOnce.Do(r.resources.GatewaysInitialized.Done)
 
 	allClasses := &gwapiv1b1.GatewayClassList{}
 	if err := r.client.List(ctx, allClasses); err != nil {
