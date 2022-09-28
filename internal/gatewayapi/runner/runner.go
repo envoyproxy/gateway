@@ -89,6 +89,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
 			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
+			var curKeys, newKeys []string
+			// Get current IR keys
+			for key := range r.InfraIR.LoadAll() {
+				curKeys = append(curKeys, key)
+			}
+
 			// Publish the IRs.
 			// Also validate the ir before sending it.
 			for key, val := range result.InfraIR {
@@ -96,6 +102,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 				} else {
 					r.InfraIR.Store(key, val)
+					newKeys = append(newKeys, key)
 				}
 			}
 			for key, val := range result.XdsIR {
@@ -104,6 +111,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				} else {
 					r.XdsIR.Store(key, val)
 				}
+			}
+
+			// Delete keys
+			// There is a 1:1 mapping between infra and xds IR keys
+			delKeys := getIRKeysToDelete(curKeys, newKeys)
+			for _, key := range delKeys {
+				r.InfraIR.Delete(key)
+				r.XdsIR.Delete(key)
 			}
 
 			// Update Status
@@ -118,4 +133,29 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		}
 	}
 	r.Logger.Info("shutting down")
+}
+
+// getIRKeysToDelete returns the list of IR keys to delete
+// based on the difference between the current keys and the
+// new keys parameters passed to the function.
+func getIRKeysToDelete(curKeys, newKeys []string) []string {
+	var delKeys []string
+	remaining := make(map[string]bool)
+
+	// Add all current keys to the remaining map
+	for _, key := range curKeys {
+		remaining[key] = true
+	}
+
+	// Delete newKeys from the remaining map
+	// to get keys that need to be deleted
+	for _, key := range newKeys {
+		delete(remaining, key)
+	}
+
+	for key := range remaining {
+		delKeys = append(delKeys, key)
+	}
+
+	return delKeys
 }

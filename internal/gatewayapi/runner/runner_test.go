@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -51,4 +52,50 @@ func TestRunner(t *testing.T) {
 		return (reflect.DeepEqual(xdsIR.LoadAll(), map[string]*ir.Xds{})) && (reflect.DeepEqual(infraIR.LoadAll(), map[string]*ir.Infra{}))
 	}, time.Second*1, time.Millisecond*20)
 
+}
+
+func TestGetIRKeysToDelete(t *testing.T) {
+	testCases := []struct {
+		name    string
+		curKeys []string
+		newKeys []string
+		delKeys []string
+	}{
+		{
+			name:    "empty",
+			curKeys: []string{},
+			newKeys: []string{},
+			delKeys: []string{},
+		},
+		{name: "no new keys",
+			curKeys: []string{"one", "two"},
+			newKeys: []string{},
+			delKeys: []string{"one", "two"},
+		},
+		{
+			name:    "no cur keys",
+			curKeys: []string{},
+			newKeys: []string{"one", "two"},
+			delKeys: []string{},
+		},
+		{
+			name:    "equal",
+			curKeys: []string{"one", "two"},
+			newKeys: []string{"two", "one"},
+			delKeys: []string{},
+		},
+		{
+			name:    "mix",
+			curKeys: []string{"one", "two"},
+			newKeys: []string{"two", "three"},
+			delKeys: []string{"one"},
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			assert.ElementsMatch(t, tc.delKeys, getIRKeysToDelete(tc.curKeys, tc.newKeys))
+		})
+	}
 }

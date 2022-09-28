@@ -149,7 +149,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: config.EnvoyConfigMapName,
+										Name: expectedConfigMapName(infra.Proxy.Name),
 									},
 									Items: []corev1.KeyToPath{
 										{

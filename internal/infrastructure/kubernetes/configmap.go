@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -38,9 +39,9 @@ var (
 )
 
 // expectedConfigMap returns the expected ConfigMap based on the provided infra.
-func (i *Infra) expectedConfigMap() *corev1.ConfigMap {
+func (i *Infra) expectedConfigMap(infra *ir.Infra) *corev1.ConfigMap {
 	ns := i.Namespace
-	name := config.EnvoyConfigMapName
+	name := expectedConfigMapName(infra.Proxy.Name)
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -56,13 +57,13 @@ func (i *Infra) expectedConfigMap() *corev1.ConfigMap {
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
 // infra, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
-	cm := i.expectedConfigMap()
+func (i *Infra) createOrUpdateConfigMap(ctx context.Context, infra *ir.Infra) (*corev1.ConfigMap, error) {
+	cm := i.expectedConfigMap(infra)
 
 	current := &corev1.ConfigMap{}
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
-		Name:      config.EnvoyConfigMapName,
+		Name:      expectedConfigMapName(infra.Proxy.Name),
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
@@ -85,11 +86,11 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context) (*corev1.ConfigMap,
 }
 
 // deleteConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
-func (i *Infra) deleteConfigMap(ctx context.Context) error {
+func (i *Infra) deleteConfigMap(ctx context.Context, infra *ir.Infra) error {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      config.EnvoyConfigMapName,
+			Name:      expectedConfigMapName(infra.Proxy.Name),
 		},
 	}
 
@@ -101,4 +102,8 @@ func (i *Infra) deleteConfigMap(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func expectedConfigMapName(proxyName string) string {
+	return fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName)
 }
