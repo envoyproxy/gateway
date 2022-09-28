@@ -92,6 +92,14 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.U
 		return err
 	}
 
+	// Watch Gateway CRUDs and reconcile affected HTTPRoutes.
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1b1.Gateway{}},
+		handler.EnqueueRequestsFromMapFunc(r.getHTTPRoutesForGateway),
+	); err != nil {
+		return err
+	}
+
 	// Watch Service CRUDs and reconcile affected HTTPRoutes.
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
@@ -102,6 +110,48 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.U
 
 	r.log.Info("watching httproute objects")
 	return nil
+}
+
+// getHTTPRoutesForGateway uses a Gateway obj to fetch HTTPRoutes, iterating
+// through them and creating a reconciliation request for each valid HTTPRoute
+// that references obj.
+func (r *httpRouteReconciler) getHTTPRoutesForGateway(obj client.Object) []reconcile.Request {
+	ctx := context.Background()
+
+	gw, ok := obj.(*gwapiv1b1.Gateway)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return []reconcile.Request{}
+	}
+
+	routes := &gwapiv1b1.HTTPRouteList{}
+	if err := r.client.List(ctx, routes); err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := []reconcile.Request{}
+	for i := range routes.Items {
+		route := routes.Items[i]
+		gateways, err := r.validateParentRefs(ctx, &route)
+		if err != nil {
+			r.log.Info("invalid parentRefs for httproute, bypassing reconciliation", "object", obj)
+			continue
+		}
+		for j := range gateways {
+			if gateways[j].Namespace == gw.Namespace && gateways[j].Name == gw.Name {
+				req := reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: route.Namespace,
+						Name:      route.Name,
+					},
+				}
+				requests = append(requests, req)
+				break
+			}
+		}
+	}
+
+	return requests
 }
 
 // getHTTPRoutesForService uses a Service obj to fetch HTTPRoutes that references
