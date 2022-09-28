@@ -40,6 +40,9 @@ func TestTranslate(t *testing.T) {
 			name: "http-route-direct-response",
 		},
 		{
+			name: "http-route-request-headers",
+		},
+		{
 			name: "http-route-weighted-invalid-backend",
 		},
 	}
