@@ -29,15 +29,14 @@ func TestCreateInfra(t *testing.T) {
 		expect bool
 	}{
 		{
-			name: "default infra",
-			in:   ir.NewInfra(),
-			// Gateway owning labels are required to create the Envoy service.
-			expect: false,
-		},
-		{
 			name:   "infra-with-expected-labels",
 			in:     infraWithLabels,
 			expect: true,
+		},
+		{
+			name:   "default infra without Gateway owner labels",
+			in:     ir.NewInfra(),
+			expect: false,
 		},
 		{
 			name:   "nil-infra",

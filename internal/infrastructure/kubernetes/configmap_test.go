@@ -7,11 +7,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -21,7 +23,17 @@ func TestExpectedConfigMap(t *testing.T) {
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
 	infra.Proxy.Name = "test"
-	cm := kube.expectedConfigMap(infra)
+
+	// An infra without Gateway owner labels should trigger
+	// an error.
+	_, err := kube.expectedConfigMap(infra)
+	require.NotNil(t, err)
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+	cm, err := kube.expectedConfigMap(infra)
+	require.NoError(t, err)
 
 	require.Equal(t, "envoy-test", cm.Name)
 	require.Equal(t, "envoy-gateway-system", cm.Namespace)
@@ -29,12 +41,19 @@ func TestExpectedConfigMap(t *testing.T) {
 	assert.Equal(t, sdsCAConfigMapData, cm.Data[sdsCAFilename])
 	require.Contains(t, cm.Data, sdsCertFilename)
 	assert.Equal(t, sdsCertConfigMapData, cm.Data[sdsCertFilename])
+
+	wantLabels := envoyAppLabel()
+	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	wantLabels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, cm.Labels))
 }
 
 func TestCreateOrUpdateConfigMap(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
 	infra.Proxy.Name = "test"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
 	testCases := []struct {
 		name    string
@@ -47,6 +66,11 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
 					Name:      "envoy-test",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "test",
+					},
 				},
 				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
 			},
@@ -57,6 +81,11 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
 					Name:      "envoy-test",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "test",
+					},
 				},
 				Data: map[string]string{"foo": "bar"},
 			},
@@ -64,6 +93,11 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
 					Name:      "envoy-test",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "test",
+					},
 				},
 				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
 			},
@@ -82,6 +116,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.expect.Namespace, cm.Namespace)
 			require.Equal(t, tc.expect.Name, cm.Name)
+			assert.True(t, apiequality.Semantic.DeepEqual(tc.expect.Labels, cm.Labels))
 			require.Equal(t, tc.expect.Data, cm.Data)
 		})
 	}
