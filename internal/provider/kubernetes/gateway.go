@@ -179,17 +179,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 
 	found := false
-	for i := range acceptedGateways {
-		key := utils.NamespacedName(&acceptedGateways[i])
-		r.resources.Gateways.Store(key, &acceptedGateways[i])
-		if key == request.NamespacedName {
-			found = true
-		}
-	}
-	if !found {
-		r.resources.Gateways.Delete(request.NamespacedName)
-	}
-
 	// Set status conditions for all accepted gateways.
 	for i := range acceptedGateways {
 		gw := acceptedGateways[i]
@@ -215,6 +204,15 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		// publish status
 		key := utils.NamespacedName(&gw)
 		r.resources.GatewayStatuses.Store(key, &gw)
+
+		r.resources.Gateways.Store(key, &gw)
+		if key == request.NamespacedName {
+			found = true
+		}
+	}
+
+	if !found {
+		r.resources.Gateways.Delete(request.NamespacedName)
 	}
 
 	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
