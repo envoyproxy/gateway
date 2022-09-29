@@ -9,19 +9,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	// envOutput determines whether to output as environment settings
-	envOutput bool
-)
-
 // getVersionsCommand returns the server cobra command to be executed.
 func getVersionsCommand() *cobra.Command {
+	// envOutput determines whether to output as environment settings
+	var envOutput bool
+
 	cmd := &cobra.Command{
 		Use:     "versions",
 		Aliases: []string{"version"},
 		Short:   "Show versions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return versions()
+			return versions(envOutput)
 		},
 	}
 
@@ -32,7 +30,7 @@ func getVersionsCommand() *cobra.Command {
 }
 
 // versions shows the versions of the Envoy Gateway.
-func versions() error {
+func versions(envOutput bool) error {
 	envoyVersion := strings.Split(ir.DefaultProxyImage, ":")[1]
 
 	if envOutput {
