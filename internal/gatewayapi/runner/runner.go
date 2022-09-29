@@ -8,7 +8,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -71,11 +70,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		case gatewayClasses == nil:
 			// Envoy Gateway startup.
 			continue
-		case gatewayClasses[0] == nil:
-			// No need to translate, publish empty IRs to trigger a delete operation.
-			r.XdsIR.Store(r.Name(), &ir.Xds{})
-			// A nil ProxyInfra tells the Infra Manager to delete the managed proxy infra.
-			r.InfraIR.Store(r.Name(), &ir.Infra{Proxy: nil})
 		default:
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{

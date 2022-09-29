@@ -103,8 +103,8 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 				!slice.ContainsString(gatewayClasses.Items[i].Finalizers, gatewayClassFinalizer) {
 				r.log.Info("gatewayclass marked for deletion")
 				cc.removeMatch(&gatewayClasses.Items[i])
-				// A nil gatewayclass removes managed proxy infra, if it exists.
-				r.resources.GatewayClasses.Store(request.Name, nil)
+				// Delete the gatewayclass from the watchable map.
+				r.resources.GatewayClasses.Delete(request.Name)
 				continue
 			}
 
