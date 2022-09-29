@@ -73,6 +73,12 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 	}
 	r.log.Info("watching gateway objects")
 
+	// Trigger Gateway reconciliation when a managed GatewayClass has changed.
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1b1.GatewayClass{}}, r.enqueueRequestForGatewaysOfClass()); err != nil {
+		return err
+	}
+
 	// Trigger gateway reconciliation when the Envoy Service or Deployment has changed.
 	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGateway()); err != nil {
 		return err
@@ -107,6 +113,47 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 	}
 
 	return true
+}
+
+// enqueueRequestForGatewaysOfClass returns an event handler that maps events for
+// the managed GatewayClass to reconcile requests for Gateway objects of that class.
+func (r *gatewayReconciler) enqueueRequestForGatewaysOfClass() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+		ctx := context.Background()
+
+		gc, ok := a.(*gwapiv1b1.GatewayClass)
+		if !ok {
+			r.log.Info("unexpected object type, bypassing reconciliation", "object", a)
+			return []reconcile.Request{}
+		}
+
+		if gc.Spec.ControllerName != r.classController {
+			r.log.Info("unmanaged gatewayclass, bypassing reconciliation", "object", a)
+			return []reconcile.Request{}
+		}
+
+		gateways := &gwapiv1b1.GatewayList{}
+		if err := r.client.List(ctx, gateways); err != nil {
+			return []reconcile.Request{}
+		}
+
+		requests := []reconcile.Request{}
+		for i := range gateways.Items {
+			gw := gateways.Items[i]
+			if string(gw.Spec.GatewayClassName) == gc.Name {
+				req := reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: gw.Namespace,
+						Name:      gw.Name,
+					},
+				}
+				requests = append(requests, req)
+				break
+			}
+		}
+
+		return requests
+	})
 }
 
 // enqueueRequestForOwningGateway returns an event handler that maps events for
