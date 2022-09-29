@@ -62,10 +62,6 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, infra *ir.Infr
 		}
 	}
 
-	if err := i.updateResource(sa); err != nil {
-		return err
-	}
-
 	return nil
 }
 

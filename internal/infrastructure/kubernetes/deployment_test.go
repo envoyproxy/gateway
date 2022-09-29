@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,6 +10,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -170,22 +171,18 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 		name    string
 		in      *ir.Infra
 		current *appsv1.Deployment
-		out     *Resources
+		want    *appsv1.Deployment
 	}{
 		{
 			name: "create deployment",
 			in:   infra,
-			out: &Resources{
-				Deployment: deploy,
-			},
+			want: deploy,
 		},
 		{
 			name:    "deployment exists",
 			in:      infra,
 			current: deploy,
-			out: &Resources{
-				Deployment: deploy,
-			},
+			want:    deploy,
 		},
 		{
 			name: "update deployment image",
@@ -203,9 +200,7 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 				},
 			},
 			current: deploy,
-			out: &Resources{
-				Deployment: deploymentWithImage(deploy, "envoyproxy/gateway-dev:v1.2.3"),
-			},
+			want:    deploymentWithImage(deploy, "envoyproxy/gateway-dev:v1.2.3"),
 		},
 	}
 
@@ -219,7 +214,15 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 			}
 			err := kube.createOrUpdateDeployment(context.Background(), tc.in)
 			require.NoError(t, err)
-			require.Equal(t, tc.out.Deployment.Spec, kube.Resources.Deployment.Spec)
+
+			actual := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      expectedDeploymentName(tc.in.Proxy.Name),
+				},
+			}
+			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.Equal(t, tc.want.Spec, actual.Spec)
 		})
 	}
 }
@@ -241,7 +244,6 @@ func TestDeleteDeployment(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
-				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()

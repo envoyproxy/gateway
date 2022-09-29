@@ -93,10 +93,6 @@ func (i *Infra) createOrUpdateService(ctx context.Context, infra *ir.Infra) erro
 		}
 	}
 
-	if err := i.updateResource(svc); err != nil {
-		return err
-	}
-
 	return nil
 }
 

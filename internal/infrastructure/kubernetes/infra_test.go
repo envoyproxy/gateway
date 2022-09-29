@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,59 +17,31 @@ import (
 )
 
 func TestCreateInfra(t *testing.T) {
-	expected := ir.NewInfra()
-	// Apply the expected labels to the proxy infra.
-	expected.GetProxyInfra().GetProxyMetadata().Labels = envoyAppLabel()
-	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
+	// Infra with Gateway owner labels.
+	infraWithLabels := ir.NewInfra()
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = envoyAppLabel()
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
 
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
-		out    *Resources
 		expect bool
 	}{
 		{
 			name: "default infra",
 			in:   ir.NewInfra(),
-			out: &Resources{
-				ServiceAccount: &corev1.ServiceAccount{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ServiceAccount",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "default",
-						Name:            "envoy",
-						ResourceVersion: "1",
-					},
-				},
-			},
 			// Gateway owning labels are required to create the Envoy service.
 			expect: false,
 		},
 		{
-			name: "infra-with-expected-labels",
-			in:   expected,
-			out: &Resources{
-				ServiceAccount: &corev1.ServiceAccount{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ServiceAccount",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:       "default",
-						Name:            "envoy-default",
-						ResourceVersion: "1",
-					},
-				},
-			},
+			name:   "infra-with-expected-labels",
+			in:     infraWithLabels,
 			expect: true,
 		},
 		{
 			name:   "nil-infra",
 			in:     nil,
-			out:    &Resources{},
 			expect: false,
 		},
 		{
@@ -77,7 +49,6 @@ func TestCreateInfra(t *testing.T) {
 			in: &ir.Infra{
 				Proxy: nil,
 			},
-			out:    &Resources{},
 			expect: false,
 		},
 	}
@@ -87,7 +58,6 @@ func TestCreateInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
-				mu:        sync.Mutex{},
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 				Namespace: "default",
 			}
@@ -97,7 +67,39 @@ func TestCreateInfra(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, *tc.out.ServiceAccount, *kube.Resources.ServiceAccount)
+
+				// Verify all resources were created via the fake kube client.
+				sa := &corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: kube.Namespace,
+						Name:      expectedServiceAccountName(tc.in.Proxy.Name),
+					},
+				}
+				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
+
+				cm := &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: kube.Namespace,
+						Name:      expectedConfigMapName(tc.in.Proxy.Name),
+					},
+				}
+				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
+
+				deploy := &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: kube.Namespace,
+						Name:      expectedDeploymentName(tc.in.Proxy.Name),
+					},
+				}
+				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
+
+				svc := &corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: kube.Namespace,
+						Name:      expectedServiceName(tc.in.Proxy.Name),
+					},
+				}
+				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))
 			}
 		})
 	}
@@ -126,7 +128,6 @@ func TestDeleteInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
-				mu:     sync.Mutex{},
 				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 			}
 			err := kube.DeleteInfra(context.Background(), tc.in)
@@ -135,46 +136,6 @@ func TestDeleteInfra(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 			}
-		})
-	}
-}
-
-func TestUpdateResource(t *testing.T) {
-	testCases := []struct {
-		name string
-		obj  client.Object
-		out  *Resources
-	}{
-		{
-			name: "happy-path-sa",
-			obj: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-			},
-			out: &Resources{
-				ServiceAccount: &corev1.ServiceAccount{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "test",
-					},
-				},
-			},
-		},
-	}
-
-	for _, tc := range testCases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			kube := &Infra{
-				mu:     sync.Mutex{},
-				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
-			}
-			err := kube.updateResource(tc.obj)
-			require.NoError(t, err)
-			require.Equal(t, tc.out, kube.Resources)
 		})
 	}
 }

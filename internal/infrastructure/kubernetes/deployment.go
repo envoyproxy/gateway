@@ -292,10 +292,6 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 		}
 	}
 
-	if err := i.updateResource(deploy); err != nil {
-		return err
-	}
-
 	return nil
 }
 
