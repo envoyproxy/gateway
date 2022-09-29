@@ -9,6 +9,7 @@ require (
 	github.com/spf13/cobra v1.4.0
 	github.com/stretchr/testify v1.8.0
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
+	github.com/tsaarni/certyaml v0.9.0
 	go.uber.org/zap v1.19.1
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	google.golang.org/grpc v1.46.2
@@ -17,7 +18,7 @@ require (
 	k8s.io/client-go v0.24.2
 	k8s.io/utils v0.0.0-20220210201930-3a6ce19ff2f9
 	sigs.k8s.io/controller-runtime v0.12.3
-	sigs.k8s.io/gateway-api v0.5.0
+	sigs.k8s.io/gateway-api v0.5.1
 )
 
 require (
@@ -74,7 +75,6 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/tsaarni/certyaml v0.9.0 // indirect
 	github.com/tsaarni/x500dn v0.0.0-20210331182804-14283c7f5a16 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
