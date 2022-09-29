@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -21,7 +22,13 @@ func expectedServiceAccountName(proxyName string) string {
 }
 
 // expectedServiceAccount returns the expected proxy serviceAccount.
-func (i *Infra) expectedServiceAccount(infra *ir.Infra) *corev1.ServiceAccount {
+func (i *Infra) expectedServiceAccount(infra *ir.Infra) (*corev1.ServiceAccount, error) {
+	// Set the labels based on the owning gateway name.
+	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
+	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+		return nil, fmt.Errorf("missing owning gateway labels")
+	}
+
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ServiceAccount",
@@ -30,14 +37,18 @@ func (i *Infra) expectedServiceAccount(infra *ir.Infra) *corev1.ServiceAccount {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      expectedServiceAccountName(infra.Proxy.Name),
+			Labels:    labels,
 		},
-	}
+	}, nil
 }
 
 // createOrUpdateServiceAccount creates the Envoy ServiceAccount in the kube api server,
 // if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, infra *ir.Infra) error {
-	sa := i.expectedServiceAccount(infra)
+	sa, err := i.expectedServiceAccount(infra)
+	if err != nil {
+		return err
+	}
 
 	current := &corev1.ServiceAccount{}
 	key := types.NamespacedName{

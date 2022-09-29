@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -23,13 +24,24 @@ func TestExpectedServiceAccount(t *testing.T) {
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
 
+	// An infra without Gateway owner labels should trigger
+	// an error.
+	_, err := kube.expectedServiceAccount(infra)
+	require.NotNil(t, err)
+
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	sa := kube.expectedServiceAccount(infra)
+	sa, err := kube.expectedServiceAccount(infra)
+	require.NoError(t, err)
 
 	// Check the serviceaccount name is as expected.
 	assert.Equal(t, sa.Name, expectedServiceAccountName(infra.Proxy.Name))
+
+	wantLabels := envoyAppLabel()
+	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	wantLabels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, sa.Labels))
 }
 
 func TestCreateOrUpdateServiceAccount(t *testing.T) {
@@ -46,6 +58,12 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Name: "test",
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						},
+					},
 				},
 			},
 			want: &corev1.ServiceAccount{
@@ -56,6 +74,11 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
 				},
 			},
 		},
@@ -65,6 +88,12 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Name: "test",
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						},
+					},
 				},
 			},
 			current: &corev1.ServiceAccount{
@@ -75,6 +104,11 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
 				},
 			},
 			want: &corev1.ServiceAccount{
@@ -85,6 +119,11 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "envoy-test",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
 				},
 			},
 		},

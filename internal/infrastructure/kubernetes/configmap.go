@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -39,26 +40,33 @@ var (
 )
 
 // expectedConfigMap returns the expected ConfigMap based on the provided infra.
-func (i *Infra) expectedConfigMap(infra *ir.Infra) *corev1.ConfigMap {
-	ns := i.Namespace
-	name := expectedConfigMapName(infra.Proxy.Name)
+func (i *Infra) expectedConfigMap(infra *ir.Infra) (*corev1.ConfigMap, error) {
+	// Set the labels based on the owning gateway name.
+	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
+	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+		return nil, fmt.Errorf("missing owning gateway labels")
+	}
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      name,
+			Namespace: i.Namespace,
+			Name:      expectedConfigMapName(infra.Proxy.Name),
+			Labels:    labels,
 		},
 		Data: map[string]string{
 			sdsCAFilename:   sdsCAConfigMapData,
 			sdsCertFilename: sdsCertConfigMapData,
 		},
-	}
+	}, nil
 }
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
 // infra, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateConfigMap(ctx context.Context, infra *ir.Infra) (*corev1.ConfigMap, error) {
-	cm := i.expectedConfigMap(infra)
+	cm, err := i.expectedConfigMap(infra)
+	if err != nil {
+		return nil, err
+	}
 
 	current := &corev1.ConfigMap{}
 	key := types.NamespacedName{
