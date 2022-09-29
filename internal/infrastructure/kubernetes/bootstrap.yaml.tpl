@@ -8,7 +8,7 @@ dynamic_resources:
   cds_config:
     resource_api_version: V3
     api_config_source:
-      api_type: GRPC
+      api_type: DELTA_GRPC
       transport_api_version: V3
       grpc_services:
       - envoy_grpc:
@@ -17,7 +17,7 @@ dynamic_resources:
   lds_config:
     resource_api_version: V3
     api_config_source:
-      api_type: GRPC
+      api_type: DELTA_GRPC
       transport_api_version: V3
       grpc_services:
       - envoy_grpc:
@@ -68,7 +68,7 @@ layered_runtime:
           resource_api_version: V3
           api_config_source:
             transport_api_version: V3
-            api_type: GRPC
+            api_type: DELTA_GRPC
             grpc_services:
               envoy_grpc:
                 cluster_name: xds_cluster
