@@ -74,10 +74,10 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 	r.log.Info("watching gateway objects")
 
 	// Trigger gateway reconciliation when the Envoy Service or Deployment has changed.
-	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGatewayClass()); err != nil {
+	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, r.enqueueRequestForOwningGateway()); err != nil {
 		return err
 	}
-	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, r.enqueueRequestForOwningGatewayClass()); err != nil {
+	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, r.enqueueRequestForOwningGateway()); err != nil {
 		return err
 	}
 
@@ -109,29 +109,30 @@ func (r *gatewayReconciler) hasMatchingController(obj client.Object) bool {
 	return true
 }
 
-// enqueueRequestForOwningGatewayClass returns an event handler that maps events with
-// the GatewayClass owning label to Gateway objects.
-func (r *gatewayReconciler) enqueueRequestForOwningGatewayClass() handler.EventHandler {
+// enqueueRequestForOwningGateway returns an event handler that maps events for
+// resources with Gateway owning labels to reconcile requests for those Gateway objects.
+func (r *gatewayReconciler) enqueueRequestForOwningGateway() handler.EventHandler {
 	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
 		labels := a.GetLabels()
-		gcName, found := labels[gatewayapi.OwningGatewayLabel]
-		if found {
-			var reqs []reconcile.Request
-			for _, gw := range r.resources.Gateways.LoadAll() {
-				if gw != nil && gw.Spec.GatewayClassName == gwapiv1b1.ObjectName(gcName) {
-					req := reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: gw.Namespace,
-							Name:      gw.Name,
-						},
-					}
-					reqs = append(reqs, req)
-					r.log.Info("queueing gateway", "namespace", gw.Namespace, "name", gw.Name)
-				}
-			}
-			return reqs
+		if labels == nil {
+			return nil
 		}
-		return []reconcile.Request{}
+
+		gatewayNamespace := labels[gatewayapi.OwningGatewayNamespaceLabel]
+		gatewayName := labels[gatewayapi.OwningGatewayNameLabel]
+
+		if len(gatewayNamespace) == 0 || len(gatewayName) == 0 {
+			return nil
+		}
+
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Namespace: gatewayNamespace,
+					Name:      gatewayName,
+				},
+			},
+		}
 	})
 }
 

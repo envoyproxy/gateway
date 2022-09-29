@@ -104,10 +104,10 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		return nil, err
 	}
 
-	// Set the labels based on the owning gatewayclass name.
+	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
-	if _, ok := labels[gatewayapi.OwningGatewayLabel]; !ok {
-		return nil, fmt.Errorf("missing owning gateway label")
+	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
 	deployment := &appsv1.Deployment{

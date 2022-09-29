@@ -23,9 +23,13 @@ const (
 	KindService   = "Service"
 	KindSecret    = "Secret"
 
-	// OwningGatewayLabel is the owner reference label used for managed infra.
+	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
+	// The value should be the namespace of the accepted Envoy Gateway.
+	OwningGatewayNamespaceLabel = "gateway.envoyproxy.io/owning-gateway-namespace"
+
+	// OwningGatewayNameLabel is the owner reference label used for managed infra.
 	// The value should be the name of the accepted Envoy Gateway.
-	OwningGatewayLabel = "gateway.envoyproxy.io/owning-gateway"
+	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
 
 	// minEphemeralPort is the first port in the ephemeral port range.
 	minEphemeralPort = 1024
@@ -227,7 +231,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
 		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabel(gateway.Name)
+		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR
@@ -1240,8 +1244,11 @@ func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
 	}
 }
 
-// GatewayOwnerLabel returns the Gateway Owner label using
-// the provided name as the value.
-func GatewayOwnerLabel(name string) map[string]string {
-	return map[string]string{OwningGatewayLabel: name}
+// GatewayOwnerLabels returns the Gateway Owner labels using
+// the provided namespace and name as the values.
+func GatewayOwnerLabels(namespace, name string) map[string]string {
+	return map[string]string{
+		OwningGatewayNamespaceLabel: namespace,
+		OwningGatewayNameLabel:      name,
+	}
 }

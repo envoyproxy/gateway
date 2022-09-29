@@ -64,7 +64,8 @@ infraIR:
     proxy:
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
       image: envoyproxy/envoy:v1.23-latest
       listeners:
