@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -117,7 +116,6 @@ func TestDeleteService(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
-				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()

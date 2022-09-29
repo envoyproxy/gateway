@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -11,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -38,7 +38,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 		ns      string
 		in      *ir.Infra
 		current *corev1.ServiceAccount
-		out     *Resources
+		want    *corev1.ServiceAccount
 	}{
 		{
 			name: "create-sa",
@@ -48,16 +48,14 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					Name: "test",
 				},
 			},
-			out: &Resources{
-				ServiceAccount: &corev1.ServiceAccount{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ServiceAccount",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "envoy-test",
-					},
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "envoy-test",
 				},
 			},
 		},
@@ -79,16 +77,14 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 					Name:      "envoy-test",
 				},
 			},
-			out: &Resources{
-				ServiceAccount: &corev1.ServiceAccount{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ServiceAccount",
-						APIVersion: "v1",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "envoy-test",
-					},
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "envoy-test",
 				},
 			},
 		},
@@ -99,7 +95,6 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
-				mu:        sync.Mutex{},
 				Namespace: tc.ns,
 			}
 			if tc.current != nil {
@@ -109,8 +104,17 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			}
 			err := kube.createOrUpdateServiceAccount(context.Background(), tc.in)
 			require.NoError(t, err)
+
+			actual := &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      expectedServiceAccountName(tc.in.Proxy.Name),
+				},
+			}
+			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-			assert.Equal(t, true, cmp.Equal(tc.out.ServiceAccount, kube.Resources.ServiceAccount, opts))
+			assert.Equal(t, true, cmp.Equal(tc.want, actual, opts))
 		})
 	}
 }
@@ -131,7 +135,6 @@ func TestDeleteServiceAccount(t *testing.T) {
 			t.Parallel()
 			kube := &Infra{
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
-				mu:        sync.Mutex{},
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
