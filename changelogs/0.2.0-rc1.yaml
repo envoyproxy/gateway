@@ -1,0 +1,34 @@
+date: August 31, 2022
+
+changes:
+- area: documentation
+  change: |
+    Added a quickstart guide for users to run and use Envoy Gateway.
+- area: api
+  change: |
+    Added the EnvoyGateway API type for configuring Envoy Gateway.
+    Added the EnvoyProxy API type for configuring managed Envoys.
+- area: ci
+  change: |
+    Added tooling to build, run, etc. Envoy Gateway.
+- area: providers
+  change: |
+    Added the Kubernetes provider.
+- area: xds
+  change: |
+    Added xDS server to configure managed Envoys.
+- area: ir
+  change: |
+    Added xds and infra IRs to decouple user-facing APIs from Envoy Gateway.
+    Added IR validation.
+- area: translator
+  change: |
+    Added the gatewayapi translator to translate Gateway API and associated resources to the IR and manage
+    Gateway API status.
+- area: message-service
+  change: |
+    Added infra and xds IR watchable map messages for inter-component communication.
+    Added a Runner to each component to support pub/sub between components.
+- area: infra-manager
+  change: |
+    Added Kubernetes Infra Manager to manage Envoy infrastructure running in a Kubernetes cluster.
