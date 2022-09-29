@@ -57,6 +57,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			}
 		}
-		r.Logger.Info("subscriber shutting down")
 	}
+	r.Logger.Info("subscriber shutting down")
 }
