@@ -1,0 +1,6 @@
+date: May 16, 2022
+
+changes:
+- area: documentation
+  change: |
+    The initial open source release describing project goals and high-level design.
