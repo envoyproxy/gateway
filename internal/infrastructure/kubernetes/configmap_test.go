@@ -12,15 +12,18 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestExpectedConfigMap(t *testing.T) {
 	// Setup the infra.
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
-	cm := kube.expectedConfigMap()
+	infra := ir.NewInfra()
+	infra.Proxy.Name = "test"
+	cm := kube.expectedConfigMap(infra)
 
-	require.Equal(t, "envoy", cm.Name)
+	require.Equal(t, "envoy-test", cm.Name)
 	require.Equal(t, "envoy-gateway-system", cm.Namespace)
 	require.Contains(t, cm.Data, sdsCAFilename)
 	assert.Equal(t, sdsCAConfigMapData, cm.Data[sdsCAFilename])
@@ -30,6 +33,8 @@ func TestExpectedConfigMap(t *testing.T) {
 
 func TestCreateOrUpdateConfigMap(t *testing.T) {
 	kube := NewInfra(nil)
+	infra := ir.NewInfra()
+	infra.Proxy.Name = "test"
 
 	testCases := []struct {
 		name    string
@@ -41,7 +46,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      config.EnvoyConfigMapName,
+					Name:      "envoy-test",
 				},
 				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
 			},
@@ -51,14 +56,14 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      config.EnvoyConfigMapName,
+					Name:      "envoy-test",
 				},
 				Data: map[string]string{"foo": "bar"},
 			},
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      config.EnvoyConfigMapName,
+					Name:      "envoy-test",
 				},
 				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
 			},
@@ -73,7 +78,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			cm, err := kube.createOrUpdateConfigMap(context.Background())
+			cm, err := kube.createOrUpdateConfigMap(context.Background(), infra)
 			require.NoError(t, err)
 			require.Equal(t, tc.expect.Namespace, cm.Namespace)
 			require.Equal(t, tc.expect.Name, cm.Name)
@@ -83,6 +88,9 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 }
 
 func TestDeleteConfigMap(t *testing.T) {
+	infra := ir.NewInfra()
+	infra.Proxy.Name = "test"
+
 	testCases := []struct {
 		name    string
 		current *corev1.ConfigMap
@@ -93,7 +101,7 @@ func TestDeleteConfigMap(t *testing.T) {
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      config.EnvoyConfigMapName,
+					Name:      "envoy-test",
 				},
 			},
 			expect: true,
@@ -115,7 +123,7 @@ func TestDeleteConfigMap(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := NewInfra(fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build())
-			err := kube.deleteConfigMap(context.Background())
+			err := kube.deleteConfigMap(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

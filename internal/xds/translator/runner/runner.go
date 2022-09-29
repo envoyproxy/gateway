@@ -36,20 +36,24 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for range r.XdsIR.Subscribe(ctx) {
+	for snapshot := range r.XdsIR.Subscribe(ctx) {
 		r.Logger.Info("received a notification")
-		for key, ir := range r.XdsIR.LoadAll() {
-			if ir == nil {
-				r.Logger.Info("xds ir is nil, skipping")
-				continue
-			}
-			// Translate to xds resources
-			result, err := translator.Translate(ir)
-			if err != nil {
-				r.Logger.Error(err, "failed to translate xds ir")
+		updates := snapshot.Updates
+		for _, update := range updates {
+			key := update.Key
+			val := update.Value
+
+			if update.Delete {
+				r.Xds.Delete(key)
 			} else {
-				// Publish
-				r.Xds.Store(key, result)
+				// Translate to xds resources
+				result, err := translator.Translate(val)
+				if err != nil {
+					r.Logger.Error(err, "failed to translate xds ir")
+				} else {
+					// Publish
+					r.Xds.Store(key, result)
+				}
 			}
 		}
 	}

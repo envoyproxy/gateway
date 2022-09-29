@@ -112,16 +112,20 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for range r.Xds.Subscribe(ctx) {
+	for snapshot := range r.Xds.Subscribe(ctx) {
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
-		for key, xds := range r.Xds.LoadAll() {
-			if xds == nil {
-				r.Logger.Info("xds is nil, skipping")
-				continue
+		for _, update := range snapshot.Updates {
+			key := update.Key
+			val := update.Value
+
+			var err error
+			if update.Delete {
+				err = r.cache.GenerateNewSnapshot(key, nil)
+			} else {
+				// Update snapshot cache
+				err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
 			}
-			// Update snapshot cache
-			err := r.cache.GenerateNewSnapshot(key, xds.XdsResources)
 			if err != nil {
 				r.Logger.Error(err, "failed to generate a snapshot")
 			}
