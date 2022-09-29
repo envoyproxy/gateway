@@ -22,7 +22,10 @@ func TestExpectedServiceAccount(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
 	sa := kube.expectedServiceAccount(infra)
 
 	// Check the serviceaccount name is as expected.

@@ -65,7 +65,8 @@ func TestDesiredService(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 	infra.Proxy.Listeners[0].Ports = []ir.ListenerPort{
 		{
 			Name:          "gateway-system-gateway-1",
@@ -93,7 +94,8 @@ func TestDesiredService(t *testing.T) {
 
 	// Ensure the Envoy service has the expected labels.
 	lbls := envoyAppLabel()
-	lbls[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+	lbls[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	lbls[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 	checkServiceHasLabels(t, svc, lbls)
 
 	for _, port := range infra.Proxy.Listeners[0].Ports {

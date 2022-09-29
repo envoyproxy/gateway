@@ -104,7 +104,10 @@ func TestExpectedDeployment(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
 
@@ -156,7 +159,10 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 func TestCreateOrUpdateDeployment(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = infra.Proxy.Name
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
 	deploy, err := kube.expectedDeployment(infra)
 	require.NoError(t, err)
 
@@ -186,7 +192,10 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
-						Labels: map[string]string{gatewayapi.OwningGatewayLabel: infra.Proxy.Name},
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
+						},
 					},
 					Name:      ir.DefaultProxyName,
 					Image:     "envoyproxy/gateway-dev:v1.2.3",

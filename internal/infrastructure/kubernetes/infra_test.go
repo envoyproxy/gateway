@@ -20,7 +20,8 @@ func TestCreateInfra(t *testing.T) {
 	expected := ir.NewInfra()
 	// Apply the expected labels to the proxy infra.
 	expected.GetProxyInfra().GetProxyMetadata().Labels = envoyAppLabel()
-	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayLabel] = "test-gw"
+	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	expected.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
 
 	testCases := []struct {
 		name   string
