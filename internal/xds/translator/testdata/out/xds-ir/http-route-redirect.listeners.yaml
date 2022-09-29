@@ -14,7 +14,7 @@
         rds:
           configSource:
             apiConfigSource:
-              apiType: GRPC
+              apiType: DELTA_GRPC
               grpcServices:
               - envoyGrpc:
                   clusterName: xds_cluster
