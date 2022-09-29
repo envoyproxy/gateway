@@ -97,6 +97,17 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 
 	for i := range gatewayClasses.Items {
 		if gatewayClasses.Items[i].Spec.ControllerName == r.controller {
+			// The gatewayclass was marked for deletion and the finalizer removed,
+			// so clean-up dependents.
+			if !gatewayClasses.Items[i].DeletionTimestamp.IsZero() &&
+				!slice.ContainsString(gatewayClasses.Items[i].Finalizers, gatewayClassFinalizer) {
+				r.log.Info("gatewayclass marked for deletion")
+				cc.removeMatch(&gatewayClasses.Items[i])
+				// A nil gatewayclass removes managed proxy infra, if it exists.
+				r.resources.GatewayClasses.Store(request.Name, nil)
+				continue
+			}
+
 			cc.addMatch(&gatewayClasses.Items[i])
 		}
 	}
@@ -113,14 +124,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, nil
 	}
 
-	// The gatewayclass was marked for deletion and the finalizer removed,
-	// so clean-up dependents.
-	if !acceptedGC.DeletionTimestamp.IsZero() && !slice.ContainsString(acceptedGC.Finalizers, gatewayClassFinalizer) {
-		r.log.Info("gatewayclass marked for deletion")
-		// A nil gatewayclass removes managed proxy infra, if it exists.
-		r.resources.GatewayClasses.Store(request.Name, nil)
-		return reconcile.Result{}, nil
-	}
 	// Store the accepted gatewayclass in the resource map.
 	r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 
@@ -166,8 +169,13 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 }
 
 type controlledClasses struct {
+	// matchedClasses holds all GatewayClass objects with matching controllerName.
 	matchedClasses []*gwapiv1b1.GatewayClass
-	oldestClass    *gwapiv1b1.GatewayClass
+
+	// oldestClass stores the first GatewayClass encountered with matching
+	// controllerName. This is maintained so that the oldestClass does not change
+	// during reboots.
+	oldestClass *gwapiv1b1.GatewayClass
 }
 
 func (cc *controlledClasses) addMatch(gc *gwapiv1b1.GatewayClass) {
@@ -181,6 +189,37 @@ func (cc *controlledClasses) addMatch(gc *gwapiv1b1.GatewayClass) {
 	case gc.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) && gc.Name < cc.oldestClass.Name:
 		// tie-breaker: first one in alphabetical order is considered oldest/accepted
 		cc.oldestClass = gc
+	}
+}
+
+func (cc *controlledClasses) removeMatch(gc *gwapiv1b1.GatewayClass) {
+	// First remove gc from matchedClasses.
+	for i, matchedGC := range cc.matchedClasses {
+		if matchedGC.Name == gc.Name {
+			cc.matchedClasses[i] = cc.matchedClasses[len(cc.matchedClasses)-1]
+			cc.matchedClasses = cc.matchedClasses[:len(cc.matchedClasses)-1]
+			break
+		}
+	}
+
+	// If the oldestClass is removed, find the new oldestClass candidate
+	// from matchedClasses.
+	if cc.oldestClass != nil && cc.oldestClass.Name == gc.Name {
+		if len(cc.matchedClasses) == 0 {
+			cc.oldestClass = nil
+			return
+		}
+
+		cc.oldestClass = cc.matchedClasses[0]
+		for i := 1; i < len(cc.matchedClasses); i++ {
+			current := cc.matchedClasses[i]
+			if current.CreationTimestamp.Time.Before(cc.oldestClass.CreationTimestamp.Time) ||
+				(current.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) &&
+					current.Name < cc.oldestClass.Name) {
+				cc.oldestClass = current
+				return
+			}
+		}
 	}
 }
 
