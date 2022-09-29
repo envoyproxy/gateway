@@ -107,7 +107,7 @@ func makeConfigSource() *core.ConfigSource {
 	source.ConfigSourceSpecifier = &core.ConfigSource_ApiConfigSource{
 		ApiConfigSource: &core.ApiConfigSource{
 			TransportApiVersion:       resource.DefaultAPIVersion,
-			ApiType:                   core.ApiConfigSource_GRPC,
+			ApiType:                   core.ApiConfigSource_DELTA_GRPC,
 			SetNodeOnFirstMessageOnly: true,
 			GrpcServices: []*core.GrpcService{{
 				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
