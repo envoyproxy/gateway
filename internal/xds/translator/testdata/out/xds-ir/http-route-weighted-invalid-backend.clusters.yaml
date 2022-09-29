@@ -3,7 +3,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: cluster_request-header-route
+    clusterName: cluster_first-route
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -13,6 +13,6 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: cluster_request-header-route
+  name: cluster_first-route
   outlierDetection: {}
   type: STATIC

@@ -30,6 +30,20 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
 	}
+	invalidBackendHTTPListener = HTTPListener{
+		Name:      "invalid-backend-match",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&invalidBackendHTTPRoute},
+	}
+	weightedInvalidBackendsHTTPListener = HTTPListener{
+		Name:      "weighted-invalid-backends-match",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
+	}
 
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
@@ -42,6 +56,26 @@ var (
 	emptyMatchHTTPRoute = HTTPRoute{
 		Name:         "empty-match",
 		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidBackendHTTPRoute = HTTPRoute{
+		Name: "invalid-backend",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("invalid-backend"),
+		},
+		BackendWeights: BackendWeights{
+			Invalid: 1,
+		},
+	}
+	weightedInvalidBackendsHTTPRoute = HTTPRoute{
+		Name: "weighted-invalid-backends",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("invalid-backends"),
+		},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+		BackendWeights: BackendWeights{
+			Invalid: 1,
+			Valid:   1,
+		},
 	}
 
 	redirectHTTPRoute = HTTPRoute{
@@ -217,6 +251,20 @@ func TestValidateXds(t *testing.T) {
 			},
 			want: []error{ErrHTTPListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
 		},
+		{
+			name: "invalid backend",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener, &invalidBackendHTTPListener},
+			},
+			want: nil,
+		},
+		{
+			name: "weighted invalid backend",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener, &weightedInvalidBackendsHTTPListener},
+			},
+			want: nil,
+		},
 	}
 	for _, test := range tests {
 		test := test
@@ -356,6 +404,16 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "empty match",
 			input: emptyMatchHTTPRoute,
 			want:  []error{ErrHTTPRouteMatchEmpty},
+		},
+		{
+			name:  "invalid backend",
+			input: invalidBackendHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "weighted invalid backends",
+			input: weightedInvalidBackendsHTTPRoute,
+			want:  nil,
 		},
 		{
 			name: "empty name and invalid match",

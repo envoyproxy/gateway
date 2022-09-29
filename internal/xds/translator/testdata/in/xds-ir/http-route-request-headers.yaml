@@ -27,6 +27,5 @@ http:
       value: ""
       append: false
     removeRequestHeaders:
-      remove:
-      - "some-header5"
-      - "some-header6"
+    - "some-header5"
+    - "some-header6"

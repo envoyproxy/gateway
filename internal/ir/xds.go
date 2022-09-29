@@ -126,6 +126,12 @@ func (t TLSListenerConfig) Validate() error {
 	return errs
 }
 
+// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
+type BackendWeights struct {
+	Valid   uint32
+	Invalid uint32
+}
+
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
@@ -137,6 +143,8 @@ type HTTPRoute struct {
 	HeaderMatches []*StringMatch
 	// QueryParamMatches define the match conditions on the query parameters.
 	QueryParamMatches []*StringMatch
+	// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
+	BackendWeights BackendWeights
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
 	AddRequestHeaders []AddHeader
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.

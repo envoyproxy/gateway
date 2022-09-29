@@ -60,7 +60,10 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			}
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
-			// 1:1 between IR HTTPRoute and xDS Cluster
+			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
+			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
+				continue
+			}
 			xdsCluster, err := buildXdsCluster(httpRoute)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds cluster"))
