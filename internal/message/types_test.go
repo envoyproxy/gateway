@@ -152,8 +152,4 @@ func TestProviderResources(t *testing.T) {
 
 	svcs = resources.GetServices()
 	assert.ElementsMatch(t, svcs, []*corev1.Service{s1, s2})
-
-	// Delete gatewayclasses
-	resources.DeleteGatewayClasses()
-	assert.Nil(t, resources.GetGatewayClasses())
 }

@@ -22,18 +22,6 @@ type ProviderResources struct {
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
 }
 
-func (p *ProviderResources) DeleteGatewayClasses() {
-	for k := range p.GatewayClasses.LoadAll() {
-		p.GatewayClasses.Delete(k)
-	}
-}
-
-func (p *ProviderResources) DeleteGateways() {
-	for k := range p.Gateways.LoadAll() {
-		p.Gateways.Delete(k)
-	}
-}
-
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
 	if p.GatewayClasses.Len() == 0 {
 		return nil
