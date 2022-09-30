@@ -9,33 +9,32 @@ __Note:__ Envoy Gateway is tested against Kubernetes v1.24.1.
 ## Installation
 Install the Gateway API CRDs:
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc1/gatewayapi-crds.yaml
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
 ```
 
 Run Envoy Gateway:
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc1/install.yaml
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
 ```
 
 Run the example app:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
 ```
 
-Due to [Issue 301][issue_301], Gateway API resources must be created in the following order. First, create the
-GatewayClass:
+The Gateway API resources must be created in the following order. First, create the GatewayClass:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/gatewayclass.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gatewayclass.yaml
 ```
 
 Create the Gateway:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gateway.yaml
 ```
 
 Create the HTTPRoute to route traffic through Envoy proxy to the example app:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httproute.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httproute.yaml
 ```
 
 ### Testing the configuration
@@ -86,22 +85,21 @@ kubectl delete gc/eg
 
 Uninstall the example app:
 ```shell
-kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc1/examples/kubernetes/httpbin.yaml
+kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
 ```
 
 Uninstall Envoy Gateway:
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc1/install.yaml
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
 ```
 
 Uninstall Gateway API CRDs:
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc1/gatewayapi-crds.yaml
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
 ```
 
 ## Next Steps
 Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.
 
-[issue_301]: https://github.com/envoyproxy/gateway/issues/301
 [kind]: https://kind.sigs.k8s.io/
 [httpbin_methods]: https://httpbin.org/#/HTTP_Methods
