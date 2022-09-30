@@ -237,7 +237,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	gws, _ := resources.Gateways.Load(key)
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
-	// with an updated status if the spec hasnt changed
+	// with an updated status if the spec has not changed
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
 	assert.Equal(t, gw.Spec, gws.Spec)
