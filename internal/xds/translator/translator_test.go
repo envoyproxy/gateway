@@ -3,7 +3,6 @@ package translator
 import (
 	"bytes"
 	"embed"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -26,7 +25,8 @@ var (
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
-		name string
+		name           string
+		requireSecrets bool
 	}{
 		{
 			name: "empty",
@@ -47,7 +47,8 @@ func TestTranslate(t *testing.T) {
 			name: "http-route-weighted-invalid-backend",
 		},
 		{
-			name: "simple-tls",
+			name:           "simple-tls",
+			requireSecrets: true,
 		},
 	}
 
@@ -63,9 +64,7 @@ func TestTranslate(t *testing.T) {
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
-			// Test secrets if the secrets output file exists
-			secretsFile := filepath.Join("testdata", "out", "xds-ir", tc.name+".secrets.yaml")
-			if _, err := os.Stat(secretsFile); err == nil {
+			if tc.requireSecrets {
 				secrets := tCtx.XdsResources[resource.SecretType]
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
