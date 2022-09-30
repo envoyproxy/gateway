@@ -39,10 +39,9 @@ func TestRunner(t *testing.T) {
 
 	// TODO: pass valid provider resources
 
-	// Reset gateway slice and update with a nil gateway to trigger a delete.
-	pResources.DeleteGateways()
+	// Delete gateway from the map.
 	key := types.NamespacedName{Namespace: "test", Name: "test"}
-	pResources.Gateways.Store(key, nil)
+	pResources.Gateways.Delete(key)
 	require.Eventually(t, func() bool {
 		out := xdsIR.LoadAll()
 		if out == nil {
