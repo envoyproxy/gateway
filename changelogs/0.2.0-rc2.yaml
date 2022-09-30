@@ -1,0 +1,31 @@
+date: September 29, 2022
+
+changes:
+  - area: documentation
+    change: |
+      Updated and expanded developer documentation.
+      Added `kube-demo` target to demonstrate Envoy Gateway functionality.
+      Added developer debugging documentation.
+  - area: ci
+    change: |
+      Added Gateway API conformance tests.
+  - area: providers
+    change: |
+      Added watchers for dependent resources of managed Envoy infrastructure.
+      Added Gateway namespace/name labels to managed resources.
+      Added support for finalizing the managed GatewayClass.
+  - area: xds
+    change: |
+      Updated xds server and Envoy bootstrap config to use Delta xDS.
+      Added initial support for mTLS between the xDS server and Envoy.
+  - area: translator
+    change: |
+      Expanded support for Gateway API status.
+      Added support for request modifier and redirect filters.
+      Added support to return 500 responses for invalid backends.
+  - area: message-service
+    change: |
+      Updated IRs to support managing multiple Envoy fleets.
+  - area: infra-manager
+    change: |
+      Separate Envoy infrastructure is created per Gateway.
