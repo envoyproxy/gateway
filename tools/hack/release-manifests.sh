@@ -27,7 +27,9 @@ curl -sLo release-artifacts/gatewayapi-crds.yaml https://github.com/kubernetes-s
 echo "Added:" release-artifacts/gatewayapi-crds.yaml
 
 # Generate the envoy gateway installation manifest supported by the release.
-${KUSTOMIZE} build internal/provider/kubernetes/config/default > release-artifacts/install.yaml
+${KUSTOMIZE} build internal/provider/kubernetes/config/default > release-artifacts/envoy-gateway.yaml
+${KUSTOMIZE} build internal/infrastructure/kubernetes/config/rbac > release-artifacts/infra-manager-rbac.yaml
+${KUSTOMIZE} build > release-artifacts/install.yaml
 
 echo "Generated:" release-artifacts/install.yaml
 
