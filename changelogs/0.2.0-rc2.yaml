@@ -17,7 +17,7 @@ changes:
   - area: xds
     change: |
       Updated xds server and Envoy bootstrap config to use Delta xDS.
-      Added initial support for mTLS.
+      Added initial support for mTLS between the xDS server and Envoy.
   - area: translator
     change: |
       Expanded support for Gateway API status.
