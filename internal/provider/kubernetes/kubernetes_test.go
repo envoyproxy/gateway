@@ -235,7 +235,12 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
 	gws, _ := resources.Gateways.Load(key)
-	assert.Equal(t, gw, gws)
+	// Only check if the spec is equal
+	// The watchable map will not store a resource
+	// with an updated status if the spec hasnt changed
+	// to eliminate this endless loop:
+	// reconcile->store->translate->update-status->reconcile
+	assert.Equal(t, gw.Spec, gws.Spec)
 }
 
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
