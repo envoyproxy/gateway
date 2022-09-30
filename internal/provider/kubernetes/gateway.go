@@ -205,7 +205,10 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		key := utils.NamespacedName(&gw)
 		r.resources.GatewayStatuses.Store(key, &gw)
 
-		r.resources.Gateways.Store(key, &gw)
+		// only store the resource if it does not exist or it has a newer spec.
+		if v, ok := r.resources.Gateways.Load(key); !ok || (gw.Generation > v.Generation) {
+			r.resources.Gateways.Store(key, &gw)
+		}
 		if key == request.NamespacedName {
 			found = true
 		}
