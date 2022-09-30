@@ -40,7 +40,7 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2
 ### Testing the configuration
 Port forward to the Envoy service:
 ```shell
-kubectl -n envoy-gateway-system port-forward service/envoy-eg 8888:8080 &
+kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:8080 &
 ```
 
 Curl the example app through Envoy proxy:
@@ -53,7 +53,7 @@ You can replace `get` with any of the supported [httpbin methods][httpbin_method
 You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
 Envoy service, run:
 ```shell
-export GATEWAY_HOST=$(kubectl get svc/envoy-eg -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export GATEWAY_HOST=$(kubectl get svc/envoy-default-eg -n envoy-gateway-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
 In certain environments, the load balancer may be exposed using a hostname, instead of an IP address. If so, replace
