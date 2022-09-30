@@ -14,7 +14,7 @@
         rds:
           configSource:
             apiConfigSource:
-              apiType: GRPC
+              apiType: DELTA_GRPC
               grpcServices:
               - envoyGrpc:
                   clusterName: xds_cluster
@@ -32,7 +32,7 @@
           - name: secret_first-listener
             sdsConfig:
               apiConfigSource:
-                apiType: GRPC
+                apiType: DELTA_GRPC
                 grpcServices:
                 - envoyGrpc:
                     clusterName: xds_cluster
