@@ -201,10 +201,15 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		status.UpdateGatewayStatusScheduledCondition(&gw, true)
 		// update address field and ready condition
 		status.UpdateGatewayStatusReadyCondition(&gw, svc, deployment)
-		// publish status
-		key := utils.NamespacedName(&gw)
-		r.resources.GatewayStatuses.Store(key, &gw)
 
+		// publish status
+		// do it inline and not using the status updater which does not update
+		// the Status.Addresses field.
+		if err := r.client.Status().Update(ctx, &gw); err != nil {
+			r.log.Error(err, "error updating status of gateway", "name", gw.Name)
+		}
+
+		key := utils.NamespacedName(&gw)
 		// only store the resource if it does not exist or it has a newer spec.
 		if v, ok := r.resources.Gateways.Load(key); !ok || (gw.Generation > v.Generation) {
 			r.resources.Gateways.Store(key, &gw)
@@ -347,7 +352,6 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					}
 					gCopy := g.DeepCopy()
 					gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, val.Status.Conditions...)
-					gCopy.Status.Addresses = val.Status.Addresses
 					gCopy.Status.Listeners = val.Status.Listeners
 					return gCopy
 				}),
