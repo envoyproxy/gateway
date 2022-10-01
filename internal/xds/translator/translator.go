@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -23,7 +25,14 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	for _, httpListener := range ir.HTTP {
 		// 1:1 between IR HTTPListener and xDS Listener
-		xdsListener, err := buildXdsListener(httpListener)
+		var xdsListener *listener.Listener
+		var err error
+		tlsPassthrough := httpListener.TLS != nil && httpListener.TLS.TLSMode == v1beta1.TLSModePassthrough
+		if tlsPassthrough {
+			xdsListener, err = buildXdsPassthroughListener(httpListener)
+		} else {
+			xdsListener, err = buildXdsListener(httpListener)
+		}
 		if err != nil {
 			return nil, multierror.Append(err, errors.New("error building xds listener"))
 		}
@@ -54,7 +63,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute, err := buildXdsRoute(httpRoute)
+			xdsRoute, err := buildXdsRoute(httpRoute, tlsPassthrough)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds route"))
 			}
@@ -64,7 +73,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			xdsCluster, err := buildXdsCluster(httpRoute)
+			xdsCluster, err := buildXdsCluster(httpRoute.Name, httpRoute.Destinations)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds cluster"))
 			}

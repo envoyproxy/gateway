@@ -44,6 +44,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
 	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
+	tlsRoutesCh := r.ProviderResources.TLSRoutes.Subscribe(ctx)
 	servicesCh := r.ProviderResources.Services.Subscribe(ctx)
 	namespacesCh := r.ProviderResources.Namespaces.Subscribe(ctx)
 
@@ -54,6 +55,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		case <-gatewayClassesCh:
 		case <-gatewaysCh:
 		case <-httpRoutesCh:
+		case <-tlsRoutesCh:
 		case <-servicesCh:
 		case <-namespacesCh:
 		}
@@ -61,6 +63,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		// Load all resources required for translation
 		in.Gateways = r.ProviderResources.GetGateways()
 		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()
+		in.TLSRoutes = r.ProviderResources.GetTLSRoutes()
 		in.Services = r.ProviderResources.GetServices()
 		in.Namespaces = r.ProviderResources.GetNamespaces()
 		gatewayClasses := r.ProviderResources.GetGatewayClasses()

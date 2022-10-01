@@ -5,6 +5,7 @@ import (
 	"net"
 
 	"github.com/tetratelabs/multierror"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 var (
@@ -98,7 +99,7 @@ func (h HTTPListener) Validate() error {
 		}
 	}
 	for _, route := range h.Routes {
-		if err := route.Validate(); err != nil {
+		if err := route.Validate(h.TLS); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -108,6 +109,9 @@ func (h HTTPListener) Validate() error {
 // TLSListenerConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
+	// TLSMode could either be Terminate or Passthrough. If the TLS mode
+	// is Passthrough, certificate and private key information is not required.
+	TLSMode v1beta1.TLSModeType
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.
@@ -117,6 +121,9 @@ type TLSListenerConfig struct {
 // Validate the fields within the TLSListenerConfig structure
 func (t TLSListenerConfig) Validate() error {
 	var errs error
+	if t.TLSMode == v1beta1.TLSModePassthrough {
+		return errs
+	}
 	if len(t.ServerCertificate) == 0 {
 		errs = multierror.Append(errs, ErrTLSServerCertEmpty)
 	}
@@ -158,13 +165,16 @@ type HTTPRoute struct {
 }
 
 // Validate the fields within the HTTPRoute structure
-func (h HTTPRoute) Validate() error {
+func (h HTTPRoute) Validate(tls *TLSListenerConfig) error {
 	var errs error
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
 	}
-	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
-		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
+	if tls == nil || tls.TLSMode != v1beta1.TLSModePassthrough {
+		// These fields could be nil in case of TLSModePassthrough.
+		if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
+			errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
+		}
 	}
 	if h.PathMatch != nil {
 		if err := h.PathMatch.Validate(); err != nil {

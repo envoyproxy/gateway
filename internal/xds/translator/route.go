@@ -9,7 +9,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, tlsPassthrough bool) (*route.Route, error) {
+	if tlsPassthrough {
+		return &route.Route{
+			Action: &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)},
+		}, nil
+	}
+
 	ret := &route.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}

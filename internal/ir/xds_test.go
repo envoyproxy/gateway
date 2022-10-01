@@ -473,9 +473,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, test.input.Validate(nil))
 			} else {
-				got := test.input.Validate()
+				got := test.input.Validate(nil)
 				for _, w := range test.want {
 					assert.ErrorContains(t, got, w.Error())
 				}

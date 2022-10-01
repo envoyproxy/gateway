@@ -288,6 +288,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 	log.Info("reconciled httproute")
 
+	r.resources.RouteInitializedOnce.Do(r.resources.RoutesInitialized.Done)
 	return reconcile.Result{}, nil
 }
 

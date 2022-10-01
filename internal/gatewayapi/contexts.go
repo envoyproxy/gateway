@@ -7,6 +7,8 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -20,6 +22,41 @@ type GatewayContext struct {
 	listeners map[v1beta1.SectionName]*ListenerContext
 }
 
+func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType, status metav1.ConditionStatus, reason v1beta1.GatewayConditionReason, message string) {
+	cond := metav1.Condition{
+		Type:               string(conditionType),
+		Status:             status,
+		Reason:             string(reason),
+		Message:            message,
+		ObservedGeneration: g.Generation,
+		LastTransitionTime: metav1.NewTime(time.Now()),
+	}
+
+	idx := -1
+	for i, existing := range g.Status.Conditions {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
+			}
+			idx = i
+			break
+		}
+	}
+
+	if idx > -1 {
+		g.Status.Conditions[idx] = cond
+	} else {
+		g.Status.Conditions = append(g.Status.Conditions, cond)
+	}
+}
+
+// GetListenerContext returns the ListenerContext with its name matching
+// listenerName from GatewayContext. If the listener exists in the Gateway Spec
+// but NOT yet in the GatewayContext, this creates a new ListenerContext for the
+// listener and attaches it to the GatewayContext.
 func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *ListenerContext {
 	if g.listeners == nil {
 		g.listeners = make(map[v1beta1.SectionName]*ListenerContext)
@@ -70,7 +107,12 @@ type ListenerContext struct {
 	gateway           *v1beta1.Gateway
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
-	tlsSecret         *v1.Secret
+	tls               listenerContextTLSConfig
+}
+
+type listenerContextTLSConfig struct {
+	mode   v1beta1.TLSModeType
+	secret *v1.Secret
 }
 
 func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
@@ -163,8 +205,32 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
-func (l *ListenerContext) SetTLSSecret(tlsSecret *v1.Secret) {
-	l.tlsSecret = tlsSecret
+func (l *ListenerContext) SetTLSConfig(mode v1beta1.TLSModeType, secret *v1.Secret) {
+	l.tls = listenerContextTLSConfig{mode, secret}
+}
+
+// RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
+// that can reference Gateway objects.
+type RouteContext interface {
+	client.Object
+
+	// GetRouteType returns the Kind of the Route object, HTTPRoute,
+	// TLSRoute, TCPRoute, UDPRoute etc.
+	GetRouteType() string
+
+	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
+	// objects being implemented are of type v1beta1.
+	// GetHostnames returns the hosts targeted by the Route object.
+	GetHostnames() []string
+
+	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
+	// objects being implemented are of type v1beta1.
+	// GetParentReferences returns the ParentReference of the Route object.
+	GetParentReferences() []v1beta1.ParentReference
+
+	// GetRouteParentContext returns RouteParentContext by using the Route
+	// objects' ParentReference.
+	GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext
 }
 
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
@@ -173,6 +239,22 @@ type HTTPRouteContext struct {
 	*v1beta1.HTTPRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (h *HTTPRouteContext) GetRouteType() string {
+	return KindHTTPRoute
+}
+
+func (h *HTTPRouteContext) GetHostnames() []string {
+	hostnames := make([]string, len(h.Spec.Hostnames))
+	for idx, s := range h.Spec.Hostnames {
+		hostnames[idx] = string(s)
+	}
+	return hostnames
+}
+
+func (h *HTTPRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	return h.Spec.ParentRefs
 }
 
 func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
@@ -215,20 +297,96 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 	ctx := &RouteParentContext{
 		ParentReference: parentRef,
 
-		route:                h.HTTPRoute,
+		httpRoute:            h.HTTPRoute,
 		routeParentStatusIdx: routeParentStatusIdx,
 	}
 	h.parentRefs[forParentRef] = ctx
 	return ctx
 }
 
+// TLSRouteContext wraps a TLSRoute and provides helper methods for
+// accessing the route's parents.
+type TLSRouteContext struct {
+	*v1alpha2.TLSRoute
+
+	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (t *TLSRouteContext) GetRouteType() string {
+	return KindTLSRoute
+}
+
+func (t *TLSRouteContext) GetHostnames() []string {
+	hostnames := make([]string, len(t.Spec.Hostnames))
+	for idx, s := range t.Spec.Hostnames {
+		hostnames[idx] = string(s)
+	}
+	return hostnames
+}
+
+func (t *TLSRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	parentReferences := make([]v1beta1.ParentReference, len(t.Spec.ParentRefs))
+	for idx, p := range t.Spec.ParentRefs {
+		parentReferences[idx] = UpgradeParentReference(p)
+	}
+	return parentReferences
+}
+
+func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
+	if t.parentRefs == nil {
+		t.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+	}
+
+	if ctx := t.parentRefs[forParentRef]; ctx != nil {
+		return ctx
+	}
+
+	var parentRef *v1beta1.ParentReference
+	for i, p := range t.Spec.ParentRefs {
+		p := UpgradeParentReference(p)
+		if *p.Namespace == *forParentRef.Namespace && p.Name == forParentRef.Name {
+			upgraded := UpgradeParentReference(t.Spec.ParentRefs[i])
+			parentRef = &upgraded
+			break
+		}
+	}
+	if parentRef == nil {
+		panic("parentRef not found")
+	}
+
+	routeParentStatusIdx := -1
+	for i := range t.Status.Parents {
+		if UpgradeParentReference(t.Status.Parents[i].ParentRef) == forParentRef {
+			routeParentStatusIdx = i
+			break
+		}
+	}
+	if routeParentStatusIdx == -1 {
+		t.Status.Parents = append(t.Status.Parents, v1alpha2.RouteParentStatus{ParentRef: DowngradeParentReference(forParentRef)})
+		routeParentStatusIdx = len(t.Status.Parents) - 1
+	}
+
+	ctx := &RouteParentContext{
+		ParentReference: parentRef,
+
+		tlsRoute:             t.TLSRoute,
+		routeParentStatusIdx: routeParentStatusIdx,
+	}
+	t.parentRefs[forParentRef] = ctx
+	return ctx
+}
+
 // RouteParentContext wraps a ParentReference and provides helper methods for
 // setting conditions and other status information on the associated
-// HTTPRoute, etc.
+// HTTPRoute, TLSRoute etc.
 type RouteParentContext struct {
 	*v1beta1.ParentReference
 
-	route                *v1beta1.HTTPRoute
+	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
+	// a single field pointing to *v1beta1.RouteStatus.
+	httpRoute *v1beta1.HTTPRoute
+	tlsRoute  *v1alpha2.TLSRoute
+
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
 }
@@ -237,43 +395,77 @@ func (r *RouteParentContext) SetListeners(listeners ...*ListenerContext) {
 	r.listeners = append(r.listeners, listeners...)
 }
 
-func (r *RouteParentContext) SetCondition(conditionType v1beta1.RouteConditionType, status metav1.ConditionStatus, reason v1beta1.RouteConditionReason, message string) {
+func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1beta1.RouteConditionType, status metav1.ConditionStatus, reason v1beta1.RouteConditionReason, message string) {
 	cond := metav1.Condition{
 		Type:               string(conditionType),
 		Status:             status,
 		Reason:             string(reason),
 		Message:            message,
-		ObservedGeneration: r.route.Generation,
+		ObservedGeneration: route.GetGeneration(),
 		LastTransitionTime: metav1.NewTime(time.Now()),
 	}
 
 	idx := -1
-	for i, existing := range r.route.Status.Parents[r.routeParentStatusIdx].Conditions {
-		if existing.Type == cond.Type {
-			// return early if the condition is unchanged
-			if existing.Status == cond.Status &&
-				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message {
-				return
+	switch route.GetRouteType() {
+	case KindHTTPRoute:
+		for i, existing := range r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions {
+			if existing.Type == cond.Type {
+				// return early if the condition is unchanged
+				if existing.Status == cond.Status &&
+					existing.Reason == cond.Reason &&
+					existing.Message == cond.Message {
+					return
+				}
+				idx = i
+				break
 			}
-			idx = i
-			break
+		}
+
+		if idx > -1 {
+			r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
+		} else {
+			r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
+		}
+	case KindTLSRoute:
+		for i, existing := range r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions {
+			if existing.Type == cond.Type {
+				// return early if the condition is unchanged
+				if existing.Status == cond.Status &&
+					existing.Reason == cond.Reason &&
+					existing.Message == cond.Message {
+					return
+				}
+				idx = i
+				break
+			}
+		}
+
+		if idx > -1 {
+			r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
+		} else {
+			r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
 		}
 	}
+}
 
-	if idx > -1 {
-		r.route.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
-	} else {
-		r.route.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.route.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
+func (r *RouteParentContext) ResetConditions(route RouteContext) {
+	switch route.GetRouteType() {
+	case KindHTTPRoute:
+		r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
+	case KindTLSRoute:
+		r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 	}
 }
 
-func (r *RouteParentContext) ResetConditions() {
-	r.route.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
-}
-
-func (r *RouteParentContext) IsAccepted() bool {
-	for _, cond := range r.route.Status.Parents[r.routeParentStatusIdx].Conditions {
+func (r *RouteParentContext) IsAccepted(route RouteContext) bool {
+	var conditions []metav1.Condition
+	switch route.GetRouteType() {
+	case KindHTTPRoute:
+		conditions = r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions
+	case KindTLSRoute:
+		conditions = r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions
+	}
+	for _, cond := range conditions {
 		if cond.Type == string(v1beta1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
 			return true
 		}
