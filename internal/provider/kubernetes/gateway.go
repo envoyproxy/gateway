@@ -202,14 +202,23 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		// update address field and ready condition
 		status.UpdateGatewayStatusReadyCondition(&gw, svc, deployment)
 
-		// publish status
-		// do it inline and not using the status updater which does not update
-		// the Status.Addresses field.
-		if err := r.client.Status().Update(ctx, &gw); err != nil {
-			r.log.Error(err, "error updating status of gateway", "name", gw.Name)
-		}
-
 		key := utils.NamespacedName(&gw)
+		// publish status
+		// do it inline since this code flow updates the
+		// Status.Addresses field whereas the message bus / subscriber
+		// does not.
+		r.statusUpdater.Send(status.Update{
+			NamespacedName: key,
+			Resource:       new(gwapiv1b1.Gateway),
+			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+				_, ok := obj.(*gwapiv1b1.Gateway)
+				if !ok {
+					panic(fmt.Sprintf("unsupported object type %T", obj))
+				}
+				return &gw
+			}),
+		})
+
 		// only store the resource if it does not exist or it has a newer spec.
 		if v, ok := r.resources.Gateways.Load(key); !ok || (gw.Generation > v.Generation) {
 			r.resources.Gateways.Store(key, &gw)
