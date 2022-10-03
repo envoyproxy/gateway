@@ -62,15 +62,28 @@ with the `envoyproxy/gateway-dev:latest` Envoy Gateway image into a Kubernetes c
 * Run `make kube-demo-undeploy` to delete the resources created by the `make kube-demo` command.
 
 ### Run Gateway API Conformance Tests
-* Run `make conformance` to run Gateway API Conformance tests using `envoy-gateway` in a
-local Kind cluster. Go [here](https://gateway-api.sigs.k8s.io/concepts/conformance/) to learn
-more about the tests.
+The commands below build and push the Envoy Gateway image to your hub, deploy Envoy Gateway to the Kubernetes cluster,
+and run the Gateway API conformance tests. Refer to the Gateway API [conformance homepage][conform] to learn more about
+the tests.
 
-**_NOTE:_** Conformance tests against a kind cluster is currently unsupported on Mac computers.
-As a workaround, you could run this against your own Kubernetes cluster (such as Kubernetes on Docker Desktop) using this command -
-`IMAGE=docker.io/you/gateway-dev make push-multiarch && IMAGE=docker.io/you/gateway-dev make kube-deploy && make run-conformance`
-which builds and pushes the Envoy-Gateway image to your hub, deploys Envoy Gateway resources into your cluster
-and runs the Gateway API conformance tests.
+#### On a Linux Host
+* Run `make conformance` to run Gateway API conformance tests against Envoy Gateway in a local Kind cluster.
+
+#### On a Mac Host
+Since Mac doesn't support [directly exposing][kind_lb] the Docker network to the Mac host, use one of the following
+workarounds to run conformance tests:
+
+- Run Envoy Gateway in your own Kubernetes cluster and then run `IMAGE=docker.io/you/gateway-dev make push-multiarch &&
+IMAGE=docker.io/you/gateway-dev make kube-deploy && make run-conformance`
+
+- Run Docker Desktop with [Kubernetes support][docker_kube] and then run `IMAGE=docker.io/you/gateway-dev make
+push-multiarch && IMAGE=docker.io/you/gateway-dev make kube-install-image && IMAGE=docker.io/you/gateway-dev make
+kube-deploy && make run-conformance`
+- Install and run [Docker Mac Net Connect][mac_connect] and then run `IMAGE=docker.io/you/gateway-dev make
+push-multiarch && IMAGE=docker.io/you/gateway-dev make kube-install-image && IMAGE=docker.io/you/gateway-dev make
+kube-deploy && make run-conformance`.
+
+**_NOTE:_**  Replace `IMAGE` with your registry's image name.
 
 ### Debugging the Envoy Config
 An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port (currently `19000`)
@@ -85,3 +98,7 @@ There are many other endpoints on the [Envoy admin interface](https://www.envoyp
 [make]: https://www.gnu.org/software/make/
 [gha]: https://docs.github.com/en/actions
 [kind]: https://kind.sigs.k8s.io/
+[conform]: https://gateway-api.sigs.k8s.io/concepts/conformance/
+[kind_lb]: https://kind.sigs.k8s.io/docs/user/loadbalancer/
+[docker_kube]: https://docs.docker.com/desktop/kubernetes/
+[mac_connect]: https://github.com/chipmk/docker-mac-net-connect
