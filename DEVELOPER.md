@@ -63,7 +63,7 @@ more about the tests.
 As a workaround, you could run this against your own Kubernetes cluster (such as Kubernetes on Docker Desktop) using this command -
 `IMAGE=docker.io/you/gateway-dev make push-multiarch && IMAGE=docker.io/you/gateway-dev make kube-deploy && make run-conformance`
 which builds and pushes the Envoy-Gateway image to your hub, deploys Envoy Gateway resources into your cluster
-and run the Gateway API conformance tests.
+and runs the Gateway API conformance tests.
 
 ### Debugging the Envoy Config
 An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port (currently `19000`)
@@ -74,7 +74,6 @@ on the Envoy Gateway deployment so that it can be accessed locally.
 Now you are able to view the running Envoy configuration by navigating to `127.0.0.1:19000/config_dump`.
 
 There are many other endpoints on the [Envoy admin interface](https://www.envoyproxy.io/docs/envoy/v1.23.0/operations/admin#operations-admin-interface) that may be helpful when debugging.
-
 
 [make]: https://www.gnu.org/software/make/
 [gha]: https://docs.github.com/en/actions
