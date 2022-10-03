@@ -59,8 +59,11 @@ with the `envoyproxy/gateway-dev:latest` Envoy Gateway image into a Kubernetes c
 local Kind cluster. Go [here](https://gateway-api.sigs.k8s.io/concepts/conformance/) to learn
 more about the tests.
 
-**_NOTE:_**  This command is currently Work in Progress. :construction::construction::construction::construction:
-
+**_NOTE:_** Conformance tests against a kind cluster is currently unsupported on Mac computers.
+As a workaround, you could run this against your own Kubernetes cluster (such as Kubernetes on Docker Desktop) using this command -
+`IMAGE=docker.io/you/gateway-dev make push-multiarch && IMAGE=docker.io/you/gateway-dev make kube-deploy && make run-conformance`
+which builds and pushes the Envoy-Gateway image to your hub, deploys Envoy Gateway resources into your cluster
+and runs the Gateway API conformance tests.
 
 ### Debugging the Envoy Config
 An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port (currently `19000`)
