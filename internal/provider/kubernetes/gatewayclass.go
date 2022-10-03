@@ -114,9 +114,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	acceptedGC := cc.acceptedClass()
-	// Reset gatewayclasses since this Reconcile function never performs a Delete and
-	// we are only interested in the first element.
-	r.resources.DeleteGatewayClasses()
 	if acceptedGC == nil {
 		r.log.Info("failed to find an accepted gatewayclass")
 		return reconcile.Result{}, nil
