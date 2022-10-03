@@ -25,7 +25,8 @@ var (
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
-		name string
+		name           string
+		requireSecrets bool
 	}{
 		{
 			name: "empty",
@@ -45,6 +46,10 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "http-route-weighted-invalid-backend",
 		},
+		{
+			name:           "simple-tls",
+			requireSecrets: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -59,6 +64,10 @@ func TestTranslate(t *testing.T) {
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
+			if tc.requireSecrets {
+				secrets := tCtx.XdsResources[resource.SecretType]
+				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
+			}
 		})
 	}
 }

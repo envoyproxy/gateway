@@ -1,0 +1,14 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  tls:
+    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
+  routes:
+  - name: "first-route" 
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
