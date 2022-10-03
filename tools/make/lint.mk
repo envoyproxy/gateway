@@ -9,20 +9,15 @@ GITHUB_ACTION ?=
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
 
-PHONY: lint-deps
-lint-deps: ## Everything necessary to lint (useful to separate out in the logs)
-
 GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
 .PHONY: lint.golint
 lint: lint.golint
-lint-deps: $(tools/golangci-lint)
 lint.golint: $(tools/golangci-lint)
 	@echo Running Go linter ...
 	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
-lint-deps: $(tools/yamllint)
 lint.yamllint: $(tools/yamllint)
 	@echo Running YAML linter ...
 	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint $$(git ls-files :*.yml :*.yaml | xargs -L1 dirname | sort -u) 
@@ -30,7 +25,6 @@ lint.yamllint: $(tools/yamllint)
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
 .PHONY: lint.codespell
 lint: lint.codespell
-lint-deps: $(tools/codespell)
 lint.codespell: CODESPELL_SKIP := $(shell cat tools/linter/codespell/.codespell.skip | tr \\n ',')
 lint.codespell: $(tools/codespell)
 	@echo Running Codespell linter ...
@@ -53,7 +47,6 @@ lint.codespell: $(tools/codespell)
 
 .PHONY: lint.whitenoise
 lint: lint.whitenoise
-lint-deps: $(tools/whitenoise)
 lint.whitenoise: $(tools/whitenoise)
 	@echo Running WhiteNoise linter ...
 	$(tools/whitenoise)

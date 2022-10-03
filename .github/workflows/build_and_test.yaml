@@ -18,7 +18,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps
-    - run: make lint-deps
     - run: make -k lint
 
   gen-check:
