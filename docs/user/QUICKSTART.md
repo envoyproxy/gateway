@@ -4,7 +4,7 @@ This guide will help you get started with Envoy Gateway in a few simple steps.
 ## Prerequisites
 A Kubernetes cluster.
 
-__Note:__ Envoy Gateway is tested against Kubernetes v1.24.1.
+__Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
 ## Installation
 Install the Gateway API CRDs:
