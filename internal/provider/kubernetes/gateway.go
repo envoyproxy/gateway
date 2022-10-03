@@ -211,11 +211,15 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 			NamespacedName: key,
 			Resource:       new(gwapiv1b1.Gateway),
 			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-				_, ok := obj.(*gwapiv1b1.Gateway)
+				g, ok := obj.(*gwapiv1b1.Gateway)
 				if !ok {
 					panic(fmt.Sprintf("unsupported object type %T", obj))
 				}
-				return &gw
+				gCopy := g.DeepCopy()
+				gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, gw.Status.Conditions...)
+				gCopy.Status.Addresses = gw.Status.Addresses
+				return gCopy
+
 			}),
 		})
 
@@ -360,7 +364,6 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
 					gCopy := g.DeepCopy()
-					gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, val.Status.Conditions...)
 					gCopy.Status.Listeners = val.Status.Listeners
 					return gCopy
 				}),
