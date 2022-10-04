@@ -56,6 +56,11 @@ with the `envoyproxy/gateway-dev:latest` Envoy Gateway image into a Kubernetes c
 
 **_NOTE:_**  Replace `IMAGE` with your registry's image name.
 
+### Configure a demo setup
+* Run `make kube-demo` to deploy a demo backend service, gatewayclass, gateway and httproute resource
+(similar to steps outlined in the [Quickstart](https://github.com/envoyproxy/gateway/blob/main/docs/user/QUICKSTART.md) docs) and test the configuration.
+* Run `make kube-demo-undeploy` to delete the resources created by the `make kube-demo` command.
+
 ### Run Gateway API Conformance Tests
 * Run `make conformance` to run Gateway API Conformance tests using `envoy-gateway` in a
 local Kind cluster. Go [here](https://gateway-api.sigs.k8s.io/concepts/conformance/) to learn
