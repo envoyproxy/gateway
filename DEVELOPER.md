@@ -47,6 +47,8 @@ Envoy Gateway is built using a [make][make]-based build system. Our CI is based 
 * Run `make create-cluster` to create a [Kind][kind] cluster.
 * Run `make kube-install-image` to build an image and load it into the Kind cluster.
 
+**_NOTE:_** Envoy Gateway is tested against Kubernetes v1.24.0.
+
 ### Deploying Envoy Gateway in Kubernetes
 * Run `IMAGE=envoyproxy/gateway-dev TAG=latest make kube-deploy` to deploy Envoy Gateway resources, including the Gateway API CRDs,
 with the `envoyproxy/gateway-dev:latest` Envoy Gateway image into a Kubernetes cluster (linked to the current kube context).
