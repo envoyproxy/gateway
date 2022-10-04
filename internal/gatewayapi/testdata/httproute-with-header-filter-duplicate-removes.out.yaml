@@ -62,10 +62,6 @@ httpRoutes:
       conditions:
       - type: Accepted
         status: "True"
-        reason: Accepted
-        message: Route is accepted
-      - type: ResolvedRefs
-        status: "False"
         reason: UnsupportedValue
         message: "RequestHeaderModifier Filter already configures request header: some-header-1 to be removed, ignoring second entry"
 xdsIR:

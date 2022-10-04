@@ -66,10 +66,6 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Route is accepted
-      - type: ResolvedRefs
         status: "False"
         reason: UnsupportedValue
         message: "RequestHeaderModifier Filter cannot set a header with an empty name"
