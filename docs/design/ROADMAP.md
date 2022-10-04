@@ -5,12 +5,13 @@ the project.
 
 ## Contributing to the Roadmap
 
-- To propose a roadmap item, create an [issue][issue] or join a [community meeting][meeting] to discuss your desired
-  feature. Update this document if your requested feature is accepted for a particular [milestone][milestones].
-- To help with an existing roadmap item, comment on the associated issue. If an item doesn't have an issue, create one
-  and open a [pull request][PR] linking the issue to an exiting roadmap item.
-- Submit a [pull request][PR] to add a feature to the roadmap. __Note:__ The feature should be discussed in an issue or
-  a community meeting before implementing the feature.
+- To add a feature to the roadmap, create an [issue][issue] or join a [community meeting][meeting] to discuss your use
+  case. If your feature is accepted, a maintainer will assign your issue to a [release milestone][milestones] and update
+  this document accordingly.
+- To help with an existing roadmap item, comment on or assign yourself to the associated issue.
+- If a roadmap item doesn't have an issue, create one, assign yourself to the issue, and reference this document. A
+  maintainer will submit a [pull request][PR] to add the feature to the roadmap. __Note:__ The feature should be
+  discussed in an issue or a community meeting before implementing it.
 
 If you don't know where to start contributing, help is needed to reduce technical, automation, and documentation debt.
 Look for issues with the `help wanted` label to get started.
@@ -46,8 +47,8 @@ contributing to the project.
 [pr]: https://github.com/envoyproxy/gateway/compare
 [milestones]: https://github.com/envoyproxy/gateway/milestones
 [v0.2.0]: https://github.com/envoyproxy/gateway/milestone/1
-[v0.3.0]: https://github.com/envoyproxy/gateway/milestone/9
-[v0.4.0]: https://github.com/envoyproxy/gateway/milestone/10
+[v0.3.0]: https://github.com/envoyproxy/gateway/milestone/7
+[v0.4.0]: https://github.com/envoyproxy/gateway/milestone/12
 [60]: https://github.com/envoyproxy/gateway/issues/60
 [64]: https://github.com/envoyproxy/gateway/issues/64
 [17]: https://github.com/envoyproxy/gateway/issues/17
