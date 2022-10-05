@@ -1,7 +1,7 @@
 Envoy Gateway: envoyproxy + Gateway API
 =======================================
 
-Release |version|
+Release |version| (Envoy |envoyVersion|, Gateway API |gatewayAPIVersion|)
 
 .. image:: https://img.shields.io/badge/slack-join-orange.svg
     :target: https://envoyproxy.io/slack
@@ -19,5 +19,6 @@ standalone or Kubernetes-based application gateway.
   :maxdepth: 2
 
   intro/index
+  intro/compatibility
   about_docs
   get_involved
