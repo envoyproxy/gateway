@@ -1,3 +1,5 @@
+// Portions of this code are based on code from Contour.
+
 package gatewayapi
 
 import (
@@ -31,6 +33,14 @@ func SectionNamePtrV1Alpha2(sectionName string) *v1alpha2.SectionName {
 func PortNumPtrV1Alpha2(port int) *v1alpha2.PortNumber {
 	pn := v1alpha2.PortNumber(port)
 	return &pn
+}
+
+func UpgradeParentReferences(old []v1alpha2.ParentReference) []v1beta1.ParentReference {
+	newParentReferences := make([]v1beta1.ParentReference, len(old))
+	for _, o := range old {
+		newParentReferences = append(newParentReferences, UpgradeParentReference(o))
+	}
+	return newParentReferences
 }
 
 // UpgradeParentReference converts v1alpha2.ParentReference to v1beta1.ParentReference

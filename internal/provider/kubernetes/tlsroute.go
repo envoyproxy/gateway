@@ -19,11 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/status"
 )
 
 const (
@@ -31,19 +33,23 @@ const (
 )
 
 type tlsRouteReconciler struct {
-	client client.Client
-	log    logr.Logger
+	client          client.Client
+	log             logr.Logger
+	statusUpdater   status.Updater
+	classController gwapiv1b1.GatewayController
 
 	resources *message.ProviderResources
 }
 
 // newTLSRouteController creates the tlsroute controller from mgr. The controller will be pre-configured
 // to watch for TLSRoute objects across all namespaces.
-func newTLSRouteController(mgr manager.Manager, cfg *config.Server, resources *message.ProviderResources) error {
+func newTLSRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
 	r := &tlsRouteReconciler{
-		client:    mgr.GetClient(),
-		log:       cfg.Logger,
-		resources: resources,
+		client:          mgr.GetClient(),
+		log:             cfg.Logger,
+		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		statusUpdater:   su,
+		resources:       resources,
 	}
 
 	c, err := controller.New("tlsroute", mgr, controller.Options{Reconciler: r})
@@ -80,6 +86,14 @@ func newTLSRouteController(mgr manager.Manager, cfg *config.Server, resources *m
 		return err
 	}
 
+	// Watch Gateway CRUDs and reconcile affected TLSRoutes.
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1b1.Gateway{}},
+		handler.EnqueueRequestsFromMapFunc(r.getTLSRoutesForGateway),
+	); err != nil {
+		return err
+	}
+
 	// Watch Service CRUDs and reconcile affected TLSRoutes.
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
@@ -90,6 +104,48 @@ func newTLSRouteController(mgr manager.Manager, cfg *config.Server, resources *m
 
 	r.log.Info("watching tlsroute objects")
 	return nil
+}
+
+// getTLSRoutesForGateway uses a Gateway obj to fetch TLSRoutes, iterating
+// through them and creating a reconciliation request for each valid TLSRoute
+// that references obj.
+func (r *tlsRouteReconciler) getTLSRoutesForGateway(obj client.Object) []reconcile.Request {
+	ctx := context.Background()
+
+	gw, ok := obj.(*gwapiv1b1.Gateway)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return []reconcile.Request{}
+	}
+
+	routes := &gwapiv1a2.TLSRouteList{}
+	if err := r.client.List(ctx, routes); err != nil {
+		return []reconcile.Request{}
+	}
+
+	requests := []reconcile.Request{}
+	for i := range routes.Items {
+		route := routes.Items[i]
+		gateways, err := validateParentRefs(ctx, r.client, route.Namespace, r.classController, gatewayapi.UpgradeParentReferences(route.Spec.ParentRefs))
+		if err != nil {
+			r.log.Info("invalid parentRefs for tlsroute, bypassing reconciliation", "object", obj)
+			continue
+		}
+		for j := range gateways {
+			if gateways[j].Namespace == gw.Namespace && gateways[j].Name == gw.Name {
+				req := reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: route.Namespace,
+						Name:      route.Name,
+					},
+				}
+				requests = append(requests, req)
+				break
+			}
+		}
+	}
+
+	return requests
 }
 
 // getTLSRoutesForService uses a Service obj to fetch TLSRoutes that references
@@ -118,8 +174,6 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 	log := r.log.WithValues("namespace", request.Namespace, "name", request.Name)
 
 	log.Info("reconciling tlsroute")
-
-	defer r.resources.RouteInitializedOnce.Do(r.resources.RoutesInitialized.Done)
 
 	// Fetch all TLSRoutes from the cache.
 	routeList := &gwapiv1a2.TLSRouteList{}

@@ -51,13 +51,10 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
 
-	// Add once for all types of Routes that we watch for. We need at least one
-	// Route object to proceed with translation.
-	resources.RoutesInitialized.Add(1)
 	if err := newHTTPRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
-	if err := newTLSRouteController(mgr, svr, resources); err != nil {
+	if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create tlsroute controller: %w", err)
 	}
 
