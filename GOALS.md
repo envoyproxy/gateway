@@ -68,8 +68,8 @@ with Envoy Proxy, xDS, or go-control-plane.
 _In order of priority_
 
 ### 1. Application developer
-The application developer spends the majority of their time developing business logic code.  They require the ability to
-manage access to their application.
+The application developer spends the majority of their time developing business logic code. They require the ability to
+manage access to their application. They understand and decide how to expose, version and upgrade their applications and are responsible for Service specific configurations like timeouts, redirects, request matching/filtering etc.
 
 ### 2. Infrastructure administrators
 The infrastructure administrators are responsible for the installation, maintenance, and operation of

@@ -1,13 +1,13 @@
 # Gateway API Translator Design
 
 ## Assumptions
-- initially target core conformance features only, to be followed by extended conformance features
+- Initially target core conformance features only, to be followed by extended conformance features
 
 ## Inputs and Outputs
 
 The main inputs to the Gateway API translator are:
 - the GatewayClass to process
-- Gateways, HTTPRoutes, Services, Secrets
+- Gateways, HTTPRoutes, Services, Secrets, ReferenceGrants
 
 The outputs of the Gateway API translator are:
 - IR
@@ -168,7 +168,7 @@ spec:
 ## Computing Status
 
 Gateway API specifies a rich set of status fields & conditions for each resource.
-To be conformant, Envoy Gateway needs to compute the appropriate status fields and conditions as it's processing resources.
+To be conformant, Envoy Gateway needs to compute the appropriate status fields and conditions as it is processing resources.
 
 Status needs to be computed and set for:
 - the GatewayClass (gatewayclass.status.conditions)
@@ -212,7 +212,7 @@ Each step may produce (1) IR; and (2) status updates on Gateway API resources.
 
 ## Context Structs
 
-To help store, access and manipulate information as it's processed during the translation process, a set of context structs will be used.
+To help store, access and manipulate information as it is processed during the translation process, a set of context structs will be used.
 These structs will wrap a given Gateway API type, and add additional fields and methods to support processing.
 For example, below is a partial sketch of the ListenerContext struct:
 
