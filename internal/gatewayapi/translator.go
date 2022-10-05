@@ -549,7 +549,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
-				xdsIR.HTTP = append(xdsIR.HTTP, irListener)
+				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			case v1beta1.TLSProtocolType:
 				irListener := &ir.TLSListener{
 					Name:    irListenerName(listener),
@@ -561,9 +561,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				} else {
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
-				xdsIR.TLS = append(xdsIR.TLS, irListener)
+				gwXdsIR.TLS = append(gwXdsIR.TLS, irListener)
 			}
-			gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
 			if !slices.Contains(foundPorts, servicePort) {
@@ -1152,8 +1151,8 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						})
 					}
 				}
-
-				irListener := xdsIR.GetListener(irListenerName(listener))
+				irKey := irStringKey(listener.gateway)
+				irListener := xdsIR[irKey].GetListener(irListenerName(listener))
 				if irListener != nil {
 					irListener.Routes = append(irListener.Routes, perHostRoutes...)
 				}
@@ -1347,8 +1346,8 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 						})
 					}
 				}
-
-				irListener := xdsIR.GetTLSListener(irListenerName(listener))
+				irKey := irStringKey(listener.gateway)
+				irListener := xdsIR[irKey].GetTLSListener(irListenerName(listener))
 				if irListener != nil {
 					irListener.Routes = append(irListener.Routes, perHostRoutes...)
 				}
