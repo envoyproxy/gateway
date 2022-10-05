@@ -71,6 +71,10 @@ httpRoutes:
               status: "True"
               reason: Accepted
               message: Route is accepted
+            - type: ResolvedRefs
+              status: "True"
+              reason: ResolvedRefs
+              message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -112,7 +116,7 @@ infraIR:
       listeners:
         - address: ""
           ports:
-            - name: http-1
+            - name: http-2
               protocol: "HTTP"
               servicePort: 80
               containerPort: 10080

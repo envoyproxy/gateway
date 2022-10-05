@@ -84,6 +84,10 @@ httpRoutes:
         reason: UnsupportedValue
         # Currently only one invalid value status will be set. If there are multiple, then only the latest is displayed until that issue is resolved.
         message: "RequestHeaderModifier Filter already configures request header: set-header-4 to be added/set, ignoring second entry"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:

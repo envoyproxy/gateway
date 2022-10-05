@@ -590,6 +590,13 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 		return nil, weight
 	}
 
+	parentRef.SetCondition(
+		v1beta1.RouteConditionResolvedRefs,
+		metav1.ConditionTrue,
+		v1beta1.RouteReasonResolvedRefs,
+		fmt.Sprintf("Service %s/%s found", NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
+	)
+
 	var portFound bool
 	for _, port := range service.Spec.Ports {
 		if port.Port == int32(*backendRef.Port) {
@@ -1027,6 +1034,8 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					ruleRoutes = append(ruleRoutes, irRoute)
 				}
 
+				var resolvedBackends int
+				var unresolvedBackends []string
 				for _, backendRef := range rule.BackendRefs {
 
 					destination, backendWeight := buildRuleRouteDest(backendRef, parentRef, httpRoute, resources)
@@ -1044,6 +1053,22 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						}
 					}
 
+					svcNs, svcName := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)
+					service := resources.GetService(svcNs, svcName)
+					if service == nil {
+						unresolvedBackends = append(unresolvedBackends, fmt.Sprintf("Service %s/%s not found", svcNs, svcName))
+					} else {
+						resolvedBackends++
+					}
+				}
+
+				if len(rule.BackendRefs) != resolvedBackends {
+					parentRef.SetCondition(
+						v1beta1.RouteConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.RouteReasonBackendNotFound,
+						strings.Join(unresolvedBackends, ", "),
+					)
 				}
 
 				// If the route has no valid backends then just use a direct response and don't fuss with weighted responses

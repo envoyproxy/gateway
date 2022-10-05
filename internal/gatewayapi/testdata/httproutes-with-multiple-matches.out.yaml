@@ -53,6 +53,10 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service envoy-gateway/service-1 found
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
@@ -85,6 +89,10 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service envoy-gateway/service-1 found
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
@@ -114,6 +122,10 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service envoy-gateway/service-2 found
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
@@ -146,6 +158,10 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service envoy-gateway/service-1 found
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
@@ -175,6 +191,10 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service envoy-gateway/service-2 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:

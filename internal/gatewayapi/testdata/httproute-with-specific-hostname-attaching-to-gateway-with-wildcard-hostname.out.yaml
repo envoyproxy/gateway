@@ -56,6 +56,10 @@ httpRoutes:
               status: "True"
               reason: Accepted
               message: Route is accepted
+            - type: ResolvedRefs
+              status: "True"
+              reason: ResolvedRefs
+              message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:

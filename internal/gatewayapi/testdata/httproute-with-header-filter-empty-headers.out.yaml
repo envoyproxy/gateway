@@ -69,6 +69,10 @@ httpRoutes:
         status: "False"
         reason: UnsupportedValue
         message: "RequestHeaderModifier Filter cannot set a header with an empty name"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:

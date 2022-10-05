@@ -56,6 +56,10 @@ httpRoutes:
         status: "False"
         reason: NoMatchingListenerHostname
         message: There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:

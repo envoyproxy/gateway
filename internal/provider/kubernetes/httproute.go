@@ -256,8 +256,8 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 							log.Info("deleted service from resource map")
 						}
 					}
-					return reconcile.Result{}, fmt.Errorf("failed to get service %s/%s",
-						svcKey.Namespace, svcKey.Name)
+					r.log.Error(err, "failed to get service", "namespace", svcKey.Namespace, "name", svcKey.Name)
+					return reconcile.Result{}, nil
 				}
 
 				// The backendRef Service exists, so add it to the resource map.

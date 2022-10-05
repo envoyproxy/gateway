@@ -61,7 +61,7 @@ httpRoutes:
       - type: ResolvedRefs
         status: "False"
         reason: BackendNotFound
-        message: "Service default/service-that-doesnt-exist-2 not found"
+        message: "Service default/service-that-doesnt-exist not found, Service default/service-that-doesnt-exist-2 not found"
 xdsIR:
   envoy-gateway-gateway-1:
     http:

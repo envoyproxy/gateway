@@ -64,6 +64,10 @@ httpRoutes:
         status: "True"
         reason: UnsupportedValue
         message: "RequestHeaderModifier Filter already configures request header: some-header-1 to be removed, ignoring second entry"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:

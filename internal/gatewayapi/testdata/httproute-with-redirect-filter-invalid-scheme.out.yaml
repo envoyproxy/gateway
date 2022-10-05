@@ -63,6 +63,10 @@ httpRoutes:
         status: "False"
         reason: UnsupportedValue
         message: "Scheme: unknown is unsupported, only 'https' and 'http' are supported"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Service default/service-1 found
 xdsIR:
   envoy-gateway-gateway-1:
     http:
