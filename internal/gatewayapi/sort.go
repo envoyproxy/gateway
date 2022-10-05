@@ -1,0 +1,69 @@
+package gatewayapi
+
+import (
+	"sort"
+
+	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+type XdsIRRoutesSlice []*ir.HTTPRoute
+
+func (x XdsIRRoutesSlice) Len() int      { return len(x) }
+func (x XdsIRRoutesSlice) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+func (x XdsIRRoutesSlice) Less(i, j int) bool {
+	// 1. Sort based on characters in a matching path.
+	pCountI := pathMatchCount(x[i].PathMatch)
+	pCountJ := pathMatchCount(x[j].PathMatch)
+	if pCountI < pCountJ {
+		return true
+	}
+	if pCountI > pCountJ {
+		return false
+	}
+	// Equal case
+
+	// 2. Sort based on the number of Header matches.
+	hCountI := len(x[i].HeaderMatches)
+	hCountJ := len(x[j].HeaderMatches)
+	if hCountI < hCountJ {
+		return true
+	}
+	if hCountI > hCountJ {
+		return false
+	}
+	// Equal case
+
+	// 3. Sort based on the number of Query param matches.
+	qCountI := len(x[i].QueryParamMatches)
+	qCountJ := len(x[j].QueryParamMatches)
+	return qCountI < qCountJ
+}
+
+// sortXdsIR sorts the xdsIR based on the match precedence
+// defined in the Gateway API spec.
+// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
+func sortXdsIRMap(xdsIR XdsIRMap) {
+	for _, ir := range xdsIR {
+		ir := ir
+		sort.SliceStable(ir.HTTP, func(i, j int) bool { return ir.HTTP[i].Name < ir.HTTP[j].Name })
+		for _, http := range ir.HTTP {
+			// descending order
+			sort.Sort(sort.Reverse(XdsIRRoutesSlice(http.Routes)))
+		}
+	}
+}
+
+func pathMatchCount(pathMatch *ir.StringMatch) int {
+	if pathMatch != nil {
+		if pathMatch.Exact != nil {
+			return len(*pathMatch.Exact)
+		}
+		if pathMatch.Prefix != nil {
+			return len(*pathMatch.Prefix)
+		}
+		if pathMatch.SafeRegex != nil {
+			return len(*pathMatch.SafeRegex)
+		}
+	}
+	return 0
+}
