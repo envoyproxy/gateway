@@ -36,5 +36,6 @@ jobs:
           files: |
             release-artifacts/gatewayapi-crds.yaml
             release-artifacts/install.yaml
+            release-artifacts/quickstart.yaml
 
         

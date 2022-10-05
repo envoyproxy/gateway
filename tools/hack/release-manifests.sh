@@ -33,6 +33,9 @@ ${KUSTOMIZE} build > release-artifacts/install.yaml
 
 echo "Generated:" release-artifacts/install.yaml
 
+# Copy the quickstart manifest
+cp examples/kubernetes/quickstart.yaml release-artifacts/quickstart.yaml
+
 # Update the image in the Envoy Gateway deployment manifest.
 [[ -n "${TAG}" ]] && run::sed \
   "-es|image: envoyproxy/gateway-dev:.*$|image: envoyproxy/gateway:${TAG}|" \
