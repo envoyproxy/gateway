@@ -124,6 +124,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
 
+	// Sort xdsIR based on the Gateway API spec
+	t.sortXdsIR(xdsIR)
+
 	return newTranslateResult(gateways, httpRoutes, xdsIR, infraIR)
 }
 
@@ -491,8 +494,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
 			}
 		}
-		// sort result to ensure translation does not change across reboots.
-		sort.Slice(xdsIR[irKey].HTTP, func(i, j int) bool { return xdsIR[irKey].HTTP[i].Name < xdsIR[irKey].HTTP[j].Name })
 	}
 }
 
@@ -1131,6 +1132,63 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 	}
 
 	return relevantHTTPRoutes
+}
+
+// sortXdsIR sorts the xdsIR based on the match precedence
+// defined in the Gateway API spec.
+// https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
+func (t *Translator) sortXdsIR(xdsIR XdsIRMap) {
+	for _, ir := range xdsIR {
+		ir := ir
+		sort.SliceStable(ir.HTTP, func(i, j int) bool { return ir.HTTP[i].Name < ir.HTTP[j].Name })
+		for _, http := range ir.HTTP {
+			http := http
+			sort.Slice(http.Routes, func(i, j int) bool {
+				// 1. Sort based on characters in a matching path.
+				pCountI := pathMatchCount(http.Routes[i].PathMatch)
+				pCountJ := pathMatchCount(http.Routes[j].PathMatch)
+				if pCountI < pCountJ {
+					return true
+				}
+				if pCountI > pCountJ {
+					return false
+				}
+				// Equal case
+
+				// 2. Sort based on the number of Header matches.
+				hCountI := len(http.Routes[i].HeaderMatches)
+				hCountJ := len(http.Routes[j].HeaderMatches)
+				if hCountI < hCountJ {
+					return true
+				}
+				if hCountI > hCountJ {
+					return false
+				}
+				// Equal case
+
+				// 3. Sort based on the number of Query param matches.
+				qCountI := len(http.Routes[i].QueryParamMatches)
+				qCountJ := len(http.Routes[j].QueryParamMatches)
+				return qCountI < qCountJ
+			})
+		}
+	}
+}
+
+func pathMatchCount(pathMatch *ir.StringMatch) int {
+	var count int
+	if pathMatch != nil {
+		if pathMatch.Exact != nil {
+			count += len(*pathMatch.Exact)
+		}
+		if pathMatch.Prefix != nil {
+			count += len(*pathMatch.Prefix)
+		}
+		if pathMatch.SafeRegex != nil {
+			count += len(*pathMatch.SafeRegex)
+		}
+	}
+	return count
 }
 
 type crossNamespaceFrom struct {
