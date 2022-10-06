@@ -37,8 +37,8 @@ func PortNumPtrV1Alpha2(port int) *v1alpha2.PortNumber {
 
 func UpgradeParentReferences(old []v1alpha2.ParentReference) []v1beta1.ParentReference {
 	newParentReferences := make([]v1beta1.ParentReference, len(old))
-	for _, o := range old {
-		newParentReferences = append(newParentReferences, UpgradeParentReference(o))
+	for i, o := range old {
+		newParentReferences[i] = UpgradeParentReference(o)
 	}
 	return newParentReferences
 }

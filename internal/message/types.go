@@ -22,6 +22,7 @@ type ProviderResources struct {
 
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
 }
 
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {

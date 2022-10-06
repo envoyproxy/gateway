@@ -3,8 +3,8 @@ package runner
 import (
 	"context"
 
+	"gopkg.in/yaml.v2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -102,6 +102,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					newKeys = append(newKeys, key)
 				}
 			}
+
 			for key, val := range result.XdsIR {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
@@ -126,6 +127,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for _, httpRoute := range result.HTTPRoutes {
 				key := utils.NamespacedName(httpRoute)
 				r.ProviderResources.HTTPRouteStatuses.Store(key, httpRoute)
+			}
+			for _, tlsRoute := range result.TLSRoutes {
+				key := utils.NamespacedName(tlsRoute)
+				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
 			}
 		}
 	}

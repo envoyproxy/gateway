@@ -15,6 +15,7 @@ import (
 func validateParentRefs(ctx context.Context, client client.Client, namespace string,
 	gatewayClassController gwapiv1b1.GatewayController,
 	routeParentReferences []gwapiv1b1.ParentReference) ([]gwapiv1b1.Gateway, error) {
+
 	var ret []gwapiv1b1.Gateway
 	for i := range routeParentReferences {
 		ref := routeParentReferences[i]
@@ -24,6 +25,7 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 		if ref.Group != nil && *ref.Group != gwapiv1b1.GroupName {
 			return nil, fmt.Errorf("invalid Group %q", *ref.Group)
 		}
+
 		// Ensure the referenced Gateway exists, using the route's namespace unless
 		// specified by the parentRef.
 		ns := namespace
@@ -34,10 +36,12 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 			Namespace: ns,
 			Name:      string(ref.Name),
 		}
+
 		gw := new(gwapiv1b1.Gateway)
 		if err := client.Get(ctx, gwKey, gw); err != nil {
 			return nil, fmt.Errorf("failed to get gateway %s/%s: %v", gwKey.Namespace, gwKey.Name, err)
 		}
+
 		gcKey := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
 		gc := new(gwapiv1b1.GatewayClass)
 		if err := client.Get(ctx, gcKey, gc); err != nil {

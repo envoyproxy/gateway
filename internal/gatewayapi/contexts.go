@@ -334,7 +334,15 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	var parentRef *v1beta1.ParentReference
 	for i, p := range t.Spec.ParentRefs {
 		p := UpgradeParentReference(p)
-		if *p.Namespace == *forParentRef.Namespace && p.Name == forParentRef.Name {
+		defaultNamespace := v1beta1.Namespace("default")
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
+		}
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if *p.Namespace == *forParentRef.Namespace &&
+			p.Name == forParentRef.Name {
 			upgraded := UpgradeParentReference(t.Spec.ParentRefs[i])
 			parentRef = &upgraded
 			break
