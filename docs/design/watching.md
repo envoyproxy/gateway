@@ -11,7 +11,7 @@ pattern.
 
 ### pub
 
-Many of the things we communicate around are naturally named, either by a bare "name" string or by a "name"/"namespace"
+Many of the things we communicate around are naturally named, either by a bare "name" string or by a "namespace"/"name"
 tuple.  And because `watchable.Map` is typed, it makes sense to have one map for each type of thing (very similar to if
 we were using native Go `map`s).  For example, a struct that might be written to by the Kubernetes provider, and read by
 the IR translator:
@@ -28,7 +28,7 @@ the IR translator:
    }
    ```
 
-The Kubernetes provider updates the table by calling `table.Thing.Store(name, val)` and `table.Thing.Delete(name)`;
+The Kubernetes provider updates the table by calling `table.Thing.Store(key, val)` and `table.Thing.Delete(key)`;
 updating a map key with a value that is deep-equal (usually `reflect.DeepEqual`, but you can implement your own `.Equal`
 method) the current value is a no-op; it won't trigger an event for subscribers.  This is handy so that the publisher
 doesn't have as much state to keep track of; it doesn't need to know "did I already publish this thing", it can just
@@ -78,7 +78,7 @@ Or, to watch multiple maps in the same loop:
            if arg.HTTPRoutes == nil {
                arg.HTTPRoutes = k8sTable.HTTPRoutes.LoadAll()
            }
-           translate(irInput)
+           translate(arg)
        }
    }
    ```
