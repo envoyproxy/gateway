@@ -120,6 +120,7 @@ func conditionChanged(a, b metav1.Condition) bool {
 
 // MergeParentConditions merges the src parent conditions into the destination parent conditions
 // If the condition has not changed, the src condition is used instead of the destination condition.
+// Parents present in the src but not in the destination are discarded.
 func MergeParentConditions(dst, src []gwapiv1b1.RouteParentStatus) {
 	// Store existing parent conditions in a map and then
 	// merge them with newer parent conditions.
@@ -137,6 +138,7 @@ func MergeParentConditions(dst, src []gwapiv1b1.RouteParentStatus) {
 
 // MergeListenerConditions merges the src listener conditions into the destination listener conditions
 // If the condition has not changed, the src condition is used instead of the destination condition.
+// Listeners present in the src but not in the destination are discarded.
 func MergeListenerConditions(dst, src []gwapiv1b1.ListenerStatus) {
 	// Store existing parent conditions in a map and then
 	// merge them with newer parent conditions.
