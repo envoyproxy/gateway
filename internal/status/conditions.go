@@ -117,3 +117,37 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, l
 func conditionChanged(a, b metav1.Condition) bool {
 	return a.Status != b.Status || a.Reason != b.Reason || a.Message != b.Message
 }
+
+// MergeParentConditions merges the src parent conditions into the destination parent conditions
+// If the condition has not changed, the src condition is used instead of the destination condition.
+func MergeParentConditions(dst, src []gwapiv1b1.RouteParentStatus) {
+	// Store existing parent conditions in a map and then
+	// merge them with newer parent conditions.
+	pConds := make(map[gwapiv1b1.ParentReference][]metav1.Condition)
+	for _, p := range src {
+		pConds[p.ParentRef] = p.Conditions
+	}
+	for i := range dst {
+		p := &dst[i]
+		if conds, ok := pConds[p.ParentRef]; ok {
+			p.Conditions = MergeConditions(conds, p.Conditions...)
+		}
+	}
+}
+
+// MergeListenerConditions merges the src listener conditions into the destination listener conditions
+// If the condition has not changed, the src condition is used instead of the destination condition.
+func MergeListenerConditions(dst, src []gwapiv1b1.ListenerStatus) {
+	// Store existing parent conditions in a map and then
+	// merge them with newer parent conditions.
+	lConds := make(map[gwapiv1b1.SectionName][]metav1.Condition)
+	for _, l := range src {
+		lConds[l.Name] = l.Conditions
+	}
+	for i := range dst {
+		l := &dst[i]
+		if conds, ok := lConds[l.Name]; ok {
+			l.Conditions = MergeConditions(conds, l.Conditions...)
+		}
+	}
+}

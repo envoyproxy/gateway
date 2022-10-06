@@ -27,14 +27,6 @@ func TestContexts(t *testing.T) {
 		Gateway: gateway,
 	}
 
-	gctx.SetCondition(v1beta1.GatewayConditionReady, metav1.ConditionTrue, v1beta1.GatewayReasonReady, "Gateway is ready")
-
-	require.Len(t, gateway.Status.Conditions, 1)
-	require.EqualValues(t, gateway.Status.Conditions[0].Type, v1beta1.GatewayConditionReady)
-	require.EqualValues(t, gateway.Status.Conditions[0].Status, metav1.ConditionTrue)
-	require.EqualValues(t, gateway.Status.Conditions[0].Reason, v1beta1.GatewayReasonReady)
-	require.EqualValues(t, gateway.Status.Conditions[0].Message, "Gateway is ready")
-
 	lctx := gctx.GetListenerContext("http")
 	require.NotNil(t, lctx)
 
@@ -53,4 +45,7 @@ func TestContexts(t *testing.T) {
 	require.Len(t, gateway.Status.Listeners, 1)
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
 	require.EqualValues(t, gateway.Status.Listeners[0].SupportedKinds[0].Kind, "HTTPRoute")
+
+	lctx.ResetConditions()
+	require.Len(t, gateway.Status.Listeners[0].Conditions, 0)
 }
