@@ -186,7 +186,7 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 
 	var parentRef *v1beta1.ParentReference
 	for i, p := range h.Spec.ParentRefs {
-		if p == forParentRef {
+		if reflect.DeepEqual(p, forParentRef) {
 			parentRef = &h.Spec.ParentRefs[i]
 			break
 		}
