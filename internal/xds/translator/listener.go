@@ -73,12 +73,17 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 	}, nil
 }
 
-func buildXdsPassthroughListener(tlsListener *ir.TLSListener) (*listener.Listener, error) {
-	if tlsListener == nil {
+func buildXdsPassthroughListener(clusterName string, tcpListener *ir.TCPListener) (*listener.Listener, error) {
+	if tcpListener == nil {
 		return nil, errors.New("http listener is nil")
 	}
 
-	mgr := &tcp.TcpProxy{StatPrefix: "passthrough"}
+	mgr := &tcp.TcpProxy{
+		StatPrefix: "passthrough",
+		ClusterSpecifier: &tcp.TcpProxy_Cluster{
+			Cluster: clusterName,
+		},
+	}
 	mgrAny, err := anypb.New(mgr)
 	if err != nil {
 		return nil, err
@@ -91,19 +96,22 @@ func buildXdsPassthroughListener(tlsListener *ir.TLSListener) (*listener.Listene
 	}
 
 	return &listener.Listener{
-		Name: getXdsListenerName(tlsListener.Name, tlsListener.Port),
+		Name: getXdsListenerName(tcpListener.Name, tcpListener.Port),
 		Address: &core.Address{
 			Address: &core.Address_SocketAddress{
 				SocketAddress: &core.SocketAddress{
 					Protocol: core.SocketAddress_TCP,
-					Address:  tlsListener.Address,
+					Address:  tcpListener.Address,
 					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: tlsListener.Port,
+						PortValue: tcpListener.Port,
 					},
 				},
 			},
 		},
 		FilterChains: []*listener.FilterChain{{
+			FilterChainMatch: &listener.FilterChainMatch{
+				ServerNames: tcpListener.SNIs,
+			},
 			Filters: []*listener.Filter{{
 				Name: wellknown.TCPProxy,
 				ConfigType: &listener.Filter_TypedConfig{
