@@ -335,10 +335,7 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					if !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					// Merge parent conditions
 					hCopy := h.DeepCopy()
-					fmt.Printf("arko %+v\n", val.Status.Parents)
-					status.MergeParentConditions(val.Status.Parents, hCopy.Status.Parents)
 					hCopy.Status.Parents = val.Status.Parents
 					return hCopy
 				}),

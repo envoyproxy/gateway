@@ -5,7 +5,6 @@ package status
 
 import (
 	"fmt"
-	"reflect"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -117,36 +116,4 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, l
 
 func conditionChanged(a, b metav1.Condition) bool {
 	return a.Status != b.Status || a.Reason != b.Reason || a.Message != b.Message
-}
-
-// MergeParentConditions merges the src parent conditions into the destination parent conditions
-// If the condition has not changed, the src condition is used instead of the destination condition.
-// Parents present in the src but not in the destination are discarded.
-func MergeParentConditions(dst, src []gwapiv1b1.RouteParentStatus) {
-	for _, pSrc := range src {
-		for i := range dst {
-			pDst := &dst[i]
-			if reflect.DeepEqual(pSrc.ParentRef, pDst.ParentRef) {
-				pDst.Conditions = MergeConditions(pSrc.Conditions, pDst.Conditions...)
-			}
-		}
-	}
-}
-
-// MergeListenerConditions merges the src listener conditions into the destination listener conditions
-// If the condition has not changed, the src condition is used instead of the destination condition.
-// Listeners present in the src but not in the destination are discarded.
-func MergeListenerConditions(dst, src []gwapiv1b1.ListenerStatus) {
-	// Store existing parent conditions in a map and then
-	// merge them with newer parent conditions.
-	lConds := make(map[gwapiv1b1.SectionName][]metav1.Condition)
-	for _, l := range src {
-		lConds[l.Name] = l.Conditions
-	}
-	for i := range dst {
-		l := &dst[i]
-		if conds, ok := lConds[l.Name]; ok {
-			l.Conditions = MergeConditions(conds, l.Conditions...)
-		}
-	}
 }
