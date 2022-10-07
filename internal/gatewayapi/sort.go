@@ -6,11 +6,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-type XdsIRRoutesSlice []*ir.HTTPRoute
+type XdsIRRoutes []*ir.HTTPRoute
 
-func (x XdsIRRoutesSlice) Len() int      { return len(x) }
-func (x XdsIRRoutesSlice) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
-func (x XdsIRRoutesSlice) Less(i, j int) bool {
+func (x XdsIRRoutes) Len() int      { return len(x) }
+func (x XdsIRRoutes) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
+func (x XdsIRRoutes) Less(i, j int) bool {
 	// 1. Sort based on characters in a matching path.
 	pCountI := pathMatchCount(x[i].PathMatch)
 	pCountJ := pathMatchCount(x[j].PathMatch)
@@ -48,7 +48,7 @@ func sortXdsIRMap(xdsIR XdsIRMap) {
 		sort.SliceStable(ir.HTTP, func(i, j int) bool { return ir.HTTP[i].Name < ir.HTTP[j].Name })
 		for _, http := range ir.HTTP {
 			// descending order
-			sort.Sort(sort.Reverse(XdsIRRoutesSlice(http.Routes)))
+			sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
 		}
 	}
 }
