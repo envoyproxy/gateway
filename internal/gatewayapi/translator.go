@@ -486,7 +486,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					proto = ir.HTTPSProtocolType
 				}
 				infraPort := ir.ListenerPort{
-					Name:          irInfraPortName(listener),
+					Name:          string(listener.Name),
 					Protocol:      proto,
 					ServicePort:   servicePort,
 					ContainerPort: containerPort,
@@ -1227,10 +1227,6 @@ func irStringKey(gateway *v1beta1.Gateway) string {
 
 func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
-}
-
-func irInfraPortName(listener *ListenerContext) string {
-	return fmt.Sprintf("%s-%s", listener.gateway.Namespace, listener.gateway.Name)
 }
 
 func routeName(httpRoute *HTTPRouteContext, ruleIdx, matchIdx int) string {

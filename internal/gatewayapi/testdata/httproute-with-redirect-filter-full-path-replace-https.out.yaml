@@ -98,7 +98,7 @@ infraIR:
       listeners:
       - address: ""
         ports:
-        - name: envoy-gateway-gateway-1
+        - name: http
           protocol: "HTTP"
           containerPort: 10080
           servicePort: 80
