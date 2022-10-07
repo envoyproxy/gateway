@@ -103,50 +103,53 @@ httpRoutes:
               reason: Accepted
               message: Route is accepted
 xdsIR:
-  http:
-    - name: envoy-gateway-gateway-1-tls-terminate
-      address: 0.0.0.0
-      port: 10443
-      hostnames:
-        - "foo.com"
-      tls:
-        serverCertificate: Zm9vCg==
-        privateKey: YmFyCg==
-      routes:
-        - name: default-httproute-1-rule-0-match-0-foo.com
-          pathMatch:
-            prefix: "/"
-          destinations:
-            - host: 7.7.7.7
-              port: 8080
-              weight: 1
-  tls:
-    - name: envoy-gateway-gateway-1-tls-passthrough
-      address: 0.0.0.0
-      port: 10090
-      hostnames:
-        - "foo.com"
-      routes:
-        - name: default-tlsroute-1-rule-0-match-0-foo.com
-          destinations:
-            - host: 7.7.7.7
-              port: 8080
-              weight: 1
+  envoy-gateway-gateway-1:
+    http:
+      - name: envoy-gateway-gateway-1-tls-terminate
+        address: 0.0.0.0
+        port: 10443
+        hostnames:
+          - "foo.com"
+        tls:
+          serverCertificate: Zm9vCg==
+          privateKey: YmFyCg==
+        routes:
+          - name: default-httproute-1-rule-0-match-0-foo.com
+            pathMatch:
+              prefix: "/"
+            destinations:
+              - host: 7.7.7.7
+                port: 8080
+                weight: 1
+    tls:
+      - name: envoy-gateway-gateway-1-tls-passthrough
+        address: 0.0.0.0
+        port: 10090
+        hostnames:
+          - "foo.com"
+        routes:
+          - name: default-tlsroute-1-rule-0-match-0-foo.com
+            destinations:
+              - host: 7.7.7.7
+                port: 8080
+                weight: 1
 infraIR:
-  proxy:
-    metadata:
-      labels:
-        gateway.envoyproxy.io/owning-gatewayclass: envoy-gateway-class
-    name: envoy-gateway-class
-    image: envoyproxy/envoy:v1.23-latest
-    listeners:
-      - address: ""
-        ports:
-          - name: envoy-gateway-gateway-1-443
-            protocol: "HTTPS"
-            servicePort: 443
-            containerPort: 10443
-          - name: envoy-gateway-gateway-1-90
-            protocol: "TLS"
-            servicePort: 90
-            containerPort: 10090
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:v1.23-latest
+      listeners:
+        - address: ""
+          ports:
+            - name: envoy-gateway-gateway-1-443
+              protocol: "HTTPS"
+              servicePort: 443
+              containerPort: 10443
+            - name: envoy-gateway-gateway-1-90
+              protocol: "TLS"
+              servicePort: 90
+              containerPort: 10090

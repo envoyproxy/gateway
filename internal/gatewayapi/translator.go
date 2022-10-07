@@ -1138,7 +1138,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					}
 
 					for _, routeRoute := range routeRoutes {
-						perHostRoutes = append(perHostRoutes, &ir.HTTPRoute{
+						hostRoute := &ir.HTTPRoute{
 							Name:                 fmt.Sprintf("%s-%s", routeRoute.Name, host),
 							PathMatch:            routeRoute.PathMatch,
 							HeaderMatches:        append(headerMatches, routeRoute.HeaderMatches...),
@@ -1148,9 +1148,15 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							Destinations:         routeRoute.Destinations,
 							Redirect:             routeRoute.Redirect,
 							DirectResponse:       routeRoute.DirectResponse,
-						})
+						}
+						// Don't bother copying over the weights unless the route has invalid backends.
+						if routeRoute.BackendWeights.Invalid > 0 {
+							hostRoute.BackendWeights = routeRoute.BackendWeights
+						}
+						perHostRoutes = append(perHostRoutes, hostRoute)
 					}
 				}
+
 				irKey := irStringKey(listener.gateway)
 				irListener := xdsIR[irKey].GetListener(irListenerName(listener))
 				if irListener != nil {

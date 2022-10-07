@@ -61,28 +61,28 @@ xdsIR:
   envoy-gateway-gateway-1:
     http:
       - name: envoy-gateway-gateway-1-tls
-      address: 0.0.0.0
-      port: 10443
-      hostnames:
-        - "*"
-      tls:
-        serverCertificate: Zm9vCg==
-        privateKey: YmFyCg==
-      routes:
-        - name: default-httproute-1-rule-0-match-0-*
-          pathMatch:
-            prefix: "/"
-          destinations:
-            - host: 7.7.7.7
-              port: 8080
-              weight: 1
+        address: 0.0.0.0
+        port: 10443
+        hostnames:
+          - "*"
+        tls:
+          serverCertificate: Zm9vCg==
+          privateKey: YmFyCg==
+        routes:
+          - name: default-httproute-1-rule-0-match-0-*
+            pathMatch:
+              prefix: "/"
+            destinations:
+              - host: 7.7.7.7
+                port: 8080
+                weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
       image: envoyproxy/envoy:v1.23-latest
       listeners:
