@@ -19,6 +19,9 @@ type ProviderResources struct {
 	TLSRoutes      watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
 	Namespaces     watchable.Map[string, *corev1.Namespace]
 	Services       watchable.Map[types.NamespacedName, *corev1.Service]
+	Secrets        watchable.Map[types.NamespacedName, *corev1.Secret]
+
+	ReferenceGrants watchable.Map[types.NamespacedName, *gwapiv1a2.ReferenceGrant]
 
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
@@ -88,6 +91,28 @@ func (p *ProviderResources) GetServices() []*corev1.Service {
 	}
 	res := make([]*corev1.Service, 0, p.Services.Len())
 	for _, v := range p.Services.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetSecrets() []*corev1.Secret {
+	if p.Secrets.Len() == 0 {
+		return nil
+	}
+	res := make([]*corev1.Secret, 0, p.Secrets.Len())
+	for _, v := range p.Secrets.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetReferenceGrants() []*gwapiv1a2.ReferenceGrant {
+	if p.ReferenceGrants.Len() == 0 {
+		return nil
+	}
+	res := make([]*gwapiv1a2.ReferenceGrant, 0, p.ReferenceGrants.Len())
+	for _, v := range p.ReferenceGrants.LoadAll() {
 		res = append(res, v)
 	}
 	return res

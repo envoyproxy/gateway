@@ -43,6 +43,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
 	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
 	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
+	secretsCh := r.ProviderResources.Secrets.Subscribe(ctx)
+	refGrantsCh := r.ProviderResources.ReferenceGrants.Subscribe(ctx)
 	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
 	tlsRoutesCh := r.ProviderResources.TLSRoutes.Subscribe(ctx)
 	servicesCh := r.ProviderResources.Services.Subscribe(ctx)
@@ -54,6 +56,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		select {
 		case <-gatewayClassesCh:
 		case <-gatewaysCh:
+		case <-secretsCh:
+		case <-refGrantsCh:
 		case <-httpRoutesCh:
 		case <-tlsRoutesCh:
 		case <-servicesCh:
@@ -62,6 +66,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		r.Logger.Info("received a notification")
 		// Load all resources required for translation
 		in.Gateways = r.ProviderResources.GetGateways()
+		in.Secrets = r.ProviderResources.GetSecrets()
+		in.ReferenceGrants = r.ProviderResources.GetReferenceGrants()
 		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()
 		in.TLSRoutes = r.ProviderResources.GetTLSRoutes()
 		in.Services = r.ProviderResources.GetServices()
@@ -81,8 +87,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate to IR
 			result := t.Translate(&in)
 
-			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
 			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
