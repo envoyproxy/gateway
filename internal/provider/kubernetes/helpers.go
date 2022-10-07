@@ -9,7 +9,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-// validateParentRefs validates parentRefs for the provided route, returning the
+// validateParentRefs validates the provided routeParentReferences, returning the
 // referenced Gateways managed by Envoy Gateway. The only supported parentRef
 // is a Gateway.
 func validateParentRefs(ctx context.Context, client client.Client, namespace string,

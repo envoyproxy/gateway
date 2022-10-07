@@ -58,15 +58,16 @@ func newTLSRouteController(mgr manager.Manager, cfg *config.Server, su status.Up
 	}
 	r.log.Info("created tlsroute controller")
 
-	// Subscribe to status updates
-	go r.subscribeAndUpdateStatus(context.Background())
-
 	if err := c.Watch(
 		&source.Kind{Type: &gwapiv1a2.TLSRoute{}},
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
 	}
+
+	// Subscribe to status updates
+	go r.subscribeAndUpdateStatus(context.Background())
+
 	// Add indexing on TLSRoute, for Service objects that are referenced in TLSRoute objects
 	// via `.spec.rules.backendRefs`. This helps in querying for TLSRoutes that are affected by
 	// a particular Service CRUD.
@@ -304,18 +305,18 @@ func (r *tlsRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			if update.Delete {
 				continue
 			}
-			// key := update.Key
-			// val := update.Value
-			// r.statusUpdater.Send(status.Update{
-			// 	NamespacedName: key,
-			// 	Resource:       new(gwapiv1a2.TLSRoute),
-			// 	Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-			// 		if _, ok := obj.(*gwapiv1a2.TLSRoute); !ok {
-			// 			panic(fmt.Sprintf("unsupported object type %T", obj))
-			// 		}
-			// 		return val
-			// 	}),
-			// })
+			key := update.Key
+			val := update.Value
+			r.statusUpdater.Send(status.Update{
+				NamespacedName: key,
+				Resource:       new(gwapiv1a2.TLSRoute),
+				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+					if _, ok := obj.(*gwapiv1a2.TLSRoute); !ok {
+						panic(fmt.Sprintf("unsupported object type %T", obj))
+					}
+					return val
+				}),
+			})
 		}
 	}
 	r.log.Info("status subscriber shutting down")

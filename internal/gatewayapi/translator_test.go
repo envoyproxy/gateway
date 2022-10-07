@@ -81,8 +81,8 @@ func TestTranslate(t *testing.T) {
 			sort.Slice(got.XdsIR[envoyGatewayNsName].HTTP, func(i, j int) bool {
 				return got.XdsIR[envoyGatewayNsName].HTTP[i].Name < got.XdsIR[envoyGatewayNsName].HTTP[j].Name
 			})
-			sort.Slice(got.XdsIR[envoyGatewayNsName].TLS, func(i, j int) bool {
-				return got.XdsIR[envoyGatewayNsName].TLS[i].Name < got.XdsIR[envoyGatewayNsName].TLS[j].Name
+			sort.Slice(got.XdsIR[envoyGatewayNsName].TCP, func(i, j int) bool {
+				return got.XdsIR[envoyGatewayNsName].TCP[i].Name < got.XdsIR[envoyGatewayNsName].TCP[j].Name
 			})
 			// Only 1 listener is supported
 			sort.Slice(got.InfraIR[envoyGatewayNsName].Proxy.Listeners[0].Ports,

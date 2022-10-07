@@ -11,7 +11,7 @@ var (
 	ErrListenerNameEmpty             = errors.New("field Name must be specified")
 	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
 	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
-	ErrListenerHostnamesEmpty        = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                = errors.New("field Name must be specified")
@@ -35,8 +35,8 @@ var (
 type Xds struct {
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
-	// TLS Listeners exposed by the gateway.
-	TLS []*TLSListener
+	// TCP Listeners exposed by the gateway.
+	TCP []*TCPListener
 }
 
 // Validate the fields within the Xds structure.
@@ -59,8 +59,8 @@ func (x Xds) GetListener(name string) *HTTPListener {
 	return nil
 }
 
-func (x Xds) GetTLSListener(name string) *TLSListener {
-	for _, listener := range x.TLS {
+func (x Xds) GetTCPListener(name string) *TCPListener {
+	for _, listener := range x.TCP {
 		if listener.Name == name {
 			return listener
 		}
@@ -101,7 +101,7 @@ func (h HTTPListener) Validate() error {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
 	if len(h.Hostnames) == 0 {
-		errs = multierror.Append(errs, ErrListenerHostnamesEmpty)
+		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
 		if err := h.TLS.Validate(); err != nil {
@@ -396,26 +396,26 @@ func (s StringMatch) Validate() error {
 	return errs
 }
 
-// TLSListener holds the listener configuration.
+// TCPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
-type TLSListener struct {
-	// Name of the TLSListener
+type TCPListener struct {
+	// Name of the TCPListener
 	Name string
 	// Address that the listener should listen on.
 	Address string
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
-	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
-	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
-	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
-	// for more info.
-	Hostnames []string
-	// Routes associated with TLS passthrough traffic to the service.
-	Routes []*TLSRoute
+	// Server names that are compared against the server names of a new connection.
+	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
+	// supported, and values like *w.example.com are invalid.
+	// SNIs are used only in case of TLS Passthrough.
+	SNIs []string
+	// Destinations associated with TCP traffic to the service.
+	Destinations []*RouteDestination
 }
 
-// Validate the fields within the TLSListener structure
-func (h TLSListener) Validate() error {
+// Validate the fields within the TCPListener structure
+func (h TCPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrListenerNameEmpty)
@@ -426,34 +426,8 @@ func (h TLSListener) Validate() error {
 	if h.Port == 0 {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
-	if len(h.Hostnames) == 0 {
-		errs = multierror.Append(errs, ErrListenerHostnamesEmpty)
-	}
-	for _, route := range h.Routes {
+	for _, route := range h.Destinations {
 		if err := route.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
-		}
-	}
-	return errs
-}
-
-// TLSRoute holds the route information associated with the HTTP Route
-// +k8s:deepcopy-gen=true
-type TLSRoute struct {
-	// Name of the TLSRoute
-	Name string
-	// Destinations associated with this matched route.
-	Destinations []*RouteDestination
-}
-
-// Validate the fields within the TLSRoute structure
-func (h TLSRoute) Validate() error {
-	var errs error
-	if h.Name == "" {
-		errs = multierror.Append(errs, ErrRouteNameEmpty)
-	}
-	for _, dest := range h.Destinations {
-		if err := dest.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}

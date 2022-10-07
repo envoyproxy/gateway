@@ -200,6 +200,10 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
+func (l *ListenerContext) SetTLSSecret(tlsSecret *v1.Secret) {
+	l.tlsSecret = tlsSecret
+}
+
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
 // that can reference Gateway objects.
 type RouteContext interface {
@@ -276,11 +280,12 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		h.Status.Parents = append(h.Status.Parents, v1beta1.RouteParentStatus{
-			ParentRef: forParentRef,
+		rParentStatus := v1beta1.RouteParentStatus{
 			// TODO: get this value from the config
 			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
-		})
+			ParentRef:      forParentRef,
+		}
+		h.Status.Parents = append(h.Status.Parents, rParentStatus)
 		routeParentStatusIdx = len(h.Status.Parents) - 1
 	}
 
@@ -334,15 +339,7 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	var parentRef *v1beta1.ParentReference
 	for i, p := range t.Spec.ParentRefs {
 		p := UpgradeParentReference(p)
-		defaultNamespace := v1beta1.Namespace("default")
-		if p.Namespace == nil {
-			p.Namespace = &defaultNamespace
-		}
-		if forParentRef.Namespace == nil {
-			forParentRef.Namespace = &defaultNamespace
-		}
-		if *p.Namespace == *forParentRef.Namespace &&
-			p.Name == forParentRef.Name {
+		if reflect.DeepEqual(p, forParentRef) {
 			upgraded := UpgradeParentReference(t.Spec.ParentRefs[i])
 			parentRef = &upgraded
 			break
@@ -354,17 +351,26 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 
 	routeParentStatusIdx := -1
 	for i := range t.Status.Parents {
-		if UpgradeParentReference(t.Status.Parents[i].ParentRef) == forParentRef {
+		p := UpgradeParentReference(t.Status.Parents[i].ParentRef)
+		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
+		}
+		if reflect.DeepEqual(p, forParentRef) {
 			routeParentStatusIdx = i
 			break
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		t.Status.Parents = append(t.Status.Parents, v1alpha2.RouteParentStatus{
-			ParentRef: DowngradeParentReference(forParentRef),
+		rParentStatus := v1alpha2.RouteParentStatus{
 			// TODO: get this value from the config
 			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
-		})
+			ParentRef:      DowngradeParentReference(forParentRef),
+		}
+		t.Status.Parents = append(t.Status.Parents, rParentStatus)
 		routeParentStatusIdx = len(t.Status.Parents) - 1
 	}
 

@@ -3,10 +3,14 @@
       address: 0.0.0.0
       portValue: 10080
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - www.example.com
+    filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: cluster_tls-passthrough
         statPrefix: passthrough
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector

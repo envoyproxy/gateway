@@ -81,45 +81,21 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
 	}
 
-	for _, tlsListener := range ir.TLS {
-		// 1:1 between IR TLSListener and xDS Listener
-		xdsListener, err := buildXdsPassthroughListener(tlsListener)
+	for _, tcpListener := range ir.TCP {
+		// 1:1 between IR TCPListener and xDS Cluster
+		xdsCluster, err := buildXdsCluster(tcpListener.Name, tcpListener.Destinations)
+		if err != nil {
+			return nil, multierror.Append(err, errors.New("error building xds cluster"))
+		}
+		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+
+		// 1:1 between IR TCPListener and xDS Listener
+		xdsListener, err := buildXdsPassthroughListener(xdsCluster.Name, tcpListener)
 		if err != nil {
 			return nil, multierror.Append(err, errors.New("error building xds listener"))
 		}
 
-		// Allocate virtual host for this tlsListener.
-		// 1:1 between IR TLSListener and xDS VirtualHost
-		routeName := getXdsRouteName(tlsListener.Name)
-		vHost := &route.VirtualHost{
-			Name:    routeName,
-			Domains: tlsListener.Hostnames,
-		}
-
-		for _, tlsListener := range tlsListener.Routes {
-			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute, err := buildXdsPassthroughRoute(tlsListener)
-			if err != nil {
-				return nil, multierror.Append(err, errors.New("error building xds route"))
-			}
-			vHost.Routes = append(vHost.Routes, xdsRoute)
-
-			// 1:1 between IR TLSRoute and xDS Cluster
-			xdsCluster, err := buildXdsCluster(tlsListener.Name, tlsListener.Destinations)
-			if err != nil {
-				return nil, multierror.Append(err, errors.New("error building xds cluster"))
-			}
-			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
-
-		}
-
-		xdsRouteCfg := &route.RouteConfiguration{
-			Name: routeName,
-		}
-		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
-
 		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
-		tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
 	}
 	return tCtx, nil
 }

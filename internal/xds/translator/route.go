@@ -38,12 +38,6 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 	return ret, nil
 }
 
-func buildXdsPassthroughRoute(tlsRoute *ir.TLSRoute) (*route.Route, error) {
-	return &route.Route{
-		Action: &route.Route_Route{Route: buildXdsRouteAction(tlsRoute.Name)},
-	}, nil
-}
-
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *route.RouteMatch {
 	outMatch := &route.RouteMatch{}
 

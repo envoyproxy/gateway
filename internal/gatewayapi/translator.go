@@ -472,7 +472,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					break
 				}
 
-				listener.tlsSecret = secret
+				listener.SetTLSSecret(secret)
 			case v1beta1.TLSProtocolType:
 				if listener.TLS == nil {
 					listener.SetCondition(
@@ -551,17 +551,17 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				}
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			case v1beta1.TLSProtocolType:
-				irListener := &ir.TLSListener{
+				irListener := &ir.TCPListener{
 					Name:    irListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
 				}
 				if listener.Hostname != nil {
-					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+					irListener.SNIs = append(irListener.SNIs, string(*listener.Hostname))
 				} else {
-					irListener.Hostnames = append(irListener.Hostnames, "*")
+					irListener.SNIs = append(irListener.SNIs, "*")
 				}
-				gwXdsIR.TLS = append(gwXdsIR.TLS, irListener)
+				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
@@ -1219,14 +1219,10 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 			// Need to compute Route rules within the parentRef loop because
 			// any conditions that come out of it have to go on each RouteParentStatus,
 			// not on the Route as a whole.
-			var routeRoutes []*ir.HTTPRoute
+			var routeDestinations []*ir.RouteDestination
 
 			// compute backends
-			for ruleIdx, rule := range tlsRoute.Spec.Rules {
-				ruleRoute := &ir.HTTPRoute{
-					Name: routeName(tlsRoute, ruleIdx, 0),
-				}
-
+			for _, rule := range tlsRoute.Spec.Rules {
 				for _, backendRef := range rule.BackendRefs {
 					if backendRef.Group != nil && *backendRef.Group != "" {
 						parentRef.SetCondition(tlsRoute,
@@ -1319,7 +1315,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 						weight = uint32(*backendRef.Weight)
 					}
 
-					ruleRoute.Destinations = append(ruleRoute.Destinations, &ir.RouteDestination{
+					routeDestinations = append(routeDestinations, &ir.RouteDestination{
 						Host:   service.Spec.ClusterIP,
 						Port:   uint32(*backendRef.Port),
 						Weight: weight,
@@ -1331,8 +1327,6 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 				//	- sum of weights for valid backend refs is 0
 				//	- returning 500's for invalid backend refs
 				//	- etc.
-
-				routeRoutes = append(routeRoutes, ruleRoute)
 			}
 
 			var hasHostnameIntersection bool
@@ -1343,24 +1337,15 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 				}
 				hasHostnameIntersection = true
 
-				var perHostRoutes []*ir.TLSRoute
-				for _, host := range hosts {
-					for _, routeRoute := range routeRoutes {
-						perHostRoutes = append(perHostRoutes, &ir.TLSRoute{
-							Name:         fmt.Sprintf("%s-%s", routeRoute.Name, host),
-							Destinations: routeRoute.Destinations,
-						})
-					}
-				}
 				irKey := irStringKey(listener.gateway)
-				irListener := xdsIR[irKey].GetTLSListener(irListenerName(listener))
+				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
-					irListener.Routes = append(irListener.Routes, perHostRoutes...)
+					irListener.Destinations = routeDestinations
 				}
 				// Theoretically there should only be one parent ref per
 				// Route that attaches to a given Listener, so fine to just increment here, but we
 				// might want to check to ensure we're not double-counting.
-				if len(routeRoutes) > 0 {
+				if len(routeDestinations) > 0 {
 					listener.IncrementAttachedRoutes()
 				}
 			}
