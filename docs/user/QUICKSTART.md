@@ -12,11 +12,6 @@ Install the Gateway API CRDs:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
 ```
 
-Run the certgen Job required for Envoy Gateway:
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/main/internal/provider/kubernetes/config/envoy-gateway/certgen-job.yaml
-```
-
 Run Envoy Gateway:
 ```shell
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
@@ -91,11 +86,6 @@ kubectl delete gc/eg
 Uninstall the example app:
 ```shell
 kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
-```
-
-Remove the certgen Job specs required for Envoy Gateway:
-```shell
-kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/main/internal/provider/kubernetes/config/envoy-gateway/certgen-job.yaml
 ```
 
 Uninstall Envoy Gateway:
