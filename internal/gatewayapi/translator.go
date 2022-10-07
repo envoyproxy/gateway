@@ -144,7 +144,9 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 
 			for _, listener := range gateway.Spec.Listeners {
 				l := gc.GetListenerContext(listener.Name)
-				// Reset attached route count since it will be recomputed during translation.
+				// Reset conditions and attached route count
+				// since it will be recomputed during translation.
+				l.ResetConditions()
 				l.ResetAttachedRoutes()
 			}
 
@@ -637,6 +639,8 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 			relevantRoute = true
 
 			parentRefCtx := httpRoute.GetRouteParentContext(parentRef)
+			// Reset conditions since they will be recomputed during translation
+			parentRefCtx.ResetConditions()
 
 			if !HasReadyListener(selectedListeners) {
 				parentRefCtx.SetCondition(v1beta1.RouteConditionAccepted, metav1.ConditionFalse, "NoReadyListeners", "There are no ready listeners for this parent ref")

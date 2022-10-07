@@ -331,10 +331,13 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				NamespacedName: key,
 				Resource:       new(gwapiv1b1.HTTPRoute),
 				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					if _, ok := obj.(*gwapiv1b1.HTTPRoute); !ok {
+					h, ok := obj.(*gwapiv1b1.HTTPRoute)
+					if !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return val
+					hCopy := h.DeepCopy()
+					hCopy.Status.Parents = val.Status.Parents
+					return hCopy
 				}),
 			})
 		}

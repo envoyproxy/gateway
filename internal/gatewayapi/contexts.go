@@ -20,37 +20,6 @@ type GatewayContext struct {
 	listeners map[v1beta1.SectionName]*ListenerContext
 }
 
-func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType, status metav1.ConditionStatus, reason v1beta1.GatewayConditionReason, message string) {
-	cond := metav1.Condition{
-		Type:               string(conditionType),
-		Status:             status,
-		Reason:             string(reason),
-		Message:            message,
-		ObservedGeneration: g.Generation,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-	}
-
-	idx := -1
-	for i, existing := range g.Status.Conditions {
-		if existing.Type == cond.Type {
-			// return early if the condition is unchanged
-			if existing.Status == cond.Status &&
-				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message {
-				return
-			}
-			idx = i
-			break
-		}
-	}
-
-	if idx > -1 {
-		g.Status.Conditions[idx] = cond
-	} else {
-		g.Status.Conditions = append(g.Status.Conditions, cond)
-	}
-}
-
 func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *ListenerContext {
 	if g.listeners == nil {
 		g.listeners = make(map[v1beta1.SectionName]*ListenerContext)
@@ -135,6 +104,10 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 	}
 }
 
+func (l *ListenerContext) ResetConditions() {
+	l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions = make([]metav1.Condition, 0)
+}
+
 func (l *ListenerContext) SetSupportedKinds(kinds ...v1beta1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
 }
@@ -213,7 +186,7 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 
 	var parentRef *v1beta1.ParentReference
 	for i, p := range h.Spec.ParentRefs {
-		if p == forParentRef {
+		if reflect.DeepEqual(p, forParentRef) {
 			parentRef = &h.Spec.ParentRefs[i]
 			break
 		}
@@ -293,6 +266,10 @@ func (r *RouteParentContext) SetCondition(conditionType v1beta1.RouteConditionTy
 	} else {
 		r.route.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.route.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
 	}
+}
+
+func (r *RouteParentContext) ResetConditions() {
+	r.route.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 }
 
 func (r *RouteParentContext) IsAccepted() bool {

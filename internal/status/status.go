@@ -144,7 +144,7 @@ func (u *UpdateWriter) Send(update Update) {
 //  Gateway
 //  HTTPRoute
 func isStatusEqual(objA, objB interface{}) bool {
-	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime", "ObservedGeneration")
 	switch a := objA.(type) {
 	case *gwapiv1b1.GatewayClass:
 		if b, ok := objB.(*gwapiv1b1.GatewayClass); ok {
