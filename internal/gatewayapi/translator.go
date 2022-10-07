@@ -3,7 +3,6 @@ package gatewayapi
 import (
 	"fmt"
 	"net/netip"
-	"sort"
 	"strings"
 
 	"golang.org/x/exp/slices"
@@ -123,6 +122,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
+
+	// Sort xdsIR based on the Gateway API spec
+	sortXdsIRMap(xdsIR)
 
 	return newTranslateResult(gateways, httpRoutes, xdsIR, infraIR)
 }
@@ -491,8 +493,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
 			}
 		}
-		// sort result to ensure translation does not change across reboots.
-		sort.Slice(xdsIR[irKey].HTTP, func(i, j int) bool { return xdsIR[irKey].HTTP[i].Name < xdsIR[irKey].HTTP[j].Name })
 	}
 }
 

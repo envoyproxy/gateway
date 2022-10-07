@@ -45,6 +45,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteInvalidCrossNamespaceParentRef,
 		tests.HTTPExactPathMatching,
 		tests.HTTPRouteCrossNamespace,
+		tests.HTTPRouteHeaderMatching,
 		tests.HTTPRouteMatchingAcrossRoutes,
 		tests.HTTPRouteInvalidNonExistentBackendRef,
 		tests.HTTPRouteInvalidBackendRefUnknownKind,
