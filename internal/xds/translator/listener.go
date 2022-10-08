@@ -73,13 +73,17 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 	}, nil
 }
 
-func buildXdsPassthroughListener(clusterName string, tcpListener *ir.TCPListener) (*listener.Listener, error) {
+func buildXdsTCPListener(clusterName string, tcpListener *ir.TCPListener) (*listener.Listener, error) {
 	if tcpListener == nil {
 		return nil, errors.New("http listener is nil")
 	}
 
+	statPrefix := "tcp"
+	if tcpListener.TLS != nil {
+		statPrefix = "passthrough"
+	}
 	mgr := &tcp.TcpProxy{
-		StatPrefix: "passthrough",
+		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcp.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},
@@ -89,13 +93,21 @@ func buildXdsPassthroughListener(clusterName string, tcpListener *ir.TCPListener
 		return nil, err
 	}
 
-	tlsInspector := &tls_inspector.TlsInspector{}
-	tlsInspectorAny, err := anypb.New(tlsInspector)
-	if err != nil {
-		return nil, err
+	filterChain := &listener.FilterChain{
+		Filters: []*listener.Filter{{
+			Name: wellknown.TCPProxy,
+			ConfigType: &listener.Filter_TypedConfig{
+				TypedConfig: mgrAny,
+			},
+		}},
+	}
+	if tcpListener.TLS != nil {
+		filterChain.FilterChainMatch = &listener.FilterChainMatch{
+			ServerNames: tcpListener.TLS.SNIs,
+		}
 	}
 
-	return &listener.Listener{
+	xdsListener := &listener.Listener{
 		Name: getXdsListenerName(tcpListener.Name, tcpListener.Port),
 		Address: &core.Address{
 			Address: &core.Address_SocketAddress{
@@ -108,24 +120,25 @@ func buildXdsPassthroughListener(clusterName string, tcpListener *ir.TCPListener
 				},
 			},
 		},
-		FilterChains: []*listener.FilterChain{{
-			FilterChainMatch: &listener.FilterChainMatch{
-				ServerNames: tcpListener.SNIs,
-			},
-			Filters: []*listener.Filter{{
-				Name: wellknown.TCPProxy,
-				ConfigType: &listener.Filter_TypedConfig{
-					TypedConfig: mgrAny,
-				},
-			}},
-		}},
-		ListenerFilters: []*listener.ListenerFilter{{
+		FilterChains: []*listener.FilterChain{filterChain},
+	}
+
+	if tcpListener.TLS != nil {
+		tlsInspector := &tls_inspector.TlsInspector{}
+		tlsInspectorAny, err := anypb.New(tlsInspector)
+		if err != nil {
+			return nil, err
+		}
+
+		xdsListener.ListenerFilters = []*listener.ListenerFilter{{
 			Name: wellknown.TlsInspector,
 			ConfigType: &listener.ListenerFilter_TypedConfig{
 				TypedConfig: tlsInspectorAny,
 			},
-		}},
-	}, nil
+		}}
+	}
+
+	return xdsListener, nil
 }
 
 func buildXdsDownstreamTLSSocket(listenerName string,

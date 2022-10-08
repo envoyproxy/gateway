@@ -77,7 +77,7 @@ infraIR:
       listeners:
         - address: ""
           ports:
-            - name: envoy-gateway-gateway-1-90
+            - name: tls
               protocol: "TLS"
               servicePort: 90
               containerPort: 10090

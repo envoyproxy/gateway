@@ -555,11 +555,14 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Name:    irListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
+					TLS: &ir.TLSInspectorConfig{
+						SNIs: []string{},
+					},
 				}
 				if listener.Hostname != nil {
-					irListener.SNIs = append(irListener.SNIs, string(*listener.Hostname))
+					irListener.TLS.SNIs = append(irListener.TLS.SNIs, string(*listener.Hostname))
 				} else {
-					irListener.SNIs = append(irListener.SNIs, "*")
+					irListener.TLS.SNIs = append(irListener.TLS.SNIs, "*")
 				}
 				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 			}
@@ -1158,7 +1161,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irKey := irStringKey(listener.gateway)
-				irListener := xdsIR[irKey].GetListener(irListenerName(listener))
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					irListener.Routes = append(irListener.Routes, perHostRoutes...)
 				}

@@ -12,6 +12,7 @@ var (
 	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
 	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPListenesSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrRouteNameEmpty                = errors.New("field Name must be specified")
@@ -50,7 +51,7 @@ func (x Xds) Validate() error {
 	return errs
 }
 
-func (x Xds) GetListener(name string) *HTTPListener {
+func (x Xds) GetHTTPListener(name string) *HTTPListener {
 	for _, listener := range x.HTTP {
 		if listener.Name == name {
 			return listener
@@ -396,7 +397,7 @@ func (s StringMatch) Validate() error {
 	return errs
 }
 
-// TCPListener holds the listener configuration.
+// TCPListener holds the TCP listener configuration.
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
 	// Name of the TCPListener
@@ -405,11 +406,9 @@ type TCPListener struct {
 	Address string
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
-	// Server names that are compared against the server names of a new connection.
-	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
-	// supported, and values like *w.example.com are invalid.
-	// SNIs are used only in case of TLS Passthrough.
-	SNIs []string
+	// TLS information required for TLS Passthrough, If provided, incoming
+	// connections' server names are inspected and routed to backends accordingly.
+	TLS *TLSInspectorConfig
 	// Destinations associated with TCP traffic to the service.
 	Destinations []*RouteDestination
 }
@@ -426,10 +425,34 @@ func (h TCPListener) Validate() error {
 	if h.Port == 0 {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
+	if h.TLS != nil {
+		if err := h.TLS.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
 	for _, route := range h.Destinations {
 		if err := route.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
+	}
+	return errs
+}
+
+// TLSInspectorConfig holds the configuration required for inspecting TLS
+// passthrough connections.
+// +k8s:deepcopy-gen=true
+type TLSInspectorConfig struct {
+	// Server names that are compared against the server names of a new connection.
+	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
+	// supported, and values like *w.example.com are invalid.
+	// SNIs are used only in case of TLS Passthrough.
+	SNIs []string
+}
+
+func (t TLSInspectorConfig) Validate() error {
+	var errs error
+	if len(t.SNIs) == 0 {
+		errs = multierror.Append(errs, ErrTCPListenesSNIsEmpty)
 	}
 	return errs
 }

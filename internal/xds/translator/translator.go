@@ -90,7 +90,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		// 1:1 between IR TCPListener and xDS Listener
-		xdsListener, err := buildXdsPassthroughListener(xdsCluster.Name, tcpListener)
+		xdsListener, err := buildXdsTCPListener(xdsCluster.Name, tcpListener)
 		if err != nil {
 			return nil, multierror.Append(err, errors.New("error building xds listener"))
 		}

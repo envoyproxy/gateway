@@ -46,18 +46,30 @@ var (
 	}
 
 	// TCPListener
-	happyTCPListener = TCPListener{
+	happyTCPListenerTLSPassthrough = TCPListener{
 		Name:         "happy",
 		Address:      "0.0.0.0",
 		Port:         80,
-		SNIs:         []string{"example.com"},
+		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
-	invalidAddrTCPListener = TCPListener{
+	invalidNameTCPListenerTLSPassthrough = TCPListener{
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidAddrTCPListenerTLSPassthrough = TCPListener{
 		Name:         "invalid-addr",
 		Address:      "1.0.0",
 		Port:         80,
-		SNIs:         []string{"example.com"},
+		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidSNITCPListenerTLSPassthrough = TCPListener{
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLSInspectorConfig{SNIs: []string{}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
@@ -263,7 +275,7 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "happy tls",
 			input: Xds{
-				TCP: []*TCPListener{&happyTCPListener},
+				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
 			},
 			want: nil,
 		},
@@ -367,24 +379,24 @@ func TestValidateTCPListener(t *testing.T) {
 		want  []error
 	}{
 		{
-			name:  "happy",
-			input: happyTCPListener,
+			name:  "tls passthrough happy",
+			input: happyTCPListenerTLSPassthrough,
 			want:  nil,
 		},
 		{
-			name: "invalid name",
-			input: TCPListener{
-				Address:      "0.0.0.0",
-				Port:         80,
-				SNIs:         []string{"example.com"},
-				Destinations: []*RouteDestination{&happyRouteDestination},
-			},
-			want: []error{ErrListenerNameEmpty},
+			name:  "tls passthrough invalid name",
+			input: invalidNameTCPListenerTLSPassthrough,
+			want:  []error{ErrListenerNameEmpty},
 		},
 		{
-			name:  "invalid addr",
-			input: invalidAddrTCPListener,
+			name:  "tls passthrough invalid addr",
+			input: invalidAddrTCPListenerTLSPassthrough,
 			want:  []error{ErrListenerAddressInvalid},
+		},
+		{
+			name:  "tls passthrough empty SNIs",
+			input: invalidSNITCPListenerTLSPassthrough,
+			want:  []error{ErrTCPListenesSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
