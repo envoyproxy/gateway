@@ -2,8 +2,9 @@ tcp:
 - name: "tls-passthrough"
   address: "0.0.0.0"
   port: 10080
-  snis:
-  - "www.example.com"
+  tls:
+    snis:
+    - "www.example.com"
   destinations:
   - host: "1.2.3.4"
     port: 50000
