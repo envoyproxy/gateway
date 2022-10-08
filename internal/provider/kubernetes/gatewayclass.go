@@ -119,6 +119,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, request reconcil
 		return reconcile.Result{}, nil
 	}
 
+	// Store the accepted gatewayclass in the resource map.
 	r.resources.GatewayClasses.Store(acceptedGC.GetName(), acceptedGC)
 
 	updater := func(gc *gwapiv1b1.GatewayClass, accepted bool) error {
