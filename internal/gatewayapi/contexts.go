@@ -22,37 +22,6 @@ type GatewayContext struct {
 	listeners map[v1beta1.SectionName]*ListenerContext
 }
 
-func (g *GatewayContext) SetCondition(conditionType v1beta1.GatewayConditionType, status metav1.ConditionStatus, reason v1beta1.GatewayConditionReason, message string) {
-	cond := metav1.Condition{
-		Type:               string(conditionType),
-		Status:             status,
-		Reason:             string(reason),
-		Message:            message,
-		ObservedGeneration: g.Generation,
-		LastTransitionTime: metav1.NewTime(time.Now()),
-	}
-
-	idx := -1
-	for i, existing := range g.Status.Conditions {
-		if existing.Type == cond.Type {
-			// return early if the condition is unchanged
-			if existing.Status == cond.Status &&
-				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message {
-				return
-			}
-			idx = i
-			break
-		}
-	}
-
-	if idx > -1 {
-		g.Status.Conditions[idx] = cond
-	} else {
-		g.Status.Conditions = append(g.Status.Conditions, cond)
-	}
-}
-
 // GetListenerContext returns the ListenerContext with listenerName.
 // If the listener exists in the Gateway Spec but NOT yet in the GatewayContext,
 // this creates a new ListenerContext for the listener and attaches it to the

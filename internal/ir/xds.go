@@ -15,7 +15,7 @@ var (
 	ErrTCPListenesSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
-	ErrRouteNameEmpty                = errors.New("field Name must be specified")
+	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
 	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
 	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
@@ -173,7 +173,7 @@ type HTTPRoute struct {
 func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrRouteNameEmpty)
+		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
 	}
 	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
 		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)

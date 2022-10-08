@@ -125,8 +125,9 @@ xdsIR:
       - name: envoy-gateway-gateway-1-tls-passthrough
         address: 0.0.0.0
         port: 10090
-        snis:
-          - "foo.com"
+        tls:
+          snis:
+            - "foo.com"
         destinations:
           - host: 7.7.7.7
             port: 8080

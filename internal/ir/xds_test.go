@@ -474,7 +474,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Destinations: []*RouteDestination{&happyRouteDestination},
 			},
-			want: []error{ErrRouteNameEmpty},
+			want: []error{ErrHTTPRouteNameEmpty},
 		},
 		{
 			name:  "empty match",
@@ -497,7 +497,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
 				Destinations:  []*RouteDestination{&happyRouteDestination},
 			},
-			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
+			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
 		{
 			name:  "redirect-httproute",
