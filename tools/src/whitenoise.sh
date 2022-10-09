@@ -1,7 +1,7 @@
 #!/bin/bash
 TRAILING_WHITESPACE=0
 # only check changed docs in pr
-for file in $(git diff --cached --name-only --diff-filter=ACRMTU $GITHUB_HEAD_REF | grep "\.md"); do
+for file in $(git diff --cached --name-only --diff-filter=ACRMTU HEAD^ | grep "\.md"); do
   if grep -r '[[:blank:]]$' "$1" > /dev/null; then
     echo "trailing whitespace: ${1}" >&2
     ERRORS=yes
