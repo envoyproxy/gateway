@@ -2,7 +2,11 @@
 
 ## Overview
 
+<<<<<<< HEAD:docs/latest/design/authentication_policy.md
 This authentication policy declares the authentication mechanisms, to be enforced on connection and request going though Envoy Gateway. This includes the credential (X.509, JWT, etc), parameters (cipher suites, key algorithms)
+=======
+This authen policy is to declare the authentication mechanisms, to be enforce on connection and request going though Envoy Gateway. This includes the credential (X.509, JWT, etc), parameters (cipher suites, key algorithms)
+>>>>>>> 9a6ed41 (Add authn policy design with JWT only):docs/design/authentication_policy.md
 The policy is similar to [OpenAPI 3.1 security objects](https://github.com/OAI/OpenAPI-Specification/blob/main/versions/3.1.0.md#securitySchemeObject) without the API key part, and should be easily translatable from it with some additions.
 
 ## Authentication mechanisms
@@ -37,4 +41,8 @@ spec:
     name: httpbin
 ```
 
+<<<<<<< HEAD:docs/latest/design/authentication_policy.md
 JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refresh.
+=======
+JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refersh.
+>>>>>>> 9a6ed41 (Add authn policy design with JWT only):docs/design/authentication_policy.md
