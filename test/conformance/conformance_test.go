@@ -50,6 +50,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteInvalidNonExistentBackendRef,
 		tests.HTTPRouteInvalidBackendRefUnknownKind,
 		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
+		tests.HTTPRouteHeaderMatching,
 	}
 	cSuite.Run(t, egTests)
 
