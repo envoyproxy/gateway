@@ -4,7 +4,7 @@ tcp:
   port: 10080
   tls:
     snis:
-    - "www.example.com"
+    - foo.com
   destinations:
   - host: "1.2.3.4"
     port: 50000

@@ -496,6 +496,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				// With TLS Passthrough, partial wildcards are not allowed in xDS config, so "*", "*w.abc.com" are
 				// invalid configurations.
+				// TODO: add regex match to detect partial wildcards like *w.abc.com
 				if listener.Hostname == nil || *listener.Hostname == "" {
 					listener.SetCondition(
 						v1beta1.ListenerConditionReady,

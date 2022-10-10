@@ -5,7 +5,7 @@
   filterChains:
   - filterChainMatch:
       serverNames:
-      - www.example.com
+      - foo.com
     filters:
     - name: envoy.filters.network.tcp_proxy
       typedConfig:

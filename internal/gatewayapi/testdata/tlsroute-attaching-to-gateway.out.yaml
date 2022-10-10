@@ -9,6 +9,7 @@ gateways:
       listeners:
         - name: tls
           protocol: TLS
+          hostname: foo.com
           port: 90
           tls:
             mode: Passthrough
@@ -60,7 +61,7 @@ xdsIR:
         port: 10090
         tls:
           snis:
-            - "*"
+            - foo.com
         destinations:
           - host: 7.7.7.7
             port: 8080

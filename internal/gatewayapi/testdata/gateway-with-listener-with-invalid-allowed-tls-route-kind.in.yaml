@@ -8,6 +8,7 @@ gateways:
       gatewayClassName: envoy-gateway-class
       listeners:
         - name: tls
+          hostname: foo.com
           protocol: TLS
           port: 80
           tls:

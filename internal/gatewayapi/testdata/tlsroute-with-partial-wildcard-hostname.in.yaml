@@ -7,10 +7,19 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
+        # TODO: add test for partial wildcard
+        # - name: tls-1
+        #   protocol: TLS
+        #   hostname: "*w.example.com"
+        #   port: 90
+        #   tls:
+        #     mode: Passthrough
+        #   allowedRoutes:
+        #     namespaces:
+        #       from: All
         - name: tls
           protocol: TLS
-          hostname: foo.com
-          port: 90
+          port: 91
           tls:
             mode: Passthrough
           allowedRoutes:
@@ -29,4 +38,15 @@ tlsRoutes:
       rules:
         - backendRefs:
             - name: service-1
+              namespace: test-service-namespace
               port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: default
+      name: service-1
+    spec:
+      clusterIP: 7.7.7.7
+      ports:
+        - port: 8080

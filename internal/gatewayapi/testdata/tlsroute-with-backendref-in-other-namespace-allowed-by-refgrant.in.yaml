@@ -9,6 +9,7 @@ gateways:
       listeners:
         - name: tls
           protocol: TLS
+          hostname: foo.com
           port: 90
           tls:
             mode: Passthrough

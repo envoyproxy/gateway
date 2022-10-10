@@ -3,8 +3,8 @@ package runner
 import (
 	"context"
 
-	"gopkg.in/yaml.v2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
