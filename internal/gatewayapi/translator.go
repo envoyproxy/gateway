@@ -494,6 +494,18 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					break
 				}
 
+				// With TLS Passthrough, partial wildcards are not allowed in xDS config, so "*", "*w.abc.com" are
+				// invalid configurations.
+				if listener.Hostname == nil || *listener.Hostname == "" {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						"Hostname must not be empty with TLS mode Passthrough.",
+					)
+					break
+				}
+
 				if len(listener.TLS.CertificateRefs) > 0 {
 					listener.SetCondition(
 						v1beta1.ListenerConditionReady,
@@ -559,10 +571,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 						SNIs: []string{},
 					},
 				}
-				if listener.Hostname != nil {
+				if listener.Hostname == nil || *listener.Hostname == "" {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						"Listener is invalid, see other Conditions for details.",
+					)
+				}
+				if listener.Hostname != nil && *listener.Hostname != "" {
 					irListener.TLS.SNIs = append(irListener.TLS.SNIs, string(*listener.Hostname))
-				} else {
-					irListener.TLS.SNIs = append(irListener.TLS.SNIs, "*")
 				}
 				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 			}

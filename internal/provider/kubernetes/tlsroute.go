@@ -258,12 +258,12 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 		log.Info("deleted tlsroute from resource map")
 
 		// Delete the Namespace and Service from the resource maps if no other
-		// routes exist in the namespace.
-		routeList = &gwapiv1a2.TLSRouteList{}
-		if err := r.client.List(ctx, routeList, &client.ListOptions{Namespace: request.Namespace}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing tlsroutes")
+		// routes (TLSRoute or HTTPRoute) exist in the namespace.
+		found, err := isRoutePresentInNamespace(ctx, r.client, request.NamespacedName.Namespace)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
-		if len(routeList.Items) == 0 {
+		if !found {
 			r.resources.Namespaces.Delete(request.Namespace)
 			log.Info("deleted namespace from resource map")
 			r.resources.Services.Delete(request.NamespacedName)
@@ -311,10 +311,13 @@ func (r *tlsRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				NamespacedName: key,
 				Resource:       new(gwapiv1a2.TLSRoute),
 				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					if _, ok := obj.(*gwapiv1a2.TLSRoute); !ok {
+					t, ok := obj.(*gwapiv1a2.TLSRoute)
+					if !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					return val
+					tCopy := t.DeepCopy()
+					tCopy.Status.Parents = val.Status.Parents
+					return tCopy
 				}),
 			})
 		}

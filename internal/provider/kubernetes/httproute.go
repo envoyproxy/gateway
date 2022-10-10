@@ -273,12 +273,12 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		log.Info("deleted httproute from resource map")
 
 		// Delete the Namespace and Service from the resource maps if no other
-		// routes exist in the namespace.
-		routeList = &gwapiv1b1.HTTPRouteList{}
-		if err := r.client.List(ctx, routeList, &client.ListOptions{Namespace: request.Namespace}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing httproutes")
+		// routes (TLSRoute or HTTPRoute) exist in the namespace.
+		found, err := isRoutePresentInNamespace(ctx, r.client, request.NamespacedName.Namespace)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
-		if len(routeList.Items) == 0 {
+		if !found {
 			r.resources.Namespaces.Delete(request.Namespace)
 			log.Info("deleted namespace from resource map")
 			r.resources.Services.Delete(request.NamespacedName)

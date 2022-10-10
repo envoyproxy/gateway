@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -53,4 +54,23 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 	}
 
 	return ret, nil
+}
+
+// isRoutePresentInNamespace checks if any kind of Routes - HTTPRoute, TLSRoute
+// exists in the namespace ns.
+func isRoutePresentInNamespace(ctx context.Context, c client.Client, ns string) (bool, error) {
+	tlsRouteList := &gwapiv1a2.TLSRouteList{}
+	if err := c.List(ctx, tlsRouteList, &client.ListOptions{Namespace: ns}); err != nil {
+		return false, fmt.Errorf("error listing tlsroutes")
+	}
+
+	httpRouteList := &gwapiv1b1.HTTPRouteList{}
+	if err := c.List(ctx, httpRouteList, &client.ListOptions{Namespace: ns}); err != nil {
+		return false, fmt.Errorf("error listing httproutes")
+	}
+
+	if len(tlsRouteList.Items)+len(httpRouteList.Items) > 0 {
+		return true, nil
+	}
+	return false, nil
 }
