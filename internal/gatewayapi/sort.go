@@ -50,8 +50,6 @@ func sortXdsIRMap(xdsIR XdsIRMap) {
 			// descending order
 			sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
 		}
-
-		sort.SliceStable(ir.TCP, func(i, j int) bool { return ir.TCP[i].Name < ir.TCP[j].Name })
 	}
 }
 
