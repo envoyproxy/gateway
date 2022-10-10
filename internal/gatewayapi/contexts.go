@@ -17,16 +17,18 @@ import (
 type GatewayContext struct {
 	*v1beta1.Gateway
 
-	listeners map[v1beta1.SectionName]*ListenerContext
+	listeners []*ListenerContext
 }
 
 func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *ListenerContext {
 	if g.listeners == nil {
-		g.listeners = make(map[v1beta1.SectionName]*ListenerContext)
+		g.listeners = make([]*ListenerContext, 0)
 	}
 
-	if ctx := g.listeners[listenerName]; ctx != nil {
-		return ctx
+	for _, l := range g.listeners {
+		if l.Name == listenerName {
+			return l
+		}
 	}
 
 	var listener *v1beta1.Listener
@@ -57,7 +59,7 @@ func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *L
 		gateway:           g.Gateway,
 		listenerStatusIdx: listenerStatusIdx,
 	}
-	g.listeners[listenerName] = ctx
+	g.listeners = append(g.listeners, ctx)
 	return ctx
 }
 
