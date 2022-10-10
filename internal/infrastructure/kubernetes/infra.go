@@ -28,8 +28,8 @@ func NewInfra(cli client.Client) *Infra {
 	}
 }
 
-// CreateInfra creates the managed kube infra, if it doesn't exist.
-func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
+// CreateOrUpdateInfra creates the managed kube infra, if it doesn't exist.
+func (i *Infra) CreateOrUpdateInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}

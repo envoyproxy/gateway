@@ -60,8 +60,8 @@ func TestCreateInfra(t *testing.T) {
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 				Namespace: "default",
 			}
-			// Create the proxy infra.
-			err := kube.CreateInfra(context.Background(), tc.in)
+			// Create or update the proxy infra.
+			err := kube.CreateOrUpdateInfra(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)
 			} else {

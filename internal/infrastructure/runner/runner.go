@@ -15,7 +15,7 @@ type Config struct {
 
 type Runner struct {
 	Config
-	mgr *infrastructure.Manager
+	mgr infrastructure.Manager
 }
 
 func (r *Runner) Name() string {
@@ -52,7 +52,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			} else {
 				// Manage the proxy infra.
-				if err := r.mgr.CreateInfra(ctx, val); err != nil {
+				if err := r.mgr.CreateOrUpdateInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
 				}
 			}
