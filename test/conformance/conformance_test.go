@@ -13,6 +13,8 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/utils/env"
 )
 
 func TestGatewayAPIConformance(t *testing.T) {
@@ -24,18 +26,25 @@ func TestGatewayAPIConformance(t *testing.T) {
 
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
 
+	setUniquePorts := env.Lookup("CONFORMANCE_UNIQUE_PORTS", "true")
+
+	validUniqueListenerPorts := []v1alpha2.PortNumber{
+		v1alpha2.PortNumber(int32(80)),
+		v1alpha2.PortNumber(int32(81)),
+		v1alpha2.PortNumber(int32(82)),
+		v1alpha2.PortNumber(int32(83)),
+	}
+
+	if setUniquePorts == "false" {
+		validUniqueListenerPorts = []v1alpha2.PortNumber{}
+	}
+
 	cSuite := suite.New(suite.Options{
-		Client:               client,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		ValidUniqueListenerPorts: []v1alpha2.PortNumber{
-			v1alpha2.PortNumber(int32(80)),
-			v1alpha2.PortNumber(int32(81)),
-			v1alpha2.PortNumber(int32(82)),
-			v1alpha2.PortNumber(int32(83)),
-			v1alpha2.PortNumber(int32(84)),
-		},
+		Client:                   client,
+		GatewayClassName:         *flags.GatewayClassName,
+		Debug:                    *flags.ShowDebug,
+		CleanupBaseResources:     *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts: validUniqueListenerPorts,
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
