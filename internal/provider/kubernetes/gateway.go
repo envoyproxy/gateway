@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -80,6 +81,16 @@ func newGatewayController(mgr manager.Manager, cfg *config.Server, su status.Upd
 	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, r.enqueueRequestForOwningGateway()); err != nil {
 		return err
 	}
+	// Trigger gateway reconciliation when a Secret that is referenced
+	// by a managed Gateway has changed.
+	if err := c.Watch(&source.Kind{Type: &corev1.Secret{}}, r.enqueueRequestForGatewaySecrets()); err != nil {
+		return err
+	}
+	// Trigger gateway reconciliation when a ReferenceGrant that refers
+	// to a managed Gateway has changed.
+	if err := c.Watch(&source.Kind{Type: &gwapiv1a2.ReferenceGrant{}}, r.enqueueRequestForReferencedGateway()); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -136,6 +147,106 @@ func (r *gatewayReconciler) enqueueRequestForOwningGateway() handler.EventHandle
 	})
 }
 
+// enqueueRequestForGatewaySecrets returns an event handler that maps events for
+// Secrets referenced by managed Gateways to reconcile requests for those Gateway objects.
+func (r *gatewayReconciler) enqueueRequestForGatewaySecrets() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+		secret, ok := a.(*corev1.Secret)
+		if !ok {
+			r.log.Info("bypassing reconciliation due to unexpected object type", "type", a)
+			return nil
+		}
+
+		ctx := context.Background()
+		var gateways gwapiv1b1.GatewayList
+		if err := r.client.List(ctx, &gateways); err != nil {
+			return nil
+		}
+
+		var reqs []reconcile.Request
+		for i := range gateways.Items {
+			gw := gateways.Items[i]
+			if r.hasMatchingController(&gw) {
+				for j := range gw.Spec.Listeners {
+					if terminatesTLS(&gw.Spec.Listeners[j]) {
+						secrets, _, err := r.secretsAndRefGrantsForGateway(ctx, &gw)
+						if err != nil {
+							return nil
+						}
+						for _, s := range secrets {
+							if s.Namespace == secret.Namespace && s.Name == secret.Name {
+								req := reconcile.Request{
+									NamespacedName: types.NamespacedName{
+										Namespace: gw.Namespace,
+										Name:      gw.Name,
+									},
+								}
+								reqs = append(reqs, req)
+							}
+						}
+					}
+				}
+			}
+		}
+
+		return reqs
+	})
+}
+
+// enqueueRequestForReferencedGateway returns an event handler that maps events for
+// resources that reference a managed Gateway to reconcile requests for those Gateway objects.
+// Note: A ReferenceGrant is the only supported object type.
+func (r *gatewayReconciler) enqueueRequestForReferencedGateway() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(func(a client.Object) []reconcile.Request {
+		rg, ok := a.(*gwapiv1a2.ReferenceGrant)
+		if !ok {
+			r.log.Info("bypassing reconciliation due to unexpected object type", "type", a)
+			return nil
+		}
+
+		var refs []types.NamespacedName
+		for _, to := range rg.Spec.To {
+			if to.Group == gwapiv1a2.GroupName &&
+				to.Kind == gatewayapi.KindGateway &&
+				to.Name != nil {
+				ref := types.NamespacedName{Namespace: rg.Namespace, Name: string(*to.Name)}
+				refs = append(refs, ref)
+			}
+		}
+		for _, from := range rg.Spec.From {
+			if from.Group == gwapiv1a2.GroupName &&
+				from.Kind == gatewayapi.KindGateway {
+				ref := types.NamespacedName{Namespace: string(from.Namespace), Name: rg.Name}
+				refs = append(refs, ref)
+			}
+		}
+
+		ctx := context.Background()
+		var gateways gwapiv1b1.GatewayList
+		if err := r.client.List(ctx, &gateways); err != nil {
+			return nil
+		}
+
+		var reqs []reconcile.Request
+		for i := range gateways.Items {
+			gw := gateways.Items[i]
+			for _, ref := range refs {
+				if gw.Namespace == ref.Namespace && gw.Name == ref.Name && r.hasMatchingController(&gw) {
+					req := reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Namespace: gw.Namespace,
+							Name:      gw.Name,
+						},
+					}
+					reqs = append(reqs, req)
+				}
+			}
+		}
+
+		return reqs
+	})
+}
+
 // Reconcile finds all the Gateways for the GatewayClass with an "Accepted: true" condition
 // and passes all Gateways for the configured GatewayClass to the IR for processing.
 func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -179,6 +290,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 
 	found := false
+	var secrets []corev1.Secret
 	// Set status conditions for all accepted gateways.
 	for i := range acceptedGateways {
 		gw := acceptedGateways[i]
@@ -195,6 +307,37 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		if err != nil {
 			r.log.Info("failed to get service for gateway",
 				"namespace", gw.Namespace, "name", gw.Name)
+		}
+
+		// Get the secret and referenceGrants of the Gateway's TLS configuration.
+		secrets, refGrants, err := r.secretsAndRefGrantsForGateway(ctx, &gw)
+		if err != nil {
+			r.log.Info("failed to get secrets and referencegrants for gateway",
+				"namespace", gw.Namespace, "name", gw.Name)
+		}
+		for i := range secrets {
+			secret := secrets[i]
+			// Store the secrets in the resource map.
+			key := utils.NamespacedName(&secret)
+			r.resources.Secrets.Store(key, &secret)
+		}
+		for i := range refGrants {
+			rg := refGrants[i]
+			// Store the referencegrants in the resource map.
+			key := utils.NamespacedName(&rg)
+			r.resources.ReferenceGrants.Store(key, &rg)
+			// Store the referencegrant namespace in the resource map.
+			key = types.NamespacedName{Name: rg.Namespace}
+			refNs := corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: rg.Namespace,
+				},
+			}
+			if err := r.client.Get(ctx, key, &refNs); err != nil {
+				r.log.Info("failed to get referencegrant namespace", "name", refNs.Name)
+				return reconcile.Result{}, nil
+			}
+			r.resources.Namespaces.Store(refNs.Name, &refNs)
 		}
 
 		// update scheduled condition
@@ -234,6 +377,24 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 
 	if !found {
 		r.resources.Gateways.Delete(request.NamespacedName)
+		// Delete the TLS secrets from the resource map if no other managed
+		// Gateways reference them.
+		for i := range secrets {
+			secret := secrets[i]
+			referenced, err := r.gatewaysRefSecret(ctx, &secret)
+			switch {
+			case err != nil:
+				r.log.Error(err, "failed to verify if other gateways reference secret")
+			case referenced:
+				r.log.Info("no other gateways reference secret; deleting from resource map",
+					"namespace", secret.Namespace, "name", secret.Name)
+				key := utils.NamespacedName(&secret)
+				r.resources.Secrets.Delete(key)
+			default:
+				r.log.Info("no other gateways reference secret; deleting from resource map",
+					"namespace", secret.Namespace, "name", secret.Name)
+			}
+		}
 	}
 
 	r.log.WithName(request.Namespace).WithName(request.Name).Info("reconciled gateway")
@@ -299,6 +460,122 @@ func (r *gatewayReconciler) envoyServiceForGateway(ctx context.Context, gateway 
 		return nil, err
 	}
 	return svc, nil
+}
+
+// gatewaysRefSecret returns true if a managed Gateway references the provided secret.
+// An error is returned if an error is encountered while checking.
+func (r *gatewayReconciler) gatewaysRefSecret(ctx context.Context, secret *corev1.Secret) (bool, error) {
+	if secret == nil {
+		return false, fmt.Errorf("secret is nil")
+	}
+	gateways := &gwapiv1b1.GatewayList{}
+	if err := r.client.List(ctx, gateways); err != nil {
+		return false, fmt.Errorf("error listing gatewayclasses: %v", err)
+	}
+	for i := range gateways.Items {
+		gw := gateways.Items[i]
+		if r.hasMatchingController(&gw) {
+			secrets, _, err := r.secretsAndRefGrantsForGateway(ctx, &gw)
+			if err != nil {
+				return false, err
+			}
+			for _, s := range secrets {
+				if s.Namespace == secret.Namespace && s.Name == secret.Name {
+					return true, nil
+				}
+			}
+		}
+	}
+
+	return false, nil
+}
+
+// secretsAndRefGrantsForGateway returns the Secrets referenced by the provided gateway listeners.
+// If the provided Gateway references a Secret in a different namespace, a list of
+// ReferenceGrants is returned that permit the cross namespace Secret reference.
+func (r *gatewayReconciler) secretsAndRefGrantsForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) ([]corev1.Secret, []gwapiv1a2.ReferenceGrant, error) {
+	var secrets []corev1.Secret
+	var returnedGrants []gwapiv1a2.ReferenceGrant
+	for i := range gateway.Spec.Listeners {
+		listener := gateway.Spec.Listeners[i]
+		if terminatesTLS(&listener) {
+			for j := range listener.TLS.CertificateRefs {
+				ref := listener.TLS.CertificateRefs[j]
+				if refsSecret(&ref) {
+					if ref.Namespace != nil {
+						// A ReferenceGrant is required for cross namespace secret references.
+						refGrants := &gwapiv1a2.ReferenceGrantList{}
+						opts := client.ListOptions{Namespace: string(*ref.Namespace)}
+						if err := r.client.List(ctx, refGrants, &opts); err != nil {
+							return nil, nil, fmt.Errorf("error listing referencegrants")
+						}
+						var gwRefd, secretRefd bool
+						for _, rg := range refGrants.Items {
+							for _, from := range rg.Spec.From {
+								if from.Group == gwapiv1a2.GroupName &&
+									from.Kind == gatewayapi.KindGateway {
+									gwRefd = true
+									break
+								}
+							}
+							for _, to := range rg.Spec.To {
+								if to.Group == corev1.GroupName &&
+									to.Kind == gatewayapi.KindSecret {
+									if to.Name == nil || *to.Name == gwapiv1a2.ObjectName(ref.Name) {
+										secretRefd = true
+										break
+									}
+								}
+							}
+							if gwRefd && secretRefd {
+								returnedGrants = append(returnedGrants, rg)
+								key := types.NamespacedName{
+									Namespace: string(*ref.Namespace),
+									Name:      string(ref.Name),
+								}
+								secret := new(corev1.Secret)
+								if err := r.client.Get(ctx, key, secret); err != nil {
+									return nil, nil, fmt.Errorf("failed to get secret: %v", err)
+								}
+								secrets = append(secrets, *secret)
+							}
+						}
+					} else {
+						// The secret is in the Gateway's namespace.
+						key := types.NamespacedName{
+							Namespace: gateway.Namespace,
+							Name:      string(ref.Name),
+						}
+						secret := new(corev1.Secret)
+						if err := r.client.Get(ctx, key, secret); err != nil {
+							return nil, nil, fmt.Errorf("failed to get secret: %v", err)
+						}
+						secrets = append(secrets, *secret)
+					}
+				}
+			}
+		}
+	}
+
+	return secrets, returnedGrants, nil
+}
+
+// terminatesTLS returns true if the provided gateway contains a listener configured
+// for TLS termination.
+func terminatesTLS(listener *gwapiv1b1.Listener) bool {
+	if listener.TLS != nil &&
+		listener.Protocol == gwapiv1b1.HTTPSProtocolType &&
+		listener.TLS.Mode != nil &&
+		*listener.TLS.Mode == gwapiv1b1.TLSModeTerminate {
+		return true
+	}
+	return false
+}
+
+// refsSecret returns true if ref refers to a Secret.
+func refsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
+	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
+		(ref.Kind == nil || *ref.Kind == gatewayapi.KindSecret)
 }
 
 // addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.

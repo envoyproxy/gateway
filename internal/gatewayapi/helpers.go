@@ -32,6 +32,10 @@ func SectionNamePtr(name string) *v1beta1.SectionName {
 	return &sectionName
 }
 
+func TLSModeTypePtr(mode v1beta1.TLSModeType) *v1beta1.TLSModeType {
+	return &mode
+}
+
 func StringPtr(val string) *string {
 	return &val
 }

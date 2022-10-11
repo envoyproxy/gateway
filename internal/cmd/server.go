@@ -150,6 +150,8 @@ func setupRunners(cfg *config.Server) error {
 	pResources.Gateways.Close()
 	pResources.HTTPRoutes.Close()
 	pResources.Services.Close()
+	pResources.Secrets.Close()
+	pResources.ReferenceGrants.Close()
 	pResources.Namespaces.Close()
 	pResources.GatewayStatuses.Close()
 	pResources.HTTPRouteStatuses.Close()
