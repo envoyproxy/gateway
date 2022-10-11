@@ -63,10 +63,7 @@ kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the
 
 .PHONY: kube-demo
 kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute resource and test the configuration.
-	kubectl apply -f examples/kubernetes/httpbin.yaml
-	kubectl apply -f examples/kubernetes/gatewayclass.yaml
-	kubectl apply -f examples/kubernetes/gateway.yaml
-	kubectl apply -f examples/kubernetes/httproute.yaml
+	kubectl apply -f examples/kubernetes/quickstart.yaml
 	@echo "\nPort forward to the Envoy service using the command below"
 	@echo "kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:8080 &"
 	@echo "\nCurl the app through Envoy proxy using the command below"
@@ -74,10 +71,7 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 
 .PHONY: kube-demo-undeploy
 kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
-	kubectl delete -f examples/kubernetes/httproute.yaml
-	kubectl delete -f examples/kubernetes/gateway.yaml
-	kubectl delete -f examples/kubernetes/gatewayclass.yaml
-	kubectl delete -f examples/kubernetes/httpbin.yaml
+	kubectl delete -f examples/kubernetes/quickstart.yaml
 
 .PHONY: run-kube-local
 run-kube-local: build kube-install ## Run Envoy Gateway locally.

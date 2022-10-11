@@ -35,5 +35,6 @@ jobs:
         with:
           files: |
             release-artifacts/install.yaml
+            release-artifacts/quickstart.yaml
 
         
