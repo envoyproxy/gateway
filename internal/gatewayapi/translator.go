@@ -920,12 +920,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 
 								if !canAddHeader {
-									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionAccepted,
-										metav1.ConditionTrue,
-										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added, ignoring second entry", headerKey),
-									)
 									continue
 								}
 
@@ -976,12 +970,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									}
 								}
 								if !canAddHeader {
-									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionAccepted,
-										metav1.ConditionTrue,
-										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added/set, ignoring second entry", headerKey),
-									)
 									continue
 								}
 								newHeader := ir.AddHeader{
@@ -1020,12 +1008,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									}
 								}
 								if !canRemHeader {
-									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionAccepted,
-										metav1.ConditionTrue,
-										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be removed, ignoring second entry", removedHeader),
-									)
 									continue
 								}
 

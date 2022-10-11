@@ -62,8 +62,8 @@ httpRoutes:
       conditions:
       - type: Accepted
         status: "True"
-        reason: UnsupportedValue
-        message: "RequestHeaderModifier Filter already configures request header: some-header-1 to be removed, ignoring second entry"
+        reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:

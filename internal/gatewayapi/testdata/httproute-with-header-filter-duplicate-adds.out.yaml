@@ -81,9 +81,8 @@ httpRoutes:
       conditions:
       - type: Accepted
         status: "True"
-        reason: UnsupportedValue
-        # Currently only one invalid value status will be set. If there are multiple, then only the latest is displayed until that issue is resolved.
-        message: "RequestHeaderModifier Filter already configures request header: set-header-4 to be added/set, ignoring second entry"
+        reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:

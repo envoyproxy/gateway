@@ -60,9 +60,9 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
-        status: "False"
-        reason: UnsupportedValue
-        message: "Status code 666 is invalid, only 302 and 301 are supported"
+        status: "True"
+        reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:
