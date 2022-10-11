@@ -57,7 +57,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
 	
-  if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
+  	if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create tlsroute controller: %w", err)
 	}
 
@@ -66,10 +66,11 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		return nil, fmt.Errorf("unable to set up health check: %w", err)
 	}
 	
-  // Add ready check health probes.
+	// Add ready check health probes.
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
-
+	}
+	
 	return &Provider{
 		manager: mgr,
 		client:  mgr.GetClient(),
