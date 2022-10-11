@@ -49,7 +49,7 @@ jobs:
 
     # conformance
     - name: Run Conformance Tests
-      run: make conformance
+      run: CONFORMANCE_UNIQUE_PORTS=false make conformance
 
     # build and push image
     - name: Login to DockerHub

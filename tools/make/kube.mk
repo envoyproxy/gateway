@@ -4,6 +4,8 @@ ENVTEST_K8S_VERSION ?= 1.24.1
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
+CONFORMANCE_UNIQUE_PORTS ?= true
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -97,7 +99,7 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
-	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --use-unique-ports=$(CONFORMANCE_UNIQUE_PORTS)
 
 .PHONY: delete-cluster
 delete-cluster: $(tools/kind) ## Delete kind cluster.

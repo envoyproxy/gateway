@@ -4,6 +4,7 @@
 package conformance
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,11 +14,13 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
-
-	"github.com/envoyproxy/gateway/internal/utils/env"
 )
 
+var useUniquePorts = flag.Bool("use-unique-ports", true, "whether to use unique ports")
+
 func TestGatewayAPIConformance(t *testing.T) {
+	flag.Parse()
+
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
 
@@ -26,8 +29,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
 
-	setUniquePorts := env.Lookup("CONFORMANCE_UNIQUE_PORTS", "true")
-
 	validUniqueListenerPorts := []v1alpha2.PortNumber{
 		v1alpha2.PortNumber(int32(80)),
 		v1alpha2.PortNumber(int32(81)),
@@ -35,7 +36,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		v1alpha2.PortNumber(int32(83)),
 	}
 
-	if setUniquePorts == "false" {
+	if !*useUniquePorts {
 		validUniqueListenerPorts = []v1alpha2.PortNumber{}
 	}
 
