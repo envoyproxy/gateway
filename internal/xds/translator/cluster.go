@@ -12,18 +12,18 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(httpRoute *ir.HTTPRoute) (*cluster.Cluster, error) {
+func buildXdsCluster(routeName string, destinations []*ir.RouteDestination) (*cluster.Cluster, error) {
 	localities := make([]*endpoint.LocalityLbEndpoints, 0, 1)
 	locality := &endpoint.LocalityLbEndpoints{
 		Locality:    &core.Locality{},
-		LbEndpoints: buildXdsEndpoints(httpRoute.Destinations),
+		LbEndpoints: buildXdsEndpoints(destinations),
 		Priority:    0,
 		// Each locality gets the same weight 1. There is a single locality
 		// per priority, so the weight value does not really matter, but some
 		// load balancers need the value to be set.
 		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
 	localities = append(localities, locality)
-	clusterName := getXdsClusterName(httpRoute.Name)
+	clusterName := getXdsClusterName(routeName)
 	return &cluster.Cluster{
 		Name:                 clusterName,
 		ConnectTimeout:       durationpb.New(5 * time.Second),

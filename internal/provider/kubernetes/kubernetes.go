@@ -52,17 +52,23 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	if err := newGatewayController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
+
 	if err := newHTTPRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
+	
+  if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
+		return nil, fmt.Errorf("failed to create tlsroute controller: %w", err)
+	}
+
 	// Add health check health probes.
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return nil, fmt.Errorf("unable to set up health check: %w", err)
 	}
-	// Add ready check health probes.
+	
+  // Add ready check health probes.
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return nil, fmt.Errorf("unable to set up ready check: %w", err)
-	}
 
 	return &Provider{
 		manager: mgr,

@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	ErrHTTPListenerNameEmpty         = errors.New("field Name must be specified")
-	ErrHTTPListenerAddressInvalid    = errors.New("field Address must be a valid IP address")
-	ErrHTTPListenerPortInvalid       = errors.New("field Port specified is invalid")
+	ErrListenerNameEmpty             = errors.New("field Name must be specified")
+	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
+	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
+	ErrTCPListenesSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
@@ -35,6 +36,8 @@ var (
 type Xds struct {
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
+	// TCP Listeners exposed by the gateway.
+	TCP []*TCPListener
 }
 
 // Validate the fields within the Xds structure.
@@ -46,6 +49,24 @@ func (x Xds) Validate() error {
 		}
 	}
 	return errs
+}
+
+func (x Xds) GetHTTPListener(name string) *HTTPListener {
+	for _, listener := range x.HTTP {
+		if listener.Name == name {
+			return listener
+		}
+	}
+	return nil
+}
+
+func (x Xds) GetTCPListener(name string) *TCPListener {
+	for _, listener := range x.TCP {
+		if listener.Name == name {
+			return listener
+		}
+	}
+	return nil
 }
 
 // HTTPListener holds the listener configuration.
@@ -68,26 +89,17 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 }
 
-func (x Xds) GetListener(name string) *HTTPListener {
-	for _, listener := range x.HTTP {
-		if listener.Name == name {
-			return listener
-		}
-	}
-	return nil
-}
-
 // Validate the fields within the HTTPListener structure
 func (h HTTPListener) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrHTTPListenerNameEmpty)
+		errs = multierror.Append(errs, ErrListenerNameEmpty)
 	}
 	if ip := net.ParseIP(h.Address); ip == nil {
-		errs = multierror.Append(errs, ErrHTTPListenerAddressInvalid)
+		errs = multierror.Append(errs, ErrListenerAddressInvalid)
 	}
 	if h.Port == 0 {
-		errs = multierror.Append(errs, ErrHTTPListenerPortInvalid)
+		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
 	if len(h.Hostnames) == 0 {
 		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
@@ -234,6 +246,20 @@ type RouteDestination struct {
 	Weight uint32
 }
 
+// Validate the fields within the RouteDestination structure
+func (r RouteDestination) Validate() error {
+	var errs error
+	// Only support IP hosts for now
+	if ip := net.ParseIP(r.Host); ip == nil {
+		errs = multierror.Append(errs, ErrRouteDestinationHostInvalid)
+	}
+	if r.Port == 0 {
+		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
+	}
+
+	return errs
+}
+
 // Add header configures a headder to be added to a request.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
@@ -336,20 +362,6 @@ func (r HTTPPathModifier) Validate() error {
 	return errs
 }
 
-// Validate the fields within the RouteDestination structure
-func (r RouteDestination) Validate() error {
-	var errs error
-	// Only support IP hosts for now
-	if ip := net.ParseIP(r.Host); ip == nil {
-		errs = multierror.Append(errs, ErrRouteDestinationHostInvalid)
-	}
-	if r.Port == 0 {
-		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
-	}
-
-	return errs
-}
-
 // StringMatch holds the various match conditions.
 // Only one of Exact, Prefix or SafeRegex can be set.
 // +k8s:deepcopy-gen=true
@@ -382,5 +394,65 @@ func (s StringMatch) Validate() error {
 		errs = multierror.Append(errs, ErrStringMatchConditionInvalid)
 	}
 
+	return errs
+}
+
+// TCPListener holds the TCP listener configuration.
+// +k8s:deepcopy-gen=true
+type TCPListener struct {
+	// Name of the TCPListener
+	Name string
+	// Address that the listener should listen on.
+	Address string
+	// Port on which the service can be expected to be accessed by clients.
+	Port uint32
+	// TLS information required for TLS Passthrough, If provided, incoming
+	// connections' server names are inspected and routed to backends accordingly.
+	TLS *TLSInspectorConfig
+	// Destinations associated with TCP traffic to the service.
+	Destinations []*RouteDestination
+}
+
+// Validate the fields within the TCPListener structure
+func (h TCPListener) Validate() error {
+	var errs error
+	if h.Name == "" {
+		errs = multierror.Append(errs, ErrListenerNameEmpty)
+	}
+	if ip := net.ParseIP(h.Address); ip == nil {
+		errs = multierror.Append(errs, ErrListenerAddressInvalid)
+	}
+	if h.Port == 0 {
+		errs = multierror.Append(errs, ErrListenerPortInvalid)
+	}
+	if h.TLS != nil {
+		if err := h.TLS.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, route := range h.Destinations {
+		if err := route.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// TLSInspectorConfig holds the configuration required for inspecting TLS
+// passthrough connections.
+// +k8s:deepcopy-gen=true
+type TLSInspectorConfig struct {
+	// Server names that are compared against the server names of a new connection.
+	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
+	// supported, and values like *w.example.com are invalid.
+	// SNIs are used only in case of TLS Passthrough.
+	SNIs []string
+}
+
+func (t TLSInspectorConfig) Validate() error {
+	var errs error
+	if len(t.SNIs) == 0 {
+		errs = multierror.Append(errs, ErrTCPListenesSNIsEmpty)
+	}
 	return errs
 }

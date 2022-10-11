@@ -8,43 +8,40 @@ gateways:
       gatewayClassName: envoy-gateway-class
       listeners:
         - name: tls
-          protocol: HTTPS
+          protocol: TLS
           hostname: foo.com
-          port: 443
-          allowedRoutes:
-            namespaces:
-              from: All
           tls:
             mode: Passthrough
             certificateRefs:
               - name: tls-secret-1
+          port: 90
+          allowedRoutes:
+            namespaces:
+              from: All
     status:
       listeners:
         - name: tls
           supportedKinds:
             - group: gateway.networking.k8s.io
-              kind: HTTPRoute
+              kind: TLSRoute
           attachedRoutes: 0
           conditions:
             - type: Ready
               status: "False"
-              reason: UnsupportedTLSMode
-              message: TLS Passthrough mode is not supported, TLS mode must be Terminate.
-httpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: HTTPRoute
+              reason: Invalid
+              message: Listener must not have TLS certificate refs set for TLS mode Passthrough
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
     metadata:
       namespace: default
-      name: httproute-1
+      name: tlsroute-1
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
       rules:
-        - matches:
-            - path:
-                value: "/"
-          backendRefs:
+        - backendRefs:
             - name: service-1
               port: 8080
     status:
@@ -65,8 +62,8 @@ infraIR:
     proxy:
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
       image: envoyproxy/envoy:v1.23-latest
       listeners:

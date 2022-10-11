@@ -201,11 +201,32 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		status.UpdateGatewayStatusScheduledCondition(&gw, true)
 		// update address field and ready condition
 		status.UpdateGatewayStatusReadyCondition(&gw, svc, deployment)
-		// publish status
-		key := utils.NamespacedName(&gw)
-		r.resources.GatewayStatuses.Store(key, &gw)
 
-		r.resources.Gateways.Store(key, &gw)
+		key := utils.NamespacedName(&gw)
+		// publish status
+		// do it inline since this code flow updates the
+		// Status.Addresses field whereas the message bus / subscriber
+		// does not.
+		r.statusUpdater.Send(status.Update{
+			NamespacedName: key,
+			Resource:       new(gwapiv1b1.Gateway),
+			Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+				g, ok := obj.(*gwapiv1b1.Gateway)
+				if !ok {
+					panic(fmt.Sprintf("unsupported object type %T", obj))
+				}
+				gCopy := g.DeepCopy()
+				gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, gw.Status.Conditions...)
+				gCopy.Status.Addresses = gw.Status.Addresses
+				return gCopy
+
+			}),
+		})
+
+		// only store the resource if it does not exist or it has a newer spec.
+		if v, ok := r.resources.Gateways.Load(key); !ok || (gw.Generation > v.Generation) {
+			r.resources.Gateways.Store(key, &gw)
+		}
 		if key == request.NamespacedName {
 			found = true
 		}
@@ -343,8 +364,6 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
 					gCopy := g.DeepCopy()
-					gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, val.Status.Conditions...)
-					gCopy.Status.Addresses = val.Status.Addresses
 					gCopy.Status.Listeners = val.Status.Listeners
 					return gCopy
 				}),

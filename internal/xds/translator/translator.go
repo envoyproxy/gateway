@@ -64,7 +64,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			xdsCluster, err := buildXdsCluster(httpRoute)
+			xdsCluster, err := buildXdsCluster(httpRoute.Name, httpRoute.Destinations)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds cluster"))
 			}
@@ -81,6 +81,22 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
 	}
 
+	for _, tcpListener := range ir.TCP {
+		// 1:1 between IR TCPListener and xDS Cluster
+		xdsCluster, err := buildXdsCluster(tcpListener.Name, tcpListener.Destinations)
+		if err != nil {
+			return nil, multierror.Append(err, errors.New("error building xds cluster"))
+		}
+		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+
+		// 1:1 between IR TCPListener and xDS Listener
+		xdsListener, err := buildXdsTCPListener(xdsCluster.Name, tcpListener)
+		if err != nil {
+			return nil, multierror.Append(err, errors.New("error building xds listener"))
+		}
+
+		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+	}
 	return tCtx, nil
 }
 

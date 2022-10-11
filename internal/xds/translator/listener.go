@@ -6,7 +6,9 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
+	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -71,6 +73,74 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 	}, nil
 }
 
+func buildXdsTCPListener(clusterName string, tcpListener *ir.TCPListener) (*listener.Listener, error) {
+	if tcpListener == nil {
+		return nil, errors.New("http listener is nil")
+	}
+
+	statPrefix := "tcp"
+	if tcpListener.TLS != nil {
+		statPrefix = "passthrough"
+	}
+	mgr := &tcp.TcpProxy{
+		StatPrefix: statPrefix,
+		ClusterSpecifier: &tcp.TcpProxy_Cluster{
+			Cluster: clusterName,
+		},
+	}
+	mgrAny, err := anypb.New(mgr)
+	if err != nil {
+		return nil, err
+	}
+
+	filterChain := &listener.FilterChain{
+		Filters: []*listener.Filter{{
+			Name: wellknown.TCPProxy,
+			ConfigType: &listener.Filter_TypedConfig{
+				TypedConfig: mgrAny,
+			},
+		}},
+	}
+	if tcpListener.TLS != nil {
+		filterChain.FilterChainMatch = &listener.FilterChainMatch{
+			ServerNames: tcpListener.TLS.SNIs,
+		}
+	}
+
+	xdsListener := &listener.Listener{
+		Name: getXdsListenerName(tcpListener.Name, tcpListener.Port),
+		Address: &core.Address{
+			Address: &core.Address_SocketAddress{
+				SocketAddress: &core.SocketAddress{
+					Protocol: core.SocketAddress_TCP,
+					Address:  tcpListener.Address,
+					PortSpecifier: &core.SocketAddress_PortValue{
+						PortValue: tcpListener.Port,
+					},
+				},
+			},
+		},
+		FilterChains: []*listener.FilterChain{filterChain},
+	}
+
+	if tcpListener.TLS != nil {
+		tlsInspector := &tls_inspector.TlsInspector{}
+		tlsInspectorAny, err := anypb.New(tlsInspector)
+		if err != nil {
+			return nil, err
+		}
+
+		xdsListener.ListenerFilters = []*listener.ListenerFilter{{
+			Name: wellknown.TlsInspector,
+			ConfigType: &listener.ListenerFilter_TypedConfig{
+				TypedConfig: tlsInspectorAny,
+			},
+		}}
+	}
+
+	return xdsListener, nil
+}
+
 func buildXdsDownstreamTLSSocket(listenerName string,
 	tlsConfig *ir.TLSListenerConfig) (*core.TransportSocket, error) {
 	tlsCtx := &tls.DownstreamTlsContext{
@@ -113,5 +183,4 @@ func buildXdsDownstreamTLSSecret(listenerName string,
 			},
 		},
 	}, nil
-
 }
