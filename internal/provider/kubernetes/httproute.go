@@ -212,10 +212,11 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 			return reconcile.Result{}, nil
 		}
 
-		// Store the httproute in the resource map.
-		r.resources.HTTPRoutes.Store(routeKey, &route)
-		log.Info("added httproute to resource map")
-
+		// only store the resource if it does not exist or it has a newer spec.
+		if v, ok := r.resources.HTTPRoutes.Load(routeKey); !ok || (route.Generation > v.Generation) {
+			r.resources.HTTPRoutes.Store(routeKey, &route)
+			log.Info("added httproute to resource map")
+		}
 		// Get the route's namespace from the cache.
 		nsKey := types.NamespacedName{Name: route.Namespace}
 		ns := new(corev1.Namespace)
