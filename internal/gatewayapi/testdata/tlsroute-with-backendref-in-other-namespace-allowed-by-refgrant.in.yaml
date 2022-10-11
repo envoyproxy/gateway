@@ -1,0 +1,57 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls
+          protocol: TLS
+          hostname: foo.com
+          port: 90
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      namespace: default
+      name: tlsroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              namespace: test-service-namespace
+              port: 8080
+services:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      namespace: test-service-namespace
+      name: service-1
+    spec:
+      clusterIP: 7.7.7.7
+      ports:
+        - port: 8080
+referenceGrants:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: ReferenceGrant
+    metadata:
+      namespace: test-service-namespace
+      name: referencegrant-1
+    spec:
+      from:
+        - group: gateway.networking.k8s.io
+          kind: TLSRoute
+          namespace: default
+      to:
+        - group: ""
+          kind: Service

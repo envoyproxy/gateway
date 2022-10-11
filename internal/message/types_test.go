@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -34,6 +35,12 @@ func TestProviderResources(t *testing.T) {
 			Namespace: "test",
 		},
 	}
+	t1 := &gwapiv1a2.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tlsroute1",
+			Namespace: "test",
+		},
+	}
 	s1 := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service1",
@@ -46,6 +53,7 @@ func TestProviderResources(t *testing.T) {
 	assert.Nil(t, resources.GetGatewayClasses())
 	assert.Nil(t, resources.GetGateways())
 	assert.Nil(t, resources.GetHTTPRoutes())
+	assert.Nil(t, resources.GetTLSRoutes())
 	assert.Nil(t, resources.GetServices())
 
 	// Add resources
@@ -63,6 +71,12 @@ func TestProviderResources(t *testing.T) {
 		Name:      r1.GetName(),
 	}
 	resources.HTTPRoutes.Store(r1Key, r1)
+
+	t1Key := types.NamespacedName{
+		Namespace: t1.GetNamespace(),
+		Name:      t1.GetName(),
+	}
+	resources.TLSRoutes.Store(t1Key, t1)
 
 	s1Key := types.NamespacedName{
 		Namespace: s1.GetNamespace(),
@@ -82,6 +96,9 @@ func TestProviderResources(t *testing.T) {
 
 	hrs := resources.GetHTTPRoutes()
 	assert.Equal(t, len(hrs), 1)
+
+	trs := resources.GetTLSRoutes()
+	assert.Equal(t, len(trs), 1)
 
 	svcs := resources.GetServices()
 	assert.Equal(t, len(svcs), 1)
@@ -110,6 +127,12 @@ func TestProviderResources(t *testing.T) {
 			Namespace: "test",
 		},
 	}
+	t2 := &gwapiv1a2.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tlsroute2",
+			Namespace: "test",
+		},
+	}
 	s2 := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service2",
@@ -131,6 +154,12 @@ func TestProviderResources(t *testing.T) {
 	}
 	resources.HTTPRoutes.Store(r2Key, r2)
 
+	t2Key := types.NamespacedName{
+		Namespace: t2.GetNamespace(),
+		Name:      t2.GetName(),
+	}
+	resources.TLSRoutes.Store(t2Key, t2)
+
 	s2Key := types.NamespacedName{
 		Namespace: s2.GetNamespace(),
 		Name:      s2.GetName(),
@@ -149,6 +178,9 @@ func TestProviderResources(t *testing.T) {
 
 	hrs = resources.GetHTTPRoutes()
 	assert.ElementsMatch(t, hrs, []*gwapiv1b1.HTTPRoute{r1, r2})
+
+	trs = resources.GetTLSRoutes()
+	assert.ElementsMatch(t, trs, []*gwapiv1a2.TLSRoute{t1, t2})
 
 	svcs = resources.GetServices()
 	assert.ElementsMatch(t, svcs, []*corev1.Service{s1, s2})

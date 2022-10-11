@@ -50,6 +50,9 @@ func TestTranslate(t *testing.T) {
 			name:           "simple-tls",
 			requireSecrets: true,
 		},
+		{
+			name: "tls-route-passthrough",
+		},
 	}
 
 	for _, tc := range testCases {

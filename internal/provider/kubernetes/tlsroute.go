@@ -1,5 +1,5 @@
 // Portions of this code are based on code from Contour, available at:
-// https://github.com/projectcontour/contour/blob/main/internal/controller/httproute.go
+// https://github.com/projectcontour/contour/blob/main/internal/controller/tlsroute.go
 
 package kubernetes
 
@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -28,10 +29,10 @@ import (
 )
 
 const (
-	serviceHTTPRouteIndex = "serviceHTTPRouteBackendRef"
+	serviceTLSRouteIndex = "serviceTLSRouteBackendRef"
 )
 
-type httpRouteReconciler struct {
+type tlsRouteReconciler struct {
 	client          client.Client
 	log             logr.Logger
 	statusUpdater   status.Updater
@@ -40,10 +41,10 @@ type httpRouteReconciler struct {
 	resources *message.ProviderResources
 }
 
-// newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
-// to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
-	r := &httpRouteReconciler{
+// newTLSRouteController creates the tlsroute controller from mgr. The controller will be pre-configured
+// to watch for TLSRoute objects across all namespaces.
+func newTLSRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+	r := &tlsRouteReconciler{
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
@@ -51,33 +52,36 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.U
 		resources:       resources,
 	}
 
-	c, err := controller.New("httproute", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("tlsroute", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
-	r.log.Info("created httproute controller")
+	r.log.Info("created tlsroute controller")
 
-	if err := c.Watch(&source.Kind{Type: &gwapiv1b1.HTTPRoute{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1a2.TLSRoute{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
 		return err
 	}
 
 	// Subscribe to status updates
 	go r.subscribeAndUpdateStatus(context.Background())
 
-	// Add indexing on HTTPRoute, for Service objects that are referenced in HTTPRoute objects
-	// via `.spec.rules.backendRefs`. This helps in querying for HTTPRoutes that are affected by
+	// Add indexing on TLSRoute, for Service objects that are referenced in TLSRoute objects
+	// via `.spec.rules.backendRefs`. This helps in querying for TLSRoutes that are affected by
 	// a particular Service CRUD.
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, func(rawObj client.Object) []string {
-		httpRoute := rawObj.(*gwapiv1b1.HTTPRoute)
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, func(rawObj client.Object) []string {
+		tlsRoute := rawObj.(*gwapiv1a2.TLSRoute)
 		var backendServices []string
-		for _, rule := range httpRoute.Spec.Rules {
+		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backend := range rule.BackendRefs {
 				if string(*backend.Kind) == gatewayapi.KindService {
-					// If an explicit Service namespace is not provided, use the HTTPRoute namespace to
+					// If an explicit Service namespace is not provided, use the TLSRoute namespace to
 					// lookup the provided Service Name.
 					backendServices = append(backendServices,
 						types.NamespacedName{
-							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httpRoute.Namespace),
+							Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsRoute.Namespace),
 							Name:      string(backend.Name),
 						}.String(),
 					)
@@ -89,30 +93,30 @@ func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.U
 		return err
 	}
 
-	// Watch Gateway CRUDs and reconcile affected HTTPRoutes.
+	// Watch Gateway CRUDs and reconcile affected TLSRoutes.
 	if err := c.Watch(
 		&source.Kind{Type: &gwapiv1b1.Gateway{}},
-		handler.EnqueueRequestsFromMapFunc(r.getHTTPRoutesForGateway),
+		handler.EnqueueRequestsFromMapFunc(r.getTLSRoutesForGateway),
 	); err != nil {
 		return err
 	}
 
-	// Watch Service CRUDs and reconcile affected HTTPRoutes.
+	// Watch Service CRUDs and reconcile affected TLSRoutes.
 	if err := c.Watch(
 		&source.Kind{Type: &corev1.Service{}},
-		handler.EnqueueRequestsFromMapFunc(r.getHTTPRoutesForService),
+		handler.EnqueueRequestsFromMapFunc(r.getTLSRoutesForService),
 	); err != nil {
 		return err
 	}
 
-	r.log.Info("watching httproute objects")
+	r.log.Info("watching tlsroute objects")
 	return nil
 }
 
-// getHTTPRoutesForGateway uses a Gateway obj to fetch HTTPRoutes, iterating
-// through them and creating a reconciliation request for each valid HTTPRoute
+// getTLSRoutesForGateway uses a Gateway obj to fetch TLSRoutes, iterating
+// through them and creating a reconciliation request for each valid TLSRoute
 // that references obj.
-func (r *httpRouteReconciler) getHTTPRoutesForGateway(obj client.Object) []reconcile.Request {
+func (r *tlsRouteReconciler) getTLSRoutesForGateway(obj client.Object) []reconcile.Request {
 	ctx := context.Background()
 
 	gw, ok := obj.(*gwapiv1b1.Gateway)
@@ -121,7 +125,7 @@ func (r *httpRouteReconciler) getHTTPRoutesForGateway(obj client.Object) []recon
 		return []reconcile.Request{}
 	}
 
-	routes := &gwapiv1b1.HTTPRouteList{}
+	routes := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, routes); err != nil {
 		return []reconcile.Request{}
 	}
@@ -129,9 +133,9 @@ func (r *httpRouteReconciler) getHTTPRoutesForGateway(obj client.Object) []recon
 	requests := []reconcile.Request{}
 	for i := range routes.Items {
 		route := routes.Items[i]
-		gateways, err := validateParentRefs(ctx, r.client, route.Namespace, r.classController, route.Spec.ParentRefs)
+		gateways, err := validateParentRefs(ctx, r.client, route.Namespace, r.classController, gatewayapi.UpgradeParentReferences(route.Spec.ParentRefs))
 		if err != nil {
-			r.log.Info("invalid parentRefs for httproute, bypassing reconciliation", "object", obj)
+			r.log.Info("invalid parentRefs for tlsroute, bypassing reconciliation", "object", obj)
 			continue
 		}
 		for j := range gateways {
@@ -151,38 +155,37 @@ func (r *httpRouteReconciler) getHTTPRoutesForGateway(obj client.Object) []recon
 	return requests
 }
 
-// getHTTPRoutesForService uses a Service obj to fetch HTTPRoutes that references
-// the Service using `.spec.rules.backendRefs`. The affected HTTPRoutes are then
+// getTLSRoutesForService uses a Service obj to fetch TLSRoutes that references
+// the Service using `.spec.rules.backendRefs`. The affected TLSRoutes are then
 // pushed for reconciliation.
-func (r *httpRouteReconciler) getHTTPRoutesForService(obj client.Object) []reconcile.Request {
-	affectedHTTPRouteList := &gwapiv1b1.HTTPRouteList{}
+func (r *tlsRouteReconciler) getTLSRoutesForService(obj client.Object) []reconcile.Request {
+	affectedTLSRouteList := &gwapiv1a2.TLSRouteList{}
 
-	if err := r.client.List(context.Background(), affectedHTTPRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, utils.NamespacedName(obj).String()),
+	if err := r.client.List(context.Background(), affectedTLSRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, utils.NamespacedName(obj).String()),
 	}); err != nil {
 		return []reconcile.Request{}
 	}
 
-	requests := make([]reconcile.Request, len(affectedHTTPRouteList.Items))
-	for i, item := range affectedHTTPRouteList.Items {
-		item := item
+	requests := make([]reconcile.Request, len(affectedTLSRouteList.Items))
+	for i, item := range affectedTLSRouteList.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: utils.NamespacedName(&item),
+			NamespacedName: utils.NamespacedName(item.DeepCopy()),
 		}
 	}
 
 	return requests
 }
 
-func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
+func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	log := r.log.WithValues("namespace", request.Namespace, "name", request.Name)
 
-	log.Info("reconciling httproute")
+	log.Info("reconciling tlsroute")
 
-	// Fetch all HTTPRoutes from the cache.
-	routeList := &gwapiv1b1.HTTPRouteList{}
+	// Fetch all TLSRoutes from the cache.
+	routeList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, routeList); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing httproutes")
+		return reconcile.Result{}, fmt.Errorf("error listing tlsroutes")
 	}
 
 	found := false
@@ -194,29 +197,10 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 			found = true
 		}
 
-		// Validate the route.
-		gws, err := validateParentRefs(ctx, r.client, route.Namespace, r.classController, route.Spec.ParentRefs)
-		if err != nil {
-			// Remove the route from the watchable map since it's invalid.
-			r.resources.HTTPRoutes.Delete(routeKey)
-			r.log.Error(err, "invalid parentRefs for httproute")
-			return reconcile.Result{}, nil
-		}
-		log.Info("validated httproute parentRefs")
+		// Store the tlsroute in the resource map.
+		r.resources.TLSRoutes.Store(routeKey, &route)
+		log.Info("added tlsroute to resource map")
 
-		if len(gws) == 0 {
-			// Remove the route from the watchable map since it doesn't reference
-			// a managed Gateway.
-			log.Info("httproute doesn't reference any managed gateways")
-			r.resources.HTTPRoutes.Delete(routeKey)
-			return reconcile.Result{}, nil
-		}
-
-		// only store the resource if it does not exist or it has a newer spec.
-		if v, ok := r.resources.HTTPRoutes.Load(routeKey); !ok || (route.Generation > v.Generation) {
-			r.resources.HTTPRoutes.Store(routeKey, &route)
-			log.Info("added httproute to resource map")
-		}
 		// Get the route's namespace from the cache.
 		nsKey := types.NamespacedName{Name: route.Namespace}
 		ns := new(corev1.Namespace)
@@ -241,7 +225,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		for i := range route.Spec.Rules {
 			for j := range route.Spec.Rules[i].BackendRefs {
 				ref := route.Spec.Rules[i].BackendRefs[j]
-				if err := validateBackendRef(&ref); err != nil {
+				if err := validateTLSRouteBackendRef(&ref); err != nil {
 					return reconcile.Result{}, fmt.Errorf("invalid backendRef: %w", err)
 				}
 
@@ -269,9 +253,9 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 	}
 
 	if !found {
-		// Delete the httproute from the resource map.
-		r.resources.HTTPRoutes.Delete(request.NamespacedName)
-		log.Info("deleted httproute from resource map")
+		// Delete the tlsroute from the resource map.
+		r.resources.TLSRoutes.Delete(request.NamespacedName)
+		log.Info("deleted tlsroute from resource map")
 
 		// Delete the Namespace and Service from the resource maps if no other
 		// routes (TLSRoute or HTTPRoute) exist in the namespace.
@@ -287,18 +271,13 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		}
 	}
 
-	log.Info("reconciled httproute")
+	log.Info("reconciled tlsroute")
 
 	return reconcile.Result{}, nil
 }
 
-// validateBackendRef validates that ref is a reference to a local Service.
-// TODO: Add support for:
-//   - Validating weights.
-//   - Validating ports.
-//   - Referencing HTTPRoutes.
-//   - Referencing Services/HTTPRoutes from other namespaces using ReferenceGrant.
-func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
+// validateTLSRouteBackendRef validates that ref is a reference to a local Service.
+func validateTLSRouteBackendRef(ref *gwapiv1a2.BackendRef) error {
 	switch {
 	case ref == nil:
 		return nil
@@ -306,7 +285,7 @@ func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
 		return fmt.Errorf("invalid group; must be nil or empty string")
 	case ref.Kind != nil && *ref.Kind != gatewayapi.KindService:
 		return fmt.Errorf("invalid kind %q; must be %q",
-			*ref.BackendRef.BackendObjectReference.Kind, gatewayapi.KindService)
+			*ref.BackendObjectReference.Kind, gatewayapi.KindService)
 	case ref.Namespace != nil:
 		return fmt.Errorf("invalid namespace; must be nil")
 	}
@@ -314,11 +293,11 @@ func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
 	return nil
 }
 
-// subscribeAndUpdateStatus subscribes to httproute status updates and writes it into the
+// subscribeAndUpdateStatus subscribes to tlsroute status updates and writes it into the
 // Kubernetes API Server
-func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
+func (r *tlsRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.resources.HTTPRouteStatuses.Subscribe(ctx) {
+	for snapshot := range r.resources.TLSRouteStatuses.Subscribe(ctx) {
 		r.log.Info("received a status notification")
 		updates := snapshot.Updates
 		for _, update := range updates {
@@ -330,15 +309,15 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			val := update.Value
 			r.statusUpdater.Send(status.Update{
 				NamespacedName: key,
-				Resource:       new(gwapiv1b1.HTTPRoute),
+				Resource:       new(gwapiv1a2.TLSRoute),
 				Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-					h, ok := obj.(*gwapiv1b1.HTTPRoute)
+					t, ok := obj.(*gwapiv1a2.TLSRoute)
 					if !ok {
 						panic(fmt.Sprintf("unsupported object type %T", obj))
 					}
-					hCopy := h.DeepCopy()
-					hCopy.Status.Parents = val.Status.Parents
-					return hCopy
+					tCopy := t.DeepCopy()
+					tCopy.Status.Parents = val.Status.Parents
+					return tCopy
 				}),
 			})
 		}

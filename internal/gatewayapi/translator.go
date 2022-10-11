@@ -19,6 +19,7 @@ import (
 const (
 	KindGateway   = "Gateway"
 	KindHTTPRoute = "HTTPRoute"
+	KindTLSRoute  = "TLSRoute"
 	KindService   = "Service"
 	KindSecret    = "Secret"
 
@@ -45,6 +46,7 @@ type InfraIRMap map[string]*ir.Infra
 type Resources struct {
 	Gateways        []*v1beta1.Gateway
 	HTTPRoutes      []*v1beta1.HTTPRoute
+	TLSRoutes       []*v1alpha2.TLSRoute
 	ReferenceGrants []*v1alpha2.ReferenceGrant
 	Namespaces      []*v1.Namespace
 	Services        []*v1.Service
@@ -90,11 +92,14 @@ type Translator struct {
 type TranslateResult struct {
 	Gateways   []*v1beta1.Gateway
 	HTTPRoutes []*v1beta1.HTTPRoute
+	TLSRoutes  []*v1alpha2.TLSRoute
 	XdsIR      XdsIRMap
 	InfraIR    InfraIRMap
 }
 
-func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteContext, xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
+func newTranslateResult(gateways []*GatewayContext,
+	httpRoutes []*HTTPRouteContext, tlsRoutes []*TLSRouteContext,
+	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
 		InfraIR: infraIR,
@@ -105,6 +110,9 @@ func newTranslateResult(gateways []*GatewayContext, httpRoutes []*HTTPRouteConte
 	}
 	for _, httpRoute := range httpRoutes {
 		translateResult.HTTPRoutes = append(translateResult.HTTPRoutes, httpRoute.HTTPRoute)
+	}
+	for _, tlsRoute := range tlsRoutes {
+		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
 	}
 
 	return translateResult
@@ -123,10 +131,13 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
 
+	// Process all relevant TLSRoutes.
+	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, gateways, resources, xdsIR)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, tlsRoutes, xdsIR, infraIR)
 }
 
 func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {
@@ -246,6 +257,33 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
+			case v1beta1.TLSProtocolType:
+				if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
+					listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindTLSRoute})
+				} else {
+					for _, kind := range listener.AllowedRoutes.Kinds {
+						if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
+							listener.SetCondition(
+								v1beta1.ListenerConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.ListenerReasonInvalidRouteKinds,
+								fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
+							)
+							continue
+						}
+
+						if kind.Kind != KindTLSRoute {
+							listener.SetCondition(
+								v1beta1.ListenerConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.ListenerReasonInvalidRouteKinds,
+								fmt.Sprintf("Kind is not supported, kind must be %s", KindTLSRoute),
+							)
+							continue
+						}
+						listener.SetSupportedKinds(kind)
+					}
+				}
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
 				if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 					listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindHTTPRoute})
@@ -258,6 +296,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 								v1beta1.ListenerReasonInvalidRouteKinds,
 								fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
 							)
+							continue
 						}
 
 						if kind.Kind != KindHTTPRoute {
@@ -267,7 +306,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 								v1beta1.ListenerReasonInvalidRouteKinds,
 								fmt.Sprintf("Kind is not supported, kind must be %s", KindHTTPRoute),
 							)
+							continue
 						}
+						listener.SetSupportedKinds(kind)
 					}
 				}
 			default:
@@ -432,6 +473,49 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				}
 
 				listener.SetTLSSecret(secret)
+			case v1beta1.TLSProtocolType:
+				if listener.TLS == nil {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
+					)
+					break
+				}
+
+				if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModePassthrough {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						"UnsupportedTLSMode",
+						fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Passthrough.", *listener.TLS.Mode),
+					)
+					break
+				}
+
+				// With TLS Passthrough, partial wildcards are not allowed in xDS config, so "*", "*w.abc.com" are
+				// invalid configurations.
+				// TODO: add regex match to detect partial wildcards like *w.abc.com
+				if listener.Hostname == nil || *listener.Hostname == "" {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						"Hostname must not be empty with TLS mode Passthrough.",
+					)
+					break
+				}
+
+				if len(listener.TLS.CertificateRefs) > 0 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						"Listener must not have TLS certificate refs set for TLS mode Passthrough",
+					)
+					break
+				}
 			}
 
 			lConditions := listener.GetConditions()
@@ -459,31 +543,60 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				continue
 			}
 
+			// Add the listener to the Xds IR.
 			servicePort := int32(listener.Port)
 			containerPort := servicePortToContainerPort(servicePort)
-			// Add the listener to the Xds IR.
-			irListener := &ir.HTTPListener{
-				Name:    irListenerName(listener),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				TLS:     irTLSConfig(listener.tlsSecret),
+			switch listener.Protocol {
+			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
+				irListener := &ir.HTTPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+					TLS:     irTLSConfig(listener.tlsSecret),
+				}
+				if listener.Hostname != nil {
+					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
+				} else {
+					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
+					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
+					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
+					irListener.Hostnames = append(irListener.Hostnames, "*")
+				}
+				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
+			case v1beta1.TLSProtocolType:
+				irListener := &ir.TCPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+					TLS: &ir.TLSInspectorConfig{
+						SNIs: []string{},
+					},
+				}
+				if listener.Hostname == nil || *listener.Hostname == "" {
+					listener.SetCondition(
+						v1beta1.ListenerConditionReady,
+						metav1.ConditionFalse,
+						v1beta1.ListenerReasonInvalid,
+						"Listener is invalid, see other Conditions for details.",
+					)
+				}
+				if listener.Hostname != nil && *listener.Hostname != "" {
+					irListener.TLS.SNIs = append(irListener.TLS.SNIs, string(*listener.Hostname))
+				}
+				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 			}
-			if listener.Hostname != nil {
-				irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
-			} else {
-				// Hostname specifies the virtual hostname to match for protocol types that define this concept.
-				// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
-				// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
-				irListener.Hostnames = append(irListener.Hostnames, "*")
-			}
-			gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
 			if !slices.Contains(foundPorts, servicePort) {
 				foundPorts = append(foundPorts, servicePort)
-				proto := ir.HTTPProtocolType
-				if listener.Protocol == v1beta1.HTTPSProtocolType {
+				var proto ir.ProtocolType
+				switch listener.Protocol {
+				case v1beta1.HTTPProtocolType:
+					proto = ir.HTTPProtocolType
+				case v1beta1.HTTPSProtocolType:
 					proto = ir.HTTPSProtocolType
+				case v1beta1.TLSProtocolType:
+					proto = ir.TLSProtocolType
 				}
 				infraPort := ir.ListenerPort{
 					Name:          string(listener.Name),
@@ -525,7 +638,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 	}
 
 	if backendRef.Group != nil && *backendRef.Group != "" {
-		parentRef.SetCondition(
+		parentRef.SetCondition(httpRoute,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonInvalidKind,
@@ -535,7 +648,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 	}
 
 	if backendRef.Kind != nil && *backendRef.Kind != KindService {
-		parentRef.SetCondition(
+		parentRef.SetCondition(httpRoute,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonInvalidKind,
@@ -559,7 +672,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 			},
 			resources.ReferenceGrants,
 		) {
-			parentRef.SetCondition(
+			parentRef.SetCondition(httpRoute,
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonRefNotPermitted,
@@ -570,7 +683,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 	}
 
 	if backendRef.Port == nil {
-		parentRef.SetCondition(
+		parentRef.SetCondition(httpRoute,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			"PortNotSpecified",
@@ -581,7 +694,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 
 	service := resources.GetService(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
 	if service == nil {
-		parentRef.SetCondition(
+		parentRef.SetCondition(httpRoute,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonBackendNotFound,
@@ -599,7 +712,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 	}
 
 	if !portFound {
-		parentRef.SetCondition(
+		parentRef.SetCondition(httpRoute,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			"PortNotFound",
@@ -628,42 +741,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
 		// parentRef.
-		var relevantRoute bool
-		for _, parentRef := range httpRoute.Spec.ParentRefs {
-			isRelevantParentRef, selectedListeners := GetReferencedListeners(parentRef, gateways)
-
-			// Parent ref is not to a Gateway that we control: skip it
-			if !isRelevantParentRef {
-				continue
-			}
-			relevantRoute = true
-
-			parentRefCtx := httpRoute.GetRouteParentContext(parentRef)
-			// Reset conditions since they will be recomputed during translation
-			parentRefCtx.ResetConditions()
-
-			if !HasReadyListener(selectedListeners) {
-				parentRefCtx.SetCondition(v1beta1.RouteConditionAccepted, metav1.ConditionFalse, "NoReadyListeners", "There are no ready listeners for this parent ref")
-				continue
-			}
-
-			var allowedListeners []*ListenerContext
-			for _, listener := range selectedListeners {
-				if listener.AllowsKind(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindHTTPRoute}) && listener.AllowsNamespace(resources.GetNamespace(httpRoute.Namespace)) {
-					allowedListeners = append(allowedListeners, listener)
-				}
-			}
-
-			if len(allowedListeners) == 0 {
-				parentRefCtx.SetCondition(v1beta1.RouteConditionAccepted, metav1.ConditionFalse, v1beta1.RouteReasonNotAllowedByListeners, "No listeners included by this parent ref allowed this attachment.")
-				continue
-			}
-
-			parentRefCtx.SetListeners(allowedListeners...)
-
-			parentRefCtx.SetCondition(v1beta1.RouteConditionAccepted, metav1.ConditionTrue, v1beta1.RouteReasonAccepted, "Route is accepted")
-		}
-
+		relevantRoute := processAllowedListenersForParentRefs(httpRoute, gateways, resources)
 		if !relevantRoute {
 			continue
 		}
@@ -672,7 +750,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 		for _, parentRef := range httpRoute.parentRefs {
 			// Skip parent refs that did not accept the route
-			if !parentRef.IsAccepted() {
+			if !parentRef.IsAccepted(httpRoute) {
 				continue
 			}
 
@@ -700,7 +778,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					case v1beta1.HTTPRouteFilterRequestRedirect:
 						// Can't have two redirects for the same route
 						if redirectResponse != nil {
-							parentRef.SetCondition(
+							parentRef.SetCondition(httpRoute,
 								v1beta1.RouteConditionResolvedRefs,
 								metav1.ConditionFalse,
 								v1beta1.RouteReasonUnsupportedValue,
@@ -722,7 +800,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								redir.Scheme = redirect.Scheme
 							} else {
 								errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
-								parentRef.SetCondition(
+								parentRef.SetCondition(httpRoute,
 									v1beta1.RouteConditionResolvedRefs,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
@@ -734,7 +812,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 						if redirect.Hostname != nil {
 							if err := isValidHostname(string(*redirect.Hostname)); err != nil {
-								parentRef.SetCondition(
+								parentRef.SetCondition(httpRoute,
 									v1beta1.RouteConditionResolvedRefs,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
@@ -763,7 +841,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 							default:
 								errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
-								parentRef.SetCondition(
+								parentRef.SetCondition(httpRoute,
 									v1beta1.RouteConditionResolvedRefs,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
@@ -780,7 +858,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								redir.StatusCode = &redirectCode
 							} else {
 								errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
-								parentRef.SetCondition(
+								parentRef.SetCondition(httpRoute,
 									v1beta1.RouteConditionResolvedRefs,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
@@ -812,7 +890,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							for _, addHeader := range headersToAdd {
 								emptyFilterConfig = false
 								if addHeader.Name == "" {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -823,7 +901,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 								// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 								if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -842,7 +920,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 
 								if !canAddHeader {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -869,7 +947,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							for _, setHeader := range headersToSet {
 
 								if setHeader.Name == "" {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -879,7 +957,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 								// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 								if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -898,7 +976,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									}
 								}
 								if !canAddHeader {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -925,7 +1003,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							}
 							for _, removedHeader := range headersToRemove {
 								if removedHeader == "" {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -942,7 +1020,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									}
 								}
 								if !canRemHeader {
-									parentRef.SetCondition(
+									parentRef.SetCondition(httpRoute,
 										v1beta1.RouteConditionResolvedRefs,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
@@ -958,7 +1036,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 						// Update the status if the filter failed to configure any valid headers to add/remove
 						if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && !emptyFilterConfig {
-							parentRef.SetCondition(
+							parentRef.SetCondition(httpRoute,
 								v1beta1.RouteConditionResolvedRefs,
 								metav1.ConditionFalse,
 								v1beta1.RouteReasonUnsupportedValue,
@@ -969,7 +1047,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						// "If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
 						// Instead, requests that would have been processed by that filter MUST receive a HTTP error response."
 						errMsg := fmt.Sprintf("Unknown custom filter type: %s", filter.Type)
-						parentRef.SetCondition(
+						parentRef.SetCondition(httpRoute,
 							v1beta1.RouteConditionResolvedRefs,
 							metav1.ConditionFalse,
 							v1beta1.RouteReasonUnsupportedValue,
@@ -1028,7 +1106,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				for _, backendRef := range rule.BackendRefs {
-
 					destination, backendWeight := buildRuleRouteDest(backendRef, parentRef, httpRoute, resources)
 					for _, route := range ruleRoutes {
 						// If the route already has a direct response or redirect configured, then it was from a filter so skip
@@ -1043,7 +1120,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							}
 						}
 					}
-
 				}
 
 				// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
@@ -1064,7 +1140,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 			var hasHostnameIntersection bool
 			for _, listener := range parentRef.listeners {
-				hosts := ComputeHosts(httpRoute.Spec.Hostnames, listener.Hostname)
+				hosts := computeHosts(httpRoute.GetHostnames(), listener.Hostname)
 				if len(hosts) == 0 {
 					continue
 				}
@@ -1104,7 +1180,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irKey := irStringKey(listener.gateway)
-				irListener := xdsIR[irKey].GetListener(irListenerName(listener))
+				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 				if irListener != nil {
 					irListener.Routes = append(irListener.Routes, perHostRoutes...)
 				}
@@ -1117,14 +1193,14 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 			}
 
 			if !hasHostnameIntersection {
-				parentRef.SetCondition(
+				parentRef.SetCondition(httpRoute,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonNoMatchingListenerHostname,
 					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
 				)
 			} else {
-				parentRef.SetCondition(
+				parentRef.SetCondition(httpRoute,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionTrue,
 					v1beta1.RouteReasonAccepted,
@@ -1135,6 +1211,246 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 	}
 
 	return relevantHTTPRoutes
+}
+
+func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext {
+	var relevantTLSRoutes []*TLSRouteContext
+
+	for _, t := range tlsRoutes {
+		if t == nil {
+			panic("received nil tlsroute")
+		}
+		tlsRoute := &TLSRouteContext{TLSRoute: t}
+
+		// Find out if this route attaches to one of our Gateway's listeners,
+		// and if so, get the list of listeners that allow it to attach for each
+		// parentRef.
+		relevantRoute := processAllowedListenersForParentRefs(tlsRoute, gateways, resources)
+		if !relevantRoute {
+			continue
+		}
+
+		relevantTLSRoutes = append(relevantTLSRoutes, tlsRoute)
+
+		for _, parentRef := range tlsRoute.parentRefs {
+			// Skip parent refs that did not accept the route
+			if !parentRef.IsAccepted(tlsRoute) {
+				continue
+			}
+
+			// Need to compute Route rules within the parentRef loop because
+			// any conditions that come out of it have to go on each RouteParentStatus,
+			// not on the Route as a whole.
+			var routeDestinations []*ir.RouteDestination
+
+			// compute backends
+			for _, rule := range tlsRoute.Spec.Rules {
+				for _, backendRef := range rule.BackendRefs {
+					if backendRef.Group != nil && *backendRef.Group != "" {
+						parentRef.SetCondition(tlsRoute,
+							v1beta1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							v1beta1.RouteReasonInvalidKind,
+							"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+						)
+						continue
+					}
+
+					if backendRef.Kind != nil && *backendRef.Kind != KindService {
+						parentRef.SetCondition(tlsRoute,
+							v1beta1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							v1beta1.RouteReasonInvalidKind,
+							"Kind is invalid, only Service is supported",
+						)
+						continue
+					}
+
+					if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != tlsRoute.Namespace {
+						if !isValidCrossNamespaceRef(
+							crossNamespaceFrom{
+								group:     v1beta1.GroupName,
+								kind:      KindTLSRoute,
+								namespace: tlsRoute.Namespace,
+							},
+							crossNamespaceTo{
+								group:     "",
+								kind:      KindService,
+								namespace: string(*backendRef.Namespace),
+								name:      string(backendRef.Name),
+							},
+							resources.ReferenceGrants,
+						) {
+							parentRef.SetCondition(tlsRoute,
+								v1beta1.RouteConditionResolvedRefs,
+								metav1.ConditionFalse,
+								v1beta1.RouteReasonRefNotPermitted,
+								fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+							)
+							continue
+						}
+					}
+
+					if backendRef.Port == nil {
+						parentRef.SetCondition(tlsRoute,
+							v1beta1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							"PortNotSpecified",
+							"A valid port number corresponding to a port on the Service must be specified",
+						)
+						continue
+					}
+
+					// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when TLSRoute graduates to v1beta1.
+					serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
+					service := resources.GetService(serviceNamespace, string(backendRef.Name))
+					if service == nil {
+						parentRef.SetCondition(tlsRoute,
+							v1beta1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							v1beta1.RouteReasonBackendNotFound,
+							fmt.Sprintf("Service %s/%s not found", serviceNamespace, string(backendRef.Name)),
+						)
+						continue
+					}
+
+					var portFound bool
+					for _, port := range service.Spec.Ports {
+						if port.Port == int32(*backendRef.Port) {
+							portFound = true
+							break
+						}
+					}
+
+					if !portFound {
+						parentRef.SetCondition(tlsRoute,
+							v1beta1.RouteConditionResolvedRefs,
+							metav1.ConditionFalse,
+							"PortNotFound",
+							fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace, string(backendRef.Name)),
+						)
+						continue
+					}
+
+					weight := uint32(1)
+					if backendRef.Weight != nil {
+						weight = uint32(*backendRef.Weight)
+					}
+
+					routeDestinations = append(routeDestinations, &ir.RouteDestination{
+						Host:   service.Spec.ClusterIP,
+						Port:   uint32(*backendRef.Port),
+						Weight: weight,
+					})
+				}
+
+				// TODO handle:
+				//	- no valid backend refs
+				//	- sum of weights for valid backend refs is 0
+				//	- returning 500's for invalid backend refs
+				//	- etc.
+			}
+
+			var hasHostnameIntersection bool
+			for _, listener := range parentRef.listeners {
+				hosts := computeHosts(tlsRoute.GetHostnames(), listener.Hostname)
+				if len(hosts) == 0 {
+					continue
+				}
+				hasHostnameIntersection = true
+
+				irKey := irStringKey(listener.gateway)
+				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
+				if irListener != nil {
+					irListener.Destinations = routeDestinations
+				}
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				if len(routeDestinations) > 0 {
+					listener.IncrementAttachedRoutes()
+				}
+			}
+
+			if !hasHostnameIntersection {
+				parentRef.SetCondition(tlsRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonNoMatchingListenerHostname,
+					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				)
+			} else {
+				parentRef.SetCondition(tlsRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionTrue,
+					v1beta1.RouteReasonAccepted,
+					"Route is accepted",
+				)
+			}
+		}
+	}
+
+	return relevantTLSRoutes
+}
+
+// processAllowedListenersForParentRefs finds out if the route attaches to one of our
+// Gateways' listeners, and if so, gets the list of listeners that allow it to
+// attach for each parentRef.
+func processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *Resources) bool {
+	var relevantRoute bool
+
+	for _, parentRef := range routeContext.GetParentReferences() {
+		isRelevantParentRef, selectedListeners := GetReferencedListeners(parentRef, gateways)
+
+		// Parent ref is not to a Gateway that we control: skip it
+		if !isRelevantParentRef {
+			continue
+		}
+		relevantRoute = true
+
+		parentRefCtx := routeContext.GetRouteParentContext(parentRef)
+		// Reset conditions since they will be recomputed during translation
+		parentRefCtx.ResetConditions(routeContext)
+
+		if !HasReadyListener(selectedListeners) {
+			parentRefCtx.SetCondition(routeContext,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				"NoReadyListeners",
+				"There are no ready listeners for this parent ref",
+			)
+			continue
+		}
+
+		var allowedListeners []*ListenerContext
+		for _, listener := range selectedListeners {
+			acceptedKind := routeContext.GetRouteType()
+			if listener.AllowsKind(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: v1beta1.Kind(acceptedKind)}) &&
+				listener.AllowsNamespace(resources.GetNamespace(routeContext.GetNamespace())) {
+				allowedListeners = append(allowedListeners, listener)
+			}
+		}
+
+		if len(allowedListeners) == 0 {
+			parentRefCtx.SetCondition(routeContext,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				v1beta1.RouteReasonNotAllowedByListeners,
+				"No listeners included by this parent ref allowed this attachment.",
+			)
+			continue
+		}
+
+		parentRefCtx.SetListeners(allowedListeners...)
+
+		parentRefCtx.SetCondition(routeContext,
+			v1beta1.RouteConditionAccepted,
+			metav1.ConditionTrue,
+			v1beta1.RouteReasonAccepted,
+			"Route is accepted",
+		)
+	}
+	return relevantRoute
 }
 
 type crossNamespaceFrom struct {
@@ -1193,7 +1509,6 @@ func isValidCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, refe
 
 // Checks if a hostname is valid according to RFC 1123 and gateway API's requirement that it not be an IP address
 func isValidHostname(hostname string) error {
-
 	if errs := validation.IsDNS1123Subdomain(hostname); errs != nil {
 		return fmt.Errorf("hostname %q is invalid for a redirect filter: %v", hostname, errs)
 	}
@@ -1229,8 +1544,8 @@ func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
-func routeName(httpRoute *HTTPRouteContext, ruleIdx, matchIdx int) string {
-	return fmt.Sprintf("%s-%s-rule-%d-match-%d", httpRoute.Namespace, httpRoute.Name, ruleIdx, matchIdx)
+func routeName(route RouteContext, ruleIdx, matchIdx int) string {
+	return fmt.Sprintf("%s-%s-rule-%d-match-%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
 }
 
 func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {

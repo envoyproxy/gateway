@@ -27,6 +27,11 @@ func FromNamespacesPtr(fromNamespaces v1beta1.FromNamespaces) *v1beta1.FromNames
 	return &fromNamespaces
 }
 
+func SectionNamePtr(name string) *v1beta1.SectionName {
+	sectionName := v1beta1.SectionName(name)
+	return &sectionName
+}
+
 func StringPtr(val string) *string {
 	return &val
 }
@@ -138,9 +143,9 @@ func HasReadyListener(listeners []*ListenerContext) bool {
 	return false
 }
 
-// ComputeHosts returns a list of the intersecting hostnames between the route
+// computeHosts returns a list of the intersecting hostnames between the route
 // and the listener.
-func ComputeHosts(routeHostnames []v1beta1.Hostname, listenerHostname *v1beta1.Hostname) []string {
+func computeHosts(routeHostnames []string, listenerHostname *v1beta1.Hostname) []string {
 	var listenerHostnameVal string
 	if listenerHostname != nil {
 		listenerHostnameVal = string(*listenerHostname)
@@ -159,7 +164,7 @@ func ComputeHosts(routeHostnames []v1beta1.Hostname, listenerHostname *v1beta1.H
 	var hostnames []string
 
 	for i := range routeHostnames {
-		routeHostname := string(routeHostnames[i])
+		routeHostname := routeHostnames[i]
 
 		// TODO ensure routeHostname is a valid hostname
 
