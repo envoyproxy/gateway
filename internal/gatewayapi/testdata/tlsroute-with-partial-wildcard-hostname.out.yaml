@@ -1,0 +1,68 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls
+          protocol: TLS
+          port: 91
+          tls:
+            mode: Passthrough
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: tls
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: TLSRoute
+          attachedRoutes: 0
+          conditions:
+            - type: Ready
+              status: "False"
+              reason: Invalid
+              message: Hostname must not be empty with TLS mode Passthrough.
+tlsRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TLSRoute
+    metadata:
+      namespace: default
+      name: tlsroute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              namespace: test-service-namespace
+              port: 8080
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          conditions:
+            - type: Accepted
+              status: "False"
+              reason: NoReadyListeners
+              message: There are no ready listeners for this parent ref
+xdsIR:
+  envoy-gateway-gateway-1: {}
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:v1.23-latest
+      listeners:
+        - address: ""

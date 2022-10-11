@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -143,6 +144,7 @@ func (u *UpdateWriter) Send(update Update) {
 //  GatewayClasses
 //  Gateway
 //  HTTPRoute
+//  TLSRoute
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime", "ObservedGeneration")
 	switch a := objA.(type) {
@@ -160,6 +162,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *gwapiv1b1.HTTPRoute:
 		if b, ok := objB.(*gwapiv1b1.HTTPRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1a2.TLSRoute:
+		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}

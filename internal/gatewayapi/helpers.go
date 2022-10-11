@@ -27,6 +27,15 @@ func FromNamespacesPtr(fromNamespaces v1beta1.FromNamespaces) *v1beta1.FromNames
 	return &fromNamespaces
 }
 
+func SectionNamePtr(name string) *v1beta1.SectionName {
+	sectionName := v1beta1.SectionName(name)
+	return &sectionName
+}
+
+func TLSModeTypePtr(mode v1beta1.TLSModeType) *v1beta1.TLSModeType {
+	return &mode
+}
+
 func StringPtr(val string) *string {
 	return &val
 }
@@ -117,8 +126,8 @@ func GetReferencedListeners(parentRef v1beta1.ParentReference, gateways []*Gatew
 		selectsGateway = true
 
 		// The parentRef may be to the entire Gateway, or to a specific listener.
-		for listenerName, listener := range gateway.listeners {
-			if parentRef.SectionName == nil || *parentRef.SectionName == listenerName {
+		for _, listener := range gateway.listeners {
+			if parentRef.SectionName == nil || *parentRef.SectionName == listener.Name {
 				referencedListeners = append(referencedListeners, listener)
 			}
 		}
@@ -138,9 +147,9 @@ func HasReadyListener(listeners []*ListenerContext) bool {
 	return false
 }
 
-// ComputeHosts returns a list of the intersecting hostnames between the route
+// computeHosts returns a list of the intersecting hostnames between the route
 // and the listener.
-func ComputeHosts(routeHostnames []v1beta1.Hostname, listenerHostname *v1beta1.Hostname) []string {
+func computeHosts(routeHostnames []string, listenerHostname *v1beta1.Hostname) []string {
 	var listenerHostnameVal string
 	if listenerHostname != nil {
 		listenerHostnameVal = string(*listenerHostname)
@@ -159,7 +168,7 @@ func ComputeHosts(routeHostnames []v1beta1.Hostname, listenerHostname *v1beta1.H
 	var hostnames []string
 
 	for i := range routeHostnames {
-		routeHostname := string(routeHostnames[i])
+		routeHostname := routeHostnames[i]
 
 		// TODO ensure routeHostname is a valid hostname
 

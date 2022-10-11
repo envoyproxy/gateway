@@ -7,6 +7,7 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -27,11 +28,12 @@ type Provider struct {
 func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
-		Scheme:             envoygateway.GetScheme(),
-		Logger:             svr.Logger,
-		LeaderElection:     false,
-		LeaderElectionID:   "5b9825d2.gateway.envoyproxy.io",
-		MetricsBindAddress: ":8080",
+		Scheme:                 envoygateway.GetScheme(),
+		Logger:                 svr.Logger,
+		LeaderElection:         false,
+		HealthProbeBindAddress: ":8081",
+		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
+		MetricsBindAddress:     ":8080",
 	}
 	mgr, err := ctrl.NewManager(cfg, mgrOpts)
 	if err != nil {
@@ -50,8 +52,23 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	if err := newGatewayController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
+
 	if err := newHTTPRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
+	}
+
+	if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources); err != nil {
+		return nil, fmt.Errorf("failed to create tlsroute controller: %w", err)
+	}
+
+	// Add health check health probes.
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		return nil, fmt.Errorf("unable to set up health check: %w", err)
+	}
+
+	// Add ready check health probes.
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		return nil, fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
 	return &Provider{

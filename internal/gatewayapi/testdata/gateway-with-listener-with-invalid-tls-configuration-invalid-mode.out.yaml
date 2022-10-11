@@ -9,6 +9,7 @@ gateways:
       listeners:
         - name: tls
           protocol: HTTPS
+          hostname: foo.com
           port: 443
           allowedRoutes:
             namespaces:

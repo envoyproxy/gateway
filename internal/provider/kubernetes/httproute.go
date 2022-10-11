@@ -129,7 +129,7 @@ func (r *httpRouteReconciler) getHTTPRoutesForGateway(obj client.Object) []recon
 	requests := []reconcile.Request{}
 	for i := range routes.Items {
 		route := routes.Items[i]
-		gateways, err := r.validateParentRefs(ctx, &route)
+		gateways, err := validateParentRefs(ctx, r.client, route.Namespace, r.classController, route.Spec.ParentRefs)
 		if err != nil {
 			r.log.Info("invalid parentRefs for httproute, bypassing reconciliation", "object", obj)
 			continue
@@ -195,7 +195,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		}
 
 		// Validate the route.
-		gws, err := r.validateParentRefs(ctx, &route)
+		gws, err := validateParentRefs(ctx, r.client, route.Namespace, r.classController, route.Spec.ParentRefs)
 		if err != nil {
 			// Remove the route from the watchable map since it's invalid.
 			r.resources.HTTPRoutes.Delete(routeKey)
@@ -212,10 +212,11 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 			return reconcile.Result{}, nil
 		}
 
-		// Store the httproute in the resource map.
-		r.resources.HTTPRoutes.Store(routeKey, &route)
-		log.Info("added httproute to resource map")
-
+		// only store the resource if it does not exist or it has a newer spec.
+		if v, ok := r.resources.HTTPRoutes.Load(routeKey); !ok || (route.Generation > v.Generation) {
+			r.resources.HTTPRoutes.Store(routeKey, &route)
+			log.Info("added httproute to resource map")
+		}
 		// Get the route's namespace from the cache.
 		nsKey := types.NamespacedName{Name: route.Namespace}
 		ns := new(corev1.Namespace)
@@ -273,12 +274,12 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		log.Info("deleted httproute from resource map")
 
 		// Delete the Namespace and Service from the resource maps if no other
-		// routes exist in the namespace.
-		routeList = &gwapiv1b1.HTTPRouteList{}
-		if err := r.client.List(ctx, routeList, &client.ListOptions{Namespace: request.Namespace}); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing httproutes")
+		// routes (TLSRoute or HTTPRoute) exist in the namespace.
+		found, err := isRoutePresentInNamespace(ctx, r.client, request.NamespacedName.Namespace)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
-		if len(routeList.Items) == 0 {
+		if !found {
 			r.resources.Namespaces.Delete(request.Namespace)
 			log.Info("deleted namespace from resource map")
 			r.resources.Services.Delete(request.NamespacedName)
@@ -343,47 +344,4 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		}
 	}
 	r.log.Info("status subscriber shutting down")
-}
-
-// validateParentRefs validates parentRefs for the provided route, returning the referenced Gateways
-// managed by Envoy Gateway. The only supported parentRef is a Gateway.
-func (r *httpRouteReconciler) validateParentRefs(ctx context.Context, route *gwapiv1b1.HTTPRoute) ([]gwapiv1b1.Gateway, error) {
-	if route == nil {
-		return nil, fmt.Errorf("httproute is nil")
-	}
-
-	var ret []gwapiv1b1.Gateway
-	for i := range route.Spec.ParentRefs {
-		ref := route.Spec.ParentRefs[i]
-		if ref.Kind != nil && *ref.Kind != "Gateway" {
-			return nil, fmt.Errorf("invalid Kind %q", *ref.Kind)
-		}
-		if ref.Group != nil && *ref.Group != gwapiv1b1.GroupName {
-			return nil, fmt.Errorf("invalid Group %q", *ref.Group)
-		}
-		// Ensure the referenced Gateway exists, using the route's namespace unless
-		// specified by the parentRef.
-		ns := route.Namespace
-		if ref.Namespace != nil {
-			ns = string(*ref.Namespace)
-		}
-		gwKey := types.NamespacedName{
-			Namespace: ns,
-			Name:      string(ref.Name),
-		}
-		gw := new(gwapiv1b1.Gateway)
-		if err := r.client.Get(ctx, gwKey, gw); err != nil {
-			return nil, fmt.Errorf("failed to get gateway %s/%s: %v", gwKey.Namespace, gwKey.Name, err)
-		}
-		gcKey := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
-		gc := new(gwapiv1b1.GatewayClass)
-		if err := r.client.Get(ctx, gcKey, gc); err != nil {
-			return nil, fmt.Errorf("failed to get gatewayclass %s: %v", gcKey.Name, err)
-		}
-		if gc.Spec.ControllerName == r.classController {
-			ret = append(ret, *gw)
-		}
-	}
-
-	return ret, nil
 }

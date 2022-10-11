@@ -34,7 +34,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            release-artifacts/gatewayapi-crds.yaml
             release-artifacts/install.yaml
 
         

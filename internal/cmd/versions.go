@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// getVersionsCommand returns the server cobra command to be executed.
+// getVersionsCommand returns the version cobra command to be executed.
 func getVersionsCommand() *cobra.Command {
 	// envOutput determines whether to output as environment settings
 	var envOutput bool

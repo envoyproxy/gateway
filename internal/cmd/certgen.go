@@ -16,7 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
-// getServerCommand returns the server cobra command to be executed.
+// getCertGenCommand returns the certGen cobra command to be executed.
 func getCertGenCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "certgen",

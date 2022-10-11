@@ -33,7 +33,7 @@ kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider 
 ##@ Kubernetes Deployment
 
 ifndef ignore-not-found
-  ignore-not-found = false
+  ignore-not-found = true
 endif
 
 .PHONY: kube-install
@@ -47,7 +47,7 @@ kube-install: manifests $(tools/kustomize) ## Install Envoy Gateway CRDs into th
 
 .PHONY: kube-uninstall
 kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml --ignore-not-found=$(ignore-not-found)
 
 .PHONY: kube-deploy
 kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
