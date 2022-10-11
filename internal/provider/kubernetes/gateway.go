@@ -166,20 +166,24 @@ func (r *gatewayReconciler) enqueueRequestForGatewaySecrets() handler.EventHandl
 		var reqs []reconcile.Request
 		for i := range gateways.Items {
 			gw := gateways.Items[i]
-			if r.hasMatchingController(&gw) && terminatesTLS(&gw) {
-				secrets, _, err := r.secretsAndRefGrantsForGateway(ctx, &gw)
-				if err != nil {
-					return nil
-				}
-				for _, s := range secrets {
-					if s.Namespace == secret.Namespace && s.Name == secret.Name {
-						req := reconcile.Request{
-							NamespacedName: types.NamespacedName{
-								Namespace: gw.Namespace,
-								Name:      gw.Name,
-							},
+			if r.hasMatchingController(&gw) {
+				for j := range gw.Spec.Listeners {
+					if terminatesTLS(&gw.Spec.Listeners[j]) {
+						secrets, _, err := r.secretsAndRefGrantsForGateway(ctx, &gw)
+						if err != nil {
+							return nil
 						}
-						reqs = append(reqs, req)
+						for _, s := range secrets {
+							if s.Namespace == secret.Namespace && s.Name == secret.Name {
+								req := reconcile.Request{
+									NamespacedName: types.NamespacedName{
+										Namespace: gw.Namespace,
+										Name:      gw.Name,
+									},
+								}
+								reqs = append(reqs, req)
+							}
+						}
 					}
 				}
 			}
@@ -492,61 +496,61 @@ func (r *gatewayReconciler) gatewaysRefSecret(ctx context.Context, secret *corev
 func (r *gatewayReconciler) secretsAndRefGrantsForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) ([]corev1.Secret, []gwapiv1a2.ReferenceGrant, error) {
 	var secrets []corev1.Secret
 	var returnedGrants []gwapiv1a2.ReferenceGrant
-	if terminatesTLS(gateway) {
-		for i := range gateway.Spec.Listeners {
-			listener := gateway.Spec.Listeners[i]
-			if listener.TLS != nil {
-				for j := range listener.TLS.CertificateRefs {
-					ref := listener.TLS.CertificateRefs[j]
-					if tlsRefIsSecret(&ref) {
-						if ref.Namespace != nil {
-							// A ReferenceGrant is required for cross namespace secret references.
-							refGrants := &gwapiv1a2.ReferenceGrantList{}
-							opts := client.ListOptions{Namespace: string(*ref.Namespace)}
-							if err := r.client.List(ctx, refGrants, &opts); err != nil {
-								return nil, nil, fmt.Errorf("error listing referencegrants")
-							}
-							var gwRefd, secretRefd bool
-							for _, rg := range refGrants.Items {
-								for _, from := range rg.Spec.From {
-									if from.Group == gwapiv1a2.GroupName &&
-										from.Kind == gatewayapi.KindGateway {
-										gwRefd = true
-									}
-								}
-								for _, to := range rg.Spec.To {
-									if to.Group == corev1.GroupName &&
-										to.Kind == gatewayapi.KindSecret {
-										if to.Name == nil || *to.Name == gwapiv1a2.ObjectName(ref.Name) {
-											secretRefd = true
-										}
-									}
-								}
-								if gwRefd && secretRefd {
-									returnedGrants = append(returnedGrants, rg)
-									key := types.NamespacedName{
-										Namespace: string(*ref.Namespace),
-										Name:      string(ref.Name),
-									}
-									secret := new(corev1.Secret)
-									if err := r.client.Get(ctx, key, secret); err != nil {
-										return nil, nil, fmt.Errorf("failed to get secret: %v", err)
-									}
-									secrets = append(secrets, *secret)
-								}
-							}
-						} else {
-							// The secret is in the Gateway's namespace.
-							key := types.NamespacedName{
-								Namespace: gateway.Namespace,
-								Name:      string(ref.Name),
-							}
-							secret := new(corev1.Secret)
-							if err := r.client.Get(ctx, key, secret); err != nil {
-								return nil, nil, fmt.Errorf("failed to get secret: %v", err)
-							}
-							secrets = append(secrets, *secret)
+	for i := range gateway.Spec.Listeners {
+		listener := gateway.Spec.Listeners[i]
+		if terminatesTLS(&listener) {
+			for j := range listener.TLS.CertificateRefs {
+				ref := listener.TLS.CertificateRefs[j]
+				if refsSecret(&ref) {
+					if ref.Namespace != nil {
+						// A ReferenceGrant is required for cross namespace secret references.
+						refGrants := &gwapiv1a2.ReferenceGrantList{}
+						opts := client.ListOptions{Namespace: string(*ref.Namespace)}
+						if err := r.client.List(ctx, refGrants, &opts); err != nil {
+							return nil, nil, fmt.Errorf("error listing referencegrants")
 						}
+						var gwRefd, secretRefd bool
+						for _, rg := range refGrants.Items {
+							for _, from := range rg.Spec.From {
+								if from.Group == gwapiv1a2.GroupName &&
+									from.Kind == gatewayapi.KindGateway {
+									gwRefd = true
+									break
+								}
+							}
+							for _, to := range rg.Spec.To {
+								if to.Group == corev1.GroupName &&
+									to.Kind == gatewayapi.KindSecret {
+									if to.Name == nil || *to.Name == gwapiv1a2.ObjectName(ref.Name) {
+										secretRefd = true
+										break
+									}
+								}
+							}
+							if gwRefd && secretRefd {
+								returnedGrants = append(returnedGrants, rg)
+								key := types.NamespacedName{
+									Namespace: string(*ref.Namespace),
+									Name:      string(ref.Name),
+								}
+								secret := new(corev1.Secret)
+								if err := r.client.Get(ctx, key, secret); err != nil {
+									return nil, nil, fmt.Errorf("failed to get secret: %v", err)
+								}
+								secrets = append(secrets, *secret)
+							}
+						}
+					} else {
+						// The secret is in the Gateway's namespace.
+						key := types.NamespacedName{
+							Namespace: gateway.Namespace,
+							Name:      string(ref.Name),
+						}
+						secret := new(corev1.Secret)
+						if err := r.client.Get(ctx, key, secret); err != nil {
+							return nil, nil, fmt.Errorf("failed to get secret: %v", err)
+						}
+						secrets = append(secrets, *secret)
 					}
 				}
 			}
@@ -558,20 +562,18 @@ func (r *gatewayReconciler) secretsAndRefGrantsForGateway(ctx context.Context, g
 
 // terminatesTLS returns true if the provided gateway contains a listener configured
 // for TLS termination.
-func terminatesTLS(gateway *gwapiv1b1.Gateway) bool {
-	for _, listener := range gateway.Spec.Listeners {
-		if listener.Protocol == gwapiv1b1.HTTPSProtocolType &&
-			listener.TLS != nil &&
-			listener.TLS.Mode != nil &&
-			*listener.TLS.Mode == gwapiv1b1.TLSModeTerminate {
-			return true
-		}
+func terminatesTLS(listener *gwapiv1b1.Listener) bool {
+	if listener.TLS != nil &&
+		listener.Protocol == gwapiv1b1.HTTPSProtocolType &&
+		listener.TLS.Mode != nil &&
+		*listener.TLS.Mode == gwapiv1b1.TLSModeTerminate {
+		return true
 	}
 	return false
 }
 
-// tlsRefIsSecret returns true if ref refers to a Secret.
-func tlsRefIsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
+// refsSecret returns true if ref refers to a Secret.
+func refsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
 	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
 		(ref.Kind == nil || *ref.Kind == gatewayapi.KindSecret)
 }
