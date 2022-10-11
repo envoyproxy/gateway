@@ -61,7 +61,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteInvalidNonExistentBackendRef,
 		tests.HTTPRouteInvalidBackendRefUnknownKind,
 		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
-		tests.HTTPRouteHeaderMatching,
 		tests.GatewaySecretReferenceGrantAllInNamespace,
 		tests.GatewaySecretReferenceGrantSpecific,
 		// Uncomment when https://github.com/envoyproxy/gateway/issues/538 is fixed.
