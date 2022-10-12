@@ -431,7 +431,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 						listener.SetCondition(
 							v1beta1.ListenerConditionResolvedRefs,
 							metav1.ConditionFalse,
-							v1beta1.ListenerReasonInvalidCertificateRef,
+							v1beta1.ListenerReasonRefNotPermitted,
 							fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant", *certificateRef.Namespace, certificateRef.Name),
 						)
 						break
