@@ -779,7 +779,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						// Can't have two redirects for the same route
 						if redirectResponse != nil {
 							parentRef.SetCondition(httpRoute,
-								v1beta1.RouteConditionResolvedRefs,
+								v1beta1.RouteConditionAccepted,
 								metav1.ConditionFalse,
 								v1beta1.RouteReasonUnsupportedValue,
 								"Cannot configure multiple requestRedirect filters for a single HTTPRouteRule",
@@ -801,7 +801,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							} else {
 								errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
 								parentRef.SetCondition(httpRoute,
-									v1beta1.RouteConditionResolvedRefs,
+									v1beta1.RouteConditionAccepted,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
 									errMsg,
@@ -813,7 +813,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						if redirect.Hostname != nil {
 							if err := isValidHostname(string(*redirect.Hostname)); err != nil {
 								parentRef.SetCondition(httpRoute,
-									v1beta1.RouteConditionResolvedRefs,
+									v1beta1.RouteConditionAccepted,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
 									err.Error(),
@@ -842,7 +842,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							default:
 								errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
 								parentRef.SetCondition(httpRoute,
-									v1beta1.RouteConditionResolvedRefs,
+									v1beta1.RouteConditionAccepted,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
 									errMsg,
@@ -859,7 +859,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							} else {
 								errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
 								parentRef.SetCondition(httpRoute,
-									v1beta1.RouteConditionResolvedRefs,
+									v1beta1.RouteConditionAccepted,
 									metav1.ConditionFalse,
 									v1beta1.RouteReasonUnsupportedValue,
 									errMsg,
@@ -891,7 +891,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								emptyFilterConfig = false
 								if addHeader.Name == "" {
 									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
+										v1beta1.RouteConditionAccepted,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
 										"RequestHeaderModifier Filter cannot add a header with an empty name",
@@ -902,7 +902,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 								if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
 									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
+										v1beta1.RouteConditionAccepted,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
 										fmt.Sprintf("RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: %q", string(addHeader.Name)),
@@ -920,12 +920,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								}
 
 								if !canAddHeader {
-									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added, ignoring second entry", headerKey),
-									)
 									continue
 								}
 
@@ -948,7 +942,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 								if setHeader.Name == "" {
 									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
+										v1beta1.RouteConditionAccepted,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
 										"RequestHeaderModifier Filter cannot set a header with an empty name",
@@ -958,7 +952,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 								if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
 									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
+										v1beta1.RouteConditionAccepted,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
 										fmt.Sprintf("RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: '%s'", string(setHeader.Name)),
@@ -976,12 +970,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									}
 								}
 								if !canAddHeader {
-									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be added/set, ignoring second entry", headerKey),
-									)
 									continue
 								}
 								newHeader := ir.AddHeader{
@@ -1004,7 +992,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							for _, removedHeader := range headersToRemove {
 								if removedHeader == "" {
 									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
+										v1beta1.RouteConditionAccepted,
 										metav1.ConditionFalse,
 										v1beta1.RouteReasonUnsupportedValue,
 										"RequestHeaderModifier Filter cannot remove a header with an empty name",
@@ -1020,12 +1008,6 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 									}
 								}
 								if !canRemHeader {
-									parentRef.SetCondition(httpRoute,
-										v1beta1.RouteConditionResolvedRefs,
-										metav1.ConditionFalse,
-										v1beta1.RouteReasonUnsupportedValue,
-										fmt.Sprintf("RequestHeaderModifier Filter already configures request header: %s to be removed, ignoring second entry", removedHeader),
-									)
 									continue
 								}
 
@@ -1037,7 +1019,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						// Update the status if the filter failed to configure any valid headers to add/remove
 						if len(addRequestHeaders) == 0 && len(removeRequestHeaders) == 0 && !emptyFilterConfig {
 							parentRef.SetCondition(httpRoute,
-								v1beta1.RouteConditionResolvedRefs,
+								v1beta1.RouteConditionAccepted,
 								metav1.ConditionFalse,
 								v1beta1.RouteReasonUnsupportedValue,
 								"RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
@@ -1048,7 +1030,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						// Instead, requests that would have been processed by that filter MUST receive a HTTP error response."
 						errMsg := fmt.Sprintf("Unknown custom filter type: %s", filter.Type)
 						parentRef.SetCondition(httpRoute,
-							v1beta1.RouteConditionResolvedRefs,
+							v1beta1.RouteConditionAccepted,
 							metav1.ConditionFalse,
 							v1beta1.RouteReasonUnsupportedValue,
 							errMsg,

@@ -63,10 +63,6 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
-      - type: ResolvedRefs
-        status: "False"
-        reason: UnsupportedValue
-        message: "Unknown custom filter type: UnsupportedType"
 xdsIR:
   envoy-gateway-gateway-1:
     http:

@@ -64,10 +64,6 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
-      - type: ResolvedRefs
-        status: "False"
-        reason: UnsupportedValue
-        message: "RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
