@@ -73,9 +73,10 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
 	kubectl delete -f examples/kubernetes/quickstart.yaml
 
-.PHONY: run-kube-local
-run-kube-local: build kube-install ## Run Envoy Gateway locally.
-	tools/hack/run-kube-local.sh
+# Uncomment when https://github.com/envoyproxy/gateway/issues/256 is fixed.
+#.PHONY: run-kube-local
+#run-kube-local: build kube-install ## Run Envoy Gateway locally.
+#	tools/hack/run-kube-local.sh
 
 .PHONY: conformance 
 conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
