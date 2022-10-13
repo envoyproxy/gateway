@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
 	"strings"
 
@@ -20,8 +20,9 @@ func NamespacedName(obj client.Object) types.NamespacedName {
 // Returns a partially hashed name for the string if it is more than 60 chars. Otherwise returns the original string
 func GetHashedName(name string) string {
 	if len(name) > 60 {
-		hsha1 := sha1.Sum([]byte(name))
-		hashedName := strings.ToLower(fmt.Sprintf("%x", hsha1))
+		h := sha256.New() // Using sha256 instead of sha1 due to Blocklisted import crypto/sha1: weak cryptographic primitive (gosec)
+		hsha := h.Sum([]byte(name))
+		hashedName := strings.ToLower(fmt.Sprintf("%x", hsha))
 		return fmt.Sprintf("%s-%s", name[0:32], hashedName[0:16])
 	}
 	return name

@@ -222,7 +222,7 @@ func TestObjectName(t *testing.T) {
 					Name: "superduperlongnamethatisdefinitelylongerthananameshouldrealisticallybe",
 				},
 			},
-			expected: "envoy-superduperlongnamethatisdefinite-14544f10f5d2c4b4",
+			expected: "envoy-superduperlongnamethatisdefinite-7375706572647570",
 		},
 	}
 

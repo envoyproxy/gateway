@@ -163,7 +163,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-very-long-name-that-will-r-7cfe8bc537943254",
+					Name:      "envoy-very-long-name-that-will-r-656e766f792d7665",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
