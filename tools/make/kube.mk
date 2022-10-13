@@ -4,6 +4,8 @@ ENVTEST_K8S_VERSION ?= 1.24.1
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
+GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+
 CONFORMANCE_UNIQUE_PORTS ?= true
 
 # Set Kubernetes Resources Directory Path
@@ -36,30 +38,13 @@ ifndef ignore-not-found
   ignore-not-found = true
 endif
 
-.PHONY: kube-install
-kube-install: manifests $(tools/kustomize) ## Install Envoy Gateway CRDs into the Kubernetes cluster specified in ~/.kube/config.
-	mkdir -pv $(OUTPUT_DIR)/manifests/provider
-	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
-	mkdir -pv $(OUTPUT_DIR)/manifests/infra
-	cp -r $(KUBE_INFRA_DIR) $(OUTPUT_DIR)/manifests/infra
-	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/crd | kubectl apply -f -
-	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
-
-.PHONY: kube-uninstall
-kube-uninstall: manifests $(tools/kustomize) ## Uninstall Envoy Gateway CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml --ignore-not-found=$(ignore-not-found)
-
 .PHONY: kube-deploy
-kube-deploy: kube-install ## Install Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
-	cd $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
-	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default | kubectl apply -f -
-	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/infra/config/rbac | kubectl apply -f -
+kube-deploy: manifests $(tools/kustomize) generate-manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	kubectl apply -f $(OUTPUT_DIR)/install.yaml
 
 .PHONY: kube-undeploy
-kube-undeploy: kube-uninstall ## Uninstall the Envoy Gateway controller into the Kubernetes cluster specified in ~/.kube/config.
-	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f - 
-	rm -rf $(OUTPUT_DIR)/manifests/provider
-	rm -rf $(OUTPUT_DIR)/manifests/infra
+kube-undeploy: manifests $(tools/kustomize) ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(OUTPUT_DIR)/install.yaml
 
 .PHONY: kube-demo
 kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute resource and test the configuration.
@@ -71,7 +56,7 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 
 .PHONY: kube-demo-undeploy
 kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
-	kubectl delete -f examples/kubernetes/quickstart.yaml
+	kubectl delete -f examples/kubernetes/quickstart.yaml --ignore-not-found=$(ignore-not-found)
 
 .PHONY: run-kube-local
 run-kube-local: build kube-install ## Run Envoy Gateway locally.
@@ -99,6 +84,24 @@ run-conformance: ## Run Gateway API conformance.
 delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
 
-.PHONY: release-manifests
-release-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
-	tools/hack/release-manifests.sh $(GATEWAY_API_VERSION) $(TAG)
+.PHONY: generate-manifests
+generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
+	@echo "\033[36m===========> Generating kubernetes manifests\033[0m"
+	mkdir -p $(OUTPUT_DIR)/
+	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
+	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/gatewayapi-crds.yaml\033[0m"
+	mkdir -pv $(OUTPUT_DIR)/manifests/provider
+	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
+	mkdir -pv $(OUTPUT_DIR)/manifests/infra
+	cp -r $(KUBE_INFRA_DIR) $(OUTPUT_DIR)/manifests/infra
+	cd $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
+	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default > $(OUTPUT_DIR)/envoy-gateway.yaml
+	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/infra/config/rbac > $(OUTPUT_DIR)/infra-manager-rbac.yaml
+	touch $(OUTPUT_DIR)/kustomization.yaml
+	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./envoy-gateway.yaml
+	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./infra-manager-rbac.yaml
+	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./gatewayapi-crds.yaml
+	$(tools/kustomize) build $(OUTPUT_DIR) > $(OUTPUT_DIR)/install.yaml
+	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/install.yaml\033[0m"
+	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
+	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/quickstart.yaml\033[0m"

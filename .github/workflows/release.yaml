@@ -28,7 +28,7 @@ jobs:
           skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ steps.vars.outputs.sha_short }} docker://docker.io/envoyproxy/gateway:${{ steps.vars.outputs.release_tag }}
 
       - name: Generate Release Manifests
-        run: make release-manifests TAG=${{ steps.vars.outputs.release_tag}}
+        run: make generate-manifests IMAGE=envoyproxy/gateway TAG=${{ steps.vars.outputs.release_tag}} OUTPUT_DIR=release-artifacts
 
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@v1
@@ -36,5 +36,3 @@ jobs:
           files: |
             release-artifacts/install.yaml
             release-artifacts/quickstart.yaml
-
-        
