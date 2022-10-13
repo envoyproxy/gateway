@@ -215,6 +215,15 @@ func TestObjectName(t *testing.T) {
 			},
 			expected: "envoy-default",
 		},
+		{
+			name: "defined infra",
+			infra: &Infra{
+				Proxy: &ProxyInfra{
+					Name: "superduperlongnamethatisdefinitelylongerthananameshouldrealisticallybe",
+				},
+			},
+			expected: "envoy-superduperlongnamethatisdefinite-14544f10f5d2c4b4",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -127,6 +127,51 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "hashed-name",
+			ns:   "test",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name: "very-long-name-that-will-result-in-a-hashed-serviceaccount-name",
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						},
+					},
+				},
+			},
+			current: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "envoy-very-long-name-that-will-r-7cfe8bc537943254",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
+				},
+			},
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "envoy-very-long-name-that-will-r-7cfe8bc537943254",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
