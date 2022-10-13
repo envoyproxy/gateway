@@ -29,7 +29,7 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2
 
 Create the Gateway:
 ```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gateway.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gateway.yaml
 ```
 
 Create the HTTPRoute to route traffic through Envoy proxy to the example app:
