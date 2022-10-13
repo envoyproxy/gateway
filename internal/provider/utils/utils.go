@@ -23,7 +23,7 @@ func GetHashedName(name string) string {
 		h := sha256.New() // Using sha256 instead of sha1 due to Blocklisted import crypto/sha1: weak cryptographic primitive (gosec)
 		hsha := h.Sum([]byte(name))
 		hashedName := strings.ToLower(fmt.Sprintf("%x", hsha))
-		return fmt.Sprintf("%s-%s", name[0:32], hashedName[0:16])
+		return fmt.Sprintf("%s-%s", name[0:32], hashedName[0:8])
 	}
 	return name
 }

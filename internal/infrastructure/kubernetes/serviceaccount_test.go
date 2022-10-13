@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -163,7 +165,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-very-long-name-that-will-r-656e766f792d7665",
+					Name:      "envoy-very-long-name-that-will-r-656e766f",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -198,6 +200,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+			fmt.Fprintf(os.Stderr, "Alice: %s\n", actual.ObjectMeta.Name)
 			assert.Equal(t, true, cmp.Equal(tc.want, actual, opts))
 		})
 	}

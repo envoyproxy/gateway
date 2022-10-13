@@ -16,7 +16,7 @@ import (
 )
 
 func expectedServiceAccountName(proxyName string) string {
-	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyPrefix, proxyName))
 }
 
 // expectedServiceAccount returns the expected proxy serviceAccount.

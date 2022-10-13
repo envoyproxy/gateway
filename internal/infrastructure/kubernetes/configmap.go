@@ -114,5 +114,5 @@ func (i *Infra) deleteConfigMap(ctx context.Context, infra *ir.Infra) error {
 }
 
 func expectedConfigMapName(proxyName string) string {
-	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyPrefix, proxyName))
 }

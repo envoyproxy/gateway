@@ -95,7 +95,7 @@ func (b *bootstrapConfig) render() error {
 }
 
 func expectedDeploymentName(proxyName string) string {
-	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyPrefix, proxyName))
 }
 
 // expectedDeployment returns the expected Deployment based on the provided infra.
