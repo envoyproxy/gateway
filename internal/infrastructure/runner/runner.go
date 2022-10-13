@@ -3,9 +3,13 @@ package runner
 import (
 	"context"
 
+	"github.com/telepresenceio/watchable"
+
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 )
 
 type Config struct {
@@ -41,9 +45,8 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.InfraIR.Subscribe(ctx) {
-		r.Logger.Info("received a notification")
-		for _, update := range snapshot.Updates {
+	watchutil.HandleSubscription(r.InfraIR.Subscribe(ctx),
+		func(update watchable.Update[string, *ir.Infra]) {
 			val := update.Value
 
 			if update.Delete {
@@ -56,7 +59,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.Logger.Error(err, "failed to create new infra")
 				}
 			}
-		}
-	}
+		},
+	)
 	r.Logger.Info("subscriber shutting down")
 }

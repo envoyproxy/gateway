@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/telepresenceio/watchable"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +30,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/slice"
+	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 )
 
 const gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
@@ -622,13 +624,11 @@ func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context, gatew
 // Kubernetes API Server
 func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.resources.GatewayStatuses.Subscribe(ctx) {
-		r.log.Info("received a status notification")
-		updates := snapshot.Updates
-		for _, update := range updates {
+	watchutil.HandleSubscription(r.resources.GatewayStatuses.Subscribe(ctx),
+		func(update watchable.Update[types.NamespacedName, *gwapiv1b1.Gateway]) {
 			// skip delete updates.
 			if update.Delete {
-				continue
+				return
 			}
 			key := update.Key
 			val := update.Value
@@ -645,8 +645,8 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					return gCopy
 				}),
 			})
-		}
-	}
+		},
+	)
 	r.log.Info("status subscriber shutting down")
 }
 
