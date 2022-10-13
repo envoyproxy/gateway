@@ -1,32 +1,20 @@
-## Introduction
-This guide will help you get started with using secure Gateways. This document uses a self-signed CA, so it should be
-used for testing and demonstration purposes only.
+## Secure Gateways
+This guide will help you get started with using secure Gateways. The guide uses a self-signed CA, so it should be used
+for testing and demonstration purposes only.
 
-## Prerequisites
+### Prerequisites
 - A Kubernetes cluster with `kubectl` context configured for the cluster.
 - OpenSSL to generate TLS assets.
 
 __Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
-## Installation
-Install the Gateway API CRDs:
-```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/gatewayapi-crds.yaml
-```
+### Installation
+Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to curl the example backend using HTTP.
 
-Run Envoy Gateway:
-```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/install.yaml
-```
+### TLS Certificates
 
-Run the example app:
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0/examples/kubernetes/httpbin.yaml
-```
-
-### TLS Assets
-
-Generate TLS assets used by the Gateway.
+Generate the certificates and keys used by the Gateway to terminate client TLS connections.
 
 For macOS users, verify curl is compiled with the LibreSSL library:
 ```shell
@@ -50,22 +38,7 @@ Store the cert/keys in A Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
-The Gateway API resources must be created in the following order. First, create the GatewayClass:
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0/examples/kubernetes/gatewayclass.yaml
-```
-
-Create the Gateway:
-```shell
-kubectl apply -f https://raw.githubusercontent.com//envoyproxy/gateway/v0.2.0/examples/kubernetes/gateway.yaml
-```
-
-Create the HTTPRoute to route traffic through Envoy proxy to the example app:
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0/examples/kubernetes/httproute.yaml
-```
-
-### Testing the configuration
+### Testing
 Port forward to the Envoy service:
 ```shell
 kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8043:8443 &
@@ -92,41 +65,11 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:${GATEWAY_HOST}" 
 You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
 
 ## Clean-Up
-Use the steps in this section to uninstall everything from the quickstart guide.
-
-Delete the HTTPRoute:
-```shell
-kubectl delete httproute/httpbin
-```
-
-Delete the Gateway:
-```shell
-kubectl delete gateway/eg
-```
+Follow the steps from the [Quickstart Guide](QUICKSTART.md) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secret:
 ```shell
 kubectl delete secret/example-cert
-```
-
-Delete the GatewayClass:
-```shell
-kubectl delete gc/eg
-```
-
-Uninstall the example app:
-```shell
-kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
-```
-
-Uninstall Envoy Gateway:
-```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
-```
-
-Uninstall Gateway API CRDs:
-```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
 ```
 
 ## Next Steps
