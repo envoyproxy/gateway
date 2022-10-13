@@ -60,7 +60,7 @@ httpRoutes:
         reason: InvalidKind
         message: Kind is invalid, only Service is supported
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway-gateway-1-656e766f:
     http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
@@ -76,13 +76,13 @@ xdsIR:
         directResponse:
           statusCode: 500
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway-gateway-1-656e766f:
     proxy:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway-gateway-1-656e766f
       image: envoyproxy/envoy:v1.23-latest
       listeners:
       - address: ""

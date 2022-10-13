@@ -57,7 +57,7 @@ httpRoutes:
         reason: NoMatchingListenerHostname
         message: There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway-gateway-1-656e766f:
     http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0
@@ -65,13 +65,13 @@ xdsIR:
       hostnames:
       - "*.envoyproxy.io"
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway-gateway-1-656e766f:
     proxy:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway-gateway-1-656e766f
       image: envoyproxy/envoy:v1.23-latest
       listeners:
       - address: ""

@@ -55,15 +55,15 @@ httpRoutes:
               reason: NoReadyListeners
               message: There are no ready listeners for this parent ref
 xdsIR:
-  envoy-gateway-gateway-1: {}
+  envoy-gateway-gateway-1-656e766f: {}
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway-gateway-1-656e766f:
     proxy:
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway-gateway-1-656e766f
       image: envoyproxy/envoy:v1.23-latest
       listeners:
         - address: ""
