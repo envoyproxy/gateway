@@ -12,7 +12,7 @@ GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' 
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
 # If we want to build envoy-gateway in linux amd64 platform, 
-# just execute make build.linux_amd64.envoy-gateway.
+# just execute make go.build.linux_amd64.envoy-gateway.
 .PHONY: go.build.%
 go.build.%:
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
