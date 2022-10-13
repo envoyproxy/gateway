@@ -7,6 +7,7 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -209,5 +210,5 @@ func (p *ProxyInfra) ObjectName() string {
 	if len(p.Name) == 0 {
 		return fmt.Sprintf("envoy-%s", DefaultProxyName)
 	}
-	return "envoy-" + p.Name
+	return "envoy-" + utils.GetHashedName(p.Name)
 }

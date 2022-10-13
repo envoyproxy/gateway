@@ -14,10 +14,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 func expectedServiceName(proxyName string) string {
-	return fmt.Sprintf("%s-%s", config.EnvoyServicePrefix, proxyName)
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
 }
 
 // expectedService returns the expected Service based on the provided infra.

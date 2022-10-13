@@ -13,6 +13,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -113,5 +114,5 @@ func (i *Infra) deleteConfigMap(ctx context.Context, infra *ir.Infra) error {
 }
 
 func expectedConfigMapName(proxyName string) string {
-	return fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName)
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
 }

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -1519,7 +1520,7 @@ func isValidHostname(hostname string) error {
 }
 
 func irStringKey(gateway *v1beta1.Gateway) string {
-	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
 }
 
 func irListenerName(listener *ListenerContext) string {

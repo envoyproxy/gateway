@@ -18,6 +18,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
@@ -94,7 +95,7 @@ func (b *bootstrapConfig) render() error {
 }
 
 func expectedDeploymentName(proxyName string) string {
-	return fmt.Sprintf("%s-%s", config.EnvoyDeploymentPrefix, proxyName)
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
 }
 
 // expectedDeployment returns the expected Deployment based on the provided infra.

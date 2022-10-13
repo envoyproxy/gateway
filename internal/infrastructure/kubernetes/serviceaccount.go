@@ -9,16 +9,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-)
-
-const (
-	envoyServiceAccountPrefix = "envoy"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 func expectedServiceAccountName(proxyName string) string {
-	return fmt.Sprintf("%s-%s", envoyServiceAccountPrefix, proxyName)
+	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyConfigMapPrefix, proxyName))
 }
 
 // expectedServiceAccount returns the expected proxy serviceAccount.
