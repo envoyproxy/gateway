@@ -44,10 +44,7 @@ jobs:
         name: codecov-envoy-gateway
         verbose: true
 
-    # build
-    - run: make build-multiarch
-
-    # conformance
+    # build image and run conformance
     - name: Run Conformance Tests
       run: CONFORMANCE_UNIQUE_PORTS=false make conformance
 
