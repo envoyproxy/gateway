@@ -125,7 +125,7 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 		return i.Proxy
 	}
 	if len(i.Proxy.Name) == 0 {
-		i.Proxy.Name = DefaultProxyName
+		i.Proxy.Name = utils.GetHashedName(DefaultProxyName) // Proxy.Name is always hashed
 	}
 	if len(i.Proxy.Image) == 0 {
 		i.Proxy.Image = DefaultProxyImage

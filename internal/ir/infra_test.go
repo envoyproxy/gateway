@@ -197,7 +197,7 @@ func TestObjectName(t *testing.T) {
 		{
 			name:     "default infra",
 			infra:    defaultInfra,
-			expected: "envoy-default",
+			expected: "envoy-default-64656661",
 		},
 		{
 			name: "defined infra",
@@ -206,7 +206,7 @@ func TestObjectName(t *testing.T) {
 					Name: "foo",
 				},
 			},
-			expected: "envoy-foo",
+			expected: "envoy-foo-666f6fe3",
 		},
 		{
 			name: "unspecified infra name",

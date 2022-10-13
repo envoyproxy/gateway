@@ -12,11 +12,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 func expectedServiceAccountName(proxyName string) string {
-	return utils.GetHashedName(fmt.Sprintf("%s-%s", config.EnvoyPrefix, proxyName))
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, proxyName)
 }
 
 // expectedServiceAccount returns the expected proxy serviceAccount.
