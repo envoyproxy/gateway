@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/telepresenceio/watchable"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -26,7 +25,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 )
 
 const (
@@ -320,8 +318,8 @@ func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
 // Kubernetes API Server
 func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	watchutil.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
-		func(update watchable.Update[types.NamespacedName, *gwapiv1b1.HTTPRoute]) {
+	message.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
+		func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRoute]) {
 			// skip delete updates.
 			if update.Delete {
 				return

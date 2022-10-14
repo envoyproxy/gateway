@@ -1,4 +1,4 @@
-package watchutil_test
+package message_test
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/telepresenceio/watchable"
 
-	"github.com/envoyproxy/gateway/internal/utils/watchutil"
+	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
@@ -16,9 +16,9 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 	close(ch)
 
 	var calls int
-	watchutil.HandleSubscription[string, any](
+	message.HandleSubscription[string, any](
 		ch,
-		func(watchable.Update[string, any]) { calls++ },
+		func(message.Update[string, any]) { calls++ },
 	)
 	assert.Equal(t, 0, calls)
 }
@@ -40,9 +40,9 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 
 	var storeCalls int
 	var deleteCalls int
-	watchutil.HandleSubscription[string, any](
+	message.HandleSubscription[string, any](
 		m.Subscribe(context.Background()),
-		func(update watchable.Update[string, any]) {
+		func(update message.Update[string, any]) {
 			end()
 			if update.Delete {
 				deleteCalls++

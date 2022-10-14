@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/telepresenceio/watchable"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -27,7 +26,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 )
 
 const (
@@ -299,8 +297,8 @@ func validateTLSRouteBackendRef(ref *gwapiv1a2.BackendRef) error {
 // Kubernetes API Server
 func (r *tlsRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	watchutil.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
-		func(update watchable.Update[types.NamespacedName, *gwapiv1a2.TLSRoute]) {
+	message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
+		func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRoute]) {
 			// skip delete updates.
 			if update.Delete {
 				return

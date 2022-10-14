@@ -1,8 +1,10 @@
-package watchutil
+package message
 
 import (
 	"github.com/telepresenceio/watchable"
 )
+
+type Update[K comparable, V any] watchable.Update[K, V]
 
 // HandleSubscription takes a channel returned by
 // watchable.Map.Subscribe() (or .SubscribeSubset()), and calls the
@@ -14,11 +16,11 @@ import (
 // entries before .Subscribe is called.
 func HandleSubscription[K comparable, V any](
 	subscription <-chan watchable.Snapshot[K, V],
-	handle func(watchable.Update[K, V]),
+	handle func(Update[K, V]),
 ) {
 	if snapshot, ok := <-subscription; ok {
 		for k, v := range snapshot.State {
-			handle(watchable.Update[K, V]{
+			handle(Update[K, V]{
 				Key:   k,
 				Value: v,
 			})
@@ -26,7 +28,7 @@ func HandleSubscription[K comparable, V any](
 	}
 	for snapshot := range subscription {
 		for _, update := range snapshot.Updates {
-			handle(update)
+			handle(Update[K, V](update))
 		}
 	}
 }

@@ -10,13 +10,11 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/telepresenceio/watchable"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 	controlplane_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
@@ -115,8 +113,8 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	watchutil.HandleSubscription(r.Xds.Subscribe(ctx),
-		func(update watchable.Update[string, *xdstypes.ResourceVersionTable]) {
+	message.HandleSubscription(r.Xds.Subscribe(ctx),
+		func(update message.Update[string, *xdstypes.ResourceVersionTable]) {
 			key := update.Key
 			val := update.Value
 

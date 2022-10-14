@@ -99,8 +99,8 @@ to worry about a backlog accumulating if they can't keep up with the rate of cha
 
 If the map contains anything before `.Subscribe` is called, that very first read won't include `snapshot.Updates`
 entries for those pre-existing items; if you are working with `snapshot.Update` instead of `snapshot.State`, then you
-must add special handling for your first read.  We have a utility function
-`./internal/utils/watchutil.HandleSubscription` to help with this.
+must add special handling for your first read.  We have a utility function `./internal/message.HandleSubscription` to
+help with this.
 
 ### other notes
 

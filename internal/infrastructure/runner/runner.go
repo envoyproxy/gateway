@@ -3,13 +3,10 @@ package runner
 import (
 	"context"
 
-	"github.com/telepresenceio/watchable"
-
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 )
 
 type Config struct {
@@ -45,8 +42,8 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	watchutil.HandleSubscription(r.InfraIR.Subscribe(ctx),
-		func(update watchable.Update[string, *ir.Infra]) {
+	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Infra]) {
 			val := update.Value
 
 			if update.Delete {

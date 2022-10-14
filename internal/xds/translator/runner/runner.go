@@ -3,12 +3,9 @@ package runner
 import (
 	"context"
 
-	"github.com/telepresenceio/watchable"
-
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/utils/watchutil"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 )
 
@@ -40,8 +37,8 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	watchutil.HandleSubscription(r.XdsIR.Subscribe(ctx),
-		func(update watchable.Update[string, *ir.Xds]) {
+	message.HandleSubscription(r.XdsIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Xds]) {
 			r.Logger.Info("received an update")
 			key := update.Key
 			val := update.Value
