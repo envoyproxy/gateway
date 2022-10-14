@@ -20,5 +20,11 @@ standalone or Kubernetes-based application gateway.
 
   intro/index
   intro/compatibility
+  user/quickstart
+  design/system-design
+  design/roadmap
+  design/gatewayapi-translator
+  design/watching
+  design/config-api
   about_docs
   get_involved
