@@ -1,6 +1,7 @@
 package infrastructure
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -10,26 +11,30 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+var _ Manager = (*kubernetes.Infra)(nil)
+
 // Manager provides the scaffolding for managing infrastructure.
-type Manager struct {
-	// TODO: create a common infra interface
-	*kubernetes.Infra
+type Manager interface {
+	// CreateOrUpdateInfra creates or updates infra.
+	CreateOrUpdateInfra(ctx context.Context, infra *ir.Infra) error
+	// DeleteInfra deletes infra
+	DeleteInfra(ctx context.Context, infra *ir.Infra) error
 }
 
 // NewManager returns a new infrastructure Manager.
-func NewManager(cfg *config.Server) (*Manager, error) {
-	mgr := new(Manager)
-
+func NewManager(cfg *config.Server) (Manager, error) {
+	var mgr Manager
 	if cfg.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}
-		mgr.Infra = kubernetes.NewInfra(cli)
+		mgr = kubernetes.NewInfra(cli)
 	} else {
-		// Kube is the only supported provider type.
+		// Kube is the only supported provider type for now.
 		return nil, fmt.Errorf("unsupported provider type %v", cfg.EnvoyGateway.Provider.Type)
 	}
 
