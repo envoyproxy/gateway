@@ -90,12 +90,17 @@ handy way to know when to run, `.Load` and friends can be used without subscribi
 There can be any number of subscribers.  For that matter, there can be any number of publishers `.Store`ing things, but
 it's probably wise to just have one publisher for each map.
 
-The channel returned from `.Subscribe` is immediately readable with a snapshot of the map as it existed when
-`.Subscribe` was called; after that initial read it becomes readable again whenever `.Store` or `.Delete` mutates the
-map.  If multiple mutations happen between reads, they are coalesced in to one snapshot to be read; the `snapshot.State`
-is the most-recent full state, and `snapshot.Updates` is a listing of each of the mutations that cause this snapshot to
-be different than the last-read one.  This way subscribers don't need to worry about a backlog accumulating if they
-can't keep up with the rate of changes from the publisher.
+The channel returned from `.Subscribe` **is immediately readable** with a snapshot of the map as it existed when
+`.Subscribe` was called; and becomes readable again whenever `.Store` or `.Delete` mutates the map.  If multiple
+mutations happen between reads (or if mutations happen between `.Subscribe` and the first read), they are coalesced in
+to one snapshot to be read; the `snapshot.State` is the most-recent full state, and `snapshot.Updates` is a listing of
+each of the mutations that cause this snapshot to be different than the last-read one.  This way subscribers don't need
+to worry about a backlog accumulating if they can't keep up with the rate of changes from the publisher.
+
+If the map contains anything before `.Subscribe` is called, that very first read won't include `snapshot.Updates`
+entries for those pre-existing items; if you are working with `snapshot.Update` instead of `snapshot.State`, then you
+must add special handling for your first read.  We have a utility function `./internal/message.HandleSubscription` to
+help with this.
 
 ### other notes
 

@@ -622,13 +622,11 @@ func (r *gatewayReconciler) envoyDeploymentForGateway(ctx context.Context, gatew
 // Kubernetes API Server
 func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.resources.GatewayStatuses.Subscribe(ctx) {
-		r.log.Info("received a status notification")
-		updates := snapshot.Updates
-		for _, update := range updates {
+	message.HandleSubscription(r.resources.GatewayStatuses.Subscribe(ctx),
+		func(update message.Update[types.NamespacedName, *gwapiv1b1.Gateway]) {
 			// skip delete updates.
 			if update.Delete {
-				continue
+				return
 			}
 			key := update.Key
 			val := update.Value
@@ -645,8 +643,8 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					return gCopy
 				}),
 			})
-		}
-	}
+		},
+	)
 	r.log.Info("status subscriber shutting down")
 }
 

@@ -318,13 +318,11 @@ func validateBackendRef(ref *gwapiv1b1.HTTPBackendRef) error {
 // Kubernetes API Server
 func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.resources.HTTPRouteStatuses.Subscribe(ctx) {
-		r.log.Info("received a status notification")
-		updates := snapshot.Updates
-		for _, update := range updates {
+	message.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
+		func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRoute]) {
 			// skip delete updates.
 			if update.Delete {
-				continue
+				return
 			}
 			key := update.Key
 			val := update.Value
@@ -341,7 +339,7 @@ func (r *httpRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					return hCopy
 				}),
 			})
-		}
-	}
+		},
+	)
 	r.log.Info("status subscriber shutting down")
 }

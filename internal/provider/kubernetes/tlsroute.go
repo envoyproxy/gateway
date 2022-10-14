@@ -297,13 +297,11 @@ func validateTLSRouteBackendRef(ref *gwapiv1a2.BackendRef) error {
 // Kubernetes API Server
 func (r *tlsRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.resources.TLSRouteStatuses.Subscribe(ctx) {
-		r.log.Info("received a status notification")
-		updates := snapshot.Updates
-		for _, update := range updates {
+	message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
+		func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRoute]) {
 			// skip delete updates.
 			if update.Delete {
-				continue
+				return
 			}
 			key := update.Key
 			val := update.Value
@@ -320,7 +318,7 @@ func (r *tlsRouteReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					return tCopy
 				}),
 			})
-		}
-	}
+		},
+	)
 	r.log.Info("status subscriber shutting down")
 }
