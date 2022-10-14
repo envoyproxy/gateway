@@ -36,8 +36,6 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 14. Confirm that the [release][] was created.
 15. Confirm that the steps in the [Quickstart Guide][] work as expected.
 16. [Generate][] the GitHub changelog.
-17. Create a `## Release Notes` section within the GitHub release that links to the Envoy Gateway
-    [release notes][].
 18. Submit a PR to merge the Quickstart Guide changes from the release branch into the main branch.
 19. If you find any bugs in this process, please create an issue.
 
@@ -64,8 +62,6 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 10. Note that the [Quickstart Guide][] references are __not__ updated for release candidates. However, test
     the quickstart steps using the release candidate by manually updating the links.
 11. [Generate][] the GitHub changelog.
-12. Create a `## Release Notes` section within the GitHub release that links to the Envoy Gateway
-    [release notes][].
 13. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
 14. If you find any bugs in this process, please create an issue.
 
