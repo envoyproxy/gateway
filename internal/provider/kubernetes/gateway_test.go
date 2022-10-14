@@ -99,6 +99,23 @@ func TestGatewayHasMatchingController(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "matching but very long name",
+			obj: &gwapiv1b1.Gateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: fmt.Sprintf("%s/%s", gwapiv1b1.GroupName, gwapiv1b1.GroupVersion.Version),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "superdupermegalongnamethatisridiculouslylongandwaylongerthanitshouldeverbeinsideofkubernetes",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewaySpec{
+					GatewayClassName: gwapiv1b1.ObjectName(match.Name),
+				},
+			},
+			expect: true,
+		},
 	}
 
 	// Create the reconciler.

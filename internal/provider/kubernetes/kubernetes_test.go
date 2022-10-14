@@ -254,6 +254,106 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	assert.Equal(t, gw.Spec, gws.Spec)
 }
 
+// Test that even when resources such as the Service/Deployment get hashed names (because of a gateway with a very long name)
+func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	gc := getGatewayClass("envoy-gateway-class")
+	require.NoError(t, cli.Create(ctx, gc))
+
+	// Ensure the GatewayClass reports "Ready".
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "gatewaywithaverylongnamethatwillresultinhashedresources",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1b1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
+
+	// Ensure the Gateway is ready and gets an address.
+	ready := false
+	hasAddress := false
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, gw); err != nil {
+			return false
+		}
+
+		for _, cond := range gw.Status.Conditions {
+			fmt.Printf("Condition: %v", cond)
+			if cond.Type == string(gwapiv1b1.GatewayConditionReady) && cond.Status == metav1.ConditionTrue {
+				ready = true
+			}
+		}
+
+		if gw.Status.Addresses != nil {
+			hasAddress = len(gw.Status.Addresses) >= 1
+		}
+
+		return ready && hasAddress
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	// Ensure the gatewayclass has been finalized.
+	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
+	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
+
+	// Ensure the number of Gateways in the Gateway resource table is as expected.
+	require.Eventually(t, func() bool {
+		return resources.Gateways.Len() == 1
+	}, defaultWait, defaultTick)
+
+	// Ensure the test Gateway in the Gateway resources is as expected.
+	key := types.NamespacedName{
+		Namespace: gw.Namespace,
+		Name:      gw.Name,
+	}
+	require.Eventually(t, func() bool {
+		return cli.Get(ctx, key, gw) == nil
+	}, defaultWait, defaultTick)
+	gws, _ := resources.Gateways.Load(key)
+	// Only check if the spec is equal
+	// The watchable map will not store a resource
+	// with an updated status if the spec has not changed
+	// to eliminate this endless loop:
+	// reconcile->store->translate->update-status->reconcile
+	assert.Equal(t, gw.Spec, gws.Spec)
+}
+
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
