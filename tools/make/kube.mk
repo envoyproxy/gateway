@@ -106,3 +106,8 @@ generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
 	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/install.yaml\033[0m"
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/quickstart.yaml\033[0m"
+
+.PHONY: generate-artifacts
+generate-artifacts: generate-manifests ## Generate release artifacts.
+	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
+	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/release-notes.yaml\033[0m"
