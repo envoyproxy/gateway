@@ -651,7 +651,6 @@ func (r *gatewayReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 }
 
 func infraServiceName(gateway *gwapiv1b1.Gateway) string {
-
 	infraName := utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
 }

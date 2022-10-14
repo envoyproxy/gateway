@@ -7,7 +7,6 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -125,7 +124,7 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 		return i.Proxy
 	}
 	if len(i.Proxy.Name) == 0 {
-		i.Proxy.Name = utils.GetHashedName(DefaultProxyName) // Proxy.Name is always hashed
+		i.Proxy.Name = DefaultProxyName
 	}
 	if len(i.Proxy.Image) == 0 {
 		i.Proxy.Image = DefaultProxyImage
@@ -210,5 +209,5 @@ func (p *ProxyInfra) ObjectName() string {
 	if len(p.Name) == 0 {
 		return fmt.Sprintf("envoy-%s", DefaultProxyName)
 	}
-	return "envoy-" + utils.GetHashedName(p.Name)
+	return "envoy-" + p.Name
 }

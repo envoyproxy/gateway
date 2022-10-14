@@ -57,7 +57,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name: "test-656e766f",
+					Name: "test",
 					Metadata: &ir.InfraMetadata{
 						Labels: map[string]string{
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -73,7 +73,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test-656e766f",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -87,7 +87,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name: "test-656e766f",
+					Name: "test",
 					Metadata: &ir.InfraMetadata{
 						Labels: map[string]string{
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -118,7 +118,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test-656e766f",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -132,7 +132,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			ns:   "test",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
-					Name: "very-long-name-that-will-r-656e766f",
+					Name: "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
 					Metadata: &ir.InfraMetadata{
 						Labels: map[string]string{
 							gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -148,7 +148,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-very-long-name-that-will-r-656e766f",
+					Name:      "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -163,7 +163,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-very-long-name-that-will-r-656e766f",
+					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-76657279",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",

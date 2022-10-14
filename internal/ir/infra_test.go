@@ -197,7 +197,7 @@ func TestObjectName(t *testing.T) {
 		{
 			name:     "default infra",
 			infra:    defaultInfra,
-			expected: "envoy-default-64656661",
+			expected: "envoy-default",
 		},
 		{
 			name: "defined infra",
@@ -206,7 +206,7 @@ func TestObjectName(t *testing.T) {
 					Name: "foo",
 				},
 			},
-			expected: "envoy-foo-666f6fe3",
+			expected: "envoy-foo",
 		},
 		{
 			name: "unspecified infra name",
@@ -214,15 +214,6 @@ func TestObjectName(t *testing.T) {
 				Proxy: &ProxyInfra{},
 			},
 			expected: "envoy-default",
-		},
-		{
-			name: "defined infra",
-			infra: &Infra{
-				Proxy: &ProxyInfra{
-					Name: "superduperlongnamethatisdefinitelylongerthananameshouldrealisticallybe",
-				},
-			},
-			expected: "envoy-superduperlongnamethatisdefinite-73757065",
 		},
 	}
 

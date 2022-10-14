@@ -23,8 +23,7 @@ func TestExpectedConfigMap(t *testing.T) {
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
 
-	// Outside of tests the Proxy.Name will always be hashed, so for the test just set it to the expected hash of "test"
-	infra.Proxy.Name = "test-656e766f"
+	infra.Proxy.Name = "test"
 
 	// An infra without Gateway owner labels should trigger
 	// an error.
@@ -32,12 +31,12 @@ func TestExpectedConfigMap(t *testing.T) {
 	require.NotNil(t, err)
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "default-gateway-1"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
 	cm, err := kube.expectedConfigMap(infra)
 	require.NoError(t, err)
 
-	require.Equal(t, "envoy-test-656e766f", cm.Name)
+	require.Equal(t, "envoy-test-74657374", cm.Name)
 	require.Equal(t, "envoy-gateway-system", cm.Namespace)
 	require.Contains(t, cm.Data, sdsCAFilename)
 	assert.Equal(t, sdsCAConfigMapData, cm.Data[sdsCAFilename])
@@ -46,17 +45,16 @@ func TestExpectedConfigMap(t *testing.T) {
 
 	wantLabels := envoyAppLabel()
 	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	wantLabels[gatewayapi.OwningGatewayNameLabel] = "default-gateway-1"
+	wantLabels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, cm.Labels))
 }
 
 func TestCreateOrUpdateConfigMap(t *testing.T) {
 	kube := NewInfra(nil)
 	infra := ir.NewInfra()
-	// Outside of tests the Proxy.Name will always be hashed, so for the test just set it to the expected hash of "test"
-	infra.Proxy.Name = "test-656e766f"
+	infra.Proxy.Name = "test"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "default-gateway-1"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
 	testCases := []struct {
 		name    string
@@ -68,11 +66,11 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      "envoy-test-656e766f",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "default-gateway-1",
+						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
 				},
 				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
@@ -87,7 +85,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "default-gateway-1",
+						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
 				},
 				Data: map[string]string{"foo": "bar"},
@@ -95,11 +93,11 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      "envoy-test-656e766f",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "default-gateway-1",
+						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
 				},
 				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
@@ -127,8 +125,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 
 func TestDeleteConfigMap(t *testing.T) {
 	infra := ir.NewInfra()
-	// Outside of tests the Proxy.Name will always be hashed, so for the test just set it to the expected hash of "test"
-	infra.Proxy.Name = "test-656e766f"
+	infra.Proxy.Name = "test"
 
 	testCases := []struct {
 		name    string
