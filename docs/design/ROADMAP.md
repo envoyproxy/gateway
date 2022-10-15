@@ -1,4 +1,4 @@
-## Introduction
+# Roadmap
 
 This document serves as a high-level reference for Envoy Gateway users and contributors to understand the direction of
 the project.
@@ -16,7 +16,7 @@ the project.
 If you don't know where to start contributing, help is needed to reduce technical, automation, and documentation debt.
 Look for issues with the `help wanted` label to get started.
 
-## Roadmap
+## Details
 Roadmap features and timelines may change based on feedback, community contributions, etc. If you depend on a specific
 roadmap item, you're encouraged to attend a community meeting to discuss the details, or help us deliver the feature by
 contributing to the project.

@@ -7,6 +7,7 @@ import re
 extensions = [
     'sphinx.ext.duration',
     'sphinx.ext.autosectionlabel',
+    'myst_parser',
 ]
 
 html_theme = 'alabaster'
@@ -35,6 +36,11 @@ copyright = '2022 Envoy Gateway Project Authors | ' + fullversion
 
 envoyVersion = os.environ["ENVOY_VERSION"]
 gatewayAPIVersion = os.environ["GATEWAYAPI_VERSION"]
+
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
 
 variables_to_export = [
     "envoyVersion",

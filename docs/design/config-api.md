@@ -1,17 +1,6 @@
 Configuration API Design
 ===================
 
-# Table of Contents
-1. [Motivation](#motivation)
-2. [Goals](#goals)
-3. [Non-Goals](#non-goals)
-4. [Control Plane API](#control_plane_api)
-   1. [Gateway Type](#gateway)
-   2. [Provider Type](#provider)
-   3. [Configuration Examples](#control_plane_configuration)
-6. [Data Plane API](#data_plane_api)
-   1. [Configuration Examples](#data_plane_configuration)
-
 ## Motivation
 [Issue 51][issue_51] specifies the need to design an API for configuring Envoy Gateway. The control plane is configured
 statically at startup and the data plane is configured dynamically through Kubernetes resources, primarily
