@@ -1378,7 +1378,11 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 					v1beta1.RouteReasonNoMatchingListenerHostname,
 					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
 				)
-			} else {
+			}
+
+			// If no negative conditions have been set, the route is considered "Accepted=True".
+			if parentRef.tlsRoute != nil &&
+				len(parentRef.tlsRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 				parentRef.SetCondition(tlsRoute,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionTrue,
