@@ -15,6 +15,12 @@ spec:
     - name: http
       protocol: HTTP
       port: 8080
+    - name: tls
+      protocol: TLS
+      hostname: passthrough.example.com
+      tls:
+        mode: Passthrough
+      port: 8443
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -80,3 +86,67 @@ spec:
         - path:
             type: PathPrefix
             value: /
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: passthrough-nginx
+  labels:
+    run: passthrough-nginx
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+  selector:
+    run: passthrough-nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: passthrough-nginx
+spec:
+  selector:
+    matchLabels:
+      run: passthrough-nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: passthrough-nginx
+    spec:
+      containers:
+      - name: passthrough-nginx
+        image: nginx
+        ports:
+        - containerPort: 443
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx
+          readOnly: true
+        - name: nginx-server-certs
+          mountPath: /etc/nginx-server-certs
+          readOnly: true
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: nginx-configmap
+      - name: nginx-server-certs
+        secret:
+          secretName: nginx-server-certs
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: tlsroute
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "passthrough.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: passthrough-nginx
+          port: 443
+          weight: 1
