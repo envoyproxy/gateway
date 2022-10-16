@@ -46,7 +46,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Debug:                    *flags.ShowDebug,
 		CleanupBaseResources:     *flags.CleanupBaseResources,
 		ValidUniqueListenerPorts: validUniqueListenerPorts,
-		SupportedFeatures: []suite.SupportedFeature{suite.SupportReferenceGrant},
+		SupportedFeatures:        []suite.SupportedFeature{suite.SupportReferenceGrant},
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
@@ -58,6 +58,8 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteCrossNamespace,
 		tests.HTTPRouteHeaderMatching,
 		tests.HTTPRouteMatchingAcrossRoutes,
+		tests.HTTPRouteHostnameIntersection,
+		tests.HTTPRouteListenerHostnameMatching,
 		tests.HTTPRouteInvalidNonExistentBackendRef,
 		tests.HTTPRouteInvalidBackendRefUnknownKind,
 		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
