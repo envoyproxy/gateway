@@ -95,8 +95,8 @@ metadata:
     run: passthrough-nginx
 spec:
   ports:
-  - port: 443
-    protocol: TCP
+    - port: 443
+      protocol: TCP
   selector:
     run: passthrough-nginx
 ---
@@ -115,24 +115,24 @@ spec:
         run: passthrough-nginx
     spec:
       containers:
-      - name: passthrough-nginx
-        image: nginx
-        ports:
-        - containerPort: 443
-        volumeMounts:
-        - name: nginx-config
-          mountPath: /etc/nginx
-          readOnly: true
-        - name: nginx-server-certs
-          mountPath: /etc/nginx-server-certs
-          readOnly: true
+        - name: passthrough-nginx
+          image: nginx
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx
+              readOnly: true
+            - name: nginx-server-certs
+              mountPath: /etc/nginx-server-certs
+              readOnly: true
       volumes:
-      - name: nginx-config
-        configMap:
-          name: nginx-configmap
-      - name: nginx-server-certs
-        secret:
-          secretName: nginx-server-certs
+        - name: nginx-config
+          configMap:
+            name: nginx-configmap
+        - name: nginx-server-certs
+          secret:
+            secretName: nginx-server-certs
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TLSRoute
