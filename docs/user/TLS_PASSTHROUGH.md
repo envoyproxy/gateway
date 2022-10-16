@@ -95,7 +95,7 @@ export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].
 
 Curl the example app through the Gateway, e.g. Envoy proxy:
 ```shell
-curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:8443:${GATEWAY_HOST}" \
+curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:8888:${GATEWAY_HOST}" \
 --cacert example.com.crt https://passthrough.example.com:8888/get
 ```
 
