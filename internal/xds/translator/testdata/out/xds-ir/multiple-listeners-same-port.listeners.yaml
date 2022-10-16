@@ -1,0 +1,127 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        rds:
+          configSource:
+            apiConfigSource:
+              apiType: DELTA_GRPC
+              grpcServices:
+              - envoyGrpc:
+                  clusterName: xds_cluster
+              setNodeOnFirstMessageOnly: true
+              transportApiVersion: V3
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        statPrefix: http
+  filterChains:
+  - filterChainMatch:
+      serverNames:
+      - foo.com
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        rds:
+          configSource:
+            apiConfigSource:
+              apiType: DELTA_GRPC
+              grpcServices:
+              - envoyGrpc:
+                  clusterName: xds_cluster
+              setNodeOnFirstMessageOnly: true
+              transportApiVersion: V3
+            resourceApiVersion: V3
+          routeConfigName: third-listener
+        statPrefix: https
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: third-listener
+            sdsConfig:
+              apiConfigSource:
+                apiType: DELTA_GRPC
+                grpcServices:
+                - envoyGrpc:
+                    clusterName: xds_cluster
+                setNodeOnFirstMessageOnly: true
+                transportApiVersion: V3
+              resourceApiVersion: V3
+  - filterChainMatch:
+      serverNames:
+      - foo.net
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        rds:
+          configSource:
+            apiConfigSource:
+              apiType: DELTA_GRPC
+              grpcServices:
+              - envoyGrpc:
+                  clusterName: xds_cluster
+              setNodeOnFirstMessageOnly: true
+              transportApiVersion: V3
+            resourceApiVersion: V3
+          routeConfigName: fourth-listener
+        statPrefix: https
+    transportSocket:
+      name: envoy.transport_sockets.tls
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+        commonTlsContext:
+          tlsCertificateSdsSecretConfigs:
+          - name: fourth-listener
+            sdsConfig:
+              apiConfigSource:
+                apiType: DELTA_GRPC
+                grpcServices:
+                - envoyGrpc:
+                    clusterName: xds_cluster
+                setNodeOnFirstMessageOnly: true
+                transportApiVersion: V3
+              resourceApiVersion: V3
+  - filterChainMatch:
+      serverNames:
+      - bar.com
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: fifth-listener
+        statPrefix: passthrough
+  - filterChainMatch:
+      serverNames:
+      - bar.net
+    filters:
+    - name: envoy.filters.network.tcp_proxy
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+        cluster: sixth-listener
+        statPrefix: passthrough
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  name: first-listener

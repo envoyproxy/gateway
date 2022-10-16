@@ -3,7 +3,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: cluster_redirect-route
+    clusterName: redirect-route
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -13,6 +13,6 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: cluster_redirect-route
+  name: redirect-route
   outlierDetection: {}
   type: STATIC

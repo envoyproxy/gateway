@@ -3,7 +3,10 @@
       address: 0.0.0.0
       portValue: 10080
   filterChains:
-  - filters:
+  - filterChainMatch:
+      serverNames:
+      - '*'
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -21,15 +24,15 @@
               setNodeOnFirstMessageOnly: true
               transportApiVersion: V3
             resourceApiVersion: V3
-          routeConfigName: route_first-listener
-        statPrefix: http
+          routeConfigName: first-listener
+        statPrefix: https
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           tlsCertificateSdsSecretConfigs:
-          - name: secret_first-listener
+          - name: first-listener
             sdsConfig:
               apiConfigSource:
                 apiType: DELTA_GRPC
@@ -39,4 +42,8 @@
                 setNodeOnFirstMessageOnly: true
                 transportApiVersion: V3
               resourceApiVersion: V3
-  name: listener_first-listener_10080
+  listenerFilters:
+  - name: envoy.filters.listener.tls_inspector
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  name: first-listener

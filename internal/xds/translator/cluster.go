@@ -23,7 +23,7 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination) (*cl
 		// load balancers need the value to be set.
 		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
 	localities = append(localities, locality)
-	clusterName := getXdsClusterName(routeName)
+	clusterName := routeName
 	return &cluster.Cluster{
 		Name:                 clusterName,
 		ConnectTimeout:       durationpb.New(5 * time.Second),

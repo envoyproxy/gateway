@@ -16,25 +16,44 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error) {
-	if httpListener == nil {
-		return nil, errors.New("http listener is nil")
+func buildXdsListener(name, address string, port uint32) *listener.Listener {
+	return &listener.Listener{
+		Name: name,
+		Address: &core.Address{
+			Address: &core.Address_SocketAddress{
+				SocketAddress: &core.SocketAddress{
+					Protocol: core.SocketAddress_TCP,
+					Address:  address,
+					PortSpecifier: &core.SocketAddress_PortValue{
+						PortValue: port,
+					},
+				},
+			},
+		},
 	}
+}
 
+func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPListener) error {
 	routerAny, err := anypb.New(&router.Router{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// HTTP filter configuration
+	var statPrefix string
+	if irListener.TLS != nil {
+		statPrefix = "https"
+	} else {
+		statPrefix = "http"
+	}
 	mgr := &hcm.HttpConnectionManager{
 		CodecType:  hcm.HttpConnectionManager_AUTO,
-		StatPrefix: "http",
+		StatPrefix: statPrefix,
 		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
 			Rds: &hcm.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
-				RouteConfigName: getXdsRouteName(httpListener.Name),
+				RouteConfigName: irListener.Name,
 			},
 		},
 		// Use only router.
@@ -46,40 +65,67 @@ func buildXdsListener(httpListener *ir.HTTPListener) (*listener.Listener, error)
 
 	mgrAny, err := anypb.New(mgr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return &listener.Listener{
-		Name: getXdsListenerName(httpListener.Name, httpListener.Port),
-		Address: &core.Address{
-			Address: &core.Address_SocketAddress{
-				SocketAddress: &core.SocketAddress{
-					Protocol: core.SocketAddress_TCP,
-					Address:  httpListener.Address,
-					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: httpListener.Port,
-					},
-				},
+	filterChain := &listener.FilterChain{
+		Filters: []*listener.Filter{{
+			Name: wellknown.HTTPConnectionManager,
+			ConfigType: &listener.Filter_TypedConfig{
+				TypedConfig: mgrAny,
 			},
-		},
-		FilterChains: []*listener.FilterChain{{
-			Filters: []*listener.Filter{{
-				Name: wellknown.HTTPConnectionManager,
-				ConfigType: &listener.Filter_TypedConfig{
-					TypedConfig: mgrAny,
-				},
-			}},
 		}},
-	}, nil
+	}
+
+	if irListener.TLS != nil {
+		tSocket, err := buildXdsDownstreamTLSSocket(irListener.Name, irListener.TLS)
+		if err != nil {
+			return err
+		}
+		filterChain.TransportSocket = tSocket
+		filterChain.FilterChainMatch = &listener.FilterChainMatch{
+			ServerNames: irListener.Hostnames,
+		}
+
+		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+			return err
+		}
+
+		xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
+	} else {
+		// Add the HTTP filter chain as the default filter chain
+		// Make sure one does not exist
+		if xdsListener.DefaultFilterChain != nil {
+			return errors.New("default filter chain already exists")
+		}
+		xdsListener.DefaultFilterChain = filterChain
+	}
+
+	return nil
 }
 
-func buildXdsTCPListener(clusterName string, tcpListener *ir.TCPListener) (*listener.Listener, error) {
-	if tcpListener == nil {
-		return nil, errors.New("http listener is nil")
+// findXdsHTTPRouteConfigName finds the name of the route config associated with the
+// http connection manager within the default filter chain.
+func findXdsHTTPRouteConfigName(xdsListener *listener.Listener) (string, error) {
+	for _, filter := range xdsListener.DefaultFilterChain.Filters {
+		if filter.Name == wellknown.HTTPConnectionManager {
+			m := new(hcm.HttpConnectionManager)
+			if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
+				return "", err
+			}
+			return m.GetRds().GetRouteConfigName(), nil
+		}
+	}
+	return "", errors.New("unable to find route config")
+}
+
+func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPListener, clusterName string) error {
+	if irListener == nil {
+		return errors.New("tcp listener is nil")
 	}
 
 	statPrefix := "tcp"
-	if tcpListener.TLS != nil {
+	if irListener.TLS != nil {
 		statPrefix = "passthrough"
 	}
 	mgr := &tcp.TcpProxy{
@@ -90,7 +136,7 @@ func buildXdsTCPListener(clusterName string, tcpListener *ir.TCPListener) (*list
 	}
 	mgrAny, err := anypb.New(mgr)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	filterChain := &listener.FilterChain{
@@ -101,44 +147,48 @@ func buildXdsTCPListener(clusterName string, tcpListener *ir.TCPListener) (*list
 			},
 		}},
 	}
-	if tcpListener.TLS != nil {
+
+	if irListener.TLS != nil {
 		filterChain.FilterChainMatch = &listener.FilterChainMatch{
-			ServerNames: tcpListener.TLS.SNIs,
+			ServerNames: irListener.TLS.SNIs,
+		}
+
+		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+			return err
+		}
+
+	}
+
+	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
+
+	return nil
+}
+
+// addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
+func addXdsTLSInspectorFilter(xdsListener *listener.Listener) error {
+	// Return early if it exists
+	for _, filter := range xdsListener.ListenerFilters {
+		if filter.Name == wellknown.TlsInspector {
+			return nil
 		}
 	}
 
-	xdsListener := &listener.Listener{
-		Name: getXdsListenerName(tcpListener.Name, tcpListener.Port),
-		Address: &core.Address{
-			Address: &core.Address_SocketAddress{
-				SocketAddress: &core.SocketAddress{
-					Protocol: core.SocketAddress_TCP,
-					Address:  tcpListener.Address,
-					PortSpecifier: &core.SocketAddress_PortValue{
-						PortValue: tcpListener.Port,
-					},
-				},
-			},
+	tlsInspector := &tls_inspector.TlsInspector{}
+	tlsInspectorAny, err := anypb.New(tlsInspector)
+	if err != nil {
+		return err
+	}
+
+	filter := &listener.ListenerFilter{
+		Name: wellknown.TlsInspector,
+		ConfigType: &listener.ListenerFilter_TypedConfig{
+			TypedConfig: tlsInspectorAny,
 		},
-		FilterChains: []*listener.FilterChain{filterChain},
 	}
 
-	if tcpListener.TLS != nil {
-		tlsInspector := &tls_inspector.TlsInspector{}
-		tlsInspectorAny, err := anypb.New(tlsInspector)
-		if err != nil {
-			return nil, err
-		}
+	xdsListener.ListenerFilters = append(xdsListener.ListenerFilters, filter)
 
-		xdsListener.ListenerFilters = []*listener.ListenerFilter{{
-			Name: wellknown.TlsInspector,
-			ConfigType: &listener.ListenerFilter_TypedConfig{
-				TypedConfig: tlsInspectorAny,
-			},
-		}}
-	}
-
-	return xdsListener, nil
+	return nil
 }
 
 func buildXdsDownstreamTLSSocket(listenerName string,
@@ -148,7 +198,7 @@ func buildXdsDownstreamTLSSocket(listenerName string,
 			TlsCertificateSdsSecretConfigs: []*tls.SdsSecretConfig{{
 				// Generate key name for this listener. The actual key will be
 				// delivered to Envoy via SDS.
-				Name:      getXdsSecretName(listenerName),
+				Name:      listenerName,
 				SdsConfig: makeConfigSource(),
 			}},
 		},
@@ -171,7 +221,7 @@ func buildXdsDownstreamTLSSecret(listenerName string,
 	tlsConfig *ir.TLSListenerConfig) (*tls.Secret, error) {
 	// Build the tls secret
 	return &tls.Secret{
-		Name: getXdsSecretName(listenerName),
+		Name: listenerName,
 		Type: &tls.Secret_TlsCertificate{
 			TlsCertificate: &tls.TlsCertificate{
 				CertificateChain: &core.DataSource{

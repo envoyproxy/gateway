@@ -135,7 +135,7 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcher.StringMatcher {
 func buildXdsRouteAction(routeName string) *route.RouteAction {
 	return &route.RouteAction{
 		ClusterSpecifier: &route.RouteAction_Cluster{
-			Cluster: getXdsClusterName(routeName),
+			Cluster: routeName,
 		},
 	}
 }
@@ -148,7 +148,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
 		},
 		{
-			Name:   getXdsClusterName(httpRoute.Name),
+			Name:   httpRoute.Name,
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
 		},
 	}
