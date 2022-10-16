@@ -1,33 +1,41 @@
-## System Design
+# System Design
 
-### Goals
+## Goals
+
 * Define the system components needed to satisfy the requirements of Envoy Gateway.
 
-### Non-Goals
+## Non-Goals
+
 * Create a detailed design and interface specification for each system component.
 
-### Terminology
+## Terminology
+
 * Control Plane- A collection of inter-related software components for providing application gateway and routing
   functionality. The control plane is implemented by Envoy Gateway and provides services for managing the data plane.
   These services are detailed in the [components](#components) section.
 * Data Plane- Provides intelligent application-level traffic routing and is implemented as one or more Envoy proxies.
 
-### Architecture
+## Architecture
+
 ![Architecture](../images/architecture.png)
 
-### Configuration
+## Configuration
+
 Envoy Gateway is configured statically at startup and the managed data plane is configured dynamically through
 Kubernetes resources, primarily [Gateway API][gw_api] objects.
 
-#### Static Configuration
+### Static Configuration
+
 Static configuration is used to configure Envoy Gateway at startup, i.e. change the GatewayClass controllerName,
 configure a Provider, etc. Currently, Envoy Gateway only supports configuration through a configuration file. If the
 configuration file is not provided, Envoy Gateway will start up with default configuration parameters.
 
-#### Dynamic Configuration
+### Dynamic Configuration
+
 Dynamic configuration is based on the concept of a declaring the desired state of the data plane and using
 reconciliation loops to drive the actual state toward the desired state. The desired state of the data plane is
 defined as Kubernetes resources that provide the following services:
+
 * Infrastructure Management- Manage the data plane infrastructure, i.e. deploy, upgrade, etc. This configuration is
   expressed through [GatewayClass][gc] and [Gateway][gw] resources. A TBD [Custom Resource][cr] can be referenced by
   `gatewayclass.spec.parametersRef` to modify data plane infrastructure default parameters,
@@ -38,58 +46,68 @@ defined as Kubernetes resources that provide the following services:
   Although a backend can be any valid Kubernetes Group/Kind resource, Envoy Gateway only supports a [Service][svc]
   reference.
 
-### Components
+## Components
 
 Envoy Gateway is made up of several components that communicate in-process; how this communication happens is described
 in [watching.md][].
 
-#### Provider
+### Provider
+
 A Provider is an infrastructure component that Envoy Gateway calls to establish its runtime configuration, resolve
 services, persist data, etc. Kubernetes and File are the only supported providers. However, other providers can be added
 in the future as Envoy Gateway use cases are better understood. A provider is configured at start up through Envoy
 Gateway's [static configuration](#static-configuration).
 
-##### Kubernetes Provider
+#### Kubernetes Provider
+
 * Uses Kubernetes-style controllers to reconcile Kubernetes resources that comprise the
   [dynamic configuration](#dynamic-configuration).
 * Manages the data plane through Kubernetes API CRUD operations.
 * Uses Kubernetes for Service discovery.
 * Uses etcd (via Kubernetes API) to persist data.
 
-##### File Provider
+#### File Provider
 
 * Uses a file watcher to watch files in a directory that define the data plane configuration.
 * Manages the data plane by calling internal APIs, e.g. `CreateDataPlane()`.
 * Uses the host's DNS for Service discovery.
 * If needed, the local filesystem is used to persist data.
 
-#### Resource Watcher
+### Resource Watcher
+
 The Resource Watcher watches resources used to establish and maintain Envoy Gateway's dynamic configuration. The
 mechanics for watching resources is provider-specific, e.g. informers, caches, etc. are used for the Kubernetes
 provider. The Resource Watcher uses the configured provider for input and provides resources to the Resource Translator
 as output.
 
-#### Resource Translator
+### Resource Translator
+
 The Resource Translator translates external resources, e.g. GatewayClass, from the Resource Watcher to the Intermediate
 Representation (IR). It is responsible for:
+
 * Translating infrastructure-specific resources/fields from the Resource Watcher to the Infra IR.
 * Translating proxy configuration resources/fields from the Resource Watcher to the xDS IR.
 
-#### Intermediate Representation (IR)
+### Intermediate Representation (IR)
+
 The Intermediate Representation defines internal data models that external resources are translated into. This allows
 Envoy Gateway to be decoupled from the external resources used for dynamic configuration. The IR consists of an Infra IR
 used as input for the Infra Manager and an xDS IR used as input for the xDS Translator.
+
 * Infra IR- Used as the internal definition of the managed data plane infrastructure.
 * xDS IR- Used as the internal definition of the managed data plane xDS configuration.
 
-#### xDS Translator
+### xDS Translator
+
 The xDS Translator translates the xDS IR into xDS Resources that are consumed by the xDS server.
 
-#### xDS Server
+### xDS Server
+
 The xDS Server is a xDS gRPC Server based on [Go Control Plane][go_cp]. Go Control Plane implements the xDS Server
 Protocol and is responsible for using xDS to configure the data plane.
 
-#### Infra Manager
+### Infra Manager
+
 The Infra Manager is a provider-specific component responsible for managing the following infrastructure:
 
 * Data Plane - Manages all the infrastructure required to run the managed Envoy proxies. For example, CRUD Deployment,
@@ -101,7 +119,8 @@ The Infra Manager is a provider-specific component responsible for managing the 
 
 The Infra Manager consumes the Infra IR as input to manage the data plane infrastructure.
 
-### Design Decisions
+## Design Decisions
+
 * Envoy Gateway will consume one [GatewayClass][gc] by comparing its configured controller name with
   `spec.controllerName` of a GatewayClass. If multiple GatewayClasses exist with the same `spec.controllerName`, Envoy
   Gateway will follow Gateway API [guidelines][gwapi_conflicts] to resolve the conflict.
@@ -119,7 +138,8 @@ The Infra Manager consumes the Infra IR as input to manage the data plane infras
 
 The draft for this document is [here][draft_design].
 
-### Caveats
+## Caveats
+
 * The custom resource used to configure the data plane infrastructure is TBD. Track [issue 95][issue_95] for the latest
   updates.
 * Envoy Gateway's static configuration spec is currently undefined. Track [issue 95][issue_95] for the latest updates.

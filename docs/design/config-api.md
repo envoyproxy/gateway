@@ -1,17 +1,19 @@
-Configuration API Design
-===================
+# Configuration API Design
 
 ## Motivation
+
 [Issue 51][issue_51] specifies the need to design an API for configuring Envoy Gateway. The control plane is configured
 statically at startup and the data plane is configured dynamically through Kubernetes resources, primarily
 [Gateway API][gw_api] objects. Refer to the Envoy Gateway [design doc][design_doc] for additional details regarding
 Envoy Gateway terminology and configuration.
 
 ## Goals
+
 * Define an __initial__ API to configure Envoy Gateway at startup.
 * Define an __initial__ API for configuring the managed data plane, e.g. Envoy proxies.
 
 ## Non-Goals
+
 * Implementation of the configuration APIs.
 * Define the `status` subresource of the configuration APIs.
 * Define a __complete__ set of APIs for configuring Envoy Gateway. As stated in the [Goals](#goals), this document
@@ -21,6 +23,7 @@ Envoy Gateway terminology and configuration.
 * Specify tooling for managing the API, e.g. generate protos, CRDs, controller RBAC, etc.
 
 ## Control Plane API
+
 The `EnvoyGateway` API defines the control plane configuration, e.g. Envoy Gateway. Key points of this API are:
 
 * It will define Envoy Gateway's startup configuration file. If the file does not exist, Envoy Gateway will start up
@@ -33,6 +36,7 @@ The `EnvoyGateway` API defines the control plane configuration, e.g. Envoy Gatew
 * If data plane static configuration is required in the future, Envoy Gateway will use a separate file for this purpose.
 
 The `v1alpha1` version and `config.gateway.envoyproxy.io` API group get generated:
+
 ```go
 // gateway/api/config/v1alpha1/doc.go
 
@@ -43,6 +47,7 @@ package v1alpha1
 ```
 
 The initial `EnvoyGateway` API being proposed:
+
 ```go
 // gateway/api/config/v1alpha1/envoygateway.go
 
@@ -128,30 +133,37 @@ type FileProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 ```
+
 __Note:__ Provider-specific configuration is defined in the `{$PROVIDER_NAME}Provider` API.
 
 ### Gateway
+
 Gateway defines desired configuration of [Gateway API][gw_api] controllers that reconcile and translate Gateway API
 resources into the Intermediate Representation (IR). Refer to the Envoy Gateway [design doc][design_doc] for additional
 details.
 
 ### Provider
+
 Provider defines the desired configuration of an Envoy Gateway provider. A provider is an infrastructure component that
 Envoy Gateway calls to establish its runtime configuration. Provider is a [union type][union]. Therefore, Envoy Gateway
 can be configured with only one provider based on the `type` discriminator field. Refer to the Envoy Gateway
 [design doc][design_doc] for additional details.
 
 ### Control Plane Configuration
+
 The configuration file is defined by the EnvoyGateway API type. At startup, Envoy Gateway searches for the configuration
 at "/etc/envoy-gateway/config.yaml".
 
 Start Envoy Gateway:
+
 ```shell
 $ ./envoy-gateway
 ```
+
 Since the configuration file does not exist, Envoy Gateway will start with default configuration parameters.
 
 The Kubernetes provider can be configured explicitly using `provider.kubernetes`:
+
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
 apiVersion: config.gateway.envoyproxy.io/v1alpha1
@@ -161,9 +173,11 @@ provider:
   kubernetes: {}
 EOF
 ```
+
 This configuration will cause Envoy Gateway to use the Kubernetes provider with default configuration parameters.
 
 The Kubernetes provider can be configured using the `provider` field. For example, the `foo` field can be set to "bar":
+
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
 apiVersion: config.gateway.envoyproxy.io/v1alpha1
@@ -174,11 +188,13 @@ provider:
     foo: bar
 EOF
 ```
+
 __Note:__ The Provider API from the Kubernetes package is currently undefined and `foo: bar` is provided for
 illustration purposes only.
 
 The same API structure is followed for each supported provider. The following example causes Envoy Gateway to use the
 File provider:
+
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
 apiVersion: config.gateway.envoyproxy.io/v1alpha1
@@ -189,12 +205,14 @@ provider:
     foo: bar
 EOF
 ```
+
 __Note:__ The Provider API from the File package is currently undefined and `foo: bar` is provided for illustration
 purposes only.
 
 Gateway API-related configuration is expressed through the `gateway` field. If unspecified, Envoy Gateway will use
 default configuration parameters for `gateway`. The following example causes the [GatewayClass][gc] controller to
 manage GatewayClasses with controllerName `foo` instead of the default `gateway.envoyproxy.io/gatewayclass-controller`:
+
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
 apiVersion: config.gateway.envoyproxy.io/v1alpha1
@@ -204,11 +222,13 @@ gateway:
 ```
 
 With any of the above configuration examples, Envoy Gateway can be started without any additional arguments:
+
 ```shell
 $ ./envoy-gateway
 ```
 
 ## Data Plane API
+
 The data plane is configured dynamically through Kubernetes resources, primarily [Gateway API][gw_api] objects.
 Optionally, the data plane infrastructure can be configured by referencing a [custom resource (CR)][cr] through
 `spec.parametersRef` of the managed GatewayClass. The `envoyproxies` API defines the data plane infrastructure
@@ -222,6 +242,7 @@ configuration and is represented as the CR referenced by the managed GatewayClas
   > not propagated down to existing Gateways.
 
 The initial `envoyproxies` API being proposed:
+
 ```go
 // gateway/api/config/v1alpha1/envoyproxy.go
 
@@ -251,12 +272,15 @@ type EnvoyProxyStatus struct {
 	// Undefined by this design spec.
 }
 ```
+
 The EnvoyProxySpec and EnvoyProxyStatus fields will be defined in the future as proxy infrastructure configuration use
 cases are better understood.
 
 ### Data Plane Configuration
+
 GatewayClass and Gateway resources define the data plane infrastructure. Note that all examples assume Envoy Gateway is
 running with the Kubernetes provider.
+
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
@@ -276,12 +300,14 @@ spec:
     protocol: HTTP
     port: 80
 ```
+
 Since the GatewayClass does not define `spec.parametersRef`, the data plane is provisioned using default configuration
 parameters. All Envoy proxies will be configured with a http listener and a Kubernetes LoadBalancer service listening
 on port 80.
 
 The following example will configure the data plane to use a ClusterIP service instead of the default LoadBalancer
 service:
+
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
@@ -313,13 +339,12 @@ spec:
   networkPublishing:
     type: ClusterIPService
 ```
+
 __Note:__ The NetworkPublishing API is currently undefined and is provided here for illustration purposes only.
 
 [issue_51]: https://github.com/envoyproxy/gateway/issues/51
 [design_doc]: https://github.com/envoyproxy/gateway/blob/main/docs/design/SYSTEM_DESIGN.md
-[xds]: https://github.com/cncf/xds
 [gw_api]: https://gateway-api.sigs.k8s.io/
-[config_guide]: https://github.com/envoyproxy/gateway/blob/main/docs/CONFIG.md
 [gc]: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
 [union]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#unions

@@ -1,4 +1,4 @@
-## Watching Components Design
+# Watching Components Design
 
 Envoy Gateway is made up of several components that communicate in-process.  Some of them (namely providers) watch
 external resources, and "publish" what they see for other components to consume; others watch what another publishes and
@@ -9,7 +9,7 @@ To facilitate this communication use the [watchable][] library.  The `watchable.
 standard library's `sync.Map` type, but supports a `.Subscribe` (and `.SubscribeSubset`) method that promotes a pub/sub
 pattern.
 
-### Pub
+## Pub
 
 Many of the things we communicate around are naturally named, either by a bare "name" string or by a "name"/"namespace"
 tuple.  And because `watchable.Map` is typed, it makes sense to have one map for each type of thing (very similar to if
@@ -34,7 +34,7 @@ method) the current value is a no-op; it won't trigger an event for subscribers.
 doesn't have as much state to keep track of; it doesn't need to know "did I already publish this thing", it can just
 `.Store` its data and `watchable` will do the right thing.
 
-### Sub
+## Sub
 
 Meanwhile, the translator and other interested components subscribe to it with `table.Thing.Subscribe` (or
 `table.Thing.SubscribeSubset` if they only care about a few "Thing"s).  So the translator goroutine might look like:
@@ -102,7 +102,7 @@ entries for those pre-existing items; if you are working with `snapshot.Update` 
 must add special handling for your first read.  We have a utility function `./internal/message.HandleSubscription` to
 help with this.
 
-### Other notes
+## Other Notes
 
 The common pattern will likely be that the entrypoint that launches the goroutines for each component instantiates the
 map, and passes them to the appropriate publishers and subscribers; same as if they were communicating via a dumb
