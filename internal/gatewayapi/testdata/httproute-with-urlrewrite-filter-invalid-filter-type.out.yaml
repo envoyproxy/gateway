@@ -47,10 +47,9 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - type: RequestRedirect
-        requestRedirect:
-          scheme: https
-          statusCode: 666
+      - type: URLRewrite
+        urlRewrite:
+          hostname: urlrewrite.envoyproxy.io
   status:
     parents:
     - parentRef:
@@ -62,7 +61,7 @@ httpRoutes:
       - type: Accepted
         status: "False"
         reason: UnsupportedValue
-        message: "Status code 666 is invalid, only 302 and 301 are supported"
+        message: "Unsupported filter type: URLRewrite"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -80,10 +79,9 @@ xdsIR:
           exact: gateway.envoyproxy.io
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        directResponse:
+          body: "Unsupported filter type: URLRewrite"
+          statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

@@ -47,10 +47,11 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - type: UnsupportedType
-        requestRedirect:
-          scheme: https
-          statusCode: 301
+      - type: ExtensionRef
+        extensionRef:
+          group: unsupported.group.io
+          kind: UnsupportedKind
+          name: unsupported
   status:
     parents:
     - parentRef:
@@ -60,9 +61,9 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Route is accepted
+        status: "False"
+        reason: UnsupportedValue
+        message: "Unknown custom filter type: ExtensionRef"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -81,7 +82,7 @@ xdsIR:
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
         directResponse:
-          body: "Unknown custom filter type: UnsupportedType"
+          body: "Unknown custom filter type: ExtensionRef"
           statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:

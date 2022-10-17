@@ -35,9 +35,7 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - type: ExtensionRef
-        extensionRef:
-          group: unsupported.group.io
-          kind: UnsupportedKind
-          name: unsupported
+      - type: URLRewrite
+        urlRewrite:
+          hostname: urlrewrite.envoyproxy.io
 

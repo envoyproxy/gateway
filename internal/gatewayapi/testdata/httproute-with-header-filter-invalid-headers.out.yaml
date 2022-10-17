@@ -66,9 +66,9 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Route is accepted
+        status: "False"
+        reason: UnsupportedValue
+        message: "RequestHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: 'example:1'"
 xdsIR:
   envoy-gateway-gateway-1:
     http:

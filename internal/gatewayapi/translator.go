@@ -1025,10 +1025,23 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 								"RequestHeaderModifier Filter did not provide valid configuration to add/set/remove any headers",
 							)
 						}
-					default:
+					case v1beta1.HTTPRouteFilterExtensionRef:
 						// "If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
 						// Instead, requests that would have been processed by that filter MUST receive a HTTP error response."
 						errMsg := fmt.Sprintf("Unknown custom filter type: %s", filter.Type)
+						parentRef.SetCondition(httpRoute,
+							v1beta1.RouteConditionAccepted,
+							metav1.ConditionFalse,
+							v1beta1.RouteReasonUnsupportedValue,
+							errMsg,
+						)
+						directResponse = &ir.DirectResponse{
+							Body:       &errMsg,
+							StatusCode: 500,
+						}
+					default:
+						// Unsupported filters.
+						errMsg := fmt.Sprintf("Unsupported filter type: %s", filter.Type)
 						parentRef.SetCondition(httpRoute,
 							v1beta1.RouteConditionAccepted,
 							metav1.ConditionFalse,
@@ -1181,7 +1194,11 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					v1beta1.RouteReasonNoMatchingListenerHostname,
 					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
 				)
-			} else {
+			}
+
+			// If no negative conditions have been set, the route is considered "Accepted=True".
+			if parentRef.httpRoute != nil &&
+				len(parentRef.httpRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 				parentRef.SetCondition(httpRoute,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionTrue,
@@ -1361,7 +1378,11 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 					v1beta1.RouteReasonNoMatchingListenerHostname,
 					"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
 				)
-			} else {
+			}
+
+			// If no negative conditions have been set, the route is considered "Accepted=True".
+			if parentRef.tlsRoute != nil &&
+				len(parentRef.tlsRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 				parentRef.SetCondition(tlsRoute,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionTrue,
