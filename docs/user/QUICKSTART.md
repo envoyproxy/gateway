@@ -124,6 +124,6 @@ kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.
+Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
 
 [httpbin_methods]: https://httpbin.org/#/HTTP_Methods
