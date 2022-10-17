@@ -46,7 +46,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Debug:                    *flags.ShowDebug,
 		CleanupBaseResources:     *flags.CleanupBaseResources,
 		ValidUniqueListenerPorts: validUniqueListenerPorts,
-		SupportedFeatures: []suite.SupportedFeature{suite.SupportReferenceGrant},
+		SupportedFeatures:        []suite.SupportedFeature{suite.SupportReferenceGrant},
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
@@ -63,7 +63,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
 		tests.GatewaySecretReferenceGrantAllInNamespace,
 		tests.GatewaySecretReferenceGrantSpecific,
-		// Uncomment when https://github.com/envoyproxy/gateway/issues/538 is fixed.
+		// Uncomment when https://github.com/envoyproxy/gateway/issues/539 is fixed.
 		/*tests.GatewaySecretMissingReferenceGrant,
 		tests.GatewaySecretInvalidReferenceGrant,*/
 	}
