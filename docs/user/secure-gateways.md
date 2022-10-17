@@ -13,18 +13,11 @@ __Note:__ Envoy Gateway is tested against Kubernetes v1.24.
 ## Installation
 
 Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to curl the example backend using HTTP.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
 
 Generate the certificates and keys used by the Gateway to terminate client TLS connections.
-
-For macOS users, verify curl is compiled with the LibreSSL library:
-
-```shell
-curl --version | grep LibreSSL
-curl 7.54.0 (x86_64-apple-darwin17.0) libcurl/7.54.0 LibreSSL/2.0.20 zlib/1.2.11 nghttp2/1.24.0
-```
 
 Create a root certificate and private key to sign certificates:
 
@@ -45,47 +38,77 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
+Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `8443` and references the
+`example-cert` Secret:
+
+```console
+$ cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 8080
+    - name: https
+      protocol: HTTPS
+      port: 8443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: example-cert
+EOF
+```
+
 ## Testing
 
-### Clusters without External Loadbalancer Support
+### Clusters without External LoadBalancer Support
+
+Get the name of the Envoy service created the by the example Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+```
 
 Port forward to the Envoy service:
 
 ```shell
-kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8043:8443 &
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8043:8443 &
 ```
 
-Curl the example app through Envoy proxy:
+Query the example app through Envoy proxy:
 
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8043:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8043/get
 ```
 
-You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
-
-### Clusters with External Loadbalancer Support
+### Clusters with External LoadBalancer Support
 
 Get the External IP of the Gateway:
+
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Curl the example app through the Gateway:
+Query the example app through the Gateway:
 
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:${GATEWAY_HOST}" \
 --cacert example.com.crt https://www.example.com:8443/get
 ```
 
-You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
-
 ## Multiple HTTPS Listeners
 
 Due to [Issue 520][], multiple HTTP listeners must use different port numbers. For example:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```console
+$ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
@@ -117,7 +140,7 @@ spec:
  EOF
 ```
 
-Store the previously created cert/key in Secret "example-cert-2":
+Store the previously created cert/key in Secret `example-cert-2`:
 
 ```shell
 kubectl create secret tls example-cert-2 --key=www.example.com.key --cert=www.example.com.crt
@@ -134,8 +157,8 @@ created in the target namespace. Without the ReferenceGrant, the cross-namespace
 To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
 namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```console
+$ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: ReferenceGrant
 metadata:
@@ -158,7 +181,7 @@ Delete the previously created Secret:
 kubectl delete secret/example-cert
 ```
 
-Recreate the example Secret in the "envoy-gateway-system" namespace:
+Recreate the example Secret in the `envoy-gateway-system` namespace:
 
 ```shell
 kubectl create secret tls example-cert -n envoy-gateway-system --key=www.example.com.key --cert=www.example.com.crt
@@ -166,8 +189,8 @@ kubectl create secret tls example-cert -n envoy-gateway-system --key=www.example
 
 Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for example:
 
-```shell
-cat <<EOF | kubectl apply -f -
+```console
+$ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:

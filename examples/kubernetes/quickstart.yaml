@@ -15,15 +15,6 @@ spec:
     - name: http
       protocol: HTTP
       port: 8080
-    - name: https
-      protocol: HTTPS
-      port: 8443
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            group: ""
-            name: example-cert
 ---
 apiVersion: v1
 kind: ServiceAccount
