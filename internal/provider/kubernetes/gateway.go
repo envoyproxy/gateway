@@ -385,13 +385,13 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 			switch {
 			case err != nil:
 				r.log.Error(err, "failed to verify if other gateways reference secret")
-			case referenced:
+			case !referenced:
 				r.log.Info("no other gateways reference secret; deleting from resource map",
 					"namespace", secret.Namespace, "name", secret.Name)
 				key := utils.NamespacedName(&secret)
 				r.resources.Secrets.Delete(key)
 			default:
-				r.log.Info("no other gateways reference secret; deleting from resource map",
+				r.log.Info("other gateways reference secret; keeping the secret in the resource map",
 					"namespace", secret.Namespace, "name", secret.Name)
 			}
 		}
