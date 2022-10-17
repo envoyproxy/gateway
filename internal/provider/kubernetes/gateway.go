@@ -290,7 +290,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 
 	found := false
-	var matchedGwSecrets []corev1.Secret
+	var secrets []corev1.Secret
 	// Set status conditions for all accepted gateways.
 	for i := range acceptedGateways {
 		gw := acceptedGateways[i]
@@ -372,7 +372,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		}
 		if key == request.NamespacedName {
 			found = true
-			matchedGwSecrets = secrets
 		}
 	}
 
@@ -380,8 +379,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 		r.resources.Gateways.Delete(request.NamespacedName)
 		// Delete the TLS secrets from the resource map if no other managed
 		// Gateways reference them.
-		for i := range matchedGwSecrets {
-			secret := matchedGwSecrets[i]
+		for i := range secrets {
+			secret := secrets[i]
 			referenced, err := r.gatewaysRefSecret(ctx, &secret)
 			switch {
 			case err != nil:
