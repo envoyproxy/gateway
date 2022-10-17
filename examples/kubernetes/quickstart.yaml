@@ -19,51 +19,51 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: httpbin
+  name: backend
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: httpbin
+  name: backend
   labels:
-    app: httpbin
-    service: httpbin
+    app: backend
+    service: backend
 spec:
   ports:
     - name: http
-      port: 80
-      targetPort: 80
+      port: 3000
+      targetPort: 3000
   selector:
-    app: httpbin
+    app: backend
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: httpbin
+  name: backend
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: httpbin
+      app: backend
       version: v1
   template:
     metadata:
       labels:
-        app: httpbin
+        app: backend
         version: v1
     spec:
-      serviceAccountName: httpbin
+      serviceAccountName: backend
       containers:
-        - image: docker.io/kennethreitz/httpbin
+        - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
           imagePullPolicy: IfNotPresent
-          name: httpbin
+          name: backend
           ports:
-            - containerPort: 80
+            - containerPort: 3000
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
-  name: httpbin
+  name: backend
 spec:
   parentRefs:
     - name: eg
@@ -73,8 +73,8 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: httpbin
-          port: 80
+          name: backend
+          port: 3000
           weight: 1
       matches:
         - path:
