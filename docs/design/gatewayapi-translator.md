@@ -1,22 +1,27 @@
 # Gateway API Translator Design
 
 ## Assumptions
+
 - initially target core conformance features only, to be followed by extended conformance features
 
 ## Inputs and Outputs
 
 The main inputs to the Gateway API translator are:
+
 - the GatewayClass to process
 - Gateways, HTTPRoutes, Services, Secrets
 
 The outputs of the Gateway API translator are:
+
 - IR
 - status updates for GatewayClass, Gateways, HTTPRoutes
 
 ## Listener Compatibility
+
 Since Envoy Gateway handles all Gateways for a given GatewayClass, we need to determine the compatibility of _all_ Listeners across _all_ of those Gateways.
 
 The rules are:
+
 - for a given port number, every Listener using that port number must have a compatible protocol (either all HTTP, or all HTTPS/TLS).
 - for a given port number, every Listener using that port number must have a distinct hostname (at most one Listener per port can have no hostname).
 
@@ -60,7 +65,7 @@ spec:
       hostname: whales.envoygateway.io
 ```
 
-####  Example 2: Gateways with compatible Listeners (same port & protocol, one hostname specified, one not)
+#### Example 2: Gateways with compatible Listeners (same port & protocol, one hostname specified, one not)
 
 ```yaml
 kind: Gateway
@@ -171,6 +176,7 @@ Gateway API specifies a rich set of status fields & conditions for each resource
 To be conformant, Envoy Gateway needs to compute the appropriate status fields and conditions as it's processing resources.
 
 Status needs to be computed and set for:
+
 - the GatewayClass (gatewayclass.status.conditions)
 - each Listener for each Gateway (gateway.status.listeners)
 - each Gateway, based on its Listeners' statuses (gateway.status.conditions)
@@ -183,7 +189,6 @@ The Gateway API translator will take the approach of populating status on the re
 The following roughly outlines the translation process.
 Each step may produce (1) IR; and (2) status updates on Gateway API resources.
 
-```
 1. Process Gateway Listeners
     - validate unique hostnames/ports/protcols
     - validate/compute supported kinds
@@ -208,7 +213,6 @@ Each step may produce (1) IR; and (2) status updates on Gateway API resources.
         - foreach matching listener:
             - foreach hostname intersection with route:
                 - add each computed route rule to host
-```
 
 ## Context Structs
 
