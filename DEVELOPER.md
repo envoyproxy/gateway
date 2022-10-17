@@ -5,19 +5,23 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 ## Prerequisites
 
 ### go
+
 * Version: 1.18.2
 * Installation Guide: https://go.dev/doc/install
 
 ### make
+
 * Recommended Version: 4.0 or later
 * Installation Guide: https://www.gnu.org/software/make
 
 ### docker
+
 * Optional when you want to build a Docker image or run `make` inside Docker.
 * Recommended Version: 20.10.16
 * Installation Guide: https://docs.docker.com/engine/install
 
 ### python3
+
 * Need a `python3` program
 * Must have a functioning `venv` module; this is part of the standard
   library, but some distributions (such as Debian and Ubuntu) replace
@@ -25,35 +29,44 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
   separately.
 
 ## Quickstart
+
 * Run `make help` to see all the available targets to build, test and run Envoy Gateway.
 
 ### Building
+
 * Run `make build` to build the Envoy Gateway binary. __Note:__ The binary gets generated in the `bin/` directory
 
 ### Testing
+
 * Run `make test` to run the golang tests.
 
 ### Running Linters
+
 * Run `make lint` to make sure your code passes all the linter checks.
 
 ### Building and Pushing the Image
+
 * Run `IMAGE=docker.io/you/gateway-dev make image` to build the docker image.
 * Run `IMAGE=docker.io/you/gateway-dev make push-multiarch` to build and push the multi-arch docker image.
 
 __Note:__  Replace `IMAGE` with your registry's image name.
 
 ### Deploying Envoy Gateway for Test/Dev
+
 * Run `make create-cluster` to create a [Kind][] cluster.
 
 #### Option 1: Use the Latest [gateway-dev][] Image
+
 * Run `TAG=latest make kube-deploy` to deploy Envoy Gateway in the Kind cluster using the latest image. Replace `latest`
   to use a different image tag.
 
 #### Option 2: Use a Custom Image
+
 * Run `make kube-install-image` to build an image from the tip of your current branch and load it in the Kind cluster.
 * Run `make kube-deploy` to install Envoy Gateway into the Kind cluster using your custom image.
 
 ### Deploying Envoy Gateway in Kubernetes
+
 * Run `TAG=latest make kube-deploy` to deploy Envoy Gateway using the latest image into a Kubernetes cluster (linked to
   the current kube context). Preface the command with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or
   tag.
@@ -62,20 +75,24 @@ __Note:__  Replace `IMAGE` with your registry's image name.
 __Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
 ### Demo Setup
+
 * Run `make kube-demo` to deploy a demo backend service, gatewayclass, gateway and httproute resource
 (similar to steps outlined in the [Quickstart][] docs) and test the configuration.
 * Run `make kube-demo-undeploy` to delete the resources created by the `make kube-demo` command.
 
 ### Run Gateway API Conformance Tests
+
 The commands below deploy Envoy Gateway to a Kubernetes cluster and run the Gateway API conformance tests. Refer to the
 Gateway API [conformance homepage][] to learn more about the tests. If Envoy Gateway is already installed, run
 `TAG=latest make run-conformance` to run the conformance tests.
 
 #### On a Linux Host
+
 * Run `TAG=latest make conformance` to create a Kind cluster, install Envoy Gateway using the latest [gateway-dev][]
   image, and run Gateway API conformance tests.
 
 #### On a Mac Host
+
 Since Mac doesn't support [directly exposing][] the Docker network to the Mac host, use one of the following
 workarounds to run conformance tests:
 
@@ -89,6 +106,7 @@ __Note:__  Preface commands with `IMAGE` or replace `TAG` to use a different Env
 is unspecified, the short SHA of your current branch is used.
 
 ### Debugging the Envoy Config
+
 An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port (currently `19000`)
 on the Envoy deployment that corresponds to a Gateway so that it can be accessed locally.
 
