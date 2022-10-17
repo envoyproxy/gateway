@@ -14,10 +14,10 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 3. Submit a [Pull Request][] to merge the release notes into the main branch. This should be the last commit to main
    before cutting the release.
 4. Create a new release branch from `main`. The release branch should be named
-   `release/v${MAJOR_VERSION}.${MINOR_VERSION}.0`, e.g. `release/v0.3.0`.
+   `release/v${MAJOR_VERSION}.${MINOR_VERSION}`, e.g. `release/v0.3`.
 
    ```shell
-   git checkout -b release/v0.3.0
+   git checkout -b release/v0.3
    ```
 
 5. Push the branch to the Envoy Gateway repo.
@@ -31,6 +31,8 @@ This document guides maintainers through the process of creating an Envoy Gatewa
    ```shell
    git tag -a v0.3.0 -m 'Envoy Gateway v0.3.0 Release'
    ```
+
+   __Note:__ The tag version differs from the release branch by including the `.0` patch version.
 
 10. Push the tag to the Envoy Gateway repository.
 
@@ -79,7 +81,7 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 
 ## Announcing the Release
 
-It's important that the world knows about the release. Follow the steps to announce the release.
+It's important that the world knows about the release. Use the following steps to announce the release.
 
 1. Set the release information in the Envoy Gateway Slack channel. For example:
 
