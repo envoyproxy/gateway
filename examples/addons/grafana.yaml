@@ -1,0 +1,209 @@
+---
+# Source: grafana/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    helm.sh/chart: grafana-6.31.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana
+    app.kubernetes.io/version: "9.0.1"
+    app.kubernetes.io/managed-by: Helm
+  name: grafana
+  namespace: envoy-gateway-system
+---
+# Source: grafana/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana
+  namespace: envoy-gateway-system
+  labels:
+    helm.sh/chart: grafana-6.31.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana
+    app.kubernetes.io/version: "9.0.1"
+    app.kubernetes.io/managed-by: Helm
+data:
+  allow-snippet-annotations: "false"
+  grafana.ini: |
+    [analytics]
+    check_for_updates = true
+    [grafana_net]
+    url = https://grafana.net
+    [log]
+    mode = console
+    [paths]
+    data = /var/lib/grafana/
+    logs = /var/log/grafana
+    plugins = /var/lib/grafana/plugins
+    provisioning = /etc/grafana/provisioning
+
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - access: proxy
+      editable: true
+      isDefault: true
+      jsonData:
+        timeInterval: 5s
+      name: Prometheus
+      orgId: 1
+      type: prometheus
+      url: http://prometheus:9090
+  dashboardproviders.yaml: |
+    apiVersion: 1
+    providers:
+    - disableDeletion: false
+      folder: envoy-gateway
+      name: envoy-gateway-dashboards
+      options:
+        path: /var/lib/grafana/dashboards/envoy-gateway-dashboards
+      orgId: 1
+      type: file
+---
+# Source: grafana/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: envoy-gateway-system
+  labels:
+    helm.sh/chart: grafana-6.31.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana
+    app.kubernetes.io/version: "9.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - name: service
+      port: 3000
+      protocol: TCP
+      targetPort: 3000
+
+  selector:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana
+---
+# Source: grafana/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: envoy-gateway-system
+  labels:
+    helm.sh/chart: grafana-6.31.1
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/instance: grafana
+    app.kubernetes.io/version: "9.0.1"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/instance: grafana
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grafana
+        app.kubernetes.io/instance: grafana
+        app: grafana
+      annotations:
+        checksum/config: 00cbea6713b515cc981941cb5cc4004e842e678e23fbb177bff4d890ac2d71da
+        checksum/dashboards-json-config: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+        checksum/sc-dashboard-provider-config: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+    spec:
+      
+      serviceAccountName: grafana
+      automountServiceAccountToken: true
+      securityContext:
+        fsGroup: 472
+        runAsGroup: 472
+        runAsUser: 472
+      enableServiceLinks: true
+      containers:
+        - name: grafana
+          image: "grafana/grafana:9.0.1"
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: config
+              mountPath: "/etc/grafana/grafana.ini"
+              subPath: grafana.ini
+            - name: storage
+              mountPath: "/var/lib/grafana"
+            - name: envoy-gateway-dashboards
+              mountPath: "/var/lib/grafana/dashboards/envoy-gateway-dashboards"
+            - name: config
+              mountPath: "/etc/grafana/provisioning/datasources/datasources.yaml"
+              subPath: "datasources.yaml"
+            - name: config
+              mountPath: "/etc/grafana/provisioning/dashboards/dashboardproviders.yaml"
+              subPath: "dashboardproviders.yaml"
+          ports:
+            - name: service
+              containerPort: 3000
+              protocol: TCP
+            - name: grafana
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: GF_PATHS_DATA
+              value: /var/lib/grafana/
+            - name: GF_PATHS_LOGS
+              value: /var/log/grafana
+            - name: GF_PATHS_PLUGINS
+              value: /var/lib/grafana/plugins
+            - name: GF_PATHS_PROVISIONING
+              value: /etc/grafana/provisioning
+            - name: "GF_AUTH_ANONYMOUS_ENABLED"
+              value: "true"
+            - name: "GF_AUTH_ANONYMOUS_ORG_ROLE"
+              value: "Admin"
+            - name: "GF_AUTH_BASIC_ENABLED"
+              value: "false"
+            - name: "GF_SECURITY_ADMIN_PASSWORD"
+              value: "-"
+            - name: "GF_SECURITY_ADMIN_USER"
+              value: "-"
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            timeoutSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+          resources:
+            {}
+      volumes:
+        - name: config
+          configMap:
+            name: grafana
+          
+        - name: envoy-gateway-dashboards
+          configMap:
+            name: envoy-gateway-dashboards
+        - name: storage
+          emptyDir: {}
+
+---
+
+apiVersion: v1
+data:
+  envoy-gateway-dashboard.json: |
+    {"annotations":{"list":[{"builtIn":1,"datasource":{"type":"datasource","uid":"grafana"},"enable":true,"hide":true,"iconColor":"rgba(0, 211, 255, 1)","name":"Annotations & Alerts","target":{"limit":100,"matchAny":false,"tags":[],"type":"dashboard"},"type":"dashboard"}]},"description":"Envoy Gateway monitoring Dashboard with cluster and host level templates. ","editable":true,"fiscalYearStartMonth":0,"gnetId":6693,"graphTooltip":0,"id":3,"iteration":1666019019485,"links":[],"liveNow":false,"panels":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[{"options":{"match":"null","result":{"text":"N/A"}},"type":"special"}],"max":3,"min":0,"thresholds":{"mode":"absolute","steps":[{"color":"#d44a3a","value":null},{"color":"rgba(237, 129, 40, 0.89)","value":1},{"color":"#299c46","value":2}]},"unit":"none"},"overrides":[]},"gridPos":{"h":5,"w":5,"x":0,"y":0},"id":9,"links":[],"maxDataPoints":100,"options":{"orientation":"horizontal","reduceOptions":{"calcs":["mean"],"fields":"","values":false},"showThresholdLabels":false,"showThresholdMarkers":true},"pluginVersion":"9.0.1","targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"sum(envoy_server_live)","format":"time_series","interval":"","intervalFactor":1,"legendFormat":"","refId":"A"}],"title":"Live servers","type":"gauge"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[{"options":{"match":"null","result":{"text":"N/A"}},"type":"special"}],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":80}]},"unit":"s"},"overrides":[]},"gridPos":{"h":5,"w":4,"x":5,"y":0},"id":12,"links":[],"maxDataPoints":100,"options":{"colorMode":"value","graphMode":"none","justifyMode":"auto","orientation":"horizontal","reduceOptions":{"calcs":["mean"],"fields":"","values":false},"textMode":"auto"},"pluginVersion":"9.0.1","targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"avg(envoy_server_uptime)","format":"time_series","intervalFactor":1,"legendFormat":"","refId":"A"}],"title":"Avg uptime per node","type":"stat"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[{"options":{"match":"null","result":{"text":"N/A"}},"type":"special"}],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":80}]},"unit":"decbytes"},"overrides":[]},"gridPos":{"h":5,"w":5,"x":9,"y":0},"id":11,"links":[],"maxDataPoints":100,"options":{"colorMode":"none","graphMode":"none","justifyMode":"auto","orientation":"horizontal","reduceOptions":{"calcs":["mean"],"fields":"","values":false},"textMode":"auto"},"pluginVersion":"9.0.1","targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"SUM(envoy_server_memory_allocated)","format":"time_series","intervalFactor":1,"legendFormat":"","refId":"A"}],"title":"Allocated Memory","type":"stat"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[{"options":{"match":"null","result":{"text":"N/A"}},"type":"special"}],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":80}]},"unit":"decbytes"},"overrides":[]},"gridPos":{"h":5,"w":4,"x":14,"y":0},"id":13,"links":[],"maxDataPoints":100,"options":{"colorMode":"none","graphMode":"none","justifyMode":"auto","orientation":"horizontal","reduceOptions":{"calcs":["mean"],"fields":"","values":false},"textMode":"auto"},"pluginVersion":"9.0.1","targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"SUM(envoy_server_memory_heap_size)","format":"time_series","intervalFactor":1,"legendFormat":"","refId":"A"}],"title":"Heap Size","type":"stat"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[{"options":{"match":"null","result":{"text":"N/A"}},"type":"special"}],"thresholds":{"mode":"absolute","steps":[{"color":"green","value":null},{"color":"red","value":80}]},"unit":"none"},"overrides":[]},"gridPos":{"h":5,"w":3,"x":18,"y":0},"id":19,"links":[],"maxDataPoints":100,"options":{"colorMode":"none","graphMode":"none","justifyMode":"auto","orientation":"horizontal","reduceOptions":{"calcs":["mean"],"fields":"","values":false},"textMode":"auto"},"pluginVersion":"9.0.1","targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"(sum(envoy_cluster_membership_healthy)  - sum(envoy_cluster_membership_total))","format":"time_series","intervalFactor":1,"legendFormat":"","refId":"A"}],"title":"Unhealthy Clusters","type":"stat"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fieldConfig":{"defaults":{"color":{"mode":"thresholds"},"mappings":[{"options":{"0":{"text":"NOT WELL"},"1":{"text":"OK"}},"type":"value"},{"options":{"match":"null","result":{"text":"N/A"}},"type":"special"}],"thresholds":{"mode":"absolute","steps":[{"color":"#d44a3a","value":null},{"color":"rgba(237, 129, 40, 0.89)","value":0},{"color":"#299c46","value":1}]},"unit":"none"},"overrides":[]},"gridPos":{"h":5,"w":3,"x":21,"y":0},"id":20,"links":[],"maxDataPoints":100,"options":{"colorMode":"value","graphMode":"none","justifyMode":"auto","orientation":"horizontal","reduceOptions":{"calcs":["mean"],"fields":"","values":false},"textMode":"auto"},"pluginVersion":"9.0.1","targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"(sum(envoy_cluster_membership_total)-sum(envoy_cluster_membership_healthy)) == bool 0","format":"time_series","intervalFactor":1,"legendFormat":"","refId":"A"}],"title":"Cluster State","type":"stat"},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":12,"x":0,"y":5},"hiddenSeries":false,"id":2,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"envoy_cluster_upstream_cx_active{envoy_cluster_name=~\"$cluster\",host=~\"$hosts\"}","format":"time_series","intervalFactor":2,"legendFormat":"{{zone}}({{host}})","refId":"A"}],"thresholds":[],"timeRegions":[],"title":"Total active connections","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"short","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":12,"x":12,"y":5},"hiddenSeries":false,"id":4,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"irate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"$cluster\",host=~\"$hosts\"}[1m])","format":"time_series","intervalFactor":2,"legendFormat":"{{zone}}({{host}})","refId":"A"}],"thresholds":[],"timeRegions":[],"title":"Total requests","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"short","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":12,"x":0,"y":12},"hiddenSeries":false,"id":5,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"envoy_http_downstream_cx_active{envoy_http_conn_manager_prefix=~\"$cluster\",host=~\"$hosts\"}","format":"time_series","intervalFactor":2,"legendFormat":"{{zone}}({{host}})","refId":"A"}],"thresholds":[],"timeRegions":[],"title":"Downstream Total active connections","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"short","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":12,"x":12,"y":12},"hiddenSeries":false,"id":6,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"irate(envoy_http_downstream_rq_total{envoy_http_conn_manager_prefix=~\"$cluster\",host=~\"$hosts\"}[1m])","format":"time_series","intervalFactor":2,"legendFormat":"{{zone}}({{host}})","refId":"A"}],"thresholds":[],"timeRegions":[],"title":"Downstream Total active requests","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"short","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":12,"x":0,"y":19},"hiddenSeries":false,"id":15,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"irate(envoy_cluster_upstream_cx_rx_bytes_total{envoy_cluster_name=~\"$cluster\",host=~\"$hosts\"}[1m])","format":"time_series","intervalFactor":1,"legendFormat":"{{zone}} ({{host}}) - in","refId":"A"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"irate(envoy_cluster_upstream_cx_tx_bytes_total{envoy_cluster_name=~\"$cluster\",host=~\"$hosts\"}[1m])","format":"time_series","intervalFactor":1,"legendFormat":"{{zone}} ({{host}}) - out","refId":"B"}],"thresholds":[],"timeRegions":[],"title":"Upstream Network Traffic","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"decbytes","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":12,"x":12,"y":19},"hiddenSeries":false,"id":17,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"irate(envoy_http_downstream_cx_rx_bytes_total{envoy_http_conn_manager_prefix=~\"$cluster\",host=~\"$hosts\"}[1m])","format":"time_series","intervalFactor":1,"legendFormat":"{{zone}} ({{host}}) - in","refId":"A"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"irate(envoy_http_downstream_cx_tx_bytes_total{envoy_http_conn_manager_prefix=~\"$cluster\",host=~\"$hosts\"}[1m])","format":"time_series","intervalFactor":1,"legendFormat":"{{zone}} ({{host}}) - out","refId":"B"}],"thresholds":[],"timeRegions":[],"title":"Downstream Network Traffic","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"decbytes","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}},{"aliasColors":{},"bars":false,"dashLength":10,"dashes":false,"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"fill":1,"fillGradient":0,"gridPos":{"h":7,"w":24,"x":0,"y":26},"hiddenSeries":false,"id":7,"legend":{"avg":false,"current":false,"max":false,"min":false,"show":true,"total":false,"values":false},"lines":true,"linewidth":1,"links":[],"nullPointMode":"null","options":{"alertThreshold":true},"percentage":false,"pluginVersion":"9.0.1","pointradius":5,"points":false,"renderer":"flot","seriesOverrides":[],"spaceLength":10,"stack":false,"steppedLine":false,"targets":[{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"sum(envoy_cluster_membership_healthy{envoy_cluster_name=\"$cluster\",host=~\"$hosts\"})/count(envoy_cluster_membership_healthy{envoy_cluster_name=\"$cluster\",host=~\"$hosts\"})","format":"time_series","intervalFactor":2,"legendFormat":"healthy","refId":"A"},{"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"expr":"sum(envoy_cluster_membership_total{envoy_cluster_name=\"$cluster\",host=~\"$hosts\"})/count(envoy_cluster_membership_total{envoy_cluster_name=\"$cluster\",host=~\"$hosts\"})","format":"time_series","intervalFactor":2,"legendFormat":"total","refId":"B"}],"thresholds":[],"timeRegions":[],"title":"Downstream members","tooltip":{"shared":true,"sort":0,"value_type":"individual"},"type":"graph","xaxis":{"mode":"time","show":true,"values":[]},"yaxes":[{"format":"short","logBase":1,"show":true},{"format":"short","logBase":1,"show":true}],"yaxis":{"align":false}}],"refresh":"30s","schemaVersion":36,"style":"dark","tags":[],"templating":{"list":[{"current":{"selected":false,"text":"xds_cluster","value":"xds_cluster"},"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"definition":"","hide":0,"includeAll":false,"label":"Cluster","multi":false,"name":"cluster","options":[],"query":{"query":"label_values(envoy_cluster_upstream_cx_total, envoy_cluster_name)","refId":"Prometheus-cluster-Variable-Query"},"refresh":1,"regex":"","skipUrlSync":false,"sort":1,"tagValuesQuery":"","tagsQuery":"","type":"query","useTags":false},{"current":{"selected":false,"text":"All","value":"$__all"},"datasource":{"type":"prometheus","uid":"PBFA97CFB590B2093"},"definition":"","hide":0,"includeAll":true,"label":"Hosts","multi":true,"name":"hosts","options":[],"query":{"query":"label_values(envoy_cluster_upstream_cx_total{envoy_cluster_name=\"$cluster\"}, host)","refId":"Prometheus-hosts-Variable-Query"},"refresh":1,"regex":"","skipUrlSync":false,"sort":1,"tagValuesQuery":"","tagsQuery":"","type":"query","useTags":false}]},"time":{"from":"now-15m","to":"now"},"timepicker":{"refresh_intervals":["5s","10s","30s","1m","5m","15m","30m","1h","2h","1d"],"time_options":["5m","15m","1h","6h","12h","24h","2d","7d","30d"]},"timezone":"","title":"Envoy Gateway Overview","uid":"000000003","version":2,"weekStart":""}
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: envoy-gateway-dashboards
+  namespace: envoy-gateway-system
+
+---

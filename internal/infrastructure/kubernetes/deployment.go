@@ -39,7 +39,7 @@ const (
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
 	// envoyAdminAddress is the listening address of the envoy admin interface.
-	envoyAdminAddress = "127.0.0.1"
+	envoyAdminAddress = "0.0.0.0"
 	// envoyAdminPort is the port used to expose admin interface.
 	envoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
@@ -127,6 +127,11 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 			Selector: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"prometheus.io/path":   "/stats/prometheus",
+						"prometheus.io/port":   fmt.Sprint(envoyAdminPort),
+						"prometheus.io/scrape": "true",
+					},
 					Labels: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels).MatchLabels,
 				},
 				Spec: corev1.PodSpec{
@@ -187,6 +192,11 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		{
 			Name:          "https",
 			ContainerPort: envoyHTTPSPort,
+			Protocol:      corev1.ProtocolTCP,
+		},
+		{
+			Name:          "monitoring",
+			ContainerPort: envoyAdminPort,
 			Protocol:      corev1.ProtocolTCP,
 		},
 	}
