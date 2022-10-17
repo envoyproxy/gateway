@@ -74,9 +74,9 @@ and runs the Gateway API conformance tests.
 
 ### Debugging the Envoy Config
 An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port (currently `19000`)
-on the Envoy Gateway deployment so that it can be accessed locally.
+on the Envoy deployment that corresponds to a Gateway so that it can be accessed locally.
 
-`kubectl port-forward deploy/envoy-default-eg -n envoy-gateway-system 19000:19000`
+`kubectl port-forward deploy/envoy-${GATEWAY_NAMESPACE}-${GATEWAY_NAME} -n envoy-gateway-system 19000:19000`
 
 Now you are able to view the running Envoy configuration by navigating to `127.0.0.1:19000/config_dump`.
 
