@@ -8,6 +8,8 @@
 *.jpg
 *.ico
 *.svg
+*.js
+*.css
 go.mod
 go.sum
 bin
