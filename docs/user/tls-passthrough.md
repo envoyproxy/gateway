@@ -1,21 +1,21 @@
-## TLS Passthrough
+# TLS Passthrough
 This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
 
 
-### Prerequisites
+## Prerequisites
 - A Kubernetes cluster with `kubectl` context configured for the cluster.
 - OpenSSL to generate TLS assets.
 
 __Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
-### Installation
+## Installation
 Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to curl the example backend using HTTP.
 
-### TLS Certificates
+## TLS Certificates
 
 Generate the certificates and keys used by the Service to terminate client TLS connections. 
-For the application, we'll deploy a sample nginx app, with the certificates loaded in the application Pod.
+For the application, we'll deploy a sample echoserver app, with the certificates loaded in the application Pod.
 
 __Note:__ These certificates will not be used by the Gateway, but will remain in the application scope.
 
@@ -38,47 +38,35 @@ openssl x509 -req -sha256 -days 365 -CA example.com.crt -CAkey example.com.key -
 
 Store the cert/keys in A Secret:
 ```shell
-kubectl create secret tls nginx-server-certs --key=passthrough.example.com.key --cert=passthrough.example.com.crt
+kubectl create secret tls server-certs --key=passthrough.example.com.key --cert=passthrough.example.com.crt
 ```
 
-### Application config
-
-Create a file for the nginx server:
+## Deployment
+Deploy TLS Passthrough application Deployment, Service and TLSRoute:
 ```shell
-cat <<\EOF > ./nginx-passthrough.conf
-events {
-}
-
-http {
-  log_format main '$remote_addr - $remote_user [$time_local]  $status '
-  '"$request" $body_bytes_sent "$http_referer" '
-  '"$http_user_agent" "$http_x_forwarded_for"';
-  access_log /var/log/nginx/access.log main;
-  error_log  /var/log/nginx/error.log;
-
-  server {
-    listen 443 ssl;
-
-    root /usr/share/nginx/html;
-    index index.html;
-
-    server_name passthrough.example.com;
-    ssl_certificate /etc/nginx-server-certs/tls.crt;
-    ssl_certificate_key /etc/nginx-server-certs/tls.key;
-  }
-}
-EOF
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/tls-passthrough.yaml
 ```
 
-Create the configmap for the nginx server to load nginx-passthrough.conf
-```shell
-kubectl create configmap nginx-configmap --from-file=nginx.conf=./nginx-passthrough.conf
+Update the Gateway from the Quickstart guide to include an TLS listener that listens on port `6443` and is configured for TLS mode Passthrough.
+```console
+$ kubectl patch gateway eg --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/listeners/-",
+   "value": {
+      "name": "tls",
+      "protocol": "TLS",
+      "hostname": "passthrough.example.com",
+      "tls": {"mode": "Passthrough"}, 
+      "port": 6443,
+    },
+}]'
 ```
 
-### Testing
+## Testing
+### Clusters without External LoadBalancer Support
 Port forward to the Envoy service:
 ```shell
-kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:8443 &
+kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:6443 &
 ```
 
 Curl the example app through Envoy proxy:
@@ -87,7 +75,7 @@ curl -v --resolve "passthrough.example.com:8888:127.0.0.1" https://passthrough.e
 --cacert passthrough.example.com.crt
 ```
 
-### For clusters with External Loadbalancer support
+### Clusters with External LoadBalancer Support
 You can also test the same functionality by sending traffic to the External IP of the Gateway:
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
@@ -104,12 +92,7 @@ Follow the steps from the [Quickstart Guide](QUICKSTART.md) to uninstall Envoy G
 
 Delete the Secret:
 ```shell
-kubectl delete secret/nginx-server-certs
-```
-
-Delete the Configmap:
-```shell
-kubectl delete configmap/nginx-configmap
+kubectl delete secret/server-certs
 ```
 
 ## Next Steps
