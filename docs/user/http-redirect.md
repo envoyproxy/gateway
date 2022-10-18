@@ -1,11 +1,11 @@
 # HTTP Redirects
 
 The [HTTPRoute][] resource can issue redirects to clients or rewrite paths sent upstream using filters. Note that
-HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway only supports core [HTTPRoute filters][]
-which consist of `RequestRedirect` and `RequestHeaderModifier`. To learn more about HTTP routing, refer to the
-[Gateway API documentation][].
+HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway only supports __core__
+[HTTPRoute filters][] which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To
+learn more about HTTP routing, refer to the [Gateway API documentation][].
 
-Follow the steps from the [Secure Gateways](SECURE_GATEWAY.md) to install Envoy Gateway and the example manifest. Do not
+Follow the steps from the [Secure Gateways](secure-gateways.md) to install Envoy Gateway and the example manifest. Do not
 proceed until you can curl the example backend from the Quickstart guide using HTTPS.
 
 ## Redirects
@@ -47,10 +47,16 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-to-https-filter-redirect -o yaml
 ```
 
-Curl'ing `redirect.example/get` should result in a `301` response from the example Gateway and redirecting to the
-configured redirect hostname.
+Get the Gateway's address:
 
 ```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Querying `redirect.example/get` should result in a `301` response from the example Gateway and redirecting to the
+configured redirect hostname.
+
+```console
 $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}:8080/get"
 ...
 < HTTP/1.1 301 Moved Permanently
@@ -58,7 +64,7 @@ $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}:8080/ge
 ...
 ```
 
-If you followed the steps in the [Secure Gateways](SECURE_GATEWAY.md) guide, you should be able to curl the redirect
+If you followed the steps in the [Secure Gateways](secure-gateways.md) guide, you should be able to curl the redirect
 location.
 
 ## Path Redirects
@@ -100,16 +106,16 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-path-redirect -o yaml
 ```
 
-Curl'ing `path.redirect.example` should result in a `302` response from the example Gateway and a redirect location
+Querying `path.redirect.example` should result in a `302` response from the example Gateway and a redirect location
 containing the configured redirect path.
 
-```console
-$ curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}:8080/get"
-...
-< HTTP/1.1 302 Found
-< location: http://path.redirect.example/status/200
-...
+Query the `path.redirect.example` host:
+
+```shell
+curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}:8080/get"
 ```
+
+You should receive a `302` with a redirect location of `http://path.redirect.example/status/200`.
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [HTTPRoute filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
