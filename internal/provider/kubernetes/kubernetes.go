@@ -45,8 +45,8 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		return nil, fmt.Errorf("failed to add status update handler %v", err)
 	}
 
-	// Initialize kubernetes provider cache to store additional object mappings.
-	cache := newProviderCache()
+	// Initialize kubernetes provider referenceStore to store additional object mappings.
+	referenceStore := newProviderReferenceStore()
 
 	// Create and register the controllers with the manager.
 	if err := newGatewayClassController(mgr, svr, updateHandler.Writer(), resources); err != nil {
@@ -56,10 +56,10 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		return nil, fmt.Errorf("failed to create gateway controller: %w", err)
 	}
 
-	if err := newHTTPRouteController(mgr, svr, updateHandler.Writer(), resources, cache); err != nil {
+	if err := newHTTPRouteController(mgr, svr, updateHandler.Writer(), resources, referenceStore); err != nil {
 		return nil, fmt.Errorf("failed to create httproute controller: %w", err)
 	}
-	if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources, cache); err != nil {
+	if err := newTLSRouteController(mgr, svr, updateHandler.Writer(), resources, referenceStore); err != nil {
 		return nil, fmt.Errorf("failed to create tlsroute controller: %w", err)
 	}
 

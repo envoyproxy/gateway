@@ -40,20 +40,20 @@ type tlsRouteReconciler struct {
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
 
-	resources *message.ProviderResources
-	cache     *providerCache
+	resources      *message.ProviderResources
+	referenceStore *providerReferenceStore
 }
 
 // newTLSRouteController creates the tlsroute controller from mgr. The controller will be pre-configured
 // to watch for TLSRoute objects across all namespaces.
-func newTLSRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources, cache *providerCache) error {
+func newTLSRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources, referenceStore *providerReferenceStore) error {
 	r := &tlsRouteReconciler{
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		statusUpdater:   su,
 		resources:       resources,
-		cache:           cache,
+		referenceStore:  referenceStore,
 	}
 
 	c, err := controller.New("tlsroute", mgr, controller.Options{Reconciler: r})
@@ -242,7 +242,7 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 						// the resource map if it exists.
 						if _, ok := r.resources.Services.Load(svcKey); ok {
 							r.resources.Services.Delete(svcKey)
-							r.cache.removeRouteToServicesMapping(kindTLSRoute+"/"+route.Namespace+"/"+route.Name, svcKey.String())
+							r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, route.Namespace, route.Name}, svcKey.String())
 							log.Info("deleted service from resource map")
 						}
 					}
@@ -252,7 +252,7 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 
 				// The backendRef Service exists, so add it to the resource map.
 				r.resources.Services.Store(svcKey, svc)
-				r.cache.updateRouteToServicesMapping(kindTLSRoute+"/"+route.Namespace+"/"+route.Name, svcKey.String())
+				r.referenceStore.updateRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, route.Namespace, route.Name}, svcKey.String())
 				log.Info("added service to resource map")
 			}
 		}
@@ -274,10 +274,10 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 
 		// Delete the Service from the resource maps if no other
 		// routes (TLSRoute or HTTPRoute) reference that Service.
-		routeServices := r.cache.getRouteToServicesMapping(kindTLSRoute + "/" + request.NamespacedName.String())
+		routeServices := r.referenceStore.getRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, request.Namespace, request.Name})
 		for _, svc := range routeServices {
-			r.cache.removeRouteToServicesMapping(kindTLSRoute+"/"+request.NamespacedName.String(), svc)
-			if r.cache.isServiceReferredByRoutes(svc) {
+			r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, request.Namespace, request.Name}, svc)
+			if r.referenceStore.isServiceReferredByRoutes(svc) {
 				r.resources.Services.Delete(request.NamespacedName)
 				log.Info("deleted service from resource map")
 			}

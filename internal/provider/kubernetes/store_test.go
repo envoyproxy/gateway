@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProviderCache(t *testing.T) {
-	cache := newProviderCache()
+func TestProviderReferenceStore(t *testing.T) {
+	cache := newProviderReferenceStore()
 
 	testCases := []struct {
 		name string
-		test func(t *testing.T, c *providerCache)
+		test func(t *testing.T, c *providerReferenceStore)
 	}{
 		{
 			name: "route to service mappings",
@@ -27,9 +27,9 @@ func TestProviderCache(t *testing.T) {
 	}
 }
 
-func testRouteToServicesMappings(t *testing.T, cache *providerCache) {
-	httpr1 := "HTTPRoute/ns1/r1"
-	tlsr1 := "TLSRoute/ns1/r1"
+func testRouteToServicesMappings(t *testing.T, cache *providerReferenceStore) {
+	httpr1 := ObjectKindNamespacedName{"HTTPRoute", "ns1", "r1"}
+	tlsr1 := ObjectKindNamespacedName{"TLSRoute", "ns1", "r1"}
 
 	ns1svc1 := "ns1/svc1"
 	ns1svc2 := "ns1/svc2"

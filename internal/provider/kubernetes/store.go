@@ -6,33 +6,39 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
-// providerCache maintains additional mappings related to Kubernetes provider
+// providerReferenceStore maintains additional mappings related to Kubernetes provider
 // resources. The mappings are regularly updated from the reconcilers based
 // on the existence of the object in the Kubernetes datastore.
-type providerCache struct {
+type providerReferenceStore struct {
 	mu sync.Mutex
 
 	// routeToServicesMappings maintains a mapping of a Route object,
 	// and the Services it references. For instance
 	// HTTPRoute/ns1/route1	-> { ns1/svc1, ns1/svc2, ns2/svc1 }
 	// TLSRoute/ns1/route1	-> { ns1/svc1, ns2/svc2 }
-	routeToServicesMappings map[string]sets.String
+	routeToServicesMappings map[ObjectKindNamespacedName]sets.String
 }
 
-func newProviderCache() *providerCache {
-	return &providerCache{
-		routeToServicesMappings: make(map[string]sets.String),
+type ObjectKindNamespacedName struct {
+	kind      string
+	namespace string
+	name      string
+}
+
+func newProviderReferenceStore() *providerReferenceStore {
+	return &providerReferenceStore{
+		routeToServicesMappings: map[ObjectKindNamespacedName]sets.String{},
 	}
 }
 
-func (p *providerCache) getRouteToServicesMapping(route string) []string {
+func (p *providerReferenceStore) getRouteToServicesMapping(route ObjectKindNamespacedName) []string {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	return p.routeToServicesMappings[route].List()
 }
 
-func (p *providerCache) updateRouteToServicesMapping(route, service string) {
+func (p *providerReferenceStore) updateRouteToServicesMapping(route ObjectKindNamespacedName, service string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -43,7 +49,7 @@ func (p *providerCache) updateRouteToServicesMapping(route, service string) {
 	}
 }
 
-func (p *providerCache) removeRouteToServicesMapping(route, service string) {
+func (p *providerReferenceStore) removeRouteToServicesMapping(route ObjectKindNamespacedName, service string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -53,7 +59,7 @@ func (p *providerCache) removeRouteToServicesMapping(route, service string) {
 	}
 }
 
-func (p *providerCache) isServiceReferredByRoutes(service string) bool {
+func (p *providerReferenceStore) isServiceReferredByRoutes(service string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
