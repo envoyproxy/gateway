@@ -42,8 +42,6 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
-
 ### For clusters with External Loadbalancer support
 
 You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
@@ -61,8 +59,6 @@ Curl the example app through Envoy proxy:
 ```shell
 curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST:8080/get
 ```
-
-You can replace `get` with any of the supported [httpbin methods][httpbin_methods].
 
 ## Clean-Up
 
@@ -83,5 +79,3 @@ kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest
 ## Next Steps
 
 Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
-
-[httpbin_methods]: https://httpbin.org/#/HTTP_Methods
