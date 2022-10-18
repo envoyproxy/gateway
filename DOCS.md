@@ -1,8 +1,9 @@
 # Working on the Envoy Gateway Docs
 
-The documentation for the Envoy Gateway lives in the `docs/` directory. It's
-written using [reStructuredText], so you'll need a working familiarity with
-that!
+The documentation for the Envoy Gateway lives in the `docs/` directory. Any
+individual document can be written using either [reStructuredText] or [Markdown], 
+you can choose the format that you're most comfortable with when working on the
+documentation.
 
 ## Documentation Structure
 
@@ -15,7 +16,8 @@ to be in `docs/index.rst`'s `toctree` though.
 
 ## Documentation Workflow
 
-To work with the docs, just edit reStructuredText files in `docs`, then run
+To work with the docs, just edit reStructuredText or Markdown files in `docs`, 
+then run
 
 ```bash
 make docs
@@ -29,15 +31,11 @@ either simply by pointing a web browser at the `file://` path to your
 cd docs/html ; python3 -m http.server
 ```
 
-### What About Markdown Files?
-
-There are currently still some pre-RST Markdown files in the `docs/` directory.
-Those should be turned into RST files and brought into the brave new world.
-
 ## Publishing Docs
 
 Whenever docs are pushed to `main`, CI will publish the built docs to GitHub
 Pages. For more details, see `.github/workflows/docs.yaml`.
 
 [reStructuredText]: https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html
+[Markdown]: https://daringfireball.net/projects/markdown/syntax
 
