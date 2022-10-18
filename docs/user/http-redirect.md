@@ -13,6 +13,7 @@ Redirects return HTTP 3XX responses to a client, instructing it to retrieve a di
 [`RequestRedirect` filter][req_filter] instructs Gateways to emit a redirect response to requests that match the rule.
 For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `requestRedirect.statusCode=301` and
 `requestRedirect.scheme="https"`:
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -37,13 +38,18 @@ spec:
         port: 80
 EOF
 ```
+
+__Note:__ `301` (default) and `302` are the only supported statusCodes.
+
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
+
 ```shell
 kubectl get httproute/http-to-https-filter-redirect -o yaml
 ```
 
 Curl'ing `redirect.example/get` should result in a `301` response from the example Gateway and redirecting to the
 configured redirect hostname.
+
 ```shell
 $ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}:8080/get"
 ...
@@ -58,6 +64,7 @@ location.
 ## Path Redirects
 Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute
 below will issue a 302 redirect to all `path.redirect.example` requests whose path begins with `/get` to `/status/200`.
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -86,14 +93,17 @@ spec:
         port: 80
 EOF
 ```
+
 The HTTPRoute status should indicate that it has been accepted and is bound to the example Gateway.
+
 ```shell
 kubectl get httproute/http-filter-path-redirect -o yaml
 ```
 
 Curl'ing `path.redirect.example` should result in a `302` response from the example Gateway and a redirect location
 containing the configured redirect path.
-```shell
+
+```console
 $ curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}:8080/get"
 ...
 < HTTP/1.1 302 Found
