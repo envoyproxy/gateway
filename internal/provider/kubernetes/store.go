@@ -43,7 +43,7 @@ func (p *providerReferenceStore) updateRouteToServicesMapping(route ObjectKindNa
 	defer p.mu.Unlock()
 
 	if len(p.routeToServicesMappings[route]) == 0 {
-		p.routeToServicesMappings[route] = map[types.NamespacedName]struct{}{service: struct{}{}}
+		p.routeToServicesMappings[route] = map[types.NamespacedName]struct{}{service: {}}
 	} else {
 		p.routeToServicesMappings[route][service] = struct{}{}
 	}
