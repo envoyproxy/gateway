@@ -41,28 +41,24 @@ kubectl create secret tls example-cert --key=www.example.com.key --cert=www.exam
 Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `8443` and references the
 `example-cert` Secret:
 
-```console
-$ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: eg
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 8080
-    - name: https
-      protocol: HTTPS
-      port: 8443
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            group: ""
-            name: example-cert
-EOF
+```shell
+kubectl patch gateway eg --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/listeners/-",
+   "value": {
+      "name": "https",
+      "protocol": "HTTPS",
+      "port": 8443,
+      "tls": {
+        "mode": "Terminate",
+        "certificateRefs": [{
+          "kind": "Secret",
+          "group": "",
+          "name": "example-cert",
+        }],
+      },
+    },
+}]'
 ```
 
 ## Testing
