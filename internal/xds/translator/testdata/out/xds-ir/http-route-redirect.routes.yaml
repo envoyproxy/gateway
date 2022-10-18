@@ -1,8 +1,8 @@
-- name: route_first-listener
+- name: first-listener
   virtualHosts:
   - domains:
     - '*'
-    name: route_first-listener
+    name: first-listener
     routes:
     - match:
         prefix: /

@@ -53,6 +53,10 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "tls-route-passthrough",
 		},
+		{
+			name:           "multiple-listeners-same-port",
+			requireSecrets: true,
+		},
 	}
 
 	for _, tc := range testCases {

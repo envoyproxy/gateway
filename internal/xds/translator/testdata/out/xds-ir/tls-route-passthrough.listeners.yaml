@@ -10,10 +10,10 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: cluster_tls-passthrough
+        cluster: tls-passthrough
         statPrefix: passthrough
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  name: listener_tls-passthrough_10080
+  name: tls-passthrough
