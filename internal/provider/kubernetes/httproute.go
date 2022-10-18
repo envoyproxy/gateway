@@ -28,6 +28,8 @@ import (
 )
 
 const (
+	kindHTTPRoute = "HTTPRoute"
+
 	serviceHTTPRouteIndex = "serviceHTTPRouteBackendRef"
 )
 
@@ -37,18 +39,20 @@ type httpRouteReconciler struct {
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
 
-	resources *message.ProviderResources
+	resources      *message.ProviderResources
+	referenceStore *providerReferenceStore
 }
 
 // newHTTPRouteController creates the httproute controller from mgr. The controller will be pre-configured
 // to watch for HTTPRoute objects across all namespaces.
-func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+func newHTTPRouteController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources, referenceStore *providerReferenceStore) error {
 	r := &httpRouteReconciler{
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
 		statusUpdater:   su,
 		resources:       resources,
+		referenceStore:  referenceStore,
 	}
 
 	c, err := controller.New("httproute", mgr, controller.Options{Reconciler: r})
@@ -254,6 +258,10 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 						// the resource map if it exists.
 						if _, ok := r.resources.Services.Load(svcKey); ok {
 							r.resources.Services.Delete(svcKey)
+							r.referenceStore.removeRouteToServicesMapping(
+								ObjectKindNamespacedName{kindHTTPRoute, route.Namespace, route.Name},
+								svcKey,
+							)
 							log.Info("deleted service from resource map")
 						}
 					}
@@ -263,6 +271,10 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 
 				// The backendRef Service exists, so add it to the resource map.
 				r.resources.Services.Store(svcKey, svc)
+				r.referenceStore.updateRouteToServicesMapping(
+					ObjectKindNamespacedName{kindHTTPRoute, route.Namespace, route.Name},
+					svcKey,
+				)
 				log.Info("added service to resource map")
 			}
 		}
@@ -282,8 +294,17 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		if !found {
 			r.resources.Namespaces.Delete(request.Namespace)
 			log.Info("deleted namespace from resource map")
-			r.resources.Services.Delete(request.NamespacedName)
-			log.Info("deleted service from resource map")
+		}
+
+		// Delete the Service from the resource maps if no other
+		// routes (TLSRoute or HTTPRoute) reference that Service.
+		routeServices := r.referenceStore.getRouteToServicesMapping(ObjectKindNamespacedName{kindHTTPRoute, request.Namespace, request.Name})
+		for svc := range routeServices {
+			r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindHTTPRoute, request.Namespace, request.Name}, svc)
+			if r.referenceStore.isServiceReferredByRoutes(svc) {
+				r.resources.Services.Delete(request.NamespacedName)
+				log.Info("deleted service from resource map")
+			}
 		}
 	}
 
