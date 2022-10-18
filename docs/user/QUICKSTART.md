@@ -16,39 +16,43 @@ Install the Gateway API CRDs:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
 ```
 
-Run Envoy Gateway:
+Deploy Envoy Gateway:
 
 ```shell
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
 ```
 
-Run the example app:
+Deploy the example app:
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
 ```
 
-The Gateway API resources must be created in the following order. First, create the GatewayClass:
+The Gateway API resources must be created in the following order:
 
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gatewayclass.yaml
-```
+1. First, create a GatewayClass:
 
-Create the Gateway:
+   ```shell
+   kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gatewayclass.yaml
+   ```
 
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gateway.yaml
-```
+2. Create a Gateway:
 
-Create the HTTPRoute to route traffic through Envoy proxy to the example app:
+   ```shell
+   kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/gateway.yaml
+   ```
 
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httproute.yaml
-```
+   After applying the Gateway manifest above, a corresponding Envoy proxy Deployment, Service, and ServiceAccount will be created.
+
+3. Create an HTTPRoute to route traffic through Envoy proxy to the example app:
+
+   ```shell
+   kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httproute.yaml
+   ```
 
 ### Testing the configuration
 
-Port forward to the Envoy service:
+Port forward to the Envoy service that was created:
 
 ```shell
 kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:8080 &
@@ -86,41 +90,41 @@ You can replace `get` with any of the supported [httpbin methods][httpbin_method
 
 Use the steps in this section to uninstall everything from the quickstart guide.
 
-Delete the HTTPRoute:
+1. Delete the HTTPRoute:
 
-```shell
-kubectl delete httproute/httpbin
-```
+   ```shell
+   kubectl delete httproute/httpbin
+   ```
 
-Delete the Gateway:
+2. Delete the Gateway:
 
-```shell
-kubectl delete gateway/eg
-```
+   ```shell
+   kubectl delete gateway/eg
+   ```
 
-Delete the GatewayClass:
+3. Delete the GatewayClass:
 
-```shell
-kubectl delete gc/eg
-```
+   ```shell
+   kubectl delete gc/eg
+   ```
 
-Uninstall the example app:
+4. Uninstall the example app:
 
-```shell
-kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
-```
+   ```shell
+   kubectl delete -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.2.0-rc2/examples/kubernetes/httpbin.yaml
+   ```
 
-Uninstall Envoy Gateway:
+5. Uninstall Envoy Gateway:
 
-```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
-```
+   ```shell
+   kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/install.yaml
+   ```
 
-Uninstall Gateway API CRDs:
+6. Uninstall Gateway API CRDs:
 
-```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
-```
+   ```shell
+   kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0-rc2/gatewayapi-crds.yaml
+   ```
 
 ## Next Steps
 
