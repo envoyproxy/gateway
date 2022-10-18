@@ -2,7 +2,7 @@ module local
 
 go 1.18
 
-require sigs.k8s.io/controller-tools v0.10.0
+require sigs.k8s.io/controller-tools v0.9.2
 
 require (
 	github.com/fatih/color v1.12.0 // indirect
