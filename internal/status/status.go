@@ -1,5 +1,15 @@
-// Portions of this code are based on code from Contour, available at:
+// Copyright 2022 Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+// This file contains code derived from Contour,
+// https://github.com/projectcontour/contour
+// from the source file
 // https://github.com/projectcontour/contour/blob/main/internal/k8s/status.go
+// and is provided here subject to the following:
+// Copyright Project Contour Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package status
 
@@ -141,10 +151,11 @@ func (u *UpdateWriter) Send(update Update) {
 // isStatusEqual checks if two objects have equivalent status.
 //
 // Supported objects:
-//  GatewayClasses
-//  Gateway
-//  HTTPRoute
-//  TLSRoute
+//
+//	GatewayClasses
+//	Gateway
+//	HTTPRoute
+//	TLSRoute
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime", "ObservedGeneration")
 	switch a := objA.(type) {

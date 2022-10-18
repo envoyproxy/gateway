@@ -19,6 +19,8 @@ KUBE_INFRA_DIR := $(ROOT_DIR)/internal/infrastructure/kubernetes/config
 endif
 
 ##@ Kubernetes Development
+YEAR := $(shell date +%Y)
+CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -26,7 +28,8 @@ manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole
 
 .PHONY: generate
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(tools/controller-gen) object paths="./..."
+# Note that the paths can't just be "./..." with the header file, or the tool will panic on run.
+	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/config/...,$(ROOT_DIR)/internal/ir/...}" 
 
 .PHONY: kube-test
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.

@@ -1,4 +1,9 @@
-// Portions of this code are based on code from Contour, available at:
+// Copyright 2022 Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+// TODO Portions of this code are based on code from Contour, available at:
 // https://github.com/projectcontour/contour/blob/main/internal/controller/gatewayclass.go
 
 package kubernetes
