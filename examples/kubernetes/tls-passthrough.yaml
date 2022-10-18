@@ -38,6 +38,14 @@ spec:
               value: /etc/server-certs/tls.crt
             - name: TLS_SERVER_PRIVKEY
               value: /etc/server-certs/tls.key
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           volumeMounts:
             - name: server-certs
               mountPath: /etc/server-certs

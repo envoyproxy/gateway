@@ -19,13 +19,6 @@ For the application, we'll deploy a sample echoserver app, with the certificates
 
 __Note:__ These certificates will not be used by the Gateway, but will remain in the application scope.
 
-For macOS users, verify curl is compiled with the LibreSSL library:
-
-```shell
-curl --version | grep LibreSSL
-curl 7.54.0 (x86_64-apple-darwin17.0) libcurl/7.54.0 LibreSSL/2.0.20 zlib/1.2.11 nghttp2/1.24.0
-```
-
 Create a root certificate and private key to sign certificates:
 
 ```shell
@@ -69,17 +62,25 @@ $ kubectl patch gateway eg --type=json --patch '[{
 ```
 
 ## Testing
+
 ### Clusters without External LoadBalancer Support
+
+Get the name of the Envoy service created the by the example Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+```
+
 Port forward to the Envoy service:
 
 ```shell
-kubectl -n envoy-gateway-system port-forward service/envoy-default-eg 8888:6443 &
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 6043:6443 &
 ```
 
 Curl the example app through Envoy proxy:
 
 ```shell
-curl -v --resolve "passthrough.example.com:8888:127.0.0.1" https://passthrough.example.com:8888 \
+curl -v --resolve "passthrough.example.com:6043:127.0.0.1" https://passthrough.example.com:6043 \
 --cacert passthrough.example.com.crt
 ```
 
@@ -93,8 +94,8 @@ export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].
 Curl the example app through the Gateway, e.g. Envoy proxy:
 
 ```shell
-curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:8888:${GATEWAY_HOST}" \
---cacert example.com.crt https://passthrough.example.com:8888/get
+curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://passthrough.example.com:6443/get
 ```
 
 ## Clean-Up
