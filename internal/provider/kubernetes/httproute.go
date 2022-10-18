@@ -260,7 +260,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 							r.resources.Services.Delete(svcKey)
 							r.referenceStore.removeRouteToServicesMapping(
 								ObjectKindNamespacedName{kindHTTPRoute, route.Namespace, route.Name},
-								svcKey.String(),
+								svcKey,
 							)
 							log.Info("deleted service from resource map")
 						}
@@ -273,7 +273,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 				r.resources.Services.Store(svcKey, svc)
 				r.referenceStore.updateRouteToServicesMapping(
 					ObjectKindNamespacedName{kindHTTPRoute, route.Namespace, route.Name},
-					svcKey.String(),
+					svcKey,
 				)
 				log.Info("added service to resource map")
 			}
@@ -299,7 +299,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 		// Delete the Service from the resource maps if no other
 		// routes (TLSRoute or HTTPRoute) reference that Service.
 		routeServices := r.referenceStore.getRouteToServicesMapping(ObjectKindNamespacedName{kindHTTPRoute, request.Namespace, request.Name})
-		for _, svc := range routeServices {
+		for svc := range routeServices {
 			r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindHTTPRoute, request.Namespace, request.Name}, svc)
 			if r.referenceStore.isServiceReferredByRoutes(svc) {
 				r.resources.Services.Delete(request.NamespacedName)

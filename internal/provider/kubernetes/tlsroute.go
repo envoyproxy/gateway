@@ -242,7 +242,10 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 						// the resource map if it exists.
 						if _, ok := r.resources.Services.Load(svcKey); ok {
 							r.resources.Services.Delete(svcKey)
-							r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, route.Namespace, route.Name}, svcKey.String())
+							r.referenceStore.removeRouteToServicesMapping(
+								ObjectKindNamespacedName{kindTLSRoute, route.Namespace, route.Name},
+								svcKey,
+							)
 							log.Info("deleted service from resource map")
 						}
 					}
@@ -252,7 +255,10 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 
 				// The backendRef Service exists, so add it to the resource map.
 				r.resources.Services.Store(svcKey, svc)
-				r.referenceStore.updateRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, route.Namespace, route.Name}, svcKey.String())
+				r.referenceStore.updateRouteToServicesMapping(
+					ObjectKindNamespacedName{kindTLSRoute, route.Namespace, route.Name},
+					svcKey,
+				)
 				log.Info("added service to resource map")
 			}
 		}
@@ -275,7 +281,7 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 		// Delete the Service from the resource maps if no other
 		// routes (TLSRoute or HTTPRoute) reference that Service.
 		routeServices := r.referenceStore.getRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, request.Namespace, request.Name})
-		for _, svc := range routeServices {
+		for svc := range routeServices {
 			r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, request.Namespace, request.Name}, svc)
 			if r.referenceStore.isServiceReferredByRoutes(svc) {
 				r.resources.Services.Delete(request.NamespacedName)
