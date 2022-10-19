@@ -57,6 +57,6 @@ func testRouteToServicesMappings(t *testing.T, cache *providerReferenceStore) {
 	// Verify that ns1svc2 is still referred by another route (HTTPRoute/ns1/r1)
 	require.Equal(t, true, cache.isServiceReferredByRoutes(ns1svc2))
 
-	// Verify that ns1svc1 is not referred by anu other route
+	// Verify that ns1svc1 is not referred by any other route
 	require.Equal(t, false, cache.isServiceReferredByRoutes(ns1svc1))
 }
