@@ -76,10 +76,13 @@ func xDSTest() error {
 				Routes: []*ir.HTTPRoute{
 					{
 						Name: "first-route",
-						Destinations: []*ir.RouteDestination{
-							{
-								Host: "1.2.3.4",
-								Port: 50000,
+						DestinationCluster: &ir.DestinationCluster{
+							ClusterName: "cluster_first-route",
+							Destinations: []*ir.RouteDestination{
+								{
+									Host: "1.2.3.4",
+									Port: 50000,
+								},
 							},
 						},
 					},
@@ -100,10 +103,13 @@ func xDSTest() error {
 				Routes: []*ir.HTTPRoute{
 					{
 						Name: "second-route",
-						Destinations: []*ir.RouteDestination{
-							{
-								Host: "1.2.3.4",
-								Port: 50000,
+						DestinationCluster: &ir.DestinationCluster{
+							ClusterName: "cluster_second-route",
+							Destinations: []*ir.RouteDestination{
+								{
+									Host: "1.2.3.4",
+									Port: 50000,
+								},
 							},
 						},
 					},
@@ -124,10 +130,13 @@ func xDSTest() error {
 				Routes: []*ir.HTTPRoute{
 					{
 						Name: "second-route",
-						Destinations: []*ir.RouteDestination{
-							{
-								Host: "1.2.3.4",
-								Port: 50000,
+						DestinationCluster: &ir.DestinationCluster{
+							ClusterName: "cluster_second-route",
+							Destinations: []*ir.RouteDestination{
+								{
+									Host: "1.2.3.4",
+									Port: 50000,
+								},
 							},
 						},
 					},

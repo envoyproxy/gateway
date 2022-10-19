@@ -58,30 +58,42 @@ var (
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:         "happy",
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		TLS:     &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_happy",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address: "0.0.0.0",
+		Port:    80,
+		TLS:     &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_invalid",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:         "invalid-addr",
-		Address:      "1.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		TLS:     &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_invalid-addr",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address: "0.0.0.0",
+		Port:    80,
+		TLS:     &TLSInspectorConfig{SNIs: []string{}},
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_invalidSNI",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 	}
 
 	// HTTPRoute
@@ -90,11 +102,17 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("example"),
 		},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_HappyHTTPRoute",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 	}
 	emptyMatchHTTPRoute = HTTPRoute{
-		Name:         "empty-match",
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name: "empty-match",
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_EmptyMatchHTTPRoute",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
 		Name: "invalid-backend",
@@ -110,7 +128,10 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("invalid-backends"),
 		},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		DestinationCluster: &DestinationCluster{
+			ClusterName:  "cluster_WeightedInvalidBackend",
+			Destinations: []*RouteDestination{&happyRouteDestination},
+		},
 		BackendWeights: BackendWeights{
 			Invalid: 1,
 			Valid:   1,
@@ -483,7 +504,10 @@ func TestValidateHTTPRoute(t *testing.T) {
 				PathMatch: &StringMatch{
 					Exact: ptrTo("example"),
 				},
-				Destinations: []*RouteDestination{&happyRouteDestination},
+				DestinationCluster: &DestinationCluster{
+					ClusterName:  "clusterHappyHTTPRoute",
+					Destinations: []*RouteDestination{&happyRouteDestination},
+				},
 			},
 			want: []error{ErrHTTPRouteNameEmpty},
 		},
@@ -506,7 +530,10 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name: "empty name and invalid match",
 			input: HTTPRoute{
 				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
-				Destinations:  []*RouteDestination{&happyRouteDestination},
+				DestinationCluster: &DestinationCluster{
+					ClusterName:  "clusterHappyHTTPRoute",
+					Destinations: []*RouteDestination{&happyRouteDestination},
+				},
 			},
 			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},

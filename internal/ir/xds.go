@@ -28,6 +28,7 @@ var (
 	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrDestinationClusterNameInvalid = errors.New("destination cluster name field must be specified")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -176,7 +177,7 @@ type HTTPRoute struct {
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect
 	// Destinations associated with this matched route.
-	Destinations []*RouteDestination
+	DestinationCluster *DestinationCluster
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -203,8 +204,9 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	for _, dest := range h.Destinations {
-		if err := dest.Validate(); err != nil {
+
+	if h.DestinationCluster != nil {
+		if err := h.DestinationCluster.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -267,6 +269,28 @@ func (r RouteDestination) Validate() error {
 		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
 	}
 
+	return errs
+}
+
+// DestinationCluster holds the destination cluster details associated with the routes in HttpRoute.
+// +k8s:deepcopy-gen=true
+type DestinationCluster struct {
+	// ClusterName refers to the name associated with the destination cluster.
+	ClusterName string
+	// Destinations associated with the cluster.
+	Destinations []*RouteDestination
+}
+
+func (d DestinationCluster) Validate() error {
+	var errs error
+	if d.ClusterName == "" {
+		errs = multierror.Append(errs, ErrDestinationClusterNameInvalid)
+	}
+	for _, destination := range d.Destinations {
+		if err := destination.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
 	return errs
 }
 
@@ -420,7 +444,7 @@ type TCPListener struct {
 	// connections' server names are inspected and routed to backends accordingly.
 	TLS *TLSInspectorConfig
 	// Destinations associated with TCP traffic to the service.
-	Destinations []*RouteDestination
+	DestinationCluster *DestinationCluster
 }
 
 // Validate the fields within the TCPListener structure
@@ -440,8 +464,8 @@ func (h TCPListener) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	for _, route := range h.Destinations {
-		if err := route.Validate(); err != nil {
+	if h.DestinationCluster != nil {
+		if err := h.DestinationCluster.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
