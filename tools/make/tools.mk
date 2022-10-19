@@ -13,7 +13,6 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 # ====================
 #
 tools/controller-gen = $(tools.bindir)/controller-gen
-# tools/controller-gen = /home/youngnick.linux/go/bin/controller-gen
 tools/golangci-lint  = $(tools.bindir)/golangci-lint
 tools/goversion      = $(tools.bindir)/goversion
 tools/kustomize      = $(tools.bindir)/kustomize
