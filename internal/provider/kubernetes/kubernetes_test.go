@@ -59,11 +59,12 @@ func TestProvider(t *testing.T) {
 	}()
 
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
-		"gatewayclass controller name": testGatewayClassController,
-		"gatewayclass accepted status": testGatewayClassAcceptedStatus,
-		"gateway scheduled status":     testGatewayScheduledStatus,
-		"httproute":                    testHTTPRoute,
-		"tlsroute":                     testTLSRoute,
+		"gatewayclass controller name":         testGatewayClassController,
+		"gatewayclass accepted status":         testGatewayClassAcceptedStatus,
+		"gateway scheduled status":             testGatewayScheduledStatus,
+		"httproute":                            testHTTPRoute,
+		"tlsroute":                             testTLSRoute,
+		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
 	}
 	for name, tc := range testcases {
 		t.Run(name, func(t *testing.T) {
@@ -714,9 +715,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 	svc := getService("test", ns.Name, map[string]int32{
 		"tls": 90,
 	})
-
 	require.NoError(t, cli.Create(ctx, svc))
-
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
@@ -793,4 +792,131 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}, defaultWait, defaultTick)
 		})
 	}
+}
+
+// testServiceCleanupForMultipleRoutes creates multiple Routes pointing to the
+// same backend Service, and checks whether the Service is properly removed
+// from the resource map after Route deletion.
+func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	gc := getGatewayClass("service-cleanup-test")
+	require.NoError(t, cli.Create(ctx, gc))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "service-cleanup-test"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "service-cleanup-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "httptest",
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1b1.HTTPProtocolType,
+				},
+				{
+					Name:     "tlstest",
+					Port:     gwapiv1b1.PortNumber(int32(8043)),
+					Protocol: gwapiv1b1.TLSProtocolType,
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	svc := getService("test", ns.Name, map[string]int32{
+		"http": 80,
+		"tls":  90,
+	})
+	require.NoError(t, cli.Create(ctx, svc))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, svc))
+	}()
+
+	tlsRoute := gwapiv1a2.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "tlsroute-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1a2.TLSRouteSpec{
+			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+				ParentRefs: []gwapiv1a2.ParentReference{{
+					Name: gwapiv1a2.ObjectName(gw.Name),
+				}},
+			},
+			Hostnames: []gwapiv1a2.Hostname{"test-tls.hostname.local"},
+			Rules: []gwapiv1a2.TLSRouteRule{{
+				BackendRefs: []gwapiv1a2.BackendRef{{
+					BackendObjectReference: gwapiv1a2.BackendObjectReference{
+						Name: "test",
+					}},
+				}},
+			},
+		},
+	}
+
+	httpRoute := gwapiv1b1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+				ParentRefs: []gwapiv1b1.ParentReference{{
+					Name: gwapiv1b1.ObjectName(gw.Name),
+				}},
+			},
+			Hostnames: []gwapiv1b1.Hostname{"test-http.hostname.local"},
+			Rules: []gwapiv1b1.HTTPRouteRule{{
+				Matches: []gwapiv1b1.HTTPRouteMatch{{
+					Path: &gwapiv1b1.HTTPPathMatch{
+						Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+						Value: gatewayapi.StringPtr("/"),
+					},
+				}},
+				BackendRefs: []gwapiv1b1.HTTPBackendRef{{
+					BackendRef: gwapiv1b1.BackendRef{
+						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+							Name: "test",
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	// Create the TLSRoute and HTTPRoute
+	require.NoError(t, cli.Create(ctx, &tlsRoute))
+	require.NoError(t, cli.Create(ctx, &httpRoute))
+
+	// Check that the Service is present in the resource map
+	key := types.NamespacedName{
+		Namespace: svc.Namespace,
+		Name:      svc.Name,
+	}
+
+	_, ok := resources.Services.Load(key)
+	assert.Equal(t, true, ok)
+
+	// Delete the TLSRoute, and check if the Service is still present
+	require.NoError(t, cli.Delete(ctx, &tlsRoute))
+	_, ok = resources.Services.Load(key)
+	assert.Equal(t, true, ok)
+
+	// Delete the HTTPRoute, and check if the Service is also removed
+	require.NoError(t, cli.Delete(ctx, &httpRoute))
+	_, ok = resources.Services.Load(key)
+	assert.Equal(t, false, ok)
 }
