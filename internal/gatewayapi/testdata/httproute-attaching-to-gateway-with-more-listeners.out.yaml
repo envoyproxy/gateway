@@ -185,10 +185,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-foo.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-2
         address: 0.0.0.0
         port: 10080
@@ -198,10 +200,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-bar.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-3
         address: 0.0.0.0
         port: 10080
@@ -211,10 +215,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-foo1.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-4
         address: 0.0.0.0
         port: 10080
@@ -224,10 +230,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-bar1.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-5
         address: 0.0.0.0
         port: 10080
@@ -237,10 +245,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-foo2.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-6
         address: 0.0.0.0
         port: 10080
@@ -250,10 +260,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-bar2.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-7
         address: 0.0.0.0
         port: 10080
@@ -263,10 +275,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-foo3.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
       - name: envoy-gateway-gateway-1-http-8
         address: 0.0.0.0
         port: 10080
@@ -276,10 +290,12 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-bar3.com
             pathMatch:
               prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

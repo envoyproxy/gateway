@@ -84,10 +84,12 @@ xdsIR:
         headerMatches:
         - name: ":authority"
           exact: gateway.envoyproxy.io
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destinationCluster:
+          clusterName: cluster_httproute-1
+          destinations:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
         removeRequestHeaders:
         - "rem-header-1"
         - "rem-header-2"

@@ -1094,7 +1094,12 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						// processing any destinations for this route.
 						if route.DirectResponse == nil && route.Redirect == nil {
 							if destination != nil {
-								route.Destinations = append(route.Destinations, destination)
+								if route.DestinationCluster == nil {
+									route.DestinationCluster = &ir.DestinationCluster{
+										ClusterName: getXdsClusterName(httpRoute.Name),
+									}
+								}
+								route.DestinationCluster.Destinations = append(route.DestinationCluster.Destinations, destination)
 								route.BackendWeights.Valid += backendWeight
 
 							} else {
@@ -1106,7 +1111,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 
 				// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 				for _, ruleRoute := range ruleRoutes {
-					if ruleRoute.BackendWeights.Invalid > 0 && len(ruleRoute.Destinations) == 0 {
+					if ruleRoute.BackendWeights.Invalid > 0 && ruleRoute.DestinationCluster == nil {
 						ruleRoute.DirectResponse = &ir.DirectResponse{
 							StatusCode: 500,
 						}
@@ -1149,7 +1154,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							QueryParamMatches:    routeRoute.QueryParamMatches,
 							AddRequestHeaders:    routeRoute.AddRequestHeaders,
 							RemoveRequestHeaders: routeRoute.RemoveRequestHeaders,
-							Destinations:         routeRoute.Destinations,
+							DestinationCluster:   routeRoute.DestinationCluster,
 							Redirect:             routeRoute.Redirect,
 							DirectResponse:       routeRoute.DirectResponse,
 						}
@@ -1348,7 +1353,10 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 				irKey := irStringKey(listener.gateway)
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
-					irListener.Destinations = routeDestinations
+					irListener.DestinationCluster = &ir.DestinationCluster{
+						ClusterName:  getXdsClusterName(tlsRoute.Name),
+						Destinations: routeDestinations,
+					}
 				}
 				// Theoretically there should only be one parent ref per
 				// Route that attaches to a given Listener, so fine to just increment here, but we
@@ -1536,6 +1544,10 @@ func irListenerName(listener *ListenerContext) string {
 
 func routeName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%s-%s-rule-%d-match-%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
+}
+
+func getXdsClusterName(httpRouteName string) string {
+	return fmt.Sprintf("cluster_%s", httpRouteName)
 }
 
 func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {

@@ -75,10 +75,12 @@ xdsIR:
                 exact: Val-1
               - name: Header-2
                 exact: Val-2
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+            destinationCluster:
+              clusterName: cluster_httproute-1
+              destinations:
+                - host: 7.7.7.7
+                  port: 8080
+                  weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
