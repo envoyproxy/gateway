@@ -377,12 +377,8 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	if !found {
 		gw, ok := r.resources.Gateways.Load(request.NamespacedName)
 		if !ok {
-			if gw != nil {
-				r.log.Info("failed to find accepted gateway in the watchable map", "namespace", gw.Namespace, "name", gw.Name)
-			} else {
-				r.log.Info("failed to find gateway in the watchable map")
-				return reconcile.Result{}, nil
-			}
+			r.log.Info("failed to find accepted gateway in the watchable map", "namespace", request.Namespace, "name", request.Name)
+			return reconcile.Result{}, nil
 		}
 
 		r.resources.Gateways.Delete(request.NamespacedName)
