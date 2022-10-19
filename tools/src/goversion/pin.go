@@ -8,4 +8,4 @@
 
 package ignore
 
-import _ "github.com/emissary-ingress/goversion"
+import "github.com/emissary-ingress/goversion"

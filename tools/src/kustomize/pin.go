@@ -8,4 +8,4 @@
 
 package ignore
 
-import _ "sigs.k8s.io/kustomize/kustomize/v3"
+import "sigs.k8s.io/kustomize/kustomize/v3"

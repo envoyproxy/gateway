@@ -8,4 +8,4 @@
 
 package ignore
 
-import _ "sigs.k8s.io/kind"
+import "sigs.k8s.io/kind"

@@ -19,8 +19,7 @@ KUBE_INFRA_DIR := $(ROOT_DIR)/internal/infrastructure/kubernetes/config
 endif
 
 ##@ Kubernetes Development
-YEAR := $(shell date +%Y)
-CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
+CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate.txt"
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.

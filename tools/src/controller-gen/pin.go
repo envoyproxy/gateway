@@ -8,4 +8,4 @@
 
 package ignore
 
-import _ "sigs.k8s.io/controller-tools/cmd/controller-gen"
+import "sigs.k8s.io/controller-tools/cmd/controller-gen"
