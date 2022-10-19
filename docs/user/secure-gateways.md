@@ -12,7 +12,7 @@ __Note:__ Envoy Gateway is tested against Kubernetes v1.24.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
@@ -61,6 +61,12 @@ kubectl patch gateway eg --type=json --patch '[{
 }]'
 ```
 
+Verify the Gateway status:
+
+```shell
+kubectl get gateway/eg -o yaml
+```
+
 ## Testing
 
 ### Clusters without External LoadBalancer Support
@@ -101,54 +107,67 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:${GATEWAY_HOST}" 
 
 ## Multiple HTTPS Listeners
 
-Due to [Issue 520][], multiple HTTP listeners must use different port numbers. For example:
-
-```console
-$ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: eg
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 8080
-    - name: https
-      protocol: HTTPS
-      port: 8443
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            group: ""
-            name: example-cert
-    - name: https-2
-      protocol: HTTPS
-      port: 8444
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            group: ""
-            name: example-cert-2
- EOF
-```
-
-Store the previously created cert/key in Secret `example-cert-2`:
+Create a TLS cert/key for the additional HTTPS listener:
 
 ```shell
-kubectl create secret tls example-cert-2 --key=www.example.com.key --cert=www.example.com.crt
+openssl req -out foo.example.com.csr -newkey rsa:2048 -nodes -keyout foo.example.com.key -subj "/CN=foo.example.com/O=httpbin organization"
+openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in foo.example.com.csr -out foo.example.com.crt
+```
+
+Store the cert/key in a Secret:
+
+```shell
+kubectl create secret tls foo-cert --key=foo.example.com.key --cert=foo.example.com.crt
+```
+
+Create another HTTPS listener on the example Gateway:
+
+```shell
+kubectl patch gateway eg --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/listeners/-",
+   "value": {
+      "name": "https-foo",
+      "protocol": "HTTPS",
+      "port": 8443,
+      "hostname": "foo.example.com",
+      "tls": {
+        "mode": "Terminate",
+        "certificateRefs": [{
+          "kind": "Secret",
+          "group": "",
+          "name": "foo-cert",
+        }],
+      },
+    },
+}]'
+```
+
+Update the HTTPRoute to route traffic for hostname `foo.example.com` to the example backend service:
+
+```shell
+kubectl patch httproute backend --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/hostnames/-",
+   "value": "foo.example.com",
+}]'
+```
+
+Verify the Gateway status:
+
+```shell
+kubectl get gateway/eg -o yaml
 ```
 
 Follow the steps in the [Testing section](#testing) to test connectivity to the backend app through both Gateway
-listeners.
+listeners. Replace `www.example.com` with `foo.example.com` to test the new HTTPS listener.
 
 ## Cross Namespace Certificate References
 
 A Gateway can be configured to reference a certificate in a different namespace. This is allowed by a [ReferenceGrant][]
-created in the target namespace. Without the ReferenceGrant, the cross-namespace reference would be invalid.
+created in the target namespace. Without the ReferenceGrant, a cross-namespace reference is invalid.
+
+Before proceeding, ensure you can query the HTTPS backend service from the [Testing section](#testing).
 
 To demonstrate cross namespace certificate references, create a ReferenceGrant that allows Gateways from the "default"
 namespace to reference Secrets in the "envoy-gateway-system" namespace:
@@ -175,6 +194,13 @@ Delete the previously created Secret:
 
 ```shell
 kubectl delete secret/example-cert
+```
+
+The Gateway HTTPS listener should now surface the `Ready: False` status condition and the example HTTPS backend should
+no longer be reachable through the Gateway.
+
+```shell
+kubectl get gateway/eg -o yaml
 ```
 
 Recreate the example Secret in the `envoy-gateway-system` namespace:
@@ -207,27 +233,28 @@ spec:
             group: ""
             name: example-cert
             namespace: envoy-gateway-system
- EOF
+EOF
 ```
+
+The Gateway HTTPS listener status should now surface the `Ready: True` condition and you should once again be able to
+query the HTTPS backend through the Gateway.
 
 Lastly, test connectivity using the above [Testing section](#testing).
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](quickstart.md) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secrets:
 
 ```shell
 kubectl delete secret/example-cert
-kubectl delete secret/example-cert-2
+kubectl delete secret/foo-cert
 ```
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.
+Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
 
 [kind]: https://kind.sigs.k8s.io/
-[httpbin_methods]: https://httpbin.org/#/HTTP_Methods
-[Issue 520]: https://github.com/envoyproxy/gateway/issues/520
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
