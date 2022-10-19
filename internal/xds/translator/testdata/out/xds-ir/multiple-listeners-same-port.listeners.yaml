@@ -21,7 +21,7 @@
               setNodeOnFirstMessageOnly: true
               transportApiVersion: V3
             resourceApiVersion: V3
-          routeConfigName: first-listener
+          routeConfigName: third-listener
         statPrefix: http
   filterChains:
   - filterChainMatch:
@@ -45,7 +45,7 @@
               setNodeOnFirstMessageOnly: true
               transportApiVersion: V3
             resourceApiVersion: V3
-          routeConfigName: third-listener
+          routeConfigName: first-listener
         statPrefix: https
     transportSocket:
       name: envoy.transport_sockets.tls
@@ -53,7 +53,7 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           tlsCertificateSdsSecretConfigs:
-          - name: third-listener
+          - name: first-listener
             sdsConfig:
               apiConfigSource:
                 apiType: DELTA_GRPC
@@ -84,7 +84,7 @@
               setNodeOnFirstMessageOnly: true
               transportApiVersion: V3
             resourceApiVersion: V3
-          routeConfigName: fourth-listener
+          routeConfigName: second-listener
         statPrefix: https
     transportSocket:
       name: envoy.transport_sockets.tls
@@ -92,7 +92,7 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           tlsCertificateSdsSecretConfigs:
-          - name: fourth-listener
+          - name: second-listener
             sdsConfig:
               apiConfigSource:
                 apiType: DELTA_GRPC
