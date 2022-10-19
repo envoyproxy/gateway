@@ -30,13 +30,11 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		if xdsListener == nil {
 			xdsListener = buildXdsListener(httpListener.Name, httpListener.Address, httpListener.Port)
 			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
-		} else {
+		} else if httpListener.TLS == nil {
 			// If an existing listener exists, dont create a new filter chain
 			// for HTTP traffic, match on the Domains field within VirtualHosts
 			// within the same RouteConfiguration instead
-			if httpListener.TLS == nil {
-				addFilterChain = false
-			}
+			addFilterChain = false
 			// Find the route config associated with this listener that
 			// maps to the filter chain for http traffic
 			// There should only be one of these per xds listener
