@@ -107,10 +107,20 @@ is unspecified, the short SHA of your current branch is used.
 
 ### Debugging the Envoy Config
 
-An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port (currently `19000`)
-on the Envoy deployment that corresponds to a Gateway so that it can be accessed locally.
+An easy way to view the envoy config that Envoy Gateway is using is to port-forward to the admin interface port
+(currently `19000`) on the Envoy deployment that corresponds to a Gateway so that it can be accessed locally.
 
-`kubectl port-forward deploy/envoy-${GATEWAY_NAMESPACE}-${GATEWAY_NAME} -n envoy-gateway-system 19000:19000`
+Get the name of the Envoy deployment. The following example is for Gateway `eg` in the `default` namespace:
+
+```shell
+export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+```
+
+Port forward the admin interface port:
+
+```shell
+kubectl port-forward deploy/envoy-${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
+```
 
 Now you are able to view the running Envoy configuration by navigating to `127.0.0.1:19000/config_dump`.
 
