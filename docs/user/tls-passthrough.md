@@ -1,20 +1,22 @@
 # TLS Passthrough
+
 This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
 
-
 ## Prerequisites
+
 - A Kubernetes cluster with `kubectl` context configured for the cluster.
 - OpenSSL to generate TLS assets.
 
 __Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
 ## Installation
+
 Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to curl the example backend using HTTP.
 
 ## TLS Certificates
 
-Generate the certificates and keys used by the Service to terminate client TLS connections. 
+Generate the certificates and keys used by the Service to terminate client TLS connections.
 For the application, we'll deploy a sample echoserver app, with the certificates loaded in the application Pod.
 
 __Note:__ These certificates will not be used by the Gateway, but will remain in the application scope.
@@ -39,6 +41,7 @@ kubectl create secret tls server-certs --key=passthrough.example.com.key --cert=
 ```
 
 ## Deployment
+
 Deploy TLS Passthrough application Deployment, Service and TLSRoute:
 
 ```shell
@@ -85,6 +88,7 @@ curl -v --resolve "passthrough.example.com:6043:127.0.0.1" https://passthrough.e
 ```
 
 ### Clusters with External LoadBalancer Support
+
 You can also test the same functionality by sending traffic to the External IP of the Gateway:
 
 ```shell
@@ -99,6 +103,7 @@ curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:$
 ```
 
 ## Clean-Up
+
 Follow the steps from the [Quickstart Guide](QUICKSTART.md) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secret:
@@ -108,6 +113,5 @@ kubectl delete secret/server-certs
 ```
 
 ## Next Steps
-Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.
 
-[kind]: https://kind.sigs.k8s.io/
+Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.

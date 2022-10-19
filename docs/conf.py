@@ -32,7 +32,7 @@ release = version
 project = f'Envoy Gateway {version}'
 author = 'Envoy Gateway Project Authors'
 
-copyright = '2022 Envoy Gateway Project Authors | ' + fullversion
+copyright = '2022 Envoy Gateway Project Authors | <a href="https://github.com/envoyproxy/gateway">GitHub</a> | ' + fullversion
 
 envoyVersion = os.environ["ENVOY_VERSION"]
 gatewayAPIVersion = os.environ["GATEWAYAPI_VERSION"]
