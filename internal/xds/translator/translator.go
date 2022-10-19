@@ -36,17 +36,17 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			// within the same RouteConfiguration instead
 			if httpListener.TLS == nil {
 				addFilterChain = false
-			}
-			// Find the route config associated with this listener that
-			// maps to the filter chain for http traffic
-			// There should only be one of these per xds listener
-			routeName, err := findXdsHTTPRouteConfigName(xdsListener)
-			if err != nil {
-				return nil, err
-			}
-			xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
-			if xdsRouteCfg == nil {
-				return nil, errors.New("unable to find xds route config")
+				// Find the route config associated with this listener that
+				// maps to the filter chain for http traffic
+				// There should only be one of these per xds listener
+				routeName, err := findXdsHTTPRouteConfigName(xdsListener)
+				if err != nil {
+					return nil, err
+				}
+				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
+				if xdsRouteCfg == nil {
+					return nil, errors.New("unable to find xds route config")
+				}
 			}
 		}
 
