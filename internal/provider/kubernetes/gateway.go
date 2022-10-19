@@ -290,7 +290,6 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 
 	found := false
-	var secrets []corev1.Secret
 	// Set status conditions for all accepted gateways.
 	for i := range acceptedGateways {
 		gw := acceptedGateways[i]
@@ -376,9 +375,19 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, request reconcile.Req
 	}
 
 	if !found {
+		gw, ok := r.resources.Gateways.Load(request.NamespacedName)
+		if !ok {
+			r.log.Info("failed to find gateway in the watchable map", "namespace", gw.Namespace, "name", gw.Name)
+		}
+
 		r.resources.Gateways.Delete(request.NamespacedName)
 		// Delete the TLS secrets from the resource map if no other managed
 		// Gateways reference them.
+		secrets, _, err := r.secretsAndRefGrantsForGateway(ctx, gw)
+		if err != nil {
+			r.log.Info("failed to get secrets and referencegrants for gateway",
+				"namespace", gw.Namespace, "name", gw.Name)
+		}
 		for i := range secrets {
 			secret := secrets[i]
 			referenced, err := r.gatewaysRefSecret(ctx, &secret)
@@ -535,6 +544,7 @@ func (r *gatewayReconciler) secretsAndRefGrantsForGateway(ctx context.Context, g
 								}
 								secret := new(corev1.Secret)
 								if err := r.client.Get(ctx, key, secret); err != nil {
+									r.resources.Secrets.Delete(key)
 									return nil, nil, fmt.Errorf("failed to get secret: %v", err)
 								}
 								secrets = append(secrets, *secret)
@@ -548,6 +558,7 @@ func (r *gatewayReconciler) secretsAndRefGrantsForGateway(ctx context.Context, g
 						}
 						secret := new(corev1.Secret)
 						if err := r.client.Get(ctx, key, secret); err != nil {
+							r.resources.Secrets.Delete(key)
 							return nil, nil, fmt.Errorf("failed to get secret: %v", err)
 						}
 						secrets = append(secrets, *secret)
