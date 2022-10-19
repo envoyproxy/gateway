@@ -3,7 +3,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: first-route
+    clusterName: cluster_first-route
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -13,7 +13,7 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: first-route
+  name: cluster_first-route
   outlierDetection: {}
   type: STATIC
 - commonLbConfig:
@@ -21,7 +21,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: second-route
+    clusterName: cluster_second-route
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -31,7 +31,7 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: second-route
+  name: cluster_second-route
   outlierDetection: {}
   type: STATIC
 - commonLbConfig:
@@ -39,7 +39,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: third-route
+    clusterName: cluster_third-route
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -49,7 +49,7 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: third-route
+  name: cluster_third-route
   outlierDetection: {}
   type: STATIC
 - commonLbConfig:
@@ -57,7 +57,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: fourth-route
+    clusterName: cluster_fourth-route
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -67,7 +67,7 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: fourth-route
+  name: cluster_fourth-route
   outlierDetection: {}
   type: STATIC
 - commonLbConfig:
@@ -75,7 +75,7 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: fifth-listener
+    clusterName: cluster_fifth-listener
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -85,7 +85,7 @@
               portValue: 50000
       loadBalancingWeight: 1
       locality: {}
-  name: fifth-listener
+  name: cluster_fifth-listener
   outlierDetection: {}
   type: STATIC
 - commonLbConfig:
@@ -93,10 +93,16 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: sixth-listener
+    clusterName: cluster_sixth-listener
     endpoints:
-    - loadBalancingWeight: 1
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
       locality: {}
-  name: sixth-listener
+  name: cluster_sixth-listener
   outlierDetection: {}
   type: STATIC

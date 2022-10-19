@@ -7,4 +7,4 @@
     - match:
         prefix: /
       route:
-        cluster: first-route
+        cluster: cluster_first-route

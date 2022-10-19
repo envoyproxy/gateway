@@ -5,20 +5,24 @@ http:
   hostnames:
   - "example.com"
   routes:
-  - name: "first-route" 
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+  - name: "first-route"
+    destinationCluster:
+      clusterName: "cluster_first-route" 
+      destinations:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "second-listener"
   address: "0.0.0.0"
   port: 10080
   hostnames:
   - "example.net"
   routes:
-  - name: "second-route" 
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+  - name: "second-route"
+    destinationCluster:
+      clusterName: "cluster_second-route" 
+      destinations:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "third-listener"
   address: "0.0.0.0"
   port: 10080
@@ -28,10 +32,12 @@ http:
     serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
     privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
   routes:
-  - name: "third-route" 
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+  - name: "third-route"
+    destinationCluster:
+      clusterName: "cluster_third-route" 
+      destinations:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "fourth-listener"
   address: "0.0.0.0"
   port: 10080
@@ -41,10 +47,12 @@ http:
     serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
     privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
   routes:
-  - name: "fourth-route" 
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+  - name: "fourth-route"
+    destinationCluster:
+      clusterName: "cluster_fourth-route" 
+      destinations:
+      - host: "1.2.3.4"
+        port: 50000
 tcp:
 - name: "fifth-listener"
   address: "0.0.0.0"
@@ -52,15 +60,19 @@ tcp:
   tls:
     snis:
     - bar.com
-  destinations:
-  - host: "1.2.3.4"
-    port: 50000
+  destinationCluster:
+    clusterName: "cluster_fifth-listener"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
 - name: "sixth-listener"
   address: "0.0.0.0"
   port: 10080
   tls:
     snis:
-    - bar.net 
+    - bar.net
+  destinationCluster:
+    clusterName: "cluster_sixth-listener" 
     destinations:
     - host: "1.2.3.4"
       port: 50000

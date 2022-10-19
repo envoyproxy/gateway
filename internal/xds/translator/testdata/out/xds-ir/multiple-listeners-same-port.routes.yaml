@@ -7,7 +7,7 @@
     - match:
         prefix: /
       route:
-        cluster: first-route
+        cluster: cluster_first-route
   - domains:
     - example.net
     name: second-listener
@@ -15,7 +15,7 @@
     - match:
         prefix: /
       route:
-        cluster: second-route
+        cluster: cluster_second-route
 - name: third-listener
   virtualHosts:
   - domains:
@@ -25,7 +25,7 @@
     - match:
         prefix: /
       route:
-        cluster: third-route
+        cluster: cluster_third-route
 - name: fourth-listener
   virtualHosts:
   - domains:
@@ -35,4 +35,4 @@
     - match:
         prefix: /
       route:
-        cluster: fourth-route
+        cluster: cluster_fourth-route
