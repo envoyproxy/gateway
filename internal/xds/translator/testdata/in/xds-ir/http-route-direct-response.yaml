@@ -6,10 +6,12 @@ http:
   hostnames:
   - "*"
   routes:
-  - name: "direct-route" 
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+  - name: "direct-route"
+    destinationCluster:
+      clusterName: "cluster_direct-route" 
+      destinations:
+      - host: "1.2.3.4"
+        port: 50000
     directResponse:
       body: "Unknown custom filter type: UnsupportedType"
       statusCode: 500

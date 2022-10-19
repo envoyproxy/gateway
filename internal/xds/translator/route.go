@@ -31,7 +31,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 			// If there are invalid backends then a weighted cluster is required for the route
 			ret.Action = &route.Route_Route{Route: buildXdsWeightedRouteAction(httpRoute)}
 		} else {
-			ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)}
+			ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.DestinationCluster.ClusterName)}
 		}
 	}
 
@@ -132,10 +132,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcher.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(routeName string) *route.RouteAction {
+func buildXdsRouteAction(clusterName string) *route.RouteAction {
 	return &route.RouteAction{
 		ClusterSpecifier: &route.RouteAction_Cluster{
-			Cluster: routeName,
+			Cluster: clusterName,
 		},
 	}
 }
@@ -148,7 +148,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
 		},
 		{
-			Name:   httpRoute.Name,
+			Name:   httpRoute.DestinationCluster.ClusterName,
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
 		},
 	}

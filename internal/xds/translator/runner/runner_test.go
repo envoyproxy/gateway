@@ -48,10 +48,13 @@ func TestRunner(t *testing.T) {
 						PathMatch: &ir.StringMatch{
 							Exact: &path,
 						},
-						Destinations: []*ir.RouteDestination{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
+						DestinationCluster: &ir.DestinationCluster{
+							ClusterName: "cluster_test-route",
+							Destinations: []*ir.RouteDestination{
+								{
+									Host: "1.2.3.4",
+									Port: 50000,
+								},
 							},
 						},
 					},

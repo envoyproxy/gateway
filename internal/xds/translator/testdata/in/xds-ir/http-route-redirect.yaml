@@ -6,10 +6,12 @@ http:
   hostnames:
   - "*"
   routes:
-  - name: "redirect-route" 
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+  - name: "redirect-route"
+    destinationCluster:
+      clusterName: "cluster_redirect-route" 
+      destinations:
+      - host: "1.2.3.4"
+        port: 50000
     redirect:
       scheme: https
       statusCode: 302
