@@ -21,12 +21,15 @@ This document guides maintainers through the process of creating an Envoy Gatewa
    ```
 
 5. Push the branch to the Envoy Gateway repo.
-6. Create a topic branch and update the release tag references in the [Quickstart Guide][]. See [PR 481][] as
-   a reference for the required changes.
+6. Create a topic branch and update the release tag references in the [Quickstart Guide][].
+
+   ```shell
+   make update-quickstart TAG=v0.3.0
+   ```
+
 7. Sign, commit, and push your changes to your fork. Send a PR to get your changes merged into the release branch.
    Do not proceed until your PR is merged.
-8. Confirm that the [release workflow][] for your PR completed successfully.
-9. Tag the head of your release branch with the release tag. For example:
+8. Tag the head of your release branch with the release tag. For example:
 
    ```shell
    git tag -a v0.3.0 -m 'Envoy Gateway v0.3.0 Release'
@@ -34,20 +37,19 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 
    __Note:__ The tag version differs from the release branch by including the `.0` patch version.
 
-10. Push the tag to the Envoy Gateway repository.
+9. Push the tag to the Envoy Gateway repository.
 
     ```shell
-    git push --tags
+    git push v0.3.0
     ```
 
-11. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-12. Confirm that the [release workflow][] completed successfully.
-13. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-14. Confirm that the [release][] was created.
-15. Confirm that the steps in the [Quickstart Guide][] work as expected.
-16. [Generate][] the GitHub changelog.
-17. Submit a PR to merge the Quickstart Guide changes from the release branch into the main branch.
-18. If you find any bugs in this process, please create an issue.
+10. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+11. Confirm that the [release workflow][] completed successfully.
+12. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+13. Confirm that the [release][] was created.
+14. Confirm that the steps in the [Quickstart Guide][] work as expected.
+15. [Generate][] the GitHub changelog.
+16. If you find any bugs in this process, please create an issue.
 
 ## Creating a Release Candidate
 
@@ -66,7 +68,7 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 5. Push the tag to the Envoy Gateway repository.
 
    ```shell
-   git push --tags
+   git push v0.3.0-rc.1
    ```
 
 6. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
@@ -99,7 +101,6 @@ It's important that the world knows about the release. Use the following steps t
    Include a sentence or two that highlights key aspects of the release.
 
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
-[PR 481]: https://github.com/envoyproxy/gateway/pull/481
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
 [Quickstart Guide]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
