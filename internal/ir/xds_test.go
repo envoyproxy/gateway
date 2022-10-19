@@ -16,6 +16,17 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
+	happyHTTPSListener = HTTPListener{
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		TLS: &TLSListenerConfig{
+			ServerCertificate: []byte{1, 2, 3},
+			PrivateKey:        []byte{1, 2, 3},
+		},
+		Routes: []*HTTPRoute{&happyHTTPRoute},
+	}
 	invalidAddrHTTPListener = HTTPListener{
 		Name:      "invalid-addr",
 		Address:   "1.0.0",
@@ -635,6 +646,44 @@ func TestValidateStringMatch(t *testing.T) {
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
+		})
+	}
+}
+
+func TestPrintable(t *testing.T) {
+	tests := []struct {
+		name  string
+		input Xds
+		want  *Xds
+	}{
+		{
+			name:  "empty",
+			input: Xds{},
+			want:  &Xds{},
+		},
+		{
+			name: "http",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+			want: &Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+		},
+		{
+			name: "https",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPSListener},
+			},
+			want: &Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, *test.want, *test.input.Printable())
 		})
 	}
 }
