@@ -283,9 +283,9 @@ func (r *tlsRouteReconciler) Reconcile(ctx context.Context, request reconcile.Re
 		routeServices := r.referenceStore.getRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, request.Namespace, request.Name})
 		for svc := range routeServices {
 			r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindTLSRoute, request.Namespace, request.Name}, svc)
-			if r.referenceStore.isServiceReferredByRoutes(svc) {
-				r.resources.Services.Delete(request.NamespacedName)
-				log.Info("deleted service from resource map")
+			if !r.referenceStore.isServiceReferredByRoutes(svc) {
+				r.resources.Services.Delete(svc)
+				log.Info("deleted service from resource map", "namespace", svc.Namespace, "name", svc.Name)
 			}
 		}
 	}
