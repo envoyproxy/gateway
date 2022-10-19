@@ -3,10 +3,7 @@
       address: 0.0.0.0
       portValue: 10080
   filterChains:
-  - filterChainMatch:
-      serverNames:
-      - '*'
-    filters:
+  - filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -42,8 +39,4 @@
                 setNodeOnFirstMessageOnly: true
                 transportApiVersion: V3
               resourceApiVersion: V3
-  listenerFilters:
-  - name: envoy.filters.listener.tls_inspector
-    typedConfig:
-      '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: first-listener
