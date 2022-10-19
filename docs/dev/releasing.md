@@ -101,7 +101,7 @@ It's important that the world knows about the release. Use the following steps t
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [PR 481]: https://github.com/envoyproxy/gateway/pull/481
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
-[Quickstart Guide]: https://github.com/envoyproxy/gateway/blob/main/docs/user/QUICKSTART.md
+[Quickstart Guide]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
 [release workflow]: https://github.com/envoyproxy/gateway/actions/workflows/release.yaml
 [image]: https://hub.docker.com/r/envoyproxy/gateway/tags

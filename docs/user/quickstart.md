@@ -16,13 +16,13 @@ Install the Gateway API CRDs and Envoy Gateway:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
 ```
 
-Install the GatewayClass, Gateway, HTTPRoute and Example App:
+Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
 ```
 
-### Testing the configuration
+## Testing the Configuration
 
 Get the name of the Envoy service created the by the example Gateway:
 
@@ -42,7 +42,7 @@ Curl the example app through Envoy proxy:
 curl --verbose --header "Host: www.example.com" http://localhost:8888/get
 ```
 
-### For clusters with External Loadbalancer support
+### External LoadBalancer Support
 
 You can also test the same functionality by sending traffic to the External IP. To get the external IP of the
 Envoy service, run:
