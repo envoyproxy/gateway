@@ -3,7 +3,10 @@ http:
   address: "0.0.0.0"
   port: 10080
   hostnames:
-  - "example.com"
+  - "foo.com"
+  tls:
+    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
   routes:
   - name: "first-route" 
     destinations:
@@ -13,7 +16,10 @@ http:
   address: "0.0.0.0"
   port: 10080
   hostnames:
-  - "example.net"
+  - "foo.net"
+  tls:
+    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
   routes:
   - name: "second-route" 
     destinations:
@@ -23,10 +29,7 @@ http:
   address: "0.0.0.0"
   port: 10080
   hostnames:
-  - "foo.com"
-  tls:
-    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
-    privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
+  - "example.com"
   routes:
   - name: "third-route" 
     destinations:
@@ -36,10 +39,7 @@ http:
   address: "0.0.0.0"
   port: 10080
   hostnames:
-  - "foo.net"
-  tls:
-    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97] # byte slice representation of "cert-data"
-    privateKey: [107, 101, 121, 45, 100, 97, 116, 97] # byte slice representation of "key-data"
+  - "example.net"
   routes:
   - name: "fourth-route" 
     destinations:

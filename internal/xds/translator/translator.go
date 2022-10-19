@@ -31,20 +31,18 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			xdsListener = buildXdsListener(httpListener.Name, httpListener.Address, httpListener.Port)
 			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 		} else if httpListener.TLS == nil {
-			// If an existing listener exists, dont create a new filter chain
-			// for HTTP traffic, match on the Domains field within VirtualHosts
-			// within the same RouteConfiguration instead
-			addFilterChain = false
 			// Find the route config associated with this listener that
-			// maps to the filter chain for http traffic
-			// There should only be one of these per xds listener
-			routeName, err := findXdsHTTPRouteConfigName(xdsListener)
-			if err != nil {
-				return nil, err
-			}
-			xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
-			if xdsRouteCfg == nil {
-				return nil, errors.New("unable to find xds route config")
+			// maps to the default filter chain for http traffic
+			routeName := findXdsHTTPRouteConfigName(xdsListener)
+			if routeName != "" {
+				// If an existing listener exists, dont create a new filter chain
+				// for HTTP traffic, match on the Domains field within VirtualHosts
+				// within the same RouteConfiguration instead
+				addFilterChain = false
+				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
+				if xdsRouteCfg == nil {
+					return nil, errors.New("unable to find xds route config")
+				}
 			}
 		}
 
@@ -52,11 +50,13 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			if err := addXdsHTTPFilterChain(xdsListener, httpListener); err != nil {
 				return nil, err
 			}
+		}
 
+		// Create a route config if we have not found one yet
+		if xdsRouteCfg == nil {
 			xdsRouteCfg = &route.RouteConfiguration{
 				Name: httpListener.Name,
 			}
-
 			tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
 		}
 

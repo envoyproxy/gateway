@@ -116,18 +116,27 @@ func addServerNamesMatch(xdsListener *listener.Listener, filterChain *listener.F
 }
 
 // findXdsHTTPRouteConfigName finds the name of the route config associated with the
-// http connection manager within the default filter chain.
-func findXdsHTTPRouteConfigName(xdsListener *listener.Listener) (string, error) {
+// http connection manager within the default filter chain and returns an empty string if
+// not found.
+func findXdsHTTPRouteConfigName(xdsListener *listener.Listener) string {
+	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
+		return ""
+	}
+
 	for _, filter := range xdsListener.DefaultFilterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
 			m := new(hcm.HttpConnectionManager)
 			if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
-				return "", err
+				return ""
 			}
-			return m.GetRds().GetRouteConfigName(), nil
+			rds := m.GetRds()
+			if rds == nil {
+				return ""
+			}
+			return rds.GetRouteConfigName()
 		}
 	}
-	return "", errors.New("unable to find route config")
+	return ""
 }
 
 func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPListener, clusterName string) error {
