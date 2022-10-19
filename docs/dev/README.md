@@ -116,7 +116,7 @@ Now you are able to view the running Envoy configuration by navigating to `127.0
 
 There are many other endpoints on the [Envoy admin interface][] that may be helpful when debugging.
 
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/QUICKSTART.md
+[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: .github/workflows

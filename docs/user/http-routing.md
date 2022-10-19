@@ -5,7 +5,7 @@ Kubernetes backends. Currently, the only supported backend supported by Envoy Ga
 shows how to route traffic based on host, header, and path fields and forward the traffic to different Kubernetes
 Services. To learn more about HTTP routing, refer to the [Gateway API documentation][].
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and then install the example
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and then install the example
 resources used for this guide.
 
 ```shell

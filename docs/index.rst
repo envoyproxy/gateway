@@ -20,8 +20,9 @@ standalone or Kubernetes-based application gateway.
 
   intro/index
   intro/compatibility
-  user/QUICKSTART
+  user/quickstart
   user/http-routing
+  user/http-request-headers
   design/system-design
   design/ROADMAP
   design/gatewayapi-translator

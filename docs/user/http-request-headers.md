@@ -6,7 +6,7 @@ learn more about HTTP routing, refer to the [Gateway API documentation][].
 
 A [`RequestHeaderModifier` filter][req_filter] instructs Gateways to modify the headers in requests that match the rule before forwarding the request upstream. Note that the `RequestHeaderModifier` filter will only modify headers before the request is sent from Envoy to the upstream service and will not affect response headers returned to the downstream client.
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and then install the example resources used for this guide.
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and then install the example resources used for this guide.
 
 ## Adding Request Headers
 
