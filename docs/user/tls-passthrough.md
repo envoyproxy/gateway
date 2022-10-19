@@ -114,4 +114,4 @@ kubectl delete secret/server-certs
 
 ## Next Steps
 
-Checkout the [Developer Guide](../../DEVELOPER.md) to get involved in the project.
+Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
