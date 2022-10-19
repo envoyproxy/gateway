@@ -69,6 +69,16 @@ func (x Xds) GetTCPListener(name string) *TCPListener {
 	return nil
 }
 
+// Printable returns a deep copy of the resource that can be safely logged.
+func (x Xds) Printable() *Xds {
+	out := x.DeepCopy()
+	for _, listener := range out.HTTP {
+		// Omit field
+		listener.TLS = nil
+	}
+	return out
+}
+
 // HTTPListener holds the listener configuration.
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {

@@ -87,6 +87,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate to IR
 			result := t.Translate(&in)
 
+			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
+			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
 			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
