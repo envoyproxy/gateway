@@ -303,7 +303,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 			r.referenceStore.removeRouteToServicesMapping(ObjectKindNamespacedName{kindHTTPRoute, request.Namespace, request.Name}, svc)
 			if !r.referenceStore.isServiceReferredByRoutes(svc) {
 				r.resources.Services.Delete(svc)
-				log.Info("deleted service from resource map", "service", svc)
+				log.Info("deleted service from resource map", "namespace", svc.Namespace, "name", svc.Name)
 			}
 		}
 	}
