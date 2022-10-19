@@ -11,7 +11,7 @@ __Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to curl the example backend using HTTP.
 
 ## TLS Certificates
@@ -104,7 +104,7 @@ curl -v -HHost:passthrough.example.com --resolve "passthrough.example.com:6443:$
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](quickstart.md) to uninstall Envoy Gateway and the example manifest.
 
 Delete the Secret:
 

@@ -22,6 +22,7 @@ standalone or Kubernetes-based application gateway.
   intro/compatibility
   user/quickstart
   user/http-routing
+  user/http-redirect
   user/http-traffic-splitting
   user/http-request-headers
   user/tls-passthrough
