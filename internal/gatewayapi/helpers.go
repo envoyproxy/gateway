@@ -76,6 +76,14 @@ func HeaderMatchTypeDerefOr(matchType *v1beta1.HeaderMatchType, defaultType v1be
 	return defaultType
 }
 
+func QueryParamMatchTypeDerefOr(matchType *v1beta1.QueryParamMatchType,
+	defaultType v1beta1.QueryParamMatchType) v1beta1.QueryParamMatchType {
+	if matchType != nil {
+		return *matchType
+	}
+	return defaultType
+}
+
 func NamespaceDerefOr(namespace *v1beta1.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)
