@@ -907,16 +907,16 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		Name:      svc.Name,
 	}
 
-	_, ok := resources.Services.Load(key)
-	assert.Equal(t, true, ok)
+	rSvc, _ := resources.Services.Load(key)
+	assert.NotNil(t, rSvc)
 
 	// Delete the TLSRoute, and check if the Service is still present
 	require.NoError(t, cli.Delete(ctx, &tlsRoute))
-	_, ok = resources.Services.Load(key)
-	assert.Equal(t, true, ok)
+	rSvc, _ = resources.Services.Load(key)
+	assert.NotNil(t, rSvc)
 
 	// Delete the HTTPRoute, and check if the Service is also removed
 	require.NoError(t, cli.Delete(ctx, &httpRoute))
-	_, ok = resources.Services.Load(key)
-	assert.Equal(t, false, ok)
+	rSvc, _ = resources.Services.Load(key)
+	assert.Nil(t, rSvc)
 }
