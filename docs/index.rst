@@ -1,5 +1,5 @@
-Envoy Gateway: envoyproxy + Gateway API
-=======================================
+Envoy Gateway
+=============
 
 Release |version| (Envoy |envoyVersion|, Gateway API |gatewayAPIVersion|)
 
@@ -21,6 +21,7 @@ standalone or Kubernetes-based application gateway.
   intro/index
   intro/compatibility
   user/QUICKSTART
+  user/http-routing
   design/system-design
   design/ROADMAP
   design/gatewayapi-translator
