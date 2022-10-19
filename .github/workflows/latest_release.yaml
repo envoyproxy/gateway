@@ -1,4 +1,4 @@
-name: Canary Release
+name: Latest Release
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
     - "**/*.png"
 
 jobs:
-  canary-release:
+  latest-release:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -16,9 +16,8 @@ jobs:
     - name: Generate Release Manifests
       run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
-    # Ignore the error from the first time canary release deletion.
-    # We do not have the release at first, after that, the error will not appear again.
-    - name: Delete Canary Release
+    # Ignore the error when we delete the latest release, it might not exist.
+    - name: Delete the Latest Release
       continue-on-error: true
       run: |
         gh release delete latest --repo $GITHUB_REPOSITORY
@@ -26,9 +25,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
-    # Same as above, ignore the error from the first time canary tag deletion.
-    # We do not have the tag at first, after that, the error will not appear again.
-    - name: Delete Canary Tag
+    # Ignore the error when we delete the latest tag, it might not exist.
+    - name: Delete the Latest Tag
       continue-on-error: true
       run:
         gh api --method DELETE /repos/$GITHUB_REPOSITORY/git/refs/tags/latest
@@ -36,7 +34,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 
-    - name: Recreate Canary Release and Tag
+    - name: Recreate the Latest Release and Tag
       uses: softprops/action-gh-release@v1
       with:
         draft: false
@@ -46,8 +44,8 @@ jobs:
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
         body: |
-          This is a "Canary Release" of **Envoy Gateway**, which contains the most recent commits on our main branch.
+          This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
           
-          Canary is **not stable**.
+          This release **might not be stable**.
 
           It is only intended for developers wishing to try out the latest features in Envoy Gateway, some of which may not be fully implemented.
