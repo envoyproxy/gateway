@@ -83,11 +83,7 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 			return err
 		}
 		filterChain.TransportSocket = tSocket
-		filterChain.FilterChainMatch = &listener.FilterChainMatch{
-			ServerNames: irListener.Hostnames,
-		}
-
-		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
 			return err
 		}
 
@@ -99,6 +95,21 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 			return errors.New("default filter chain already exists")
 		}
 		xdsListener.DefaultFilterChain = filterChain
+	}
+
+	return nil
+}
+
+func addServerNamesMatch(xdsListener *listener.Listener, filterChain *listener.FilterChain, hostnames []string) error {
+	// Dont add a filter chain match if the hostname is a wildcard character.
+	if len(hostnames) > 0 && hostnames[0] != "*" {
+		filterChain.FilterChainMatch = &listener.FilterChainMatch{
+			ServerNames: hostnames,
+		}
+
+		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -149,14 +160,9 @@ func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPList
 	}
 
 	if irListener.TLS != nil {
-		filterChain.FilterChainMatch = &listener.FilterChainMatch{
-			ServerNames: irListener.TLS.SNIs,
-		}
-
-		if err := addXdsTLSInspectorFilter(xdsListener); err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.SNIs); err != nil {
 			return err
 		}
-
 	}
 
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)
