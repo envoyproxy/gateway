@@ -13,13 +13,13 @@ __Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/install.yaml
 ```
 
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/quickstart.yaml
 ```
 
 ## Testing the Configuration
@@ -67,13 +67,13 @@ Use the steps in this section to uninstall everything from the quickstart guide.
 Delete the GatewayClass, Gateway, HTTPRoute and Example App:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml --ignore-not-found=true
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/quickstart.yaml --ignore-not-found=true
 ```
 
 Delete the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml --ignore-not-found=true
+kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/install.yaml --ignore-not-found=true
 ```
 
 ## Next Steps
