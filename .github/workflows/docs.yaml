@@ -3,13 +3,15 @@ on:
   push:
     branches:
       - "main"
-      - "release/v*"
+      # Uncomment here until https://github.com/envoyproxy/gateway/issues/632 has been fixed.
+      # - "release/v*"
     paths-ignore:
       - "**/*.png"
   pull_request:
     branches:
       - "main"
-      - "release/v*"
+      # Uncomment here until https://github.com/envoyproxy/gateway/issues/632 has been fixed.
+      # - "release/v*"
     paths-ignore:
       - "**/*.png"
 
