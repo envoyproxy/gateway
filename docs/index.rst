@@ -31,5 +31,6 @@ standalone or Kubernetes-based application gateway.
   design/gatewayapi-translator
   design/watching
   design/config-api
+  releases/v0.2
   about_docs
   get_involved
