@@ -5,6 +5,14 @@
     name: first-listener
     routes:
     - match:
-        prefix: /
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        path: foo/bar
+        queryParameters:
+        - name: debug
+          stringMatch:
+            exact: "yes"
       route:
         cluster: first-route

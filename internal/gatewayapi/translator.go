@@ -1075,6 +1075,14 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							})
 						}
 					}
+					for _, queryParamMatch := range match.QueryParams {
+						if QueryParamMatchTypeDerefOr(queryParamMatch.Type, v1beta1.QueryParamMatchExact) == v1beta1.QueryParamMatchExact {
+							irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
+								Name:  queryParamMatch.Name,
+								Exact: StringPtr(queryParamMatch.Value),
+							})
+						}
+					}
 
 					// Add the redirect filter or direct response that were created earlier to all the irRoutes
 					if redirectResponse != nil {

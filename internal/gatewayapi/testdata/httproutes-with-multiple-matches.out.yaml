@@ -187,10 +187,9 @@ xdsIR:
       - name: envoy-gateway-httproute-2-rule-0-match-0-example.com
         pathMatch:
           prefix: "/v1/example"
-        # Remove comments once https://github.com/envoyproxy/gateway/issues/512 is fixed
-        # queryParamMatches:
-        # - name: "debug"
-        #   exact: "yes"
+        queryParamMatches:
+        - name: "debug"
+          exact: "yes"
         headerMatches:
         - name: :authority
           exact: example.com
