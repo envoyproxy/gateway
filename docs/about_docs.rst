@@ -1,5 +1,9 @@
 About the documentation
 =======================
 
-The Envoy Gateway documentation is **VERY MUCH A WORK IN PROGRESS**.
+Learn how to contribute to Envoy Gateway documentation.
 
+.. toctree::
+  :maxdepth: 1
+
+  dev/DOCS

@@ -1,5 +1,5 @@
 Envoy Gateway
-=======================================
+=============
 
 Release |version| (Envoy |envoyVersion|, Gateway API |gatewayAPIVersion|)
 
@@ -16,21 +16,14 @@ standalone or Kubernetes-based application gateway.
    complete. We would love for you to :doc:`get involved<get_involved>`.
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
   intro/index
   intro/compatibility
-  user/quickstart
-  user/http-routing
-  user/http-redirect
-  user/http-traffic-splitting
-  user/http-request-headers
-  user/tls-passthrough
-  design/system-design
-  design/roadmap
-  design/gatewayapi-translator
-  design/watching
-  design/config-api
-  releases/v0.2
+  user_docs
+  design_docs
+  dev_docs
+  releases
+  roadmap
   about_docs
   get_involved
