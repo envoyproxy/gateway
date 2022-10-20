@@ -20,15 +20,6 @@ linters-settings:
     simplify: true
   unparam:
     check-exported: false
-  goheader:
-    # Note that because the format is different (this needs no comment markers),
-    # updating this text means also updating /tools/boilerplate.txt so that
-    # `make generate` will update the generated files correctly.
-    template: |-
-      Copyright Envoy Gateway Authors
-      SPDX-License-Identifier: Apache-2.0
-      The full text of the Apache license is available in the LICENSE file at
-      the root of the repo.
 
 issues:
   exclude-rules:
