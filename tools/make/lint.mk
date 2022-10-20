@@ -72,3 +72,7 @@ gen-check: generate manifests
 		echo "\nERROR: Some files need to be updated, please run 'make generate' and 'make manifests' to include any changed files to your PR\n"; \
 		git diff --exit-code; \
 	fi
+
+.PHONY: licensecheck
+licensecheck: ## Check license headers are present.
+	tools/boilerplate/verify-boilerplate.sh

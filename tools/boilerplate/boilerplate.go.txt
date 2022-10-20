@@ -3,9 +3,3 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-//go:build pin
-// +build pin
-
-package ignore
-
-import "github.com/golangci/golangci-lint/cmd/golangci-lint"
