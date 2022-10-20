@@ -11,6 +11,13 @@ changes:
     change: |
       Added the EnvoyGateway API type for configuring Envoy Gateway.
       Added the EnvoyProxy API type for configuring managed Envoys.
+  - area: ci-tooling-testing
+    change: |
+      Added tooling to build, run, etc. Envoy Gateway.
+      Added Gateway API conformance tests.
+      Added Make-based tooling to fetch all tools so checks (code lint, spellchecks) and tests can be run locally.
+      Added support for releasing latest artifacts to GitHub.
+      Added code coverage with a minimum 60% threshold.
   - area: ir
     change: |
       Added xds and infra IRs to decouple user-facing APIs from Envoy Gateway.
