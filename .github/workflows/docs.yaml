@@ -3,13 +3,13 @@ on:
   push:
     branches:
       - "main"
-      - "release-v*"
+      - "release/v*"
     paths-ignore:
       - "**/*.png"
   pull_request:
     branches:
       - "main"
-      - "release-v*"
+      - "release/v*"
     paths-ignore:
       - "**/*.png"
 
