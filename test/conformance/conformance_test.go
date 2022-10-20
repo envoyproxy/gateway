@@ -6,8 +6,6 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-
-
 package conformance
 
 import (
@@ -53,7 +51,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Debug:                    *flags.ShowDebug,
 		CleanupBaseResources:     *flags.CleanupBaseResources,
 		ValidUniqueListenerPorts: validUniqueListenerPorts,
-		SupportedFeatures:        []suite.SupportedFeature{suite.SupportReferenceGrant},
+		SupportedFeatures:        []suite.SupportedFeature{suite.SupportHTTPRouteQueryParamMatching, suite.SupportReferenceGrant},
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
