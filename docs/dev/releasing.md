@@ -28,10 +28,13 @@ This document guides maintainers through the process of creating an Envoy Gatewa
    ```
 
 7. Sign, commit, and push your changes to your fork. Send a PR to get your changes merged into the release branch.
-   Do not proceed until your PR is merged.
-8. Tag the head of your release branch with the release tag. For example:
+   Do not proceed until your PR is merged and the Build and Test [release GitHub action][] has completed for your PR.
+8. Change back to your release branch, pull the upstream (`origin` in the following example) to get the Quickstart Guide
+   update, and tag the head of your release branch with the release tag. For example:
 
    ```shell
+   git checkout release/v0.3
+   git pull origin release/v0.3
    git tag -a v0.3.0 -m 'Envoy Gateway v0.3.0 Release'
    ```
 
@@ -40,7 +43,7 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 9. Push the tag to the Envoy Gateway repository.
 
     ```shell
-    git push v0.3.0
+    git push origin v0.3.0
     ```
 
 10. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
