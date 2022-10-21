@@ -49,7 +49,7 @@ defined as Kubernetes resources that provide the following services:
 ## Components
 
 Envoy Gateway is made up of several components that communicate in-process; how this communication happens is described
-in [watching.md][].
+in the [Watching Components Design][wcd].
 
 ### Provider
 
@@ -164,4 +164,4 @@ The draft for this document is [here][draft_design].
 [be]: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.BackendObjectReference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [issue_95]: https://github.com/envoyproxy/gateway/pull/95
-[watching.md]: ./watching.md
+[ wcd ]: ./watching.md
