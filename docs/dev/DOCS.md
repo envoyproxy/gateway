@@ -16,16 +16,8 @@ to be in `docs/index.rst`'s `toctree` though.
 
 ## Documentation Workflow
 
-To work with the docs, just edit reStructuredText or Markdown files in `docs`.
-Before you compile the docs, you need to set the `ENVOY_VERSION` and 
-`GATEWAYAPI_VERSION` environment variables. For example:
-
-```bash
-export ENVOY_VERSION=1.23
-export GATEWAYAPI_VERSION=0.5.1
-```
-
-Then run
+To work with the docs, just edit reStructuredText or Markdown files in `docs`, 
+then run
 
 ```bash
 make docs
