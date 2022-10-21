@@ -15,8 +15,8 @@ standalone or Kubernetes-based application gateway.
    This project is under active development. Many, many features are not
    complete. We would love for you to :doc:`get involved<get_involved>`.
 
-   This project is now listed in official 
-   `Gateway API implementations <https://gateway-api.sigs.k8s.io/implementations/#envoy-gateway>`_ .
+   This project is now listed as an official
+   `Gateway API implementation <https://gateway-api.sigs.k8s.io/implementations/#envoy-gateway>`_ .
 
 .. toctree::
   :maxdepth: 1
