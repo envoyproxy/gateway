@@ -1,4 +1,4 @@
-About the documentation
+About the Documentation
 =======================
 
 Learn how to contribute to Envoy Gateway documentation.
