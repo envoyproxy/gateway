@@ -18,3 +18,8 @@ coverage.xml
 
 # `go mod vendor`
 vendor/
+
+# TLS assets that may have been created for secure gateways.
+*.crt
+*.csr
+*.key
