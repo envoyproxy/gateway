@@ -28,7 +28,7 @@ Kubernetes resources, primarily [Gateway API][gw_api] objects.
 
 Static configuration is used to configure Envoy Gateway at startup, i.e. change the GatewayClass controllerName,
 configure a Provider, etc. Currently, Envoy Gateway only supports configuration through a configuration file. If the
-configuration file is not provided, Envoy Gateway will start up with default configuration parameters.
+configuration file is not provided, Envoy Gateway starts-up with default configuration parameters.
 
 ### Dynamic Configuration
 
@@ -37,8 +37,8 @@ reconciliation loops to drive the actual state toward the desired state. The des
 defined as Kubernetes resources that provide the following services:
 
 * Infrastructure Management- Manage the data plane infrastructure, i.e. deploy, upgrade, etc. This configuration is
-  expressed through [GatewayClass][gc] and [Gateway][gw] resources. A TBD [Custom Resource][cr] can be referenced by
-  `gatewayclass.spec.parametersRef` to modify data plane infrastructure default parameters,
+  expressed through [GatewayClass][gc] and [Gateway][gw] resources. The `EnvoyProxy` [Custom Resource][cr] can be
+  referenced by `gatewayclass.spec.parametersRef` to modify data plane infrastructure default parameters,
   e.g. expose Envoy network endpoints using a NodePort service instead of a LoadBalancer service.
 * Traffic Routing- Define how to handle application-level requests to backend services. For example, route all HTTP
   requests for "www.example.com" to a backend service running a web server. This configuration is expressed through
@@ -54,9 +54,9 @@ in the [Watching Components Design][wcd].
 ### Provider
 
 A Provider is an infrastructure component that Envoy Gateway calls to establish its runtime configuration, resolve
-services, persist data, etc. Kubernetes and File are the only supported providers. However, other providers can be added
-in the future as Envoy Gateway use cases are better understood. A provider is configured at start up through Envoy
-Gateway's [static configuration](#static-configuration).
+services, persist data, etc. As of v0.2, Kubernetes is the only implemented provider. A file provider is on the roadmap
+via [Issue #37][]. Other providers can be added in the future as Envoy Gateway use cases are better understood. A
+provider is configured at start up through Envoy Gateway's [static configuration](#static-configuration).
 
 #### Kubernetes Provider
 
@@ -88,6 +88,8 @@ Representation (IR). It is responsible for:
 * Translating infrastructure-specific resources/fields from the Resource Watcher to the Infra IR.
 * Translating proxy configuration resources/fields from the Resource Watcher to the xDS IR.
 
+__Note:__ The Resource Translator is implemented as the `Translator` API type in the `gatewayapi` package.
+
 ### Intermediate Representation (IR)
 
 The Intermediate Representation defines internal data models that external resources are translated into. This allows
@@ -103,7 +105,7 @@ The xDS Translator translates the xDS IR into xDS Resources that are consumed by
 
 ### xDS Server
 
-The xDS Server is a xDS gRPC Server based on [Go Control Plane][go_cp]. Go Control Plane implements the xDS Server
+The xDS Server is a xDS gRPC Server based on [Go Control Plane][go_cp]. Go Control Plane implements the Delta xDS Server
 Protocol and is responsible for using xDS to configure the data plane.
 
 ### Infra Manager
@@ -121,32 +123,34 @@ The Infra Manager consumes the Infra IR as input to manage the data plane infras
 
 ## Design Decisions
 
-* Envoy Gateway will consume one [GatewayClass][gc] by comparing its configured controller name with
+* Envoy Gateway consumes one [GatewayClass][gc] by comparing its configured controller name with
   `spec.controllerName` of a GatewayClass. If multiple GatewayClasses exist with the same `spec.controllerName`, Envoy
-  Gateway will follow Gateway API [guidelines][gwapi_conflicts] to resolve the conflict.
-  `gatewayclass.spec.parametersRef` refers to a custom resource for configuring the managed proxy infrastructure. If
-  unspecified, default configuration parameters are used for the managed proxy infrastructure.
-* Envoy Gateway will manage [Gateways][gw] that reference its GatewayClass.
-  * The first Gateway causes Envoy Gateway to provision the managed Envoy proxy infrastructure.
-  * Envoy Gateway will merge multiple Gateways that match its GatewayClass and will follow Gateway API
-    [guidelines][gwapi_conflicts] to resolve any conflicts.
-  * A Gateway `listener` corresponds to a proxy [Listener][listener].
-* An [HTTPRoute][hroute] resource corresponds to a proxy [Route][route].
-  * Each [backendRef][be_ref] corresponds to a proxy [Cluster][cluster].
-* The goal is to make the Infra Manager & Translator components extensible in the future. For now, extensibility can be
-  achieved using xDS support that Envoy Gateway will provide.
+  Gateway follows Gateway API [guidelines][gwapi_conflicts] to resolve the conflict.
+  `gatewayclass.spec.parametersRef` refers to the `EnvoyProxy` custom resource for configuring the managed proxy
+  infrastructure. If unspecified, default configuration parameters are used for the managed proxy infrastructure.
+* Envoy Gateway manages [Gateways][gw] that reference its GatewayClass.
+  * A Gateway resource causes Envoy Gateway to provision managed Envoy proxy infrastructure.
+  * Envoy Gateway groups Listeners by Port and collapses each group of Listeners into a single Listener if the Listeners
+    in the group are compatible. Envoy Gateway considers Listeners to be compatible if all the following conditions are
+    met:
+    * Either each Listener within the group specifies the “HTTP” Protocol or each Listener within the group specifies
+      either the “HTTPS” or “TLS” Protocol.
+    * Each Listener within the group specifies a unique "Hostname".
+    * As a special case, one Listener within a group may omit "Hostname", in which case this Listener matches when no
+      other Listener matches.
+  * Envoy Gateway does __not__ merge listeners across multiple Gateways.
+* Envoy Gateway follows Gateway API [guidelines][gwapi_conflicts] to resolve any conflicts.
+  * A Gateway `listener` corresponds to an Envoy proxy [Listener][listener].
+* An [HTTPRoute][hroute] resource corresponds to an Envoy proxy [Route][route].
+  * Each [backendRef][be_ref] corresponds to an Envoy proxy [Cluster][cluster].
+* The goal is to make Envoy Gateway components extensible in the future. See the [roadmap][] for additional details.
 
 The draft for this document is [here][draft_design].
-
-## Caveats
-
-* The custom resource used to configure the data plane infrastructure is TBD. Track [issue 95][issue_95] for the latest
-  updates.
-* Envoy Gateway's static configuration spec is currently undefined. Track [issue 95][issue_95] for the latest updates.
 
 [gw_api]: https://gateway-api.sigs.k8s.io
 [gc]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass
 [gw]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway
+[gw_spec]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1
 [hroute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute
 [troute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute
 [go_cp]: https://github.com/envoyproxy/go-control-plane
@@ -165,3 +169,5 @@ The draft for this document is [here][draft_design].
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
 [issue_95]: https://github.com/envoyproxy/gateway/pull/95
 [ wcd ]: ./watching.md
+[Issue #37]: https://github.com/envoyproxy/gateway/issues/37
+[roadmap]: roadmap.md
