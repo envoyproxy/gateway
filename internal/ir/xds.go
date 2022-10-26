@@ -502,7 +502,7 @@ type UDPListener struct {
 	Address string
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
-	// Destinations associated with TCP traffic to the service.
+	// Destinations associated with UDP traffic to the service.
 	Destinations []*RouteDestination
 }
 
