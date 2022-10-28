@@ -91,7 +91,14 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// GatewayClassName is the name of the GatewayClass
+	// to process Gateways for.
 	GatewayClassName v1beta1.ObjectName
+
+	// ProxyImage is the optional proxy image to use in
+	// the Infra IR. If unspecified, the default proxy
+	// image will be used.
+	ProxyImage string
 }
 
 type TranslateResult struct {
@@ -252,6 +259,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		gwInfraIR := ir.NewInfra()
 		gwInfraIR.Proxy.Name = irKey
 		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
+		if len(t.ProxyImage) > 0 {
+			gwInfraIR.Proxy.Image = t.ProxyImage
+		}
+
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
 		infraIR[irKey] = gwInfraIR

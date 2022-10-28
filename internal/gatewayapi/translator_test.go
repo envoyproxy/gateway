@@ -48,6 +48,7 @@ func TestTranslate(t *testing.T) {
 
 			translator := &Translator{
 				GatewayClassName: "envoy-gateway-class",
+				ProxyImage:       "envoyproxy/envoy:translator-tests",
 			}
 
 			// Add common test fixtures
