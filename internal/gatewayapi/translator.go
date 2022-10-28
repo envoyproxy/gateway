@@ -1095,6 +1095,13 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 						}
 					}
 
+					if match.Method != nil {
+						irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+							Name:  ":method",
+							Exact: StringPtr(string(*match.Method)),
+						})
+					}
+
 					// Add the redirect filter or direct response that were created earlier to all the irRoutes
 					if redirectResponse != nil {
 						irRoute.Redirect = redirectResponse
