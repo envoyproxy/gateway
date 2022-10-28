@@ -1,6 +1,6 @@
 # Watching Components Design
 
-Envoy Gateway is made up of several components that communicate in-process.  Some of them (namely providers) watch
+Envoy Gateway is made up of several components that communicate in-process.  Some of them (namely Providers) watch
 external resources, and "publish" what they see for other components to consume; others watch what another publishes and
 act on it (such as the resource translator watches what the providers publish, and then publishes its own results that
 are watched by another component).  Some of these internally published results are consumed by multiple components.

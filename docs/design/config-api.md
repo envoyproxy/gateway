@@ -46,7 +46,7 @@ The `v1alpha1` version and `config.gateway.envoyproxy.io` API group get generate
 package v1alpha1
 ```
 
-The initial `EnvoyGateway` API being proposed:
+The initial `EnvoyGateway` API:
 
 ```go
 // gateway/api/config/v1alpha1/envoygateway.go
@@ -231,17 +231,17 @@ $ ./envoy-gateway
 
 The data plane is configured dynamically through Kubernetes resources, primarily [Gateway API][gw_api] objects.
 Optionally, the data plane infrastructure can be configured by referencing a [custom resource (CR)][cr] through
-`spec.parametersRef` of the managed GatewayClass. The `envoyproxies` API defines the data plane infrastructure
+`spec.parametersRef` of the managed GatewayClass. The `EnvoyProxy` API defines the data plane infrastructure
 configuration and is represented as the CR referenced by the managed GatewayClass. Key points of this API are:
 
-* If unreferenced by `spec.parametersRef`, default parameters will be used to configure the data plane infrastructure,
-  e.g. expose Envoy network endpoints using a LoadBalancer service.
+* If unreferenced by `gatewayclass.spec.parametersRef`, default parameters will be used to configure the data plane
+  infrastructure, e.g. expose Envoy network endpoints using a LoadBalancer service.
 * Envoy Gateway will follow Gateway API [recommendations][gc] regarding updates to the EnvoyProxy CR:
   > It is recommended that this resource be used as a template for Gateways. This means that a Gateway is based on the
   > state of the GatewayClass at the time it was created and changes to the GatewayClass or associated parameters are
   > not propagated down to existing Gateways.
 
-The initial `envoyproxies` API being proposed:
+The initial `EnvoyProxy` API:
 
 ```go
 // gateway/api/config/v1alpha1/envoyproxy.go
@@ -302,7 +302,7 @@ spec:
 ```
 
 Since the GatewayClass does not define `spec.parametersRef`, the data plane is provisioned using default configuration
-parameters. All Envoy proxies will be configured with a http listener and a Kubernetes LoadBalancer service listening
+parameters. The Envoy proxies will be configured with a http listener and a Kubernetes LoadBalancer service listening
 on port 80.
 
 The following example will configure the data plane to use a ClusterIP service instead of the default LoadBalancer
