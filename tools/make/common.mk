@@ -20,6 +20,8 @@
 
 ROOT_PACKAGE=github.com/envoyproxy/gateway
 
+RELEASE_VERSION=$(shell cat VERSION)
+
 # Set Root Directory Path
 ifeq ($(origin ROOT_DIR),undefined)
 ROOT_DIR := $(abspath $(shell  pwd -P))

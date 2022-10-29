@@ -150,7 +150,6 @@ The draft for this document is [here][draft_design].
 [gw_api]: https://gateway-api.sigs.k8s.io
 [gc]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gatewayclass
 [gw]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway
-[gw_spec]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1
 [hroute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute
 [troute]: https://gateway-api.sigs.k8s.io/concepts/api-overview/#tlsroute
 [go_cp]: https://github.com/envoyproxy/go-control-plane
@@ -167,7 +166,6 @@ The draft for this document is [here][draft_design].
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
 [be]: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.BackendObjectReference
 [svc]: https://kubernetes.io/docs/concepts/services-networking/service/
-[issue_95]: https://github.com/envoyproxy/gateway/pull/95
 [ wcd ]: ./watching.md
 [Issue #37]: https://github.com/envoyproxy/gateway/issues/37
 [roadmap]: roadmap.md

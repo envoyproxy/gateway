@@ -9,4 +9,5 @@ Learn how to contribute to Envoy Gateway.
   dev/CODE_OF_CONDUCT
   dev/CONTRIBUTING
   dev/README
+  dev/DOCS
   dev/releasing

@@ -16,26 +16,14 @@ html_theme = 'alabaster'
 master_doc = 'index'
 
 # General information about the project.
-
-fullversion = os.environ["BUILD_VERSION"]
-release = fullversion
-
-version = fullversion
-
-m = re.match(r"^(v\d+\.\d+\.\d+)(-rc\d+)", version)
-
-if m:
-    version = "".join(m.groups())
-
-release = version
-
-project = f'Envoy Gateway {version}'
-author = 'Envoy Gateway Project Authors'
-
-copyright = 'Envoy Gateway Project Authors | <a href="https://github.com/envoyproxy/gateway">GitHub</a> | ' + fullversion
-
+version = os.environ["BUILD_VERSION"]
 envoyVersion = os.environ["ENVOY_VERSION"]
 gatewayAPIVersion = os.environ["GATEWAYAPI_VERSION"]
+
+project = 'Envoy Gateway'
+author = 'Envoy Gateway Project Authors'
+
+copyright = 'Envoy Gateway Project Authors | <a href="https://github.com/envoyproxy/gateway">GitHub</a> | <a href="/latest">Latest Docs</a>'
 
 source_suffix = {
     '.rst': 'restructuredtext',
