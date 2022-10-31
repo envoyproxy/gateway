@@ -1,0 +1,85 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: tls
+      protocol: TLS
+      port: 91
+      tls:
+        mode: Passthrough
+      allowedRoutes:
+        namespaces:
+          from: All
+  status:
+    listeners:
+    - name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+    attachedRoutes: 1
+    conditions:
+    - type: Ready
+      status: "True"
+      reason: Ready
+      message: Listener is ready
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    namespace: default
+    name: tlsroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    hostnames:
+    - "foo.com"        
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - parentRef:
+      namespace: envoy-gateway
+      name: gateway-1
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      conditions:
+      - type: Accepted
+        status: "True"
+        reason: Accepted
+        message: Route is accepted
+xdsIR:
+  envoy-gateway-gateway-1:
+    tcp:
+    - name: envoy-gateway-gateway-1-tls
+      address: 0.0.0.0
+      port: 10091
+      tls:
+        snis:
+        - foo.com
+      destinations:
+      - host: 7.7.7.7
+        port: 8080
+        weight: 1
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:translator-tests
+      listeners:
+      - address: ""
+        ports:
+        - name: tls
+          protocol: "TLS"
+          servicePort: 91
+          containerPort: 10091
