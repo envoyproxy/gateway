@@ -21,12 +21,12 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
-    attachedRoutes: 1
-    conditions:
-    - type: Ready
-      status: "True"
-      reason: Ready
-      message: Listener is ready
+      attachedRoutes: 1
+      conditions:
+      - type: Ready
+        status: "True"
+        reason: Ready
+        message: Listener is ready
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
@@ -38,7 +38,7 @@ tlsRoutes:
     - namespace: envoy-gateway
       name: gateway-1
     hostnames:
-    - "foo.com"        
+    - foo.com
     rules:
     - backendRefs:
       - name: service-1
@@ -46,8 +46,8 @@ tlsRoutes:
   status:
     parents:
     - parentRef:
-      namespace: envoy-gateway
-      name: gateway-1
+        namespace: envoy-gateway
+        name: gateway-1
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted

@@ -41,17 +41,17 @@ tlsRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-    status:
-      parents:
-      - parentRef:
-          namespace: envoy-gateway
-          name: gateway-1
-        controllerName: gateway.envoyproxy.io/gatewayclass-controller
-        conditions:
-        - type: Accepted
-          status: "True"
-          reason: Accepted
-          message: Route is accepted
+  status:
+    parents:
+    - parentRef:
+        namespace: envoy-gateway
+        name: gateway-1
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      conditions:
+      - type: Accepted
+        status: "True"
+        reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     tcp:
