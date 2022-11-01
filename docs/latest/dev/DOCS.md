@@ -36,10 +36,10 @@ make docs
 
 This will create `docs/html` with the built HTML pages. You can view the docs
 either simply by pointing a web browser at the `file://` path to your
-`docs/html/latest`, or by firing up a static webserver from that directory, e.g.
+`docs/html`, or by firing up a static webserver from that directory, e.g.
 
 ``` shell
-cd docs/html/latest ; python3 -m http.server
+cd docs/html ; python3 -m http.server
 ```
 
 If you want to generate a new release version of the docs, like `v0.3.0`, then run
