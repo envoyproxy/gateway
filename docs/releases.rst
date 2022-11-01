@@ -4,6 +4,7 @@ Releases
 Learn more about Envoy Gateway releases.
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
+  releases/README
   releases/v0.2
