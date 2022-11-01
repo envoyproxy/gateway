@@ -144,6 +144,9 @@ The Infra Manager consumes the Infra IR as input to manage the data plane infras
 * An [HTTPRoute][hroute] resource corresponds to an Envoy proxy [Route][route].
   * Each [backendRef][be_ref] corresponds to an Envoy proxy [Cluster][cluster].
 * The goal is to make Envoy Gateway components extensible in the future. See the [roadmap][] for additional details.
+* Envoy Gateway will add support for the TCPRoute as well as the UDPRoute defined in the Gateway API. The implementation
+  will only support proxying in non-transparent mode i.e. the backend will see the source IP and port of the deployed
+  Envoy instance instead of the client.
 
 The draft for this document is [here][draft_design].
 
