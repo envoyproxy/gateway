@@ -557,7 +557,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Port:    uint32(containerPort),
 					TLS:     irTLSConfig(listener.tlsSecret),
 				}
-				if listener.Hostname != nil && *listener.Hostname != "" {
+				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))
 				} else {
 					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
