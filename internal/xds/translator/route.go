@@ -161,7 +161,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
 		ClusterNotFoundResponseCode: route.RouteAction_INTERNAL_SERVER_ERROR,
 		ClusterSpecifier: &route.RouteAction_WeightedClusters{
 			WeightedClusters: &route.WeightedCluster{
-				Clusters:    clusters,
+				Clusters: clusters,
 			},
 		},
 	}
