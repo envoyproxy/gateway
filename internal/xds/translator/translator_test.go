@@ -62,6 +62,9 @@ func TestTranslate(t *testing.T) {
 			name:           "multiple-listeners-same-port",
 			requireSecrets: true,
 		},
+		{
+			name: "udp-route",
+		},
 	}
 
 	for _, tc := range testCases {

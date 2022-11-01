@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -31,9 +32,9 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		var xdsRouteCfg *route.RouteConfiguration
 
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListener(tCtx, httpListener.Address, httpListener.Port)
+		xdsListener := findXdsListener(tCtx, httpListener.Address, httpListener.Port, core.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsListener(httpListener.Name, httpListener.Address, httpListener.Port)
+			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port)
 			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 		} else if httpListener.TLS == nil {
 			// Find the route config associated with this listener that
@@ -113,21 +114,48 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port)
+		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, core.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsListener(tcpListener.Name, tcpListener.Address, tcpListener.Port)
+			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port)
 			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 		}
-
+		// todo: huabing zhao we should check the conflicted listeners: multiple TCP listeners or TCP and HTTP listeners
+		// should not listen on the same port
 		if err := addXdsTCPFilterChain(xdsListener, tcpListener, xdsCluster.Name); err != nil {
 			return nil, err
+		}
+	}
+
+	for _, udpListener := range ir.UDP {
+		// 1:1 between IR UDPListener and xDS Cluster
+		xdsCluster, err := buildXdsCluster(udpListener.Name, udpListener.Destinations)
+		if err != nil {
+			return nil, multierror.Append(err, errors.New("error building xds cluster"))
+		}
+		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+
+		// Search for an existing listener, if it does not exist, create one.
+		xdsListener := findXdsListener(tCtx, udpListener.Address, udpListener.Port, core.SocketAddress_UDP)
+		if xdsListener == nil {
+			xdsListener, err := buildXdsUDPListener(xdsCluster.Name, udpListener)
+			if err != nil {
+				return nil, multierror.Append(err, errors.New("error building xds cluster"))
+			}
+			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+		} else {
+			// todo: huabing zhao instead of throwing an error, we should just remove the conflicted listener and print
+			// a warning
+			return nil, multierror.Append(err,
+				fmt.Errorf("error building xds cluster: UDP listener %s conflicts with an existing one %s",
+					udpListener.Name, xdsListener.Name))
 		}
 	}
 	return tCtx, nil
 }
 
-// findXdsListener finds an xds listener with the same address and port, and returns nil if there is no match.
-func findXdsListener(tCtx *types.ResourceVersionTable, address string, port uint32) *listener.Listener {
+// findXdsListener finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
+func findXdsListener(tCtx *types.ResourceVersionTable, address string, port uint32,
+	protocol core.SocketAddress_Protocol) *listener.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resource.ListenerType] == nil {
 		return nil
 	}
@@ -135,7 +163,8 @@ func findXdsListener(tCtx *types.ResourceVersionTable, address string, port uint
 	for _, r := range tCtx.XdsResources[resource.ListenerType] {
 		listener := r.(*listener.Listener)
 		addr := listener.GetAddress()
-		if addr.GetSocketAddress().GetPortValue() == port && addr.GetSocketAddress().Address == address {
+		if addr.GetSocketAddress().GetPortValue() == port && addr.GetSocketAddress().Address == address && addr.
+			GetSocketAddress().Protocol == protocol {
 			return listener
 		}
 	}

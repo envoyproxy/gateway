@@ -8,6 +8,8 @@ package translator
 import (
 	"errors"
 
+	xdscore "github.com/cncf/xds/go/xds/core/v3"
+	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -15,6 +17,7 @@ import (
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
+	udp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -22,7 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsListener(name, address string, port uint32) *listener.Listener {
+func buildXdsTCPListener(name, address string, port uint32) *listener.Listener {
 	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
 	return &listener.Listener{
 		Name: name,
@@ -285,4 +288,79 @@ func buildXdsDownstreamTLSSecret(listenerName string,
 			},
 		},
 	}, nil
+}
+
+func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*listener.Listener, error) {
+	if udpListener == nil {
+		return nil, errors.New("udp listener is nil")
+	}
+
+	statPrefix := "udp"
+
+	route := &udp.Route{
+		Cluster: clusterName,
+	}
+	routeAny, err := anypb.New(route)
+	if err != nil {
+		return nil, err
+	}
+	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
+	udpProxy := &udp.UdpProxyConfig{
+		StatPrefix: statPrefix,
+		AccessLog: []*accesslog.AccessLog{
+			{
+				Name:       wellknown.FileAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
+			},
+		},
+		RouteSpecifier: &udp.UdpProxyConfig_Matcher{
+			Matcher: &matcher.Matcher{
+				OnNoMatch: &matcher.Matcher_OnMatch{
+					OnMatch: &matcher.Matcher_OnMatch_Action{
+						Action: &xdscore.TypedExtensionConfig{
+							TypedConfig: routeAny,
+						},
+					},
+				},
+			},
+		},
+	}
+	udpProxyAny, err := anypb.New(udpProxy)
+	if err != nil {
+		return nil, err
+	}
+
+	filterChain := &listener.FilterChain{
+		Filters: []*listener.Filter{{
+			Name: "envoy.filters.udp_listener.udp_proxy",
+			ConfigType: &listener.Filter_TypedConfig{
+				TypedConfig: udpProxyAny,
+			},
+		}},
+	}
+
+	xdsListener := &listener.Listener{
+		Name: udpListener.Name,
+		AccessLog: []*accesslog.AccessLog{
+			{
+				Name:       wellknown.FileAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
+				Filter:     listenerAccessLogFilter,
+			},
+		},
+		Address: &core.Address{
+			Address: &core.Address_SocketAddress{
+				SocketAddress: &core.SocketAddress{
+					Protocol: core.SocketAddress_UDP,
+					Address:  udpListener.Address,
+					PortSpecifier: &core.SocketAddress_PortValue{
+						PortValue: udpListener.Port,
+					},
+				},
+			},
+		},
+		FilterChains: []*listener.FilterChain{filterChain},
+	}
+
+	return xdsListener, nil
 }
