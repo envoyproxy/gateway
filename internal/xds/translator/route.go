@@ -146,7 +146,6 @@ func buildXdsRouteAction(routeName string) *route.RouteAction {
 }
 
 func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
-	totalWeight := httpRoute.BackendWeights.Valid + httpRoute.BackendWeights.Invalid
 	clusters := []*route.WeightedCluster_ClusterWeight{
 		{
 			Name:   "invalid-backend-cluster",
@@ -162,8 +161,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
 		ClusterNotFoundResponseCode: route.RouteAction_INTERNAL_SERVER_ERROR,
 		ClusterSpecifier: &route.RouteAction_WeightedClusters{
 			WeightedClusters: &route.WeightedCluster{
-				TotalWeight: &wrapperspb.UInt32Value{Value: totalWeight},
-				Clusters:    clusters,
+				Clusters: clusters,
 			},
 		},
 	}
