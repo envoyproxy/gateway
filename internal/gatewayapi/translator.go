@@ -572,19 +572,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
 					TLS: &ir.TLSInspectorConfig{
+						// Since we need to first compute intersecting hostnames between the
+						// listener and TLS Route, populate this field after processing TLS Routes.
 						SNIs: []string{},
 					},
-				}
-				if listener.Hostname == nil || *listener.Hostname == "" {
-					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						"Listener is invalid, see other Conditions for details.",
-					)
-				}
-				if listener.Hostname != nil && *listener.Hostname != "" {
-					irListener.TLS.SNIs = append(irListener.TLS.SNIs, string(*listener.Hostname))
 				}
 				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 			}
@@ -1390,13 +1381,16 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 				if len(hosts) == 0 {
 					continue
 				}
+
 				hasHostnameIntersection = true
 
 				irKey := irStringKey(listener.gateway)
 				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
 				if irListener != nil {
 					irListener.Destinations = routeDestinations
+					irListener.TLS.SNIs = hosts
 				}
+
 				// Theoretically there should only be one parent ref per
 				// Route that attaches to a given Listener, so fine to just increment here, but we
 				// might want to check to ensure we're not double-counting.
