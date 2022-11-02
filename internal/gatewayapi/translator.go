@@ -1076,21 +1076,37 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 							irRoute.PathMatch = &ir.StringMatch{
 								Exact: match.Path.Value,
 							}
+						case v1beta1.PathMatchRegularExpression:
+							irRoute.PathMatch = &ir.StringMatch{
+								SafeRegex: match.Path.Value,
+							}
 						}
 					}
 					for _, headerMatch := range match.Headers {
-						if HeaderMatchTypeDerefOr(headerMatch.Type, v1beta1.HeaderMatchExact) == v1beta1.HeaderMatchExact {
+						switch HeaderMatchTypeDerefOr(headerMatch.Type, v1beta1.HeaderMatchExact) {
+						case v1beta1.HeaderMatchExact:
 							irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 								Name:  string(headerMatch.Name),
 								Exact: StringPtr(headerMatch.Value),
 							})
+						case v1beta1.HeaderMatchRegularExpression:
+							irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+								Name:      string(headerMatch.Name),
+								SafeRegex: StringPtr(headerMatch.Value),
+							})
 						}
 					}
 					for _, queryParamMatch := range match.QueryParams {
-						if QueryParamMatchTypeDerefOr(queryParamMatch.Type, v1beta1.QueryParamMatchExact) == v1beta1.QueryParamMatchExact {
+						switch QueryParamMatchTypeDerefOr(queryParamMatch.Type, v1beta1.QueryParamMatchExact) {
+						case v1beta1.QueryParamMatchExact:
 							irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 								Name:  queryParamMatch.Name,
 								Exact: StringPtr(queryParamMatch.Value),
+							})
+						case v1beta1.QueryParamMatchRegularExpression:
+							irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
+								Name:      queryParamMatch.Name,
+								SafeRegex: StringPtr(queryParamMatch.Value),
 							})
 						}
 					}
