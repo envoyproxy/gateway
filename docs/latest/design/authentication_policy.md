@@ -46,7 +46,11 @@ spec:
 ```
 
 <<<<<<< HEAD:docs/latest/design/authentication_policy.md
+<<<<<<< HEAD:docs/latest/design/authentication_policy.md
 JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refresh.
 =======
 JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refersh.
 >>>>>>> 9a6ed41 (Add authn policy design with JWT only):docs/design/authentication_policy.md
+=======
+JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refresh.
+>>>>>>> 3cb97e1 (Update docs/design/authentication_policy.md):docs/design/authentication_policy.md
