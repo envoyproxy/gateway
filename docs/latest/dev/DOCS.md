@@ -39,7 +39,7 @@ either simply by pointing a web browser at the `file://` path to your
 `docs/html`, or by firing up a static webserver from that directory, e.g.
 
 ``` shell
-cd docs/html ; python3 -m http.server
+make docs-serve
 ```
 
 If you want to generate a new release version of the docs, like `v0.3.0`, then run
