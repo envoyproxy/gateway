@@ -37,4 +37,4 @@ spec:
     name: httpbin
 ```
 
-JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refersh.
+JWT Bearer token will be translate to Envoy's JWT authentication filter. The JWKS URI need to be translated to a separate cluster for JWKS fetch and refresh.
