@@ -136,4 +136,4 @@ There are many other endpoints on the [Envoy admin interface][] that may be help
 [Kubernetes support]: https://docs.docker.com/desktop/kubernetes/
 [gateway-dev]: https://hub.docker.com/r/envoyproxy/gateway-dev/tags
 [mac_connect]: https://github.com/chipmk/docker-mac-net-connect
-[Envoy admin interface]: https://www.envoyproxy.io/docs/envoy/v1.23.0/operations/admin#operations-admin-interface
+[Envoy admin interface]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin#operations-admin-interface
