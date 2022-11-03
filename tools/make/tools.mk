@@ -14,7 +14,6 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 #
 tools/controller-gen = $(tools.bindir)/controller-gen
 tools/golangci-lint  = $(tools.bindir)/golangci-lint
-tools/goversion      = $(tools.bindir)/goversion
 tools/kustomize      = $(tools.bindir)/kustomize
 tools/kind           = $(tools.bindir)/kind
 tools/setup-envtest  = $(tools.bindir)/setup-envtest

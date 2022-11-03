@@ -7,10 +7,8 @@ package cmd
 
 import (
 	"fmt"
-	"runtime/debug"
-	"strings"
 
-	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/spf13/cobra"
 )
 
@@ -36,36 +34,12 @@ func getVersionsCommand() *cobra.Command {
 
 // versions shows the versions of the Envoy Gateway.
 func versions(envOutput bool) error {
-	envoyVersion := strings.Split(ir.DefaultProxyImage, ":")[1]
-
 	if envOutput {
-		fmt.Printf("ENVOY_VERSION=\"%s\"\n", envoyVersion)
+		fmt.Printf("ENVOY_VERSION=\"%s\"\n", version.EnvoyVersion)
+		fmt.Printf("GATEWAYAPI_VERSION=\"%s\"\n", version.GatewayAPIVersion)
+		fmt.Printf("ENVOY_GATEWAY_VERSION=\"%s\"\n", version.EnvoyGatewayVersion)
 	} else {
-		fmt.Printf("Envoy:       %s\n", envoyVersion)
-	}
-
-	bi, ok := debug.ReadBuildInfo()
-	if !ok {
-		return fmt.Errorf("could not read build info")
-	}
-
-	foundGatewayAPI := false
-
-	for _, dep := range bi.Deps {
-		if dep.Path == "sigs.k8s.io/gateway-api" {
-			if envOutput {
-				fmt.Printf("GATEWAYAPI_VERSION=\"%s\"\n", dep.Version)
-			} else {
-				fmt.Printf("Gateway API: %s\n", dep.Version)
-			}
-
-			foundGatewayAPI = true
-			break
-		}
-	}
-
-	if !foundGatewayAPI {
-		return fmt.Errorf("could not find Gateway API version")
+		return version.Print()
 	}
 
 	return nil

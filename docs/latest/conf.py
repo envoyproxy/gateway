@@ -31,6 +31,7 @@ source_suffix = {
 }
 
 variables_to_export = [
+    "version",
     "envoyVersion",
     "gatewayAPIVersion",
 ]
