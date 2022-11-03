@@ -14,13 +14,14 @@ import (
 func GetRootCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "envoy-gateway",
-		Short: "Manages Envoy Proxy as a standalone or Kubernetes-based application gateway",
+		Short: "Envoy Gateway",
+		Long:  "Manages Envoy Proxy as a standalone or Kubernetes-based application gateway",
 	}
 
 	cmd.AddCommand(getServerCommand())
+	cmd.AddCommand(getVersionsCommand())
 	cmd.AddCommand(getxDSTestCommand())
 	cmd.AddCommand(getCertGenCommand())
-	cmd.AddCommand(getVersionsCommand())
 
 	return cmd
 }
