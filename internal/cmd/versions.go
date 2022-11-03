@@ -36,7 +36,11 @@ func getVersionsCommand() *cobra.Command {
 
 // versions shows the versions of the Envoy Gateway.
 func versions(envOutput bool) error {
-	envoyVersion := strings.Split(ir.DefaultProxyImage, ":")[1]
+	parts := strings.Split(ir.DefaultProxyImage, ":")
+	if len(parts) < 2 {
+		return fmt.Errorf("could not decode string into envoy version: %v", ir.DefaultProxyImage)
+	}
+	envoyVersion := parts[1]
 
 	if envOutput {
 		fmt.Printf("ENVOY_VERSION=\"%s\"\n", envoyVersion)
