@@ -35,12 +35,14 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
-  unit-tests:
+  build-and-test:
     runs-on: ubuntu-latest
-    needs: [lint, gen-check]
+    needs: [lint, gen-check, license-check]
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps
+
+    # test
     - name: Run Coverage Tests
       run: make go.test.coverage
     - name: Upload coverage to Codecov
@@ -50,33 +52,31 @@ jobs:
         files: ./coverage.xml
         name: codecov-envoy-gateway
         verbose: true
-  
-  conformance-tests:
-    runs-on: ubuntu-latest
-    needs: [unit-tests]
-    strategy:
-      matrix:
-        kind_node_tag: ["v1.24.0", "v1.23.6", "v1.22.9"]
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./tools/github-actions/setup-deps
-    - name: Run Conformance Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.kind_node_tag }}
-        CONFORMANCE_UNIQUE_PORTS: false
-      run: make conformance
 
-
-  build-and-push-image:
-    runs-on: ubuntu-latest
-    needs: [conformance-tests]
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./tools/github-actions/setup-deps
-
+    # build
     - name: Build Multiarch EG Binaries
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
+    # conformance
+    - name: Run Conformance Tests (v1.24.0)
+      env:
+        KIND_NODE_TAG: v1.24.0
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+    
+    - name: Run Conformance Tests (v1.23.6)
+      env:
+        KIND_NODE_TAG: v1.23.6
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+    
+    - name: Run Conformance Tests (v1.22.9)
+      env:
+        KIND_NODE_TAG: v1.22.9
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+
+    # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
       uses: docker/login-action@v2
