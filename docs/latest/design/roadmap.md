@@ -22,7 +22,7 @@ Roadmap features and timelines may change based on feedback, community contribut
 roadmap item, you're encouraged to attend a community meeting to discuss the details, or help us deliver the feature by
 contributing to the project.
 
-`Last Updated: October 2022`
+`Last Updated: November 2022`
 
 ### [v0.2.0][v0.2.0]: Establish a Solid Foundation
 
@@ -32,13 +32,18 @@ contributing to the project.
 - Achieve Gateway API conformance (e.g. routing, LB, Header transformation, etc.)- [Issue #65][65].
 - Setup a CI/CD pipeline- [Issue #63][63].
 
-### [v0.3.0][v0.3.0]: Drive Advanced Features through Extension Mechanisms
+### [v0.3.0][v0.3.0]: Driving Advanced Features through Extension Mechanisms
 
-- Global Rate Limiting
-- AuthN/AuthZ- [Issue #336][336].
-- Lets Encrypt Integration
+- Support extended Gateway API fields.
+- Support experimental Gateway APIs such as TCPRoute [Issue #643][643], UDPRoute [Issue #641][641] and GRPCRoute [Issue #642][642].
+- Rate Limiting [Issue #670][670].
+- Authentication [Issue #336][336].
 
-### [v0.4.0][v0.4.0]: Manageability and Scale
+### [v0.4.0][v0.4.0]: More Advanced Features through Extension Mechanisms
+
+- Allow users to configure xDS Resources [Issue #24][24].
+
+### [v0.5.0][v0.5.0]: Manageability and Scale
 
 - Tooling for devs/infra admins to aid in managing/maintaining EG
 - Support advanced provisioning use cases (e.g. multi-cluster, serverless, etc.)
@@ -52,9 +57,15 @@ contributing to the project.
 [v0.2.0]: https://github.com/envoyproxy/gateway/milestone/1
 [v0.3.0]: https://github.com/envoyproxy/gateway/milestone/7
 [v0.4.0]: https://github.com/envoyproxy/gateway/milestone/12
-[60]: https://github.com/envoyproxy/gateway/issues/60
-[64]: https://github.com/envoyproxy/gateway/issues/64
+[v0.5.0]: https://github.com/envoyproxy/gateway/milestone/13
 [17]: https://github.com/envoyproxy/gateway/issues/17
-[65]: https://github.com/envoyproxy/gateway/issues/65
+[24]: https://github.com/envoyproxy/gateway/issues/24
+[60]: https://github.com/envoyproxy/gateway/issues/60
 [63]: https://github.com/envoyproxy/gateway/issues/63
+[64]: https://github.com/envoyproxy/gateway/issues/64
+[65]: https://github.com/envoyproxy/gateway/issues/65
 [336]: https://github.com/envoyproxy/gateway/issues/336
+[641]: https://github.com/envoyproxy/gateway/issues/641
+[642]: https://github.com/envoyproxy/gateway/issues/642
+[643]: https://github.com/envoyproxy/gateway/issues/643
+[670]: https://github.com/envoyproxy/gateway/issues/670
