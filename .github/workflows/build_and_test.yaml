@@ -58,8 +58,23 @@ jobs:
       run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     # conformance
-    - name: Run Conformance Tests
-      run: CONFORMANCE_UNIQUE_PORTS=false make conformance
+    - name: Run Conformance Tests (v1.24.0)
+      env:
+        KIND_NODE_TAG: v1.24.0
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+    
+    - name: Run Conformance Tests (v1.23.6)
+      env:
+        KIND_NODE_TAG: v1.23.6
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+    
+    - name: Run Conformance Tests (v1.22.9)
+      env:
+        KIND_NODE_TAG: v1.22.9
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
 
     # build and push image
     - name: Login to DockerHub
