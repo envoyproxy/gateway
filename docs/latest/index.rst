@@ -1,7 +1,7 @@
-Envoy Gateway
+`Envoy Gateway </>`_
 =============
 
-Release |version| (Envoy |envoyVersion|, Gateway API |gatewayAPIVersion|)
+Release |version|
 
 .. image:: https://img.shields.io/badge/slack-join-orange.svg
     :target: https://envoyproxy.slack.com/archives/C03E6NHLESV

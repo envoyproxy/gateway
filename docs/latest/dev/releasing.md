@@ -19,45 +19,31 @@ export GITHUB_REMOTE=origin
 ```
 
 1. Clone the repo, checkout the `main` branch, ensure it’s up-to-date, and your local branch is clean.
-2. Create a topic branch to create the release notes. Reference previous [release notes][] for additional details.
-3. Sign, commit, and push your changes to your fork and submit a [Pull Request][] to merge the release notes into the
-   `main` branch.
-4. Create a topic branch for the release announcement. Reference previous [release announcements][] for additional
-   details.
-5. Sign, commit, and push your changes to your fork and submit a [Pull Request][] to merge the release announcement
-   into the `main` branch.
-6. Create a topic branch and update the release tag references in the [Quickstart Guide][]. This should be the last
-   commit to main before cutting the release.
+2. Create a topic branch to create the release notes and release docs. Reference previous [release notes][] for additional details.
+3. Sign, commit, and push your changes to your fork and submit a [Pull Request][] to merge the changes listed below
+   into the `main` branch. Do not proceed until all your PRs have merged and the [Build and Test][build-and-test GitHub action] has completed for your final PR:
 
-   ```shell
-   make update-quickstart TAG=${MAJOR_VERSION}.${MINOR_VERSION}.0
+   1. Add Release Announcement.
+   2. Add Release Versioned Documents.
+
+   ``` shell
+      make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
    ```
 
-7. Sign, commit, and push your changes to your fork. Send a PR to get your changes merged into main. Do not proceed
-   until all your PRs have merged and the Build and Test [release GitHub action][] has completed for your final PR.
-
-   __Note:__ The Quickstart update should occur in the release branch after [Issue #632][] is resolved.
-
-8. Pull the latest changes from the `main` branch that include commits from all the above PRs:
-
-   ```shell
-   git pull ${GITHUB_REMOTE} main
-   ```
-
-9. Create a new release branch from `main`. The release branch should be named
+4. Create a new release branch from `main`. The release branch should be named
    `release/v${MAJOR_VERSION}.${MINOR_VERSION}`, e.g. `release/v0.3`.
 
    ```shell
    git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-10. Push the branch to the Envoy Gateway repo.
+5. Push the branch to the Envoy Gateway repo.
 
     ```shell
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-11. Tag the head of your release branch with the release tag. For example:
+6. Tag the head of your release branch with the release tag. For example:
 
     ```shell
     git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0 -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0 Release'
@@ -65,18 +51,18 @@ export GITHUB_REMOTE=origin
 
     __Note:__ The tag version differs from the release branch by including the `.0` patch version.
 
-12. Push the tag to the Envoy Gateway repository.
+7. Push the tag to the Envoy Gateway repository.
 
      ```shell
      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.0
      ```
 
-13. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-14. Confirm that the [release workflow][] completed successfully.
-15. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-16. Confirm that the [release][] was created.
-17. Confirm that the steps in the [Quickstart Guide][] work as expected.
-18. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+8. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+9. Confirm that the [release workflow][] completed successfully.
+10. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+11. Confirm that the [release][] was created.
+12. Confirm that the steps in the [Quickstart Guide][] work as expected.
+13. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
    # Release Announcement
@@ -85,7 +71,7 @@ export GITHUB_REMOTE=origin
    (https://gateway.envoyproxy.io/releases/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
    ```
 
-19. If you find any bugs in this process, please create an issue.
+If you find any bugs in this process, please create an issue.
 
 ## Creating a Release Candidate
 
@@ -103,27 +89,27 @@ export GITHUB_REMOTE=origin
 ```
 
 1. Clone the repo, checkout the `main` branch, ensure it’s up-to-date, and your local branch is clean.
-5. Tag the head of the main branch with the release candidate number.
+2. Tag the head of the main branch with the release candidate number.
 
    ```shell
    git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER} Release Candidate'
    ```
 
-6. Push the tag to the Envoy Gateway repository.
+3. Push the tag to the Envoy Gateway repository.
 
    ```shell
    git push v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}
    ```
 
-7. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-8. Confirm that the [release workflow][] completed successfully.
-9. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-10. Confirm that the [release][] was created.
-11. Note that the [Quickstart Guide][] references are __not__ updated for release candidates. However, test
+4. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+5. Confirm that the [release workflow][] completed successfully.
+6. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+7. Confirm that the [release][] was created.
+8. Note that the [Quickstart Guide][] references are __not__ updated for release candidates. However, test
     the quickstart steps using the release candidate by manually updating the links.
-12. [Generate][] the GitHub changelog.
-13. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
-14. If you find any bugs in this process, please create an issue.
+9. [Generate][] the GitHub changelog.
+10. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
+11. If you find any bugs in this process, please create an issue.
 
 ## Announcing the Release
 
@@ -150,10 +136,9 @@ It's important that the world knows about the release. Use the following steps t
 [release notes]: https://github.com/envoyproxy/gateway/tree/main/release-notes
 [Pull Request]: https://github.com/envoyproxy/gateway/pulls
 [Quickstart Guide]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
+[build-and-test GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/build_and_test.yaml
 [release GitHub action]: https://github.com/envoyproxy/gateway/blob/main/.github/workflows/release.yaml
 [release workflow]: https://github.com/envoyproxy/gateway/actions/workflows/release.yaml
 [image]: https://hub.docker.com/r/envoyproxy/gateway/tags
 [release]: https://github.com/envoyproxy/gateway/releases
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
-[release announcements]: https://github.com/envoyproxy/gateway/blob/main/docs/releases/v0.2.md
-[Issue #632]: https://github.com/envoyproxy/gateway/issues/632

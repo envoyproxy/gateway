@@ -3,15 +3,11 @@ on:
   push:
     branches:
       - "main"
-      # Uncomment here until https://github.com/envoyproxy/gateway/issues/632 has been fixed.
-      # - "release/v*"
     paths-ignore:
       - "**/*.png"
   pull_request:
     branches:
       - "main"
-      # Uncomment here until https://github.com/envoyproxy/gateway/issues/632 has been fixed.
-      # - "release/v*"
     paths-ignore:
       - "**/*.png"
 
@@ -36,8 +32,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./tools/github-actions/setup-deps
 
-      # docs
-      - run: make docs
+      - name: Generate EG Pages
+        run: make docs
 
       # Upload docs for GitHub Pages    
       - name: Upload GitHub Pages artifact

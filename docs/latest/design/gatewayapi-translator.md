@@ -22,7 +22,6 @@ The outputs of the Gateway API translator are:
 
 ## Listener Compatibility
 
-
 Envoy Gateway follows Gateway API listener compatibility spec:
 > Each listener in a Gateway must have a unique combination of Hostname, Port, and Protocol. An implementation MAY group
 > Listeners by Port and then collapse each group of Listeners into a single Listener if the implementation determines

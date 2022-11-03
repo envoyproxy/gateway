@@ -115,10 +115,3 @@ generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
 generate-artifacts: generate-manifests ## Generate release artifacts.
 	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
 	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/release-notes.yaml\033[0m"
-
-.PHONY: update-quickstart
-update-quickstart: ## Update quickstart doc image tags to a specific version.
-	cp -r docs/user/quickstart.md $(OUTPUT_DIR)/quickstart.md
-	cat $(OUTPUT_DIR)/quickstart.md | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/quickstart-$(TAG).md
-	mv $(OUTPUT_DIR)/quickstart-$(TAG).md docs/user/quickstart.md
-	@echo "\033[36m===========> Updated: docs/user/quickstart.md\033[0m"
