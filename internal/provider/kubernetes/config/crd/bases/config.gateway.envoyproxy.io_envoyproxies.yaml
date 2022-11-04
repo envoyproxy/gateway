@@ -68,7 +68,7 @@ spec:
                             logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
                             can be used as values for fields within the Struct. Alias
                             to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
-                            \n Example: ``` fileds: \n status: \"%RESPONSE_CODE%\"
+                            \n Example: ``` fields: \n status: \"%RESPONSE_CODE%\"
                             message: \"%LOCAL_REPLY_BODY%\" \n ```"
                           type: object
                         logName:
@@ -89,7 +89,8 @@ spec:
                           type: object
                         service:
                           description: "Specifies the service that implements the
-                            Envoy ALS gRPC authorization service. \n Example: \"otel-collector.monitoring.svc.cluster.local\"."
+                            Envoy AccessLogService gRPC authorization service. \n
+                            Example: \"otel-collector.monitoring.svc.cluster.local\"."
                           type: string
                         text:
                           description: "Format for the proxy access log, following
@@ -105,7 +106,7 @@ spec:
                       description: Text defines text based access logs.
                       properties:
                         format:
-                          description: Format for envoy text defaulat access logs,
+                          description: Format for envoy text default access logs,
                             empty value results in default access log format.
                           type: string
                         path:

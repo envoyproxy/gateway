@@ -37,7 +37,7 @@ type EnvoyProxyAccessLog struct {
 	Text *TextFileEnvoyProxyAccessLog `json:"text,omitempty"`
 	// Json defines structured json based access logs.
 	// +optional
-	Json *JsonFileEnvoyProxyAccessLog `json:"json,omitempty"`
+	Json *JSONFileEnvoyProxyAccessLog `json:"json,omitempty"`
 	// Otel defines configuration for OpenTelemetry log provider.
 	// +optional
 	Otel *OpenTelemetryEnvoyProxyAccessLog `json:"otel,omitempty"`
@@ -47,12 +47,12 @@ type TextFileEnvoyProxyAccessLog struct {
 	// Path defines the file path used to expose envoy access log, empty value results in default `/dev/stdout`.
 	// +optional
 	Path string `json:"path,omitempty"`
-	// Format for envoy text defaulat access logs, empty value results in default access log format.
+	// Format for envoy text default access logs, empty value results in default access log format.
 	// +optional
 	Format string `json:"format,omitempty"`
 }
 
-type JsonFileEnvoyProxyAccessLog struct {
+type JSONFileEnvoyProxyAccessLog struct {
 	// Path defines the file path used to expose envoy access log, empty value results in default `/dev/stdout`.
 	// +optional
 	Path string `json:"path,omitempty"`
@@ -62,7 +62,7 @@ type JsonFileEnvoyProxyAccessLog struct {
 }
 
 type OpenTelemetryEnvoyProxyAccessLog struct {
-	// Specifies the service that implements the Envoy ALS gRPC authorization service.
+	// Specifies the service that implements the Envoy AccessLogService gRPC authorization service.
 	//
 	// Example: "otel-collector.monitoring.svc.cluster.local".
 	Service string `json:"service,omitempty"`
@@ -99,7 +99,7 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 	//
 	// Example:
 	// ```
-	// fileds:
+	// fields:
 	//
 	//	status: "%RESPONSE_CODE%"
 	//	message: "%LOCAL_REPLY_BODY%"
