@@ -5,8 +5,8 @@ HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway o
 [HTTPRoute filters][] which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To
 learn more about HTTP routing, refer to the [Gateway API documentation][].
 
-Follow the steps from the [Secure Gateways](secure-gateways.md) to install Envoy Gateway and the example manifest. Do not
-proceed until you can curl the example backend from the Quickstart guide using HTTPS.
+Follow the steps from the [Secure Gateways](secure-gateways.md) to install Envoy Gateway and the example manifest. Do
+not proceed until you can curl the example backend from the Quickstart guide using HTTPS.
 
 ## Redirects
 Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. A
@@ -34,8 +34,8 @@ spec:
           hostname: www.example.com
           port: 8443
       backendRefs:
-      - name: httpbin
-        port: 80
+      - name: backend
+        port: 3000
 EOF
 ```
 
@@ -95,8 +95,8 @@ spec:
             replaceFullPath: /status/200
           statusCode: 302
       backendRefs:
-      - name: httpbin
-        port: 80
+      - name: backend
+        port: 3000
 EOF
 ```
 

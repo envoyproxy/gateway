@@ -28,7 +28,7 @@ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=example In
 Create a certificate and a private key for `www.example.com`:
 
 ```shell
-openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=httpbin organization"
+openssl req -out www.example.com.csr -newkey rsa:2048 -nodes -keyout www.example.com.key -subj "/CN=www.example.com/O=example organization"
 openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in www.example.com.csr -out www.example.com.crt
 ```
 
@@ -110,7 +110,7 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:${GATEWAY_HOST}" 
 Create a TLS cert/key for the additional HTTPS listener:
 
 ```shell
-openssl req -out foo.example.com.csr -newkey rsa:2048 -nodes -keyout foo.example.com.key -subj "/CN=foo.example.com/O=httpbin organization"
+openssl req -out foo.example.com.csr -newkey rsa:2048 -nodes -keyout foo.example.com.key -subj "/CN=foo.example.com/O=example organization"
 openssl x509 -req -days 365 -CA example.com.crt -CAkey example.com.key -set_serial 0 -in foo.example.com.csr -out foo.example.com.crt
 ```
 
