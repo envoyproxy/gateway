@@ -32,10 +32,11 @@ contributing to the project.
 - Achieve Gateway API conformance (e.g. routing, LB, Header transformation, etc.)- [Issue #65][65].
 - Setup a CI/CD pipeline- [Issue #63][63].
 
-### [v0.3.0][v0.3.0]: Driving Advanced Features through Extension Mechanisms
+### [v0.3.0][v0.3.0]: Drive Advanced Features through Extension Mechanisms
 
 - Support extended Gateway API fields.
 - Support experimental Gateway APIs such as TCPRoute [Issue #643][643], UDPRoute [Issue #641][641] and GRPCRoute [Issue #642][642].
+- Establish guidelines for leveragaing Gateway API extensions [Issue #675][675].
 - Rate Limiting [Issue #670][670].
 - Authentication [Issue #336][336].
 
@@ -69,3 +70,4 @@ contributing to the project.
 [642]: https://github.com/envoyproxy/gateway/issues/642
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
+[675]: https://github.com/envoyproxy/gateway/issues/675
