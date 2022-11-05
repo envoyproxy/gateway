@@ -4,7 +4,7 @@ User Guides
 Learn how to deploy, use, and operate Envoy Gateway.
 
 .. toctree::
-  :maxdepth: 2
+  :maxdepth: 1
 
   user/quickstart
   user/http-routing
