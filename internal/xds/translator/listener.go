@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 
+	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
@@ -22,8 +23,16 @@ import (
 )
 
 func buildXdsListener(name, address string, port uint32) *listener.Listener {
+	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
 	return &listener.Listener{
 		Name: name,
+		AccessLog: []*accesslog.AccessLog{
+			{
+				Name:       wellknown.FileAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
+				Filter:     listenerAccessLogFilter,
+			},
+		},
 		Address: &core.Address{
 			Address: &core.Address_SocketAddress{
 				SocketAddress: &core.SocketAddress{
@@ -44,6 +53,11 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 		return err
 	}
 
+	accesslogAny, err := anypb.New(stdoutFileAccessLog)
+	if err != nil {
+		return err
+	}
+
 	// HTTP filter configuration
 	var statPrefix string
 	if irListener.TLS != nil {
@@ -52,6 +66,12 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 		statPrefix = "http"
 	}
 	mgr := &hcm.HttpConnectionManager{
+		AccessLog: []*accesslog.AccessLog{
+			{
+				Name:       wellknown.FileAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
+			},
+		},
 		CodecType:  hcm.HttpConnectionManager_AUTO,
 		StatPrefix: statPrefix,
 		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
@@ -153,7 +173,19 @@ func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPList
 	if irListener.TLS != nil {
 		statPrefix = "passthrough"
 	}
+
+	accesslogAny, err := anypb.New(stdoutFileAccessLog)
+	if err != nil {
+		return err
+	}
+
 	mgr := &tcp.TcpProxy{
+		AccessLog: []*accesslog.AccessLog{
+			{
+				Name:       wellknown.FileAccessLog,
+				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
+			},
+		},
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcp.TcpProxy_Cluster{
 			Cluster: clusterName,
