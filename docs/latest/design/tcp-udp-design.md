@@ -21,7 +21,7 @@ In this mode, the upstream will see Envoy's IP address.
 For TCP, Envoy terminates the downstream connection, connects the upstream with the downstream IP address, and proxies 
 the TCP traffic from the downstream to the upstream. 
 
-For UDP, Envoy receives UDP packages from the downstream, and use the downstream IP address as the sender IP address 
+For UDP, Envoy receives UDP packages from the downstream, and uses the downstream IP address as the sender IP address 
 when proxying the UDP packages to the upstream.
 
 In this mode, the upstream will see the original downstream IP address.
