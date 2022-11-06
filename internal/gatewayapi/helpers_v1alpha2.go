@@ -137,6 +137,55 @@ func DowngradeRouteParentStatuses(routeParentStatuses []v1beta1.RouteParentStatu
 	return res
 }
 
+// UpgradeBackendRef converts v1alpha2.BackendRef to v1beta1.BackendRef
+func UpgradeBackendRef(old v1alpha2.BackendRef) v1beta1.BackendRef {
+	upgraded := v1beta1.BackendRef{}
+
+	if old.Group != nil {
+		upgraded.Group = GroupPtr(string(*old.Group))
+	}
+
+	if old.Kind != nil {
+		upgraded.Kind = KindPtr(string(*old.Kind))
+	}
+
+	if old.Namespace != nil {
+		upgraded.Namespace = NamespacePtr(string(*old.Namespace))
+	}
+
+	upgraded.Name = v1beta1.ObjectName(old.Name)
+
+	if old.Port != nil {
+		upgraded.Port = PortNumPtr(int32(*old.Port))
+	}
+
+	return upgraded
+}
+
+func DowngradeBackendRef(old v1beta1.BackendRef) v1alpha2.BackendRef {
+	downgraded := v1alpha2.BackendRef{}
+
+	if old.Group != nil {
+		downgraded.Group = GroupPtrV1Alpha2(string(*old.Group))
+	}
+
+	if old.Kind != nil {
+		downgraded.Kind = KindPtrV1Alpha2(string(*old.Kind))
+	}
+
+	if old.Namespace != nil {
+		downgraded.Namespace = NamespacePtrV1Alpha2(string(*old.Namespace))
+	}
+
+	downgraded.Name = v1alpha2.ObjectName(old.Name)
+
+	if old.Port != nil {
+		downgraded.Port = PortNumPtrV1Alpha2(int(*old.Port))
+	}
+
+	return downgraded
+}
+
 func NamespaceDerefOrAlpha(namespace *v1alpha2.Namespace, defaultNamespace string) string {
 	if namespace != nil && *namespace != "" {
 		return string(*namespace)

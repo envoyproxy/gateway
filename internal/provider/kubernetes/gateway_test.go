@@ -126,7 +126,7 @@ func TestGatewayHasMatchingController(t *testing.T) {
 	// Create the reconciler.
 	logger, err := log.NewLogger()
 	require.NoError(t, err)
-	r := gatewayReconciler{
+	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
 	}
@@ -135,7 +135,7 @@ func TestGatewayHasMatchingController(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(match, nonMatch, tc.obj).Build()
-			actual := r.hasMatchingController(tc.obj)
+			actual := r.hasMatchingControllerForGateway(tc.obj)
 			require.Equal(t, tc.expect, actual)
 		})
 	}
@@ -364,7 +364,7 @@ func TestAddFinalizer(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	r := new(gatewayReconciler)
+	r := new(gatewayAPIReconciler)
 	ctx := context.Background()
 
 	for _, tc := range testCases {
@@ -428,7 +428,7 @@ func TestRemoveFinalizer(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	r := new(gatewayReconciler)
+	r := new(gatewayAPIReconciler)
 	ctx := context.Background()
 
 	for _, tc := range testCases {
@@ -842,7 +842,7 @@ func TestSecretsAndRefGrantsForGateway(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	r := new(gatewayReconciler)
+	r := new(gatewayAPIReconciler)
 	ctx := context.Background()
 
 	for i := range testCases {
