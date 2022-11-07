@@ -34,7 +34,7 @@ contributing to the project.
 
 ### [v0.3.0][v0.3.0]: Drive Advanced Features through Extension Mechanisms
 
-- Support extended Gateway API fields.
+- Support extended Gateway API fields [Issue #707][707].
 - Support experimental Gateway APIs such as TCPRoute [Issue #643][643], UDPRoute [Issue #641][641] and GRPCRoute [Issue #642][642].
 - Establish guidelines for leveragaing Gateway API extensions [Issue #675][675].
 - Rate Limiting [Issue #670][670].
@@ -71,3 +71,4 @@ contributing to the project.
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
 [675]: https://github.com/envoyproxy/gateway/issues/675
+[707]: https://github.com/envoyproxy/gateway/issues/707
