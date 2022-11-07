@@ -89,6 +89,31 @@ var (
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
+	// UDPListener
+	happyUDPListener = UDPListener{
+		Name:         "happy",
+		Address:      "0.0.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidNameUDPListener = UDPListener{
+		Address:      "0.0.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidAddrUDPListener = UDPListener{
+		Name:         "invalid-addr",
+		Address:      "1.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidPortUDPListenerT = UDPListener{
+		Name:         "invalid-port",
+		Address:      "0.0.0.0",
+		Port:         0,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
 		Name: "happy",
@@ -466,6 +491,48 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 				require.NoError(t, test.input.Validate())
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateUDPListener(t *testing.T) {
+	tests := []struct {
+		name  string
+		input UDPListener
+		want  []error
+	}{
+		{
+			name:  "udp happy",
+			input: happyUDPListener,
+			want:  nil,
+		},
+		{
+			name:  "udp invalid name",
+			input: invalidNameUDPListener,
+			want:  []error{ErrListenerNameEmpty},
+		},
+		{
+			name:  "udp invalid addr",
+			input: invalidAddrUDPListener,
+			want:  []error{ErrListenerAddressInvalid},
+		},
+		{
+			name:  "udp invalid port",
+			input: invalidPortUDPListenerT,
+			want:  []error{ErrListenerPortInvalid},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
+				}
 			}
 		})
 	}

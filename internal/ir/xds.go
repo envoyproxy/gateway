@@ -43,6 +43,8 @@ type Xds struct {
 	HTTP []*HTTPListener
 	// TCP Listeners exposed by the gateway.
 	TCP []*TCPListener
+	// UDP Listeners exposed by the gateway.
+	UDP []*UDPListener
 }
 
 // Validate the fields within the Xds structure.
@@ -50,6 +52,16 @@ func (x Xds) Validate() error {
 	var errs error
 	for _, http := range x.HTTP {
 		if err := http.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, tcp := range x.TCP {
+		if err := tcp.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, udp := range x.UDP {
+		if err := udp.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -67,6 +79,15 @@ func (x Xds) GetHTTPListener(name string) *HTTPListener {
 
 func (x Xds) GetTCPListener(name string) *TCPListener {
 	for _, listener := range x.TCP {
+		if listener.Name == name {
+			return listener
+		}
+	}
+	return nil
+}
+
+func (x Xds) GetUDPListener(name string) *UDPListener {
+	for _, listener := range x.UDP {
 		if listener.Name == name {
 			return listener
 		}
@@ -468,6 +489,39 @@ func (t TLSInspectorConfig) Validate() error {
 	var errs error
 	if len(t.SNIs) == 0 {
 		errs = multierror.Append(errs, ErrTCPListenesSNIsEmpty)
+	}
+	return errs
+}
+
+// UDPListener holds the UDP listener configuration.
+// +k8s:deepcopy-gen=true
+type UDPListener struct {
+	// Name of the UDPListener
+	Name string
+	// Address that the listener should listen on.
+	Address string
+	// Port on which the service can be expected to be accessed by clients.
+	Port uint32
+	// Destinations associated with UDP traffic to the service.
+	Destinations []*RouteDestination
+}
+
+// Validate the fields within the UDPListener structure
+func (h UDPListener) Validate() error {
+	var errs error
+	if h.Name == "" {
+		errs = multierror.Append(errs, ErrListenerNameEmpty)
+	}
+	if ip := net.ParseIP(h.Address); ip == nil {
+		errs = multierror.Append(errs, ErrListenerAddressInvalid)
+	}
+	if h.Port == 0 {
+		errs = multierror.Append(errs, ErrListenerPortInvalid)
+	}
+	for _, route := range h.Destinations {
+		if err := route.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
 	}
 	return errs
 }
