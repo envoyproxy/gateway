@@ -16,7 +16,7 @@ import (
 
 const (
 	DefaultProxyName  = "default"
-	DefaultProxyImage = "envoyproxy/envoy:v1.24-latest"
+	DefaultProxyImage = "envoyproxy/envoy-dev:latest"
 )
 
 // Infra defines managed infrastructure.
@@ -36,7 +36,7 @@ type ProxyInfra struct {
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *v1alpha1.EnvoyProxy
 	// Image is the container image used for the managed proxy infrastructure.
-	// If unset, defaults to "envoyproxy/envoy:v1.24-latest".
+	// If unset, defaults to "envoyproxy/envoy-dev:latest".
 	Image string
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []ProxyListener
