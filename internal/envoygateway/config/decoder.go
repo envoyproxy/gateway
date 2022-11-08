@@ -38,7 +38,7 @@ func Decode(cfgPath string) (*v1alpha1.EnvoyGateway, error) {
 	// Attempt to cast the object.
 	eg, ok := obj.(*v1alpha1.EnvoyGateway)
 	if !ok {
-		return nil, errors.New("failed to convert obj to EnvoyGateway types")
+		return nil, errors.New("failed to convert object to EnvoyGateway type")
 	}
 
 	return eg, nil
