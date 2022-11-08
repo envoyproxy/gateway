@@ -1,10 +1,10 @@
 DOCS_OUTPUT_DIR := docs/html
+RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v})) 
 
 ##@ Docs
 
 .PHONY: docs
 docs: docs.clean $(tools/sphinx-build) ## Generate Envoy Gateway Docs Sources
-	$(eval RELEASE_VERSIONS := latest $(shell cat VERSION))
 	mkdir -p $(DOCS_OUTPUT_DIR)
 	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
 	@for VERSION in $(RELEASE_VERSIONS); do \
