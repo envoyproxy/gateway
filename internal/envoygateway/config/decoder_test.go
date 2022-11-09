@@ -6,6 +6,7 @@
 package config
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -51,6 +52,74 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "provider-with-gateway.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultProvider(),
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "provider-mixing-gateway.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: v1alpha1.DefaultProvider(),
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "gateway-mixing-provider.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: true,
+		},
+		{
+			in: inPath + "provider-mixing-gateway.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: v1alpha1.DefaultProvider(),
+					Gateway:  v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: false,
+		},
+		{
+			in: inPath + "gateway-mixing-provider.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: v1alpha1.DefaultProvider(),
+					Gateway:  v1alpha1.DefaultGateway(),
+				},
+			},
+			expect: false,
+		},
+		{
 			in:     inPath + "no-api-version.yaml",
 			expect: false,
 		},
@@ -60,6 +129,18 @@ func TestDecode(t *testing.T) {
 		},
 		{
 			in:     "/non/existent/config.yaml",
+			expect: false,
+		},
+		{
+			in:     inPath + "invalid-gateway-group.yaml",
+			expect: false,
+		},
+		{
+			in:     inPath + "invalid-gateway-kind.yaml",
+			expect: false,
+		},
+		{
+			in:     inPath + "invalid-gateway-version.yaml",
 			expect: false,
 		},
 	}
@@ -72,7 +153,7 @@ func TestDecode(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, tc.out, eg)
 			} else {
-				require.Error(t, err, "An error was expected")
+				require.Equal(t, (!reflect.DeepEqual(tc.out, eg) || err != nil), true)
 			}
 		})
 	}
