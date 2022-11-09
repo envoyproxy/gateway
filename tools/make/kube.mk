@@ -67,7 +67,7 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 #run-kube-local: build kube-install ## Run Envoy Gateway locally.
 #	tools/hack/run-kube-local.sh
 
-.PHONY: conformance 
+.PHONY: conformance
 conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
 .PHONY: create-cluster
