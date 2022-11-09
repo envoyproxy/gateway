@@ -15,7 +15,7 @@ var (
 		Path: "/dev/stdout",
 	}
 
-	// for the case when a route doesnt exist to upstream, hcm logs will not be present
+	// for the case when a route does not exist to upstream, hcm logs will not be present
 	listenerAccessLogFilter = &accesslog.AccessLogFilter{
 		FilterSpecifier: &accesslog.AccessLogFilter_ResponseFlagFilter{
 			ResponseFlagFilter: &accesslog.ResponseFlagFilter{Flags: []string{"NR"}},
