@@ -93,7 +93,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			xdsCluster, err := buildXdsCluster(httpRoute.Name, httpRoute.Destinations)
+			xdsCluster, err := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2)
 			if err != nil {
 				return nil, multierror.Append(err, errors.New("error building xds cluster"))
 			}
@@ -106,7 +106,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	for _, tcpListener := range ir.TCP {
 		// 1:1 between IR TCPListener and xDS Cluster
-		xdsCluster, err := buildXdsCluster(tcpListener.Name, tcpListener.Destinations)
+		xdsCluster, err := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */)
 		if err != nil {
 			return nil, multierror.Append(err, errors.New("error building xds cluster"))
 		}
@@ -126,7 +126,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	for _, udpListener := range ir.UDP {
 		// 1:1 between IR UDPListener and xDS Cluster
-		xdsCluster, err := buildXdsCluster(udpListener.Name, udpListener.Destinations)
+		xdsCluster, err := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */)
 		if err != nil {
 			return nil, multierror.Append(err, errors.New("error building xds cluster"))
 		}

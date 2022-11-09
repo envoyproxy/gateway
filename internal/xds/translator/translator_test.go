@@ -65,6 +65,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "udp-route",
 		},
+		{
+			name: "http2-route",
+		},
 	}
 
 	for _, tc := range testCases {

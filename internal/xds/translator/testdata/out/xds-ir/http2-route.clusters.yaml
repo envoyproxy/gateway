@@ -1,0 +1,19 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  http2ProtocolOptions: {}
+  loadAssignment:
+    clusterName: first-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: first-route
+  outlierDetection: {}
+  type: STATIC
