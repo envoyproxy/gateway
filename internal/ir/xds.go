@@ -123,6 +123,8 @@ type HTTPListener struct {
 	TLS *TLSListenerConfig
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute
+	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
+	IsHTTP2 bool
 }
 
 // Validate the fields within the HTTPListener structure
