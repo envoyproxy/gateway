@@ -1,0 +1,18 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        path: foo/bar
+        queryParameters:
+        - name: debug
+          stringMatch:
+            exact: "yes"
+      route:
+        cluster: first-route
