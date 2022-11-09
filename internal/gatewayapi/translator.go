@@ -552,7 +552,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			switch listener.Protocol {
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
-					Name:    irListenerName(listener),
+					Name:    irHTTPListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
 					TLS:     irTLSConfig(listener.tlsSecret),
@@ -566,18 +566,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
-			case v1beta1.TLSProtocolType:
-				irListener := &ir.TCPListener{
-					Name:    irListenerName(listener),
-					Address: "0.0.0.0",
-					Port:    uint32(containerPort),
-					TLS: &ir.TLSInspectorConfig{
-						// Since we need to first compute intersecting hostnames between the
-						// listener and TLS Route, populate this field after processing TLS Routes.
-						SNIs: []string{},
-					},
-				}
-				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
@@ -1200,7 +1188,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 				}
 
 				irKey := irStringKey(listener.gateway)
-				irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
+				irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 				if irListener != nil {
 					irListener.Routes = append(irListener.Routes, perHostRoutes...)
 				}
@@ -1385,11 +1373,20 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 				hasHostnameIntersection = true
 
 				irKey := irStringKey(listener.gateway)
-				irListener := xdsIR[irKey].GetTCPListener(irListenerName(listener))
-				if irListener != nil {
-					irListener.Destinations = routeDestinations
-					irListener.TLS.SNIs = hosts
+				containerPort := servicePortToContainerPort(int32(listener.Port))
+				// Create the TCP Listener while parsing the TLSRoute since
+				// the listener directly links to a routeDestination.
+				irListener := &ir.TCPListener{
+					Name:    irTCPListenerName(listener, tlsRoute),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+					TLS: &ir.TLSInspectorConfig{
+						SNIs: hosts,
+					},
+					Destinations: routeDestinations,
 				}
+				gwXdsIR := xdsIR[irKey]
+				gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 
 				// Theoretically there should only be one parent ref per
 				// Route that attaches to a given Listener, so fine to just increment here, but we
@@ -1571,8 +1568,12 @@ func irStringKey(gateway *v1beta1.Gateway) string {
 	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
 }
 
-func irListenerName(listener *ListenerContext) string {
+func irHTTPListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
+}
+
+func irTCPListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
+	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
 }
 
 func routeName(route RouteContext, ruleIdx, matchIdx int) string {

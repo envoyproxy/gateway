@@ -21,7 +21,7 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
-      attachedRoutes: 1
+      attachedRoutes: 2 
       conditions:
       - type: Ready
         status: "True"
@@ -54,6 +54,32 @@ tlsRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    namespace: default
+    name: tlsroute-2
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    hostnames:
+    - bar.com
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - parentRef:
+        namespace: envoy-gateway
+        name: gateway-1
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      conditions:
+      - type: Accepted
+        status: "True"
+        reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     tcp:
@@ -67,6 +93,16 @@ xdsIR:
       - host: 7.7.7.7
         port: 8080
         weight: 1
+    - name: envoy-gateway-gateway-1-tls-tlsroute-2
+      address: 0.0.0.0
+      port: 10091
+      tls:
+        snis:
+        - bar.com
+      destinations:
+      - host: 7.7.7.7
+        port: 8080
+        weight: 1       
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
