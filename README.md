@@ -15,8 +15,8 @@ Kubernetes-based application gateway.
 
 ## Contact
 
-* Slack: Go to [Envoy Gateway Channel](https://envoyproxy.slack.com/archives/C03E6NHLESV).
-* [Google Group][group]: Envoy Gateway developer discussion (APIs, feature design, etc.).
+* Slack: Join the [Envoy Slack workspace][] if you're not already a member. Otherwise, use the
+  [Envoy Gateway channel][] to start collaborating with the community.
 
 ## Contributing
 
@@ -33,3 +33,5 @@ The Envoy Gateway team meets every Tuesday and Thursday. Refer to the meeting de
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
 [group]: https://groups.google.com/forum/#!forum/envoy-gateway-developers
 [blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
+[Envoy Slack workspace]: https://communityinviter.com/apps/envoyproxy/envoy
+[Envoy Gateway channel]: https://envoyproxy.slack.com/archives/C03E6NHLESV
