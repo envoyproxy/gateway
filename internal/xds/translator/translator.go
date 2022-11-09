@@ -7,8 +7,6 @@ package translator
 
 import (
 	"errors"
-	"fmt"
-
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -119,8 +117,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port)
 			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 		}
-		// todo: huabing zhao we should check the conflicted listeners: multiple TCP listeners or TCP and HTTP listeners
-		// should not listen on the same port
+
 		if err := addXdsTCPFilterChain(xdsListener, tcpListener, xdsCluster.Name); err != nil {
 			return nil, err
 		}
@@ -134,21 +131,13 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		}
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
-		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListener(tCtx, udpListener.Address, udpListener.Port, core.SocketAddress_UDP)
-		if xdsListener == nil {
-			xdsListener, err := buildXdsUDPListener(xdsCluster.Name, udpListener)
-			if err != nil {
-				return nil, multierror.Append(err, errors.New("error building xds cluster"))
-			}
-			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
-		} else {
-			// todo: huabing zhao instead of throwing an error, we should just remove the conflicted listener and print
-			// a warning
-			return nil, multierror.Append(err,
-				fmt.Errorf("error building xds cluster: UDP listener %s conflicts with an existing one %s",
-					udpListener.Name, xdsListener.Name))
+		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
+		// translator
+		xdsListener, err := buildXdsUDPListener(xdsCluster.Name, udpListener)
+		if err != nil {
+			return nil, multierror.Append(err, errors.New("error building xds cluster"))
 		}
+		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 	}
 	return tCtx, nil
 }

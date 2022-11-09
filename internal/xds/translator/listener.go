@@ -295,7 +295,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 		return nil, errors.New("udp listener is nil")
 	}
 
-	statPrefix := "udp"
+	statPrefix := "service"
 
 	route := &udp.Route{
 		Cluster: clusterName,
@@ -345,7 +345,6 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 			{
 				Name:       wellknown.FileAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
-				Filter:     listenerAccessLogFilter,
 			},
 		},
 		Address: &core.Address{
