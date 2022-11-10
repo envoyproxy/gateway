@@ -28,7 +28,7 @@ individuals and will be valid for 1 year from the start date.
 
 - Envoy core proxy maintainers [Member: Matt Klein; Start Date: 5/16/2022]
 - Tetrate [Member: Varun Talwar; Start Date: 5/16/2022]
-- VMware [Member: Winnie Kwon; Start Date: 5/16/2022]
+- VMware [Member: Winnie Kwon; Start Date: 11/10/2022]
 - Ambassador Labs [Member: Richard Li; Start Date: 5/16/2022]
 - Fidelity Investments [Member: Venkat Kasisomayajula / Rajarajan Pudupatti Sundari Jeyakodi; Start Date: 5/16/2022]
 
