@@ -119,7 +119,7 @@ export ENVOY_DEPLOYMENT=$(kubectl get deploy -n envoy-gateway-system --selector=
 Port forward the admin interface port:
 
 ```shell
-kubectl port-forward deploy/envoy-${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
+kubectl port-forward deploy/${ENVOY_DEPLOYMENT} -n envoy-gateway-system 19000:19000
 ```
 
 Now you are able to view the running Envoy configuration by navigating to `127.0.0.1:19000/config_dump`.
