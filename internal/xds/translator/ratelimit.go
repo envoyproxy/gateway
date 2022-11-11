@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"bytes"
 	"strconv"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -164,6 +166,15 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 	}
 
 	return rateLimits
+}
+
+// GetRateLimitServiceConfigStr returns the YAML string for the rate limit service configuration.
+func GetRateLimitServiceConfigStr(yamlRoot *ratelimitserviceconfig.YamlRoot) (string, error) {
+	var buf bytes.Buffer
+	enc := goyaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	err := enc.Encode(*yamlRoot)
+	return buf.String(), err
 }
 
 // BuildRateLimitServiceConfig builds the rate limit service configuration based on

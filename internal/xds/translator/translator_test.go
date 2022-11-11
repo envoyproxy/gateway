@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -196,12 +195,9 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 }
 
 func requireYamlRootToYAMLString(t *testing.T, yamlRoot *ratelimitserviceconfig.YamlRoot) string {
-	var buf bytes.Buffer
-	enc := goyaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	err := enc.Encode(*yamlRoot)
+	str, err := GetRateLimitServiceConfigStr(yamlRoot)
 	require.NoError(t, err)
-	return buf.String()
+	return str
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
