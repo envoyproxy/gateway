@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 
+	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -108,6 +109,19 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 		}
 
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
+
+		// TODO: Make this into a generic interface for API Gateway features
+		// Check if a ratelimit cluster exists, if not, add it, if its needed.
+		if rlCluster := findXdsCluster(tCtx, getRateLimitServiceClusterName()); rlCluster == nil {
+			rlCluster, err := buildRateLimitServiceCluster(httpListener)
+			if err != nil {
+				return multierror.Append(err, errors.New("error building ratelimit cluster"))
+			}
+			// Add cluster
+			if rlCluster != nil {
+				tCtx.AddXdsResource(resource.ClusterType, rlCluster)
+			}
+		}
 	}
 	return nil
 }
@@ -147,6 +161,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 	}
 	return nil
+
 }
 
 // findXdsListener finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
@@ -162,6 +177,22 @@ func findXdsListener(tCtx *types.ResourceVersionTable, address string, port uint
 		if addr.GetSocketAddress().GetPortValue() == port && addr.GetSocketAddress().Address == address && addr.
 			GetSocketAddress().Protocol == protocol {
 			return listener
+		}
+	}
+
+	return nil
+}
+
+// findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
+func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *cluster.Cluster {
+	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resource.ClusterType] == nil {
+		return nil
+	}
+
+	for _, r := range tCtx.XdsResources[resource.ClusterType] {
+		cluster := r.(*cluster.Cluster)
+		if cluster.Name == name {
+			return cluster
 		}
 	}
 

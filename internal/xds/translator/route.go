@@ -49,6 +49,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *route.Route {
 		}
 	}
 
+	// TODO: convert this into a generic interface for API Gateway features
+	if err := PatchRouteWithRateLimit(ret.GetRoute(), httpRoute); err != nil {
+		return nil, err
+	}
+
 	return ret
 }
 

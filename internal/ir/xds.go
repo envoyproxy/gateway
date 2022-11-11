@@ -211,6 +211,9 @@ type HTTPRoute struct {
 	Destinations []*RouteDestination
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite
+	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
+	// the requests on this route.
+	RateLimit *RateLimit
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -590,4 +593,45 @@ func (h UDPListener) Validate() error {
 		}
 	}
 	return errs
+}
+
+// RateLimit holds the rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type RateLimit struct {
+	// Global rate limit settings.
+	Global *GlobalRateLimit
+}
+
+// GlobalRateLimit holds the global rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type GlobalRateLimit struct {
+	// Rules for rate limiting.
+	Rules []*RateLimitRule
+}
+
+// RateLimitRule holds the match and limit configuration for ratelimiting.
+// +k8s:deepcopy-gen=true
+type RateLimitRule struct {
+	// HeaderMatches define the match conditions on the request headers for this route.
+	HeaderMatches []*StringMatch
+	// Limit holds the rate limit values.
+	Limit *RateLimitValue
+}
+
+type RateLimitUnit string
+
+const (
+	Second RateLimitUnit = "second"
+	Minute RateLimitUnit = "minute"
+	Hour   RateLimitUnit = "hour"
+	Day    RateLimitUnit = "day"
+)
+
+// RateLimitValue holds the
+// +k8s:deepcopy-gen=true
+type RateLimitValue struct {
+	// Requests are the number of requests that need to be rate limited.
+	Requests uint32
+	// Unit of rate limiting.
+	Unit RateLimitUnit
 }
