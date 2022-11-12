@@ -93,10 +93,12 @@ func (r *gatewayAPIReconciler) processGateway(obj client.Object) []reconcile.Req
 	if len(acceptedGateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
 		// If needed, remove the finalizer from the accepted GatewayClass.
-		if err := r.removeFinalizer(ctx, acceptedClass); err != nil {
-			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
-				acceptedClass.Name))
-			return requests
+		if acceptedClass != nil {
+			if err := r.removeFinalizer(ctx, acceptedClass); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
+					acceptedClass.Name))
+				return requests
+			}
 		}
 	} else {
 		// If needed, finalize the accepted GatewayClass.
