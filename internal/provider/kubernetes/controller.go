@@ -17,6 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/utils/slice"
 
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -133,6 +134,14 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	if err := c.Watch(
 		&source.Kind{Type: &gwapiv1a2.ReferenceGrant{}},
 		handler.EnqueueRequestsFromMapFunc(r.processReferenceGrant),
+	); err != nil {
+		return err
+	}
+
+	// Watch Deployment CRUDs and process affected Gateways.
+	if err := c.Watch(
+		&source.Kind{Type: &appsv1.Deployment{}},
+		handler.EnqueueRequestsFromMapFunc(r.processDeployment),
 	); err != nil {
 		return err
 	}

@@ -245,6 +245,33 @@ func (r *gatewayAPIReconciler) processGateway(obj client.Object) []reconcile.Req
 	return requests
 }
 
+// TODO: comment
+func (r *gatewayAPIReconciler) processDeployment(obj client.Object) []reconcile.Request {
+	// Once a Gateway is created, EG reconciles a envoy Deployment for the Gateway,
+	// and once that Deployment is Ready, we must watch that change to process the
+	// corresponding Gateway.
+	// No need to store these Deployments in the resource table.
+	labels := obj.GetLabels()
+	if labels != nil {
+		gatewayNamespacedName := types.NamespacedName{
+			Namespace: labels[gatewayapi.OwningGatewayNamespaceLabel],
+			Name:      labels[gatewayapi.OwningGatewayNameLabel],
+		}
+
+		if len(gatewayNamespacedName.Namespace) != 0 && len(gatewayNamespacedName.Name) != 0 {
+			r.log.Info("processing deployment for owning Gateway", "namespace", obj.GetNamespace(), "name", obj.GetName())
+			gateway := new(gwapiv1b1.Gateway)
+			if err := r.client.Get(context.Background(), gatewayNamespacedName, gateway); err != nil {
+				// This should not really happen.
+				r.log.Error(err, "failed to get corresponding Gateway for Deployment.")
+				return []reconcile.Request{}
+			}
+			return r.processGateway(gateway)
+		}
+	}
+	return []reconcile.Request{}
+}
+
 // gatewaysRefSecret returns true if a managed Gateway references the provided secret.
 // An error is returned if an error is encountered while checking.
 func (r *gatewayAPIReconciler) gatewaysRefSecret(ctx context.Context, secret *corev1.Secret) (bool, error) {

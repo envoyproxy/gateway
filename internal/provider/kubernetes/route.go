@@ -304,6 +304,7 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 
 // processService processes the Service coming from the watcher and further
 // processes parent Route objects to eventually reconcile GatewayClass.
+// This also takes care of the Service that directly corresponds to a Gateway.
 func (r *gatewayAPIReconciler) processService(obj client.Object) []reconcile.Request {
 	r.log.Info("processing service", "namespace", obj.GetNamespace(), "name", obj.GetName())
 	ctx := context.Background()
@@ -329,6 +330,29 @@ func (r *gatewayAPIReconciler) processService(obj client.Object) []reconcile.Req
 	}
 
 	if !serviceDeleted {
+		// Once a Gateway is created, EG reconciles a Service for the Gateway, and
+		// once that Service is assigned an IP from the LB controller, we must watch
+		// that change to process the corresponding Gateway.
+		// No need to store these Services in the resource table.
+		labels := service.GetLabels()
+		if labels != nil {
+			gatewayNamespacedName := types.NamespacedName{
+				Namespace: labels[gatewayapi.OwningGatewayNamespaceLabel],
+				Name:      labels[gatewayapi.OwningGatewayNameLabel],
+			}
+
+			if len(gatewayNamespacedName.Namespace) != 0 && len(gatewayNamespacedName.Name) != 0 {
+				r.log.Info("processing Service for owning Gateway", "namespace", obj.GetNamespace(), "name", obj.GetName())
+				gateway := new(gwapiv1b1.Gateway)
+				if err := r.client.Get(context.Background(), gatewayNamespacedName, gateway); err != nil {
+					// This should not really happen.
+					r.log.Error(err, "failed to get corresponding Gateway for Service.")
+					return []reconcile.Request{}
+				}
+				return r.processGateway(gateway)
+			}
+		}
+
 		// Store the Service in watchable map.
 		r.resources.Services.Store(svckey, service.DeepCopy())
 	}
@@ -349,6 +373,7 @@ func (r *gatewayAPIReconciler) processService(obj client.Object) []reconcile.Req
 		return []reconcile.Request{}
 	}
 
+	// Continue processing Route objects.
 	for _, h := range httpRouteList.Items {
 		requests = append(requests, r.processHTTPRoute(h.DeepCopy())...)
 	}
