@@ -178,13 +178,12 @@ spec:
     - group: ""
       name: backend
       port: 3000
-      port: 80
       weight: 1
     filters:
     - type: RequestHeaderModifier
       requestHeaderModifier:
         remove:
-        - name: "remove-header"
+        - "remove-header"
 EOF
 ```
 
