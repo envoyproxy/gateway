@@ -21,7 +21,7 @@ gateways:
             - type: Accepted
               status: "False"
               reason: UnsupportedProtocol
-              message: Protocol TCP is unsupported, must be HTTP or HTTPS.
+              message: Protocol TCP is unsupported, must be HTTP, HTTPS, or UDP.
             - type: Programmed
               status: "False"
               reason: Invalid

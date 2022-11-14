@@ -111,6 +111,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(tlsRoute)
 				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
 			}
+			for _, udpRoute := range result.UDPRoutes {
+				key := utils.NamespacedName(udpRoute)
+				r.ProviderResources.UDPRouteStatuses.Store(key, udpRoute)
+			}
 		},
 	)
 	r.Logger.Info("shutting down")
