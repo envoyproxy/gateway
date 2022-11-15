@@ -1522,114 +1522,125 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 			var routeDestinations []*ir.RouteDestination
 
 			// compute backends
-			for _, rule := range udpRoute.Spec.Rules {
-				for _, backendRef := range rule.BackendRefs {
-					if backendRef.Group != nil && *backendRef.Group != "" {
-						parentRef.SetCondition(udpRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonInvalidKind,
-							"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
-						)
-						continue
-					}
-
-					if backendRef.Kind != nil && *backendRef.Kind != KindService {
-						parentRef.SetCondition(udpRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonInvalidKind,
-							"Kind is invalid, only Service is supported",
-						)
-						continue
-					}
-
-					if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != udpRoute.Namespace {
-						if !isValidCrossNamespaceRef(
-							crossNamespaceFrom{
-								group:     v1beta1.GroupName,
-								kind:      KindUDPRoute,
-								namespace: udpRoute.Namespace,
-							},
-							crossNamespaceTo{
-								group:     "",
-								kind:      KindService,
-								namespace: string(*backendRef.Namespace),
-								name:      string(backendRef.Name),
-							},
-							resources.ReferenceGrants,
-						) {
-							parentRef.SetCondition(udpRoute,
-								v1beta1.RouteConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.RouteReasonRefNotPermitted,
-								fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
-							)
-							continue
-						}
-					}
-
-					if backendRef.Port == nil {
-						parentRef.SetCondition(udpRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							"PortNotSpecified",
-							"A valid port number corresponding to a port on the Service must be specified",
-						)
-						continue
-					}
-
-					// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when UDPRoute graduates to v1beta1.
-					serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
-					service := resources.GetService(serviceNamespace, string(backendRef.Name))
-					if service == nil {
-						parentRef.SetCondition(udpRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonBackendNotFound,
-							fmt.Sprintf("Service %s/%s not found", serviceNamespace, string(backendRef.Name)),
-						)
-						continue
-					}
-
-					var portFound bool
-					for _, port := range service.Spec.Ports {
-						if port.Port == int32(*backendRef.Port) {
-							portFound = true
-							break
-						}
-					}
-
-					if !portFound {
-						parentRef.SetCondition(udpRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							"PortNotFound",
-							fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace, string(backendRef.Name)),
-						)
-						continue
-					}
-
-					weight := uint32(1)
-					if backendRef.Weight != nil {
-						weight = uint32(*backendRef.Weight)
-					}
-
-					routeDestinations = append(routeDestinations, &ir.RouteDestination{
-						Host:   service.Spec.ClusterIP,
-						Port:   uint32(*backendRef.Port),
-						Weight: weight,
-					})
-				}
-
-				// TODO handle:
-				//	- no valid backend refs
-				//	- sum of weights for valid backend refs is 0
-				//	- returning 500's for invalid backend refs
-				//	- etc.
+			if len(udpRoute.Spec.Rules) != 1 {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					"InvalidRule",
+					"One and only one rule is supported",
+				)
+				continue
+			}
+			if len(udpRoute.Spec.Rules[0].BackendRefs) != 1 {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					"InvalidBackend",
+					"One and only one backend is supported",
+				)
+				continue
 			}
 
+			backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
+			if backendRef.Group != nil && *backendRef.Group != "" {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonInvalidKind,
+					"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+				)
+				continue
+			}
+
+			if backendRef.Kind != nil && *backendRef.Kind != KindService {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonInvalidKind,
+					"Kind is invalid, only Service is supported",
+				)
+				continue
+			}
+
+			if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != udpRoute.Namespace {
+				if !isValidCrossNamespaceRef(
+					crossNamespaceFrom{
+						group:     v1beta1.GroupName,
+						kind:      KindUDPRoute,
+						namespace: udpRoute.Namespace,
+					},
+					crossNamespaceTo{
+						group:     "",
+						kind:      KindService,
+						namespace: string(*backendRef.Namespace),
+						name:      string(backendRef.Name),
+					},
+					resources.ReferenceGrants,
+				) {
+					parentRef.SetCondition(udpRoute,
+						v1beta1.RouteConditionResolvedRefs,
+						metav1.ConditionFalse,
+						v1beta1.RouteReasonRefNotPermitted,
+						fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+					)
+					continue
+				}
+			}
+
+			if backendRef.Port == nil {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					"PortNotSpecified",
+					"A valid port number corresponding to a port on the Service must be specified",
+				)
+				continue
+			}
+
+			// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when UDPRoute graduates to v1beta1.
+			serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
+			service := resources.GetService(serviceNamespace, string(backendRef.Name))
+			if service == nil {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonBackendNotFound,
+					fmt.Sprintf("Service %s/%s not found", serviceNamespace, string(backendRef.Name)),
+				)
+				continue
+			}
+
+			var portFound bool
+			for _, port := range service.Spec.Ports {
+				if port.Port == int32(*backendRef.Port) {
+					portFound = true
+					break
+				}
+			}
+
+			if !portFound {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionResolvedRefs,
+					metav1.ConditionFalse,
+					"PortNotFound",
+					fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace, string(backendRef.Name)),
+				)
+				continue
+			}
+
+			// weight is not used in udp route destinations
+			routeDestinations = append(routeDestinations, &ir.RouteDestination{
+				Host: service.Spec.ClusterIP,
+				Port: uint32(*backendRef.Port),
+			})
+
+			accepted := false
 			for _, listener := range parentRef.listeners {
+				// only one route is allowed for a UDP listener
+				if listener.AttachedRoutes() > 0 {
+					continue
+				}
+				accepted = true
 				irKey := irStringKey(listener.gateway)
 				containerPort := servicePortToContainerPort(int32(listener.Port))
 				// Create the UDP Listener while parsing the UDPRoute since
@@ -1652,13 +1663,21 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 			}
 
 			// If no negative conditions have been set, the route is considered "Accepted=True".
-			if parentRef.udpRoute != nil &&
+			if accepted && parentRef.udpRoute != nil &&
 				len(parentRef.udpRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 				parentRef.SetCondition(udpRoute,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionTrue,
 					v1beta1.RouteReasonAccepted,
 					"Route is accepted",
+				)
+			}
+			if !accepted {
+				parentRef.SetCondition(udpRoute,
+					v1beta1.RouteConditionAccepted,
+					metav1.ConditionFalse,
+					v1beta1.RouteReasonUnsupportedValue,
+					"Multiple routes on the same UDP listener",
 				)
 			}
 		}

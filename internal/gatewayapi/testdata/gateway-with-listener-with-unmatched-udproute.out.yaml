@@ -8,7 +8,6 @@ gateways:
       gatewayClassName: envoy-gateway-class
       listeners:
         - name: udp
-          hostname: foo.com
           protocol: UDP
           port: 80
           allowedRoutes:
@@ -20,21 +19,29 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: UDPRoute
+          AttachedRoutes: 0
           conditions:
             - type: Ready
-              status: "False"
-              reason: Invalid
-              message: Listener must not have hostname set when protocol is UDP.
+              status: "True"
+              reason: Ready
+              message: Listener is ready
+
 xdsIR:
   envoy-gateway-gateway-1: {}
+
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
       image: envoyproxy/envoy:translator-tests
       listeners:
         - address: ""
+          ports:
+            - name: udp
+              protocol: "UDP"
+              servicePort: 80
+              containerPort: 10080

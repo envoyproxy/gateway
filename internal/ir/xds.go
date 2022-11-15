@@ -281,6 +281,7 @@ type RouteDestination struct {
 	// Port on the service to forward the request to.
 	Port uint32
 	// Weight associated with this destination.
+	// Note: Weight is not used in UDP route.
 	Weight uint32
 }
 

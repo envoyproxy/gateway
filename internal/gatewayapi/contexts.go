@@ -134,6 +134,10 @@ func (l *ListenerContext) IncrementAttachedRoutes() {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes++
 }
 
+func (l *ListenerContext) AttachedRoutes() int32 {
+	return l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes
+}
+
 func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") && allowed.Kind == kind.Kind {
