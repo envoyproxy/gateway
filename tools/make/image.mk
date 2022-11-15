@@ -47,7 +47,8 @@ image.verify:
 image.build: $(addprefix image.build.$(IMAGE_PLAT)., $(IMAGES))
 
 .PHONY: image.build.%
-image.build.%: go.build.% image.verify
+image.build.%: image.verify
+	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
 	@$(call log, "Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)")
@@ -100,7 +101,7 @@ image.push.multiarch:
 
 .PHONY: image
 image: ## Build docker images for host platform. See Option PLATFORM and BINS.
-image: image.build
+image: go.build image.build
 
 .PHONY: image-multiarch
 image-multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
