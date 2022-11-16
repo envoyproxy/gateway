@@ -9,7 +9,7 @@ gateways:
       listeners:
         - name: udp
           protocol: UDP
-          port: 80
+          port: 162
           allowedRoutes:
             namespaces:
               from: All
@@ -26,7 +26,7 @@ udpRoutes:
       rules:
         - backendRefs:
             - name: service-1
-              port: 8080
+              port: 8162
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: UDPRoute
     metadata:
@@ -39,4 +39,4 @@ udpRoutes:
       rules:
         - backendRefs:
             - name: service-2
-              port: 8080
+              port: 8162

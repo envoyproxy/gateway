@@ -747,6 +747,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 
 	var portFound bool
 	for _, port := range service.Spec.Ports {
+		//TODO Huabing Zhao: we also need to check if the protocol matches
 		if port.Port == int32(*backendRef.Port) {
 			portFound = true
 			break
@@ -1397,6 +1398,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 
 					var portFound bool
 					for _, port := range service.Spec.Ports {
+						//TODO Huabing Zhao: we also need to check if the protocol matches
 						if port.Port == int32(*backendRef.Port) {
 							portFound = true
 							break
@@ -1612,7 +1614,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 
 			var portFound bool
 			for _, port := range service.Spec.Ports {
-				if port.Port == int32(*backendRef.Port) {
+				if port.Port == int32(*backendRef.Port) && port.Protocol == v1.ProtocolUDP {
 					portFound = true
 					break
 				}
@@ -1623,7 +1625,8 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 					v1beta1.RouteConditionResolvedRefs,
 					metav1.ConditionFalse,
 					"PortNotFound",
-					fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace, string(backendRef.Name)),
+					fmt.Sprintf("UDP Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace,
+						string(backendRef.Name)),
 				)
 				continue
 			}

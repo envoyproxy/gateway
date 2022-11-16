@@ -9,7 +9,7 @@ gateways:
       listeners:
         - name: udp
           protocol: UDP
-          port: 80
+          port: 162
           allowedRoutes:
             namespaces:
               from: All
@@ -19,7 +19,7 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: UDPRoute
-          AttachedRoutes: 1
+          AttachedRoutes: 0
           conditions:
             - type: Ready
               status: "True"
@@ -50,16 +50,12 @@ udpRoutes:
               status: "True"
               reason: Accepted
               message: Route is accepted
+            - type: ResolvedRefs
+              status: "False"
+              reason: PortNotFound
+              message: UDP Port 8080 not found on service default/service-1
 xdsIR:
-  envoy-gateway-gateway-1:
-    udp:
-      - name: "envoy-gateway-gateway-1-udp-udproute-1"
-        address: "0.0.0.0"
-        port: 10080
-        destinations:
-          - host: "7.7.7.7"
-            port: 8080
-            weight: 0
+  envoy-gateway-gateway-1: {}
 
 infraIR:
   envoy-gateway-gateway-1:
@@ -75,5 +71,5 @@ infraIR:
           ports:
             - name: udp
               protocol: "UDP"
-              servicePort: 80
-              containerPort: 10080
+              servicePort: 162
+              containerPort: 10162
