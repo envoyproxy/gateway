@@ -71,99 +71,27 @@ type AuthenticationSpec struct {
 	// Type defines the type of authentication provider to use. Supported provider
 	// types are:
 	//
-	// * JWT
-	//
-	//   JWT defines the JSON Web Token (JWT) authentication provider type.
+	// * JWT: A provider that uses JSON Web Token (JWT) for authenticating requests.
 	//
 	// +unionDiscriminator
-	Type AuthenticationType `json:"type"`
-	
+	Type AuthenticationType
+
 	// JWT defines the JSON Web Token (JWT) authentication provider type. When multiple
 	// jwtProviders are specified, the JWT is considered valid if any of the providers
-	// successfully validate the JWT. For additional details, see:
-	//
-	//   https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html
-	//
-	// +kubebuilder:validation:MaxItems=4
-	// +optional
-	JwtProviders []JwtAuthenticationProvider `json:"jwtProviders,omitempty"`
+	// successfully validate the JWT.
+	JwtProviders []JwtAuthenticationProvider
 }
 
-// AuthenticationType is a type of authentication provider.
-// +kubebuilder:validation:Enum=JWT
-type AuthenticationType string
-
-const (
-	// JwtAuthenticationProviderType is the JWT authentication provider type.
-	JwtAuthenticationProviderType AuthenticationType = "JWT"
-)
-
-// JwtAuthenticationProvider defines the JSON Web Token (JWT) authentication provider type
-// and how JWTs should be verified:
-type JwtAuthenticationProvider struct {
-	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
-	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name"`
-
-	// Issuer is the principal that issued the JWT.	For additional details, see:
-	//
-	//   https://tools.ietf.org/html/rfc7519#section-4.1.1
-	//
-	// Example:
-	//  issuer: https://auth.example.com
-	//
-	// If not provided, the JWT issuer is not checked.
-	//
-	// +kubebuilder:validation:MaxLength=253
-	// +optional
-	Issuer string `json:"issuer,omitempty"`
-
-	// Audiences is a list of JWT audiences allowed to access. For additional details, see:
-	//
-	//   https://tools.ietf.org/html/rfc7519#section-4.1.3
-	//
-	// Example:
-	//   audiences:
-	//   - foo.apps.example.com
-	//     bar.apps.example.com
-	//
-	// If not provided, JWT audiences are not checked.
-	//
-	// +kubebuilder:validation:MaxItems=8
-	// +optional
-	Audiences []string `json:"audiences,omitempty"`
-
-	// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
-	// HTTP/HTTPS endpoint.
-	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
-
-	// TODO: Add TBD JWT fields based on defined use cases.
-}
-
-// RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
-// HTTP/HTTPS endpoint.
-type RemoteJWKS struct {
-	// Uri is the HTTP/HTTPS URI to fetch the JWKS.
-	//
-	// Example:
-	//  uri: https://www.googleapis.com/oauth2/v1/certs
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Uri string `json:"uri"`
-
-	// TODO: Add TBD remote JWKS fields based on defined use cases.
-}
+...
 ```
+
+Refer to [PR 773][] for the detailed Authentication API spec.
 
 The status subresource is not included in the Authentication API. Status will be surfaced by an HTTPRoute that
 references an Authentication. For example, an HTTPRoute will surface the `ResolvedRefs=False` status condition if it
-references an Authentication that does not exist. It may be beneficial to add status fields in the future based on
-defined use-cases. For example, a remote JWKS can be validated based on the specified URI and have an appropriate
-status condition surfaced.
+references an Authentication that does not exist. It may be beneficial to add Authentication status fields in the future
+based on defined use-cases. For example, a remote JWKS can be validated based on the specified URI and have an
+appropriate status condition surfaced.
 
 #### Authentication Example
 
@@ -184,8 +112,6 @@ spec:
     remoteJwks:
       uri: https://foo.com/jwt/public-key/jwks.json
       <TBD>
-status:
-  <TBD>
 ```
 
 __Note:__ `type` is a union type, allowing only one of any supported provider type such as `jwtProviders` to be
@@ -608,3 +534,4 @@ Authentication should support additional authentication types in the future, for
 [HTTPRouteFilter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
 [JWKS]: https://www.rfc-editor.org/rfc/rfc7517
 [JWT authentication filter]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter#config-http-filters-jwt-authn
+[PR 773]: https://github.com/envoyproxy/gateway/pull/733
