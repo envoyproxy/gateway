@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package ir
 
 import (
@@ -11,7 +16,7 @@ import (
 
 const (
 	DefaultProxyName  = "default"
-	DefaultProxyImage = "envoyproxy/envoy:v1.23-latest"
+	DefaultProxyImage = "envoyproxy/envoy-dev:latest"
 )
 
 // Infra defines managed infrastructure.
@@ -31,7 +36,7 @@ type ProxyInfra struct {
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *v1alpha1.EnvoyProxy
 	// Image is the container image used for the managed proxy infrastructure.
-	// If unset, defaults to "envoyproxy/envoy:v1.23-latest".
+	// If unset, defaults to "envoyproxy/envoy-dev:latest".
 	Image string
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []ProxyListener
@@ -79,6 +84,9 @@ const (
 
 	// HTTPSProtocolType accepts HTTP/1.1 or HTTP/2 sessions over TLS.
 	HTTPSProtocolType ProtocolType = "HTTPS"
+
+	// Accepts TLS sessions over TCP.
+	TLSProtocolType ProtocolType = "TLS"
 )
 
 // NewInfra returns a new Infra with default parameters.

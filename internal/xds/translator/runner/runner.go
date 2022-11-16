@@ -1,9 +1,15 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
 	"context"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 )
@@ -36,10 +42,9 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.XdsIR.Subscribe(ctx) {
-		r.Logger.Info("received a notification")
-		updates := snapshot.Updates
-		for _, update := range updates {
+	message.HandleSubscription(r.XdsIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Xds]) {
+			r.Logger.Info("received an update")
 			key := update.Key
 			val := update.Value
 
@@ -55,7 +60,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.Xds.Store(key, result)
 				}
 			}
-		}
-	}
+		},
+	)
 	r.Logger.Info("subscriber shutting down")
 }

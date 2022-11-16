@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package crypto
 
 import (
@@ -46,8 +51,8 @@ func TestGenerateCerts(t *testing.T) {
 
 	run(t, "no configuration - use defaults", testcase{
 		certConfig:              &Configuration{},
-		wantEnvoyGatewayDNSName: "envoy-gateway",
-		wantEnvoyDNSName:        "*.envoy-gateway-system",
+		wantEnvoyGatewayDNSName: DefaultEnvoyGatewayDNSPrefix,
+		wantEnvoyDNSName:        fmt.Sprintf("*.%s", DefaultNamespace),
 	})
 }
 

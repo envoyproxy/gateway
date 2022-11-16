@@ -1,6 +1,7 @@
 .DS_Store
 bin/
-/docs/html
+
+docs/html
 
 # Intellij
 *.iml
@@ -15,3 +16,11 @@ release-artifacts/
 
 # Outputs
 coverage.xml
+
+# `go mod vendor`
+vendor/
+
+# TLS assets that may have been created for secure gateways.
+*.crt
+*.csr
+*.key

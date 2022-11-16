@@ -1,0 +1,51 @@
+name: Latest Release
+
+on:
+  push:
+    branches:
+    - "main"
+    paths-ignore:
+    - "**/*.png"
+
+jobs:
+  latest-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Generate Release Manifests
+      run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
+
+    # Ignore the error when we delete the latest release, it might not exist.
+    - name: Delete the Latest Release
+      continue-on-error: true
+      run: |
+        gh release delete latest --repo $GITHUB_REPOSITORY
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+
+    # Ignore the error when we delete the latest tag, it might not exist.
+    - name: Delete the Latest Tag
+      continue-on-error: true
+      run:
+        gh api --method DELETE /repos/$GITHUB_REPOSITORY/git/refs/tags/latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+
+    - name: Recreate the Latest Release and Tag
+      uses: softprops/action-gh-release@v1
+      with:
+        draft: false
+        prerelease: true
+        tag_name: latest
+        files: |
+          release-artifacts/install.yaml
+          release-artifacts/quickstart.yaml
+        body: |
+          This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
+          
+          This release **might not be stable**.
+
+          It is only intended for developers wishing to try out the latest features in Envoy Gateway, some of which may not be fully implemented.

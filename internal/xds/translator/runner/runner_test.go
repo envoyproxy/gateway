@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
@@ -14,8 +19,6 @@ import (
 )
 
 func TestRunner(t *testing.T) {
-	// Remove once https://github.com/envoyproxy/gateway/issues/504 is completed.
-	t.Skip()
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)

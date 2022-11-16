@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package config
 
 import (
@@ -12,12 +17,8 @@ const (
 	EnvoyGatewayNamespace = "envoy-gateway-system"
 	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
-	// EnvoyConfigMapPrefix is the prefix applied to the Envoy ConfigMap.
-	EnvoyConfigMapPrefix = "envoy"
-	// EnvoyServicePrefix is the prefix applied to the Envoy Service.
-	EnvoyServicePrefix = "envoy"
-	// EnvoyDeploymentPrefix is the prefix applied to the Envoy Deployment.
-	EnvoyDeploymentPrefix = "envoy"
+	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
+	EnvoyPrefix = "envoy"
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters

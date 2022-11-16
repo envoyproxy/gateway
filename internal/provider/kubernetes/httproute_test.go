@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package kubernetes
 
 import (
@@ -732,7 +737,7 @@ func TestValidateParentRefs(t *testing.T) {
 				objs = append(objs, tc.gateways[i])
 			}
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(objs...).Build()
-			gws, err := r.validateParentRefs(ctx, tc.route)
+			gws, err := validateParentRefs(ctx, r.client, tc.route.Namespace, r.classController, tc.route.Spec.ParentRefs)
 			if tc.expected {
 				require.NoError(t, err)
 			} else {

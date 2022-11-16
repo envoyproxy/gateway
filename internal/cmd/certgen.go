@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package cmd
 
 import (
@@ -16,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
-// getServerCommand returns the server cobra command to be executed.
+// getCertGenCommand returns the certGen cobra command to be executed.
 func getCertGenCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "certgen",

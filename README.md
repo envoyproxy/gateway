@@ -10,19 +10,19 @@ Kubernetes-based application gateway.
 
 * [Blog][blog] introducing Envoy Gateway.
 * [Goals](GOALS.md)
-* [Quickstart](./docs/user/QUICKSTART.md) to use Envoy Gateway in a few simple steps.
-* [Roadmap](./docs/design/ROADMAP.md)
+* [Quickstart](./docs/latest/user/quickstart.md) to use Envoy Gateway in a few simple steps.
+* [Roadmap](./docs/latest/design/roadmap.md)
 
 ## Contact
 
-* Slack: Go to [Envoy Gateway Channel](https://envoyproxy.slack.com/archives/C03E6NHLESV).
-* [Google Group][group]: Envoy Gateway developer discussion (APIs, feature design, etc.).
+* Slack: Join the [Envoy Slack workspace][] if you're not already a member. Otherwise, use the
+  [Envoy Gateway channel][] to start collaborating with the community.
 
 ## Contributing
 
-* [Code of conduct](CODE_OF_CONDUCT.md)
-* [Contributing guide](CONTRIBUTING.md)
-* [Developer guide](DEVELOPER.md)
+* [Code of conduct](./docs/latest/dev/CODE_OF_CONDUCT.md)
+* [Contributing guide](./docs/latest/dev/CONTRIBUTING.md)
+* [Developer guide](docs/latest/dev/README.md)
 
 ## Community Meeting
 
@@ -33,3 +33,5 @@ The Envoy Gateway team meets every Tuesday and Thursday. Refer to the meeting de
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
 [group]: https://groups.google.com/forum/#!forum/envoy-gateway-developers
 [blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
+[Envoy Slack workspace]: https://communityinviter.com/apps/envoyproxy/envoy
+[Envoy Gateway channel]: https://envoyproxy.slack.com/archives/C03E6NHLESV

@@ -14,7 +14,6 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 #
 tools/controller-gen = $(tools.bindir)/controller-gen
 tools/golangci-lint  = $(tools.bindir)/golangci-lint
-tools/goversion      = $(tools.bindir)/goversion
 tools/kustomize      = $(tools.bindir)/kustomize
 tools/kind           = $(tools.bindir)/kind
 tools/setup-envtest  = $(tools.bindir)/setup-envtest
@@ -33,3 +32,23 @@ $(tools.bindir)/%.d/venv: $(tools.srcdir)/%/requirements.txt
 	$@/bin/pip3 install -r $< || (rm -rf $@; exit 1)
 $(tools.bindir)/%: $(tools.bindir)/%.d/venv
 	ln -sf $*.d/venv/bin/$* $@
+
+ifneq ($(GOOS),windows)
+# Shellcheck
+# ==========
+#
+tools/shellcheck = $(tools.bindir)/shellcheck
+SHELLCHECK_VERSION=0.8.0
+SHELLCHECK_ARCH=$(shell uname -m)
+# shellcheck uses the same binary on Intel and Apple Silicon Mac.
+ifeq ($(GOOS),darwin)
+SHELLCHECK_ARCH=x86_64
+endif
+SHELLCHECK_TXZ = https://github.com/koalaman/shellcheck/releases/download/v$(SHELLCHECK_VERSION)/shellcheck-v$(SHELLCHECK_VERSION).$(GOOS).$(SHELLCHECK_ARCH).tar.xz
+tools/bin/$(notdir $(SHELLCHECK_TXZ)):
+	mkdir -p $(@D)
+	curl -sfL $(SHELLCHECK_TXZ) -o $@
+%/bin/shellcheck: %/bin/$(notdir $(SHELLCHECK_TXZ))
+	mkdir -p $(@D)
+	tar -C $(@D) -Jxmf $< --strip-components=1 shellcheck-v$(SHELLCHECK_VERSION)/shellcheck
+endif

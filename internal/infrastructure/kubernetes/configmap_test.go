@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package kubernetes
 
 import (
@@ -22,6 +27,7 @@ func TestExpectedConfigMap(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli)
 	infra := ir.NewInfra()
+
 	infra.Proxy.Name = "test"
 
 	// An infra without Gateway owner labels should trigger
@@ -35,7 +41,7 @@ func TestExpectedConfigMap(t *testing.T) {
 	cm, err := kube.expectedConfigMap(infra)
 	require.NoError(t, err)
 
-	require.Equal(t, "envoy-test", cm.Name)
+	require.Equal(t, "envoy-test-74657374", cm.Name)
 	require.Equal(t, "envoy-gateway-system", cm.Namespace)
 	require.Contains(t, cm.Data, sdsCAFilename)
 	assert.Equal(t, sdsCAConfigMapData, cm.Data[sdsCAFilename])
@@ -65,7 +71,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      "envoy-test",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -92,7 +98,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.EnvoyGatewayNamespace,
-					Name:      "envoy-test",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",

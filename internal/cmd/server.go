@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package cmd
 
 import (
@@ -150,9 +155,13 @@ func setupRunners(cfg *config.Server) error {
 	pResources.Gateways.Close()
 	pResources.HTTPRoutes.Close()
 	pResources.Services.Close()
+	pResources.Secrets.Close()
+	pResources.ReferenceGrants.Close()
 	pResources.Namespaces.Close()
 	pResources.GatewayStatuses.Close()
 	pResources.HTTPRouteStatuses.Close()
+	pResources.TLSRoutes.Close()
+	pResources.TLSRouteStatuses.Close()
 	xdsIR.Close()
 	infraIR.Close()
 	xds.Close()

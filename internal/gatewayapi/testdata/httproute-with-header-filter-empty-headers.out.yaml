@@ -66,13 +66,9 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Route is accepted
-      - type: ResolvedRefs
         status: "False"
         reason: UnsupportedValue
-        message: "RequestHeaderModifier Filter cannot set a header with an empty name"
+        message: RequestHeaderModifier Filter cannot set a header with an empty name
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -104,7 +100,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:v1.23-latest
+      image: envoyproxy/envoy:translator-tests
       listeners:
       - address: ""
         ports:

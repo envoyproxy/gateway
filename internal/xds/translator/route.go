@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package translator
 
 import (
@@ -135,20 +140,19 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcher.StringMatcher {
 func buildXdsRouteAction(routeName string) *route.RouteAction {
 	return &route.RouteAction{
 		ClusterSpecifier: &route.RouteAction_Cluster{
-			Cluster: getXdsClusterName(routeName),
+			Cluster: routeName,
 		},
 	}
 }
 
 func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
-	totalWeight := httpRoute.BackendWeights.Valid + httpRoute.BackendWeights.Invalid
 	clusters := []*route.WeightedCluster_ClusterWeight{
 		{
 			Name:   "invalid-backend-cluster",
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
 		},
 		{
-			Name:   getXdsClusterName(httpRoute.Name),
+			Name:   httpRoute.Name,
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
 		},
 	}
@@ -157,8 +161,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
 		ClusterNotFoundResponseCode: route.RouteAction_INTERNAL_SERVER_ERROR,
 		ClusterSpecifier: &route.RouteAction_WeightedClusters{
 			WeightedClusters: &route.WeightedCluster{
-				TotalWeight: &wrapperspb.UInt32Value{Value: totalWeight},
-				Clusters:    clusters,
+				Clusters: clusters,
 			},
 		},
 	}

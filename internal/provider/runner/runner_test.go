@@ -1,11 +1,16 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -51,7 +56,8 @@ func TestStart(t *testing.T) {
 					ProviderResources: new(message.ProviderResources),
 				},
 			}
-			ctx := ctrl.SetupSignalHandler()
+			ctx, cancel := context.WithCancel(context.Background())
+			t.Cleanup(cancel)
 			err := runner.Start(ctx)
 			if tc.expect {
 				require.NoError(t, err)

@@ -1,6 +1,12 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package config
 
 import (
+	"errors"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -23,16 +29,16 @@ func Decode(cfgPath string) (*v1alpha1.EnvoyGateway, error) {
 	}
 
 	// Figure out the resource type from the Group|Version|Kind.
-	if gvk.Group != v1alpha1.GroupVersion.Group &&
-		gvk.Version != v1alpha1.GroupVersion.Version &&
+	if gvk.Group != v1alpha1.GroupVersion.Group ||
+		gvk.Version != v1alpha1.GroupVersion.Version ||
 		gvk.Kind != v1alpha1.KindEnvoyGateway {
-		return nil, err
+		return nil, errors.New("failed to decode unmatched resource type")
 	}
 
 	// Attempt to cast the object.
 	eg, ok := obj.(*v1alpha1.EnvoyGateway)
 	if !ok {
-		return nil, err
+		return nil, errors.New("failed to convert object to EnvoyGateway type")
 	}
 
 	return eg, nil

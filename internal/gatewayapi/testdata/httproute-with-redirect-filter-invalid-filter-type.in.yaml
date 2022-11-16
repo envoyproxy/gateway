@@ -35,8 +35,9 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
-      - type: UnsupportedType
-        requestRedirect:
-          scheme: https
-          statusCode: 301
+      - type: ExtensionRef
+        extensionRef:
+          group: unsupported.group.io
+          kind: UnsupportedKind
+          name: unsupported
 

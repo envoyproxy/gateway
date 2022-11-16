@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package kubernetes
 
 import (
@@ -28,8 +33,8 @@ func NewInfra(cli client.Client) *Infra {
 	}
 }
 
-// CreateInfra creates the managed kube infra, if it doesn't exist.
-func (i *Infra) CreateInfra(ctx context.Context, infra *ir.Infra) error {
+// CreateOrUpdateInfra creates the managed kube infra, if it doesn't exist.
+func (i *Infra) CreateOrUpdateInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}

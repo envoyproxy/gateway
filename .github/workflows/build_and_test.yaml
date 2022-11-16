@@ -3,13 +3,13 @@ on:
   push:
     branches:
     - "main"
-    - "release-v*"
+    - "release/v*"
     paths-ignore:
     - "**/*.png"
   pull_request:
     branches:
     - "main"
-    - "release-v*"
+    - "release/v*"
     paths-ignore:
     - "**/*.png"
 jobs:
@@ -28,16 +28,25 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
+    - run: make -k licensecheck
+
   build-and-test:
     runs-on: ubuntu-latest
+    needs: [lint, gen-check, license-check]
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps
 
     # test
-    - run: make go.test.coverage
+    - name: Run Coverage Tests
+      run: make go.test.coverage
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         fail_ci_if_error: true
         files: ./coverage.xml
@@ -45,10 +54,26 @@ jobs:
         verbose: true
 
     # build
-    - run: make build-multiarch
+    - name: Build Multiarch EG Binaries
+      run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     # conformance
-    - name: Run Conformance Tests
+    - name: Run Conformance Tests (v1.24.0)
+      env:
+        KIND_NODE_TAG: v1.24.0
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+    
+    - name: Run Conformance Tests (v1.23.6)
+      env:
+        KIND_NODE_TAG: v1.23.6
+        CONFORMANCE_UNIQUE_PORTS: false
+      run: make conformance
+    
+    - name: Run Conformance Tests (v1.22.9)
+      env:
+        KIND_NODE_TAG: v1.22.9
+        CONFORMANCE_UNIQUE_PORTS: false
       run: make conformance
 
     # build and push image
@@ -59,14 +84,15 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - run: make image.multiarch.setup
+    - name: Setup Multiarch Environment
+      run: make image.multiarch.setup
 
     - name: Build and Push EG Commit Image
       if: github.event_name == 'push'
       # tag is set to the short SHA of the commit
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64"
+      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64"
+      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev

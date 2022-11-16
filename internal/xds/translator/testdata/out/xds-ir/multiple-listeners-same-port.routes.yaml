@@ -1,0 +1,38 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - foo.com
+    name: first-listener
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: first-route
+- name: second-listener
+  virtualHosts:
+  - domains:
+    - foo.net
+    name: second-listener
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: second-route
+- name: third-listener
+  virtualHosts:
+  - domains:
+    - example.com
+    name: third-listener
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: third-route
+  - domains:
+    - example.net
+    name: fourth-listener
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: fourth-route

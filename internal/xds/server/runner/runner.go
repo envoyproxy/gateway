@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
@@ -16,6 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
+	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 	controlplane_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	controlplane_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	controlplane_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
@@ -112,10 +118,8 @@ func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.Xds.Subscribe(ctx) {
-		r.Logger.Info("received a notification")
-		// Load all resources required for translation
-		for _, update := range snapshot.Updates {
+	message.HandleSubscription(r.Xds.Subscribe(ctx),
+		func(update message.Update[string, *xdstypes.ResourceVersionTable]) {
 			key := update.Key
 			val := update.Value
 
@@ -129,8 +133,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			if err != nil {
 				r.Logger.Error(err, "failed to generate a snapshot")
 			}
-		}
-	}
+		},
+	)
 
 	r.Logger.Info("subscriber shutting down")
 

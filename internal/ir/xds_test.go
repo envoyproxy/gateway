@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package ir
 
 import (
@@ -15,6 +20,17 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
+	}
+	happyHTTPSListener = HTTPListener{
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		TLS: &TLSListenerConfig{
+			ServerCertificate: []byte{1, 2, 3},
+			PrivateKey:        []byte{1, 2, 3},
+		},
+		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
 		Name:      "invalid-addr",
@@ -43,6 +59,59 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
+	}
+
+	// TCPListener
+	happyTCPListenerTLSPassthrough = TCPListener{
+		Name:         "happy",
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidNameTCPListenerTLSPassthrough = TCPListener{
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidAddrTCPListenerTLSPassthrough = TCPListener{
+		Name:         "invalid-addr",
+		Address:      "1.0.0",
+		Port:         80,
+		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidSNITCPListenerTLSPassthrough = TCPListener{
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLSInspectorConfig{SNIs: []string{}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+
+	// UDPListener
+	happyUDPListener = UDPListener{
+		Name:         "happy",
+		Address:      "0.0.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidNameUDPListener = UDPListener{
+		Address:      "0.0.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidAddrUDPListener = UDPListener{
+		Name:         "invalid-addr",
+		Address:      "1.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	invalidPortUDPListenerT = UDPListener{
+		Name:         "invalid-port",
+		Address:      "0.0.0.0",
+		Port:         0,
+		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
 	// HTTPRoute
@@ -245,11 +314,18 @@ func TestValidateXds(t *testing.T) {
 			want: nil,
 		},
 		{
+			name: "happy tls",
+			input: Xds{
+				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
+			},
+			want: nil,
+		},
+		{
 			name: "invalid listener",
 			input: Xds{
 				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
 			},
-			want: []error{ErrHTTPListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
+			want: []error{ErrListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
 		},
 		{
 			name: "invalid backend",
@@ -300,12 +376,12 @@ func TestValidateHTTPListener(t *testing.T) {
 				Hostnames: []string{"example.com"},
 				Routes:    []*HTTPRoute{&happyHTTPRoute},
 			},
-			want: []error{ErrHTTPListenerNameEmpty},
+			want: []error{ErrListenerNameEmpty},
 		},
 		{
 			name:  "invalid addr",
 			input: invalidAddrHTTPListener,
-			want:  []error{ErrHTTPListenerAddressInvalid},
+			want:  []error{ErrListenerAddressInvalid},
 		},
 		{
 			name: "invalid port and hostnames",
@@ -314,12 +390,54 @@ func TestValidateHTTPListener(t *testing.T) {
 				Address: "1.0.0",
 				Routes:  []*HTTPRoute{&happyHTTPRoute},
 			},
-			want: []error{ErrHTTPListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
+			want: []error{ErrListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
 		},
 		{
 			name:  "invalid route match",
 			input: invalidRouteMatchHTTPListener,
 			want:  []error{ErrHTTPRouteMatchEmpty},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTCPListener(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TCPListener
+		want  []error
+	}{
+		{
+			name:  "tls passthrough happy",
+			input: happyTCPListenerTLSPassthrough,
+			want:  nil,
+		},
+		{
+			name:  "tls passthrough invalid name",
+			input: invalidNameTCPListenerTLSPassthrough,
+			want:  []error{ErrListenerNameEmpty},
+		},
+		{
+			name:  "tls passthrough invalid addr",
+			input: invalidAddrTCPListenerTLSPassthrough,
+			want:  []error{ErrListenerAddressInvalid},
+		},
+		{
+			name:  "tls passthrough empty SNIs",
+			input: invalidSNITCPListenerTLSPassthrough,
+			want:  []error{ErrTCPListenesSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -376,7 +494,48 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestValidateUDPListener(t *testing.T) {
+	tests := []struct {
+		name  string
+		input UDPListener
+		want  []error
+	}{
+		{
+			name:  "udp happy",
+			input: happyUDPListener,
+			want:  nil,
+		},
+		{
+			name:  "udp invalid name",
+			input: invalidNameUDPListener,
+			want:  []error{ErrListenerNameEmpty},
+		},
+		{
+			name:  "udp invalid addr",
+			input: invalidAddrUDPListener,
+			want:  []error{ErrListenerAddressInvalid},
+		},
+		{
+			name:  "udp invalid port",
+			input: invalidPortUDPListenerT,
+			want:  []error{ErrListenerPortInvalid},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
 }
 
 func TestValidateHTTPRoute(t *testing.T) {
@@ -559,6 +718,44 @@ func TestValidateStringMatch(t *testing.T) {
 			} else {
 				require.EqualError(t, test.input.Validate(), test.want.Error())
 			}
+		})
+	}
+}
+
+func TestPrintable(t *testing.T) {
+	tests := []struct {
+		name  string
+		input Xds
+		want  *Xds
+	}{
+		{
+			name:  "empty",
+			input: Xds{},
+			want:  &Xds{},
+		},
+		{
+			name: "http",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+			want: &Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+		},
+		{
+			name: "https",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyHTTPSListener},
+			},
+			want: &Xds{
+				HTTP: []*HTTPListener{&happyHTTPListener},
+			},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, *test.want, *test.input.Printable())
 		})
 	}
 }

@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package translator
 
 import (
@@ -12,19 +17,19 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(httpRoute *ir.HTTPRoute) (*cluster.Cluster, error) {
+func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool) (*cluster.Cluster, error) {
 	localities := make([]*endpoint.LocalityLbEndpoints, 0, 1)
 	locality := &endpoint.LocalityLbEndpoints{
 		Locality:    &core.Locality{},
-		LbEndpoints: buildXdsEndpoints(httpRoute.Destinations),
+		LbEndpoints: buildXdsEndpoints(destinations),
 		Priority:    0,
 		// Each locality gets the same weight 1. There is a single locality
 		// per priority, so the weight value does not really matter, but some
 		// load balancers need the value to be set.
 		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
 	localities = append(localities, locality)
-	clusterName := getXdsClusterName(httpRoute.Name)
-	return &cluster.Cluster{
+	clusterName := routeName
+	cluster := &cluster.Cluster{
 		Name:                 clusterName,
 		ConnectTimeout:       durationpb.New(5 * time.Second),
 		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STATIC},
@@ -35,7 +40,13 @@ func buildXdsCluster(httpRoute *ir.HTTPRoute) (*cluster.Cluster, error) {
 			LocalityConfigSpecifier: &cluster.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &cluster.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
 		OutlierDetection: &cluster.OutlierDetection{},
-	}, nil
+	}
+
+	if isHTTP2 {
+		cluster.Http2ProtocolOptions = &core.Http2ProtocolOptions{}
+	}
+
+	return cluster, nil
 
 }
 

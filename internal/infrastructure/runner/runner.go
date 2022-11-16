@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package runner
 
 import (
@@ -5,6 +10,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -15,7 +21,7 @@ type Config struct {
 
 type Runner struct {
 	Config
-	mgr *infrastructure.Manager
+	mgr infrastructure.Manager
 }
 
 func (r *Runner) Name() string {
@@ -41,9 +47,8 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	for snapshot := range r.InfraIR.Subscribe(ctx) {
-		r.Logger.Info("received a notification")
-		for _, update := range snapshot.Updates {
+	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Infra]) {
 			val := update.Value
 
 			if update.Delete {
@@ -52,11 +57,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			} else {
 				// Manage the proxy infra.
-				if err := r.mgr.CreateInfra(ctx, val); err != nil {
+				if err := r.mgr.CreateOrUpdateInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
 				}
 			}
-		}
-	}
+		},
+	)
 	r.Logger.Info("subscriber shutting down")
 }

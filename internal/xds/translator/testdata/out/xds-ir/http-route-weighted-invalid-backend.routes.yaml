@@ -1,8 +1,8 @@
-- name: route_first-listener
+- name: first-listener
   virtualHosts:
   - domains:
     - '*'
-    name: route_first-listener
+    name: first-listener
     routes:
     - match:
         prefix: /
@@ -12,6 +12,5 @@
           clusters:
           - name: invalid-backend-cluster
             weight: 1
-          - name: cluster_first-route
+          - name: first-route
             weight: 1
-          totalWeight: 2

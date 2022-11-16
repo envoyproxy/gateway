@@ -1,12 +1,26 @@
-- address:
+- accessLog:
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /dev/stdout
+  address:
     socketAddress:
       address: 0.0.0.0
       portValue: 10080
-  filterChains:
-  - filters:
+  defaultFilterChain:
+    filters:
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        accessLog:
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/stdout
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:
@@ -21,6 +35,6 @@
               setNodeOnFirstMessageOnly: true
               transportApiVersion: V3
             resourceApiVersion: V3
-          routeConfigName: route_first-listener
+          routeConfigName: first-listener
         statPrefix: http
-  name: listener_first-listener_10080
+  name: first-listener

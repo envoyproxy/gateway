@@ -1,9 +1,15 @@
 //go:build conformance
 // +build conformance
 
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package conformance
 
 import (
+	"flag"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,7 +21,11 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
+var useUniquePorts = flag.Bool("use-unique-ports", true, "whether to use unique ports")
+
 func TestGatewayAPIConformance(t *testing.T) {
+	flag.Parse()
+
 	cfg, err := config.GetConfig()
 	require.NoError(t, err)
 
@@ -24,18 +34,24 @@ func TestGatewayAPIConformance(t *testing.T) {
 
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
 
+	validUniqueListenerPorts := []v1alpha2.PortNumber{
+		v1alpha2.PortNumber(int32(80)),
+		v1alpha2.PortNumber(int32(81)),
+		v1alpha2.PortNumber(int32(82)),
+		v1alpha2.PortNumber(int32(83)),
+	}
+
+	if !*useUniquePorts {
+		validUniqueListenerPorts = []v1alpha2.PortNumber{}
+	}
+
 	cSuite := suite.New(suite.Options{
-		Client:               client,
-		GatewayClassName:     *flags.GatewayClassName,
-		Debug:                *flags.ShowDebug,
-		CleanupBaseResources: *flags.CleanupBaseResources,
-		ValidUniqueListenerPorts: []v1alpha2.PortNumber{
-			v1alpha2.PortNumber(int32(80)),
-			v1alpha2.PortNumber(int32(81)),
-			v1alpha2.PortNumber(int32(82)),
-			v1alpha2.PortNumber(int32(83)),
-			v1alpha2.PortNumber(int32(84)),
-		},
+		Client:                   client,
+		GatewayClassName:         *flags.GatewayClassName,
+		Debug:                    *flags.ShowDebug,
+		CleanupBaseResources:     *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts: validUniqueListenerPorts,
+		SupportedFeatures:        []suite.SupportedFeature{suite.SupportHTTPRouteQueryParamMatching, suite.SupportReferenceGrant},
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
@@ -47,9 +63,16 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteCrossNamespace,
 		tests.HTTPRouteHeaderMatching,
 		tests.HTTPRouteMatchingAcrossRoutes,
+		tests.HTTPRouteHostnameIntersection,
+		tests.HTTPRouteListenerHostnameMatching,
 		tests.HTTPRouteInvalidNonExistentBackendRef,
 		tests.HTTPRouteInvalidBackendRefUnknownKind,
 		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
+		tests.GatewaySecretReferenceGrantAllInNamespace,
+		tests.GatewaySecretReferenceGrantSpecific,
+		// Uncomment when https://github.com/envoyproxy/gateway/issues/539 is fixed.
+		/*tests.GatewaySecretMissingReferenceGrant,
+		tests.GatewaySecretInvalidReferenceGrant,*/
 	}
 	cSuite.Run(t, egTests)
 

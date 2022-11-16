@@ -64,10 +64,6 @@ httpRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
-      - type: ResolvedRefs
-        status: "False"
-        reason: UnsupportedValue
-        message: "RequestHeaderModifier Filter already configures request header: some-header-1 to be removed, ignoring second entry"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -97,7 +93,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:v1.23-latest
+      image: envoyproxy/envoy:translator-tests
       listeners:
       - address: ""
         ports:

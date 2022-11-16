@@ -1,9 +1,15 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package message
 
 import (
 	"github.com/telepresenceio/watchable"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -15,11 +21,16 @@ type ProviderResources struct {
 	GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
 	Gateways       watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRoutes     watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+	TLSRoutes      watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
 	Namespaces     watchable.Map[string, *corev1.Namespace]
 	Services       watchable.Map[types.NamespacedName, *corev1.Service]
+	Secrets        watchable.Map[types.NamespacedName, *corev1.Secret]
+
+	ReferenceGrants watchable.Map[types.NamespacedName, *gwapiv1a2.ReferenceGrant]
 
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
 }
 
 func (p *ProviderResources) GetGatewayClasses() []*gwapiv1b1.GatewayClass {
@@ -56,6 +67,17 @@ func (p *ProviderResources) GetHTTPRoutes() []*gwapiv1b1.HTTPRoute {
 	return res
 }
 
+func (p *ProviderResources) GetTLSRoutes() []*gwapiv1a2.TLSRoute {
+	if p.TLSRoutes.Len() == 0 {
+		return nil
+	}
+	res := make([]*gwapiv1a2.TLSRoute, 0, p.TLSRoutes.Len())
+	for _, v := range p.TLSRoutes.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
 func (p *ProviderResources) GetNamespaces() []*corev1.Namespace {
 	if p.Namespaces.Len() == 0 {
 		return nil
@@ -74,6 +96,28 @@ func (p *ProviderResources) GetServices() []*corev1.Service {
 	}
 	res := make([]*corev1.Service, 0, p.Services.Len())
 	for _, v := range p.Services.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetSecrets() []*corev1.Secret {
+	if p.Secrets.Len() == 0 {
+		return nil
+	}
+	res := make([]*corev1.Secret, 0, p.Secrets.Len())
+	for _, v := range p.Secrets.LoadAll() {
+		res = append(res, v)
+	}
+	return res
+}
+
+func (p *ProviderResources) GetReferenceGrants() []*gwapiv1a2.ReferenceGrant {
+	if p.ReferenceGrants.Len() == 0 {
+		return nil
+	}
+	res := make([]*gwapiv1a2.ReferenceGrant, 0, p.ReferenceGrants.Len())
+	for _, v := range p.ReferenceGrants.LoadAll() {
 		res = append(res, v)
 	}
 	return res

@@ -1,8 +1,14 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package envoygateway
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -26,6 +32,9 @@ func init() {
 		panic(err)
 	}
 	if err := gwapiv1b1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	if err := gwapiv1a2.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
 }

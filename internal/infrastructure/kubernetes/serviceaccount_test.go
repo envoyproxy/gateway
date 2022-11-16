@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package kubernetes
 
 import (
@@ -73,7 +78,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test",
+					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
@@ -118,7 +123,52 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test",
+					Name:      "envoy-test-74657374",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
+				},
+			},
+		},
+		{
+			name: "hashed-name",
+			ns:   "test",
+			in: &ir.Infra{
+				Proxy: &ir.ProxyInfra{
+					Name: "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
+					Metadata: &ir.InfraMetadata{
+						Labels: map[string]string{
+							gatewayapi.OwningGatewayNamespaceLabel: "default",
+							gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+						},
+					},
+				},
+			},
+			current: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "very-long-name-that-will-be-hashed-and-cut-off-because-its-too-long",
+					Labels: map[string]string{
+						"app.gateway.envoyproxy.io/name":       "envoy",
+						gatewayapi.OwningGatewayNamespaceLabel: "default",
+						gatewayapi.OwningGatewayNameLabel:      "gateway-1",
+					},
+				},
+			},
+			want: &corev1.ServiceAccount{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ServiceAccount",
+					APIVersion: "v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-76657279",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",

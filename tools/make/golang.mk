@@ -2,6 +2,13 @@
 #
 # All make targets related to golang are defined in this file.
 
+VERSION_PACKAGE := github.com/envoyproxy/gateway/internal/cmd/version
+
+GO_LDFLAGS += -X $(VERSION_PACKAGE).EnvoyGatewayVersion=$(shell cat VERSION) \
+	-X $(VERSION_PACKAGE).GitCommitID=$(GIT_COMMIT)
+
+GIT_COMMIT:=$(shell git rev-parse HEAD)
+
 GOPATH := $(shell go env GOPATH)
 ifeq ($(origin GOBIN), undefined)
 	GOBIN := $(GOPATH)/bin
@@ -12,7 +19,7 @@ GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' 
 # Build the target binary in target platform.
 # The pattern of build.% is `build.{Platform}.{Command}`.
 # If we want to build envoy-gateway in linux amd64 platform, 
-# just execute make build.linux_amd64.envoy-gateway.
+# just execute make go.build.linux_amd64.envoy-gateway.
 .PHONY: go.build.%
 go.build.%:
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
@@ -20,7 +27,7 @@ go.build.%:
 	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
 	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
 	@$(call log, "Building binary $(COMMAND) with commit $(REV) for $(OS) $(ARCH)")
-	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) $(ROOT_PACKAGE)/cmd/$(COMMAND)
+	CGO_ENABLED=0 GOOS=$(OS) GOARCH=$(ARCH) go build -o $(OUTPUT_DIR)/$(OS)/$(ARCH)/$(COMMAND) -ldflags "$(GO_LDFLAGS)" $(ROOT_PACKAGE)/cmd/$(COMMAND)
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build

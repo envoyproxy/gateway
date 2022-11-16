@@ -1,0 +1,23 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: tls-passthrough
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      - endpoint:
+          address:
+            socketAddress:
+              address: 5.6.7.8
+              portValue: 50001
+      loadBalancingWeight: 1
+      locality: {}
+  name: tls-passthrough
+  outlierDetection: {}
+  type: STATIC

@@ -1,3 +1,8 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package kubernetes
 
 import (
@@ -14,10 +19,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 func expectedServiceName(proxyName string) string {
-	return fmt.Sprintf("%s-%s", config.EnvoyServicePrefix, proxyName)
+	svcName := utils.GetHashedName(proxyName)
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, svcName)
 }
 
 // expectedService returns the expected Service based on the provided infra.

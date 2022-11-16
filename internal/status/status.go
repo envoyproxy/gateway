@@ -1,5 +1,15 @@
-// Portions of this code are based on code from Contour, available at:
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+// This file contains code derived from Contour,
+// https://github.com/projectcontour/contour
+// from the source file
 // https://github.com/projectcontour/contour/blob/main/internal/k8s/status.go
+// and is provided here subject to the following:
+// Copyright Project Contour Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package status
 
@@ -13,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -143,6 +154,7 @@ func (u *UpdateWriter) Send(update Update) {
 //  GatewayClasses
 //  Gateway
 //  HTTPRoute
+//  TLSRoute
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime", "ObservedGeneration")
 	switch a := objA.(type) {
@@ -160,6 +172,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *gwapiv1b1.HTTPRoute:
 		if b, ok := objB.(*gwapiv1b1.HTTPRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1a2.TLSRoute:
+		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
