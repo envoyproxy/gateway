@@ -45,12 +45,12 @@ httpRoutes:
     name: httproute-2
   spec:
     parentRefs:
-      - namespace: envoy-gateway
-        name: gateway-1
+    - namespace: envoy-gateway
+      name: gateway-1
     rules:
-      - matches:
-          - path:
-              value: "/test"
-        backendRefs:
-          - name: service-2
-            port: 8080
+    - matches:
+      - path:
+          value: "/test"
+      backendRefs:
+      - name: service-2
+        port: 8080

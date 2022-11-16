@@ -78,69 +78,69 @@ httpRoutes:
     name: httproute-2
   spec:
     parentRefs:
-      - namespace: envoy-gateway
-        name: gateway-1
+    - namespace: envoy-gateway
+      name: gateway-1
     rules:
-      - matches:
-          - path:
-              value: "/test"
-        backendRefs:
-          - name: service-2
-            port: 8080
+    - matches:
+      - path:
+          value: "/test"
+      backendRefs:
+      - name: service-2
+        port: 8080
   status:
     parents:
-      - parentRef:
-          namespace: envoy-gateway
-          name: gateway-1
-        controllerName: gateway.envoyproxy.io/gatewayclass-controller
-        conditions:
-          - type: Accepted
-            status: "True"
-            Reason: Accepted
-            message: Route is accepted
+    - parentRef:
+        namespace: envoy-gateway
+        name: gateway-1
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      conditions:
+      - type: Accepted
+        status: "True"
+        Reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:
-      - name: envoy-gateway-gateway-1-http-1
-        address: 0.0.0.0
-        port: 10080
-        hostnames:
-          - "foo.com"
-        routes:
-          - name: default-httproute-2-rule-0-match-0-foo.com
-            pathMatch:
-              prefix: "/test"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
-          - name: default-httproute-1-rule-0-match-0-foo.com
-            pathMatch:
-              prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
-      - name: envoy-gateway-gateway-1-http-2
-        address: 0.0.0.0
-        port: 10081
-        hostnames:
-          - "bar.com"
-        routes:
-          - name: default-httproute-2-rule-0-match-0-bar.com
-            pathMatch:
-              prefix: "/test"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
-          - name: default-httproute-1-rule-0-match-0-bar.com
-            pathMatch:
-              prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+    - name: envoy-gateway-gateway-1-http-1
+      address: 0.0.0.0
+      port: 10080
+      hostnames:
+      - "foo.com"
+      routes:
+      - name: default-httproute-2-rule-0-match-0-foo.com
+        pathMatch:
+          prefix: "/test"
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+      - name: default-httproute-1-rule-0-match-0-foo.com
+        pathMatch:
+          prefix: "/"
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+    - name: envoy-gateway-gateway-1-http-2
+      address: 0.0.0.0
+      port: 10081
+      hostnames:
+      - "bar.com"
+      routes:
+      - name: default-httproute-2-rule-0-match-0-bar.com
+        pathMatch:
+          prefix: "/test"
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+      - name: default-httproute-1-rule-0-match-0-bar.com
+        pathMatch:
+          prefix: "/"
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
@@ -151,13 +151,13 @@ infraIR:
       name: envoy-gateway-gateway-1
       image: envoyproxy/envoy:translator-tests
       listeners:
-        - address: ""
-          ports:
-            - name: http-1
-              protocol: "HTTP"
-              servicePort: 80
-              containerPort: 10080
-            - name: http-2
-              protocol: "HTTP"
-              servicePort: 81
-              containerPort: 10081
+      - address: ""
+        ports:
+        - name: http-1
+          protocol: "HTTP"
+          servicePort: 80
+          containerPort: 10080
+        - name: http-2
+          protocol: "HTTP"
+          servicePort: 81
+          containerPort: 10081

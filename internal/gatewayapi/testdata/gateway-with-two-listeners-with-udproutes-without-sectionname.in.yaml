@@ -9,13 +9,13 @@ gateways:
       listeners:
         - name: udp1
           protocol: UDP
-          port: 80
+          port: 161
           allowedRoutes:
             namespaces:
               from: All
         - name: udp2
           protocol: UDP
-          port: 81
+          port: 162
           allowedRoutes:
             namespaces:
               from: All

@@ -9,13 +9,13 @@ gateways:
       listeners:
         - name: udp1
           protocol: UDP
-          port: 80
+          port: 161
           allowedRoutes:
             namespaces:
               from: All
         - name: udp2
           protocol: UDP
-          port: 81
+          port: 162
           allowedRoutes:
             namespaces:
               from: All
@@ -54,7 +54,7 @@ udpRoutes:
       rules:
         - backendRefs:
             - name: service-1
-              port: 8080
+              port: 8162
     status:
       parents:
         - parentRef:
@@ -78,7 +78,7 @@ udpRoutes:
       rules:
         - backendRefs:
             - name: service-2
-              port: 8080
+              port: 8162
     status:
       parents:
         - parentRef:
@@ -87,22 +87,22 @@ udpRoutes:
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
           conditions:
             - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Route is accepted
+              status: "False"
+              reason: UnsupportedValue
+              message: Multiple routes on the same UDP listener
 xdsIR:
   envoy-gateway-gateway-1:
     udp:
       - name: "envoy-gateway-gateway-1-udp1-udproute-1"
         address: "0.0.0.0"
-        port: 10080
+        port: 10161
         destinations:
           - host: "7.7.7.7"
             port: 8162
             weight: 0
-      - name: "envoy-gateway-gateway-1-udp2-udproute-2"
+      - name: "envoy-gateway-gateway-1-udp2-udproute-1"
         address: "0.0.0.0"
-        port: 10081
+        port: 10162
         destinations:
           - host: "7.7.7.7"
             port: 8162
@@ -122,9 +122,9 @@ infraIR:
           ports:
             - name: udp1
               protocol: "UDP"
-              servicePort: 8162
-              containerPort: 18162
+              servicePort: 161
+              containerPort: 10161
             - name: udp2
               protocol: "UDP"
-              servicePort: 8162
-              containerPort: 18162
+              servicePort: 162
+              containerPort: 10162

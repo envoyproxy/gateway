@@ -747,7 +747,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 
 	var portFound bool
 	for _, port := range service.Spec.Ports {
-		//TODO Huabing Zhao: we also need to check if the protocol matches
+		// TODO Huabing Zhao: we also need to check if the protocol matches
 		if port.Port == int32(*backendRef.Port) {
 			portFound = true
 			break
@@ -1398,7 +1398,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 
 					var portFound bool
 					for _, port := range service.Spec.Ports {
-						//TODO Huabing Zhao: we also need to check if the protocol matches
+						// TODO Huabing Zhao: we also need to check if the protocol matches
 						if port.Port == int32(*backendRef.Port) {
 							portFound = true
 							break
