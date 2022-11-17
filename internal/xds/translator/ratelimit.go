@@ -101,6 +101,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		rlActions := []*route.RateLimit_Action{}
 		// Matches are ANDed
 		for mIdx, match := range rule.HeaderMatches {
+			// Case when header value is not set
 			if match.Exact == nil && match.Prefix == nil && match.SafeRegex == nil {
 				// Setup RequestHeader actions
 				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
@@ -130,6 +131,19 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 				}
 				rlActions = append(rlActions, action)
 			}
+		}
+
+		// Case when header match is not set and the rate limit is applied
+		// to all traffic.
+		if len(rule.HeaderMatches) == 0 {
+			action := &route.RateLimit_Action{
+				ActionSpecifier: &route.RateLimit_Action_GenericKey_{
+					GenericKey: &route.RateLimit_Action_GenericKey{
+						DescriptorValue: getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1),
+					},
+				},
+			}
+			rlActions = append(rlActions, action)
 		}
 
 		rateLimit := &route.RateLimit{Actions: rlActions}
