@@ -16,7 +16,6 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	wkt "github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -117,7 +116,12 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			} else {
 				// Setup HeaderValueMatch actions
 				descriptorVal := getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
-				headerMatcher := buildHeaderMatcher(match)
+				headerMatcher := &route.HeaderMatcher{
+					Name: match.Name,
+					HeaderMatchSpecifier: &route.HeaderMatcher_StringMatch{
+						StringMatch: buildXdsStringMatcher(match),
+					},
+				}
 				action := &route.RateLimit_Action{
 					ActionSpecifier: &route.RateLimit_Action_HeaderValueMatch_{
 						HeaderValueMatch: &route.RateLimit_Action_HeaderValueMatch{
@@ -152,44 +156,6 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 	}
 
 	return rateLimits
-}
-
-func buildHeaderMatcher(match *ir.StringMatch) *route.HeaderMatcher {
-	var stringMatcher *matcher.StringMatcher
-
-	if match.Exact != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Exact{
-				Exact: *match.Exact,
-			},
-		}
-	}
-	if match.Prefix != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Prefix{
-				Prefix: *match.Prefix,
-			},
-		}
-	}
-	if match.SafeRegex != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_SafeRegex{
-				SafeRegex: &matcher.RegexMatcher{
-					Regex: *match.SafeRegex,
-					EngineType: &matcher.RegexMatcher_GoogleRe2{
-						GoogleRe2: &matcher.RegexMatcher_GoogleRE2{},
-					},
-				},
-			},
-		}
-	}
-
-	return &route.HeaderMatcher{
-		Name: match.Name,
-		HeaderMatchSpecifier: &route.HeaderMatcher_StringMatch{
-			StringMatch: stringMatcher,
-		},
-	}
 }
 
 func buildRateLimitServiceCluster(irListener *ir.HTTPListener) (*cluster.Cluster, error) {
