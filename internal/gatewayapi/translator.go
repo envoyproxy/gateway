@@ -202,69 +202,9 @@ type portListeners struct {
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 
-	// Iterate through all listeners and collect info about protocols
-	// and hostnames per port.
-	for _, gateway := range gateways {
-		portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
-		for _, listener := range gateway.listeners {
-			if portListenerInfo[listener.Port] == nil {
-				portListenerInfo[listener.Port] = &portListeners{
-					protocols: sets.NewString(),
-					hostnames: map[string]int{},
-				}
-			}
-
-			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
-
-			var protocol string
-			switch listener.Protocol {
-			// HTTPS and TLS can co-exist on the same port
-			case v1beta1.HTTPSProtocolType, v1beta1.TLSProtocolType:
-				protocol = "https/tls"
-			default:
-				protocol = string(listener.Protocol)
-			}
-			if protocol != string(v1beta1.UDPProtocolType) {
-				portListenerInfo[listener.Port].protocols.Insert(protocol)
-			}
-
-			var hostname string
-			if listener.Hostname != nil {
-				hostname = string(*listener.Hostname)
-			}
-
-			portListenerInfo[listener.Port].hostnames[hostname]++
-		}
-
-		// Set Conflicted conditions for any listeners with conflicting specs.
-		for _, info := range portListenerInfo {
-			for _, listener := range info.listeners {
-				if len(info.protocols) > 1 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						v1beta1.ListenerReasonProtocolConflict,
-						"All listeners for a given port must use a compatible protocol",
-					)
-				}
-
-				var hostname string
-				if listener.Hostname != nil {
-					hostname = string(*listener.Hostname)
-				}
-
-				if info.hostnames[hostname] > 1 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionConflicted,
-						metav1.ConditionTrue,
-						v1beta1.ListenerReasonHostnameConflict,
-						"All listeners for a given port must use a unique hostname",
-					)
-				}
-			}
-		}
-	}
-
+	t.checkConflictedLayer7Listeners(gateways)
+	t.checkConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
+	t.checkConflictedLayer4Listeners(gateways, v1beta1.UDPProtocolType)
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
@@ -648,6 +588,101 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				}
 				// Only 1 listener is supported.
 				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
+			}
+		}
+	}
+}
+
+func (t *Translator) checkConflictedLayer7Listeners(gateways []*GatewayContext) {
+	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
+	// and hostnames per port.
+	for _, gateway := range gateways {
+		portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
+		for _, listener := range gateway.listeners {
+			if listener.Protocol == v1beta1.UDPProtocolType {
+				continue
+			}
+			if portListenerInfo[listener.Port] == nil {
+				portListenerInfo[listener.Port] = &portListeners{
+					protocols: sets.NewString(),
+					hostnames: map[string]int{},
+				}
+			}
+
+			portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
+
+			var protocol string
+			switch listener.Protocol {
+			// HTTPS and TLS can co-exist on the same port
+			case v1beta1.HTTPSProtocolType, v1beta1.TLSProtocolType:
+				protocol = "https/tls"
+			default:
+				protocol = string(listener.Protocol)
+			}
+			portListenerInfo[listener.Port].protocols.Insert(protocol)
+
+			var hostname string
+			if listener.Hostname != nil {
+				hostname = string(*listener.Hostname)
+			}
+
+			portListenerInfo[listener.Port].hostnames[hostname]++
+		}
+
+		// Set Conflicted conditions for any listeners with conflicting specs.
+		for _, info := range portListenerInfo {
+			for _, listener := range info.listeners {
+				if len(info.protocols) > 1 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						v1beta1.ListenerReasonProtocolConflict,
+						"All listeners for a given port must use a compatible protocol",
+					)
+				}
+
+				var hostname string
+				if listener.Hostname != nil {
+					hostname = string(*listener.Hostname)
+				}
+
+				if info.hostnames[hostname] > 1 {
+					listener.SetCondition(
+						v1beta1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						v1beta1.ListenerReasonHostnameConflict,
+						"All listeners for a given port must use a unique hostname",
+					)
+				}
+			}
+		}
+	}
+}
+
+func (t *Translator) checkConflictedLayer4Listeners(gateways []*GatewayContext, protocol v1beta1.ProtocolType) {
+	// Iterate through all layer-4(TCP UDP) listeners and check if there are more than one listener on the same port
+	for _, gateway := range gateways {
+		portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
+		for _, listener := range gateway.listeners {
+			if listener.Protocol == protocol {
+				if portListenerInfo[listener.Port] == nil {
+					portListenerInfo[listener.Port] = &portListeners{}
+				}
+				portListenerInfo[listener.Port].listeners = append(portListenerInfo[listener.Port].listeners, listener)
+			}
+		}
+
+		// Leave the first one and set Conflicted conditions for all other listeners with conflicting specs.
+		for _, info := range portListenerInfo {
+			if len(info.listeners) > 1 {
+				for i := 1; i < len(info.listeners); i++ {
+					info.listeners[i].SetCondition(
+						v1beta1.ListenerConditionConflicted,
+						metav1.ConditionTrue,
+						v1beta1.ListenerReasonProtocolConflict,
+						fmt.Sprintf("Only one %s listener is allowed in a given port", protocol),
+					)
+				}
 			}
 		}
 	}
@@ -1641,6 +1676,9 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 			for _, listener := range parentRef.listeners {
 				// only one route is allowed for a UDP listener
 				if listener.AttachedRoutes() > 0 {
+					continue
+				}
+				if !listener.IsReady() {
 					continue
 				}
 				accepted = true
