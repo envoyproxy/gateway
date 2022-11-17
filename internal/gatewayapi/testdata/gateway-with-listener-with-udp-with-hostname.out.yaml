@@ -21,7 +21,7 @@ gateways:
             - group: gateway.networking.k8s.io
               kind: UDPRoute
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: Invalid
               message: Listener must not have hostname set when protocol is UDP.

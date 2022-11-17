@@ -205,6 +205,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	t.checkConflictedLayer7Listeners(gateways)
 	t.checkConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
 	t.checkConflictedLayer4Listeners(gateways, v1beta1.UDPProtocolType)
+
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
@@ -230,87 +231,11 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			// Process protocol & supported kinds
 			switch listener.Protocol {
 			case v1beta1.TLSProtocolType:
-				if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
-					listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindTLSRoute})
-				} else {
-					for _, kind := range listener.AllowedRoutes.Kinds {
-						if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
-							listener.SetCondition(
-								v1beta1.ListenerConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.ListenerReasonInvalidRouteKinds,
-								fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
-							)
-							continue
-						}
-
-						if kind.Kind != KindTLSRoute {
-							listener.SetCondition(
-								v1beta1.ListenerConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.ListenerReasonInvalidRouteKinds,
-								fmt.Sprintf("Kind is not supported, kind must be %s", KindTLSRoute),
-							)
-							continue
-						}
-						listener.SetSupportedKinds(kind)
-					}
-				}
+				t.checkAllowedRoutes(listener, KindTLSRoute)
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
-				if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
-					listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindHTTPRoute})
-				} else {
-					for _, kind := range listener.AllowedRoutes.Kinds {
-						if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
-							listener.SetCondition(
-								v1beta1.ListenerConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.ListenerReasonInvalidRouteKinds,
-								fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
-							)
-							continue
-						}
-
-						if kind.Kind != KindHTTPRoute {
-							listener.SetCondition(
-								v1beta1.ListenerConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.ListenerReasonInvalidRouteKinds,
-								fmt.Sprintf("Kind is not supported, kind must be %s", KindHTTPRoute),
-							)
-							continue
-						}
-						listener.SetSupportedKinds(kind)
-					}
-				}
+				t.checkAllowedRoutes(listener, KindHTTPRoute)
 			case v1beta1.UDPProtocolType:
-				if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
-					listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: KindUDPRoute})
-				} else {
-					for _, kind := range listener.AllowedRoutes.Kinds {
-						if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
-							listener.SetCondition(
-								v1beta1.ListenerConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.ListenerReasonInvalidRouteKinds,
-								fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
-							)
-							continue
-						}
-
-						if kind.Kind != KindUDPRoute {
-							listener.SetCondition(
-								v1beta1.ListenerConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.ListenerReasonInvalidRouteKinds,
-								fmt.Sprintf("Kind is not supported, kind must be %s", KindUDPRoute),
-							)
-							continue
-						}
-						listener.SetSupportedKinds(kind)
-					}
-				}
-
+				t.checkAllowedRoutes(listener, KindUDPRoute)
 			default:
 				listener.SetCondition(
 					v1beta1.ListenerConditionAccepted,
@@ -322,229 +247,21 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 
 			// Validate allowed namespaces
-			if listener.AllowedRoutes != nil &&
-				listener.AllowedRoutes.Namespaces != nil &&
-				listener.AllowedRoutes.Namespaces.From != nil &&
-				*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector {
-				if listener.AllowedRoutes.Namespaces.Selector == nil {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
-					)
-				} else {
-					selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
-					if err != nil {
-						listener.SetCondition(
-							v1beta1.ListenerConditionProgrammed,
-							metav1.ConditionFalse,
-							v1beta1.ListenerReasonInvalid,
-							fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
-						)
-					}
-
-					listener.namespaceSelector = selector
-				}
-			}
+			t.validateAllowedNamespaces(listener)
 
 			// Process TLS configuration
-			switch listener.Protocol {
-			case v1beta1.HTTPProtocolType, v1beta1.UDPProtocolType, v1beta1.TCPProtocolType:
-				if listener.TLS != nil {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						fmt.Sprintf("Listener must not have TLS set when protocol is %s.", listener.Protocol),
-					)
-				}
-			case v1beta1.HTTPSProtocolType:
-				if listener.TLS == nil {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
-					)
-					break
-				}
-
-				if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModeTerminate {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						"UnsupportedTLSMode",
-						fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Terminate.", *listener.TLS.Mode),
-					)
-					break
-				}
-
-				if len(listener.TLS.CertificateRefs) != 1 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						"Listener must have exactly 1 TLS certificate ref",
-					)
-					break
-				}
-
-				certificateRef := listener.TLS.CertificateRefs[0]
-
-				if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalidCertificateRef,
-						"Listener's TLS certificate ref group must be unspecified/empty.",
-					)
-					break
-				}
-
-				if certificateRef.Kind != nil && string(*certificateRef.Kind) != KindSecret {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalidCertificateRef,
-						fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", KindSecret),
-					)
-					break
-				}
-
-				secretNamespace := listener.gateway.Namespace
-
-				if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
-					if !isValidCrossNamespaceRef(
-						crossNamespaceFrom{
-							group:     string(v1beta1.GroupName),
-							kind:      KindGateway,
-							namespace: listener.gateway.Namespace,
-						},
-						crossNamespaceTo{
-							group:     "",
-							kind:      KindSecret,
-							namespace: string(*certificateRef.Namespace),
-							name:      string(certificateRef.Name),
-						},
-						resources.ReferenceGrants,
-					) {
-						listener.SetCondition(
-							v1beta1.ListenerConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.ListenerReasonRefNotPermitted,
-							fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant", *certificateRef.Namespace, certificateRef.Name),
-						)
-						break
-					}
-
-					secretNamespace = string(*certificateRef.Namespace)
-				}
-
-				secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
-
-				if secret == nil {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalidCertificateRef,
-						fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
-					)
-					break
-				}
-
-				if secret.Type != v1.SecretTypeTLS {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalidCertificateRef,
-						fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, v1.SecretTypeTLS),
-					)
-					break
-				}
-
-				if len(secret.Data[v1.TLSCertKey]) == 0 || len(secret.Data[v1.TLSPrivateKeyKey]) == 0 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalidCertificateRef,
-						fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey),
-					)
-					break
-				}
-
-				listener.SetTLSSecret(secret)
-			case v1beta1.TLSProtocolType:
-				if listener.TLS == nil {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
-					)
-					break
-				}
-
-				if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModePassthrough {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						"UnsupportedTLSMode",
-						fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Passthrough.", *listener.TLS.Mode),
-					)
-					break
-				}
-
-				if len(listener.TLS.CertificateRefs) > 0 {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						"Listener must not have TLS certificate refs set for TLS mode Passthrough",
-					)
-					break
-				}
-			}
+			t.checkTLS(listener, resources)
 
 			// Process Hostname configuration
-			if listener.Protocol == v1beta1.UDPProtocolType || listener.Protocol == v1beta1.TCPProtocolType {
-				if listener.Hostname != nil {
-					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						fmt.Sprintf("Listener must not have hostname set when protocol is %s.", listener.Protocol),
-					)
-					break
-				}
-			}
+			t.checkHostName(listener)
 
-			lConditions := listener.GetConditions()
-			if len(lConditions) == 0 {
-				listener.SetCondition(v1beta1.ListenerConditionProgrammed, metav1.ConditionTrue, v1beta1.ListenerReasonProgrammed, "Listener is ready")
-				// Any condition on the listener apart from Ready=true indicates an error.
-			} else if !(lConditions[0].Type == string(v1beta1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
-				// set "Ready: false" if it's not set already.
-				var hasReadyCond bool
-				for _, existing := range lConditions {
-					if existing.Type == string(v1beta1.ListenerConditionProgrammed) {
-						hasReadyCond = true
-						break
-					}
-				}
-				if !hasReadyCond {
-					listener.SetCondition(
-						v1beta1.ListenerConditionProgrammed,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonInvalid,
-						"Listener is invalid, see other Conditions for details.",
-					)
-				}
-				// skip computing IR
+			// Process conditions and check if the listener is ready
+			isReady := t.checkListenerConditions(listener)
+			if !isReady {
 				continue
 			}
 
-			// Add the listener to the Xds IR.
+			// Add the listener to the Xds IR
 			servicePort := &ProtocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
 			containerPort := servicePortToContainerPort(servicePort.port)
 			switch listener.Protocol {
@@ -566,7 +283,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			}
 
-			// Add the listener to the Infra IR. Infra IR ports must have a unique port number.
+			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
+			// (TCP or UDP).
 			if !containsPort(foundPorts, servicePort) {
 				foundPorts = append(foundPorts, servicePort)
 				var proto ir.ProtocolType
@@ -589,6 +307,267 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				// Only 1 listener is supported.
 				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
 			}
+		}
+	}
+}
+
+func (t *Translator) checkListenerConditions(listener *ListenerContext) (isReady bool) {
+	lConditions := listener.GetConditions()
+	if len(lConditions) == 0 {
+		listener.SetCondition(v1beta1.ListenerConditionProgrammed, metav1.ConditionTrue, v1beta1.ListenerReasonProgrammed,
+			"Listener is ready")
+		return true
+
+	}
+	// Any condition on the listener apart from Ready=true indicates an error.
+	if !(lConditions[0].Type == string(v1beta1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
+		// set "Ready: false" if it's not set already.
+		var hasReadyCond bool
+		for _, existing := range lConditions {
+			if existing.Type == string(v1beta1.ListenerConditionProgrammed) {
+				hasReadyCond = true
+				break
+			}
+		}
+		if !hasReadyCond {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				"Listener is invalid, see other Conditions for details.",
+			)
+		}
+		// skip computing IR
+		return false
+	}
+	return true
+}
+
+func (t *Translator) validateAllowedNamespaces(listener *ListenerContext) {
+	if listener.AllowedRoutes != nil &&
+		listener.AllowedRoutes.Namespaces != nil &&
+		listener.AllowedRoutes.Namespaces.From != nil &&
+		*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector {
+		if listener.AllowedRoutes.Namespaces.Selector == nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
+			)
+		} else {
+			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
+			if err != nil {
+				listener.SetCondition(
+					v1beta1.ListenerConditionProgrammed,
+					metav1.ConditionFalse,
+					v1beta1.ListenerReasonInvalid,
+					fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
+				)
+			}
+
+			listener.namespaceSelector = selector
+		}
+	}
+}
+
+func (t *Translator) checkTLS(listener *ListenerContext, resources *Resources) {
+	switch listener.Protocol {
+	case v1beta1.HTTPProtocolType, v1beta1.UDPProtocolType, v1beta1.TCPProtocolType:
+		if listener.TLS != nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				fmt.Sprintf("Listener must not have TLS set when protocol is %s.", listener.Protocol),
+			)
+		}
+	case v1beta1.HTTPSProtocolType:
+		if listener.TLS == nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
+			)
+			break
+		}
+
+		if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModeTerminate {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				"UnsupportedTLSMode",
+				fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Terminate.", *listener.TLS.Mode),
+			)
+			break
+		}
+
+		if len(listener.TLS.CertificateRefs) != 1 {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				"Listener must have exactly 1 TLS certificate ref",
+			)
+			break
+		}
+
+		certificateRef := listener.TLS.CertificateRefs[0]
+
+		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidCertificateRef,
+				"Listener's TLS certificate ref group must be unspecified/empty.",
+			)
+			break
+		}
+
+		if certificateRef.Kind != nil && string(*certificateRef.Kind) != KindSecret {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidCertificateRef,
+				fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", KindSecret),
+			)
+			break
+		}
+
+		secretNamespace := listener.gateway.Namespace
+
+		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
+			if !isValidCrossNamespaceRef(
+				crossNamespaceFrom{
+					group:     string(v1beta1.GroupName),
+					kind:      KindGateway,
+					namespace: listener.gateway.Namespace,
+				},
+				crossNamespaceTo{
+					group:     "",
+					kind:      KindSecret,
+					namespace: string(*certificateRef.Namespace),
+					name:      string(certificateRef.Name),
+				},
+				resources.ReferenceGrants,
+			) {
+				listener.SetCondition(
+					v1beta1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					v1beta1.ListenerReasonRefNotPermitted,
+					fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant", *certificateRef.Namespace, certificateRef.Name),
+				)
+				break
+			}
+
+			secretNamespace = string(*certificateRef.Namespace)
+		}
+
+		secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
+
+		if secret == nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidCertificateRef,
+				fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
+			)
+			break
+		}
+
+		if secret.Type != v1.SecretTypeTLS {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidCertificateRef,
+				fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, v1.SecretTypeTLS),
+			)
+			break
+		}
+
+		if len(secret.Data[v1.TLSCertKey]) == 0 || len(secret.Data[v1.TLSPrivateKeyKey]) == 0 {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidCertificateRef,
+				fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey),
+			)
+			break
+		}
+
+		listener.SetTLSSecret(secret)
+	case v1beta1.TLSProtocolType:
+		if listener.TLS == nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
+			)
+			break
+		}
+
+		if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModePassthrough {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				"UnsupportedTLSMode",
+				fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Passthrough.", *listener.TLS.Mode),
+			)
+			break
+		}
+
+		if len(listener.TLS.CertificateRefs) > 0 {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				"Listener must not have TLS certificate refs set for TLS mode Passthrough",
+			)
+			break
+		}
+	}
+}
+
+func (t *Translator) checkHostName(listener *ListenerContext) {
+	if listener.Protocol == v1beta1.UDPProtocolType || listener.Protocol == v1beta1.TCPProtocolType {
+		if listener.Hostname != nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				fmt.Sprintf("Listener must not have hostname set when protocol is %s.", listener.Protocol),
+			)
+		}
+	}
+}
+
+func (t *Translator) checkAllowedRoutes(listener *ListenerContext, routeKind v1beta1.Kind) {
+	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
+		listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: routeKind})
+	} else {
+		for _, kind := range listener.AllowedRoutes.Kinds {
+			if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
+				listener.SetCondition(
+					v1beta1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					v1beta1.ListenerReasonInvalidRouteKinds,
+					fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
+				)
+				continue
+			}
+
+			if kind.Kind != routeKind {
+				listener.SetCondition(
+					v1beta1.ListenerConditionResolvedRefs,
+					metav1.ConditionFalse,
+					v1beta1.ListenerReasonInvalidRouteKinds,
+					fmt.Sprintf("Kind is not supported, kind must be %s", routeKind),
+				)
+				continue
+			}
+			listener.SetSupportedKinds(kind)
 		}
 	}
 }
@@ -782,8 +761,8 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 
 	var portFound bool
 	for _, port := range service.Spec.Ports {
-		// TODO Huabing Zhao: we also need to check if the protocol matches
-		if port.Port == int32(*backendRef.Port) {
+		if port.Port == int32(*backendRef.Port) &&
+			(port.Protocol == v1.ProtocolTCP || port.Protocol == "") { // Default protocol is TCP
 			portFound = true
 			break
 		}
@@ -1433,8 +1412,8 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 
 					var portFound bool
 					for _, port := range service.Spec.Ports {
-						// TODO Huabing Zhao: we also need to check if the protocol matches
-						if port.Port == int32(*backendRef.Port) {
+						if port.Port == int32(*backendRef.Port) &&
+							(port.Protocol == v1.ProtocolTCP || port.Protocol == "") { // Default protocol is TCP
 							portFound = true
 							break
 						}
@@ -1579,6 +1558,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 			}
 
 			backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
+
 			if backendRef.Group != nil && *backendRef.Group != "" {
 				parentRef.SetCondition(udpRoute,
 					v1beta1.RouteConditionResolvedRefs,

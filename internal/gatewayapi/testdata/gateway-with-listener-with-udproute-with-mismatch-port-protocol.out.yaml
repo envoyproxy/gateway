@@ -21,9 +21,9 @@ gateways:
               kind: UDPRoute
           AttachedRoutes: 0
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
 udpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2

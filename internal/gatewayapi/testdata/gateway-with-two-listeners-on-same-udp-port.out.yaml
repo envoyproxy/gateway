@@ -27,9 +27,9 @@ gateways:
         kind: UDPRoute
       AttachedRoutes: 1
       conditions:
-      - type: Ready
+      - type: Programmed
         status: "True"
-        reason: Ready
+        reason: Programmed
         message: Listener is ready
     - name: udp2
       supportedKinds:
@@ -41,7 +41,7 @@ gateways:
         status: "True"
         reason: ProtocolConflict
         message: Only one UDP listener is allowed in a given port
-      - type: Ready
+      - type: Programmed
         status: "False"
         reason: Invalid
         message: Listener is invalid, see other Conditions for details.
