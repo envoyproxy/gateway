@@ -16,8 +16,33 @@ http:
             requests: 5
             unit: second
     pathMatch:
-      name: "test"
       exact: "foo/bar"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000    
+  - name: "second-route"
+    rateLimit:
+      global:
+        rules:
+        - headerMatches:
+          - name: "x-user-id"
+          limit:
+            requests: 5
+            unit: second
+    pathMatch:
+      exact: "example"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000     
+  - name: "third-route"
+    rateLimit:
+      global:
+        rules:
+        - limit:
+            requests: 5
+            unit: second
+    pathMatch:
+      exact: "test"
     destinations:
     - host: "1.2.3.4"
       port: 50000

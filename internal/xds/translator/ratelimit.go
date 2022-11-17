@@ -139,6 +139,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			action := &route.RateLimit_Action{
 				ActionSpecifier: &route.RateLimit_Action_GenericKey_{
 					GenericKey: &route.RateLimit_Action_GenericKey{
+						DescriptorKey:   getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1),
 						DescriptorValue: getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1),
 					},
 				},

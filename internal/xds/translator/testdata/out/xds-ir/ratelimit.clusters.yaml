@@ -16,6 +16,42 @@
   name: first-route
   outlierDetection: {}
   type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: second-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: second-route
+  outlierDetection: {}
+  type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: third-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: third-route
+  outlierDetection: {}
+  type: STATIC
 - connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
