@@ -11,7 +11,7 @@
             exact: jason
         - name: test
           stringMatch:
-            suffix: end            
+            suffix: end
         path: foo/bar
         queryParameters:
         - name: debug
