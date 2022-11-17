@@ -9,6 +9,9 @@
         - name: user
           stringMatch:
             exact: jason
+        - name: test
+          stringMatch:
+            suffix: end            
         path: foo/bar
         queryParameters:
         - name: debug

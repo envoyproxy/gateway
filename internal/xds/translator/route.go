@@ -121,6 +121,12 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcher.StringMatcher {
 				Prefix: *irMatch.Prefix,
 			},
 		}
+	} else if irMatch.Suffix != nil {
+		stringMatcher = &matcher.StringMatcher{
+			MatchPattern: &matcher.StringMatcher_Suffix{
+				Suffix: *irMatch.Suffix,
+			},
+		}
 	} else if irMatch.SafeRegex != nil {
 		stringMatcher = &matcher.StringMatcher{
 			MatchPattern: &matcher.StringMatcher_SafeRegex{
