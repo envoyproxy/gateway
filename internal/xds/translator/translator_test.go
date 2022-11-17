@@ -101,6 +101,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "http-route-rewrite-url-host",
 		},
+		{
+			name: "ratelimit",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -1,0 +1,19 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        path: foo/bar
+      route:
+        cluster: first-route
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorValue: first-route-value-rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
