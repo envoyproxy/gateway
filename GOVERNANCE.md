@@ -21,7 +21,7 @@ future addition of committee seats), the Envoy core proxy maintainer seat will b
 tie with a super vote.
 
 ## Steering Committee
-The steering committee will be a 5-member body that will make directional and any strategic
+The steering committee will be a 6-member body that will make directional and any strategic
 technical decisions on the Envoy gateway project. It will also decide on any changes on its
 governance, marketing and future direction. Seats will be tied to organizations and not
 individuals and will be valid for 1 year from the start date.
