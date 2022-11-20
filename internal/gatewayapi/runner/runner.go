@@ -46,51 +46,29 @@ func (r *Runner) Start(ctx context.Context) error {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	gatewayClassesCh := r.ProviderResources.GatewayClasses.Subscribe(ctx)
-	gatewaysCh := r.ProviderResources.Gateways.Subscribe(ctx)
-	secretsCh := r.ProviderResources.Secrets.Subscribe(ctx)
-	refGrantsCh := r.ProviderResources.ReferenceGrants.Subscribe(ctx)
-	httpRoutesCh := r.ProviderResources.HTTPRoutes.Subscribe(ctx)
-	tlsRoutesCh := r.ProviderResources.TLSRoutes.Subscribe(ctx)
-	servicesCh := r.ProviderResources.Services.Subscribe(ctx)
-	namespacesCh := r.ProviderResources.Namespaces.Subscribe(ctx)
+	resourcesCh := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
 
 	for ctx.Err() == nil {
-		var in gatewayapi.Resources
+		var in *gatewayapi.Resources
 		// Receive subscribed resource notifications
-		select {
-		case <-gatewayClassesCh:
-		case <-gatewaysCh:
-		case <-secretsCh:
-		case <-refGrantsCh:
-		case <-httpRoutesCh:
-		case <-tlsRoutesCh:
-		case <-servicesCh:
-		case <-namespacesCh:
-		}
+
+		<-resourcesCh
 		r.Logger.Info("received a notification")
+
 		// Load all resources required for translation
-		in.Gateways = r.ProviderResources.GetGateways()
-		in.Secrets = r.ProviderResources.GetSecrets()
-		in.ReferenceGrants = r.ProviderResources.GetReferenceGrants()
-		in.HTTPRoutes = r.ProviderResources.GetHTTPRoutes()
-		in.TLSRoutes = r.ProviderResources.GetTLSRoutes()
-		in.Services = r.ProviderResources.GetServices()
-		in.Namespaces = r.ProviderResources.GetNamespaces()
-		gatewayClasses := r.ProviderResources.GetGatewayClasses()
-		// Fetch the first gateway class since there should be only 1
-		// gateway class linked to this controller
+		in = r.ProviderResources.GetResources()
+
 		switch {
-		case gatewayClasses == nil:
+		case in == nil:
 			// Envoy Gateway startup.
 			continue
 		default:
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
-				GatewayClassName: v1beta1.ObjectName(gatewayClasses[0].GetName()),
+				GatewayClassName: v1beta1.ObjectName(r.ProviderResources.GetResourcesKey()),
 			}
 			// Translate to IR
-			result := t.Translate(&in)
+			result := t.Translate(in)
 
 			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
 			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))

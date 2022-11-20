@@ -58,6 +58,32 @@ type Resources struct {
 	Secrets         []*v1.Secret
 }
 
+func (r *Resources) DeepCopy() *Resources {
+	resourcesCopy := new(Resources)
+	for _, i := range r.Gateways {
+		resourcesCopy.Gateways = append(resourcesCopy.Gateways, i.DeepCopy())
+	}
+	for _, i := range r.HTTPRoutes {
+		resourcesCopy.HTTPRoutes = append(resourcesCopy.HTTPRoutes, i.DeepCopy())
+	}
+	for _, i := range r.TLSRoutes {
+		resourcesCopy.TLSRoutes = append(resourcesCopy.TLSRoutes, i.DeepCopy())
+	}
+	for _, i := range r.ReferenceGrants {
+		resourcesCopy.ReferenceGrants = append(resourcesCopy.ReferenceGrants, i.DeepCopy())
+	}
+	for _, i := range r.Namespaces {
+		resourcesCopy.Namespaces = append(resourcesCopy.Namespaces, i.DeepCopy())
+	}
+	for _, i := range r.Services {
+		resourcesCopy.Services = append(resourcesCopy.Services, i.DeepCopy())
+	}
+	for _, i := range r.Secrets {
+		resourcesCopy.Secrets = append(resourcesCopy.Secrets, i.DeepCopy())
+	}
+	return resourcesCopy
+}
+
 func (r *Resources) GetNamespace(name string) *v1.Namespace {
 	for _, ns := range r.Namespaces {
 		if ns.Name == name {

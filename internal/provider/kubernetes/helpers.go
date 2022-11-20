@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -22,9 +21,11 @@ import (
 )
 
 const (
+	kindGateway   = "Gateway"
 	kindTLSRoute  = "TLSRoute"
 	kindHTTPRoute = "HTTPRoute"
 	kindSecret    = "Secret"
+	kindService   = "Service"
 
 	gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
 )
@@ -73,25 +74,6 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 	}
 
 	return ret, nil
-}
-
-// isRoutePresentInNamespace checks if any kind of Routes - HTTPRoute, TLSRoute
-// exists in the namespace ns.
-func isRoutePresentInNamespace(ctx context.Context, c client.Client, ns string) (bool, error) {
-	tlsRouteList := &gwapiv1a2.TLSRouteList{}
-	if err := c.List(ctx, tlsRouteList, &client.ListOptions{Namespace: ns}); err != nil {
-		return false, fmt.Errorf("error listing tlsroutes")
-	}
-
-	httpRouteList := &gwapiv1b1.HTTPRouteList{}
-	if err := c.List(ctx, httpRouteList, &client.ListOptions{Namespace: ns}); err != nil {
-		return false, fmt.Errorf("error listing httproutes")
-	}
-
-	if len(tlsRouteList.Items)+len(httpRouteList.Items) > 0 {
-		return true, nil
-	}
-	return false, nil
 }
 
 type controlledClasses struct {
@@ -220,31 +202,6 @@ func infraServiceName(gateway *gwapiv1b1.Gateway) string {
 func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
 	infraName := utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
-}
-
-// findGatewayReferencesFromRefGrant helps in finding and aggregating all the
-// Gateway references if present in the ReferenceGrant object ref.
-func findGatewayReferencesFromRefGrant(ref *gwapiv1a2.ReferenceGrant) []types.NamespacedName {
-	refs := []types.NamespacedName{}
-
-	for _, to := range ref.Spec.To {
-		if to.Group == gwapiv1a2.GroupName && to.Kind == gatewayapi.KindGateway && to.Name != nil {
-			refs = append(refs, types.NamespacedName{
-				Namespace: ref.Namespace,
-				Name:      string(*to.Name),
-			})
-		}
-	}
-	for _, from := range ref.Spec.From {
-		if from.Group == gwapiv1a2.GroupName && from.Kind == gatewayapi.KindGateway {
-			refs = append(refs, types.NamespacedName{
-				Namespace: string(from.Namespace),
-				Name:      ref.Name,
-			})
-		}
-	}
-
-	return refs
 }
 
 // validateBackendRef validates that ref is a reference to a local Service.
