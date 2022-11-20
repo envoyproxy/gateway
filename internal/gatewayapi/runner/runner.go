@@ -45,30 +45,20 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	// Subscribe to resources
-	resourcesCh := r.ProviderResources.GatewayAPIResources.Subscribe(ctx)
+	message.HandleSubscription(r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+		func(update message.Update[string, *gatewayapi.Resources]) {
+			val := update.Value
 
-	for ctx.Err() == nil {
-		var in *gatewayapi.Resources
-		// Receive subscribed resource notifications
+			if update.Delete || val == nil {
+				return
+			}
 
-		<-resourcesCh
-		r.Logger.Info("received a notification")
-
-		// Load all resources required for translation
-		in = r.ProviderResources.GetResources()
-
-		switch {
-		case in == nil:
-			// Envoy Gateway startup.
-			continue
-		default:
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
-				GatewayClassName: v1beta1.ObjectName(r.ProviderResources.GetResourcesKey()),
+				GatewayClassName: v1beta1.ObjectName(update.Key),
 			}
 			// Translate to IR
-			result := t.Translate(in)
+			result := t.Translate(val)
 
 			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
 			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
@@ -121,8 +111,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(tlsRoute)
 				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
 			}
-		}
-	}
+		},
+	)
 	r.Logger.Info("shutting down")
 }
 

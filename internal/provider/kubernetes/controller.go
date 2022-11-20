@@ -157,7 +157,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				continue
 			}
 
-			r.log.Info("HEYO3 ADDING MATCH")
 			cc.addMatch(&gatewayClasses.Items[i])
 		}
 	}
