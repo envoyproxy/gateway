@@ -21,12 +21,6 @@ import (
 )
 
 const (
-	kindGateway   = "Gateway"
-	kindTLSRoute  = "TLSRoute"
-	kindHTTPRoute = "HTTPRoute"
-	kindSecret    = "Secret"
-	kindService   = "Service"
-
 	gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
 )
 
