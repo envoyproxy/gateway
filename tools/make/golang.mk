@@ -58,7 +58,7 @@ go.tidy:
 	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
 		git diff --exit-code go.sum; \
-   		echo '\nError: ensure all changes have been committed!'; \
+   		echo -e '\nError: ensure all changes have been committed!'; \
 	else \
 		echo 'Go module looks clean!'; \
    	fi

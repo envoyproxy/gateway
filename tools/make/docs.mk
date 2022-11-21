@@ -30,7 +30,7 @@ docs.clean:
 .PHONY: docs-release-prepare
 docs-release-prepare:
 	mkdir -p $(OUTPUT_DIR)
-	@echo "\033[36m===========> Updated Release Version: $(TAG)\033[0m"
+	@echo -e "\033[36m===========> Updated Release Version: $(TAG)\033[0m"
 	$(eval LAST_VERSION := $(shell cat VERSION))
 	cat docs/index.html | sed "s;$(LAST_VERSION);$(TAG);g" > $(OUTPUT_DIR)/index.html
 	mv $(OUTPUT_DIR)/index.html docs/index.html
@@ -38,7 +38,7 @@ docs-release-prepare:
 
 .PHONY: docs-release-gen
 docs-release-gen:
-	@echo "\033[36m===========> Added Release Doc: docs/$(TAG)\033[0m"
+	@echo -e "\033[36m===========> Added Release Doc: docs/$(TAG)\033[0m"
 	cp -r docs/latest docs/$(TAG)
 	@for DOC in $(shell ls docs/latest/user); do \
 		cp docs/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
