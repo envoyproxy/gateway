@@ -197,7 +197,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	for _, gc := range cc.notAcceptedClasses() {
 		if err := updater(gc, false); err != nil {
 			r.resources.GatewayAPIResources.Delete(acceptedGC.Name)
-			return reconcile.Result{}, err
+			return reconcile.Result{}, nil
 		}
 	}
 	if acceptedGC == nil {
@@ -226,7 +226,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, acceptedGC.Name),
 	}); err != nil {
 		r.log.Info("no associated Gateways found for GatewayClass", "name", acceptedGC.Name)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	for i := range gatewayList.Items {
@@ -254,7 +254,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 						if err != nil {
 							r.log.Error(err, "unable to find Secret")
 							// TODO delete secret case
-							return reconcile.Result{}, err
+							return reconcile.Result{}, nil
 						}
 
 						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))
@@ -285,7 +285,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				FieldSelector: fields.OneTermEqualSelector(gatewayTLSRouteIndex, utils.NamespacedName(gtw).String()),
 			}); err != nil {
 				r.log.Error(err, "unable to find associated TLSRoutes")
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 			for _, tlsRoute := range tlsRouteList.Items {
 				r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
@@ -328,7 +328,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, utils.NamespacedName(gtw).String()),
 			}); err != nil {
 				r.log.Error(err, "unable to find associated HTTPRoutes")
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 			for _, httpRoute := range httpRouteList.Items {
 				r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
@@ -386,7 +386,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 			namespace, err := r.getNamespace(ctx, ns)
 			if err != nil {
 				r.log.Error(err, "unable to find the namespace")
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 
 			resourceTree.Namespaces = append(resourceTree.Namespaces, namespace.DeepCopy())
@@ -404,20 +404,20 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
 				acceptedGC.Name))
-			return reconcile.Result{}, err
+			return reconcile.Result{}, nil
 		}
 	}
 
 	if err := updater(acceptedGC, true); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	// If needed, finalize the accepted GatewayClass.
 	if err := r.addFinalizer(ctx, acceptedGC); err != nil {
 		r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
 			acceptedGC.Name))
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
