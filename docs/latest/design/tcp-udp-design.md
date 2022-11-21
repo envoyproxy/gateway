@@ -12,19 +12,19 @@ Envoy can work as a non-transparent proxy or a transparent proxy for both [TCP](
 For TCP, Envoy terminates the downstream connection, connects the upstream with its own IP address, and proxies the 
 TCP traffic from the downstream to the upstream. 
 
-For UDP, Envoy receives UDP packages from the downstream, and uses its own IP address as the sender IP address when 
-proxying the UDP packages to the upstream.
+For UDP, Envoy receives UDP datagrams from the downstream, and uses its own IP address as the sender IP address when 
+proxying the UDP datagrams to the upstream.
 
-In this mode, the upstream will see Envoy's IP address.
+In this mode, the upstream will see Envoy's IP address and port.
 
 ## Transparent Proxy Mode
 For TCP, Envoy terminates the downstream connection, connects the upstream with the downstream IP address, and proxies 
 the TCP traffic from the downstream to the upstream. 
 
-For UDP, Envoy receives UDP packages from the downstream, and uses the downstream IP address as the sender IP address 
-when proxying the UDP packages to the upstream.
+For UDP, Envoy receives UDP datagrams from the downstream, and uses the downstream IP address as the sender IP address 
+when proxying the UDP datagrams to the upstream.
 
-In this mode, the upstream will see the original downstream IP address.
+In this mode, the upstream will see the original downstream IP address and Envoy's mac address.
 
 Note: Even in transparent mode, the upstream can't see the port number of the downstream because Envoy doesn't forward 
 the port number.
