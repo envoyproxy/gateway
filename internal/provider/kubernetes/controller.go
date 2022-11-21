@@ -108,7 +108,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	// Watch Service CRUDs and process affected *Route objects.
-	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForObject{}, predicate.NewPredicateFuncs(r.checkStatusUpdateForGatewayByService)); err != nil {
+	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, handler.EnqueueRequestsFromMapFunc(r.processServiceForOwningGateway)); err != nil {
 		return err
 	}
 
@@ -126,7 +126,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
-	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForObject{}, predicate.NewPredicateFuncs(r.checkStatusUpdateForGatewayByDeployment)); err != nil {
+	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(r.processDeploymentForOwningGateway)); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 }
 
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	r.log.WithName(request.Name).Info("reconciling gatewayclass")
+	r.log.WithName(request.Name).Info("reconciling gatewayAPI object", "namespace", request.Namespace, "name", request.Name)
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
@@ -145,19 +145,21 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	var cc controlledClasses
 
 	for i := range gatewayClasses.Items {
-		if gatewayClasses.Items[i].Spec.ControllerName == r.classController {
+		gwClass := gatewayClasses.Items[i].DeepCopy()
+		if gwClass.Spec.ControllerName == r.classController {
 			// The gatewayclass was marked for deletion and the finalizer removed,
 			// so clean-up dependents.
-			if !gatewayClasses.Items[i].DeletionTimestamp.IsZero() &&
-				!slice.ContainsString(gatewayClasses.Items[i].Finalizers, gatewayClassFinalizer) {
+			if !gwClass.DeletionTimestamp.IsZero() &&
+				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
 				r.log.Info("gatewayclass marked for deletion")
-				cc.removeMatch(&gatewayClasses.Items[i])
+				cc.removeMatch(gwClass)
+
 				// Delete the gatewayclass from the watchable map.
-				r.resources.GatewayAPIResources.Delete(request.Name)
+				r.resources.GatewayAPIResources.Delete(gwClass.Name)
 				continue
 			}
 
-			cc.addMatch(&gatewayClasses.Items[i])
+			cc.addMatch(gwClass)
 		}
 	}
 
@@ -226,7 +228,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, acceptedGC.Name),
 	}); err != nil {
 		r.log.Info("no associated Gateways found for GatewayClass", "name", acceptedGC.Name)
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	for i := range gatewayList.Items {
@@ -251,10 +253,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 							types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)},
 							secret,
 						)
-						if err != nil {
+						if err != nil && !kerrors.IsNotFound(err) {
 							r.log.Error(err, "unable to find Secret")
-							// TODO delete secret case
-							return reconcile.Result{}, nil
+							return reconcile.Result{}, err
 						}
 
 						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))
@@ -285,7 +286,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				FieldSelector: fields.OneTermEqualSelector(gatewayTLSRouteIndex, utils.NamespacedName(gtw).String()),
 			}); err != nil {
 				r.log.Error(err, "unable to find associated TLSRoutes")
-				return reconcile.Result{}, nil
+				return reconcile.Result{}, err
 			}
 			for _, tlsRoute := range tlsRouteList.Items {
 				r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
@@ -328,7 +329,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, utils.NamespacedName(gtw).String()),
 			}); err != nil {
 				r.log.Error(err, "unable to find associated HTTPRoutes")
-				return reconcile.Result{}, nil
+				return reconcile.Result{}, err
 			}
 			for _, httpRoute := range httpRouteList.Items {
 				r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
@@ -371,8 +372,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				service := new(corev1.Service)
 				err := r.client.Get(ctx, serviceNamespaceName, service)
 				if err != nil {
+					if kerrors.IsNotFound(err) {
+						continue
+					}
 					r.log.Error(err, "unable to find associated Services")
-					continue
+					return reconcile.Result{}, err
 				}
 
 				allAssociatedNamespaces[service.Namespace] = struct{}{}
@@ -385,8 +389,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		for ns := range allAssociatedNamespaces {
 			namespace, err := r.getNamespace(ctx, ns)
 			if err != nil {
+				if kerrors.IsNotFound(err) {
+					continue
+				}
 				r.log.Error(err, "unable to find the namespace")
-				return reconcile.Result{}, nil
+				return reconcile.Result{}, err
 			}
 
 			resourceTree.Namespaces = append(resourceTree.Namespaces, namespace.DeepCopy())
@@ -396,8 +403,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 
 	// Update finalizer on the gateway class based on the resource tree.
-	acceptedGateways := resourceTree.Gateways
-	if len(acceptedGateways) == 0 {
+	if len(resourceTree.Gateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
 		// If needed, remove the finalizer from the accepted GatewayClass.
 
@@ -422,7 +428,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
 
-	r.log.WithName(request.Name).Info("reconciled gatewayclass")
+	r.log.WithName(request.Name).Info("reconciled successfully")
 	return reconcile.Result{}, nil
 }
 
@@ -436,27 +442,19 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 	return ns, nil
 }
 
-func (r *gatewayAPIReconciler) checkStatusUpdateForGatewayByDeployment(obj client.Object) bool {
-	// Note: make sure this predicate function always returns false, as we do not want to
-	// Reconcile the gateway API resources because of a Deployment CRUD action.
+// enqueueRequestForOwningGateway returns an event handler that maps events for
+// resources with Gateway owning labels to reconcile requests for those Gateway objects.
+func (r *gatewayAPIReconciler) processDeploymentForOwningGateway(obj client.Object) []reconcile.Request {
 	ctx := context.Background()
 	deployment := obj.(*appsv1.Deployment)
 
+	// Process Deployment Reconcile nothing.
+	request := []reconcile.Request{}
+
 	// Check if the deployment belongs to a Gateway, if so, find the Gateway.
-	gwName, ok := deployment.Labels[gatewayapi.OwningGatewayNameLabel]
-	if !ok {
-		return false
-	}
-
-	gwNamespace, ok := deployment.Labels[gatewayapi.OwningGatewayNamespaceLabel]
-	if !ok {
-		return false
-	}
-
-	gatewayKey := types.NamespacedName{Namespace: gwNamespace, Name: gwName}
-	gtw := new(gwapiv1b1.Gateway)
-	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
-		r.log.Error(err, "gateway not found")
+	gtw := r.findOwningGateway(ctx, deployment.GetLabels())
+	if gtw == nil {
+		return request
 	}
 
 	// Check if the Service for the Gateway also exists, if it does, proceed with
@@ -465,34 +463,24 @@ func (r *gatewayAPIReconciler) checkStatusUpdateForGatewayByDeployment(obj clien
 	if err != nil {
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
+		return request
 	}
 
 	r.statusUpdateForGateway(gtw, svc, deployment)
-	return false
+	return request
 }
 
-func (r *gatewayAPIReconciler) checkStatusUpdateForGatewayByService(obj client.Object) bool {
-	// Note: make sure this predicate function returns false in case the Service belongs
-	// to the Gateway object. In case the Service is a backendRef to a Route object, the state
-	// needs to be reconciled as usual.
+func (r *gatewayAPIReconciler) processServiceForOwningGateway(obj client.Object) []reconcile.Request {
 	ctx := context.Background()
 	svc := obj.(*corev1.Service)
 
+	// Process Service Reconcile nothing.
+	request := []reconcile.Request{}
+
 	// Check if the Service belongs to a Gateway, if so, find the Gateway.
-	gwName, ok := svc.Labels[gatewayapi.OwningGatewayNameLabel]
-	if !ok {
-		return true
-	}
-
-	gwNamespace, ok := svc.Labels[gatewayapi.OwningGatewayNamespaceLabel]
-	if !ok {
-		return true
-	}
-
-	gatewayKey := types.NamespacedName{Namespace: gwNamespace, Name: gwName}
-	gtw := new(gwapiv1b1.Gateway)
-	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
-		r.log.Error(err, "gateway not found")
+	gtw := r.findOwningGateway(ctx, svc.GetLabels())
+	if gtw == nil {
+		return request
 	}
 
 	// Check if the Deployment for the Gateway also exists, if it does, proceed with
@@ -501,10 +489,32 @@ func (r *gatewayAPIReconciler) checkStatusUpdateForGatewayByService(obj client.O
 	if err != nil {
 		r.log.Info("failed to get Deployment for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
+		return request
 	}
 
 	r.statusUpdateForGateway(gtw, svc, deployment)
-	return false
+	return request
+}
+
+func (r gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1b1.Gateway {
+	gwName, ok := labels[gatewayapi.OwningGatewayNameLabel]
+	if !ok {
+		return nil
+	}
+
+	gwNamespace, ok := labels[gatewayapi.OwningGatewayNamespaceLabel]
+	if !ok {
+		return nil
+	}
+
+	gatewayKey := types.NamespacedName{Namespace: gwNamespace, Name: gwName}
+	gtw := new(gwapiv1b1.Gateway)
+	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
+		r.log.Error(err, "gateway not found")
+		return nil
+	}
+
+	return gtw
 }
 
 func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, svc *corev1.Service, deploy *appsv1.Deployment) {
@@ -530,7 +540,6 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, sv
 			gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, gtw.Status.Conditions...)
 			gCopy.Status.Addresses = gtw.Status.Addresses
 			return gCopy
-
 		}),
 	})
 }
