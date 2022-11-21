@@ -70,9 +70,8 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
 		tests.GatewaySecretReferenceGrantAllInNamespace,
 		tests.GatewaySecretReferenceGrantSpecific,
-		// Uncomment when https://github.com/envoyproxy/gateway/issues/539 is fixed.
-		/*tests.GatewaySecretMissingReferenceGrant,
-		tests.GatewaySecretInvalidReferenceGrant,*/
+		tests.GatewaySecretMissingReferenceGrant,
+		tests.GatewaySecretInvalidReferenceGrant,
 	}
 	cSuite.Run(t, egTests)
 
