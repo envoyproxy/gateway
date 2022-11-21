@@ -31,7 +31,7 @@ manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/config/...,$(ROOT_DIR)/internal/ir/...}" 
+	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/config/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}" 
 
 .PHONY: kube-test
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.

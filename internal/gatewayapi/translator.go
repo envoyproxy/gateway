@@ -48,6 +48,7 @@ type InfraIRMap map[string]*ir.Infra
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
+// +k8s:deepcopy-gen=true
 type Resources struct {
 	Gateways        []*v1beta1.Gateway
 	HTTPRoutes      []*v1beta1.HTTPRoute
@@ -56,32 +57,6 @@ type Resources struct {
 	Namespaces      []*v1.Namespace
 	Services        []*v1.Service
 	Secrets         []*v1.Secret
-}
-
-func (r *Resources) DeepCopy() *Resources {
-	resourcesCopy := new(Resources)
-	for _, i := range r.Gateways {
-		resourcesCopy.Gateways = append(resourcesCopy.Gateways, i.DeepCopy())
-	}
-	for _, i := range r.HTTPRoutes {
-		resourcesCopy.HTTPRoutes = append(resourcesCopy.HTTPRoutes, i.DeepCopy())
-	}
-	for _, i := range r.TLSRoutes {
-		resourcesCopy.TLSRoutes = append(resourcesCopy.TLSRoutes, i.DeepCopy())
-	}
-	for _, i := range r.ReferenceGrants {
-		resourcesCopy.ReferenceGrants = append(resourcesCopy.ReferenceGrants, i.DeepCopy())
-	}
-	for _, i := range r.Namespaces {
-		resourcesCopy.Namespaces = append(resourcesCopy.Namespaces, i.DeepCopy())
-	}
-	for _, i := range r.Services {
-		resourcesCopy.Services = append(resourcesCopy.Services, i.DeepCopy())
-	}
-	for _, i := range r.Secrets {
-		resourcesCopy.Secrets = append(resourcesCopy.Secrets, i.DeepCopy())
-	}
-	return resourcesCopy
 }
 
 func (r *Resources) GetNamespace(name string) *v1.Namespace {
