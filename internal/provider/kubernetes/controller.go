@@ -199,7 +199,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	for _, gc := range cc.notAcceptedClasses() {
 		if err := updater(gc, false); err != nil {
 			r.resources.GatewayAPIResources.Delete(acceptedGC.Name)
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
 	}
 	if acceptedGC == nil {
@@ -404,7 +404,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	if err := updater(acceptedGC, true); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	// Update finalizer on the gateway class based on the resource tree.
@@ -415,6 +415,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
 				acceptedGC.Name))
+			return reconcile.Result{}, err
 		}
 
 		// No further processing is required as there are no Gateways for this GatewayClass
@@ -425,7 +426,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	if err := r.addFinalizer(ctx, acceptedGC); err != nil {
 		r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
 			acceptedGC.Name))
-		return reconcile.Result{}, nil
+		return reconcile.Result{}, err
 	}
 
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
