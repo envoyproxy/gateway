@@ -24,15 +24,18 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@$(LOG_TARGET)
 	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=internal/provider/kubernetes/config/crd/bases output:rbac:artifacts:config=internal/provider/kubernetes/config/rbac
 
 .PHONY: generate
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
+	@$(LOG_TARGET)
 	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/config/...,$(ROOT_DIR)/internal/ir/...}" 
 
 .PHONY: kube-test
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
+	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
@@ -43,14 +46,17 @@ endif
 
 .PHONY: kube-deploy
 kube-deploy: manifests $(tools/kustomize) generate-manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	@$(LOG_TARGET)
 	kubectl apply -f $(OUTPUT_DIR)/install.yaml
 
 .PHONY: kube-undeploy
 kube-undeploy: manifests $(tools/kustomize) ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	@$(LOG_TARGET)
 	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(OUTPUT_DIR)/install.yaml
 
 .PHONY: kube-demo
 kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute resource and test the configuration.
+	@$(LOG_TARGET)
 	kubectl apply -f examples/kubernetes/quickstart.yaml
 	$(eval ENVOY_SERVICE := $(shell kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}'))
 	@echo -e "\nPort forward to the Envoy service using the command below"
@@ -60,6 +66,7 @@ kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute
 
 .PHONY: kube-demo-undeploy
 kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
+	@$(LOG_TARGET)
 	kubectl delete -f examples/kubernetes/quickstart.yaml --ignore-not-found=$(ignore-not-found)
 
 # Uncomment when https://github.com/envoyproxy/gateway/issues/256 is fixed.
@@ -72,14 +79,17 @@ conformance: create-cluster kube-install-image kube-deploy run-conformance delet
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
+	@$(LOG_TARGET)
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
 kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+	@$(LOG_TARGET)
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
 .PHONY: run-conformance
 run-conformance: ## Run Gateway API conformance.
+	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
@@ -87,14 +97,16 @@ run-conformance: ## Run Gateway API conformance.
 
 .PHONY: delete-cluster
 delete-cluster: $(tools/kind) ## Delete kind cluster.
+	@$(LOG_TARGET)
 	$(tools/kind) delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
 generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
-	@echo -e "\033[36m===========> Generating kubernetes manifests\033[0m"
+	@$(LOG_TARGET)
+	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/gatewayapi-crds.yaml\033[0m"
+	@$(call log, "Added: $(OUTPUT_DIR)/gatewayapi-crds.yaml")
 	mkdir -pv $(OUTPUT_DIR)/manifests/provider
 	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
 	mkdir -pv $(OUTPUT_DIR)/manifests/infra
@@ -107,11 +119,12 @@ generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
 	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./infra-manager-rbac.yaml
 	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./gatewayapi-crds.yaml
 	$(tools/kustomize) build $(OUTPUT_DIR) > $(OUTPUT_DIR)/install.yaml
-	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/install.yaml\033[0m"
+	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
-	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/quickstart.yaml\033[0m"
+	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.
+	@$(LOG_TARGET)
 	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
-	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/release-notes.yaml\033[0m"
+	@$(call log, "Added: $(OUTPUT_DIR)/release-notes.yaml")

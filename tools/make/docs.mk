@@ -5,6 +5,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 
 .PHONY: docs
 docs: docs.clean $(tools/sphinx-build) ## Generate Envoy Gateway Docs Sources
+	@$(LOG_TARGET)
 	mkdir -p $(DOCS_OUTPUT_DIR)
 	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
 	@for VERSION in $(RELEASE_VERSIONS); do \
@@ -16,6 +17,7 @@ docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gate
 
 .PHONY: docs-serve
 docs-serve: ## Start Envoy Gateway Site Locally
+	@$(LOG_TARGET)
 	python3 -m http.server -d $(DOCS_OUTPUT_DIR)
 
 .PHONY: clean
@@ -24,13 +26,14 @@ clean: docs.clean
 
 .PHONY: docs.clean
 docs.clean:
-	@$(call log, "Cleaning all built docs")
+	@$(LOG_TARGET)
 	rm -rf $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs-release-prepare
 docs-release-prepare:
+	@$(LOG_TARGET)
 	mkdir -p $(OUTPUT_DIR)
-	@echo -e "\033[36m===========> Updated Release Version: $(TAG)\033[0m"
+	@$(call log, "Updated Release Version: $(TAG)")
 	$(eval LAST_VERSION := $(shell cat VERSION))
 	cat docs/index.html | sed "s;$(LAST_VERSION);$(TAG);g" > $(OUTPUT_DIR)/index.html
 	mv $(OUTPUT_DIR)/index.html docs/index.html
@@ -38,11 +41,12 @@ docs-release-prepare:
 
 .PHONY: docs-release-gen
 docs-release-gen:
-	@echo -e "\033[36m===========> Added Release Doc: docs/$(TAG)\033[0m"
+	@$(LOG_TARGET)
+	@$(call log, "Added Release Doc: docs/$(TAG)")
 	cp -r docs/latest docs/$(TAG)
 	@for DOC in $(shell ls docs/latest/user); do \
 		cp docs/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
 		cat $(OUTPUT_DIR)/$$DOC | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/$(TAG)-$$DOC ; \
 		mv $(OUTPUT_DIR)/$(TAG)-$$DOC docs/$(TAG)/user/$$DOC ; \
-		echo "\033[36m===========> Updated: docs/$(TAG)/user/$$DOC\033[0m" ; \
+		$(call log, "Updated: docs/$(TAG)/user/$$DOC") ; \
 	done

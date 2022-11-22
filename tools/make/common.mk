@@ -79,12 +79,15 @@ include tools/make/kube.mk
 include tools/make/docs.mk
 
 # Log the running target
-LOG_TARGET = echo "===========> Running $@..."
+LOG_TARGET = echo -e "\033[0;32m===========> Running $@ ... \033[0m"
 # Log debugging info
 define log
-echo "===========> $1"
+echo -e "\033[36m===========>$1\033[0m"
 endef
 
+define errorlog
+echo -e "\033[0;31m===========>$1\033[0m"
+endef
 
 define USAGE_OPTIONS
 

@@ -22,6 +22,7 @@ GO_VERSION = $(shell grep -oE "^go [[:digit:]]*\.[[:digit:]]*" go.mod | cut -d' 
 # just execute make go.build.linux_amd64.envoy-gateway.
 .PHONY: go.build.%
 go.build.%:
+	@$(LOG_TARGET)
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
 	$(eval OS := $(word 1,$(subst _, ,$(PLATFORM))))
@@ -44,11 +45,12 @@ go.test.unit: ## Run go unit tests
 
 .PHONY: go.test.coverage
 go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in GitHub Actions
+	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files
-	@$(call log, "Cleaning all build output")
+	@$(LOG_TARGET)
 	rm -rf $(OUTPUT_DIR)
 
 .PHONY: go.tidy
@@ -58,9 +60,9 @@ go.tidy:
 	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
 		git diff --exit-code go.sum; \
-   		echo -e '\nError: ensure all changes have been committed!'; \
+		$(call errorlog, "Error: ensure all changes have been committed!"); \
 	else \
-		echo 'Go module looks clean!'; \
+		$(call log, "Go module looks clean!"); \
    	fi
 
 ##@ Golang
