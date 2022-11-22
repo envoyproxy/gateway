@@ -14,6 +14,8 @@
 # https://news.ycombinator.com/item?id=16486331
 .SECONDARY:
 
+SHELL:=/bin/bash
+
 # ====================================================================================================
 # ROOT Options:
 # ====================================================================================================
@@ -111,7 +113,7 @@ export USAGE_OPTIONS
 ## help: Show this help info.
 .PHONY: help
 help:
-	@echo "Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or Kubernetes-based application gateway\n"
+	@echo -e "Envoy Gateway is an open source project for managing Envoy Proxy as a standalone or Kubernetes-based application gateway\n"
 	@echo -e "Usage:\n  make \033[36m<Target>\033[0m \033[36m<Option>\033[0m\n\nTargets:"
 	@awk 'BEGIN {FS = ":.*##"; printf ""} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo -e "$$USAGE_OPTIONS"
