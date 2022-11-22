@@ -53,10 +53,10 @@ kube-undeploy: manifests $(tools/kustomize) ## Uninstall the Envoy Gateway into 
 kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute resource and test the configuration.
 	kubectl apply -f examples/kubernetes/quickstart.yaml
 	$(eval ENVOY_SERVICE := $(shell kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}'))
-	@echo "\nPort forward to the Envoy service using the command below"
-	@echo 'kubectl -n envoy-gateway-system port-forward service/$(ENVOY_SERVICE) 8888:8080 &'
-	@echo "\nCurl the app through Envoy proxy using the command below"
-	@echo "curl --verbose --header \"Host: www.example.com\" http://localhost:8888/get\n"
+	@echo -e "\nPort forward to the Envoy service using the command below"
+	@echo -e 'kubectl -n envoy-gateway-system port-forward service/$(ENVOY_SERVICE) 8888:8080 &'
+	@echo -e "\nCurl the app through Envoy proxy using the command below"
+	@echo -e "curl --verbose --header \"Host: www.example.com\" http://localhost:8888/get\n"
 
 .PHONY: kube-demo-undeploy
 kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
@@ -91,10 +91,10 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 
 .PHONY: generate-manifests
 generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
-	@echo "\033[36m===========> Generating kubernetes manifests\033[0m"
+	@echo -e "\033[36m===========> Generating kubernetes manifests\033[0m"
 	mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/gatewayapi-crds.yaml\033[0m"
+	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/gatewayapi-crds.yaml\033[0m"
 	mkdir -pv $(OUTPUT_DIR)/manifests/provider
 	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
 	mkdir -pv $(OUTPUT_DIR)/manifests/infra
@@ -107,11 +107,11 @@ generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
 	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./infra-manager-rbac.yaml
 	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./gatewayapi-crds.yaml
 	$(tools/kustomize) build $(OUTPUT_DIR) > $(OUTPUT_DIR)/install.yaml
-	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/install.yaml\033[0m"
+	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/install.yaml\033[0m"
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
-	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/quickstart.yaml\033[0m"
+	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/quickstart.yaml\033[0m"
 
 .PHONY: generate-artifacts
 generate-artifacts: generate-manifests ## Generate release artifacts.
 	cp -r $(ROOT_DIR)/release-notes/$(TAG).yaml $(OUTPUT_DIR)/release-notes.yaml
-	@echo "\033[36m===========> Added: $(OUTPUT_DIR)/release-notes.yaml\033[0m"
+	@echo -e "\033[36m===========> Added: $(OUTPUT_DIR)/release-notes.yaml\033[0m"
