@@ -11,6 +11,9 @@ REGISTRY ?= docker.io/envoyproxy
 IMAGE_NAME ?= gateway-dev
 # IMAGE is the image URL for build and push image targets.
 IMAGE ?= ${REGISTRY}/${IMAGE_NAME}
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+IMAGE_BASE ?= gcr.io/distroless/static:nonroot
 # Tag is the tag to use for build and push image targets.
 TAG ?= $(REV)
 
@@ -55,7 +58,7 @@ image.build.%: image.verify go.build.linux_$(GOARCH).%
 	@$(call log, "Building image $(IMAGES):$(TAG) in linux/$(GOARCH)")
 	$(eval BUILD_SUFFIX := --pull -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
 	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) in linux/$(GOARCH)")
-	$(DOCKER) build --platform linux/$(GOARCH) $(BUILD_SUFFIX)
+	$(DOCKER) build --build-arg IMAGE_BASE=$(IMAGE_BASE) --platform linux/$(GOARCH) $(BUILD_SUFFIX)
 
 .PHONY: image.push
 image.push: $(addprefix image.push., $(IMAGES))
