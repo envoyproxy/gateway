@@ -82,6 +82,7 @@ kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind 
 run-conformance: ## Run Gateway API conformance.
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=5m -n gateway-system pod -l job-name=gateway-api-admission --for=jsonpath='{.status.phase}'=Succeeded
 	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --use-unique-ports=$(CONFORMANCE_UNIQUE_PORTS)
 
