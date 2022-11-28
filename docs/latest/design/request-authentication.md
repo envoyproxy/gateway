@@ -335,7 +335,7 @@ dynamic_listeners:
     ...
         default_filter_chain:
           filters:
-          - name: envoy.filters.network.http_connection_manager_1
+          - name: envoy.filters.network.http_connection_manager
             typed_config:
               '@type': >-
                 type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
@@ -343,7 +343,7 @@ dynamic_listeners:
               rds:
                 config_source:
                   ...
-                route_config_name: default-eg-http-1
+                route_config_name: default-eg-http
               http_filters:
                 - name: envoy.filters.http.jwt_authn
                   typed_config:
@@ -358,53 +358,33 @@ dynamic_listeners:
                           http_uri:
                             uri: https://foo.com/jwt/public-key/jwks.json
                             cluster: default-example1-example1-jwt
+                      default-example2-example2:
+                        issuer: https://www.example2.com
+                        audiences:
+                          - bar.com
+                        remote_jwks:
+                          http_uri:
+                            uri: https://bar.com/jwt/public-key/jwks.json
+                            cluster: default-example2-example2-jwt
                     rules:
                       - match:
                           exact: /foo
                         requires:
                           provider_name: default-example1-example1
+                      - match:
+                          exact: /bar
+                        requires:
+                          provider_name: default-example2-example2
                 - name: envoy.filters.http.router
                   typed_config:
                     '@type': >-
                       type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            - name: envoy.filters.network.http_connection_manager_2
-              typed_config:
-                '@type': >-
-                  type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                stat_prefix: http
-                rds:
-                  config_source:
-                    ...
-                  route_config_name: default-eg-http-2
-                http_filters:
-                  - name: envoy.filters.http.jwt_authn
-                    typed_config:
-                      '@type': >-
-                        type.googleapis.com/envoy.config.filter.http.jwt_authn.v2alpha.JwtAuthentication
-                      providers:
-                        default-example2-example2:
-                          issuer: https://www.example2.com
-                          audiences:
-                            - bar.com
-                          remote_jwks:
-                            http_uri:
-                              uri: https://bar.com/jwt/public-key/jwks.json
-                              cluster: default-example2-example2-jwt
-                      rules:
-                        - match:
-                            exact: /bar
-                          requires:
-                            provider_name: default-example2-example2
-                  - name: envoy.filters.http.router
-                    typed_config:
-                      '@type': >-
-                        type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 dynamic_route_configs:
   - route_config:
       '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
-      name: default-eg-http-1
+      name: default-eg-http
       virtual_hosts:
-        - name: default-eg-http-1
+        - name: default-eg-http
           domains:
             - '*'
           routes:
@@ -416,14 +396,6 @@ dynamic_route_configs:
                       exact: www.example1.com
               route:
                 cluster: default-backend-rule-0-match-0-www.example1.com
-  - route_config:
-      '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
-      name: default-eg-http
-      virtual_hosts:
-        - name: default-eg-http-2
-          domains:
-            - '*'
-          routes:
             - match:
                 prefix: /bar
                 headers:
@@ -510,10 +482,8 @@ type AuthenticationSpec struct {
 ```
 
 Authentication should support additional authentication types in the future, for example:
-- mutualTLS (client certificate)
 - OAuth2
 - OIDC
-- External authentication
 
 ## Outstanding Questions
 
