@@ -35,11 +35,12 @@ endif
 
 .PHONY: image.verify
 image.verify:
+	@$(LOG_TARGET)
 	$(eval API_VERSION := $(shell $(DOCKER) version | grep -E 'API version: {1,6}[0-9]' | head -n1 | awk '{print $$3} END { if (NR==0) print 0}' ))
 	$(eval PASS := $(shell echo "$(API_VERSION) > $(DOCKER_SUPPORTED_API_VERSION)" | bc))
 	@if [ $(PASS) -ne 1 ]; then \
 		$(DOCKER) -v ;\
-		echo "Unsupported docker version. Docker API version should be greater than $(DOCKER_SUPPORTED_API_VERSION)"; \
+		$(call log, Unsupported docker version. Docker API version should be greater than $(DOCKER_SUPPORTED_API_VERSION)); \
 		exit 1; \
 	fi
 
@@ -48,6 +49,7 @@ image.build: $(addprefix image.build.$(IMAGE_PLAT)., $(IMAGES))
 
 .PHONY: image.build.%
 image.build.%: image.verify
+	@$(LOG_TARGET)
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
@@ -61,6 +63,7 @@ image.push: $(addprefix image.push.$(IMAGE_PLAT)., $(IMAGES))
 
 .PHONY: image.push.%
 image.push.%: image.build.%
+	@$(LOG_TARGET)
 	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
@@ -72,29 +75,34 @@ image.push.%: image.build.%
 
 .PHONY: image.multiarch.verify
 image.multiarch.verify:
+	@$(LOG_TARGET)
 	$(eval PASS := $(shell docker buildx --help | grep "docker buildx" ))
 	@if [ -z "$(PASS)" ]; then \
-		echo "Cannot find docker buildx, please install first"; \
+		$(call log, Cannot find docker buildx, please install first); \
 		exit 1;\
 	fi
 
 .PHONY: image.multiarch.emulate $(EMULATE_TARGETS)
 image.multiarch.emulate: $(EMULATE_TARGETS)
 $(EMULATE_TARGETS): image.multiarch.emulate.%:
+	@$(LOG_TARGET)
 # Install QEMU emulator, the same emulator as the host will report an error but can safe ignore
 	docker run --rm --privileged tonistiigi/binfmt --install linux/$*
 
 .PHONY: image.multiarch.setup
 image.multiarch.setup: image.verify image.multiarch.verify image.multiarch.emulate
+	@$(LOG_TARGET)
 	docker buildx rm $(BUILDX_CONTEXT) || :
 	docker buildx create --use --name $(BUILDX_CONTEXT) --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.build.multiarch
 image.build.multiarch:
+	@$(LOG_TARGET)
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}"
 
 .PHONY: image.push.multiarch
 image.push.multiarch:
+	@$(LOG_TARGET)
 	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --push
 
 ##@ Image

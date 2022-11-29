@@ -17,14 +17,14 @@ GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
 lint: lint.golint
 lint-deps: $(tools/golangci-lint)
 lint.golint: $(tools/golangci-lint)
-	@echo Running Go linter ...
+	@$(LOG_TARGET)
 	$(tools/golangci-lint) run $(GOLANGCI_LINT_FLAGS) --build-tags=e2e --config=tools/linter/golangci-lint/.golangci.yml
 
 .PHONY: lint.yamllint
 lint: lint.yamllint
 lint-deps: $(tools/yamllint)
 lint.yamllint: $(tools/yamllint)
-	@echo Running YAML linter ...
+	@$(LOG_TARGET)
 	$(tools/yamllint) --config-file=tools/linter/yamllint/.yamllint $$(git ls-files :*.yml :*.yaml | xargs -L1 dirname | sort -u) 
 
 CODESPELL_FLAGS ?= $(if $(GITHUB_ACTION),--disable-colors)
@@ -33,7 +33,7 @@ lint: lint.codespell
 lint-deps: $(tools/codespell)
 lint.codespell: CODESPELL_SKIP := $(shell cat tools/linter/codespell/.codespell.skip | tr \\n ',')
 lint.codespell: $(tools/codespell)
-	@echo Running Codespell linter ...
+	@$(LOG_TARGET)
 # This ::add-matcher/::remove-matcher business is based on
 # https://github.com/codespell-project/actions-codespell/blob/2292753ad350451611cafcbabc3abe387491339a/entrypoint.sh
 # We do this here instead of just using
@@ -55,7 +55,7 @@ lint.codespell: $(tools/codespell)
 lint: lint.whitenoise
 lint-deps: $(tools/whitenoise)
 lint.whitenoise: $(tools/whitenoise)
-	@echo Running WhiteNoise linter ...
+	@$(LOG_TARGET)
 	$(tools/whitenoise)
 
 
@@ -63,16 +63,18 @@ lint.whitenoise: $(tools/whitenoise)
 lint: lint.shellcheck
 lint-deps: $(tools/shellcheck)
 lint.shellcheck: $(tools/shellcheck)
-	@echo Running Shellcheck linter ...
+	@$(LOG_TARGET)
 	$(tools/shellcheck) tools/hack/*.sh
 
 .PHONY: gen-check
 gen-check: generate manifests
+	@$(LOG_TARGET)
 	@if [ ! -z "`git status --porcelain`" ]; then \
-		echo -e "\nERROR: Some files need to be updated, please run 'make generate' and 'make manifests' to include any changed files to your PR\n"; \
+		$(call errorlog, ERROR: Some files need to be updated, please run 'make generate' and 'make manifests' to include any changed files to your PR); \
 		git diff --exit-code; \
 	fi
 
 .PHONY: licensecheck
 licensecheck: ## Check license headers are present.
+	@$(LOG_TARGET)
 	tools/boilerplate/verify-boilerplate.sh
