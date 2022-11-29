@@ -9,7 +9,7 @@ GITHUB_ACTION ?=
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
 
-PHONY: lint-deps
+.PHONY: lint-deps
 lint-deps: ## Everything necessary to lint (useful to separate out in the logs)
 
 GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
