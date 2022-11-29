@@ -410,6 +410,8 @@ type StringMatch struct {
 	Exact *string
 	// Prefix match condition.
 	Prefix *string
+	// Suffix match condition.
+	Suffix *string
 	// SafeRegex match condition.
 	SafeRegex *string
 }
@@ -422,6 +424,9 @@ func (s StringMatch) Validate() error {
 		matchCount++
 	}
 	if s.Prefix != nil {
+		matchCount++
+	}
+	if s.Suffix != nil {
 		matchCount++
 	}
 	if s.SafeRegex != nil {

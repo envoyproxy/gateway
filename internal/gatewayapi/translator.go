@@ -1161,10 +1161,19 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 					// If the intersecting host is more specific than the Listener's hostname,
 					// add an additional header match to all of the routes for it
 					if host != "*" && (listener.Hostname == nil || string(*listener.Hostname) != host) {
-						headerMatches = append(headerMatches, &ir.StringMatch{
-							Name:  ":authority",
-							Exact: StringPtr(host),
-						})
+						// Hostnames that are prefixed with a wildcard label (*.)
+						// are interpreted as a suffix match.
+						if strings.HasPrefix(host, "*.") {
+							headerMatches = append(headerMatches, &ir.StringMatch{
+								Name:   ":authority",
+								Suffix: StringPtr(host[2:]),
+							})
+						} else {
+							headerMatches = append(headerMatches, &ir.StringMatch{
+								Name:  ":authority",
+								Exact: StringPtr(host),
+							})
+						}
 					}
 
 					for _, routeRoute := range routeRoutes {

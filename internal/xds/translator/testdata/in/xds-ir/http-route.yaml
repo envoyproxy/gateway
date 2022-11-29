@@ -7,12 +7,14 @@ http:
   routes:
   - name: "first-route"
     pathMatch:
-      name: "test"
       exact: "foo/bar"
     headerMatches:
     - name: user
       stringMatch:
       exact: "jason"
+    - name: test 
+      stringMatch:
+      suffix: "end"     
     queryParamMatches:
     - name: "debug"
       exact: "yes"
