@@ -3,6 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.18
 
 require (
+	github.com/cncf/xds/go v0.0.0-20220314180256-7f1daf1720fc
 	github.com/envoyproxy/go-control-plane v0.10.3-0.20221028143534-ed9652aebfd9
 	github.com/go-logr/zapr v1.2.0
 	github.com/google/go-cmp v0.5.8
@@ -51,7 +52,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cncf/xds/go v0.0.0-20220314180256-7f1daf1720fc // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.7 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.3+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
