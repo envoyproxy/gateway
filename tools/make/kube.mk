@@ -8,6 +8,9 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 CONFORMANCE_UNIQUE_PORTS ?= true
 
+# Set the platform to linux so the EG binary is not built for Darwin on MacOS hosts.
+override PLATFORM = linux
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -83,7 +86,7 @@ create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gate
 	tools/hack/create-cluster.sh
 
 .PHONY: kube-install-image
-kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
+kube-install-image: image $(tools/kind) ## Install the EG image to a kind cluster using the provided $IMAGE and $TAG.
 	@$(LOG_TARGET)
 	tools/hack/kind-load-image.sh $(IMAGE) $(TAG)
 
