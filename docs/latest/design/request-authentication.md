@@ -4,8 +4,8 @@
 
 [Issue 336][] specifies the need for exposing a user-facing API to configure request authentication. Request
 authentication is defined as an authentication mechanism to be enforced by Envoy on a per-request basis. A connection
-will be rejected if it contains invalid authentication information, based on the `Authentication` API type proposed in
-this design document.
+will be rejected if it contains invalid authentication information, based on the `AuthenticationFilter` API type
+proposed in this design document.
 
 Envoy Gateway leverages [Gateway API][] for configuring managed Envoy proxies. Gateway API defines core, extended, and
 implementation-specific API [support levels][] for implementors such as Envoy Gateway to expose features. Since
@@ -37,11 +37,6 @@ As a Service Producer, I need the ability to:
 * Have different authentication mechanisms per route rule.
 * Choose from different authentication mechanisms supported by Envoy, e.g. OIDC.
 
-### Security API Group
-
-A new API group, `security.gateway.envoyproxy.io` is introduced to group security-related APIs. This will allow security
-APIs to be versioned, changed, etc. over time.
-
 ### Authentication API Type
 
 The Authentication API type defines authentication configuration for authenticating requests through managed Envoy
@@ -55,51 +50,50 @@ import (
 
 )
 
-type Authentication struct {
+type AuthenticationFilter struct {
 	metav1.TypeMeta
 	metav1.ObjectMeta
 
 	// Spec defines the desired state of the Authentication type.
-	Spec AuthenticationSpec
+	Spec AuthenticationFilterSpec
 
 	// Note: The status sub-resource has been excluded but may be added in the future.
 }
 
-// AuthenticationSpec defines the desired state of the Authentication type.
+// AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
 // +union
-type AuthenticationSpec struct {
-	// Type defines the type of authentication provider to use. Supported provider
-	// types are:
+type AuthenticationFilterSpec struct {
+	// Type defines the type of authentication provider to use. Supported provider types are:
 	//
 	// * JWT: A provider that uses JSON Web Token (JWT) for authenticating requests.
 	//
 	// +unionDiscriminator
-	Type AuthenticationType
+	Type AuthenticationFilterType
 
 	// JWT defines the JSON Web Token (JWT) authentication provider type. When multiple
 	// jwtProviders are specified, the JWT is considered valid if any of the providers
 	// successfully validate the JWT.
-	JwtProviders []JwtAuthenticationProvider
+	JwtProviders []JwtAuthenticationFilterProvider
 }
 
 ...
 ```
 
-Refer to [PR 773][] for the detailed Authentication API spec.
+Refer to [PR 773][] for the detailed AuthenticationFilter API spec.
 
-The status subresource is not included in the Authentication API. Status will be surfaced by an HTTPRoute that
-references an Authentication. For example, an HTTPRoute will surface the `ResolvedRefs=False` status condition if it
-references an Authentication that does not exist. It may be beneficial to add Authentication status fields in the future
+The status subresource is not included in the AuthenticationFilter API. Status will be surfaced by an HTTPRoute that
+references an AuthenticationFilter. For example, an HTTPRoute will surface the `ResolvedRefs=False` status condition if it
+references an AuthenticationFilter that does not exist. It may be beneficial to add AuthenticationFilter status fields in the future
 based on defined use-cases. For example, a remote JWKS can be validated based on the specified URI and have an
 appropriate status condition surfaced.
 
-#### Authentication Example
+#### AuthenticationFilter Example
 
-The following is an Authentication example with one JWT authentication provider:
+The following is an AuthenticationFilter example with one JWT authentication provider:
 
 ```yaml
-apiVersion: security.gateway.envoyproxy.io/v1alpha1
-kind: Authentication
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: AuthenticationFilter
 metadata:
   name: example
 spec:
@@ -137,8 +131,8 @@ spec:
       filters:
         - type: ExtensionRef
           extensionRef:
-            group: security.gateway.envoyproxy.io
-            kind: Authentication
+            group: gateway.envoyproxy.io
+            kind: AuthenticationFilter
             name: example
       backendRefs:
         - name: backend
@@ -151,12 +145,12 @@ backend service named "backend".
 ## Implementation Details
 
 The JWT authentication type is translated to an Envoy [JWT authentication filter][] and a cluster is created for each
-remote JWKS. The following examples provide additional details on how Gateway API and Authentication resources are
+remote JWKS. The following examples provide additional details on how Gateway API and AuthenticationFilter resources are
 translated into Envoy configuration.
 
 ### Example 1: One Route with One JWT Provider
 
-The following cluster is created from the above HTTPRoute and Authentication:
+The following cluster is created from the above HTTPRoute and AuthenticationFilter:
 
 ```yaml
 dynamic_clusters:
@@ -202,16 +196,16 @@ dynamic_resources:
               "@type": type.googleapis.com/envoy.config.filter.http.jwt_authn.v2alpha.JwtAuthentication
 ```
 
-This JWT authentication filter contains two fields:
+This JWT authentication HTTP filter contains two fields:
 * The `providers` field specifies how a JWT should be verified, such as where to extract the token, where to fetch the
   public key (JWKS) and where to output its payload. This field is built from the source resource `namespace-name`, and
-  the JWT provider name of an Authentication.
+  the JWT provider name of an AuthenticationFilter.
 * The `rules` field specifies matching rules and their requirements. If a request matches a rule, its requirement
   applies. The requirement specifies which JWT providers should be used. This field is built from a HTTPRoute
-  `matches` rule that references the Authentication extended filter. When a referenced Authentication specifies
-  multiple `jwtProviders`, the JWT is considered valid if __any__ of the providers successfully validate the JWT.
+  `matches` rule that references the AuthenticationFilter. When a referenced Authentication specifies multiple
+  `jwtProviders`, the JWT is considered valid if __any__ of the providers successfully validate the JWT.
 
-The following JWT Authentication filter `providers` configuration is created from the above Authentication.
+The following JWT authentication HTTP filter `providers` configuration is created from the above AuthenticationFilter.
 
 ```yaml
 providers:
@@ -226,7 +220,7 @@ providers:
          timeout: 1s
 ```
 
-The following JWT Authentication filter `rules` configuration is created from the above HTTPRoute.
+The following JWT authentication HTTP filter `rules` configuration is created from the above HTTPRoute.
 
 ```yaml
 rules:
@@ -236,16 +230,16 @@ rules:
       provider_name: default-example-example
 ```
 
-### Example 2: Two HTTPRoutes with Different Authentications
+### Example 2: Two HTTPRoutes with Different AuthenticationFilters
 
 The following example contains:
 * Two HTTPRoutes with different hostnames.
-* Each HTTPRoute references a different Authentication
-* Each Authentication contains a different JWT provider.
+* Each HTTPRoute references a different AuthenticationFilter.
+* Each AuthenticationFilter contains a different JWT provider.
 
 ```yaml
-apiVersion: security.gateway.envoyproxy.io/v1alpha1
-kind: Authentication
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: AuthenticationFilter
 metadata:
   name: example1
 spec:
@@ -258,8 +252,8 @@ spec:
     remoteJwks:
       uri: https://foo.com/jwt/public-key/jwks.json
 ---
-apiVersion: security.gateway.envoyproxy.io/v1alpha1
-kind: Authentication
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: AuthenticationFilter
 metadata:
   name: example2
 spec:
@@ -291,8 +285,8 @@ spec:
       filters:
         - type: ExtensionRef
           extensionRef:
-            group: security.gateway.envoyproxy.io
-            kind: Authentication
+            group: gateway.envoyproxy.io
+            kind: AuthenticationFilter
             name: example1
       backendRefs:
         - name: backend
@@ -317,8 +311,8 @@ spec:
       filters:
         - type: ExtensionRef
           extensionRef:
-            group: security.gateway.envoyproxy.io
-            kind: Authentication
+            group: gateway.envoyproxy.io
+            kind: AuthenticationFilter
             name: example2
       backendRefs:
         - name: backend2
@@ -435,40 +429,39 @@ __Note:__ The JWT provider cluster and route is omitted from the above example f
 
 ### Implementation Outline
 
-* Create a `security` API group and add the Authentication API type to this group.
-* Update the Kubernetes provider to get/watch Authentication resources that are referenced by managed HTTPRoutes. Add
-  the referenced Authentication object to the resource map and publish it.
-* Update the resource translator to include the Authentication API in HTTPRoute processing.
-* Update the xDS translator to translate an Authentication into xDS resources. The translator should perform the
+* Update the Kubernetes provider to get/watch AuthenticationFilter resources that are referenced by managed HTTPRoutes.
+  Add the referenced AuthenticationFilter object to the resource map and publish it.
+* Update the resource translator to include the AuthenticationFilter API in HTTPRoute processing.
+* Update the xDS translator to translate an AuthenticationFilter into xDS resources. The translator should perform the
   following:
   * Convert a list of JWT rules from the xds IR into an Envoy JWT filter config.
-  * Create a JWT authentication filter.
+  * Create a JWT authentication HTTP filter.
   * Build the HTTP Connection Manager (HCM) HTTP filters.
   * Build the HCM.
   * When building the Listener, create an HCM for each filter-chain.
 
-## Adding Authentication Provider Types
+## Adding Authentication Types
 
-Additional authentication provider types can be added in the future through the `ProviderType` API. For example, to add
-the `Foo` authentication provider type:
+Additional authentication types can be added in the future through the `AuthenticationFilterType` API. For
+example, to add the `Foo` authentication type:
 
-Define the `FooProvider` type:
+Define the `Foo` authentication provider:
 
 ```go
 package v1alpha1
 
-// FooProvider defines the "Foo" authentication provider type.
-type FooProvider struct {
-	// TODO: Define fields of the Foo authentication provider type.
+// FooAuthenticationFilterProvider defines the "Foo" authentication filter provider type.
+type FooAuthenticationFilterProvider struct {
+	// TODO: Define fields of the Foo authentication filter provider type.
 }
 ```
 
-Add the `FooProvider` type to `AuthenticationSpec`:
+Add the `FooAuthenticationFilterProvider` type to `AuthenticationFilterSpec`:
 
 ```go
 package v1alpha1
 
-type AuthenticationSpec struct {
+type AuthenticationFilterSpec struct {
 	...
 	
 	// Foo defines the Foo authentication type. For additional
@@ -477,17 +470,30 @@ type AuthenticationSpec struct {
 	//   <INSERT_LINK>
 	//
 	// +optional
-	Foo *FooAuthentication `json:"foo"`
+	Foo *FooAuthenticationFilterProvider
 }
 ```
 
-Authentication should support additional authentication types in the future, for example:
+Lastly, add the type to the `AuthenticationType` enum:
+
+```go
+// AuthenticationType is a type of authentication provider.
+// +kubebuilder:validation:Enum=JWT,FOO
+type AuthenticationFilterType string
+
+const (
+	// JwtAuthenticationProviderType is the JWT authentication provider type.
+	FooAuthenticationFilterProviderType AuthenticationFilterType = "FOO"
+)
+```
+
+The AuthenticationFilter API should support additional authentication types in the future, for example:
 - OAuth2
 - OIDC
 
 ## Outstanding Questions
 
-- If Envoy Gateway owns the Authentication API, is an xDS IR equivalent needed?
+- If Envoy Gateway owns the AuthenticationFilter API, is an xDS IR equivalent needed?
 - Should local JWKS be implemented before remote JWKS?
 - How should Envoy obtain the trusted CA for a remote JWKS?
 - Should HTTPS be the only supported scheme for remote JWKS?
