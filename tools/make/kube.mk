@@ -92,6 +92,7 @@ run-conformance: ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
 	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --use-unique-ports=$(CONFORMANCE_UNIQUE_PORTS)
 
