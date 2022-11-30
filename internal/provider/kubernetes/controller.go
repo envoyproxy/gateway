@@ -156,6 +156,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	var cc controlledClasses
 
 	for _, gwClass := range gatewayClasses.Items {
+		gwClass := gwClass
 		if gwClass.Spec.ControllerName == r.classController {
 			// The gatewayclass was marked for deletion and the finalizer removed,
 			// so clean-up dependents.
@@ -242,13 +243,16 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 
 	for _, gtw := range gatewayList.Items {
+		gtw := gtw
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		allAssociatedNamespaces[gtw.Namespace] = struct{}{}
 
 		for _, listener := range gtw.Spec.Listeners {
+			listener := listener
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
+					certRef := certRef
 					if refsSecret(&certRef) {
 						secret := new(corev1.Secret)
 						secretNamespace := gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace)
@@ -292,10 +296,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				return reconcile.Result{}, err
 			}
 			for _, tlsRoute := range tlsRouteList.Items {
+				tlsRoute := tlsRoute
 				r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
 				for _, rule := range tlsRoute.Spec.Rules {
 					for _, backendRef := range rule.BackendRefs {
+						backendRef := backendRef
 						ref := gatewayapi.UpgradeBackendRef(backendRef)
 						if err := validateBackendRef(&ref); err != nil {
 							r.log.Error(err, "invalid backendRef")
@@ -335,10 +341,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				return reconcile.Result{}, err
 			}
 			for _, httpRoute := range httpRouteList.Items {
+				httpRoute := httpRoute
 				r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
 				for _, rule := range httpRoute.Spec.Rules {
 					for _, backendRef := range rule.BackendRefs {
+						backendRef := backendRef
 						if err := validateBackendRef(&backendRef.BackendRef); err != nil {
 							r.log.Error(err, "invalid backendRef")
 							continue
