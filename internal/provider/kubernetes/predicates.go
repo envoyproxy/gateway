@@ -9,11 +9,16 @@ import (
 	"context"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
+
+// TODO: all predicate functions are unti test candidates.
 
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
@@ -98,6 +103,30 @@ func (r *gatewayAPIReconciler) validateRouteParentReferences(refs []gwapiv1b1.Pa
 			if !r.validateGatewayForReconcile(gw) {
 				return false
 			}
+		}
+	}
+
+	return true
+}
+
+func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) bool {
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	gwList := &gwapiv1b1.GatewayList{}
+	if err := r.client.List(context.Background(), gwList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(secretGatewayIndex, utils.NamespacedName(secret).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRoutes")
+		return false
+	}
+
+	for _, gw := range gwList.Items {
+		if !r.validateGatewayForReconcile(&gw) {
+			return false
 		}
 	}
 

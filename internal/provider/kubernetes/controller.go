@@ -87,7 +87,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	if err := c.Watch(
 		&source.Kind{Type: &gwapiv1b1.Gateway{}},
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateGatewayForReconcile)); err != nil {
+		predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
+	); err != nil {
 		return err
 	}
 	if err := addGatewayIndexers(ctx, mgr); err != nil {
@@ -124,7 +125,11 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	// Watch Secret CRUDs and process affected Gateways.
-	if err := c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &corev1.Secret{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+	); err != nil {
 		return err
 	}
 
