@@ -152,10 +152,10 @@ func (u *UpdateWriter) Send(update Update) {
 //
 // Supported objects:
 //
-//	GatewayClasses
-//	Gateway
-//	HTTPRoute
-//	TLSRoute
+//  GatewayClasses
+//  Gateway
+//  HTTPRoute
+//  TLSRoute
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime", "ObservedGeneration")
 	switch a := objA.(type) {
