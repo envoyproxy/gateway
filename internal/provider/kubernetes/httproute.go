@@ -214,7 +214,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 			// Remove the route from the watchable map since it's invalid.
 			r.resources.HTTPRoutes.Delete(routeKey)
 			r.log.Error(err, "invalid parentRefs for httproute")
-			return reconcile.Result{}, nil
+			continue
 		}
 		log.Info("validated httproute parentRefs")
 
@@ -223,7 +223,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, request reconcile.R
 			// a managed Gateway.
 			log.Info("httproute doesn't reference any managed gateways")
 			r.resources.HTTPRoutes.Delete(routeKey)
-			return reconcile.Result{}, nil
+			continue
 		}
 
 		// only store the resource if it does not exist or it has a newer spec.
