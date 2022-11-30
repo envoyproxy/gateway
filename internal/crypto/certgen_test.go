@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 func TestGenerateCerts(t *testing.T) {
@@ -52,7 +53,7 @@ func TestGenerateCerts(t *testing.T) {
 	run(t, "no configuration - use defaults", testcase{
 		certConfig:              &Configuration{},
 		wantEnvoyGatewayDNSName: DefaultEnvoyGatewayDNSPrefix,
-		wantEnvoyDNSName:        fmt.Sprintf("*.%s", DefaultNamespace),
+		wantEnvoyDNSName:        fmt.Sprintf("*.%s", config.EnvoyGatewayNamespace),
 	})
 }
 
