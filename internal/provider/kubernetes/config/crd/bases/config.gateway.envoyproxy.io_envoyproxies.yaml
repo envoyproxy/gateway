@@ -34,6 +34,44 @@ spec:
             type: object
           spec:
             description: EnvoyProxySpec defines the desired state of EnvoyProxy.
+            properties:
+              provider:
+                description: Provider defines the desired resource provider and provider-specific
+                  configuration. If unspecified, the "Kubernetes" resource provider
+                  is used with default configuration parameters.
+                properties:
+                  kubernetes:
+                    description: Kubernetes defines the desired state of the Kubernetes
+                      resource provider. Kubernetes provides infrastructure resources
+                      for running the data plane, e.g. Envoy proxy, and optional auxiliary
+                      control planes. If unspecified and type is "Kubernetes", default
+                      settings for managed Kubernetes resources are applied.
+                    properties:
+                      envoyDeployment:
+                        description: EnvoyDeployment defines the desired state of
+                          the Envoy deployment resource. If unspecified, default settings
+                          for the manged Envoy deployment resource are applied.
+                        properties:
+                          replicas:
+                            description: Replicas is the number of desired Envoy proxy
+                              pods. Defaults to 1.
+                            format: int32
+                            type: integer
+                        type: object
+                    type: object
+                  type:
+                    description: "Type is the type of resource provider to use. A
+                      resource provider provides infrastructure resources for running
+                      the data plane, e.g. Envoy proxy, and optional auxiliary control
+                      planes. Supported types are: \n * Kubernetes: Provides infrastructure
+                      resources for running the data plane, e.g. Envoy proxy, and
+                      optional auxiliary control planes."
+                    enum:
+                    - Kubernetes
+                    type: string
+                required:
+                - type
+                type: object
             type: object
           status:
             description: EnvoyProxyStatus defines the observed state of EnvoyProxy
