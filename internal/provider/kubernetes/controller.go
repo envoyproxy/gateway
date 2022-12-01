@@ -647,23 +647,19 @@ func addGatewayIndexers(ctx context.Context, mgr manager.Manager) error {
 
 // removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
-	firstAttempt := true
 	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if !firstAttempt {
-			// Get the resource.
-			if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
-				if kerrors.IsNotFound(err) {
-					return nil
-				}
-				return err
+		// Get the resource.
+		if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
+			if kerrors.IsNotFound(err) {
+				return nil
 			}
+			return err
 		}
 
 		if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 			updated := gc.DeepCopy()
 			updated.Finalizers = slice.RemoveString(updated.Finalizers, gatewayClassFinalizer)
 			if err := r.client.Update(ctx, updated); err != nil {
-				firstAttempt = false
 				return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
 			}
 		}
@@ -676,23 +672,19 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b
 
 // addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
 func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
-	firstAttempt := true
 	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if !firstAttempt {
-			// Get the resource.
-			if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
-				if kerrors.IsNotFound(err) {
-					return nil
-				}
-				return err
+		// Get the resource.
+		if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
+			if kerrors.IsNotFound(err) {
+				return nil
 			}
+			return err
 		}
 
 		if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 			updated := gc.DeepCopy()
 			updated.Finalizers = append(updated.Finalizers, gatewayClassFinalizer)
 			if err := r.client.Update(ctx, updated); err != nil {
-				firstAttempt = false
 				return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
 			}
 		}
