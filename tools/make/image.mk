@@ -45,32 +45,28 @@ image.verify:
 	fi
 
 .PHONY: image.build
-image.build: $(addprefix image.build.$(IMAGE_PLAT)., $(IMAGES))
+image.build: $(addprefix image.build., $(IMAGES))
 
 .PHONY: image.build.%
-image.build.%: image.verify
+image.build.%: image.verify go.build.linux_$(GOARCH).%
 	@$(LOG_TARGET)
-	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
-	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
-	@$(call log, "Building image $(IMAGES) in tag $(TAG) for $(IMAGE_PLAT)")
+	@$(call log, "Building image $(IMAGES):$(TAG) in linux/$(GOARCH)")
 	$(eval BUILD_SUFFIX := --pull -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
-	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) for $(ARCH)")
-	$(DOCKER) build --platform $(IMAGE_PLAT) $(BUILD_SUFFIX)
+	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) in linux/$(GOARCH)")
+	$(DOCKER) build --platform linux/$(GOARCH) $(BUILD_SUFFIX)
 
 .PHONY: image.push
-image.push: $(addprefix image.push.$(IMAGE_PLAT)., $(IMAGES))
+image.push: $(addprefix image.push., $(IMAGES))
 
 .PHONY: image.push.%
 image.push.%: image.build.%
 	@$(LOG_TARGET)
-	$(eval COMMAND := $(word 2,$(subst ., ,$*)))
+	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
-	$(eval PLATFORM := $(word 1,$(subst ., ,$*)))
-	$(eval ARCH := $(word 2,$(subst _, ,$(PLATFORM))))
-	$(eval IMAGE_PLAT := $(subst _,/,$(PLATFORM)))
 	@$(call log, "Pushing image $(IMAGES) $(TAG) to $(REGISTRY)")
-	@$(call log, "Pushing docker image tag $(IMAGE):$(TAG) for $(ARCH)")
+	@$(call log, "Pushing docker image tag $(IMAGE):$(TAG) in linux/$(GOARCH)")
 	$(DOCKER) push $(IMAGE):$(TAG)
 
 .PHONY: image.multiarch.verify
@@ -109,7 +105,7 @@ image.push.multiarch:
 
 .PHONY: image
 image: ## Build docker images for host platform. See Option PLATFORM and BINS.
-image: go.build image.build
+image: image.build
 
 .PHONY: image-multiarch
 image-multiarch: ## Build docker images for multiple platforms. See Option PLATFORMS and IMAGES.
@@ -122,4 +118,3 @@ push: image.push
 .PHONY: push-multiarch
 push-multiarch: ## Push docker images for multiple platforms to registry.
 push-multiarch: image.multiarch.setup go.build.multiarch image.push.multiarch
-
