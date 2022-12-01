@@ -8,9 +8,11 @@ are listed below; **bold** type indicates the versions of the Envoy Proxy
 and the Gateway API actually compiled into each Envoy Gateway release.
 
 +--------------------------+---------------------+---------------------+----------------------------+
-| Envoy Gateway version    | Envoy Proxy version | Gateway API version | Kubernetes minimum version |
+| Envoy Gateway version    | Envoy Proxy version | Gateway API version | Kubernetes version         |
 +--------------------------+---------------------+---------------------+----------------------------+
 | v0.2.0                   | **v1.23-latest**    | **v0.5.1**          | v1.24                      |
++--------------------------+---------------------+---------------------+----------------------------+
+| latest                   | **dev-latest**      | **v0.5.1**          | v1.23.6, v1.24, v1.25      |
 +--------------------------+---------------------+---------------------+----------------------------+
 
 .. note::
