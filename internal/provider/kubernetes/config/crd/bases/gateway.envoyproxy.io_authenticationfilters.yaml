@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: authentications.security.gateway.envoyproxy.io
+  name: authenticationfilters.gateway.envoyproxy.io
 spec:
-  group: security.gateway.envoyproxy.io
+  group: gateway.envoyproxy.io
   names:
-    kind: Authentication
-    listKind: AuthenticationList
-    plural: authentications
-    singular: authentication
+    kind: AuthenticationFilter
+    listKind: AuthenticationFilterList
+    plural: authenticationfilters
+    singular: authenticationfilter
   scope: Namespaced
   versions:
   - name: v1alpha1
@@ -32,7 +32,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of the Authentication type.
+            description: Spec defines the desired state of the AuthenticationFilter
+              type.
             properties:
               jwtProviders:
                 description: "JWT defines the JSON Web Token (JWT) authentication
@@ -40,8 +41,9 @@ spec:
                   is considered valid if any of the providers successfully validate
                   the JWT. For additional details, see: \n https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html"
                 items:
-                  description: 'JwtAuthenticationProvider defines the JSON Web Token
-                    (JWT) authentication provider type and how JWTs should be verified:'
+                  description: 'JwtAuthenticationFilterProvider defines the JSON Web
+                    Token (JWT) authentication provider type and how JWTs should be
+                    verified:'
                   properties:
                     audiences:
                       description: "Audiences is a list of JWT audiences allowed to

@@ -11,26 +11,25 @@ import (
 
 //+kubebuilder:object:root=true
 
-type Authentication struct {
+type AuthenticationFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of the Authentication type.
-	Spec AuthenticationSpec `json:"spec"`
+	// Spec defines the desired state of the AuthenticationFilter type.
+	Spec AuthenticationFilterSpec `json:"spec"`
 
 	// Note: The status sub-resource has been excluded but may be added in the future.
 }
 
-// AuthenticationSpec defines the desired state of the Authentication type.
+// AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
 // +union
-type AuthenticationSpec struct {
-	// Type defines the type of authentication provider to use. Supported provider
-	// types are:
+type AuthenticationFilterSpec struct {
+	// Type defines the type of authentication provider to use. Supported provider types are:
 	//
 	//   * JWT: A provider that uses JSON Web Token (JWT) for authenticating requests.
 	//
 	// +unionDiscriminator
-	Type AuthenticationType `json:"type"`
+	Type AuthenticationFilterType `json:"type"`
 
 	// JWT defines the JSON Web Token (JWT) authentication provider type. When multiple
 	// jwtProviders are specified, the JWT is considered valid if any of the providers
@@ -40,21 +39,21 @@ type AuthenticationSpec struct {
 	//
 	// +kubebuilder:validation:MaxItems=4
 	// +optional
-	JwtProviders []JwtAuthenticationProvider `json:"jwtProviders,omitempty"`
+	JwtProviders []JwtAuthenticationFilterProvider `json:"jwtProviders,omitempty"`
 }
 
-// AuthenticationType is a type of authentication provider.
+// AuthenticationFilterType is a type of authentication provider.
 // +kubebuilder:validation:Enum=JWT
-type AuthenticationType string
+type AuthenticationFilterType string
 
 const (
-	// JwtAuthenticationProviderType is the JWT authentication provider type.
-	JwtAuthenticationProviderType AuthenticationType = "JWT"
+	// JwtAuthenticationFilterProviderType is the JWT authentication provider type.
+	JwtAuthenticationFilterProviderType AuthenticationFilterType = "JWT"
 )
 
-// JwtAuthenticationProvider defines the JSON Web Token (JWT) authentication provider type
+// JwtAuthenticationFilterProvider defines the JSON Web Token (JWT) authentication provider type
 // and how JWTs should be verified:
-type JwtAuthenticationProvider struct {
+type JwtAuthenticationFilterProvider struct {
 	// Name defines a unique name for the JWT provider. A name can have a variety of forms,
 	// including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
 	//
@@ -119,9 +118,9 @@ type RemoteJWKS struct {
 type AuthenticationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Authentication `json:"items"`
+	Items           []AuthenticationFilter `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Authentication{}, &AuthenticationList{})
+	SchemeBuilder.Register(&AuthenticationFilter{}, &AuthenticationList{})
 }
