@@ -120,7 +120,10 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	// Watch Service CRUDs and process affected *Route objects.
-	if err := c.Watch(&source.Kind{Type: &corev1.Service{}}, handler.EnqueueRequestsFromMapFunc(r.processServiceForOwningGateway)); err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &corev1.Service{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validateServiceForReconcile)); err != nil {
 		return err
 	}
 
@@ -134,7 +137,10 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	// Watch ReferenceGrant CRUDs and process affected Gateways.
-	if err := c.Watch(&source.Kind{Type: &gwapiv1a2.ReferenceGrant{}}, &handler.EnqueueRequestForObject{}); err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1a2.ReferenceGrant{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
 		return err
 	}
 	if err := addReferenceGrantIndexers(ctx, mgr); err != nil {
@@ -142,7 +148,11 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
-	if err := c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, handler.EnqueueRequestsFromMapFunc(r.processDeploymentForOwningGateway)); err != nil {
+	if err := c.Watch(
+		&source.Kind{Type: &appsv1.Deployment{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
+	); err != nil {
 		return err
 	}
 
@@ -204,7 +214,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 			// this branch makes testing easier by not going through the status.Updater.
 			copy := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
 
-			if err := r.client.Status().Update(ctx, copy); err != nil {
+			if err := r.client.Status().Update(ctx, copy); err != nil && !kerrors.IsNotFound(err) {
 				return fmt.Errorf("error updating status of gatewayclass %s: %w", copy.Name, err)
 			}
 		}
@@ -368,7 +378,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 							to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
 							refGrant, err := r.findReferenceGrant(ctx, from, to)
 							if err != nil {
-								r.log.Error(err, "unable to find ReferenceGrant that links the Service to TLSRoute")
+								r.log.Error(err, "unable to find ReferenceGrant that links the Service to HTTPRoute")
 								continue
 							}
 
@@ -459,66 +469,6 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 		return nil, err
 	}
 	return ns, nil
-}
-
-// processDeploymentForOwningGateway tries finding the owning Gateway of the Deployment
-// if it exists, finds the Gateway's Service, and further updates the Gateway
-// status Ready condition.
-func (r *gatewayAPIReconciler) processDeploymentForOwningGateway(obj client.Object) (request []reconcile.Request) {
-	// Process Deployment Reconcile nothing.
-	ctx := context.Background()
-	deployment := obj.(*appsv1.Deployment)
-	if deployment == nil {
-		return
-	}
-
-	// Check if the deployment belongs to a Gateway, if so, find the Gateway.
-	gtw := r.findOwningGateway(ctx, deployment.GetLabels())
-	if gtw == nil {
-		return
-	}
-
-	// Check if the Service for the Gateway also exists, if it does, proceed with
-	// the Gateway status update.
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Service for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-		return
-	}
-
-	r.statusUpdateForGateway(gtw, svc, deployment)
-	return
-}
-
-// processServiceForOwningGateway tries finding the owning Gateway of the Service
-// if it exists, finds the Gateway's Deployment, and further updates the Gateway
-// status Ready condition.
-func (r *gatewayAPIReconciler) processServiceForOwningGateway(obj client.Object) (request []reconcile.Request) {
-	// Process Service Reconcile nothing.
-	ctx := context.Background()
-	svc := obj.(*corev1.Service)
-	if svc == nil {
-		return
-	}
-
-	// Check if the Service belongs to a Gateway, if so, find the Gateway.
-	gtw := r.findOwningGateway(ctx, svc.GetLabels())
-	if gtw == nil {
-		return
-	}
-
-	// Check if the Deployment for the Gateway also exists, if it does, proceed with
-	// the Gateway status update.
-	deployment, err := r.envoyDeploymentForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-		return
-	}
-
-	r.statusUpdateForGateway(gtw, svc, deployment)
-	return
 }
 
 func (r gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1b1.Gateway {
@@ -702,6 +652,9 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b
 		if !firstAttempt {
 			// Get the resource.
 			if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
 				return err
 			}
 		}
@@ -728,6 +681,9 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.G
 		if !firstAttempt {
 			// Get the resource.
 			if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
+				if kerrors.IsNotFound(err) {
+					return nil
+				}
 				return err
 			}
 		}

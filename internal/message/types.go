@@ -18,6 +18,8 @@ import (
 
 // ProviderResources message
 type ProviderResources struct {
+	// GatewayAPIResources is a map from a GatewayClass name to
+	// a group of gateway API resources.
 	GatewayAPIResources watchable.Map[string, *gatewayapi.Resources]
 
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
