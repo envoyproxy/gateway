@@ -43,7 +43,6 @@ static_resources:
                 address: {{ .XdsServer.Address }}
                 port_value: {{ .XdsServer.Port }}
     http2_protocol_options: {}
-
     name: xds_cluster
     type: STRICT_DNS
     transport_socket:
