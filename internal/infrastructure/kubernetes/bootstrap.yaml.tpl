@@ -1,5 +1,9 @@
 admin:
-  access_log_path: {{ .AdminServer.AccessLogPath }}
+  access_log:
+  - name: envoy.access_loggers.file
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: {{ .AdminServer.AccessLogPath }}
   address:
     socket_address:
       address: {{ .AdminServer.Address }}
@@ -39,6 +43,7 @@ static_resources:
                 address: {{ .XdsServer.Address }}
                 port_value: {{ .XdsServer.Port }}
     http2_protocol_options: {}
+
     name: xds_cluster
     type: STRICT_DNS
     transport_socket:
