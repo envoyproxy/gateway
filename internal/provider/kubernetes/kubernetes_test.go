@@ -162,11 +162,11 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		return false
 	}, defaultWait, defaultTick)
 
-	// Since there are no Gateways present for the GatewayClass, we store nothing
-	// in the resource map.
+	// Even though no gateways exist, the controller loads the empty resource map
+	// to support gateway deletions.
 	require.Eventually(t, func() bool {
 		_, ok := resources.GatewayAPIResources.Load(gc.Name)
-		return !ok
+		return ok
 	}, defaultWait, defaultTick)
 }
 

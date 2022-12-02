@@ -442,6 +442,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 			return reconcile.Result{}, err
 		}
 
+		// Store the resource tree to trigger a delete operation.
+		r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
+
 		// No further processing is required as there are no Gateways for this GatewayClass
 		return reconcile.Result{}, nil
 	}
