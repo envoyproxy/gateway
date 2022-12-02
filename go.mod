@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.18
+go 1.19
 
 require (
 	github.com/cncf/xds/go v0.0.0-20220314180256-7f1daf1720fc
