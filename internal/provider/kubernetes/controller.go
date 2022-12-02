@@ -230,10 +230,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 			return reconcile.Result{}, err
 		}
 	}
-	if acceptedGC == nil {
-		r.log.Info("no accepted GatewayClass available.")
-		return reconcile.Result{}, nil
-	}
 
 	resourceTree := &gatewayapi.Resources{
 		Gateways:        []*gwapiv1b1.Gateway{},

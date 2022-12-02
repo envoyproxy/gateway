@@ -18,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -298,8 +299,10 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}, defaultWait, defaultTick)
 
 	// Ensure the gatewayclass has been finalized.
-	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
-	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
 	key := types.NamespacedName{
@@ -394,8 +397,10 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	}()
 
 	// Ensure the gatewayclass has been finalized.
-	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
-	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
 
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
