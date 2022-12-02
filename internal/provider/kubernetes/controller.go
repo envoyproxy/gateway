@@ -441,21 +441,18 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				acceptedGC.Name))
 			return reconcile.Result{}, err
 		}
-
-		// Store the resource tree to trigger a delete operation.
-		r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
-
-		// No further processing is required as there are no Gateways for this GatewayClass
-		return reconcile.Result{}, nil
+	} else {
+		// finalize the accepted GatewayClass.
+		if err := r.addFinalizer(ctx, acceptedGC); err != nil {
+			r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
+				acceptedGC.Name))
+			return reconcile.Result{}, err
+		}
 	}
 
-	// If needed, finalize the accepted GatewayClass.
-	if err := r.addFinalizer(ctx, acceptedGC); err != nil {
-		r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
-			acceptedGC.Name))
-		return reconcile.Result{}, err
-	}
-
+	// The Store is triggered even when there are no Gateways associated to the
+	// GatewayClass. This would happen in case the last Gateway is removed and the
+	// Store will be required to trigger a cleanup of envoy infra resources.
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
 
 	r.log.WithName(request.Name).Info("reconciled gatewayAPI object successfully", "namespace", request.Namespace, "name", request.Name)
