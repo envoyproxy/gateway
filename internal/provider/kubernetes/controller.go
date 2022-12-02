@@ -40,6 +40,8 @@ const (
 	gatewayHTTPRouteIndex    = "gatewayHTTPRouteIndex"
 	secretGatewayIndex       = "secretGatewayIndex"
 	targetRefGrantRouteIndex = "targetRefGrantRouteIndex"
+	serviceHTTPRouteIndex    = "serviceHTTPRouteIndex"
+	serviceTLSRouteIndex     = "serviceTLSRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -578,6 +580,28 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	}); err != nil {
 		return err
 	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, func(rawObj client.Object) []string {
+		httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+		var services []string
+		for _, rule := range httproute.Spec.Rules {
+			for _, backend := range rule.BackendRefs {
+				if string(*backend.Kind) == gatewayapi.KindService {
+					// If an explicit Service namespace is not provided, use the HTTPRoute namespace to
+					// lookup the provided Gateway Name.
+					services = append(services,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
+							Name:      string(backend.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+		return services
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -601,6 +625,28 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 			}
 		}
 		return gateways
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, func(rawObj client.Object) []string {
+		tlsroute := rawObj.(*gwapiv1a2.TLSRoute)
+		var services []string
+		for _, rule := range tlsroute.Spec.Rules {
+			for _, backend := range rule.BackendRefs {
+				if string(*backend.Kind) == gatewayapi.KindService {
+					// If an explicit Service namespace is not provided, use the TLSRoute namespace to
+					// lookup the provided Gateway Name.
+					services = append(services,
+						types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
+							Name:      string(backend.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+		return services
 	}); err != nil {
 		return err
 	}

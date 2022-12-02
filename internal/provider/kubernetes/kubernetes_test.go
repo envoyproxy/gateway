@@ -291,15 +291,15 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	// Ensure the gatewayclass has been finalized.
-	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
-	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
-
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
 		res, _ := resources.GatewayAPIResources.Load("gc-scheduled-status-test")
-		return len(res.Gateways) == 1
+		return res != nil && len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
+
+	// Ensure the gatewayclass has been finalized.
+	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
+	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
 	key := types.NamespacedName{

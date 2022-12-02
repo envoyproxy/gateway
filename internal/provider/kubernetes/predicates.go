@@ -171,8 +171,27 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return true
 	}
 
-	// TODO: further filter only those services that are referred by HTTPRoutes
-	return true
+	httpRouteList := &gwapiv1b1.HTTPRouteList{}
+	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, utils.NamespacedName(svc).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRoutes")
+		return false
+	}
+
+	tlsRouteList := &gwapiv1a2.TLSRouteList{}
+	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, utils.NamespacedName(svc).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRoutes")
+		return false
+	}
+
+	// Check how many Route objects refer this Service
+	allAssociatedRoutes := len(httpRouteList.Items) +
+		len(tlsRouteList.Items)
+
+	return allAssociatedRoutes != 0
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
