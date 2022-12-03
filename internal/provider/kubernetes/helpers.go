@@ -24,6 +24,12 @@ const (
 	gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
 )
 
+type ObjectKindNamespacedName struct {
+	kind      string
+	namespace string
+	name      string
+}
+
 // validateParentRefs validates the provided routeParentReferences, returning the
 // referenced Gateways managed by Envoy Gateway. The only supported parentRef
 // is a Gateway.

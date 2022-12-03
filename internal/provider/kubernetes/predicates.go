@@ -8,10 +8,12 @@ package kubernetes
 import (
 	"context"
 
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,59 +62,6 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false
-	}
-
-	return true
-}
-
-// validateTLSRouteForReconcile checks whether the HTTPRoute refers any valid Gateway.
-func (r *gatewayAPIReconciler) validateHTTPRouteForReconcile(obj client.Object) bool {
-	hr, ok := obj.(*gwapiv1b1.HTTPRoute)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-
-	parentReferences := hr.Spec.ParentRefs
-	return r.validateRouteParentReferences(parentReferences, hr.Namespace)
-}
-
-// validateTLSRouteForReconcile checks whether the TLSRoute refers any valid Gateway.
-func (r *gatewayAPIReconciler) validateTLSRouteForReconcile(obj client.Object) bool {
-	tr, ok := obj.(*gwapiv1a2.TLSRoute)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
-
-	parentReferences := gatewayapi.UpgradeParentReferences(tr.Spec.ParentRefs)
-	return r.validateRouteParentReferences(parentReferences, tr.Namespace)
-}
-
-// validateRouteParentReferences checks whether the parent references of a given Route
-// object, point to valid Gateways.
-func (r *gatewayAPIReconciler) validateRouteParentReferences(refs []gwapiv1b1.ParentReference, defaultNamespace string) bool {
-	for _, ref := range refs {
-		if ref.Kind != nil && *ref.Kind == gatewayapi.KindGateway {
-			key := types.NamespacedName{
-				Namespace: gatewayapi.NamespaceDerefOr(ref.Namespace, defaultNamespace),
-				Name:      string(ref.Name),
-			}
-
-			gw := &gwapiv1b1.Gateway{}
-			if err := r.client.Get(context.Background(), key, gw); err != nil {
-				r.log.Error(err, "failed to get gateway", "namespace", key.Namespace, "name", key.Name)
-				return false
-			}
-
-			if !r.validateGatewayForReconcile(gw) {
-				return false
-			}
-
-			// Even if one of the parent references points to a valid Gateway, we
-			// must reconcile the Route object.
-			return true
-		}
 	}
 
 	return true
@@ -222,4 +171,58 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 
 	// There is no need to reconcile the Deployment any further.
 	return false
+}
+
+// envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
+func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*appsv1.Deployment, error) {
+	key := types.NamespacedName{
+		Namespace: config.EnvoyGatewayNamespace,
+		Name:      infraDeploymentName(gateway),
+	}
+	deployment := new(appsv1.Deployment)
+	if err := r.client.Get(ctx, key, deployment); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return deployment, nil
+}
+
+// envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
+func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*corev1.Service, error) {
+	key := types.NamespacedName{
+		Namespace: config.EnvoyGatewayNamespace,
+		Name:      infraServiceName(gateway),
+	}
+	svc := new(corev1.Service)
+	if err := r.client.Get(ctx, key, svc); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return svc, nil
+}
+
+// findOwningGateway attempts finds a Gateway using "labels".
+func (r gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1b1.Gateway {
+	gwName, ok := labels[gatewayapi.OwningGatewayNameLabel]
+	if !ok {
+		return nil
+	}
+
+	gwNamespace, ok := labels[gatewayapi.OwningGatewayNamespaceLabel]
+	if !ok {
+		return nil
+	}
+
+	gatewayKey := types.NamespacedName{Namespace: gwNamespace, Name: gwName}
+	gtw := new(gwapiv1b1.Gateway)
+	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
+		r.log.Error(err, "gateway not found")
+		return nil
+	}
+
+	return gtw
 }
