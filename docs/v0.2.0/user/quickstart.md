@@ -16,6 +16,12 @@ Install the Gateway API CRDs and Envoy Gateway:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/v0.2.0/install.yaml
 ```
 
+Wait for Envoy Gateway to become available:
+
+```shell
+kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+```
+
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
