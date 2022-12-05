@@ -83,6 +83,10 @@ func (r *gatewayAPIReconciler) validateSecretForReconcile(obj client.Object) boo
 		return false
 	}
 
+	if len(gwList.Items) == 0 {
+		return false
+	}
+
 	for _, gw := range gwList.Items {
 		gw := gw
 		if !r.validateGatewayForReconcile(&gw) {
