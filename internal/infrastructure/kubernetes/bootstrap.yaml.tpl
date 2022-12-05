@@ -27,9 +27,6 @@ dynamic_resources:
       - envoy_grpc:
           cluster_name: xds_cluster
       set_node_on_first_message_only: true
-node:
-  cluster: envoy-gateway-system
-  id: envoy-default
 static_resources:
   clusters:
   - connect_timeout: 1s
