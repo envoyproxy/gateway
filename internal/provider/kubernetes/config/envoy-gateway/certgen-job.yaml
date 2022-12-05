@@ -48,6 +48,12 @@ spec:
         command:
         - envoy-gateway
         - certgen
+        env:
+        - name: ENVOY_GATEWAY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
       restartPolicy: Never
       serviceAccountName: certgen
       securityContext:

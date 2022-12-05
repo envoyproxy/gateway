@@ -10,11 +10,15 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/utils/env"
+)
+
+var (
+	// EnvoyGatewayNamespace is the namespace where envoy-gateway is running.
+	EnvoyGatewayNamespace = env.Lookup("ENVOY_GATEWAY_NAMESPACE", "envoy-gateway-system")
 )
 
 const (
-	// EnvoyGatewayNamespace is the namespace where envoy-gateway is running.
-	EnvoyGatewayNamespace = "envoy-gateway-system"
 	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
