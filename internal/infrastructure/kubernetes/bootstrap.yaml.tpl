@@ -1,5 +1,9 @@
 admin:
-  access_log_path: {{ .AdminServer.AccessLogPath }}
+  access_log:
+  - name: envoy.access_loggers.file
+    typed_config:
+      "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: {{ .AdminServer.AccessLogPath }}
   address:
     socket_address:
       address: {{ .AdminServer.Address }}
