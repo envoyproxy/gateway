@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -45,8 +44,7 @@ func TestRunner(t *testing.T) {
 	// TODO: pass valid provider resources
 
 	// Delete gateway from the map.
-	key := types.NamespacedName{Namespace: "test", Name: "test"}
-	pResources.Gateways.Delete(key)
+	pResources.GatewayAPIResources.Delete("test")
 	require.Eventually(t, func() bool {
 		out := xdsIR.LoadAll()
 		if out == nil {

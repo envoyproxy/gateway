@@ -53,9 +53,9 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	// Create the reconciler.
 	logger, err := log.NewLogger()
 	require.NoError(t, err)
-	r := gatewayClassReconciler{
-		controller: v1alpha1.GatewayControllerName,
-		log:        logger,
+	r := gatewayAPIReconciler{
+		classController: v1alpha1.GatewayControllerName,
+		log:             logger,
 	}
 
 	for _, tc := range testCases {

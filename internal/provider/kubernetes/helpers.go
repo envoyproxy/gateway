@@ -9,11 +9,26 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
+
+const (
+	gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
+)
+
+type ObjectKindNamespacedName struct {
+	kind      string
+	namespace string
+	name      string
+}
 
 // validateParentRefs validates the provided routeParentReferences, returning the
 // referenced Gateways managed by Envoy Gateway. The only supported parentRef
@@ -61,21 +76,152 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 	return ret, nil
 }
 
-// isRoutePresentInNamespace checks if any kind of Routes - HTTPRoute, TLSRoute
-// exists in the namespace ns.
-func isRoutePresentInNamespace(ctx context.Context, c client.Client, ns string) (bool, error) {
-	tlsRouteList := &gwapiv1a2.TLSRouteList{}
-	if err := c.List(ctx, tlsRouteList, &client.ListOptions{Namespace: ns}); err != nil {
-		return false, fmt.Errorf("error listing tlsroutes")
+type controlledClasses struct {
+	// matchedClasses holds all GatewayClass objects with matching controllerName.
+	matchedClasses []*gwapiv1b1.GatewayClass
+
+	// oldestClass stores the first GatewayClass encountered with matching
+	// controllerName. This is maintained so that the oldestClass does not change
+	// during reboots.
+	oldestClass *gwapiv1b1.GatewayClass
+}
+
+func (cc *controlledClasses) addMatch(gc *gwapiv1b1.GatewayClass) {
+	cc.matchedClasses = append(cc.matchedClasses, gc)
+
+	switch {
+	case cc.oldestClass == nil:
+		cc.oldestClass = gc
+	case gc.CreationTimestamp.Time.Before(cc.oldestClass.CreationTimestamp.Time):
+		cc.oldestClass = gc
+	case gc.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) && gc.Name < cc.oldestClass.Name:
+		// tie-breaker: first one in alphabetical order is considered oldest/accepted
+		cc.oldestClass = gc
+	}
+}
+
+func (cc *controlledClasses) removeMatch(gc *gwapiv1b1.GatewayClass) {
+	// First remove gc from matchedClasses.
+	for i, matchedGC := range cc.matchedClasses {
+		if matchedGC.Name == gc.Name {
+			cc.matchedClasses[i] = cc.matchedClasses[len(cc.matchedClasses)-1]
+			cc.matchedClasses = cc.matchedClasses[:len(cc.matchedClasses)-1]
+			break
+		}
 	}
 
-	httpRouteList := &gwapiv1b1.HTTPRouteList{}
-	if err := c.List(ctx, httpRouteList, &client.ListOptions{Namespace: ns}); err != nil {
-		return false, fmt.Errorf("error listing httproutes")
+	// If the oldestClass is removed, find the new oldestClass candidate
+	// from matchedClasses.
+	if cc.oldestClass != nil && cc.oldestClass.Name == gc.Name {
+		if len(cc.matchedClasses) == 0 {
+			cc.oldestClass = nil
+			return
+		}
+
+		cc.oldestClass = cc.matchedClasses[0]
+		for i := 1; i < len(cc.matchedClasses); i++ {
+			current := cc.matchedClasses[i]
+			if current.CreationTimestamp.Time.Before(cc.oldestClass.CreationTimestamp.Time) ||
+				(current.CreationTimestamp.Time.Equal(cc.oldestClass.CreationTimestamp.Time) &&
+					current.Name < cc.oldestClass.Name) {
+				cc.oldestClass = current
+				return
+			}
+		}
+	}
+}
+
+func (cc *controlledClasses) acceptedClass() *gwapiv1b1.GatewayClass {
+	return cc.oldestClass
+}
+
+func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1b1.GatewayClass {
+	var res []*gwapiv1b1.GatewayClass
+	for _, gc := range cc.matchedClasses {
+		// skip the oldest one since it will be accepted.
+		if gc.Name != cc.oldestClass.Name {
+			res = append(res, gc)
+		}
 	}
 
-	if len(tlsRouteList.Items)+len(httpRouteList.Items) > 0 {
-		return true, nil
+	return res
+}
+
+// isAccepted returns true if the provided gatewayclass contains the Accepted=true
+// status condition.
+func isAccepted(gc *gwapiv1b1.GatewayClass) bool {
+	if gc == nil {
+		return false
 	}
-	return false, nil
+	for _, cond := range gc.Status.Conditions {
+		if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// gatewaysOfClass returns a list of gateways that reference gc from the provided gwList.
+func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) []gwapiv1b1.Gateway {
+	var ret []gwapiv1b1.Gateway
+	if gwList == nil || gc == nil {
+		return ret
+	}
+	for i := range gwList.Items {
+		gw := gwList.Items[i]
+		if string(gw.Spec.GatewayClassName) == gc.Name {
+			ret = append(ret, gw)
+		}
+	}
+	return ret
+}
+
+// terminatesTLS returns true if the provided gateway contains a listener configured
+// for TLS termination.
+func terminatesTLS(listener *gwapiv1b1.Listener) bool {
+	if listener.TLS != nil &&
+		listener.Protocol == gwapiv1b1.HTTPSProtocolType &&
+		listener.TLS.Mode != nil &&
+		*listener.TLS.Mode == gwapiv1b1.TLSModeTerminate {
+		return true
+	}
+	return false
+}
+
+// refsSecret returns true if ref refers to a Secret.
+func refsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
+	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
+		(ref.Kind == nil || *ref.Kind == gatewayapi.KindSecret)
+}
+
+func infraServiceName(gateway *gwapiv1b1.Gateway) string {
+	infraName := utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
+}
+
+func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
+	infraName := utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
+}
+
+// validateBackendRef validates that ref is a reference to a local Service.
+// TODO: Add support for:
+//   - Validating weights.
+//   - Validating ports.
+//   - Referencing HTTPRoutes.
+//   - Referencing Services/HTTPRoutes from other namespaces using ReferenceGrant.
+func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
+	switch {
+	case ref == nil:
+		return nil
+	case ref.Group != nil && *ref.Group != corev1.GroupName:
+		return fmt.Errorf("invalid group; must be nil or empty string")
+	case ref.Kind != nil && *ref.Kind != gatewayapi.KindService:
+		return fmt.Errorf("invalid kind %q; must be %q",
+			*ref.BackendObjectReference.Kind, gatewayapi.KindService)
+	case ref.Namespace != nil:
+		return fmt.Errorf("invalid namespace; must be nil")
+	}
+
+	return nil
 }

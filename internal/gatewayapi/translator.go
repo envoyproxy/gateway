@@ -48,6 +48,7 @@ type InfraIRMap map[string]*ir.Infra
 
 // Resources holds the Gateway API and related
 // resources that the translators needs as inputs.
+// +k8s:deepcopy-gen=true
 type Resources struct {
 	Gateways        []*v1beta1.Gateway
 	HTTPRoutes      []*v1beta1.HTTPRoute

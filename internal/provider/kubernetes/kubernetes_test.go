@@ -6,8 +6,6 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-
-
 package kubernetes
 
 import (
@@ -20,6 +18,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/exp/slices"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -35,7 +35,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -163,9 +162,12 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		return false
 	}, defaultWait, defaultTick)
 
-	// Ensure the GatewayClass resource map contains the gatewayclass under test.
-	gcs, _ := resources.GatewayClasses.Load(gc.Name)
-	assert.Equal(t, gc, gcs)
+	// Even though no gateways exist, the controller loads the empty resource map
+	// to support gateway deletions.
+	require.Eventually(t, func() bool {
+		_, ok := resources.GatewayAPIResources.Load(gc.Name)
+		return ok
+	}, defaultWait, defaultTick)
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -215,6 +217,60 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	}
 	require.NoError(t, cli.Create(ctx, gw))
 
+	labels := map[string]string{
+		gatewayapi.OwningGatewayNameLabel:      gw.Name,
+		gatewayapi.OwningGatewayNamespaceLabel: gw.Namespace,
+	}
+
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      gw.Name + "-deployment",
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{MatchLabels: labels},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name:  "dummy",
+						Image: "dummy",
+						Ports: []corev1.ContainerPort{{
+							ContainerPort: 8080,
+						}},
+					}},
+				},
+			},
+		},
+		Status: appsv1.DeploymentStatus{
+			AvailableReplicas: 1,
+		},
+	}
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: gw.Namespace,
+			Name:      gw.Name + "-svc",
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{
+				Port: 80,
+			}},
+		},
+		Status: corev1.ServiceStatus{
+			LoadBalancer: corev1.LoadBalancerStatus{
+				Ingress: []corev1.LoadBalancerIngress{{IP: "1.1.1.1"}},
+			},
+		},
+	}
+
+	require.NoError(t, cli.Create(ctx, deploy))
+	require.NoError(t, cli.Create(ctx, svc))
+
 	// Ensure the Gateway reports "Scheduled".
 	require.Eventually(t, func() bool {
 		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: gw.Name}, gw); err != nil {
@@ -222,7 +278,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		}
 
 		for _, cond := range gw.Status.Conditions {
-			fmt.Printf("Condition: %v", cond)
+			fmt.Printf("Condition: %v\n", cond)
 			if cond.Type == string(gwapiv1b1.GatewayConditionScheduled) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -236,13 +292,16 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	// Ensure the gatewayclass has been finalized.
-	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
-	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
-
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
-		return resources.Gateways.Len() == 1
+		res, _ := resources.GatewayAPIResources.Load("gc-scheduled-status-test")
+		return res != nil && len(res.Gateways) == 1
+	}, defaultWait, defaultTick)
+
+	// Ensure the gatewayclass has been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
 	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
@@ -253,13 +312,14 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
-	gws, _ := resources.Gateways.Load(key)
+
+	res, _ := resources.GatewayAPIResources.Load("gc-scheduled-status-test")
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
 	// with an updated status if the spec has not changed
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
-	assert.Equal(t, gw.Spec, gws.Spec)
+	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
 }
 
 // Test that even when resources such as the Service/Deployment get hashed names (because of a gateway with a very long name)
@@ -319,7 +379,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 		}
 
 		for _, cond := range gw.Status.Conditions {
-			fmt.Printf("Condition: %v", cond)
+			fmt.Printf("Condition: %v\n", cond)
 			if cond.Type == string(gwapiv1b1.GatewayConditionReady) && cond.Status == metav1.ConditionTrue {
 				ready = true
 			}
@@ -337,12 +397,15 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	}()
 
 	// Ensure the gatewayclass has been finalized.
-	require.NoError(t, cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc))
-	require.Contains(t, gc.Finalizers, gatewayClassFinalizer)
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc)
+		return err == nil && slices.Contains(gc.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
 
 	// Ensure the number of Gateways in the Gateway resource table is as expected.
 	require.Eventually(t, func() bool {
-		return resources.Gateways.Len() == 1
+		res, _ := resources.GatewayAPIResources.Load("envoy-gateway-class")
+		return len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
 
 	// Ensure the test Gateway in the Gateway resources is as expected.
@@ -353,13 +416,13 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	require.Eventually(t, func() bool {
 		return cli.Get(ctx, key, gw) == nil
 	}, defaultWait, defaultTick)
-	gws, _ := resources.Gateways.Load(key)
+	res, _ := resources.GatewayAPIResources.Load("envoy-gateway-class")
 	// Only check if the spec is equal
 	// The watchable map will not store a resource
 	// with an updated status if the spec has not changed
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
-	assert.Equal(t, gw.Spec, gws.Spec)
+	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
 }
 
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -652,7 +715,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			}()
 
 			require.Eventually(t, func() bool {
-				return resources.HTTPRoutes.Len() == 1
+				return resources.GatewayAPIResources.Len() != 0
 			}, defaultWait, defaultTick)
 
 			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
@@ -663,22 +726,41 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
-			hroutes, _ := resources.HTTPRoutes.Load(key)
-			assert.Equal(t, &testCase.route, hroutes)
+
+			require.Eventually(t, func() bool {
+				res, ok := resources.GatewayAPIResources.Load("httproute-test")
+				return ok && len(res.HTTPRoutes) != 0
+			}, defaultWait, defaultTick)
+			res, _ := resources.GatewayAPIResources.Load("httproute-test")
+			assert.Equal(t, &testCase.route, res.HTTPRoutes[0])
 
 			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
-				_, ok := resources.Namespaces.Load(testCase.route.Namespace)
-				return ok
+				res, ok := resources.GatewayAPIResources.Load(testCase.route.Namespace)
+				if !ok {
+					return false
+				}
+				for _, ns := range res.Namespaces {
+					if ns.Name == testCase.route.Namespace {
+						return true
+					}
+				}
+				return false
 			}, defaultWait, defaultTick)
 
 			// Ensure the Service is in the resource map.
-			svcKey := utils.NamespacedName(svc)
 			require.Eventually(t, func() bool {
-				_, ok := resources.Services.Load(svcKey)
-				return ok
+				res, ok := resources.GatewayAPIResources.Load("httproute-test")
+				if !ok {
+					return false
+				}
+				for _, s := range res.Services {
+					if s.Name == svc.Name && s.Namespace == svc.Namespace {
+						return true
+					}
+				}
+				return false
 			}, defaultWait, defaultTick)
-
 		})
 	}
 }
@@ -771,7 +853,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			}()
 
 			require.Eventually(t, func() bool {
-				return resources.TLSRoutes.Len() == 1
+				return resources.GatewayAPIResources.Len() != 0
 			}, defaultWait, defaultTick)
 
 			// Ensure the test TLSRoute in the TLSRoute resources is as expected.
@@ -782,20 +864,40 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 			require.Eventually(t, func() bool {
 				return cli.Get(ctx, key, &testCase.route) == nil
 			}, defaultWait, defaultTick)
-			troutes, _ := resources.TLSRoutes.Load(key)
-			assert.Equal(t, &testCase.route, troutes)
 
-			// Ensure the TLSRoute Namespace is in the Namespace resource map.
 			require.Eventually(t, func() bool {
-				_, ok := resources.Namespaces.Load(testCase.route.Namespace)
-				return ok
+				res, ok := resources.GatewayAPIResources.Load("tlsroute-test")
+				return ok && len(res.TLSRoutes) != 0
+			}, defaultWait, defaultTick)
+			res, _ := resources.GatewayAPIResources.Load("tlsroute-test")
+			assert.Equal(t, &testCase.route, res.TLSRoutes[0])
+
+			// Ensure the HTTPRoute Namespace is in the Namespace resource map.
+			require.Eventually(t, func() bool {
+				res, ok := resources.GatewayAPIResources.Load(testCase.route.Namespace)
+				if !ok {
+					return false
+				}
+				for _, ns := range res.Namespaces {
+					if ns.Name == testCase.route.Namespace {
+						return true
+					}
+				}
+				return false
 			}, defaultWait, defaultTick)
 
 			// Ensure the Service is in the resource map.
-			svcKey := utils.NamespacedName(svc)
 			require.Eventually(t, func() bool {
-				_, ok := resources.Services.Load(svcKey)
-				return ok
+				res, ok := resources.GatewayAPIResources.Load("tlsroute-test")
+				if !ok {
+					return false
+				}
+				for _, s := range res.Services {
+					if s.Name == svc.Name && s.Namespace == svc.Namespace {
+						return true
+					}
+				}
+				return false
 			}, defaultWait, defaultTick)
 		})
 	}
@@ -909,27 +1011,46 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	require.NoError(t, cli.Create(ctx, &httpRoute))
 
 	// Check that the Service is present in the resource map
-	key := types.NamespacedName{
-		Namespace: svc.Namespace,
-		Name:      svc.Name,
-	}
-
 	require.Eventually(t, func() bool {
-		rSvc, _ := resources.Services.Load(key)
-		return rSvc != nil
+		res, ok := resources.GatewayAPIResources.Load("service-cleanup-test")
+		if !ok {
+			return false
+		}
+		for _, s := range res.Services {
+			if s.Namespace == svc.Namespace && s.Name == svc.Name {
+				return true
+			}
+		}
+		return false
 	}, defaultWait, defaultTick)
 
 	// Delete the TLSRoute, and check if the Service is still present
 	require.NoError(t, cli.Delete(ctx, &tlsRoute))
 	require.Eventually(t, func() bool {
-		rSvc, _ := resources.Services.Load(key)
-		return rSvc != nil
+		res, ok := resources.GatewayAPIResources.Load("service-cleanup-test")
+		if !ok {
+			return false
+		}
+		for _, s := range res.Services {
+			if s.Namespace == svc.Namespace && s.Name == svc.Name {
+				return true
+			}
+		}
+		return false
 	}, defaultWait, defaultTick)
 
 	// Delete the HTTPRoute, and check if the Service is also removed
 	require.NoError(t, cli.Delete(ctx, &httpRoute))
 	require.Eventually(t, func() bool {
-		rSvc, _ := resources.Services.Load(key)
-		return rSvc == nil
+		res, ok := resources.GatewayAPIResources.Load("service-cleanup-test")
+		if !ok {
+			return false
+		}
+		for _, s := range res.Services {
+			if s.Namespace == svc.Namespace && s.Name == svc.Name {
+				return false
+			}
+		}
+		return true
 	}, defaultWait, defaultTick)
 }
