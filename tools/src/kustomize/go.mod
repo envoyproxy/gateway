@@ -1,6 +1,6 @@
 module local
 
-go 1.18
+go 1.19
 
 require sigs.k8s.io/kustomize/kustomize/v3 v3.10.0
 

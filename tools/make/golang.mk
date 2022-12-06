@@ -53,14 +53,16 @@ go.clean: ## Clean the building output files
 	@$(LOG_TARGET)
 	rm -rf $(OUTPUT_DIR)
 
-.PHONY: go.tidy
-go.tidy:
+.PHONY: go.mod.lint
+lint: go.mod.lint
+go.mod.lint:
 	@$(LOG_TARGET)
 	@go mod tidy -compat=$(GO_VERSION)
 	@if test -n "$$(git status -s -- go.mod go.sum)"; then \
 		git diff --exit-code go.mod; \
 		git diff --exit-code go.sum; \
 		$(call errorlog, "Error: ensure all changes have been committed!"); \
+		exit 1; \
 	else \
 		$(call log, "Go module looks clean!"); \
    	fi
@@ -80,8 +82,8 @@ test: ## Run all Go test of code sources.
 test: go.test.unit
 
 .PHONY: format
-format: ## Update dependences with mod tidy.
-format: go.tidy
+format: ## Update and check dependences with go mod tidy.
+format: go.mod.lint
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.

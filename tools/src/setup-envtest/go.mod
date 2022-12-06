@@ -1,6 +1,6 @@
 module local
 
-go 1.18
+go 1.19
 
 require sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20220706173534-cd0058ad295c
 
