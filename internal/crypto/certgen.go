@@ -91,13 +91,8 @@ type certificateRequest struct {
 
 // GenerateCerts generates a CA Certificate along with certificates for Envoy Gateway
 // and Envoy returning them as a *Certificates struct or error if encountered.
-func GenerateCerts(egCfg *v1alpha1.EnvoyGateway) (*Certificates, error) {
+func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 	certCfg := new(Configuration)
-
-	// Check if the EG config is not provided, then default.
-	if egCfg == nil {
-		egCfg = v1alpha1.DefaultEnvoyGateway()
-	}
 
 	certCfg.getProvider()
 	switch certCfg.Provider.Type {
@@ -110,12 +105,11 @@ func GenerateCerts(egCfg *v1alpha1.EnvoyGateway) (*Certificates, error) {
 		}
 
 		var egDNSNames, envoyDNSNames []string
-		egProvider := egCfg.GetProvider().Type
+		egProvider := cfg.EnvoyGateway.GetProvider().Type
 		switch egProvider {
 		case v1alpha1.ProviderTypeKubernetes:
-			ns := config.EnvoyGatewayNamespace
-			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, ns, DefaultDNSSuffix)
-			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", ns))
+			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.Namespace, DefaultDNSSuffix)
+			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.Namespace))
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
 			return nil, fmt.Errorf("unsupported provider type %v", egProvider)

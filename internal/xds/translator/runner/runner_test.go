@@ -22,7 +22,7 @@ func TestRunner(t *testing.T) {
 	// Setup
 	xdsIR := new(message.XdsIR)
 	xds := new(message.Xds)
-	cfg, err := config.NewDefaultServer()
+	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
 		Server: *cfg,

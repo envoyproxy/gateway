@@ -24,7 +24,7 @@ func TestRunner(t *testing.T) {
 	pResources := new(message.ProviderResources)
 	xdsIR := new(message.XdsIR)
 	infraIR := new(message.InfraIR)
-	cfg, err := config.NewDefaultServer()
+	cfg, err := config.New()
 	require.NoError(t, err)
 	r := New(&Config{
 		Server:            *cfg,

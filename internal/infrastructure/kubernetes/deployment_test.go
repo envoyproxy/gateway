@@ -20,6 +20,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
@@ -107,8 +108,10 @@ func checkContainerImage(t *testing.T, container *corev1.Container, image string
 }
 
 func TestExpectedDeployment(t *testing.T) {
+	svrCfg, err := config.New()
+	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	kube := NewInfra(cli)
+	kube := NewInfra(cli, svrCfg)
 	infra := ir.NewInfra()
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
@@ -163,7 +166,10 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 }
 
 func TestCreateOrUpdateDeployment(t *testing.T) {
-	kube := NewInfra(nil)
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	kube := NewInfra(nil, cfg)
 	infra := ir.NewInfra()
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
