@@ -6,16 +6,16 @@ metadata:
     gateway.networking.k8s.io/bundle-version: v0.6.0-rc1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
-  name: tlsroutes.gateway.networking.k8s.io
+  name: udproutes.gateway.networking.k8s.io
 spec:
   group: gateway.networking.k8s.io
   names:
     categories:
     - gateway-api
-    kind: TLSRoute
-    listKind: TLSRouteList
-    plural: tlsroutes
-    singular: tlsroute
+    kind: UDPRoute
+    listKind: UDPRouteList
+    plural: udproutes
+    singular: udproute
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -25,11 +25,9 @@ spec:
     name: v1alpha2
     schema:
       openAPIV3Schema:
-        description: "The TLSRoute resource is similar to TCPRoute, but can be configured
-          to match against TLS-specific metadata. This allows more flexibility in
-          matching streams for a given TLS listener. \n If you need to forward traffic
-          to a single target for a TLS listener, you could choose to use a TCPRoute
-          with a TLS listener."
+        description: UDPRoute provides a way to route UDP traffic. When combined with
+          a Gateway listener, it can be used to forward traffic on the port specified
+          by the listener to a set of backends specified by the UDPRoute.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -44,52 +42,8 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of TLSRoute.
+            description: Spec defines the desired state of UDPRoute.
             properties:
-              hostnames:
-                description: "Hostnames defines a set of SNI names that should match
-                  against the SNI attribute of TLS ClientHello message in TLS handshake.
-                  This matches the RFC 1123 definition of a hostname with 2 notable
-                  exceptions: \n 1. IPs are not allowed in SNI names per RFC 6066.
-                  2. A hostname may be prefixed with a wildcard label (`*.`). The
-                  wildcard    label must appear by itself as the first label. \n If
-                  a hostname is specified by both the Listener and TLSRoute, there
-                  must be at least one intersecting hostname for the TLSRoute to be
-                  attached to the Listener. For example: \n * A Listener with `test.example.com`
-                  as the hostname matches TLSRoutes   that have either not specified
-                  any hostnames, or have specified at   least one of `test.example.com`
-                  or `*.example.com`. * A Listener with `*.example.com` as the hostname
-                  matches TLSRoutes   that have either not specified any hostnames
-                  or have specified at least   one hostname that matches the Listener
-                  hostname. For example,   `test.example.com` and `*.example.com`
-                  would both match. On the other   hand, `example.com` and `test.example.net`
-                  would not match. \n If both the Listener and TLSRoute have specified
-                  hostnames, any TLSRoute hostnames that do not match the Listener
-                  hostname MUST be ignored. For example, if a Listener specified `*.example.com`,
-                  and the TLSRoute specified `test.example.com` and `test.example.net`,
-                  `test.example.net` must not be considered for a match. \n If both
-                  the Listener and TLSRoute have specified hostnames, and none match
-                  with the criteria above, then the TLSRoute is not accepted. The
-                  implementation must raise an 'Accepted' Condition with a status
-                  of `False` in the corresponding RouteParentStatus. \n Support: Core"
-                items:
-                  description: "Hostname is the fully qualified domain name of a network
-                    host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard    label
-                    must appear by itself as the first label. \n Hostname can be \"precise\"
-                    which is a domain name without the terminating dot of a network
-                    host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
-                    name prefixed with a single wildcard label (e.g. `*.example.com`).
-                    \n Note that as per RFC1035 and RFC1123, a *label* must consist
-                    of lower case alphanumeric characters or '-', and must start and
-                    end with an alphanumeric character. No other punctuation is allowed."
-                  maxLength: 253
-                  minLength: 1
-                  pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                  type: string
-                maxItems: 16
-                type: array
               parentRefs:
                 description: "ParentRefs references the resources (usually Gateways)
                   that a Route wants to be attached to. Note that the referenced parent
@@ -202,23 +156,20 @@ spec:
                 maxItems: 32
                 type: array
               rules:
-                description: Rules are a list of TLS matchers and actions.
+                description: Rules are a list of UDP matchers and actions.
                 items:
-                  description: TLSRouteRule is the configuration for a given rule.
+                  description: UDPRouteRule is the configuration for a given rule.
                   properties:
                     backendRefs:
                       description: "BackendRefs defines the backend(s) where matching
                         requests should be sent. If unspecified or invalid (refers
                         to a non-existent resource or a Service with no endpoints),
-                        the rule performs no forwarding; if no filters are specified
-                        that would result in a response being sent, the underlying
-                        implementation must actively reject request attempts to this
-                        backend, by rejecting the connection or returning a 500 status
-                        code. Request rejections must respect weight; if an invalid
-                        backend is requested to have 80% of requests, then 80% of
-                        requests must be rejected instead. \n Support: Core for Kubernetes
-                        Service \n Support: Implementation-specific for any other
-                        resource \n Support for weight: Extended"
+                        the underlying implementation MUST actively reject connection
+                        attempts to this backend. Packet drops must respect weight;
+                        if an invalid backend is requested to have 80% of the packets,
+                        then 80% of packets must be dropped instead. \n Support: Core
+                        for Kubernetes Service Support: Implementation-specific for
+                        any other resource \n Support for weight: Extended"
                       items:
                         description: "BackendRef defines how a Route should forward
                           a request to a Kubernetes resource. \n Note that when a
@@ -305,7 +256,7 @@ spec:
             - rules
             type: object
           status:
-            description: Status defines the current state of TLSRoute.
+            description: Status defines the current state of UDPRoute.
             properties:
               parents:
                 description: "Parents is a list of parent resources (usually Gateways)

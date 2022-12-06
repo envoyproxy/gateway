@@ -68,7 +68,7 @@ func UpgradeParentReference(old v1alpha2.ParentReference) v1beta1.ParentReferenc
 		upgraded.Namespace = NamespacePtr(string(*old.Namespace))
 	}
 
-	upgraded.Name = v1beta1.ObjectName(old.Name)
+	upgraded.Name = old.Name
 
 	if old.SectionName != nil {
 		upgraded.SectionName = SectionNamePtr(string(*old.SectionName))
@@ -96,7 +96,7 @@ func DowngradeParentReference(old v1beta1.ParentReference) v1alpha2.ParentRefere
 		downgraded.Namespace = NamespacePtrV1Alpha2(string(*old.Namespace))
 	}
 
-	downgraded.Name = v1alpha2.ObjectName(old.Name)
+	downgraded.Name = old.Name
 
 	if old.SectionName != nil {
 		downgraded.SectionName = SectionNamePtrV1Alpha2(string(*old.SectionName))
@@ -115,7 +115,7 @@ func UpgradeRouteParentStatuses(routeParentStatuses []v1alpha2.RouteParentStatus
 	for _, rps := range routeParentStatuses {
 		res = append(res, v1beta1.RouteParentStatus{
 			ParentRef:      UpgradeParentReference(rps.ParentRef),
-			ControllerName: v1beta1.GatewayController(rps.ControllerName),
+			ControllerName: rps.ControllerName,
 			Conditions:     rps.Conditions,
 		})
 	}
@@ -129,7 +129,7 @@ func DowngradeRouteParentStatuses(routeParentStatuses []v1beta1.RouteParentStatu
 	for _, rps := range routeParentStatuses {
 		res = append(res, v1alpha2.RouteParentStatus{
 			ParentRef:      DowngradeParentReference(rps.ParentRef),
-			ControllerName: v1alpha2.GatewayController(rps.ControllerName),
+			ControllerName: rps.ControllerName,
 			Conditions:     rps.Conditions,
 		})
 	}
@@ -153,7 +153,7 @@ func UpgradeBackendRef(old v1alpha2.BackendRef) v1beta1.BackendRef {
 		upgraded.Namespace = NamespacePtr(string(*old.Namespace))
 	}
 
-	upgraded.Name = v1beta1.ObjectName(old.Name)
+	upgraded.Name = old.Name
 
 	if old.Port != nil {
 		upgraded.Port = PortNumPtr(int32(*old.Port))
@@ -177,7 +177,7 @@ func DowngradeBackendRef(old v1beta1.BackendRef) v1alpha2.BackendRef {
 		downgraded.Namespace = NamespacePtrV1Alpha2(string(*old.Namespace))
 	}
 
-	downgraded.Name = v1alpha2.ObjectName(old.Name)
+	downgraded.Name = old.Name
 
 	if old.Port != nil {
 		downgraded.Port = PortNumPtrV1Alpha2(int(*old.Port))

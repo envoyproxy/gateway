@@ -628,7 +628,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Filters: []gwapiv1b1.HTTPRouteFilter{
 								{
 									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPRequestHeaderFilter{
+									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
 										Add: []gwapiv1b1.HTTPHeader{
 											{
 												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
@@ -691,7 +691,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Filters: []gwapiv1b1.HTTPRouteFilter{
 								{
 									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPRequestHeaderFilter{
+									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",
