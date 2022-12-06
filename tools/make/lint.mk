@@ -9,8 +9,10 @@ GITHUB_ACTION ?=
 .PHONY: lint
 lint: ## Run all linter of code sources, including golint, yamllint, whitenoise lint and codespell.
 
+# lint-deps is run separately in CI to separate the tooling install logs from the actual output logs generated
+# by the lint tooling.
 .PHONY: lint-deps
-lint-deps: ## Everything necessary to lint (useful to separate out in the logs)
+lint-deps: ## Everything necessary to lint
 
 GOLANGCI_LINT_FLAGS ?= $(if $(GITHUB_ACTION),--out-format=github-actions)
 .PHONY: lint.golint
