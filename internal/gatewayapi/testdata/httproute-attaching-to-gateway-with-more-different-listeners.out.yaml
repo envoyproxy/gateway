@@ -71,9 +71,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-2
           supportedKinds:
@@ -81,9 +81,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-3
           supportedKinds:
@@ -91,9 +91,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-4
           supportedKinds:
@@ -101,9 +101,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-5
           supportedKinds:
@@ -111,9 +111,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-6
           supportedKinds:
@@ -121,9 +121,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-7
           supportedKinds:
@@ -131,9 +131,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
         - name: http-8
           supportedKinds:
@@ -141,9 +141,9 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1

@@ -25,7 +25,7 @@ gateways:
               status: "False"
               reason: InvalidRouteKinds
               message: "Kind is not supported, kind must be HTTPRoute"
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: Invalid
               message: Listener is invalid, see other Conditions for details.

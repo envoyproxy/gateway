@@ -23,7 +23,7 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 0
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: Invalid
               message: Listener must have exactly 1 TLS certificate ref

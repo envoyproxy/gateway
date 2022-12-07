@@ -52,12 +52,12 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass, 
 func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) metav1.Condition {
 	switch scheduled {
 	case true:
-		return newCondition(string(gwapiv1b1.GatewayConditionScheduled), metav1.ConditionTrue,
-			string(gwapiv1b1.GatewayReasonScheduled),
+		return newCondition(string(gwapiv1b1.GatewayReasonAccepted), metav1.ConditionTrue,
+			string(gwapiv1b1.GatewayReasonAccepted),
 			"The Gateway has been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	default:
-		return newCondition(string(gwapiv1b1.GatewayConditionScheduled), metav1.ConditionFalse,
-			string(gwapiv1b1.GatewayReasonScheduled),
+		return newCondition(string(gwapiv1b1.GatewayReasonAccepted), metav1.ConditionFalse,
+			string(gwapiv1b1.GatewayReasonAccepted),
 			"The Gateway has not been scheduled by Envoy Gateway", time.Now(), gw.Generation)
 	}
 }
@@ -66,7 +66,7 @@ func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) met
 // Ready condition surfaces true when the Envoy Deployment status is ready.
 func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
 	if len(gw.Status.Addresses) == 0 {
-		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,
+		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonAddressNotAssigned),
 			"No addresses have been assigned to the Gateway", time.Now(), gw.Generation)
 	}
@@ -75,15 +75,15 @@ func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Depl
 	// mark the Gateway as ready yet.
 
 	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
-		return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionFalse,
+		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonNoResources),
 			"Deployment replicas unavailable", time.Now(), gw.Generation)
 	}
 
 	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
 		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
-	return newCondition(string(gwapiv1b1.GatewayConditionReady), metav1.ConditionTrue,
-		string(gwapiv1b1.GatewayReasonReady), message, time.Now(), gw.Generation)
+	return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionTrue,
+		string(gwapiv1b1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
 }
 
 // MergeConditions adds or updates matching conditions, and updates the transition

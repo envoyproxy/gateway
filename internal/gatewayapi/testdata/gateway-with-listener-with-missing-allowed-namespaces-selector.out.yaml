@@ -21,7 +21,7 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 0
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: Invalid
               message: The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to "Selector".

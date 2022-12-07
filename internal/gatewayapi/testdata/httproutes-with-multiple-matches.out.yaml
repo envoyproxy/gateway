@@ -21,9 +21,9 @@ gateways:
         kind: HTTPRoute
       attachedRoutes: 5
       conditions:
-      - type: Ready
+      - type: Programmed
         status: "True"
-        reason: Ready
+        reason: Programmed
         message: Listener is ready
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1

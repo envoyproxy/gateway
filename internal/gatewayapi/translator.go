@@ -330,7 +330,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				}
 			default:
 				listener.SetCondition(
-					v1beta1.ListenerConditionDetached,
+					v1beta1.ListenerConditionAccepted,
 					metav1.ConditionTrue,
 					v1beta1.ListenerReasonUnsupportedProtocol,
 					fmt.Sprintf("Protocol %s is unsupported, must be %s or %s.", listener.Protocol, v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType),
@@ -344,7 +344,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector {
 				if listener.AllowedRoutes.Namespaces.Selector == nil {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						"The allowedRoutes.namespaces.selector field must be specified when allowedRoutes.namespaces.from is set to \"Selector\".",
@@ -353,7 +353,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 					if err != nil {
 						listener.SetCondition(
-							v1beta1.ListenerConditionReady,
+							v1beta1.ListenerConditionProgrammed,
 							metav1.ConditionFalse,
 							v1beta1.ListenerReasonInvalid,
 							fmt.Sprintf("The allowedRoutes.namespaces.selector could not be parsed: %v.", err),
@@ -369,7 +369,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case v1beta1.HTTPProtocolType:
 				if listener.TLS != nil {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						fmt.Sprintf("Listener must not have TLS set when protocol is %s.", listener.Protocol),
@@ -378,7 +378,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case v1beta1.HTTPSProtocolType:
 				if listener.TLS == nil {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
@@ -388,7 +388,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModeTerminate {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						"UnsupportedTLSMode",
 						fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Terminate.", *listener.TLS.Mode),
@@ -398,7 +398,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				if len(listener.TLS.CertificateRefs) != 1 {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						"Listener must have exactly 1 TLS certificate ref",
@@ -493,7 +493,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case v1beta1.TLSProtocolType:
 				if listener.TLS == nil {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						fmt.Sprintf("Listener must have TLS set when protocol is %s.", listener.Protocol),
@@ -503,7 +503,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				if listener.TLS.Mode != nil && *listener.TLS.Mode != v1beta1.TLSModePassthrough {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						"UnsupportedTLSMode",
 						fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Passthrough.", *listener.TLS.Mode),
@@ -513,7 +513,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				if len(listener.TLS.CertificateRefs) > 0 {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						"Listener must not have TLS certificate refs set for TLS mode Passthrough",
@@ -524,20 +524,20 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 			lConditions := listener.GetConditions()
 			if len(lConditions) == 0 {
-				listener.SetCondition(v1beta1.ListenerConditionReady, metav1.ConditionTrue, v1beta1.ListenerReasonReady, "Listener is ready")
+				listener.SetCondition(v1beta1.ListenerConditionProgrammed, metav1.ConditionTrue, v1beta1.ListenerReasonProgrammed, "Listener is ready")
 				// Any condition on the listener apart from Ready=true indicates an error.
-			} else if !(lConditions[0].Type == string(v1beta1.ListenerConditionReady) && lConditions[0].Status == metav1.ConditionTrue) {
+			} else if !(lConditions[0].Type == string(v1beta1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
 				// set "Ready: false" if it's not set already.
 				var hasReadyCond bool
 				for _, existing := range lConditions {
-					if existing.Type == string(v1beta1.ListenerConditionReady) {
+					if existing.Type == string(v1beta1.ListenerConditionProgrammed) {
 						hasReadyCond = true
 						break
 					}
 				}
 				if !hasReadyCond {
 					listener.SetCondition(
-						v1beta1.ListenerConditionReady,
+						v1beta1.ListenerConditionProgrammed,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonInvalid,
 						"Listener is invalid, see other Conditions for details.",
