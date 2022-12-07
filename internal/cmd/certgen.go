@@ -17,7 +17,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
@@ -42,7 +41,7 @@ func certGen() error {
 	}
 	log := cfg.Logger
 
-	certs, err := crypto.GenerateCerts(cfg.EnvoyGateway)
+	certs, err := crypto.GenerateCerts(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to generate certificates: %v", err)
 	}
@@ -53,16 +52,16 @@ func certGen() error {
 		return fmt.Errorf("failed to create controller-runtime client: %v", err)
 	}
 
-	if err := outputCerts(ctrl.SetupSignalHandler(), log, cli, certs); err != nil {
+	if err := outputCerts(ctrl.SetupSignalHandler(), log, cli, certs, cfg.Namespace); err != nil {
 		return fmt.Errorf("failed to output certificates: %v", err)
 	}
 
 	return nil
 }
 
-// outputCerts outputs the certs in certs as directed by config.
-func outputCerts(ctx context.Context, log logr.Logger, cli client.Client, certs *crypto.Certificates) error {
-	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(config.EnvoyGatewayNamespace, certs))
+// outputCerts outputs the provided certs to a secret in namespace ns.
+func outputCerts(ctx context.Context, log logr.Logger, cli client.Client, certs *crypto.Certificates, ns string) error {
+	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(ns, certs))
 	if err != nil {
 		return fmt.Errorf("failed to create or update secrets: %v", err)
 	}

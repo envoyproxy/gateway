@@ -56,10 +56,14 @@ func server() error {
 // getConfig gets the Server configuration
 func getConfig() (*config.Server, error) {
 	// Initialize with default config parameters.
-	cfg, err := config.NewDefaultServer()
+	cfg, err := config.New()
 	if err != nil {
 		return nil, err
 	}
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	log := cfg.Logger
 
 	// Read the config file.

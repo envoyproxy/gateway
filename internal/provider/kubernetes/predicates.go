@@ -8,9 +8,6 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,6 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 // TODO: all predicate functions are unti test candidates.
@@ -158,6 +158,11 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		return false
 	}
 
+	if deployment.Namespace != r.namespace {
+		r.log.Info("deployment namespace doesn't match configured namespace", "namespace", r.namespace)
+		return false
+	}
+
 	// Check if the deployment belongs to a Gateway, if so, find the Gateway.
 	gtw := r.findOwningGateway(ctx, deployment.GetLabels())
 	if gtw != nil {
@@ -180,7 +185,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
-		Namespace: config.EnvoyGatewayNamespace,
+		Namespace: r.namespace,
 		Name:      infraDeploymentName(gateway),
 	}
 	deployment := new(appsv1.Deployment)
@@ -196,7 +201,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
-		Namespace: config.EnvoyGatewayNamespace,
+		Namespace: r.namespace,
 		Name:      infraServiceName(gateway),
 	}
 	svc := new(corev1.Service)

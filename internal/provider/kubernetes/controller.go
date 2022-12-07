@@ -49,6 +49,7 @@ type gatewayAPIReconciler struct {
 	log             logr.Logger
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
+	namespace       string
 
 	resources *message.ProviderResources
 }
@@ -61,6 +62,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		client:          mgr.GetClient(),
 		log:             cfg.Logger,
 		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		namespace:       cfg.Namespace,
 		statusUpdater:   su,
 		resources:       resources,
 	}

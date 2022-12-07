@@ -17,6 +17,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -66,8 +67,10 @@ func checkServiceHasLabels(t *testing.T, svc *corev1.Service, expected map[strin
 }
 
 func TestDesiredService(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	kube := NewInfra(cli)
+	kube := NewInfra(cli, cfg)
 	infra := ir.NewInfra()
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name

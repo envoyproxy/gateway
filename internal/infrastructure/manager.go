@@ -37,7 +37,7 @@ func NewManager(cfg *config.Server) (Manager, error) {
 		if err != nil {
 			return nil, err
 		}
-		mgr = kubernetes.NewInfra(cli)
+		mgr = kubernetes.NewInfra(cli, cfg)
 	} else {
 		// Kube is the only supported provider type for now.
 		return nil, fmt.Errorf("unsupported provider type %v", cfg.EnvoyGateway.Provider.Type)

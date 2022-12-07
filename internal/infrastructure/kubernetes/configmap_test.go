@@ -25,14 +25,17 @@ import (
 func TestExpectedConfigMap(t *testing.T) {
 	// Setup the infra.
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	kube := NewInfra(cli)
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	kube := NewInfra(cli, cfg)
 	infra := ir.NewInfra()
 
 	infra.Proxy.Name = "test"
 
 	// An infra without Gateway owner labels should trigger
 	// an error.
-	_, err := kube.expectedConfigMap(infra)
+	_, err = kube.expectedConfigMap(infra)
 	require.NotNil(t, err)
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
@@ -55,7 +58,9 @@ func TestExpectedConfigMap(t *testing.T) {
 }
 
 func TestCreateOrUpdateConfigMap(t *testing.T) {
-	kube := NewInfra(nil)
+	cfg, err := config.New()
+	require.NoError(t, err)
+	kube := NewInfra(nil, cfg)
 	infra := ir.NewInfra()
 	infra.Proxy.Name = "test"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
@@ -70,7 +75,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			name: "create configmap",
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.EnvoyGatewayNamespace,
+					Namespace: cfg.Namespace,
 					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
@@ -85,7 +90,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			name: "update configmap",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.EnvoyGatewayNamespace,
+					Namespace: cfg.Namespace,
 					Name:      "envoy-test",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
@@ -97,7 +102,7 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			},
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.EnvoyGatewayNamespace,
+					Namespace: cfg.Namespace,
 					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
 						"app.gateway.envoyproxy.io/name":       "envoy",
@@ -129,6 +134,9 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 }
 
 func TestDeleteConfigMap(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
 	infra := ir.NewInfra()
 	infra.Proxy.Name = "test"
 
@@ -141,7 +149,7 @@ func TestDeleteConfigMap(t *testing.T) {
 			name: "delete configmap",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.EnvoyGatewayNamespace,
+					Namespace: cfg.Namespace,
 					Name:      "envoy-test",
 				},
 			},
@@ -151,7 +159,7 @@ func TestDeleteConfigMap(t *testing.T) {
 			name: "configmap not found",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.EnvoyGatewayNamespace,
+					Namespace: cfg.Namespace,
 					Name:      "foo",
 				},
 			},
@@ -163,7 +171,8 @@ func TestDeleteConfigMap(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			kube := NewInfra(fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build())
+			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+			kube := NewInfra(cli, cfg)
 			err := kube.deleteConfigMap(context.Background(), infra)
 			require.NoError(t, err)
 		})

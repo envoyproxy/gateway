@@ -15,17 +15,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 func TestGenerateCerts(t *testing.T) {
 	type testcase struct {
-		envoyGateway            *v1alpha1.EnvoyGateway
 		certConfig              *Configuration
 		wantEnvoyGatewayDNSName string
 		wantEnvoyDNSName        string
 	}
+
+	cfg, err := config.New()
+	require.NoError(t, err)
 
 	run := func(t *testing.T, name string, tc testcase) {
 		t.Helper()
@@ -33,7 +34,7 @@ func TestGenerateCerts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Helper()
 
-			got, err := GenerateCerts(tc.envoyGateway)
+			got, err := GenerateCerts(cfg)
 			require.NoError(t, err)
 
 			roots := x509.NewCertPool()
@@ -53,7 +54,7 @@ func TestGenerateCerts(t *testing.T) {
 	run(t, "no configuration - use defaults", testcase{
 		certConfig:              &Configuration{},
 		wantEnvoyGatewayDNSName: DefaultEnvoyGatewayDNSPrefix,
-		wantEnvoyDNSName:        fmt.Sprintf("*.%s", config.EnvoyGatewayNamespace),
+		wantEnvoyDNSName:        fmt.Sprintf("*.%s", config.DefaultNamespace),
 	})
 }
 

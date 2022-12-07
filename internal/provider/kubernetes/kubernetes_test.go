@@ -48,7 +48,7 @@ func TestProvider(t *testing.T) {
 	require.NoError(t, err)
 
 	// Setup and start the kube provider.
-	svr, err := config.NewDefaultServer()
+	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
 	provider, err := New(cliCfg, svr, resources)

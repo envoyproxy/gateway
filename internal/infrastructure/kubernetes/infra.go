@@ -13,7 +13,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/utils/env"
 )
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -26,10 +25,10 @@ type Infra struct {
 }
 
 // NewInfra returns a new Infra.
-func NewInfra(cli client.Client) *Infra {
+func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	return &Infra{
 		Client:    cli,
-		Namespace: env.Lookup("ENVOY_GATEWAY_NAMESPACE", config.EnvoyGatewayNamespace),
+		Namespace: cfg.Namespace,
 	}
 }
 
