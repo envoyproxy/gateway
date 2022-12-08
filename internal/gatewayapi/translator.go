@@ -331,7 +331,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			default:
 				listener.SetCondition(
 					v1beta1.ListenerConditionAccepted,
-					metav1.ConditionTrue,
+					metav1.ConditionFalse,
 					v1beta1.ListenerReasonUnsupportedProtocol,
 					fmt.Sprintf("Protocol %s is unsupported, must be %s or %s.", listener.Protocol, v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType),
 				)

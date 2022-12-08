@@ -19,7 +19,7 @@ gateways:
           attachedRoutes: 0
           conditions:
             - type: Accepted
-              status: "True"
+              status: "False"
               reason: UnsupportedProtocol
               message: Protocol TCP is unsupported, must be HTTP or HTTPS.
             - type: Programmed
