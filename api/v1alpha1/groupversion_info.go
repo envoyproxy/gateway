@@ -5,8 +5,8 @@
 
 // Package v1alpha1 contains API Schema definitions for the gateway.envoyproxy.io API group.
 //
-//+kubebuilder:object:generate=true
-//+groupName=gateway.envoyproxy.io
+// +kubebuilder:object:generate=true
+// +groupName=gateway.envoyproxy.io
 package v1alpha1
 
 import (
