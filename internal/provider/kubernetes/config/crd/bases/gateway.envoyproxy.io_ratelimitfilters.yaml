@@ -1,0 +1,130 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.9.2
+  creationTimestamp: null
+  name: ratelimitfilters.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    kind: RateLimitFilter
+    listKind: RateLimitFilterList
+    plural: ratelimitfilters
+    singular: ratelimitfilter
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: RateLimitFilter allows the user to limit the number of incoming
+          requests to a predefined value based on attributes within the traffic flow.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of HTTPRoute.
+            properties:
+              rules:
+                description: Rules are a list of RateLimit matchers and limits.
+                items:
+                  description: RateLimitRule defines the semantics for matching attributes
+                    from the incoming requests, and setting limits for them.
+                  properties:
+                    limit:
+                      description: RateLimitValue defines the limits for rate limiting.
+                      properties:
+                        requests:
+                          type: integer
+                        unit:
+                          description: "RateLimitUnit specifies the intervals for
+                            setting rate limits. Valid RateLimitUnit values are: \n
+                            * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
+                          enum:
+                          - Second
+                          - Minute
+                          - Hour
+                          - Day
+                          type: string
+                      required:
+                      - requests
+                      - unit
+                      type: object
+                    matches:
+                      items:
+                        description: RateLimitMatch specifies the attributes within
+                          the traffic flow that can be matched on.
+                        properties:
+                          headers:
+                            items:
+                              description: HeaderMatch defines the match attributes
+                                within the HTTP Headers of the request.
+                              properties:
+                                name:
+                                  description: Name of the HTTP header.
+                                  maxLength: 256
+                                  minLength: 1
+                                  type: string
+                                type:
+                                  default: Exact
+                                  description: Type specifies how to match against
+                                    the value of the header.
+                                  enum:
+                                  - Exact
+                                  - RegularExpression
+                                  - Any
+                                  type: string
+                                value:
+                                  description: Value within the HTTP header. Due to
+                                    the case-insensitivity of header names, "foo"
+                                    and "Foo" are considered equivalent. Do not set
+                                    this field when Type="Any", implying matching
+                                    on any/all unique values within the header.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            maxItems: 16
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
+                        type: object
+                      maxItems: 8
+                      type: array
+                  required:
+                  - limit
+                  type: object
+                maxItems: 16
+                type: array
+              type:
+                description: Type decides the scope for the RateLimits.
+                enum:
+                - Global
+                type: string
+            required:
+            - rules
+            - type
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
