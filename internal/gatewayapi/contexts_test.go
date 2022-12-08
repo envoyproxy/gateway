@@ -35,13 +35,13 @@ func TestContexts(t *testing.T) {
 	lctx := gctx.GetListenerContext("http")
 	require.NotNil(t, lctx)
 
-	lctx.SetCondition(v1beta1.ListenerConditionAccepted, metav1.ConditionTrue, v1beta1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
+	lctx.SetCondition(v1beta1.ListenerConditionAccepted, metav1.ConditionFalse, v1beta1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
 
 	require.Len(t, gateway.Status.Listeners, 1)
 	require.EqualValues(t, gateway.Status.Listeners[0].Name, "http")
 	require.Len(t, gateway.Status.Listeners[0].Conditions, 1)
 	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Type, v1beta1.ListenerConditionAccepted)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Status, metav1.ConditionTrue)
+	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Status, metav1.ConditionFalse)
 	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Reason, v1beta1.ListenerReasonUnsupportedProtocol)
 	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Message, "HTTPS protocol is not supported yet")
 
