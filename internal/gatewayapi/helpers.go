@@ -13,6 +13,11 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
+const (
+	TCPProtocol = "TCP"
+	UDPProtocol = "UDP"
+)
+
 func GroupPtr(name string) *v1beta1.Group {
 	group := v1beta1.Group(name)
 	return &group
@@ -222,4 +227,22 @@ func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
 
 	wildcardMatch := strings.TrimSuffix(hostname, strings.TrimPrefix(wildcardHostname, "*"))
 	return len(wildcardMatch) > 0
+}
+
+func containsPort(ports []*ProtocolPort, port *ProtocolPort) bool {
+	for _, protocolPort := range ports {
+		if protocolPort.port == port.port && layer4Protocol(protocolPort) == layer4Protocol(port) {
+			return true
+		}
+	}
+	return false
+}
+
+func layer4Protocol(protocolPort *ProtocolPort) string {
+	switch protocolPort.protocol {
+	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.TLSProtocolType, v1beta1.TCPProtocolType:
+		return TCPProtocol
+	default:
+		return UDPProtocol
+	}
 }

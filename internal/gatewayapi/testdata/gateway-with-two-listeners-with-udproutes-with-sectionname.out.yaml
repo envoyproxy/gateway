@@ -1,0 +1,134 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: udp1
+          protocol: UDP
+          port: 162
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: udp2
+          protocol: UDP
+          port: 163
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: udp1
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: UDPRoute
+          AttachedRoutes: 1
+          conditions:
+            - type: Programmed
+              status: "True"
+              reason: Programmed
+              message: Listener is ready
+        - name: udp2
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: UDPRoute
+          AttachedRoutes: 1
+          conditions:
+            - type: Programmed
+              status: "True"
+              reason: Programmed
+              message: Listener is ready
+udpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: UDPRoute
+    metadata:
+      namespace: default
+      name: udproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: udp1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8162
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+            sectionName: udp1
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Route is accepted
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: UDPRoute
+    metadata:
+      namespace: default
+      name: udproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+          sectionName: udp2
+      rules:
+        - backendRefs:
+            - name: service-2
+              port: 8162
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+            sectionName: udp2
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Route is accepted
+xdsIR:
+  envoy-gateway-gateway-1:
+    udp:
+      - name: "envoy-gateway-gateway-1-udp1-udproute-1"
+        address: "0.0.0.0"
+        port: 10162
+        destinations:
+          - host: "7.7.7.7"
+            port: 8162
+            weight: 0
+      - name: "envoy-gateway-gateway-1-udp2-udproute-2"
+        address: "0.0.0.0"
+        port: 10163
+        destinations:
+          - host: "7.7.7.7"
+            port: 8162
+            weight: 0
+
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:translator-tests
+      listeners:
+        - address: ""
+          ports:
+            - name: udp1
+              protocol: "UDP"
+              servicePort: 162
+              containerPort: 10162
+            - name: udp2
+              protocol: "UDP"
+              servicePort: 163
+              containerPort: 10163

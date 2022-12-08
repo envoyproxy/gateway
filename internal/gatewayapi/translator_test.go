@@ -62,8 +62,9 @@ func TestTranslate(t *testing.T) {
 						Spec: v1.ServiceSpec{
 							ClusterIP: "7.7.7.7",
 							Ports: []v1.ServicePort{
-								{Port: 8080},
-								{Port: 8443},
+								{Port: 8080, Protocol: v1.ProtocolTCP},
+								{Port: 8443, Protocol: v1.ProtocolTCP},
+								{Port: 8162, Protocol: v1.ProtocolUDP},
 							},
 						},
 					},

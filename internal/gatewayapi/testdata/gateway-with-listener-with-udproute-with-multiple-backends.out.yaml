@@ -7,42 +7,42 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: unsupported
-          protocol: TCP
+        - name: udp
+          protocol: UDP
           port: 80
           allowedRoutes:
             namespaces:
               from: All
     status:
       listeners:
-        - name: unsupported
-          attachedRoutes: 0
+        - name: udp
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: UDPRoute
+          AttachedRoutes: 0
           conditions:
-            - type: Accepted
-              status: "False"
-              reason: UnsupportedProtocol
-              message: Protocol TCP is unsupported, must be HTTP, HTTPS, or UDP.
             - type: Programmed
-              status: "False"
-              reason: Invalid
-              message: Listener is invalid, see other Conditions for details.
-httpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: HTTPRoute
+              status: "True"
+              reason: Programmed
+              message: Listener is ready
+udpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: UDPRoute
     metadata:
       namespace: default
-      name: httproute-1
+      name: udproute-1
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
       rules:
-        - matches:
-            - path:
-                value: "/"
-          backendRefs:
+        - backendRefs:
             - name: service-1
               port: 8080
+              weight: 50
+            - name: service-2
+              port: 8080
+              weight: 50
     status:
       parents:
         - parentRef:
@@ -51,11 +51,16 @@ httpRoutes:
           controllerName: gateway.envoyproxy.io/gatewayclass-controller
           conditions:
             - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Route is accepted
+            - type: ResolvedRefs
               status: "False"
-              reason: NoReadyListeners
-              message: There are no ready listeners for this parent ref
+              reason: InvalidBackend
+              message: One and only one backend is supported
 xdsIR:
   envoy-gateway-gateway-1: {}
+
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
@@ -67,3 +72,8 @@ infraIR:
       image: envoyproxy/envoy:translator-tests
       listeners:
         - address: ""
+          ports:
+            - name: udp
+              protocol: "UDP"
+              servicePort: 80
+              containerPort: 10080

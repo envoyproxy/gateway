@@ -52,6 +52,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.UDPRoutes != nil {
+		in, out := &in.UDPRoutes, &out.UDPRoutes
+		*out = make([]*v1alpha2.UDPRoute, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha2.UDPRoute)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.ReferenceGrants != nil {
 		in, out := &in.ReferenceGrants, &out.ReferenceGrants
 		*out = make([]*v1alpha2.ReferenceGrant, len(*in))

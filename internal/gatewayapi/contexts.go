@@ -134,6 +134,10 @@ func (l *ListenerContext) IncrementAttachedRoutes() {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes++
 }
 
+func (l *ListenerContext) AttachedRoutes() int32 {
+	return l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes
+}
+
 func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") && allowed.Kind == kind.Kind {
@@ -360,6 +364,88 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	return ctx
 }
 
+// UDPRouteContext wraps a UDPRoute and provides helper methods for
+// accessing the route's parents.
+type UDPRouteContext struct {
+	*v1alpha2.UDPRoute
+
+	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (u *UDPRouteContext) GetRouteType() string {
+	return KindUDPRoute
+}
+
+// GetHostnames return empty string array because UDPRoute has no hostnames
+func (u *UDPRouteContext) GetHostnames() []string {
+	return []string{""}
+}
+
+func (u *UDPRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	parentReferences := make([]v1beta1.ParentReference, len(u.Spec.ParentRefs))
+	for idx, p := range u.Spec.ParentRefs {
+		parentReferences[idx] = UpgradeParentReference(p)
+	}
+	return parentReferences
+}
+
+func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
+	if u.parentRefs == nil {
+		u.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+	}
+
+	if ctx := u.parentRefs[forParentRef]; ctx != nil {
+		return ctx
+	}
+
+	var parentRef *v1beta1.ParentReference
+	for i, p := range u.Spec.ParentRefs {
+		p := UpgradeParentReference(p)
+		if reflect.DeepEqual(p, forParentRef) {
+			upgraded := UpgradeParentReference(u.Spec.ParentRefs[i])
+			parentRef = &upgraded
+			break
+		}
+	}
+	if parentRef == nil {
+		panic("parentRef not found")
+	}
+
+	routeParentStatusIdx := -1
+	for i := range u.Status.Parents {
+		p := UpgradeParentReference(u.Status.Parents[i].ParentRef)
+		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
+		}
+		if reflect.DeepEqual(p, forParentRef) {
+			routeParentStatusIdx = i
+			break
+		}
+	}
+	if routeParentStatusIdx == -1 {
+		rParentStatus := v1alpha2.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      DowngradeParentReference(forParentRef),
+		}
+		u.Status.Parents = append(u.Status.Parents, rParentStatus)
+		routeParentStatusIdx = len(u.Status.Parents) - 1
+	}
+
+	ctx := &RouteParentContext{
+		ParentReference: parentRef,
+
+		udpRoute:             u.UDPRoute,
+		routeParentStatusIdx: routeParentStatusIdx,
+	}
+	u.parentRefs[forParentRef] = ctx
+	return ctx
+}
+
 // RouteParentContext wraps a ParentReference and provides helper methods for
 // setting conditions and other status information on the associated
 // HTTPRoute, TLSRoute etc.
@@ -370,6 +456,7 @@ type RouteParentContext struct {
 	// a single field pointing to *v1beta1.RouteStatus.
 	httpRoute *v1beta1.HTTPRoute
 	tlsRoute  *v1alpha2.TLSRoute
+	udpRoute  *v1alpha2.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
@@ -429,6 +516,25 @@ func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1be
 		} else {
 			r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
 		}
+	case KindUDPRoute:
+		for i, existing := range r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions {
+			if existing.Type == cond.Type {
+				// return early if the condition is unchanged
+				if existing.Status == cond.Status &&
+					existing.Reason == cond.Reason &&
+					existing.Message == cond.Message {
+					return
+				}
+				idx = i
+				break
+			}
+		}
+
+		if idx > -1 {
+			r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
+		} else {
+			r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
+		}
 	}
 }
 
@@ -438,6 +544,8 @@ func (r *RouteParentContext) ResetConditions(route RouteContext) {
 		r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 	case KindTLSRoute:
 		r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
+	case KindUDPRoute:
+		r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 	}
 }
 
@@ -448,6 +556,8 @@ func (r *RouteParentContext) IsAccepted(route RouteContext) bool {
 		conditions = r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions
 	case KindTLSRoute:
 		conditions = r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions
+	case KindUDPRoute:
+		conditions = r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions
 	}
 	for _, cond := range conditions {
 		if cond.Type == string(v1beta1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
