@@ -24,9 +24,9 @@ gateways:
               kind: TLSRoute
           attachedRoutes: 1
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "True"
-              reason: Ready
+              reason: Programmed
               message: Listener is ready
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2

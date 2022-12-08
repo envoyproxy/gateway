@@ -80,7 +80,7 @@ func TestComputeGatewayScheduledCondition(t *testing.T) {
 			name:  "scheduled gateway",
 			sched: true,
 			expect: metav1.Condition{
-				Type:   string(gwapiv1b1.GatewayConditionScheduled),
+				Type:   string(gwapiv1b1.GatewayReasonAccepted),
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -88,7 +88,7 @@ func TestComputeGatewayScheduledCondition(t *testing.T) {
 			name:  "not scheduled gateway",
 			sched: false,
 			expect: metav1.Condition{
-				Type:   string(gwapiv1b1.GatewayConditionScheduled),
+				Type:   string(gwapiv1b1.GatewayReasonAccepted),
 				Status: metav1.ConditionFalse,
 			},
 		},
@@ -144,12 +144,12 @@ func TestConditionChanged(t *testing.T) {
 			name:     "check condition reason differs",
 			expected: true,
 			a: metav1.Condition{
-				Type:   string(gwapiv1b1.GatewayConditionReady),
+				Type:   string(gwapiv1b1.GatewayConditionProgrammed),
 				Status: metav1.ConditionFalse,
 				Reason: "foo",
 			},
 			b: metav1.Condition{
-				Type:   string(gwapiv1b1.GatewayConditionReady),
+				Type:   string(gwapiv1b1.GatewayConditionProgrammed),
 				Status: metav1.ConditionFalse,
 				Reason: "bar",
 			},
@@ -258,7 +258,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 			deploymentStatus: appsv1.DeploymentStatus{AvailableReplicas: 1},
 			expect: metav1.Condition{
 				Status: metav1.ConditionTrue,
-				Reason: string(gwapiv1b1.GatewayReasonReady),
+				Reason: string(gwapiv1b1.GatewayConditionProgrammed),
 			},
 		},
 		{
@@ -300,7 +300,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
 			got := computeGatewayReadyCondition(gtw, deployment)
 
-			assert.Equal(t, string(gwapiv1b1.GatewayConditionReady), got.Type)
+			assert.Equal(t, string(gwapiv1b1.GatewayConditionProgrammed), got.Type)
 			assert.Equal(t, tc.expect.Status, got.Status)
 			assert.Equal(t, tc.expect.Reason, got.Reason)
 		})

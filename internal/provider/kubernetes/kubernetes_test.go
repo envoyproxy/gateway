@@ -279,7 +279,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 		for _, cond := range gw.Status.Conditions {
 			fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionScheduled) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -380,7 +380,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 
 		for _, cond := range gw.Status.Conditions {
 			fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionReady) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1b1.GatewayConditionProgrammed) && cond.Status == metav1.ConditionTrue {
 				ready = true
 			}
 		}
@@ -628,7 +628,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Filters: []gwapiv1b1.HTTPRouteFilter{
 								{
 									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPRequestHeaderFilter{
+									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
 										Add: []gwapiv1b1.HTTPHeader{
 											{
 												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
@@ -691,7 +691,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Filters: []gwapiv1b1.HTTPRouteFilter{
 								{
 									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPRequestHeaderFilter{
+									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",

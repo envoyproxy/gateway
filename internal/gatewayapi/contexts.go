@@ -164,7 +164,7 @@ func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
 
 func (l *ListenerContext) IsReady() bool {
 	for _, cond := range l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions {
-		if cond.Type == string(v1beta1.ListenerConditionReady) && cond.Status == metav1.ConditionTrue {
+		if cond.Type == string(v1beta1.ListenerConditionProgrammed) && cond.Status == metav1.ConditionTrue {
 			return true
 		}
 	}

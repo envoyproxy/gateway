@@ -23,7 +23,7 @@ gateways:
               kind: TLSRoute
           attachedRoutes: 0
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: UnsupportedTLSMode
               message: TLS Terminate mode is not supported, TLS mode must be Passthrough.

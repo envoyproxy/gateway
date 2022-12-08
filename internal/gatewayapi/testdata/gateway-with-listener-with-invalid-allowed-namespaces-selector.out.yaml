@@ -27,7 +27,7 @@ gateways:
               kind: HTTPRoute
           attachedRoutes: 0
           conditions:
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: Invalid
               message: "The allowedRoutes.namespaces.selector could not be parsed: values: Invalid value: []string{\"bar\"}: values set must be empty for exists and does not exist."

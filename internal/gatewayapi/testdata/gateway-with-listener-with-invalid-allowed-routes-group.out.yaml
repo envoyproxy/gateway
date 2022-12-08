@@ -25,7 +25,7 @@ gateways:
               status: "False"
               reason: InvalidRouteKinds
               message: "Group is not supported, group must be gateway.networking.k8s.io"
-            - type: Ready
+            - type: Programmed
               status: "False"
               reason: Invalid
               message: Listener is invalid, see other Conditions for details.
