@@ -14,27 +14,27 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// RateLimit allows the user to limit the number of incoming requests
+// RateLimitFilter allows the user to limit the number of incoming requests
 // to a predefined value based on attributes within the traffic flow.
-type RateLimit struct {
+type RateLimitFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of HTTPRoute.
-	Spec RateLimitSpec `json:"spec"`
+	Spec RateLimitFilterSpec `json:"spec"`
 }
 
 // +kubebuilder:object:root=true
 
-// RateLimitList contains a list of RateLimit resources.
+// RateLimitFilterList contains a list of RateLimitFilter resources.
 type RateLimitList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []RateLimit `json:"items"`
+	Items           []RateLimitFilter `json:"items"`
 }
 
-// RateLimitSpec defines the desired state of RateLimit
-type RateLimitSpec struct {
+// RateLimitFilterSpec defines the desired state of RateLimitFilter
+type RateLimitFilterSpec struct {
 	// Type decides the scope for the RateLimits.
 	Type RateLimitType `json:"type"`
 	// Rules are a list of RateLimit matchers and limits.
@@ -98,9 +98,9 @@ type HeaderMatch struct {
 // HeaderMatchType specifies the semantics of how HTTP header values should be
 // compared. Valid HeaderMatchType values are:
 //
-// * "Exact"
-// * "RegularExpression"
-// * "Any"
+// * "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header.
+// * "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header.
+// * "Any": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
 //
 // +kubebuilder:validation:Enum=Exact;RegularExpression;Any
 type HeaderMatchType string

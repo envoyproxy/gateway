@@ -1,8 +1,8 @@
-# Rate Limiting Design
+# Rate Limit Design
 
 ## Overview
 
-Rate limiting is a feature that allows the user to limit the number of incoming requests
+Rate limit is a feature that allows the user to limit the number of incoming requests
 to a predefined value based on attributes within the traffic flow.
 
 Here are some reasons why a user may want to implements Rate limits
@@ -18,7 +18,7 @@ to a specific route to safeguard health of internal application components.
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimit
+kind: RateLimitFilter
 metadata:
   name: ratelimit-all-requests
 spec:
@@ -47,7 +47,7 @@ spec:
         - type: ExtensionRef
           extensionRef:
             group: gateway.envoyproxy.io
-            kind: RateLimit
+            kind: RateLimitFilter
             name: ratelimit-all-requests
       backendRefs:
         - name: backend
@@ -59,7 +59,7 @@ by matching on a custom `x-user-id` header with a value set to `one`
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimit
+kind: RateLimitFilter
 metadata:
   name: ratelimit-specific-user
 spec:
@@ -91,7 +91,7 @@ spec:
         - type: ExtensionRef
           extensionRef:
             group: gateway.envoyproxy.io
-            kind: RateLimit
+            kind: RateLimitFilter
             name: ratelimit-specific-user
       backendRefs:
         - name: backend
@@ -105,7 +105,7 @@ by matching on a custom `x-user-id` header. Here, user A (recognised from the tr
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimit
+kind: RateLimitFilter
 metadata:
   name: ratelimit-per-user
 spec:
@@ -137,13 +137,16 @@ spec:
         - type: ExtensionRef
           extensionRef:
             group: gateway.envoyproxy.io
-            kind: RateLimit
+            kind: RateLimitFilter
             name: ratelimit-per-user 
       backendRefs:
         - name: backend
           port: 3000
 ```
 
-* The initial design uses an Extension filter to apply the Rate Limiting functionality on a specific HTTPRoute.
-This was preferred over the PolicyAttachment Extension mechanism, because it is unclear whether Rate Limiting
+## Design Decisions
+
+* The initial design uses an Extension filter to apply the Rate Limit functionality on a specific HTTPRoute.
+This was preferred over the PolicyAttachment Extension mechanism, because it is unclear whether Rate Limit
 will be required to be enforced or overridden by the platform administrator or not.
+* The Rate limits are applied across all backends within a HTTPRoute, and are not applied per backend.
