@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: passthrough-echoserver
-          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
+          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
           ports:
             - containerPort: 8443
           env:

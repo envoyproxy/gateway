@@ -119,7 +119,7 @@ spec:
     spec:
       serviceAccountName: backend-2
       containers:
-        - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
+        - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
           imagePullPolicy: IfNotPresent
           name: backend-2
           ports:

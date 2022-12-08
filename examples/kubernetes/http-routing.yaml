@@ -56,7 +56,7 @@ spec:
     spec:
       containers:
         - name: example-backend
-          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
+          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
           env:
             - name: POD_NAME
               valueFrom:
@@ -119,7 +119,7 @@ spec:
     spec:
       containers:
         - name: foo-backend
-          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
+          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
           env:
             - name: POD_NAME
               valueFrom:
@@ -186,7 +186,7 @@ spec:
     spec:
       containers:
         - name: bar-backend
-          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
+          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
           env:
             - name: POD_NAME
               valueFrom:
@@ -233,7 +233,7 @@ spec:
     spec:
       containers:
         - name: bar-canary-backend
-          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20220815-e21d1a4
+          image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
           env:
             - name: POD_NAME
               valueFrom:
