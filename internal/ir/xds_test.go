@@ -214,7 +214,7 @@ var (
 		},
 	}
 
-	addHeaderHTTPRoute = HTTPRoute{
+	addRequestHeaderHTTPRoute = HTTPRoute{
 		Name: "addheader",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addheader"),
@@ -238,7 +238,7 @@ var (
 		},
 	}
 
-	removeHeaderHTTPRoute = HTTPRoute{
+	removeRequestHeaderHTTPRoute = HTTPRoute{
 		Name: "remheader",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("remheader"),
@@ -250,7 +250,7 @@ var (
 		},
 	}
 
-	addRemoveHeadersDupeHTTPRoute = HTTPRoute{
+	addAndRemoveRequestHeadersDupeHTTPRoute = HTTPRoute{
 		Name: "duplicateheader",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("duplicateheader"),
@@ -274,12 +274,86 @@ var (
 		},
 	}
 
-	addHeaderEmptyHTTPRoute = HTTPRoute{
+	addRequestHeaderEmptyHTTPRoute = HTTPRoute{
 		Name: "addemptyheader",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addemptyheader"),
 		},
 		AddRequestHeaders: []AddHeader{
+			{
+				Name:   "",
+				Value:  "example-value",
+				Append: true,
+			},
+		},
+	}
+
+	addResponseHeaderHTTPRoute = HTTPRoute{
+		Name: "addheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("addheader"),
+		},
+		AddResponseHeaders: []AddHeader{
+			{
+				Name:   "example-header",
+				Value:  "example-value",
+				Append: true,
+			},
+			{
+				Name:   "example-header-2",
+				Value:  "example-value-2",
+				Append: false,
+			},
+			{
+				Name:   "empty-header",
+				Value:  "",
+				Append: false,
+			},
+		},
+	}
+
+	removeResponseHeaderHTTPRoute = HTTPRoute{
+		Name: "remheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("remheader"),
+		},
+		RemoveResponseHeaders: []string{
+			"x-request-header",
+			"example-header",
+			"another-header",
+		},
+	}
+
+	addAndRemoveResponseHeadersDupeHTTPRoute = HTTPRoute{
+		Name: "duplicateheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("duplicateheader"),
+		},
+		AddResponseHeaders: []AddHeader{
+			{
+				Name:   "example-header",
+				Value:  "example-value",
+				Append: true,
+			},
+			{
+				Name:   "example-header",
+				Value:  "example-value-2",
+				Append: false,
+			},
+		},
+		RemoveResponseHeaders: []string{
+			"x-request-header",
+			"example-header",
+			"example-header",
+		},
+	}
+
+	addResponseHeaderEmptyHTTPRoute = HTTPRoute{
+		Name: "addemptyheader",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("addemptyheader"),
+		},
+		AddResponseHeaders: []AddHeader{
 			{
 				Name:   "",
 				Value:  "example-value",
@@ -609,22 +683,42 @@ func TestValidateHTTPRoute(t *testing.T) {
 		},
 		{
 			name:  "add-request-headers-httproute",
-			input: addHeaderHTTPRoute,
+			input: addRequestHeaderHTTPRoute,
 			want:  nil,
 		},
 		{
 			name:  "remove-request-headers-httproute",
-			input: removeHeaderHTTPRoute,
+			input: removeRequestHeaderHTTPRoute,
 			want:  nil,
 		},
 		{
-			name:  "add-remove-headers-duplicate",
-			input: addRemoveHeadersDupeHTTPRoute,
+			name:  "add-remove-request-headers-duplicate",
+			input: addAndRemoveRequestHeadersDupeHTTPRoute,
 			want:  []error{ErrAddHeaderDuplicate, ErrRemoveHeaderDuplicate},
 		},
 		{
-			name:  "add-header-empty",
-			input: addHeaderEmptyHTTPRoute,
+			name:  "add-request-header-empty",
+			input: addRequestHeaderEmptyHTTPRoute,
+			want:  []error{ErrAddHeaderEmptyName},
+		},
+		{
+			name:  "add-response-headers-httproute",
+			input: addResponseHeaderHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "remove-response-headers-httproute",
+			input: removeResponseHeaderHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "add-remove-response-headers-duplicate",
+			input: addAndRemoveResponseHeadersDupeHTTPRoute,
+			want:  []error{ErrAddHeaderDuplicate, ErrRemoveHeaderDuplicate},
+		},
+		{
+			name:  "add-response-header-empty",
+			input: addResponseHeaderEmptyHTTPRoute,
 			want:  []error{ErrAddHeaderEmptyName},
 		},
 	}

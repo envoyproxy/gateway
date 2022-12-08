@@ -1,0 +1,13 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        prefix: /
+      responseHeadersToRemove:
+      - some-header5
+      - some-header6
+      route:
+        cluster: response-header-route

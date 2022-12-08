@@ -199,6 +199,10 @@ type HTTPRoute struct {
 	AddRequestHeaders []AddHeader
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
 	RemoveRequestHeaders []string
+	// AddResponseHeaders defines header/value sets to be added to the headers of response.
+	AddResponseHeaders []AddHeader
+	// RemoveResponseHeaders defines a list of headers to be removed from response.
+	RemoveResponseHeaders []string
 	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect.
 	DirectResponse *DirectResponse
 	// Redirections to be returned for this route. Takes precedence over Destinations.
@@ -271,6 +275,31 @@ func (h HTTPRoute) Validate() error {
 			}
 		}
 	}
+	if len(h.AddResponseHeaders) > 0 {
+		occurred := map[string]bool{}
+		for _, header := range h.AddResponseHeaders {
+			if err := header.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+			if !occurred[header.Name] {
+				occurred[header.Name] = true
+			} else {
+				errs = multierror.Append(errs, ErrAddHeaderDuplicate)
+				break
+			}
+		}
+	}
+	if len(h.RemoveResponseHeaders) > 0 {
+		occurred := map[string]bool{}
+		for _, header := range h.RemoveResponseHeaders {
+			if !occurred[header] {
+				occurred[header] = true
+			} else {
+				errs = multierror.Append(errs, ErrRemoveHeaderDuplicate)
+				break
+			}
+		}
+	}
 	return errs
 }
 
@@ -298,7 +327,7 @@ func (r RouteDestination) Validate() error {
 	return errs
 }
 
-// Add header configures a headder to be added to a request.
+// Add header configures a headder to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
 	Name   string

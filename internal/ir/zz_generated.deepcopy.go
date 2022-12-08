@@ -151,6 +151,16 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.AddResponseHeaders != nil {
+		in, out := &in.AddResponseHeaders, &out.AddResponseHeaders
+		*out = make([]AddHeader, len(*in))
+		copy(*out, *in)
+	}
+	if in.RemoveResponseHeaders != nil {
+		in, out := &in.RemoveResponseHeaders, &out.RemoveResponseHeaders
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.DirectResponse != nil {
 		in, out := &in.DirectResponse, &out.DirectResponse
 		*out = new(DirectResponse)

@@ -1,0 +1,31 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        prefix: /
+      responseHeadersToAdd:
+      - append: true
+        header:
+          key: some-header
+          value: some-value
+      - append: true
+        header:
+          key: some-header-2
+          value: some-value
+      - append: false
+        header:
+          key: some-header3
+          value: some-value
+      - append: false
+        header:
+          key: some-header4
+          value: some-value
+      - append: false
+        header:
+          key: empty-header
+        keepEmptyValue: true
+      route:
+        cluster: response-header-route

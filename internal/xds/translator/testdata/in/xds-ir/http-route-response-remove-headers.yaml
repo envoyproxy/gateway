@@ -1,0 +1,15 @@
+name: "http-route"
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "response-header-route" 
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
+    removeResponseHeaders:
+    - "some-header5"
+    - "some-header6"

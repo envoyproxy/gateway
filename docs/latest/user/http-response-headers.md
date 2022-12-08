@@ -1,16 +1,14 @@
-# HTTP Request Headers
+# HTTP Response Headers
 
-The [HTTPRoute][] resource can modify the headers of a request before forwarding it to the upstream service. HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway only supports __core__
-[HTTPRoute filters][] which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To
-learn more about HTTP routing, refer to the [Gateway API documentation][].
+The [HTTPRoute][] resource can modify the headers of a response before responding it to the downstream service. To learn more about HTTP routing, refer to the [Gateway API documentation][].
 
-A [`RequestHeaderModifier` filter][req_filter] instructs Gateways to modify the headers in requests that match the rule before forwarding the request upstream. Note that the `RequestHeaderModifier` filter will only modify headers before the request is sent from Envoy to the upstream service and will not affect response headers returned to the downstream client.
+A [`ResponseHeaderModifier` filter][req_filter] instructs Gateways to modify the headers in responses that match the rule before responding to the downstream. Note that the `ResponseHeaderModifier` filter will only modify headers before the response is returned from Envoy to the downstream client and will not affect request headers forwarding to the upstream service.
 
 Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and then install the example resources used for this guide.
 
-## Adding Request Headers
+## Adding Response Headers
 
-The `RequestHeaderModifier` filter can add new headers to a request before it is sent to the upstream. If the request does not have the header configured by the filter, then that header will be added to the request. If the request already has the header configured by the filter, then the value of the header in the filter will be appended to the value of the header in the request.
+The `ResponseHeaderModifier` filter can add new headers to a response before it is sent to the upstream. If the response does not have the header configured by the filter, then that header will be added to the response. If the response already has the header configured by the filter, then the value of the header in the filter will be appended to the value of the header in the response.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -35,8 +33,8 @@ spec:
       port: 3000
       weight: 1
     filters:
-    - type: RequestHeaderModifier
-      requestHeaderModifier:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
         add:
         - name: "add-header"
           value: "foo"
@@ -56,16 +54,16 @@ export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].
 ```
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the example
-app should indicate that the upstream example app received the header `add-header` with the value: `something,foo`
+app should indicate that the downstream client received the header `add-header` with the value: `foo`
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" --header "add-header: something"
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -H 'X-Echo-Set-Header: X-Foo: value1'
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
-> add-header: something
+> X-Echo-Set-Header: X-Foo: value1
 > 
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
@@ -74,22 +72,23 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
+< x-foo: value1
+< add-header: foo
 < 
 ...
  "headers": {
   "Accept": [
    "*/*"
   ],
-  "Add-Header": [
-   "something",
-   "foo"
-  ],
+  "X-Echo-Set-Header": [
+   "X-Foo: value1"
+  ]
 ...
 ```
 
-## Setting Request Headers
+## Setting Response Headers
 
-Setting headers is similar to adding headers. If the request does not have the header configured by the filter, then it will be added, but unlike [adding request headers](#adding-request-headers) which will append the value of the header if the request already contains it, setting a header will cause the value to be replaced by the value configured in the filter.
+Setting headers is similar to adding headers. If the response does not have the header configured by the filter, then it will be added, but unlike [adding response headers](#adding-response-headers) which will append the value of the header if the response already contains it, setting a header will cause the value to be replaced by the value configured in the filter.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -114,8 +113,8 @@ spec:
         type: PathPrefix
         value: /
     filters:
-    - type: RequestHeaderModifier
-      requestHeaderModifier:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
         set:
         - name: "set-header"
           value: "foo"
@@ -123,16 +122,16 @@ EOF
 ```
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the example
-app should indicate that the upstream example app received the header `add-header` with the original value `something` replaced by `foo`.
+app should indicate that the downstream client received the header `set-header` with the original value `value1` replaced by `foo`.
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" --header "set-header: something"
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -H 'X-Echo-Set-Header: set-header: value1'
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
-> add-header: something
+> X-Echo-Set-Header: set-header: value1
 > 
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
@@ -141,22 +140,23 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-<  
+< set-header: foo
+<
  "headers": {
   "Accept": [
    "*/*"
   ],
-  "Set-Header": [
-   "foo"
-  ],
+  "X-Echo-Set-Header": [
+    "set-header": value1"
+  ]
 ...
 ```
 
-## Removing Request Headers
+## Removing Response Headers
 
-Headers can be removed from a request by simply supplying a list of header names.
+Headers can be removed from a response by simply supplying a list of header names.
 
-Setting headers is similar to adding headers. If the request does not have the header configured by the filter, then it will be added, but unlike [adding request headers](#adding-request-headers) which will append the value of the header if the request already contains it, setting a header will cause the value to be replaced by the value configured in the filter.
+Setting headers is similar to adding headers. If the response does not have the header configured by the filter, then it will be added, but unlike [adding response headers](#adding-response-headers) which will append the value of the header if the response already contains it, setting a header will cause the value to be replaced by the value configured in the filter.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -180,26 +180,26 @@ spec:
       port: 3000
       weight: 1
     filters:
-    - type: RequestHeaderModifier
-      requestHeaderModifier:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
         remove:
         - "remove-header"
 EOF
 ```
 
 Querying `headers.example/get` should result in a `200` response from the example Gateway and the output from the example
-app should indicate that the upstream example app received the header `add-header`, but the header `remove-header` that was sent by curl
-was removed before the upstream received the request.
+app should indicate that the header `remove-header` that was sent by curl
+was removed before the upstream received the response.
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" --header "add-header: something" --header "remove-header: foo"
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -H 'X-Echo-Set-Header: remove-header: value1'
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
-> add-header: something
-> 
+> X-Echo-Set-Header: remove-header: value1
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -213,9 +213,9 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
   "Accept": [
    "*/*"
   ],
-  "Add-Header": [
-   "something"
-  ],
+  "X-Echo-Set-Header": [
+    "remove-header": value1"
+  ]
 ...
 ```
 
@@ -246,8 +246,8 @@ spec:
       port: 3000
       weight: 1
     filters:
-    - type: RequestHeaderModifier
-      requestHeaderModifier:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
         add:
         - name: "add-header-1"
           value: "foo"
@@ -260,6 +260,5 @@ EOF
 ```
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[HTTPRoute filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [req_filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPHeaderFilter
