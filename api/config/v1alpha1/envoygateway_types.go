@@ -57,7 +57,9 @@ type Gateway struct {
 // Provider defines the desired configuration of a provider.
 // +union
 type Provider struct {
-	// Type is the type of provider to use.
+	// Type is the type of provider to use. Supported types are:
+	//
+	//   * Kubernetes: A provider that provides runtime configuration via the Kubernetes API.
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`
@@ -73,17 +75,6 @@ type Provider struct {
 	// +optional
 	File *FileProvider `json:"file,omitempty"`
 }
-
-// ProviderType defines the types of providers supported by Envoy Gateway.
-type ProviderType string
-
-const (
-	// ProviderTypeKubernetes defines the "Kubernetes" provider.
-	ProviderTypeKubernetes ProviderType = "Kubernetes"
-
-	// ProviderTypeFile defines the "File" provider.
-	ProviderTypeFile ProviderType = "File"
-)
 
 // KubernetesProvider defines configuration for the Kubernetes provider.
 type KubernetesProvider struct {
