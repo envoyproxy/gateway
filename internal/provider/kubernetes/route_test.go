@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-func TestValidateParentRefs(t *testing.T) {
+func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	testCases := []struct {
 		name     string
 		route    *gwapiv1b1.HTTPRoute
