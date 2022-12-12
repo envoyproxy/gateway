@@ -11,6 +11,7 @@
 package gatewayapi
 
 import (
+	configv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"k8s.io/api/core/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -140,6 +141,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 				(*in).DeepCopyInto(*out)
 			}
 		}
+	}
+	if in.EnvoyProxy != nil {
+		in, out := &in.EnvoyProxy, &out.EnvoyProxy
+		*out = new(configv1alpha1.EnvoyProxy)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

@@ -24,6 +24,15 @@ rules:
   - list
   - watch
 - apiGroups:
+  - config.gateway.envoyproxy.io
+  resources:
+  - envoyproxies
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - gateway.envoyproxy.io
   resources:
   - authenticationfilters
