@@ -772,7 +772,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "tlsroute-test"}, nil, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test"}, nil, map[string]int32{
 		"tls": 90,
 	})
 	require.NoError(t, cli.Create(ctx, svc))

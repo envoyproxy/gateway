@@ -10,6 +10,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -119,9 +120,8 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 			return false
 		}
 
-		// nil check for unit tests.
 		r.statusUpdateForGateway(gtw, svc, deployment)
-		return true
+		return false
 	}
 
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
@@ -175,7 +175,6 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 			return false
 		}
 
-		// nil check for unit tests.
 		r.statusUpdateForGateway(gtw, svc, deployment)
 	}
 
@@ -191,6 +190,9 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return deployment, nil
@@ -204,6 +206,10 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+		// return nil, nil
 		return nil, err
 	}
 	return svc, nil

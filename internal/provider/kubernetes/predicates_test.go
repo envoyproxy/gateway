@@ -219,7 +219,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",
 				gatewayapi.OwningGatewayNamespaceLabel: "default",
 			}, nil),
-			expect: true,
+			// Note that in case when a deployment exists, the Service is just processed for Gateway status
+			// updates and not reconciled further.
+			expect: false,
 		},
 		{
 			name: "route service but no routes exist",
