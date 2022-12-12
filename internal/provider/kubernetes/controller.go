@@ -170,11 +170,12 @@ type resourceMappings struct {
 }
 
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	r.log.WithName(request.Name).Info("reconciling gatewayAPI object", "namespace", request.Namespace, "name", request.Name)
+	r.log.WithName(request.Name).Info("reconciling request", "namespace", request.Namespace, "name", request.Name)
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
+		r.log.Error(err, "failed to list gatewayclasses")
+		return reconcile.Result{}, nil
 	}
 
 	var cc controlledClasses
@@ -224,7 +225,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 			copy := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted)
 
 			if err := r.client.Status().Update(ctx, copy); err != nil && !kerrors.IsNotFound(err) {
-				return fmt.Errorf("error updating status of gatewayclass %s: %w", copy.Name, err)
+				return fmt.Errorf("failed to update status of gatewayclass %s: %w", copy.Name, err)
 			}
 		}
 		return nil
@@ -256,17 +257,18 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	// Find gateways for the acceptedGC
 	// Find the Gateways that reference this Class.
-	gatewayList := &gwapiv1b1.GatewayList{}
-	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
+	gatewayList := new(gwapiv1b1.GatewayList)
+	opts := &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, acceptedGC.Name),
-	}); err != nil {
-		r.log.Info("no associated Gateways found for GatewayClass", "name", acceptedGC.Name)
-		return reconcile.Result{}, err
+	}
+	if err := r.client.List(ctx, gatewayList, opts); err != nil {
+		r.log.Error(err, "failed to list gateways")
+		return reconcile.Result{}, nil
 	}
 
 	for _, gtw := range gatewayList.Items {
 		gtw := gtw
-		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
+		r.log.Info("processing gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces[gtw.Namespace] = struct{}{}
 
 		for _, listener := range gtw.Spec.Listeners {
@@ -276,39 +278,56 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				for _, certRef := range listener.TLS.CertificateRefs {
 					certRef := certRef
 					if refsSecret(&certRef) {
-						secret := new(corev1.Secret)
-						secretNamespace := gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace)
-						err := r.client.Get(ctx,
-							types.NamespacedName{Namespace: secretNamespace, Name: string(certRef.Name)},
-							secret,
-						)
-						if err != nil && !kerrors.IsNotFound(err) {
-							r.log.Error(err, "unable to find Secret")
-							return reconcile.Result{}, err
+						key := types.NamespacedName{
+							Namespace: gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace),
+							Name:      string(certRef.Name),
 						}
+						secret := new(corev1.Secret)
+						if err := r.client.Get(ctx, key, secret); err != nil {
+							if kerrors.IsNotFound(err) {
+								r.log.Info("secret not found", "namespace", key.Namespace, "name", key.Name)
+							} else {
+								r.log.Error(err, "failed to get secret", "namespace", key.Namespace, "name", key.Name)
+								return reconcile.Result{}, nil
+							}
+						} else {
+							// The secret exists, so process it.
+							r.log.Info("processing secret", "namespace", secret.Namespace, "name", secret.Name)
 
-						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))
-
-						if secretNamespace != gtw.Namespace {
-							from := ObjectKindNamespacedName{kind: gatewayapi.KindGateway, namespace: gtw.Namespace, name: gtw.Name}
-							to := ObjectKindNamespacedName{kind: gatewayapi.KindSecret, namespace: secretNamespace, name: string(certRef.Name)}
-							refGrant, err := r.findReferenceGrant(ctx, from, to)
-							if err != nil {
-								r.log.Error(err, "unable to find ReferenceGrant that links the Secret to Gateway")
-								continue
+							if secret.Namespace != gtw.Namespace {
+								from := ObjectKindNamespacedName{
+									kind:      gatewayapi.KindGateway,
+									namespace: gtw.Namespace,
+									name:      gtw.Name,
+								}
+								to := ObjectKindNamespacedName{
+									kind:      gatewayapi.KindSecret,
+									namespace: secret.Namespace,
+									name:      string(certRef.Name),
+								}
+								refGrant, err := r.findReferenceGrant(ctx, from, to)
+								if err != nil {
+									r.log.Error(err, "failed to find referencegrant",
+										"namespace", refGrant.Namespace, "name", refGrant.Name)
+									return reconcile.Result{}, nil
+								}
+								if refGrant != nil {
+									// Found the referencegrant, so add it to the resource map.
+									resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+								} else {
+									r.log.Info("referencegrant not found for secret",
+										"namespace", secret.Namespace, "name", secret.Name)
+								}
 							}
 
-							resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+							resourceMap.allAssociatedNamespaces[secret.Namespace] = struct{}{}
+							resourceTree.Secrets = append(resourceTree.Secrets, secret)
 						}
-
-						resourceMap.allAssociatedNamespaces[secretNamespace] = struct{}{}
-						resourceTree.Secrets = append(resourceTree.Secrets, secret)
 					}
 				}
 			}
 		}
 
-		// Route Processing
 		// Get TLSRoute objects and check if it exists.
 		if err := r.processTLSRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
 			return reconcile.Result{}, err
@@ -322,22 +341,23 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
 	}
 
-	for serviceNamespaceName := range resourceMap.allAssociatedBackendRefs {
-		r.log.Info("processing Service", "namespace", serviceNamespaceName.Namespace,
-			"name", serviceNamespaceName.Name)
+	for svcNamespacedName := range resourceMap.allAssociatedBackendRefs {
+		r.log.Info("processing service", "namespace", svcNamespacedName.Namespace,
+			"name", svcNamespacedName.Name)
 
 		service := new(corev1.Service)
-		err := r.client.Get(ctx, serviceNamespaceName, service)
-		if err != nil {
-			r.log.Error(err, "unable to find associated Services")
+		if err := r.client.Get(ctx, svcNamespacedName, service); err != nil {
 			if kerrors.IsNotFound(err) {
+				r.log.Info("service not found", "namespace", svcNamespacedName.Namespace, "name", svcNamespacedName.Name)
+			} else {
+				r.log.Error(err, "failed to get service", "namespace", svcNamespacedName.Namespace, "name", svcNamespacedName.Name)
 				return reconcile.Result{}, nil
 			}
-			return reconcile.Result{}, err
+		} else {
+			// The service exists, so add it to the resource map.
+			resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
+			resourceTree.Services = append(resourceTree.Services, service)
 		}
-
-		resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
-		resourceTree.Services = append(resourceTree.Services, service)
 	}
 
 	// Add all ReferenceGrants to the resourceTree
@@ -346,40 +366,37 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the
-	// namespace exists. Add to the resourceTree.
+	// namespace exists and add it to the resource tree.
 	for ns := range resourceMap.allAssociatedNamespaces {
 		namespace, err := r.getNamespace(ctx, ns)
 		if err != nil {
-			r.log.Error(err, "unable to find the namespace")
-			if kerrors.IsNotFound(err) {
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, err
+			r.log.Error(err, "failed to get namespace")
+			return reconcile.Result{}, nil
 		}
-
-		resourceTree.Namespaces = append(resourceTree.Namespaces, namespace)
+		if namespace != nil {
+			// The namespace exists, so add it to the resource tree.
+			resourceTree.Namespaces = append(resourceTree.Namespaces, namespace)
+		}
 	}
 
 	if err := updater(acceptedGC, true); err != nil {
-		r.log.Error(err, "unable to update GatewayClass status")
+		r.log.Error(err, "failed to update gatewayclass status")
 		return reconcile.Result{}, err
 	}
 
 	// Update finalizer on the gateway class based on the resource tree.
 	if len(resourceTree.Gateways) == 0 {
-		r.log.Info("No gateways found for accepted gatewayclass")
+		r.log.Info("no gateways found for accepted gatewayclass")
 
 		// If needed, remove the finalizer from the accepted GatewayClass.
 		if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
-			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
-				acceptedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s", acceptedGC.Name))
 			return reconcile.Result{}, err
 		}
 	} else {
 		// finalize the accepted GatewayClass.
 		if err := r.addFinalizer(ctx, acceptedGC); err != nil {
-			r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
-				acceptedGC.Name))
+			r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s", acceptedGC.Name))
 			return reconcile.Result{}, err
 		}
 	}
@@ -389,7 +406,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Store will be required to trigger a cleanup of envoy infra resources.
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
 
-	r.log.WithName(request.Name).Info("reconciled gatewayAPI object successfully", "namespace", request.Namespace, "name", request.Name)
+	r.log.WithName(request.Name).Info("successfully reconciled request", "namespace", request.Namespace, "name", request.Name)
 	return reconcile.Result{}, nil
 }
 
@@ -397,7 +414,9 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 	nsKey := types.NamespacedName{Name: name}
 	ns := new(corev1.Namespace)
 	if err := r.client.Get(ctx, nsKey, ns); err != nil {
-		r.log.Error(err, "unable to get Namespace")
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return ns, nil
@@ -432,9 +451,10 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, sv
 
 func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1a2.ReferenceGrant, error) {
 	refGrantList := new(gwapiv1a2.ReferenceGrantList)
-	if err := r.client.List(ctx, refGrantList, &client.ListOptions{
+	opts := &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind),
-	}); err != nil {
+	}
+	if err := r.client.List(ctx, refGrantList, opts); err != nil {
 		return nil, err
 	}
 
@@ -448,8 +468,10 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 		}
 	}
 
-	return nil, fmt.Errorf("no reference grants found that target %s in namespace %s for kind %s in namespace %s",
-		to.kind, to.namespace, from.kind, from.namespace)
+	r.log.Info("no referencegrants found", "target", to.kind, "namespace", to.namespace, "kind",
+		from.kind, "namespace", from.namespace)
+
+	return nil, nil
 }
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {

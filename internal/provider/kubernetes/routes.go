@@ -53,7 +53,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					if err != nil {
-						r.log.Error(err, "unable to find ReferenceGrant that links the Service to TLSRoute")
+						r.log.Info("failed to find referencegrant", "error", err)
 						continue
 					}
 
