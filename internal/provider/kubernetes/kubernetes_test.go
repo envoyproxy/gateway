@@ -35,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
 
 const (
@@ -92,40 +93,10 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
-func getGatewayClass(name string) *gwapiv1b1.GatewayClass {
-	return &gwapiv1b1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: gwapiv1b1.GatewayClassSpec{
-			ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
-		},
-	}
-}
-
-func getService(name, namespace string, ports map[string]int32) *corev1.Service {
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{},
-		},
-	}
-	for name, port := range ports {
-		service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
-			Name: name,
-			Port: port,
-		})
-	}
-	return service
-}
-
 func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("test-gc-controllername")
+	gc := test.GetGatewayClass("test-gc-controllername", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -141,7 +112,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("test-gc-accepted-status")
+	gc := test.GetGatewayClass("test-gc-accepted-status", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -173,7 +144,7 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("gc-scheduled-status-test")
+	gc := test.GetGatewayClass("gc-scheduled-status-test", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -326,7 +297,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("envoy-gateway-class")
+	gc := test.GetGatewayClass("envoy-gateway-class", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -428,7 +399,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("httproute-test")
+	gc := test.GetGatewayClass("httproute-test", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -476,7 +447,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := getService("test", ns.Name, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: "test", Name: ns.Name}, nil, map[string]int32{
 		"http":  80,
 		"https": 443,
 	})
@@ -768,7 +739,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("tlsroute-test")
+	gc := test.GetGatewayClass("tlsroute-test", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -801,7 +772,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := getService("test", ns.Name, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: "test", Name: ns.Name}, nil, map[string]int32{
 		"tls": 90,
 	})
 	require.NoError(t, cli.Create(ctx, svc))
@@ -909,7 +880,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := getGatewayClass("service-cleanup-test")
+	gc := test.GetGatewayClass("service-cleanup-test", v1alpha1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
@@ -945,7 +916,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := getService("test-common-svc", ns.Name, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: "test-common-svc", Name: ns.Name}, nil, map[string]int32{
 		"http": 80,
 		"tls":  90,
 	})
