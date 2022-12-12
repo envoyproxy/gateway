@@ -447,7 +447,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := test.GetService(types.NamespacedName{Namespace: "test", Name: ns.Name}, nil, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test"}, nil, map[string]int32{
 		"http":  80,
 		"https": 443,
 	})
@@ -772,7 +772,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := test.GetService(types.NamespacedName{Namespace: "test", Name: ns.Name}, nil, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "tlsroute-test"}, nil, map[string]int32{
 		"tls": 90,
 	})
 	require.NoError(t, cli.Create(ctx, svc))
@@ -916,7 +916,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		require.NoError(t, cli.Delete(ctx, gw))
 	}()
 
-	svc := test.GetService(types.NamespacedName{Namespace: "test-common-svc", Name: ns.Name}, nil, map[string]int32{
+	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test-common-svc"}, nil, map[string]int32{
 		"http": 80,
 		"tls":  90,
 	})

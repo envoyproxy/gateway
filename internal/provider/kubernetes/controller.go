@@ -404,6 +404,10 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 }
 
 func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, svc *corev1.Service, deploy *appsv1.Deployment) {
+	if r.statusUpdater == nil {
+		return
+	}
+
 	// update scheduled condition
 	status.UpdateGatewayStatusScheduledCondition(gtw, true)
 	// update address field and ready condition

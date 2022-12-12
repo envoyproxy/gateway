@@ -120,9 +120,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		}
 
 		// nil check for unit tests.
-		if r.statusUpdater != nil {
-			r.statusUpdateForGateway(gtw, svc, deployment)
-		}
+		r.statusUpdateForGateway(gtw, svc, deployment)
 		return true
 	}
 
@@ -178,9 +176,7 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		}
 
 		// nil check for unit tests.
-		if r.statusUpdater != nil {
-			r.statusUpdateForGateway(gtw, svc, deployment)
-		}
+		r.statusUpdateForGateway(gtw, svc, deployment)
 	}
 
 	// There is no need to reconcile the Deployment any further.
