@@ -130,20 +130,6 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: false,
 		},
-		// Doesn't work because indexer based queries won't work unless indexers are set for manager.
-		// {
-		// 	name: "references valid gateway different namespace",
-		// 	configs: []client.Object{
-		// 		test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
-		// 		test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", ObjectKindNamespacedName{
-		// 			kind:      gatewayapi.KindSecret,
-		// 			name:      "secret",
-		// 			namespace: "defaulty",
-		// 		}),
-		// 	},
-		// 	secret: test.GetSecret(types.NamespacedName{Namespace: "other-ns", Name: "secret"}),
-		// 	expect: false,
-		// },
 		{
 			name: "gateway does not exist",
 			configs: []client.Object{
@@ -152,19 +138,6 @@ func TestValidateSecretForReconcile(t *testing.T) {
 			secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
 			expect: false,
 		},
-		// Doesn't work because indexer based queries won't work unless indexers are set for manager.
-		// {
-		// 	name: "gateway exists with bad certificate kind",
-		// 	configs: []client.Object{
-		// 		test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
-		// 		test.GetSecureGateway(types.NamespacedName{Name: "scheduled-status-test"}, "test-gc", ObjectKindNamespacedName{
-		// 			kind: "BadSecretKind",
-		// 			name: "secret",
-		// 		}),
-		// 	},
-		// 	secret: test.GetSecret(types.NamespacedName{Name: "secret"}),
-		// 	expect: false,
-		// },
 	}
 
 	// Create the reconciler.
