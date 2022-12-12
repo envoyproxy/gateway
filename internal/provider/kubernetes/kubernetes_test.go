@@ -32,6 +32,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -82,9 +83,10 @@ func TestProvider(t *testing.T) {
 
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
-	crd := filepath.Join(".", "testdata", "in")
+	gwAPIs := filepath.Join(".", "testdata", "in")
+	egAPIs := filepath.Join(".", "config", "crd", "bases")
 	env := &envtest.Environment{
-		CRDDirectoryPaths: []string{crd},
+		CRDDirectoryPaths: []string{gwAPIs, egAPIs},
 	}
 	cfg, err := env.Start()
 	if err != nil {
@@ -458,6 +460,14 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, svc))
 	}()
 
+	authenFilter := test.GetAuthenticationFilter("test-authen", ns.Name)
+
+	require.NoError(t, cli.Create(ctx, authenFilter))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, authenFilter))
+	}()
+
 	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
 	redirectPort := gwapiv1b1.PortNumber(8443)
 	redirectStatus := 301
@@ -783,6 +793,56 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 											"test-header",
 											"example",
 										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "authenfilter-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-authenfilter-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/authenfilter/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1b1.LocalObjectReference{
+										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+										Kind:  gwapiv1b1.Kind(egv1a1.AuthenticationFilterKind),
+										Name:  gwapiv1b1.ObjectName("test-authen"),
 									},
 								},
 							},

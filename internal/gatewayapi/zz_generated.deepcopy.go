@@ -11,6 +11,7 @@
 package gatewayapi
 
 import (
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"k8s.io/api/core/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -103,6 +104,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(v1.Secret)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.AuthenFilters != nil {
+		in, out := &in.AuthenFilters, &out.AuthenFilters
+		*out = make([]*v1alpha1.AuthenticationFilter, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha1.AuthenticationFilter)
 				(*in).DeepCopyInto(*out)
 			}
 		}

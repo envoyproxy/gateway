@@ -11,7 +11,8 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 var (
@@ -28,9 +29,14 @@ func init() {
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
-	if err := v1alpha1.AddToScheme(scheme); err != nil {
+	// Add Envoy Gateway types.
+	if err := egcfgv1a1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}
+	if err := egv1a1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
+	// Add Gateway API types.
 	if err := gwapiv1b1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}

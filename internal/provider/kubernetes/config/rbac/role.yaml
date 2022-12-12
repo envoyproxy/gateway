@@ -24,6 +24,15 @@ rules:
   - list
   - watch
 - apiGroups:
+  - gateway.envoyproxy.io
+  resources:
+  - authenticationfilters
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses

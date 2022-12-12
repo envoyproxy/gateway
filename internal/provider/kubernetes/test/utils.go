@@ -6,6 +6,7 @@
 package test
 
 import (
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,4 +143,33 @@ func GetService(nsname types.NamespacedName, labels map[string]string, ports map
 		})
 	}
 	return service
+}
+
+// GetAuthenticationFilter returns a pointer to an AuthenticationFilter with the
+// provided ns/name. The AuthenticationFilter uses a JWT provider with dummy issuer,
+// audiences, and remoteJWKS settings.
+func GetAuthenticationFilter(name, ns string) *egv1a1.AuthenticationFilter {
+	return &egv1a1.AuthenticationFilter{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       egv1a1.AuthenticationFilterKind,
+			APIVersion: egv1a1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      name,
+		},
+		Spec: egv1a1.AuthenticationFilterSpec{
+			Type: egv1a1.JwtAuthenticationFilterProviderType,
+			JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+				{
+					Name:      "test",
+					Issuer:    "https://www.test.local",
+					Audiences: []string{"test.local"},
+					RemoteJWKS: egv1a1.RemoteJWKS{
+						URI: "https://test.local/jwt/public-key/jwks.json",
+					},
+				},
+			},
+		},
+	}
 }

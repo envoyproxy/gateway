@@ -6,11 +6,15 @@
 package gatewayapi
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
@@ -245,4 +249,30 @@ func layer4Protocol(protocolPort *ProtocolPort) string {
 	default:
 		return UDPProtocol
 	}
+}
+
+// ValidateHTTPRouteFilter validates the provided filter.
+func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
+	switch {
+	case filter == nil:
+		return errors.New("filter is nil")
+	case filter.Type == v1beta1.HTTPRouteFilterRequestMirror ||
+		filter.Type == v1beta1.HTTPRouteFilterURLRewrite ||
+		filter.Type == v1beta1.HTTPRouteFilterRequestRedirect ||
+		filter.Type == v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		return nil
+	case filter.Type == v1beta1.HTTPRouteFilterExtensionRef:
+		switch {
+		case filter.ExtensionRef == nil:
+			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
+			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
+		case string(filter.ExtensionRef.Kind) != egv1a1.AuthenticationFilterKind:
+			return fmt.Errorf("invalid kind; must be %s", egv1a1.AuthenticationFilterKind)
+		default:
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unsupported filter type: %v", filter.Type)
 }

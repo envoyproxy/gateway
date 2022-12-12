@@ -8,13 +8,15 @@ package kubernetes
 import (
 	"context"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 // processTLSRoutes finds TLSRoutes corresponding to a gatewayNamespaceName, further checks for
@@ -77,13 +79,14 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRoutes")
+		r.log.Error(err, "failed to list HTTPRoutes")
 		return err
 	}
 	for _, httpRoute := range httpRouteList.Items {
 		httpRoute := httpRoute
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
+		var authenFilters []*egv1a1.AuthenticationFilter
 		for _, rule := range httpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
@@ -110,6 +113,28 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
 				}
 			}
+
+			for i := range rule.Filters {
+				filter := rule.Filters[i]
+				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+					r.log.Error(err, "bypassing filter rule", "index", i)
+					continue
+				}
+
+				if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
+					authenFilter, err := r.getAuthenticationFilter(ctx, httpRoute.Namespace, string(filter.ExtensionRef.Name))
+					if err != nil {
+						r.log.Error(err, "bypassing filter rule", "index", i)
+						continue
+					}
+
+					authenFilters = append(authenFilters, authenFilter)
+				}
+			}
+		}
+
+		if len(authenFilters) > 0 {
+			resourceMap.httpRouteToAuthenFilters[utils.NamespacedName(&httpRoute)] = authenFilters
 		}
 
 		resourceMap.allAssociatedNamespaces[httpRoute.Namespace] = struct{}{}
