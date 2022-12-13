@@ -90,7 +90,7 @@ type HeaderMatch struct {
 
 	// Value within the HTTP header. Due to the
 	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
-	// Do not set this field when Type="Any", implying matching on any/all unique values within the header.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique values within the header.
 	// +optional
 	Value *string `json:"value,omitempty"`
 }
@@ -100,16 +100,17 @@ type HeaderMatch struct {
 //
 // * "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header.
 // * "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header.
-// * "Any": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
+// * "Distinct": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
+//     Note that each unique value will receive its own rate limit bucket.
 //
-// +kubebuilder:validation:Enum=Exact;RegularExpression;Any
+// +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
 type HeaderMatchType string
 
 // HeaderMatchType constants.
 const (
 	HeaderMatchExact             HeaderMatchType = "Exact"
 	HeaderMatchRegularExpression HeaderMatchType = "RegularExpression"
-	HeaderMatchAny               HeaderMatchType = "Any"
+	HeaderMatchDistinct          HeaderMatchType = "Distinct"
 )
 
 // RateLimitValue defines the limits for rate limiting.

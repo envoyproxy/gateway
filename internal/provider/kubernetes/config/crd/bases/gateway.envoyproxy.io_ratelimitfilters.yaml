@@ -87,13 +87,13 @@ spec:
                                   enum:
                                   - Exact
                                   - RegularExpression
-                                  - Any
+                                  - Distinct
                                   type: string
                                 value:
                                   description: Value within the HTTP header. Due to
                                     the case-insensitivity of header names, "foo"
                                     and "Foo" are considered equivalent. Do not set
-                                    this field when Type="Any", implying matching
+                                    this field when Type="Distinct", implying matching
                                     on any/all unique values within the header.
                                   type: string
                               required:
