@@ -158,24 +158,22 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		return false
 	}
 
-	if deployment.Namespace != r.namespace {
-		r.log.Info("deployment namespace doesn't match configured namespace", "namespace", r.namespace)
-		return false
-	}
+	// Only deployments in the configured namespace should be reconciled.
+	if deployment.Namespace == r.namespace {
+		// Check if the deployment belongs to a Gateway, if so, find the Gateway.
+		gtw := r.findOwningGateway(ctx, deployment.GetLabels())
+		if gtw != nil {
+			// Check if the Service for the Gateway also exists, if it does, proceed with
+			// the Gateway status update.
+			svc, err := r.envoyServiceForGateway(ctx, gtw)
+			if err != nil {
+				r.log.Info("failed to get Service for gateway",
+					"namespace", gtw.Namespace, "name", gtw.Name)
+				return false
+			}
 
-	// Check if the deployment belongs to a Gateway, if so, find the Gateway.
-	gtw := r.findOwningGateway(ctx, deployment.GetLabels())
-	if gtw != nil {
-		// Check if the Service for the Gateway also exists, if it does, proceed with
-		// the Gateway status update.
-		svc, err := r.envoyServiceForGateway(ctx, gtw)
-		if err != nil {
-			r.log.Info("failed to get Service for gateway",
-				"namespace", gtw.Namespace, "name", gtw.Name)
-			return false
+			r.statusUpdateForGateway(gtw, svc, deployment)
 		}
-
-		r.statusUpdateForGateway(gtw, svc, deployment)
 	}
 
 	// There is no need to reconcile the Deployment any further.
