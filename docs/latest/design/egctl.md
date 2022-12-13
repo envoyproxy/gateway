@@ -4,10 +4,10 @@
 
 EG should provide a command line tool with following capabilities:
 
-- One-stop installation/uninstallation experience
+- One-step installation/uninstallation experience
 - Collect configuration from data plane
-- Change envoy logging configuration on the fly
-- Analyse system configuration
+- Update admin options such as changing log level
+- Analyse system configuration to diagnose any issues in envoy-gateway
 
 This tool is named `egctl`.
 
