@@ -20,14 +20,14 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 	}
 
 	if len(httpRoute.AddRequestHeaders) > 0 {
-		ret.RequestHeadersToAdd = buildXdsAddedRequestHeaders(httpRoute.AddRequestHeaders)
+		ret.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)
 	}
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		ret.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
-		ret.ResponseHeadersToAdd = buildXdsAddedResponseHeaders(httpRoute.AddResponseHeaders)
+		ret.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
 	}
 	if len(httpRoute.RemoveResponseHeaders) > 0 {
 		ret.ResponseHeadersToRemove = httpRoute.RemoveResponseHeaders
@@ -228,28 +228,7 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *route.DirectResponseA
 	return ret
 }
 
-func buildXdsAddedRequestHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
-	ret := make([]*core.HeaderValueOption, len(headersToAdd))
-
-	for i, header := range headersToAdd {
-		ret[i] = &core.HeaderValueOption{
-			Header: &core.HeaderValue{
-				Key:   header.Name,
-				Value: header.Value,
-			},
-			Append: &wrapperspb.BoolValue{Value: header.Append},
-		}
-
-		// Allow empty headers to be set, but don't add the config to do so unless necessary
-		if header.Value == "" {
-			ret[i].KeepEmptyValue = true
-		}
-	}
-
-	return ret
-}
-
-func buildXdsAddedResponseHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
+func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
 	ret := make([]*core.HeaderValueOption, len(headersToAdd))
 
 	for i, header := range headersToAdd {
