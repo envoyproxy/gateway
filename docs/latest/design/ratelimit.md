@@ -25,7 +25,7 @@ Note - This is not part of the initial design and will be added as a future enha
 
 ## Match Types 
 
-### Rate limit a specifc traffic flow 
+### Rate limit a specific traffic flow 
 
 * Here is an example of a ratelimit implemented by the application developer to limit a specific user
 by matching on a custom `x-user-id` header with a value set to `one`

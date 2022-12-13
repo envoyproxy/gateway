@@ -98,9 +98,9 @@ type HeaderMatch struct {
 // HeaderMatchType specifies the semantics of how HTTP header values should be
 // compared. Valid HeaderMatchType values are:
 //
-// * "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header.
-// * "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header.
-// * "Distinct": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
+//   - "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header.
+//   - "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header.
+//   - "Distinct": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
 //     Note that each unique value will receive its own rate limit bucket.
 //
 // +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
