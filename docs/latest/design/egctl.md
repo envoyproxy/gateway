@@ -5,7 +5,7 @@
 EG should provide a command line tool with following capabilities:
 
 - One-stop installation/uninstallation experience
-- Collect configuration form data plane
+- Collect configuration from data plane
 - Change envoy logging configuration on the fly
 - Analyse system configuration
 
