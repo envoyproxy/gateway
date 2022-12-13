@@ -678,6 +678,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				})
 			},
 		)
+		r.log.Info("gateway status subscriber shutting down")
 	}()
 
 	// HTTPRoute object status updater
@@ -705,6 +706,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				})
 			},
 		)
+		r.log.Info("httpRoute status subscriber shutting down")
 	}()
 
 	// TLSRoute object status updater
@@ -732,7 +734,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				})
 			},
 		)
+		r.log.Info("tlsRoute status subscriber shutting down")
 	}()
 
-	r.log.Info("status subscriber shutting down")
 }
