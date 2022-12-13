@@ -591,10 +591,10 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			},
 		},
 		{
-			name: "addheader-httproute",
+			name: "add-request-header-httproute",
 			route: gwapiv1b1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-addheader-test",
+					Name:      "httproute-add-request-header-test",
 					Namespace: ns.Name,
 				},
 				Spec: gwapiv1b1.HTTPRouteSpec{
@@ -654,10 +654,10 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			},
 		},
 		{
-			name: "remheader-httproute",
+			name: "remove-request-header-httproute",
 			route: gwapiv1b1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-remheader-test",
+					Name:      "httproute-remove-request-header-test",
 					Namespace: ns.Name,
 				},
 				Spec: gwapiv1b1.HTTPRouteSpec{
@@ -692,6 +692,121 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 								{
 									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
 									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
+										Remove: []string{
+											"example-header-1",
+											"test-header",
+											"example",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "add-response-header-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-add-response-header-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/addheader/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterType("ResponseHeaderModifier"),
+									ResponseHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
+										Add: []gwapiv1b1.HTTPHeader{
+											{
+												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
+												Value: "value-1",
+											},
+											{
+												Name:  gwapiv1b1.HTTPHeaderName("header-2"),
+												Value: "value-2",
+											},
+										},
+										Set: []gwapiv1b1.HTTPHeader{
+											{
+												Name:  gwapiv1b1.HTTPHeaderName("header-3"),
+												Value: "value-3",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "remove-response-header-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-remove-response-header-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/remheader/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterType("ResponseHeaderModifier"),
+									ResponseHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",

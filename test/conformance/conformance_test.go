@@ -54,14 +54,16 @@ func TestGatewayAPIConformance(t *testing.T) {
 		CleanupBaseResources:     *flags.CleanupBaseResources,
 		ValidUniqueListenerPorts: validUniqueListenerPorts,
 		SupportedFeatures: map[suite.SupportedFeature]bool{
-			suite.SupportHTTPRouteQueryParamMatching: true,
-			suite.SupportReferenceGrant:              true,
+			suite.SupportHTTPRouteQueryParamMatching:    true,
+			suite.SupportReferenceGrant:                 true,
+			suite.SupportHTTPResponseHeaderModification: true,
 		},
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
 		tests.HTTPRouteSimpleSameNamespace,
 		tests.HTTPRouteRequestHeaderModifier,
+		tests.HTTPRouteResponseHeaderModifier,
 		tests.HTTPRouteQueryParamMatching,
 		tests.HTTPRouteInvalidCrossNamespaceParentRef,
 		tests.HTTPExactPathMatching,

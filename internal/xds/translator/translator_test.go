@@ -49,6 +49,15 @@ func TestTranslate(t *testing.T) {
 			name: "http-route-request-headers",
 		},
 		{
+			name: "http-route-response-add-headers",
+		},
+		{
+			name: "http-route-response-remove-headers",
+		},
+		{
+			name: "http-route-response-add-remove-headers",
+		},
+		{
 			name: "http-route-weighted-invalid-backend",
 		},
 		{

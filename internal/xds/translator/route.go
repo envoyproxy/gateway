@@ -20,10 +20,17 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 	}
 
 	if len(httpRoute.AddRequestHeaders) > 0 {
-		ret.RequestHeadersToAdd = buildXdsAddedRequestHeaders(httpRoute.AddRequestHeaders)
+		ret.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)
 	}
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
 		ret.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
+	}
+
+	if len(httpRoute.AddResponseHeaders) > 0 {
+		ret.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
+	}
+	if len(httpRoute.RemoveResponseHeaders) > 0 {
+		ret.ResponseHeadersToRemove = httpRoute.RemoveResponseHeaders
 	}
 
 	switch {
@@ -221,7 +228,7 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *route.DirectResponseA
 	return ret
 }
 
-func buildXdsAddedRequestHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
+func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
 	ret := make([]*core.HeaderValueOption, len(headersToAdd))
 
 	for i, header := range headersToAdd {
