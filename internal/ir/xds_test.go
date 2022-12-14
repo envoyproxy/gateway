@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 var (
@@ -59,6 +61,45 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
+	}
+	happyJwtAuthenListener = HTTPListener{
+		Name:      "happy",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&happyHTTPRoute},
+		RequestAuthentication: &RequestAuthentication{
+			JWT: &JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+						},
+						Requires: &JwtRequirement{
+							Providers: []egv1a1.JwtAuthenticationFilterProvider{
+								{
+									Name: "test1",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test1.local",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	invalidJwtAuthenListener = HTTPListener{
+		Name:                  "happy",
+		Address:               "0.0.0.0",
+		Port:                  80,
+		Hostnames:             []string{"example.com"},
+		Routes:                []*HTTPRoute{&happyHTTPRoute},
+		RequestAuthentication: &RequestAuthentication{JWT: nil},
 	}
 
 	// TCPListener
@@ -448,6 +489,20 @@ func TestValidateXds(t *testing.T) {
 			},
 			want: nil,
 		},
+		{
+			name: "happy jwt authen",
+			input: Xds{
+				HTTP: []*HTTPListener{&happyJwtAuthenListener},
+			},
+			want: nil,
+		},
+		{
+			name: "invalid jwt authen",
+			input: Xds{
+				HTTP: []*HTTPListener{&invalidJwtAuthenListener},
+			},
+			want: []error{ErrRequestAuthenRequiresJwt},
+		},
 	}
 	for _, test := range tests {
 		test := test
@@ -503,6 +558,16 @@ func TestValidateHTTPListener(t *testing.T) {
 			name:  "invalid route match",
 			input: invalidRouteMatchHTTPListener,
 			want:  []error{ErrHTTPRouteMatchEmpty},
+		},
+		{
+			name:  "happy jwt authen",
+			input: happyJwtAuthenListener,
+			want:  nil,
+		},
+		{
+			name:  "invalid jwt authen",
+			input: invalidJwtAuthenListener,
+			want:  []error{ErrRequestAuthenRequiresJwt},
 		},
 	}
 	for _, test := range tests {
@@ -861,6 +926,260 @@ func TestValidateStringMatch(t *testing.T) {
 	}
 	for _, test := range tests {
 		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateJwtRequestAuthentication(t *testing.T) {
+	tests := []struct {
+		name  string
+		input JwtRequestAuthentication
+		want  error
+	}{
+		{
+			name: "nil rules",
+			input: JwtRequestAuthentication{
+				Rules: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "match path with no provider",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "match path with too many providers",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+						},
+						Requires: &JwtRequirement{
+							Providers: []egv1a1.JwtAuthenticationFilterProvider{
+								{
+									Name: "test1",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test1.local",
+									},
+								},
+								{
+									Name: "test2",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test2.local",
+									},
+								},
+								{
+									Name: "test3",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test3.local",
+									},
+								},
+								{
+									Name: "test4",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test4.local",
+									},
+								},
+								{
+									Name: "test5",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test5.local",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: ErrJwtProvidersExceeded,
+		},
+		{
+			name: "too many rules",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test1",
+								Exact: ptrTo("/test1"),
+							}),
+						},
+					},
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test2",
+								Exact: ptrTo("/test2"),
+							}),
+						},
+					},
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test3",
+								Exact: ptrTo("/test3"),
+							}),
+						},
+					},
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test4",
+								Exact: ptrTo("/test4"),
+							}),
+						},
+					},
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test5",
+								Exact: ptrTo("/test5"),
+							}),
+						},
+					},
+				},
+			},
+			want: ErrJwtRulesExceeded,
+		},
+		{
+			name: "match path with provider and remote jwks uri",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+							HeaderMatches:     nil,
+							QueryParamMatches: nil,
+						},
+						Requires: &JwtRequirement{
+							Providers: []egv1a1.JwtAuthenticationFilterProvider{
+								{
+									Name:      "test",
+									Issuer:    "https://test.local",
+									Audiences: []string{"test1", "test2"},
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test.local",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "too many header matches",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							HeaderMatches: []StringMatch{
+								{
+									Name:  "test1",
+									Exact: ptrTo("test1"),
+								},
+								{
+									Name:  "test2",
+									Exact: ptrTo("test2"),
+								},
+								{
+									Name:  "test3",
+									Exact: ptrTo("test3"),
+								},
+								{
+									Name:  "test4",
+									Exact: ptrTo("test4"),
+								},
+								{
+									Name:  "test5",
+									Exact: ptrTo("test5"),
+								},
+								{
+									Name:  "test6",
+									Exact: ptrTo("test6"),
+								},
+								{
+									Name:  "test7",
+									Exact: ptrTo("test7"),
+								},
+								{
+									Name:  "test8",
+									Exact: ptrTo("test8"),
+								},
+								{
+									Name:  "test9",
+									Exact: ptrTo("test9"),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: ErrHeaderMatchesExceeded,
+		},
+		{
+			name: "too many query matches",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							QueryParamMatches: []StringMatch{
+								{
+									Name:  "test1",
+									Exact: ptrTo("test1"),
+								},
+								{
+									Name:  "test2",
+									Exact: ptrTo("test2"),
+								},
+								{
+									Name:  "test3",
+									Exact: ptrTo("test3"),
+								},
+								{
+									Name:  "test4",
+									Exact: ptrTo("test4"),
+								},
+								{
+									Name:  "test5",
+									Exact: ptrTo("test5"),
+								},
+							},
+						},
+					},
+				},
+			},
+			want: ErrQueryMatchesExceeded,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())

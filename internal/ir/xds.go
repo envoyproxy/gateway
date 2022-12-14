@@ -7,9 +7,20 @@ package ir
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/tetratelabs/multierror"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+)
+
+const (
+	maxJwtRules          = 4
+	maxHeaderMatches     = 8
+	maxQueryParamMatches = 4
+	maxJwtProviders      = 4
 )
 
 var (
@@ -34,6 +45,11 @@ var (
 	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrJwtRulesExceeded              = fmt.Errorf("jwt authentication exceeds the maximum of %d rules", maxJwtRules)
+	ErrRequestAuthenRequiresJwt      = errors.New("jwt field is required when request authentication is set")
+	ErrHeaderMatchesExceeded         = fmt.Errorf("request header matches exceeds the maximum of %d matches", maxHeaderMatches)
+	ErrQueryMatchesExceeded          = fmt.Errorf("query parameter matches exceeds the maximum of %d matches", maxQueryParamMatches)
+	ErrJwtProvidersExceeded          = fmt.Errorf("jwt authentication providers exceeds the maximum of %d providers", maxJwtProviders)
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -126,6 +142,63 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
 	IsHTTP2 bool
+	// RequestAuthentication defines the schema for authenticating HTTP requests.
+	RequestAuthentication *RequestAuthentication
+}
+
+// RequestAuthentication defines the schema for authenticating HTTP requests.
+// Only one of "jwt" can be specified.
+//
+// TODO: Add support for additional request authentication providers, i.e. OIDC.
+//
+// +k8s:deepcopy-gen=true
+type RequestAuthentication struct {
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JwtRequestAuthentication
+}
+
+// JwtRequestAuthentication defines the schema for authenticating HTTP requests using
+// JSON Web Tokens (JWT).
+//
+// +k8s:deepcopy-gen=true
+type JwtRequestAuthentication struct {
+	// Rules define requirements for authenticating HTTP requests based on route matching criteria.
+	// The first matched requirement will be applied. A maximum of 4 items in the list is allowed.
+	Rules []JwtRule
+}
+
+// JwtRule defines a JWT requirement for a specific route condition.
+//
+// +k8s:deepcopy-gen=true
+type JwtRule struct {
+	// Match defines the schema for matching an HTTP request. The "requires" field only
+	// applies when the match is satisfied.
+	Match HTTPRequestMatch
+	// Requires specifies a JWT requirement. If unspecified, JWT verification is disabled.
+	Requires *JwtRequirement
+}
+
+// HTTPRequestMatch defines the schema for matching an HTTP request.
+//
+// +k8s:deepcopy-gen=true
+type HTTPRequestMatch struct {
+	// PathMatch defines a match condition based on path.
+	PathMatch *StringMatch
+	// HeaderMatches is a list of matching conditions based on request headers.
+	// A maximum of 4 items in the list is allowed.
+	HeaderMatches []StringMatch
+	// QueryParamMatches is a list of matching conditions based on query parameters.
+	// maxQueryParamMatches defines the maximum number of items in the list.
+	QueryParamMatches []StringMatch
+}
+
+// JwtRequirement defines the schema of a JWT requirement.
+//
+// +k8s:deepcopy-gen=true
+type JwtRequirement struct {
+	// Providers defines a list of JSON Web Token (JWT) authentication providers.
+	// maxQueryParamMatches defines the maximum number of items in the list.
+	Providers []egv1a1.JwtAuthenticationFilterProvider
 }
 
 // Validate the fields within the HTTPListener structure
@@ -148,11 +221,69 @@ func (h HTTPListener) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	if h.RequestAuthentication != nil {
+		switch {
+		case h.RequestAuthentication.JWT == nil:
+			errs = multierror.Append(errs, ErrRequestAuthenRequiresJwt)
+		default:
+			if err := h.RequestAuthentication.JWT.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+		}
+	}
 	for _, route := range h.Routes {
 		if err := route.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	return errs
+}
+
+func (j *JwtRequestAuthentication) Validate() error {
+	var errs error
+
+	if len(j.Rules) > maxJwtRules {
+		errs = multierror.Append(errs, ErrJwtRulesExceeded)
+	}
+
+	for _, rule := range j.Rules {
+		switch {
+		case rule.Match.PathMatch != nil:
+			if err := rule.Match.PathMatch.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+		case len(rule.Match.HeaderMatches) > maxHeaderMatches:
+			errs = multierror.Append(errs, ErrHeaderMatchesExceeded)
+		case len(rule.Match.HeaderMatches) > 0 && len(rule.Match.HeaderMatches) <= maxJwtRules:
+			for _, header := range rule.Match.HeaderMatches {
+				if err := header.Validate(); err != nil {
+					errs = multierror.Append(errs, err)
+				}
+			}
+		case len(rule.Match.QueryParamMatches) > maxQueryParamMatches:
+			errs = multierror.Append(errs, ErrQueryMatchesExceeded)
+		case len(rule.Match.QueryParamMatches) > 0 && len(rule.Match.QueryParamMatches) <= maxJwtRules:
+			for _, query := range rule.Match.QueryParamMatches {
+				if err := query.Validate(); err != nil {
+					errs = multierror.Append(errs, err)
+				}
+			}
+		}
+		if rule.Requires != nil {
+			if len(rule.Requires.Providers) > maxJwtProviders {
+				errs = multierror.Append(errs, ErrJwtProvidersExceeded)
+			} else {
+				// Validate each JWT provider.
+				for i := range rule.Requires.Providers {
+					provider := rule.Requires.Providers[i]
+					if err := validation.ValidateJwtProvider(&provider); err != nil {
+						errs = multierror.Append(errs, err)
+					}
+				}
+			}
+		}
+	}
+
 	return errs
 }
 
