@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"fmt"
-	"github.com/envoyproxy/gateway/internal/ir"
 	"net/netip"
 	"strings"
 
@@ -17,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
