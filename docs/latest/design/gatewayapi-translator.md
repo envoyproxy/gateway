@@ -48,7 +48,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-      hostname: *.envoygateway.io
+      hostname: "*.envoygateway.io"
     - name: http
       protocol: HTTP
       port: 80
@@ -75,7 +75,7 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-      hostname: *.envoygateway.io
+      hostname: "*.envoygateway.io"
     - name: http
       protocol: HTTP
       port: 80

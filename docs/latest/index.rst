@@ -1,5 +1,5 @@
 `Envoy Gateway </>`_
-=============
+====================
 
 Release: |version|
 
