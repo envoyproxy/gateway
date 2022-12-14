@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"net/netip"
 	"strings"
 
@@ -16,8 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -696,8 +695,7 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if !checkBackendRef(&backendRef.BackendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute,
-		v1.ProtocolTCP) {
+	if !checkBackendRef(&backendRef.BackendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
 		return nil, weight
 	}
 
