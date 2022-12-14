@@ -209,7 +209,6 @@ func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
 //   - Validating weights.
 //   - Validating ports.
 //   - Referencing HTTPRoutes.
-//   - Referencing Services/HTTPRoutes from other namespaces using ReferenceGrant.
 func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
 	switch {
 	case ref == nil:
@@ -219,8 +218,6 @@ func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
 	case ref.Kind != nil && *ref.Kind != gatewayapi.KindService:
 		return fmt.Errorf("invalid kind %q; must be %q",
 			*ref.BackendObjectReference.Kind, gatewayapi.KindService)
-	case ref.Namespace != nil:
-		return fmt.Errorf("invalid namespace; must be nil")
 	}
 
 	return nil

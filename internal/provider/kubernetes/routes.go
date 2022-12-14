@@ -52,12 +52,17 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
 					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					if err != nil {
-						r.log.Error(err, "unable to find ReferenceGrant that links the Service to TLSRoute")
-						continue
+					switch {
+					case err != nil:
+						r.log.Error(err, "failed to find ReferenceGrant")
+					case refGrant == nil:
+						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+					default:
+						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
 					}
-
-					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
 				}
 			}
 		}
@@ -77,7 +82,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
-		r.log.Error(err, "unable to find associated HTTPRoutes")
+		r.log.Error(err, "failed to list HTTPRoutes")
 		return err
 	}
 	for _, httpRoute := range httpRouteList.Items {
@@ -99,15 +104,28 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}] = struct{}{}
 
 				if backendNamespace != httpRoute.Namespace {
-					from := ObjectKindNamespacedName{kind: gatewayapi.KindHTTPRoute, namespace: httpRoute.Namespace, name: httpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
-					refGrant, err := r.findReferenceGrant(ctx, from, to)
-					if err != nil {
-						r.log.Error(err, "unable to find ReferenceGrant that links the Service to HTTPRoute")
-						continue
+					from := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindHTTPRoute,
+						namespace: httpRoute.Namespace,
+						name:      httpRoute.Name,
 					}
-
-					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+					to := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindService,
+						namespace: backendNamespace,
+						name:      string(backendRef.Name),
+					}
+					refGrant, err := r.findReferenceGrant(ctx, from, to)
+					switch {
+					case err != nil:
+						r.log.Error(err, "failed to find ReferenceGrant")
+					case refGrant == nil:
+						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+					default:
+						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
+					}
 				}
 			}
 		}
