@@ -1,5 +1,9 @@
 ---
 
+ignore: |
+  # Remove when https://github.com/kubernetes-sigs/gateway-api/issues/1600 is fixed.
+  bin/gatewayapi-crds.yaml
+
 rules:
   braces:
     min-spaces-inside: 0
