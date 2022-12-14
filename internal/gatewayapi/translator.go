@@ -696,7 +696,8 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if !checkBackendRef(&backendRef.BackendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
+	if !checkBackendRef(&backendRef.BackendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute,
+		v1.ProtocolTCP) {
 		return nil, weight
 	}
 
