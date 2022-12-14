@@ -243,6 +243,77 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 	return ctx
 }
 
+// GRPCRouteContext wraps an GRPCRoute and provides helper methods for
+// accessing the route's parents.
+type GRPCRouteContext struct {
+	*v1alpha2.GRPCRoute
+
+	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (h *GRPCRouteContext) GetRouteType() string {
+	return KindGRPCRoute
+}
+
+func (h *GRPCRouteContext) GetHostnames() []string {
+	hostnames := make([]string, len(h.Spec.Hostnames))
+	for idx, s := range h.Spec.Hostnames {
+		hostnames[idx] = string(s)
+	}
+	return hostnames
+}
+
+func (h *GRPCRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	return h.Spec.ParentRefs
+}
+
+func (h *GRPCRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
+	if h.parentRefs == nil {
+		h.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+	}
+
+	if ctx := h.parentRefs[forParentRef]; ctx != nil {
+		return ctx
+	}
+
+	var parentRef *v1beta1.ParentReference
+	for i, p := range h.Spec.ParentRefs {
+		if reflect.DeepEqual(p, forParentRef) {
+			parentRef = &h.Spec.ParentRefs[i]
+			break
+		}
+	}
+	if parentRef == nil {
+		panic("parentRef not found")
+	}
+
+	routeParentStatusIdx := -1
+	for i := range h.Status.Parents {
+		if reflect.DeepEqual(h.Status.Parents[i].ParentRef, forParentRef) {
+			routeParentStatusIdx = i
+			break
+		}
+	}
+	if routeParentStatusIdx == -1 {
+		rParentStatus := v1beta1.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      forParentRef,
+		}
+		h.Status.Parents = append(h.Status.Parents, rParentStatus)
+		routeParentStatusIdx = len(h.Status.Parents) - 1
+	}
+
+	ctx := &RouteParentContext{
+		ParentReference: parentRef,
+
+		grpcRoute:            h.GRPCRoute,
+		routeParentStatusIdx: routeParentStatusIdx,
+	}
+	h.parentRefs[forParentRef] = ctx
+	return ctx
+}
+
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
 // accessing the route's parents.
 type TLSRouteContext struct {
@@ -503,6 +574,7 @@ type RouteParentContext struct {
 	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
 	// a single field pointing to *v1beta1.RouteStatus.
 	httpRoute *v1beta1.HTTPRoute
+	grpcRoute *v1alpha2.GRPCRoute
 	tlsRoute  *v1alpha2.TLSRoute
 	tcpRoute  *v1alpha2.TCPRoute
 	udpRoute  *v1alpha2.UDPRoute
