@@ -693,88 +693,10 @@ func buildRuleRouteDest(backendRef v1beta1.HTTPBackendRef,
 		weight = uint32(*backendRef.Weight)
 	}
 
-	if backendRef.Group != nil && *backendRef.Group != "" {
-		parentRef.SetCondition(httpRoute,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonInvalidKind,
-			"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
-		)
-		return nil, weight
-	}
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if backendRef.Kind != nil && *backendRef.Kind != KindService {
-		parentRef.SetCondition(httpRoute,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service is supported",
-		)
-		return nil, weight
-	}
-
-	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != httpRoute.Namespace {
-		if !isValidCrossNamespaceRef(
-			crossNamespaceFrom{
-				group:     v1beta1.GroupName,
-				kind:      KindHTTPRoute,
-				namespace: httpRoute.Namespace,
-			},
-			crossNamespaceTo{
-				group:     "",
-				kind:      KindService,
-				namespace: string(*backendRef.Namespace),
-				name:      string(backendRef.Name),
-			},
-			resources.ReferenceGrants,
-		) {
-			parentRef.SetCondition(httpRoute,
-				v1beta1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				v1beta1.RouteReasonRefNotPermitted,
-				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
-			)
-			return nil, weight
-		}
-	}
-
-	if backendRef.Port == nil {
-		parentRef.SetCondition(httpRoute,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotSpecified",
-			"A valid port number corresponding to a port on the Service must be specified",
-		)
-		return nil, weight
-	}
-
-	service := resources.GetService(NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name))
-	if service == nil {
-		parentRef.SetCondition(httpRoute,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonBackendNotFound,
-			fmt.Sprintf("Service %s/%s not found", NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
-		)
-		return nil, weight
-	}
-
-	var portFound bool
-	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) &&
-			(port.Protocol == v1.ProtocolTCP || port.Protocol == "") { // Default protocol is TCP
-			portFound = true
-			break
-		}
-	}
-
-	if !portFound {
-		parentRef.SetCondition(httpRoute,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotFound",
-			fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace), string(backendRef.Name)),
-		)
+	if !checkBackendRef(&backendRef.BackendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
 		return nil, weight
 	}
 
@@ -1505,90 +1427,11 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 			// compute backends
 			for _, rule := range tlsRoute.Spec.Rules {
 				for _, backendRef := range rule.BackendRefs {
-					if backendRef.Group != nil && *backendRef.Group != "" {
-						parentRef.SetCondition(tlsRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonInvalidKind,
-							"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
-						)
-						continue
-					}
-
-					if backendRef.Kind != nil && *backendRef.Kind != KindService {
-						parentRef.SetCondition(tlsRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonInvalidKind,
-							"Kind is invalid, only Service is supported",
-						)
-						continue
-					}
-
-					if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != tlsRoute.Namespace {
-						if !isValidCrossNamespaceRef(
-							crossNamespaceFrom{
-								group:     v1beta1.GroupName,
-								kind:      KindTLSRoute,
-								namespace: tlsRoute.Namespace,
-							},
-							crossNamespaceTo{
-								group:     "",
-								kind:      KindService,
-								namespace: string(*backendRef.Namespace),
-								name:      string(backendRef.Name),
-							},
-							resources.ReferenceGrants,
-						) {
-							parentRef.SetCondition(tlsRoute,
-								v1beta1.RouteConditionResolvedRefs,
-								metav1.ConditionFalse,
-								v1beta1.RouteReasonRefNotPermitted,
-								fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
-							)
-							continue
-						}
-					}
-
-					if backendRef.Port == nil {
-						parentRef.SetCondition(tlsRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							"PortNotSpecified",
-							"A valid port number corresponding to a port on the Service must be specified",
-						)
-						continue
-					}
-
 					// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when TLSRoute graduates to v1beta1.
 					serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
 					service := resources.GetService(serviceNamespace, string(backendRef.Name))
-					if service == nil {
-						parentRef.SetCondition(tlsRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							v1beta1.RouteReasonBackendNotFound,
-							fmt.Sprintf("Service %s/%s not found", serviceNamespace, string(backendRef.Name)),
-						)
-						continue
-					}
 
-					var portFound bool
-					for _, port := range service.Spec.Ports {
-						if port.Port == int32(*backendRef.Port) &&
-							(port.Protocol == v1.ProtocolTCP || port.Protocol == "") { // Default protocol is TCP
-							portFound = true
-							break
-						}
-					}
-
-					if !portFound {
-						parentRef.SetCondition(tlsRoute,
-							v1beta1.RouteConditionResolvedRefs,
-							metav1.ConditionFalse,
-							"PortNotFound",
-							fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace, string(backendRef.Name)),
-						)
+					if !checkBackendRef(&backendRef, parentRef, tlsRoute, resources, serviceNamespace, KindTLSRoute) {
 						continue
 					}
 
@@ -1721,91 +1564,11 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 			}
 
 			backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-
-			if backendRef.Group != nil && *backendRef.Group != "" {
-				parentRef.SetCondition(udpRoute,
-					v1beta1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.RouteReasonInvalidKind,
-					"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
-				)
-				continue
-			}
-
-			if backendRef.Kind != nil && *backendRef.Kind != KindService {
-				parentRef.SetCondition(udpRoute,
-					v1beta1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.RouteReasonInvalidKind,
-					"Kind is invalid, only Service is supported",
-				)
-				continue
-			}
-
-			if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != udpRoute.Namespace {
-				if !isValidCrossNamespaceRef(
-					crossNamespaceFrom{
-						group:     v1beta1.GroupName,
-						kind:      KindUDPRoute,
-						namespace: udpRoute.Namespace,
-					},
-					crossNamespaceTo{
-						group:     "",
-						kind:      KindService,
-						namespace: string(*backendRef.Namespace),
-						name:      string(backendRef.Name),
-					},
-					resources.ReferenceGrants,
-				) {
-					parentRef.SetCondition(udpRoute,
-						v1beta1.RouteConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.RouteReasonRefNotPermitted,
-						fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
-					)
-					continue
-				}
-			}
-
-			if backendRef.Port == nil {
-				parentRef.SetCondition(udpRoute,
-					v1beta1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					"PortNotSpecified",
-					"A valid port number corresponding to a port on the Service must be specified",
-				)
-				continue
-			}
-
 			// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when UDPRoute graduates to v1beta1.
 			serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
 			service := resources.GetService(serviceNamespace, string(backendRef.Name))
-			if service == nil {
-				parentRef.SetCondition(udpRoute,
-					v1beta1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.RouteReasonBackendNotFound,
-					fmt.Sprintf("Service %s/%s not found", serviceNamespace, string(backendRef.Name)),
-				)
-				continue
-			}
 
-			var portFound bool
-			for _, port := range service.Spec.Ports {
-				if port.Port == int32(*backendRef.Port) && port.Protocol == v1.ProtocolUDP {
-					portFound = true
-					break
-				}
-			}
-
-			if !portFound {
-				parentRef.SetCondition(udpRoute,
-					v1beta1.RouteConditionResolvedRefs,
-					metav1.ConditionFalse,
-					"PortNotFound",
-					fmt.Sprintf("UDP Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace,
-						string(backendRef.Name)),
-				)
+			if !checkBackendRef(&backendRef, parentRef, udpRoute, resources, serviceNamespace, KindUDPRoute) {
 				continue
 			}
 
@@ -2051,4 +1814,133 @@ func GatewayOwnerLabels(namespace, name string) map[string]string {
 		OwningGatewayNamespaceLabel: namespace,
 		OwningGatewayNameLabel:      name,
 	}
+}
+
+func checkBackendRef(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext,
+	resources *Resources, serviceNamespace string, routeKind v1beta1.Kind) bool {
+	if !checkBackendRefGroup(backendRef, parentRef, route) {
+		return false
+	}
+	if !checkBackendRefKind(backendRef, parentRef, route) {
+		return false
+	}
+	if !checkBackendNamespace(backendRef, parentRef, route, resources, routeKind) {
+		return false
+	}
+	if !checkBackendPort(backendRef, parentRef, route) {
+		return false
+	}
+	protocol := v1.ProtocolTCP
+	if routeKind == KindUDPRoute {
+		protocol = v1.ProtocolUDP
+	}
+	if !checkBackendService(backendRef, parentRef, resources, serviceNamespace, route, protocol) {
+		return false
+	}
+	return true
+}
+
+func checkBackendRefGroup(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
+	if backendRef.Group != nil && *backendRef.Group != "" {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonInvalidKind,
+			"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+		)
+		return false
+	}
+	return true
+}
+
+func checkBackendRefKind(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
+	if backendRef.Kind != nil && *backendRef.Kind != KindService {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonInvalidKind,
+			"Kind is invalid, only Service is supported",
+		)
+		return false
+	}
+	return true
+}
+
+func checkBackendNamespace(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext,
+	resources *Resources, routeKind v1beta1.Kind) bool {
+	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != route.GetNamespace() {
+		if !isValidCrossNamespaceRef(
+			crossNamespaceFrom{
+				group:     v1beta1.GroupName,
+				kind:      string(routeKind),
+				namespace: route.GetNamespace(),
+			},
+			crossNamespaceTo{
+				group:     "",
+				kind:      KindService,
+				namespace: string(*backendRef.Namespace),
+				name:      string(backendRef.Name),
+			},
+			resources.ReferenceGrants,
+		) {
+			parentRef.SetCondition(route,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.RouteReasonRefNotPermitted,
+				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+			)
+			return false
+		}
+	}
+	return true
+}
+
+func checkBackendPort(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
+	if backendRef.Port == nil {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"PortNotSpecified",
+			"A valid port number corresponding to a port on the Service must be specified",
+		)
+		return false
+	}
+	return true
+}
+func checkBackendService(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, resources *Resources,
+	serviceNamespace string, route RouteContext, protocol v1.Protocol) bool {
+	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	if service == nil {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonBackendNotFound,
+			fmt.Sprintf("Service %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name)),
+		)
+		return false
+	}
+	var portFound bool
+	for _, port := range service.Spec.Ports {
+		portProtocol := port.Protocol
+		if port.Protocol == "" { // Default protocol is TCP
+			portProtocol = v1.ProtocolTCP
+		}
+		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
+			portFound = true
+			break
+		}
+	}
+
+	if !portFound {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"PortNotFound",
+			fmt.Sprintf(string(protocol)+" Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace,
+				string(backendRef.Name)),
+		)
+		return false
+	}
+	return true
 }
