@@ -121,7 +121,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		}
 
 		r.statusUpdateForGateway(gtw, svc, deployment)
-		return true
+		return false
 	}
 
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
