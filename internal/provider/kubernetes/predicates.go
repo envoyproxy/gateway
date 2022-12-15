@@ -209,7 +209,6 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 		if kerrors.IsNotFound(err) {
 			return nil, nil
 		}
-		// return nil, nil
 		return nil, err
 	}
 	return svc, nil
