@@ -50,8 +50,8 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/exa
 
 Patch the Gateway from the Quickstart guide to include a TLS listener that listens on port `6443` and is configured for TLS mode Passthrough:
 
-```console
-$ kubectl patch gateway eg --type=json --patch '[{
+```shell
+kubectl patch gateway eg --type=json --patch '[{
    "op": "add",
    "path": "/spec/listeners/-",
    "value": {
