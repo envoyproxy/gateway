@@ -1427,6 +1427,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 			// compute backends
 			for _, rule := range tlsRoute.Spec.Rules {
 				for _, backendRef := range rule.BackendRefs {
+					backendRef := backendRef
 					// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when TLSRoute graduates to v1beta1.
 					serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
 					service := resources.GetService(serviceNamespace, string(backendRef.Name))
