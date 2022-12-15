@@ -57,7 +57,7 @@ httpRoutes:
       - type: ResolvedRefs
         status: "False"
         reason: PortNotFound
-        message: "Port 8888 not found on service default/service-1"
+        message: "TCP Port 8888 not found on service default/service-1"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
