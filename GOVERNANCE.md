@@ -28,10 +28,10 @@ individuals and will be valid for 1 year from the start date.
 
 - Envoy core proxy maintainers [Member: Matt Klein; Start Date: 5/16/2022]
 - Tetrate [Member: Varun Talwar; Start Date: 5/16/2022]
-- VMware [Member: Winnie Kwon; Start Date: 11/10/2022]
+- VMware [Member: Winnie Kwon; Start Date: 5/16/2022]
 - Ambassador Labs [Member: Richard Li; Start Date: 5/16/2022]
 - Fidelity Investments [Member: Venkat Kasisomayajula / Rajarajan Pudupatti Sundari Jeyakodi; Start Date: 5/16/2022]
-- Tencent Holdings Limited [Member: Xunzhuo Liu; Start Date: 11/17/2022]
+- Tencent Holdings Limited [Member: Xunzhuo Liu; Start Date: 5/16/2022]
 
 Steering seats will be evaluated once per year and new people/organizations can be nominated
 for being added to the steering committee based on contribution to the project or being a
