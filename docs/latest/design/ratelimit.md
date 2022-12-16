@@ -163,6 +163,85 @@ spec:
           port: 3000
 ```
 
+## Multiple RateLimitFilters, rules and matches
+* Users can create multiple `RateLimitFilter`s and apply it to the same `HTTPRoute`. In such a case each
+`RateLimitFilter` will be applied to the route and matched (and limited) in a mutually exclusive way, independent of each other.
+* Rate limits are applied for each `RateLimitFilter` `rule` when the conditions under `matches` hold true.
+* A `match` holds true, when all conditions under the `match` hold true.
+
+Here's an example highlighting this -
+```
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-all-safeguard-app 
+spec:
+  type: Global
+  rules:
+  - matches:
+    - limit:
+        requests: 100
+        unit: Second
+---
+
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-per-user
+spec:
+  type: Global
+  rules:
+  - matches:
+    - Type: Distinct
+      header:
+        name: x-user-id
+      limit:
+        requests: 1000
+        unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: example
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - www.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /foo
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: RateLimitFilter
+            name: ratelimit-per-user
+	- type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: RateLimitFilter
+            name: ratelimit-all-safeguard-app    
+      backendRefs:
+        - name: backend
+          port: 3000
+```
+* The user has created two `RateLimitFilter`s  and has attached it to a `HTTPRoute` - one(`ratelimit-all-safeguard-app`) to
+ensure that the backend does not get overwhelmed with requests, any excess requests are rate limited irrespective of
+the attributes within the traffic flow, and another(`ratelimit-per-user`) to rate limit each distinct user client
+who can be differentiated using the `x-user-id` header, to ensure that each client does not make exessive requests to the backend.
+* If user `baz` (identified with the header and value of `x-user-id: baz`) sends 90 requests within the first second, and
+user `bar` sends 11 more requests during that same interval of 1 second, and user `bar` sends the 101th request within that second,
+the rule defined in `ratelimit-all-safeguard-app` gets activated and Envoy Gateway will ratelimit the request sent by `bar` (and any other
+request sent within that 1 second). After 1 second, the rate limit counter associated with the `ratelimit-all-safeguard-app` rule
+is reset and again evaluated.
+* If user `bar` also ends up sending 90 more requests within the hour, summing up `bar`'s total request count to 101, the rate limit rule
+defined within `ratelimit-per-user` will get activated, and `bar`'s requests will be rate limited again until the hour interval ends.
+* Within the same above hour, if `baz` sends 11 more requests, summing up `baz`'s total request count to 101, the rate limit rule defined
+within ``ratelimit-per-user` will get activated for `baz`, and `baz`'s requests will also be rate limited until the hour interval ends. 
+
 ## Design Decisions
 
 * The initial design uses an Extension filter to apply the Rate Limit functionality on a specific `HTTPRoute`.
