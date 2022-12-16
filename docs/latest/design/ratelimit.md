@@ -170,6 +170,7 @@ spec:
 * A `match` holds true, when all conditions under the `match` hold true.
 
 Here's an example highlighting this -
+
 ```
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
@@ -228,6 +229,7 @@ spec:
         - name: backend
           port: 3000
 ```
+
 * The user has created two `RateLimitFilter`s  and has attached it to a `HTTPRoute` - one(`ratelimit-all-safeguard-app`) to
 ensure that the backend does not get overwhelmed with requests, any excess requests are rate limited irrespective of
 the attributes within the traffic flow, and another(`ratelimit-per-user`) to rate limit each distinct user client
@@ -240,7 +242,7 @@ is reset and again evaluated.
 * If user `bar` also ends up sending 90 more requests within the hour, summing up `bar`'s total request count to 101, the rate limit rule
 defined within `ratelimit-per-user` will get activated, and `bar`'s requests will be rate limited again until the hour interval ends.
 * Within the same above hour, if `baz` sends 11 more requests, summing up `baz`'s total request count to 101, the rate limit rule defined
-within ``ratelimit-per-user` will get activated for `baz`, and `baz`'s requests will also be rate limited until the hour interval ends. 
+within `ratelimit-per-user` will get activated for `baz`, and `baz`'s requests will also be rate limited until the hour interval ends. 
 
 ## Design Decisions
 
