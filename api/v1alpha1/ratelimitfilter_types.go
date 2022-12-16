@@ -34,8 +34,10 @@ type RateLimitList struct {
 }
 
 // RateLimitFilterSpec defines the desired state of RateLimitFilter
+// +union
 type RateLimitFilterSpec struct {
 	// Type decides the scope for the RateLimits.
+	// +unionDiscriminator
 	Type RateLimitType `json:"type"`
 	// Rules are a list of RateLimit matchers and limits.
 	//

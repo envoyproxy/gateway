@@ -13,7 +13,7 @@ Here are some reasons why a user may want to implements Rate limits
 
 ## Scope Types
 
-The rate limit type here describe the scope of rate limits
+The rate limit type here describes the scope of rate limits.
 
 * Global - In this case, the rate limit is common across all the instances of Envoy proxies
 where its applied i.e. if the data plane has 2 replicas of Envoy running, and the rate limit is
@@ -41,10 +41,10 @@ spec:
   - matches:
     - header:
         name: x-user-id
-	value: one
+        value: one
       limit:
         requests: 10
-	unit: Hour
+        unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -165,10 +165,11 @@ spec:
 
 ## Design Decisions
 
-* The initial design uses an Extension filter to apply the Rate Limit functionality on a specific HTTPRoute.
+* The initial design uses an Extension filter to apply the Rate Limit functionality on a specific `HTTPRoute`.
 This was preferred over the PolicyAttachment Extension mechanism, because it is unclear whether Rate Limit
 will be required to be enforced or overridden by the platform administrator or not.
-* The Rate limits are applied across all backends within a HTTPRoute, and are not applied per backend.
+* The RateFilter can only be applied as a filter to a `HTTPRouteRule`, applying it across all backends within a `HTTPRoute`
+and cannot be applied a filter within a `HTTPBackendRef` for a specifc backend.
 * The HTTPRoute API has a `matches` field within each `rule` to select a specific traffic flow to be routed to
 the destination backend. The RateLimitFilter API that can be attached to an HTTPRoute via an `extensionRef` filter,
 also has a `matches` field within each `rule` to select attributes within the traffic flow to rate limit specific clients.
