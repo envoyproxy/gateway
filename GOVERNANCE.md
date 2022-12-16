@@ -26,12 +26,12 @@ technical decisions on the Envoy gateway project. It will also decide on any cha
 governance, marketing and future direction. Seats will be tied to organizations and not
 individuals and will be valid for 1 year from the start date.
 
-- Envoy core proxy maintainers [Member: Matt Klein; Start Date: 5/16/2022]
-- Tetrate [Member: Varun Talwar; Start Date: 5/16/2022]
-- VMware [Member: Winnie Kwon; Start Date: 5/16/2022]
-- Ambassador Labs [Member: Richard Li; Start Date: 5/16/2022]
-- Fidelity Investments [Member: Venkat Kasisomayajula / Rajarajan Pudupatti Sundari Jeyakodi; Start Date: 5/16/2022]
-- Tencent Holdings Limited [Member: Xunzhuo Liu; Start Date: 5/16/2022]
+- Envoy core proxy maintainers [Member: Matt Klein; End Date: 5/16/2023]
+- Tetrate [Member: Varun Talwar; End Date: 5/16/2023]
+- VMware [Member: Winnie Kwon; End Date: 5/16/2023]
+- Ambassador Labs [Member: Richard Li; End Date: 5/16/2023]
+- Fidelity Investments [Member: Venkat Kasisomayajula / Rajarajan Pudupatti Sundari Jeyakodi; End Date: 5/16/2023]
+- Tencent Holdings Limited [Member: Xunzhuo Liu; End Date: 5/16/2023]
 
 Steering seats will be evaluated once per year and new people/organizations can be nominated
 for being added to the steering committee based on contribution to the project or being a
