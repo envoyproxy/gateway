@@ -88,7 +88,7 @@ spec:
   - matches:
     - limit:
         requests: 1000
-	unit: Second
+        unit: Second
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -136,7 +136,7 @@ spec:
         name: x-user-id
       limit:
         requests: 10
-	unit: Hour
+        unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
