@@ -17,7 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool) (*cluster.Cluster, error) {
+func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool) *cluster.Cluster {
 	localities := make([]*endpoint.LocalityLbEndpoints, 0, 1)
 	locality := &endpoint.LocalityLbEndpoints{
 		Locality:    &core.Locality{},
@@ -46,7 +46,7 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 		cluster.Http2ProtocolOptions = &core.Http2ProtocolOptions{}
 	}
 
-	return cluster, nil
+	return cluster
 
 }
 

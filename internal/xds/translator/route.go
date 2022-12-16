@@ -14,7 +14,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
+func buildXdsRoute(httpRoute *ir.HTTPRoute) *route.Route {
 	ret := &route.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}
@@ -47,7 +47,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) (*route.Route, error) {
 		}
 	}
 
-	return ret, nil
+	return ret
 }
 
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *route.RouteMatch {
