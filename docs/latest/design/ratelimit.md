@@ -169,7 +169,7 @@ spec:
 This was preferred over the PolicyAttachment Extension mechanism, because it is unclear whether Rate Limit
 will be required to be enforced or overridden by the platform administrator or not.
 * The RateFilter can only be applied as a filter to a `HTTPRouteRule`, applying it across all backends within a `HTTPRoute`
-and cannot be applied a filter within a `HTTPBackendRef` for a specifc backend.
+and cannot be applied a filter within a `HTTPBackendRef` for a specific backend.
 * The HTTPRoute API has a `matches` field within each `rule` to select a specific traffic flow to be routed to
 the destination backend. The RateLimitFilter API that can be attached to an HTTPRoute via an `extensionRef` filter,
 also has a `matches` field within each `rule` to select attributes within the traffic flow to rate limit specific clients.
