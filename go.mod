@@ -11,14 +11,14 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/telepresenceio/watchable v0.0.0-20220726211108-9bb86f92afa7
 	github.com/tsaarni/certyaml v0.9.0
-	go.uber.org/zap v1.19.1
+	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
 	google.golang.org/grpc v1.49.0
 	k8s.io/api v0.26.0
 	k8s.io/apimachinery v0.26.0
 	k8s.io/client-go v0.26.0
-	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d
-	sigs.k8s.io/controller-runtime v0.12.3
+	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
+	sigs.k8s.io/controller-runtime v0.14.0
 	sigs.k8s.io/gateway-api v0.6.0-rc2
 )
 
@@ -44,6 +44,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.6.7 // indirect
+	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.4 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -73,7 +74,7 @@ require (
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/term v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
-	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
+	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3 // indirect
