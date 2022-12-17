@@ -22,7 +22,7 @@ egctl [command] [subcommand] [name] [flags]
 where `command`, `name`, and `flags` are:
 
 * `command`: Specifies the operation that you want to perform on one or more resources,
-  for example `install`, `uninstall`, `proxy-config`, `version`.
+  for example `install`, `uninstall`, `config`, `version`.
 
 * `name`: Specifies the name of the specified pod. 
 
@@ -34,31 +34,34 @@ If you need help, run `kubectl help` from the terminal window.
 
 The following table includes short descriptions and the general syntax for all the `egctl` operations:
 
-| Operation      | Syntax                          | Description                                               |
-| -------------- |---------------------------------|-----------------------------------------------------------|
-| `version`      | `egctl version`                 | Prints out build version information.                     |
-| `install`      | `egctl install -f FILENAME`     | Install or reconfigure EG on a cluster.                   |
-| `uninstall`    | `egctl uninstall`               | Uninstall EG from a cluster                               |
-| `proxy-config` | `egctl proxy-config SUBCOMMAND` | Retrieve information about proxy configuration from envoy |
-| `analyze`      | `egctl analyze`                 | Analyze configuration and print validation messages       |
+| Operation   | Syntax                           | Description                                                                 |
+| ----------- | -------------------------------- | --------------------------------------------------------------------------- |
+| `version`   | `egctl version`                  | Prints out build version information.                                       |
+| `install`   | `egctl install -f CUSTOMPROFILE` | Install or reconfigure EG on a cluster.                                     |
+| `uninstall` | `egctl uninstall`                | Uninstall EG from a cluster                                                 |
+| `config`    | `egctl config SUBCOMMAND`        | Retrieve information about proxy configuration from envoy proxy and gateway |
+| `analyze`   | `egctl analyze`                  | Analyze configuration and print validation messages                         |
 
 ## Examples
 
 Use the following set of examples to help you familiarize yourself with running the commonly used `egctl` operations:
 
 ```console
-# Install EG using the definition in custom-values.yaml
-egctl install -f custom-values.yaml
+# Install EG using the definition in custom profile file
+egctl install -f custom-profile.yaml
 
 # Uninstall EG
 egctl uninstall
 
 # Retrieve all information about proxy configuration from envoy
-egctl proxy-config all <pod_name>
+egctl config envoy-proxy all <pod_name>
 
-# Retrieve listener information about proxy configuration from envoy
-egctl proxy-config listener <pod_name>
+# Retrieve listener information about proxy configuration from envoy 
+egctl config envoy-proxy listener <pod_name>
 
-# Change log level of envoy
-egctl proxy-config log <pod_name> --level trace
+# Change log level of envoy proxy
+egctl config envoy-proxy log <pod_name> --level trace
+
+# Retrieve information about envoy gateway
+egctl config envoy-gateway
 ```
