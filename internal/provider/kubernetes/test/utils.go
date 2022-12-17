@@ -79,16 +79,29 @@ func GetSecret(nsname types.NamespacedName) *corev1.Secret {
 }
 
 // GetHTTPRoute returns a sample HTTPRoute with a parent reference.
-func GetHTTPRoute(nsname types.NamespacedName, parent string) *gwapiv1b1.HTTPRoute {
+func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1b1.HTTPRoute {
 	return &gwapiv1b1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nsname.Namespace,
-			Name:      nsname.Name,
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
 		},
 		Spec: gwapiv1b1.HTTPRouteSpec{
 			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
 				ParentRefs: []gwapiv1b1.ParentReference{
 					{Name: gwapiv1b1.ObjectName(parent)},
+				},
+			},
+			Rules: []gwapiv1b1.HTTPRouteRule{
+				{
+					BackendRefs: []gwapiv1b1.HTTPBackendRef{
+						{
+							BackendRef: gwapiv1b1.BackendRef{
+								BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									Name: gwapiv1b1.ObjectName(serviceName.Name),
+								},
+							},
+						},
+					},
 				},
 			},
 		},

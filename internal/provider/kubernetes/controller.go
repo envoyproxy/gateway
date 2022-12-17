@@ -506,7 +506,7 @@ func serviceHTTPRouteIndexFunc(rawObj client.Object) []string {
 	var services []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
-			if string(*backend.Kind) == gatewayapi.KindService {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
 				// If an explicit Service namespace is not provided, use the HTTPRoute namespace to
 				// lookup the provided Gateway Name.
 				services = append(services,
