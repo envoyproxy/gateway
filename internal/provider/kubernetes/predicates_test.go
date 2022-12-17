@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -151,7 +153,11 @@ func TestValidateSecretForReconcile(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&gwapiv1b1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc).
+			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateSecretForReconcile(tc.secret)
 			require.Equal(t, tc.expect, res)
@@ -240,7 +246,12 @@ func TestValidateServiceForReconcile(t *testing.T) {
 
 	for _, tc := range testCases {
 		tc := tc
-		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
+			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)
 			require.Equal(t, tc.expect, res)
