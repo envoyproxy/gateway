@@ -290,15 +290,29 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))
 
 						if secretNamespace != gtw.Namespace {
-							from := ObjectKindNamespacedName{kind: gatewayapi.KindGateway, namespace: gtw.Namespace, name: gtw.Name}
-							to := ObjectKindNamespacedName{kind: gatewayapi.KindSecret, namespace: secretNamespace, name: string(certRef.Name)}
-							refGrant, err := r.findReferenceGrant(ctx, from, to)
-							if err != nil {
-								r.log.Error(err, "unable to find ReferenceGrant that links the Secret to Gateway")
-								continue
+							from := ObjectKindNamespacedName{
+								kind:      gatewayapi.KindGateway,
+								namespace: gtw.Namespace,
+								name:      gtw.Name,
 							}
-
-							resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+							to := ObjectKindNamespacedName{
+								kind:      gatewayapi.KindSecret,
+								namespace: secretNamespace,
+								name:      string(certRef.Name),
+							}
+							refGrant, err := r.findReferenceGrant(ctx, from, to)
+							switch {
+							case err != nil:
+								r.log.Error(err, "failed to find ReferenceGrant")
+							case refGrant == nil:
+								r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+									"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+							default:
+								// RefGrant found
+								resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+								r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+									"name", refGrant.Name)
+							}
 						}
 
 						resourceMap.allAssociatedNamespaces[secretNamespace] = struct{}{}
@@ -329,15 +343,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		service := new(corev1.Service)
 		err := r.client.Get(ctx, serviceNamespaceName, service)
 		if err != nil {
-			r.log.Error(err, "unable to find associated Services")
-			if kerrors.IsNotFound(err) {
-				return reconcile.Result{}, nil
-			}
-			return reconcile.Result{}, err
+			r.log.Error(err, "failed to get Service", "namespace", serviceNamespaceName.Namespace,
+				"name", serviceNamespaceName.Name)
+		} else {
+			resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
+			resourceTree.Services = append(resourceTree.Services, service)
+			r.log.Info("added Service to resource tree", "namespace", serviceNamespaceName.Namespace,
+				"name", serviceNamespaceName.Name)
 		}
-
-		resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
-		resourceTree.Services = append(resourceTree.Services, service)
 	}
 
 	// Add all ReferenceGrants to the resourceTree
@@ -437,10 +450,9 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, sv
 
 func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1a2.ReferenceGrant, error) {
 	refGrantList := new(gwapiv1a2.ReferenceGrantList)
-	if err := r.client.List(ctx, refGrantList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind),
-	}); err != nil {
-		return nil, err
+	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
+	if err := r.client.List(ctx, refGrantList, opts); err != nil {
+		return nil, fmt.Errorf("failed to list ReferenceGrants: %v", err)
 	}
 
 	for _, refGrant := range refGrantList.Items {
@@ -453,8 +465,8 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 		}
 	}
 
-	return nil, fmt.Errorf("no reference grants found that target %s in namespace %s for kind %s in namespace %s",
-		to.kind, to.namespace, from.kind, from.namespace)
+	// No ReferenceGrant found.
+	return nil, nil
 }
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
