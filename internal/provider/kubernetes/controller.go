@@ -495,28 +495,30 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, func(rawObj client.Object) []string {
-		httproute := rawObj.(*gwapiv1b1.HTTPRoute)
-		var services []string
-		for _, rule := range httproute.Spec.Rules {
-			for _, backend := range rule.BackendRefs {
-				if string(*backend.Kind) == gatewayapi.KindService {
-					// If an explicit Service namespace is not provided, use the HTTPRoute namespace to
-					// lookup the provided Gateway Name.
-					services = append(services,
-						types.NamespacedName{
-							Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
-							Name:      string(backend.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-		return services
-	}); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
+}
+
+func serviceHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+	var services []string
+	for _, rule := range httproute.Spec.Rules {
+		for _, backend := range rule.BackendRefs {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+				// If an explicit Service namespace is not provided, use the HTTPRoute namespace to
+				// lookup the provided Gateway Name.
+				services = append(services,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
+						Name:      string(backend.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return services
 }
 
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are
@@ -543,56 +545,37 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, func(rawObj client.Object) []string {
-		tlsroute := rawObj.(*gwapiv1a2.TLSRoute)
-		var services []string
-		for _, rule := range tlsroute.Spec.Rules {
-			for _, backend := range rule.BackendRefs {
-				if string(*backend.Kind) == gatewayapi.KindService {
-					// If an explicit Service namespace is not provided, use the TLSRoute namespace to
-					// lookup the provided Gateway Name.
-					services = append(services,
-						types.NamespacedName{
-							Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
-							Name:      string(backend.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-		return services
-	}); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
+}
+
+func serviceTLSRouteIndexFunc(rawObj client.Object) []string {
+	tlsroute := rawObj.(*gwapiv1a2.TLSRoute)
+	var services []string
+	for _, rule := range tlsroute.Spec.Rules {
+		for _, backend := range rule.BackendRefs {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+				// If an explicit Service namespace is not provided, use the TLSRoute namespace to
+				// lookup the provided Gateway Name.
+				services = append(services,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
+						Name:      string(backend.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return services
 }
 
 // addGatewayIndexers adds indexing on Gateway, for Secret objects that are
 // referenced in Gateway objects. This helps in querying for Gateways that are
 // affected by a particular Secret CRUD.
 func addGatewayIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.Gateway{}, secretGatewayIndex, func(rawObj client.Object) []string {
-		gateway := rawObj.(*gwapiv1b1.Gateway)
-		var secretReferences []string
-		for _, listener := range gateway.Spec.Listeners {
-			if listener.TLS == nil || *listener.TLS.Mode != gwapiv1b1.TLSModeTerminate {
-				continue
-			}
-			for _, cert := range listener.TLS.CertificateRefs {
-				if *cert.Kind == gatewayapi.KindSecret {
-					// If an explicit Secret namespace is not provided, use the Gateway namespace to
-					// lookup the provided Secret Name.
-					secretReferences = append(secretReferences,
-						types.NamespacedName{
-							Namespace: gatewayapi.NamespaceDerefOr(cert.Namespace, gateway.Namespace),
-							Name:      string(cert.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-		return secretReferences
-	}); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.Gateway{}, secretGatewayIndex, secretGatewayIndexFunc); err != nil {
 		return err
 	}
 
@@ -603,6 +586,29 @@ func addGatewayIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 	return nil
+}
+
+func secretGatewayIndexFunc(rawObj client.Object) []string {
+	gateway := rawObj.(*gwapiv1b1.Gateway)
+	var secretReferences []string
+	for _, listener := range gateway.Spec.Listeners {
+		if listener.TLS == nil || *listener.TLS.Mode != gwapiv1b1.TLSModeTerminate {
+			continue
+		}
+		for _, cert := range listener.TLS.CertificateRefs {
+			if *cert.Kind == gatewayapi.KindSecret {
+				// If an explicit Secret namespace is not provided, use the Gateway namespace to
+				// lookup the provided Secret Name.
+				secretReferences = append(secretReferences,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(cert.Namespace, gateway.Namespace),
+						Name:      string(cert.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return secretReferences
 }
 
 // removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
