@@ -40,85 +40,95 @@ spec:
           spec:
             description: Spec defines the desired state of HTTPRoute.
             properties:
-              rules:
-                description: Rules are a list of RateLimit matchers and limits.
-                items:
-                  description: RateLimitRule defines the semantics for matching attributes
-                    from the incoming requests, and setting limits for them.
-                  properties:
-                    limit:
-                      description: RateLimitValue defines the limits for rate limiting.
+              global:
+                description: Global rate limit configuration.
+                properties:
+                  rules:
+                    description: Rules are a list of RateLimit matchers and limits.
+                    items:
+                      description: RateLimitRule defines the semantics for matching
+                        attributes from the incoming requests, and setting limits
+                        for them.
                       properties:
-                        requests:
-                          type: integer
-                        unit:
-                          description: "RateLimitUnit specifies the intervals for
-                            setting rate limits. Valid RateLimitUnit values are: \n
-                            * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
-                          enum:
-                          - Second
-                          - Minute
-                          - Hour
-                          - Day
-                          type: string
+                        limit:
+                          description: RateLimitValue defines the limits for rate
+                            limiting.
+                          properties:
+                            requests:
+                              type: integer
+                            unit:
+                              description: "RateLimitUnit specifies the intervals
+                                for setting rate limits. Valid RateLimitUnit values
+                                are: \n * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
+                              enum:
+                              - Second
+                              - Minute
+                              - Hour
+                              - Day
+                              type: string
+                          required:
+                          - requests
+                          - unit
+                          type: object
+                        matches:
+                          items:
+                            description: RateLimitMatch specifies the attributes within
+                              the traffic flow that can be matched on.
+                            properties:
+                              headers:
+                                items:
+                                  description: HeaderMatch defines the match attributes
+                                    within the HTTP Headers of the request.
+                                  properties:
+                                    name:
+                                      description: Name of the HTTP header.
+                                      maxLength: 256
+                                      minLength: 1
+                                      type: string
+                                    type:
+                                      default: Exact
+                                      description: Type specifies how to match against
+                                        the value of the header.
+                                      enum:
+                                      - Exact
+                                      - RegularExpression
+                                      - Distinct
+                                      type: string
+                                    value:
+                                      description: Value within the HTTP header. Due
+                                        to the case-insensitivity of header names,
+                                        "foo" and "Foo" are considered equivalent.
+                                        Do not set this field when Type="Distinct",
+                                        implying matching on any/all unique values
+                                        within the header.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 16
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
+                            type: object
+                          maxItems: 8
+                          type: array
                       required:
-                      - requests
-                      - unit
+                      - limit
                       type: object
-                    matches:
-                      items:
-                        description: RateLimitMatch specifies the attributes within
-                          the traffic flow that can be matched on.
-                        properties:
-                          headers:
-                            items:
-                              description: HeaderMatch defines the match attributes
-                                within the HTTP Headers of the request.
-                              properties:
-                                name:
-                                  description: Name of the HTTP header.
-                                  maxLength: 256
-                                  minLength: 1
-                                  type: string
-                                type:
-                                  default: Exact
-                                  description: Type specifies how to match against
-                                    the value of the header.
-                                  enum:
-                                  - Exact
-                                  - RegularExpression
-                                  - Distinct
-                                  type: string
-                                value:
-                                  description: Value within the HTTP header. Due to
-                                    the case-insensitivity of header names, "foo"
-                                    and "Foo" are considered equivalent. Do not set
-                                    this field when Type="Distinct", implying matching
-                                    on any/all unique values within the header.
-                                  type: string
-                              required:
-                              - name
-                              type: object
-                            maxItems: 16
-                            type: array
-                            x-kubernetes-list-map-keys:
-                            - name
-                            x-kubernetes-list-type: map
-                        type: object
-                      maxItems: 8
-                      type: array
-                  required:
-                  - limit
-                  type: object
-                maxItems: 16
-                type: array
+                    maxItems: 16
+                    type: array
+                required:
+                - rules
+                type: object
               type:
-                description: Type decides the scope for the RateLimits.
+                description: "Type decides the scope for the RateLimits. Valid RateLimitType
+                  values are: \n * \"Global\" - In this mode, the rate limits are
+                  applied across all Envoy proxy instances."
                 enum:
                 - Global
                 type: string
             required:
-            - rules
             - type
             type: object
         required:
@@ -126,5 +136,4 @@ spec:
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
+    subresources: {}

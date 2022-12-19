@@ -9,9 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +genclient
 // +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // RateLimitFilter allows the user to limit the number of incoming requests
@@ -33,30 +31,37 @@ type RateLimitList struct {
 	Items           []RateLimitFilter `json:"items"`
 }
 
-// RateLimitFilterSpec defines the desired state of RateLimitFilter
+// RateLimitFilterSpec defines the desired state of RateLimitFilter.
 // +union
 type RateLimitFilterSpec struct {
 	// Type decides the scope for the RateLimits.
+	// Valid RateLimitType values are:
+	//
+	// * "Global" - In this mode, the rate limits are applied across all Envoy proxy instances.
+	//
 	// +unionDiscriminator
 	Type RateLimitType `json:"type"`
-	// Rules are a list of RateLimit matchers and limits.
-	//
-	// +kubebuilder:validation:MaxItems=16
-	Rules []RateLimitRule `json:"rules"`
+	// Global rate limit configuration.
+	// +optional
+	Global *GlobalRateLimit `json:"global"`
 }
 
 // RateLimitType specifies the types of RateLimiting.
-// Valid RateLimitType values are:
-//
-// * "Global"
-//
 // +kubebuilder:validation:Enum=Global
 type RateLimitType string
 
 const (
 	// In this mode, the rate limits are applied across all Envoy proxy instances.
-	RateLimitTypeGlobal RateLimitType = "Global"
+	GlobalRateLimitType RateLimitType = "Global"
 )
+
+// GlobalRateLimit defines the global rate limit configuration.
+type GlobalRateLimit struct {
+	// Rules are a list of RateLimit matchers and limits.
+	//
+	// +kubebuilder:validation:MaxItems=16
+	Rules []RateLimitRule `json:"rules"`
+}
 
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
