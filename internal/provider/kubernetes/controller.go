@@ -520,23 +520,7 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 //     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
 //     particular AuthenticationFilter CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, gatewayHTTPRouteIndex, func(rawObj client.Object) []string {
-		httproute := rawObj.(*gwapiv1b1.HTTPRoute)
-		var gateways []string
-		for _, parent := range httproute.Spec.ParentRefs {
-			if string(*parent.Kind) == gatewayapi.KindGateway {
-				// If an explicit Gateway namespace is not provided, use the HTTPRoute namespace to
-				// lookup the provided Gateway Name.
-				gateways = append(gateways,
-					types.NamespacedName{
-						Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, httproute.Namespace),
-						Name:      string(parent.Name),
-					}.String(),
-				)
-			}
-		}
-		return gateways
-	}); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -568,6 +552,24 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	}
 
 	return nil
+}
+
+func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+	var gateways []string
+	for _, parent := range httproute.Spec.ParentRefs {
+		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
+			// If an explicit Gateway namespace is not provided, use the HTTPRoute namespace to
+			// lookup the provided Gateway Name.
+			gateways = append(gateways,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, httproute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
+		}
+	}
+	return gateways
 }
 
 func serviceHTTPRouteIndexFunc(rawObj client.Object) []string {
