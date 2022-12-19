@@ -550,7 +550,7 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		for _, rule := range httproute.Spec.Rules {
 			for i := range rule.Filters {
 				filter := rule.Filters[i]
-				if filter.Type == gwapiv1a2.HTTPRouteFilterExtensionRef {
+				if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
 					if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
 						filters = append(filters,
 							types.NamespacedName{
