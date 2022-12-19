@@ -16,6 +16,7 @@ release-artifacts/
 
 # Outputs
 coverage.xml
+cover.out
 
 # `go mod vendor`
 vendor/

@@ -17,6 +17,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -178,6 +179,28 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 
 	// There is no need to reconcile the Deployment any further.
 	return false
+}
+
+// httpRoutesForAuthenticationFilter tries finding HTTPRoute referents of the provided
+// AuthenticationFilter and returns true if any exist.
+func (r *gatewayAPIReconciler) httpRoutesForAuthenticationFilter(obj client.Object) bool {
+	ctx := context.Background()
+	filter, ok := obj.(*egv1a1.AuthenticationFilter)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	// Check if the AuthenticationFilter belongs to a managed HTTPRoute.
+	httpRouteList := &gwapiv1b1.HTTPRouteList{}
+	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(authenFilterHTTPRouteIndex, utils.NamespacedName(filter).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated HTTPRoutes")
+		return false
+	}
+
+	return len(httpRouteList.Items) != 0
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.

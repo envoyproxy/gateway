@@ -9,6 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// AuthenticationFilterKind is the name of the AuthenticationFilter kind.
+	AuthenticationFilterKind = "AuthenticationFilter"
+)
+
 //+kubebuilder:object:root=true
 
 type AuthenticationFilter struct {
@@ -114,13 +119,13 @@ type RemoteJWKS struct {
 
 //+kubebuilder:object:root=true
 
-// AuthenticationList contains a list of Authentication.
-type AuthenticationList struct {
+// AuthenticationFilterList contains a list of AuthenticationFilter.
+type AuthenticationFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []AuthenticationFilter `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&AuthenticationFilter{}, &AuthenticationList{})
+	SchemeBuilder.Register(&AuthenticationFilter{}, &AuthenticationFilterList{})
 }

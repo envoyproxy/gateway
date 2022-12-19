@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -58,6 +59,20 @@ type Resources struct {
 	Namespaces      []*v1.Namespace
 	Services        []*v1.Service
 	Secrets         []*v1.Secret
+	AuthenFilters   []*egv1a1.AuthenticationFilter
+}
+
+func NewResources() *Resources {
+	return &Resources{
+		Gateways:        []*v1beta1.Gateway{},
+		HTTPRoutes:      []*v1beta1.HTTPRoute{},
+		TLSRoutes:       []*v1alpha2.TLSRoute{},
+		Services:        []*v1.Service{},
+		Secrets:         []*v1.Secret{},
+		ReferenceGrants: []*v1alpha2.ReferenceGrant{},
+		Namespaces:      []*v1.Namespace{},
+		AuthenFilters:   []*egv1a1.AuthenticationFilter{},
+	}
 }
 
 func (r *Resources) GetNamespace(name string) *v1.Namespace {

@@ -11,15 +11,227 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
+
+func TestProcessHTTPRoutes(t *testing.T) {
+	// The gatewayclass configured for the reconciler and referenced by test cases.
+	gcCtrlName := gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName)
+	gc := &gwapiv1b1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: gcCtrlName,
+		},
+	}
+
+	// The gateway referenced by test cases.
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "http",
+					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+				},
+			},
+		},
+	}
+	gwNsName := utils.NamespacedName(gw).String()
+
+	testCases := []struct {
+		name     string
+		routes   []*gwapiv1b1.HTTPRoute
+		filters  []*egv1a1.AuthenticationFilter
+		expected bool
+	}{
+		{
+			name: "valid httproute",
+			routes: []*gwapiv1b1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1b1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1b1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1b1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1b1.HTTPPathMatch{
+											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+											Value: gatewayapi.StringPtr("/"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "httproute with one authenticationfilter",
+			routes: []*gwapiv1b1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1b1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1b1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1b1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1b1.HTTPPathMatch{
+											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+											Value: gatewayapi.StringPtr("/"),
+										},
+									},
+								},
+								Filters: []gwapiv1b1.HTTPRouteFilter{
+									{
+										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1b1.LocalObjectReference{
+											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+											Kind:  gwapiv1b1.Kind(egv1a1.AuthenticationFilterKind),
+											Name:  gwapiv1b1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			filters: []*egv1a1.AuthenticationFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.AuthenticationFilterKind,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: egv1a1.AuthenticationFilterSpec{
+						Type: egv1a1.JwtAuthenticationFilterProviderType,
+						JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+							{
+								Name:      "test",
+								Issuer:    "https://www.test.local",
+								Audiences: []string{"test.local"},
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		// Add objects referenced by test cases.
+		objs := []client.Object{gc, gw}
+
+		// Create the reconciler.
+		logger, err := log.NewLogger()
+		require.NoError(t, err)
+		r := &gatewayAPIReconciler{
+			log:             logger,
+			classController: gcCtrlName,
+		}
+		ctx := context.Background()
+
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add the test case objects to the reconciler client.
+			for _, route := range tc.routes {
+				objs = append(objs, route)
+			}
+			for _, filter := range tc.filters {
+				objs = append(objs, filter)
+			}
+			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(objs...).Build()
+
+			// Process the test case httproutes.
+			resourceTree := gatewayapi.NewResources()
+			resourceMap := newResourceMapping()
+			err := r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
+			if tc.expected {
+				require.NoError(t, err)
+				// Ensure the resource tree and map are as expected.
+				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
+				if tc.filters != nil {
+					for _, route := range tc.routes {
+						require.Equal(t, tc.filters, resourceMap.httpRouteToAuthenFilters[utils.NamespacedName(route)])
+					}
+				}
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
 
 func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	testCases := []struct {

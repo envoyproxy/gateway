@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/config.gateway.envoyproxy.io_envoyproxies.yaml
+- bases/gateway.envoyproxy.io_authenticationfilters.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

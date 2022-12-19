@@ -9,13 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
-	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/slice"
-
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -32,16 +25,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
 
 const (
-	classGatewayIndex        = "classGatewayIndex"
-	gatewayTLSRouteIndex     = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex    = "gatewayHTTPRouteIndex"
-	secretGatewayIndex       = "secretGatewayIndex"
-	targetRefGrantRouteIndex = "targetRefGrantRouteIndex"
-	serviceHTTPRouteIndex    = "serviceHTTPRouteIndex"
-	serviceTLSRouteIndex     = "serviceTLSRouteIndex"
+	classGatewayIndex          = "classGatewayIndex"
+	gatewayTLSRouteIndex       = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex      = "gatewayHTTPRouteIndex"
+	secretGatewayIndex         = "secretGatewayIndex"
+	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
+	serviceHTTPRouteIndex      = "serviceHTTPRouteIndex"
+	serviceTLSRouteIndex       = "serviceTLSRouteIndex"
+	authenFilterHTTPRouteIndex = "authenHTTPRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -156,6 +158,14 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		return err
 	}
 
+	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
+	if err := c.Watch(
+		&source.Kind{Type: &egv1a1.AuthenticationFilter{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)); err != nil {
+		return err
+	}
+
 	r.log.Info("watching gatewayAPI related objects")
 	return nil
 }
@@ -167,6 +177,18 @@ type resourceMappings struct {
 	allAssociatedBackendRefs map[types.NamespacedName]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
 	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1a2.ReferenceGrant
+	// httpRouteToAuthenFilters is a map of httproute to authenticationfilter associations,
+	// where the key is the httproute namespaced name.
+	httpRouteToAuthenFilters map[types.NamespacedName][]*egv1a1.AuthenticationFilter
+}
+
+func newResourceMapping() *resourceMappings {
+	return &resourceMappings{
+		allAssociatedNamespaces:  map[string]struct{}{},
+		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
+		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
+		httpRouteToAuthenFilters: map[types.NamespacedName][]*egv1a1.AuthenticationFilter{},
+	}
 }
 
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
@@ -238,21 +260,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		}
 	}
 
-	resourceTree := &gatewayapi.Resources{
-		Gateways:        []*gwapiv1b1.Gateway{},
-		HTTPRoutes:      []*gwapiv1b1.HTTPRoute{},
-		TLSRoutes:       []*gwapiv1a2.TLSRoute{},
-		Services:        []*corev1.Service{},
-		Secrets:         []*corev1.Secret{},
-		ReferenceGrants: []*gwapiv1a2.ReferenceGrant{},
-		Namespaces:      []*corev1.Namespace{},
-	}
-
-	resourceMap := &resourceMappings{
-		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
-		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
-	}
+	// Initialize resource types.
+	resourceTree := gatewayapi.NewResources()
+	resourceMap := newResourceMapping()
 
 	// Find gateways for the acceptedGC
 	// Find the Gateways that reference this Class.
@@ -373,6 +383,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		resourceTree.Namespaces = append(resourceTree.Namespaces, namespace)
 	}
 
+	// Add all AuthenticationFilters to the resourceTree.
+	for _, hroute := range resourceTree.HTTPRoutes {
+		if filters, ok := resourceMap.httpRouteToAuthenFilters[utils.NamespacedName(hroute)]; ok {
+			resourceTree.AuthenFilters = append(resourceTree.AuthenFilters, filters...)
+		}
+	}
+
 	if err := updater(acceptedGC, true); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
 		return reconcile.Result{}, err
@@ -469,6 +486,19 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
+func (r *gatewayAPIReconciler) getAuthenticationFilter(ctx context.Context, ns, name string) (*egv1a1.AuthenticationFilter, error) {
+	filter := new(egv1a1.AuthenticationFilter)
+	key := types.NamespacedName{
+		Namespace: ns,
+		Name:      name,
+	}
+	if err := r.client.Get(ctx, key, filter); err != nil {
+		return nil, err
+	}
+
+	return filter, nil
+}
+
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
 		refGrant := rawObj.(*gwapiv1a2.ReferenceGrant)
@@ -483,9 +513,12 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 	return nil
 }
 
-// addHTTPRouteIndexers adds indexing on HTTPRoute, for Service objects that are
-// referenced in HTTPRoute objects via `.spec.rules.backendRefs`. This helps in
-// querying for HTTPRoutes that are affected by a particular Service CRUD.
+// addHTTPRouteIndexers adds indexing on HTTPRoute.
+//   - For Service objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
+//     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
+//   - For AuthenticationFilter objects that are referenced in HTTPRoute objects via
+//     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
+//     particular AuthenticationFilter CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, gatewayHTTPRouteIndex, func(rawObj client.Object) []string {
 		httproute := rawObj.(*gwapiv1b1.HTTPRoute)
@@ -510,6 +543,30 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc); err != nil {
 		return err
 	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, authenFilterHTTPRouteIndex, func(obj client.Object) []string {
+		httproute := obj.(*gwapiv1b1.HTTPRoute)
+		var filters []string
+		for _, rule := range httproute.Spec.Rules {
+			for i := range rule.Filters {
+				filter := rule.Filters[i]
+				if filter.Type == gwapiv1a2.HTTPRouteFilterExtensionRef {
+					if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+						filters = append(filters,
+							types.NamespacedName{
+								Namespace: httproute.Namespace,
+								Name:      string(filter.ExtensionRef.Name),
+							}.String(),
+						)
+					}
+				}
+			}
+		}
+		return filters
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }
 
