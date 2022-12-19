@@ -37,14 +37,15 @@ metadata:
   name: ratelimit-specific-user
 spec:
   type: Global
-  rules:
-  - matches:
-    - header:
-        name: x-user-id
-        value: one
-      limit:
-        requests: 10
-        unit: Hour
+  global:
+    rules:
+    - matches:
+      - header:
+          name: x-user-id
+          value: one
+        limit:
+          requests: 10
+          unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -84,11 +85,12 @@ metadata:
   name: ratelimit-all-requests
 spec:
   type: Global
-  rules:
-  - matches:
-    - limit:
-        requests: 1000
-        unit: Second
+  global:
+    rules:
+    - matches:
+      - limit:
+          requests: 1000
+          unit: Second
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -129,14 +131,15 @@ metadata:
   name: ratelimit-per-user
 spec:
   type: Global
-  rules:
-  - matches:
-    - Type: Distinct
-      header:
-        name: x-user-id
-      limit:
-        requests: 10
-        unit: Hour
+  global:
+    rules:
+    - matches:
+      - Type: Distinct
+        header:
+          name: x-user-id
+        limit:
+          requests: 10
+          unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -178,11 +181,12 @@ metadata:
   name: ratelimit-all-safeguard-app 
 spec:
   type: Global
-  rules:
-  - matches:
-    - limit:
-        requests: 100
-        unit: Second
+  global:
+    rules:
+    - matches:
+      - limit:
+          requests: 100
+          unit: Second
 ---
 
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -191,14 +195,15 @@ metadata:
   name: ratelimit-per-user
 spec:
   type: Global
-  rules:
-  - matches:
-    - Type: Distinct
-      header:
-        name: x-user-id
-      limit:
-        requests: 1000
-        unit: Hour
+  global:
+    rules:
+    - matches:
+      - Type: Distinct
+        header:
+          name: x-user-id
+        limit:
+          requests: 1000
+          unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -246,13 +251,22 @@ within `ratelimit-per-user` will get activated for `baz`, and `baz`'s requests w
 
 ## Design Decisions
 
-* The initial design uses an Extension filter to apply the Rate Limit functionality on a specific `HTTPRoute`.
-This was preferred over the PolicyAttachment Extension mechanism, because it is unclear whether Rate Limit
+* The initial design uses an Extension filter to apply the Rate Limit functionality on a specific [HTTPRoute][].
+This was preferred over the [PolicyAttachment][] extension mechanism, because it is unclear whether Rate Limit
 will be required to be enforced or overridden by the platform administrator or not.
-* The RateFilter can only be applied as a filter to a `HTTPRouteRule`, applying it across all backends within a `HTTPRoute`
-and cannot be applied a filter within a `HTTPBackendRef` for a specific backend.
-* The HTTPRoute API has a `matches` field within each `rule` to select a specific traffic flow to be routed to
-the destination backend. The RateLimitFilter API that can be attached to an HTTPRoute via an `extensionRef` filter,
+* The RateLimitFilter can only be applied as a filter to a [HTTPRouteRule[], applying it across all backends within a [HTTPRoute][]
+and cannot be applied a filter within a [HTTPBackendRef][] for a specific backend.
+* The [HTTPRoute][] API has a [matches][] field within each [rule][] to select a specific traffic flow to be routed to
+the destination backend. The RateLimitFilter API that can be attached to an HTTPRoute via an [extensionRef][] filter,
 also has a `matches` field within each `rule` to select attributes within the traffic flow to rate limit specific clients.
 The two levels of `matches` allow for flexibility and aim to hold match information specific to its use, allowing the author/owner
-of each configuration to be different.
+of each configuration to be different. It also allows the `matches` field within the RateLimitFilter to be enhanced with other matchable 
+attribute such as [IP subnet][] in the future that are not relevant in the [HTTPRoute][] API.
+
+[PolicyAttachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPBackendRef
+[matches]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
+[rule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
+[extensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilterType
+[IP subnet]: https://en.wikipedia.org/wiki/Subnetwork
