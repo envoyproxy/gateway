@@ -211,7 +211,11 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			for _, filter := range tc.filters {
 				objs = append(objs, filter)
 			}
-			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(objs...).Build()
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				WithIndex(&gwapiv1b1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc).
+				Build()
 
 			// Process the test case httproutes.
 			resourceTree := gatewayapi.NewResources()
