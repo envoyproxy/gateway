@@ -18,7 +18,7 @@ type RateLimitFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of HTTPRoute.
+	// Spec defines the desired state of RateLimitFilter.
 	Spec RateLimitFilterSpec `json:"spec"`
 }
 

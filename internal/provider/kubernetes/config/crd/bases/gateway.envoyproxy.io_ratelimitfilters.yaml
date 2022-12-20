@@ -38,7 +38,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of HTTPRoute.
+            description: Spec defines the desired state of RateLimitFilter.
             properties:
               global:
                 description: Global rate limit configuration.
