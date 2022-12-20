@@ -73,7 +73,7 @@ type RateLimitRule struct {
 	// Matches holds the list of match conditions to select
 	// a specific traffic flow.
 	// All individual match conditions must hold True for this rule
-	// for its limit to be applied.
+	// and its limit to be applied.
 	// If matches is empty, is equivalent to True, and
 	// the limit is applied.
 	//
