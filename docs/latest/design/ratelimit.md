@@ -40,12 +40,12 @@ spec:
   global:
     rules:
     - matches:
-      - header:
-          name: x-user-id
+      - headers:
+        - name: x-user-id
           value: one
-        limit:
-          requests: 10
-          unit: Hour
+      limit:
+        requests: 10
+        unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -53,23 +53,23 @@ metadata:
   name: example
 spec:
   parentRefs:
-    - name: eg
+  - name: eg
   hostnames:
-    - www.example.com
+  - www.example.com
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /foo
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: RateLimitFilter
-            name: ratelimit-specific-user
-      backendRefs:
-        - name: backend
-          port: 3000
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-specific-user
+    backendRefs:
+    - name: backend
+      port: 3000
 ```
 
 ### Rate limit all traffic flows
@@ -87,10 +87,9 @@ spec:
   type: Global
   global:
     rules:
-    - matches:
-      - limit:
-          requests: 1000
-          unit: Second
+    - limit:
+        requests: 1000
+        unit: Second
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -98,23 +97,23 @@ metadata:
   name: example
 spec:
   parentRefs:
-    - name: eg
+  - name: eg
   hostnames:
-    - www.example.com
+  - www.example.com
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /foo
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: RateLimitFilter
-            name: ratelimit-all-requests
-      backendRefs:
-        - name: backend
-          port: 3000
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-all-requests
+    backendRefs:
+    - name: backend
+      port: 3000
 ```
 
 ### Rate limit per distinct value
@@ -134,12 +133,12 @@ spec:
   global:
     rules:
     - matches:
-      - Type: Distinct
-        header:
+      - headers:
+        - type: Distinct
           name: x-user-id
-        limit:
-          requests: 10
-          unit: Hour
+      limit:
+        requests: 10
+        unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -147,23 +146,23 @@ metadata:
   name: example
 spec:
   parentRefs:
-    - name: eg
+  - name: eg
   hostnames:
-    - www.example.com
+  - www.example.com
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /foo
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: RateLimitFilter
-            name: ratelimit-per-user 
-      backendRefs:
-        - name: backend
-          port: 3000
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-per-user 
+    backendRefs:
+    - name: backend
+      port: 3000
 ```
 
 ## Multiple RateLimitFilters, rules and matches
@@ -183,10 +182,9 @@ spec:
   type: Global
   global:
     rules:
-    - matches:
-      - limit:
-          requests: 100
-          unit: Second
+    - limit:
+        requests: 100
+        unit: Second
 ---
 
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -198,12 +196,12 @@ spec:
   global:
     rules:
     - matches:
-      - Type: Distinct
-        header:
+      - headers:
+        - type: Distinct
           name: x-user-id
-        limit:
-          requests: 1000
-          unit: Hour
+      limit:
+        requests: 1000
+        unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -211,28 +209,28 @@ metadata:
   name: example
 spec:
   parentRefs:
-    - name: eg
+  - name: eg
   hostnames:
-    - www.example.com
+  - www.example.com
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /foo
-      filters:
-        - type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: RateLimitFilter
-            name: ratelimit-per-user
-	- type: ExtensionRef
-          extensionRef:
-            group: gateway.envoyproxy.io
-            kind: RateLimitFilter
-            name: ratelimit-all-safeguard-app    
-      backendRefs:
-        - name: backend
-          port: 3000
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-per-user
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-all-safeguard-app
+    backendRefs:
+    - name: backend
+      port: 3000
 ```
 
 * The user has created two `RateLimitFilter`s  and has attached it to a `HTTPRoute` - one(`ratelimit-all-safeguard-app`) to
