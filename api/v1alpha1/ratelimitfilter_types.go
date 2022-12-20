@@ -58,10 +58,13 @@ const (
 
 // GlobalRateLimit defines the global rate limit configuration.
 type GlobalRateLimit struct {
-	// Rules are a list of RateLimit matchers and limits.
+	// Rules are a list of RateLimit selectors and limits.
 	// Each rule and its associated limit is applied
-	// in a mutually exclusive way i.e. multiple
-	// rules might get applied for the same traffic flow.
+	// in a mutually exclusive way i.e. if multiple
+	// rules get selected, each of their associated
+	// limits get applied, so a single traffic request
+	// might increase the rate limit counters for multiple
+	// rules if selected.
 	//
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
@@ -70,27 +73,31 @@ type GlobalRateLimit struct {
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
-	// Matches holds the list of match conditions to select
-	// a specific traffic flow.
-	// All individual match conditions must hold True for this rule
+	// ClientSelectors holds the list of select conditions to select
+	// specific clients using attributes from the traffic flow.
+	// All individual select conditions must hold True for this rule
 	// and its limit to be applied.
-	// If matches is empty, is equivalent to True, and
+	// If this field is empty, it is equivalent to True, and
 	// the limit is applied.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
-	Matches []RateLimitMatch `json:"matches,omitempty"`
+	ClientSelectors []RateLimitSelectCondition `json:"clientSelectors,omitempty"`
 	// Limit holds the rate limit values.
-	// This limit is enforced for traffic flows when the matches
-	// compute to True.
+	// This limit is applied for traffic flows when the selectors
+	// compute to True, causing the request to be counted towards the limit.
+	// The limit is enforced and the request is ratelimited, i.e. a response with
+	// 429 HTTP status code is sent back to the client when
+	// the selected requests have reached the limit.
 	Limit RateLimitValue `json:"limit"`
 }
 
-// RateLimitMatch specifies the attributes within the traffic flow that can
-// be matched on.
-type RateLimitMatch struct {
+// RateLimitSelectCondition specifies the attributes within the traffic flow that can
+// be used to select a subset of clients to be ratelimited.
+// All the individual conditions must hold True for the overall condition to hold True.
+type RateLimitSelectCondition struct {
 	// Headers is a list of all header matches that must be matched
-	// for the overall match condition to hold True.
+	// for the overall select condition to hold True.
 	//
 	// +listType=map
 	// +listMapKey=name

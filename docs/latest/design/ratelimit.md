@@ -39,7 +39,7 @@ spec:
   type: Global
   global:
     rules:
-    - matches:
+    - clientSelectors:
       - headers:
         - name: x-user-id
           value: one
@@ -57,7 +57,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - matches:
+  - clientSelectors:
     - path:
         type: PathPrefix
         value: /foo
@@ -101,7 +101,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - matches:
+  - clientSelectors:
     - path:
         type: PathPrefix
         value: /foo
@@ -132,7 +132,7 @@ spec:
   type: Global
   global:
     rules:
-    - matches:
+    - clientSelectors:
       - headers:
         - type: Distinct
           name: x-user-id
@@ -150,7 +150,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - matches:
+  - clientSelectors:
     - path:
         type: PathPrefix
         value: /foo
@@ -165,11 +165,10 @@ spec:
       port: 3000
 ```
 
-## Multiple RateLimitFilters, rules and matches
+## Multiple RateLimitFilters, rules and clientSelectors
 * Users can create multiple `RateLimitFilter`s and apply it to the same `HTTPRoute`. In such a case each
 `RateLimitFilter` will be applied to the route and matched (and limited) in a mutually exclusive way, independent of each other.
-* Rate limits are applied for each `RateLimitFilter` `rule` when the conditions under `matches` hold true.
-* A `match` holds true, when all conditions under the `match` hold true.
+* Rate limits are applied for each `RateLimitFilter` `rule` when ALL the conditions under `clientSelectors` hold true.
 
 Here's an example highlighting this -
 
@@ -195,7 +194,7 @@ spec:
   type: Global
   global:
     rules:
-    - matches:
+    - clientSelectors:
       - headers:
         - type: Distinct
           name: x-user-id
@@ -213,7 +212,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - matches:
+  - clientSelectors:
     - path:
         type: PathPrefix
         value: /foo
@@ -256,9 +255,9 @@ will be required to be enforced or overridden by the platform administrator or n
 and cannot be applied a filter within a [HTTPBackendRef][] for a specific backend.
 * The [HTTPRoute][] API has a [matches][] field within each [rule][] to select a specific traffic flow to be routed to
 the destination backend. The RateLimitFilter API that can be attached to an HTTPRoute via an [extensionRef][] filter,
-also has a `matches` field within each `rule` to select attributes within the traffic flow to rate limit specific clients.
-The two levels of `matches` allow for flexibility and aim to hold match information specific to its use, allowing the author/owner
-of each configuration to be different. It also allows the `matches` field within the RateLimitFilter to be enhanced with other matchable 
+also has a `clientSelectors` field within each `rule` to select attributes within the traffic flow to rate limit specific clients.
+The two levels of selectors/matches allow for flexibility and aim to hold match information specific to its use, allowing the author/owner
+of each configuration to be different. It also allows the `clientSelectors` field within the RateLimitFilter to be enhanced with other matchable
 attribute such as [IP subnet][] in the future that are not relevant in the [HTTPRoute][] API.
 
 [PolicyAttachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/

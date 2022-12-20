@@ -44,49 +44,32 @@ spec:
                 description: Global rate limit configuration.
                 properties:
                   rules:
-                    description: Rules are a list of RateLimit matchers and limits.
+                    description: Rules are a list of RateLimit selectors and limits.
                       Each rule and its associated limit is applied in a mutually
-                      exclusive way i.e. multiple rules might get applied for the
-                      same traffic flow.
+                      exclusive way i.e. if multiple rules get selected, each of their
+                      associated limits get applied, so a single traffic request might
+                      increase the rate limit counters for multiple rules if selected.
                     items:
                       description: RateLimitRule defines the semantics for matching
                         attributes from the incoming requests, and setting limits
                         for them.
                       properties:
-                        limit:
-                          description: Limit holds the rate limit values. This limit
-                            is enforced for traffic flows when the matches compute
-                            to True.
-                          properties:
-                            requests:
-                              type: integer
-                            unit:
-                              description: "RateLimitUnit specifies the intervals
-                                for setting rate limits. Valid RateLimitUnit values
-                                are: \n * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
-                              enum:
-                              - Second
-                              - Minute
-                              - Hour
-                              - Day
-                              type: string
-                          required:
-                          - requests
-                          - unit
-                          type: object
-                        matches:
-                          description: Matches holds the list of match conditions
-                            to select a specific traffic flow. All individual match
-                            conditions must hold True for this rule and its limit
-                            to be applied. If matches is empty, is equivalent to True,
-                            and the limit is applied.
+                        clientSelectors:
+                          description: ClientSelectors holds the list of select conditions
+                            to select specific clients using attributes from the traffic
+                            flow. All individual select conditions must hold True
+                            for this rule and its limit to be applied. If this field
+                            is empty, it is equivalent to True, and the limit is applied.
                           items:
-                            description: RateLimitMatch specifies the attributes within
-                              the traffic flow that can be matched on.
+                            description: RateLimitSelectCondition specifies the attributes
+                              within the traffic flow that can be used to select a
+                              subset of clients to be ratelimited. All the individual
+                              conditions must hold True for the overall condition
+                              to hold True.
                             properties:
                               headers:
                                 description: Headers is a list of all header matches
-                                  that must be matched for the overall match condition
+                                  that must be matched for the overall select condition
                                   to hold True.
                                 items:
                                   description: HeaderMatch defines the match attributes
@@ -125,6 +108,31 @@ spec:
                             type: object
                           maxItems: 8
                           type: array
+                        limit:
+                          description: Limit holds the rate limit values. This limit
+                            is applied for traffic flows when the selectors compute
+                            to True, causing the request to be counted towards the
+                            limit. The limit is enforced and the request is ratelimited,
+                            i.e. a response with 429 HTTP status code is sent back
+                            to the client when the selected requests have reached
+                            the limit.
+                          properties:
+                            requests:
+                              type: integer
+                            unit:
+                              description: "RateLimitUnit specifies the intervals
+                                for setting rate limits. Valid RateLimitUnit values
+                                are: \n * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
+                              enum:
+                              - Second
+                              - Minute
+                              - Hour
+                              - Day
+                              type: string
+                          required:
+                          - requests
+                          - unit
+                          type: object
                       required:
                       - limit
                       type: object
