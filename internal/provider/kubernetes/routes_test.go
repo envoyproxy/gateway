@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -137,7 +138,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
 										ExtensionRef: &gwapiv1b1.LocalObjectReference{
 											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-											Kind:  gwapiv1b1.Kind(egv1a1.AuthenticationFilterKind),
+											Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
 											Name:  gwapiv1b1.ObjectName("test"),
 										},
 									},
@@ -161,7 +162,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			filters: []*egv1a1.AuthenticationFilter{
 				{
 					TypeMeta: metav1.TypeMeta{
-						Kind:       egv1a1.AuthenticationFilterKind,
+						Kind:       egv1a1.KindAuthenticationFilter,
 						APIVersion: egv1a1.GroupVersion.String(),
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -226,8 +227,13 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
 				if tc.filters != nil {
-					for _, route := range tc.routes {
-						require.Equal(t, tc.filters, resourceMap.httpRouteToAuthenFilters[utils.NamespacedName(route)])
+					for i, filter := range tc.filters {
+						key := types.NamespacedName{
+							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
+							Namespace: tc.routes[i].Namespace,
+							Name:      filter.Name,
+						}
+						require.Equal(t, filter, resourceMap.authenFilters[key])
 					}
 				}
 			} else {

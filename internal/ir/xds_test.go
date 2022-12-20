@@ -62,45 +62,6 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&weightedInvalidBackendsHTTPRoute},
 	}
-	happyJwtAuthenListener = HTTPListener{
-		Name:      "happy",
-		Address:   "0.0.0.0",
-		Port:      80,
-		Hostnames: []string{"example.com"},
-		Routes:    []*HTTPRoute{&happyHTTPRoute},
-		RequestAuthentication: &RequestAuthentication{
-			JWT: &JwtRequestAuthentication{
-				Rules: []JwtRule{
-					{
-						Match: HTTPRequestMatch{
-							PathMatch: ptrTo(StringMatch{
-								Name:  "test",
-								Exact: ptrTo("/test"),
-							}),
-						},
-						Requires: &JwtRequirement{
-							Providers: []egv1a1.JwtAuthenticationFilterProvider{
-								{
-									Name: "test1",
-									RemoteJWKS: egv1a1.RemoteJWKS{
-										URI: "https://test1.local",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	invalidJwtAuthenListener = HTTPListener{
-		Name:                  "happy",
-		Address:               "0.0.0.0",
-		Port:                  80,
-		Hostnames:             []string{"example.com"},
-		Routes:                []*HTTPRoute{&happyHTTPRoute},
-		RequestAuthentication: &RequestAuthentication{JWT: nil},
-	}
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
@@ -436,6 +397,37 @@ var (
 		},
 	}
 
+	jwtAuthenHTTPRoute = HTTPRoute{
+		Name: "jwtauthen",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("jwtauthen"),
+		},
+		RequestAuthentication: &RequestAuthentication{
+			JWT: &JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+						},
+						Requires: &JwtRequirement{
+							Providers: []egv1a1.JwtAuthenticationFilterProvider{
+								{
+									Name: "test1",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test1.local",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Host: "10.11.12.13",
@@ -488,20 +480,6 @@ func TestValidateXds(t *testing.T) {
 				HTTP: []*HTTPListener{&happyHTTPListener, &weightedInvalidBackendsHTTPListener},
 			},
 			want: nil,
-		},
-		{
-			name: "happy jwt authen",
-			input: Xds{
-				HTTP: []*HTTPListener{&happyJwtAuthenListener},
-			},
-			want: nil,
-		},
-		{
-			name: "invalid jwt authen",
-			input: Xds{
-				HTTP: []*HTTPListener{&invalidJwtAuthenListener},
-			},
-			want: []error{ErrRequestAuthenRequiresJwt},
 		},
 	}
 	for _, test := range tests {
@@ -558,16 +536,6 @@ func TestValidateHTTPListener(t *testing.T) {
 			name:  "invalid route match",
 			input: invalidRouteMatchHTTPListener,
 			want:  []error{ErrHTTPRouteMatchEmpty},
-		},
-		{
-			name:  "happy jwt authen",
-			input: happyJwtAuthenListener,
-			want:  nil,
-		},
-		{
-			name:  "invalid jwt authen",
-			input: invalidJwtAuthenListener,
-			want:  []error{ErrRequestAuthenRequiresJwt},
 		},
 	}
 	for _, test := range tests {
@@ -833,6 +801,11 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "add-response-header-empty",
 			input: addResponseHeaderEmptyHTTPRoute,
 			want:  []error{ErrAddHeaderEmptyName},
+		},
+		{
+			name:  "jwt-authen-httproute",
+			input: jwtAuthenHTTPRoute,
+			want:  nil,
 		},
 	}
 	for _, test := range tests {

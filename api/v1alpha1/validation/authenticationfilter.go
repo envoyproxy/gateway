@@ -8,6 +8,7 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
@@ -64,8 +65,15 @@ func ValidateJwtProvider(jwt *egv1a1.JwtAuthenticationFilterProvider) error {
 	switch {
 	case len(jwt.Name) == 0:
 		errs = append(errs, errors.New("name must be set for jwt provider"))
+	case len(jwt.Issuer) != 0:
+		if _, err := url.ParseRequestURI(jwt.Issuer); err != nil {
+			errs = append(errs, fmt.Errorf("invalid issuer URI: %v", err))
+		}
 	case len(jwt.RemoteJWKS.URI) == 0:
 		errs = append(errs, fmt.Errorf("uri must be set for remote JWKS provider: %s", jwt.Name))
+	}
+	if _, err := url.ParseRequestURI(jwt.RemoteJWKS.URI); err != nil {
+		errs = append(errs, fmt.Errorf("invalid remote JWKS URI: %v", err))
 	}
 
 	return utilerrors.NewAggregate(errs)

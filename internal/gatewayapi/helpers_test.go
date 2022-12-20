@@ -79,7 +79,7 @@ func TestValidateAuthenFilterRef(t *testing.T) {
 				Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
 				ExtensionRef: &gwapiv1b1.LocalObjectReference{
 					Group: "UnsupportedGroup",
-					Kind:  egv1a1.AuthenticationFilterKind,
+					Kind:  egv1a1.KindAuthenticationFilter,
 					Name:  "test",
 				},
 			},
@@ -103,7 +103,7 @@ func TestValidateAuthenFilterRef(t *testing.T) {
 				Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
 				ExtensionRef: &gwapiv1b1.LocalObjectReference{
 					Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-					Kind:  egv1a1.AuthenticationFilterKind,
+					Kind:  egv1a1.KindAuthenticationFilter,
 					Name:  "test",
 				},
 			},

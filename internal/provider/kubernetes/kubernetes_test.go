@@ -895,7 +895,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
 									ExtensionRef: &gwapiv1b1.LocalObjectReference{
 										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1b1.Kind(egv1a1.AuthenticationFilterKind),
+										Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
 										Name:  gwapiv1b1.ObjectName("test-authen"),
 									},
 								},
