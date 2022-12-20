@@ -42,6 +42,7 @@ type RateLimitFilterSpec struct {
 	// +unionDiscriminator
 	Type RateLimitType `json:"type"`
 	// Global rate limit configuration.
+	//
 	// +optional
 	Global *GlobalRateLimit `json:"global"`
 }
@@ -58,6 +59,9 @@ const (
 // GlobalRateLimit defines the global rate limit configuration.
 type GlobalRateLimit struct {
 	// Rules are a list of RateLimit matchers and limits.
+	// Each rule and its associated limit is applied
+	// in a mutually exclusive way i.e. multiple
+	// rules might get applied for the same traffic flow.
 	//
 	// +kubebuilder:validation:MaxItems=16
 	Rules []RateLimitRule `json:"rules"`
@@ -66,15 +70,28 @@ type GlobalRateLimit struct {
 // RateLimitRule defines the semantics for matching attributes
 // from the incoming requests, and setting limits for them.
 type RateLimitRule struct {
+	// Matches holds the list of match conditions to select
+	// a specific traffic flow.
+	// All individual match conditions must hold True for this rule
+	// for its limit to be applied.
+	// If matches is empty, is equivalent to True, and
+	// the limit is applied.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=8
 	Matches []RateLimitMatch `json:"matches,omitempty"`
-	Limit   RateLimitValue   `json:"limit"`
+	// Limit holds the rate limit values.
+	// This limit is enforced for traffic flows when the matches
+	// compute to True.
+	Limit RateLimitValue `json:"limit"`
 }
 
 // RateLimitMatch specifies the attributes within the traffic flow that can
 // be matched on.
 type RateLimitMatch struct {
+	// Headers is a list of all header matches that must be matched
+	// for the overall match condition to hold True.
+	//
 	// +listType=map
 	// +listMapKey=name
 	// +optional
