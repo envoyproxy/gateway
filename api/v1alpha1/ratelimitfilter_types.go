@@ -96,8 +96,8 @@ type RateLimitRule struct {
 // be used to select a subset of clients to be ratelimited.
 // All the individual conditions must hold True for the overall condition to hold True.
 type RateLimitSelectCondition struct {
-	// Headers is a list of all header matches that must be matched
-	// for the overall select condition to hold True.
+	// Headers is a list of request headers to match. Multiple header values are ANDed together,
+	// meaning, a request MUST match all the specified headers.
 	//
 	// +listType=map
 	// +listMapKey=name

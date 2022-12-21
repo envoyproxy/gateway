@@ -68,9 +68,10 @@ spec:
                               to hold True.
                             properties:
                               headers:
-                                description: Headers is a list of all header matches
-                                  that must be matched for the overall select condition
-                                  to hold True.
+                                description: Headers is a list of request headers
+                                  to match. Multiple header values are ANDed together,
+                                  meaning, a request MUST match all the specified
+                                  headers.
                                 items:
                                   description: HeaderMatch defines the match attributes
                                     within the HTTP Headers of the request.
