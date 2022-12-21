@@ -123,6 +123,7 @@ type HeaderMatch struct {
 	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
 	// Do not set this field when Type="Distinct", implying matching on any/all unique values within the header.
 	// +optional
+	// +kubebuilder:validation:MaxLength=1024
 	Value *string `json:"value,omitempty"`
 }
 
@@ -131,6 +132,7 @@ type HeaderMatch struct {
 //
 //   - "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header.
 //   - "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header.
+//     The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
 //   - "Distinct": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
 //     Note that each unique value will receive its own rate limit bucket.
 //

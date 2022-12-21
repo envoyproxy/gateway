@@ -96,6 +96,7 @@ spec:
                                         Do not set this field when Type="Distinct",
                                         implying matching on any/all unique values
                                         within the header.
+                                      maxLength: 1024
                                       type: string
                                   required:
                                   - name
