@@ -161,3 +161,60 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 	return nil
 }
+
+// processUDPRoutes finds UDPRoutes corresponding to a gatewayNamespaceName, further checks for
+// the backend references and pushes the UDPRoutes to the resourceTree.
+func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayNamespaceName string,
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	udpRouteList := &gwapiv1a2.UDPRouteList{}
+	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gatewayUDPRouteIndex, gatewayNamespaceName),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated UDPRoutes")
+		return err
+	}
+
+	for _, udpRoute := range udpRouteList.Items {
+		udpRoute := udpRoute
+		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
+
+		for _, rule := range udpRoute.Spec.Rules {
+			for _, backendRef := range rule.BackendRefs {
+				backendRef := backendRef
+				ref := gatewayapi.UpgradeBackendRef(backendRef)
+				if err := validateBackendRef(&ref); err != nil {
+					r.log.Error(err, "invalid backendRef")
+					continue
+				}
+
+				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
+				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
+					Namespace: backendNamespace,
+					Name:      string(backendRef.Name),
+				}] = struct{}{}
+
+				if backendNamespace != udpRoute.Namespace {
+					from := ObjectKindNamespacedName{kind: gatewayapi.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					refGrant, err := r.findReferenceGrant(ctx, from, to)
+					switch {
+					case err != nil:
+						r.log.Error(err, "failed to find ReferenceGrant")
+					case refGrant == nil:
+						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+					default:
+						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
+					}
+				}
+			}
+		}
+
+		resourceMap.allAssociatedNamespaces[udpRoute.Namespace] = struct{}{}
+		resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, &udpRoute)
+	}
+
+	return nil
+}
