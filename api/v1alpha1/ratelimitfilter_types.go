@@ -44,7 +44,7 @@ type RateLimitFilterSpec struct {
 	// Global rate limit configuration.
 	//
 	// +optional
-	Global *GlobalRateLimit `json:"global"`
+	Global *GlobalRateLimit `json:"global,omitempty"`
 }
 
 // RateLimitType specifies the types of RateLimiting.
@@ -52,7 +52,7 @@ type RateLimitFilterSpec struct {
 type RateLimitType string
 
 const (
-	// In this mode, the rate limits are applied across all Envoy proxy instances.
+	// GlobalRateLimitType allows the rate limits to be applied across all Envoy proxy instances.
 	GlobalRateLimitType RateLimitType = "Global"
 )
 
