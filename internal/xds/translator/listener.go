@@ -106,7 +106,7 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 	}
 
 	if irListener.TLS != nil {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.Name, irListener.TLS)
+		tSocket, err := buildXdsDownstreamTLSSocket(irListener.Name)
 		if err != nil {
 			return err
 		}
@@ -246,8 +246,7 @@ func addXdsTLSInspectorFilter(xdsListener *listener.Listener) error {
 	return nil
 }
 
-func buildXdsDownstreamTLSSocket(listenerName string,
-	tlsConfig *ir.TLSListenerConfig) (*core.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(listenerName string) (*core.TransportSocket, error) {
 	tlsCtx := &tls.DownstreamTlsContext{
 		CommonTlsContext: &tls.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: []*tls.SdsSecretConfig{{
@@ -273,7 +272,7 @@ func buildXdsDownstreamTLSSocket(listenerName string,
 }
 
 func buildXdsDownstreamTLSSecret(listenerName string,
-	tlsConfig *ir.TLSListenerConfig) (*tls.Secret, error) {
+	tlsConfig *ir.TLSListenerConfig) *tls.Secret {
 	// Build the tls secret
 	return &tls.Secret{
 		Name: listenerName,
@@ -287,7 +286,7 @@ func buildXdsDownstreamTLSSecret(listenerName string,
 				},
 			},
 		},
-	}, nil
+	}
 }
 
 func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*listener.Listener, error) {

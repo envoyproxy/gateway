@@ -328,7 +328,7 @@ func (r RouteDestination) Validate() error {
 	return errs
 }
 
-// Add header configures a headder to be added to a request or response.
+// Add header configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
 	Name   string

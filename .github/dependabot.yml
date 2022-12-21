@@ -1,0 +1,47 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /tools/src/codespell
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/controller-gen
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/golangci-lint
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/kind
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/kustomize
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/setup-envtest
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /tools/src/sphinx-build
+    schedule:
+      interval: weekly
+  - package-ecosystem: pip
+    directory: /tools/src/yamllint
+    schedule:
+      interval: weekly

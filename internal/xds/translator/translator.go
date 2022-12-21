@@ -67,10 +67,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
-			secret, err := buildXdsDownstreamTLSSecret(httpListener.Name, httpListener.TLS)
-			if err != nil {
-				return nil, multierror.Append(err, errors.New("error building xds listener tls secret"))
-			}
+			secret := buildXdsDownstreamTLSSecret(httpListener.Name, httpListener.TLS)
 			tCtx.AddXdsResource(resource.SecretType, secret)
 		}
 
@@ -83,20 +80,14 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute, err := buildXdsRoute(httpRoute)
-			if err != nil {
-				return nil, multierror.Append(err, errors.New("error building xds route"))
-			}
+			xdsRoute := buildXdsRoute(httpRoute)
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			xdsCluster, err := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2)
-			if err != nil {
-				return nil, multierror.Append(err, errors.New("error building xds cluster"))
-			}
+			xdsCluster := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2)
 			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		}
@@ -106,10 +97,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	for _, tcpListener := range ir.TCP {
 		// 1:1 between IR TCPListener and xDS Cluster
-		xdsCluster, err := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */)
-		if err != nil {
-			return nil, multierror.Append(err, errors.New("error building xds cluster"))
-		}
+		xdsCluster := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */)
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		// Search for an existing listener, if it does not exist, create one.
@@ -126,10 +114,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	for _, udpListener := range ir.UDP {
 		// 1:1 between IR UDPListener and xDS Cluster
-		xdsCluster, err := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */)
-		if err != nil {
-			return nil, multierror.Append(err, errors.New("error building xds cluster"))
-		}
+		xdsCluster := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */)
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
