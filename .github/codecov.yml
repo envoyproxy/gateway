@@ -1,0 +1,19 @@
+codecov:
+  # we build and upload only a single coverage file, so we don't need to wait for other CI
+  # jobs to complete for us to see the coverage results
+  require_ci_to_pass: false
+
+# not interested in inline PR comments via github checks
+github_checks: false
+
+comment:
+  layout: "diff,files"
+
+coverage:
+  status:
+    # require coverage to not be worse than previously
+    project:
+      default:
+        target: auto
+        # allow a potential drop of up to 5%
+        threshold: 5%
