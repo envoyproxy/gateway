@@ -209,6 +209,8 @@ type HTTPRoute struct {
 	Redirect *Redirect
 	// Destinations associated with this matched route.
 	Destinations []*RouteDestination
+	// Rewrite to be changed for this route.
+	URLRewrite *URLRewrite
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -247,6 +249,11 @@ func (h HTTPRoute) Validate() error {
 	}
 	if h.DirectResponse != nil {
 		if err := h.DirectResponse.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if h.URLRewrite != nil {
+		if err := h.URLRewrite.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -361,6 +368,28 @@ func (r DirectResponse) Validate() error {
 	var errs error
 	if status := r.StatusCode; status > 599 || status < 100 {
 		errs = multierror.Append(errs, ErrDirectResponseStatusInvalid)
+	}
+
+	return errs
+}
+
+// Re holds the details for how to rewrite a request
+// +k8s:deepcopy-gen=true
+type URLRewrite struct {
+	// Path contains config for rewriting the path of the request.
+	Path *HTTPPathModifier
+	// Hostname configures the replacement of the request's hostname.
+	Hostname *string
+}
+
+// Validate the fields within the URLRewrite structure
+func (r URLRewrite) Validate() error {
+	var errs error
+
+	if r.Path != nil {
+		if err := r.Path.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
 	}
 
 	return errs

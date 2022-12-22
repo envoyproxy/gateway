@@ -1,0 +1,17 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        headers:
+        - name: :authority
+          stringMatch:
+            exact: gateway.envoyproxy.io
+        prefix: /origin
+      route:
+        appendXForwardedHost: true
+        cluster: rewrite-route
+        hostRewriteLiteral: 3.3.3.3
+        prefixRewrite: /rewrite

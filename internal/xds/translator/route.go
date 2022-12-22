@@ -38,6 +38,8 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *route.Route {
 		ret.Action = &route.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
 	case httpRoute.Redirect != nil:
 		ret.Action = &route.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+	case httpRoute.URLRewrite != nil:
+		ret.Action = &route.Route_Route{Route: buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)}
 	default:
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
@@ -209,6 +211,37 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *route.RedirectAction {
 		if *redirection.StatusCode == 302 {
 			ret.ResponseCode = route.RedirectAction_FOUND
 		} // no need to check for 301 since Envoy will use 301 as the default if the field is not configured
+	}
+
+	return ret
+}
+
+func buildXdsURLRewriteAction(routeName string, urlRewrite *ir.URLRewrite) *route.RouteAction {
+	ret := &route.RouteAction{
+		ClusterSpecifier: &route.RouteAction_Cluster{
+			Cluster: routeName,
+		},
+	}
+
+	if urlRewrite.Path != nil {
+		if urlRewrite.Path.FullReplace != nil {
+			ret.RegexRewrite = &matcher.RegexMatchAndSubstitute{
+				Pattern: &matcher.RegexMatcher{
+					Regex: "/.+",
+				},
+				Substitution: *urlRewrite.Path.FullReplace,
+			}
+		} else if urlRewrite.Path.PrefixMatchReplace != nil {
+			ret.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+		}
+	}
+
+	if urlRewrite.Hostname != nil {
+		ret.HostRewriteSpecifier = &route.RouteAction_HostRewriteLiteral{
+			HostRewriteLiteral: *urlRewrite.Hostname,
+		}
+
+		ret.AppendXForwardedHost = true
 	}
 
 	return ret

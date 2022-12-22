@@ -49,7 +49,9 @@ httpRoutes:
       filters:
       - type: URLRewrite
         urlRewrite:
-          hostname: urlrewrite.envoyproxy.io
+          path:
+            type: ReplacePrefixMatch
+            replacePrefixMatch: /rewrite
   status:
     parents:
     - parentRef:
@@ -61,7 +63,7 @@ httpRoutes:
       - type: Accepted
         status: "True"
         reason: Accepted
-        message: "Route is accepted"
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -77,14 +79,13 @@ xdsIR:
         headerMatches:
         - name: ":authority"
           exact: gateway.envoyproxy.io
-        # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
-        # normally but leave out the filter config and set the status, but this behaviour can be changed.
         destinations:
         - host: 7.7.7.7
           port: 8080
           weight: 1
         urlRewrite:
-          hostname: "urlrewrite.envoyproxy.io"
+          path:
+            prefixMatchReplace: /rewrite
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

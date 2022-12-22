@@ -9,7 +9,9 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/quickstart
   user/http-routing
   user/http-redirect
+  user/http-urlrewrite
   user/http-traffic-splitting
   user/http-request-headers
+  user/http-response-headers
   user/secure-gateways
   user/tls-passthrough
