@@ -472,6 +472,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	redirectPort := gwapiv1b1.PortNumber(8443)
 	redirectStatus := 301
 
+	rewriteHostname := gwapiv1b1.PreciseHostname("rewrite.hostname.local")
+
 	var testCases = []struct {
 		name  string
 		route gwapiv1b1.HTTPRoute
@@ -563,6 +565,58 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 										},
 										Port:       &redirectPort,
 										StatusCode: &redirectStatus,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "rewrite-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-rewrite-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/rewrite/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterType("URLRewrite"),
+									URLRewrite: &gwapiv1b1.HTTPURLRewriteFilter{
+										Hostname: &rewriteHostname,
+										Path: &gwapiv1b1.HTTPPathModifier{
+											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
+											ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+										},
 									},
 								},
 							},

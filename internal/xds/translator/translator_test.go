@@ -77,6 +77,15 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "http2-route",
 		},
+		{
+			name: "http-route-rewrite-url-prefix",
+		},
+		{
+			name: "http-route-rewrite-url-fullpath",
+		},
+		{
+			name: "http-route-rewrite-url-host",
+		},
 	}
 
 	for _, tc := range testCases {

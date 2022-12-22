@@ -214,6 +214,33 @@ var (
 		},
 	}
 
+	urlRewriteHTTPRoute = HTTPRoute{
+		Name: "rewrite",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("rewrite"),
+		},
+		URLRewrite: &URLRewrite{
+			Hostname: ptrTo("rewrite.example.com"),
+			Path: &HTTPPathModifier{
+				FullReplace: ptrTo("/rewrite"),
+			},
+		},
+	}
+
+	urlRewriteFilterBadPath = HTTPRoute{
+		Name: "rewrite",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("rewrite"),
+		},
+		URLRewrite: &URLRewrite{
+			Hostname: ptrTo("rewrite.example.com"),
+			Path: &HTTPPathModifier{
+				FullReplace:        ptrTo("/rewrite"),
+				PrefixMatchReplace: ptrTo("/rewrite"),
+			},
+		},
+	}
+
 	addRequestHeaderHTTPRoute = HTTPRoute{
 		Name: "addheader",
 		PathMatch: &StringMatch{
@@ -680,6 +707,16 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "direct-response-bad-status",
 			input: directResponseBadStatus,
 			want:  []error{ErrDirectResponseStatusInvalid},
+		},
+		{
+			name:  "rewrite-httproute",
+			input: urlRewriteHTTPRoute,
+			want:  nil,
+		},
+		{
+			name:  "rewrite-bad-path",
+			input: urlRewriteFilterBadPath,
+			want:  []error{ErrHTTPPathModifierDoubleReplace},
 		},
 		{
 			name:  "add-request-headers-httproute",

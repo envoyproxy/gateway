@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/envoyproxy/gateway/internal/ir"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -21,6 +23,11 @@ const (
 	TCPProtocol = "TCP"
 	UDPProtocol = "UDP"
 )
+
+type protocolPort struct {
+	protocol v1beta1.ProtocolType
+	port     int32
+}
 
 func GroupPtr(name string) *v1beta1.Group {
 	group := v1beta1.Group(name)
@@ -169,6 +176,54 @@ func HasReadyListener(listeners []*ListenerContext) bool {
 	return false
 }
 
+// ValidateHTTPRouteFilter validates the provided filter.
+func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
+	switch {
+	case filter == nil:
+		return errors.New("filter is nil")
+	case filter.Type == v1beta1.HTTPRouteFilterRequestMirror ||
+		filter.Type == v1beta1.HTTPRouteFilterURLRewrite ||
+		filter.Type == v1beta1.HTTPRouteFilterRequestRedirect ||
+		filter.Type == v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		return nil
+	case filter.Type == v1beta1.HTTPRouteFilterExtensionRef:
+		switch {
+		case filter.ExtensionRef == nil:
+			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
+			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
+		case string(filter.ExtensionRef.Kind) != egv1a1.AuthenticationFilterKind:
+			return fmt.Errorf("invalid kind; must be %s", egv1a1.AuthenticationFilterKind)
+		default:
+			return nil
+		}
+	}
+
+	return fmt.Errorf("unsupported filter type: %v", filter.Type)
+}
+
+// GatewayOwnerLabels returns the Gateway Owner labels using
+// the provided namespace and name as the values.
+func GatewayOwnerLabels(namespace, name string) map[string]string {
+	return map[string]string{
+		OwningGatewayNamespaceLabel: namespace,
+		OwningGatewayNameLabel:      name,
+	}
+}
+
+// servicePortToContainerPort translates a service port into an ephemeral
+// container port.
+func servicePortToContainerPort(servicePort int32) int32 {
+	// If the service port is a privileged port (1-1023)
+	// add a constant to the value converting it into an ephemeral port.
+	// This allows the container to bind to the port without needing a
+	// CAP_NET_BIND_SERVICE capability.
+	if servicePort < minEphemeralPort {
+		return servicePort + wellKnownPortShift
+	}
+	return servicePort
+}
+
 // computeHosts returns a list of the intersecting hostnames between the route
 // and the listener.
 func computeHosts(routeHostnames []string, listenerHostname *v1beta1.Hostname) []string {
@@ -233,7 +288,7 @@ func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
 	return len(wildcardMatch) > 0
 }
 
-func containsPort(ports []*ProtocolPort, port *ProtocolPort) bool {
+func containsPort(ports []*protocolPort, port *protocolPort) bool {
 	for _, protocolPort := range ports {
 		if protocolPort.port == port.port && layer4Protocol(protocolPort) == layer4Protocol(port) {
 			return true
@@ -242,7 +297,7 @@ func containsPort(ports []*ProtocolPort, port *ProtocolPort) bool {
 	return false
 }
 
-func layer4Protocol(protocolPort *ProtocolPort) string {
+func layer4Protocol(protocolPort *protocolPort) string {
 	switch protocolPort.protocol {
 	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.TLSProtocolType, v1beta1.TCPProtocolType:
 		return TCPProtocol
@@ -251,28 +306,46 @@ func layer4Protocol(protocolPort *ProtocolPort) string {
 	}
 }
 
-// ValidateHTTPRouteFilter validates the provided filter.
-func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
-	switch {
-	case filter == nil:
-		return errors.New("filter is nil")
-	case filter.Type == v1beta1.HTTPRouteFilterRequestMirror ||
-		filter.Type == v1beta1.HTTPRouteFilterURLRewrite ||
-		filter.Type == v1beta1.HTTPRouteFilterRequestRedirect ||
-		filter.Type == v1beta1.HTTPRouteFilterRequestHeaderModifier:
+type crossNamespaceFrom struct {
+	group     string
+	kind      string
+	namespace string
+}
+
+type crossNamespaceTo struct {
+	group     string
+	kind      string
+	namespace string
+	name      string
+}
+
+func irStringKey(gateway *v1beta1.Gateway) string {
+	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
+}
+
+func irHTTPListenerName(listener *ListenerContext) string {
+	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
+}
+
+func irTCPListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
+	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
+}
+
+func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
+	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
+}
+
+func routeName(route RouteContext, ruleIdx, matchIdx int) string {
+	return fmt.Sprintf("%s-%s-rule-%d-match-%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
+}
+
+func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
+	if tlsSecret == nil {
 		return nil
-	case filter.Type == v1beta1.HTTPRouteFilterExtensionRef:
-		switch {
-		case filter.ExtensionRef == nil:
-			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
-			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
-		case string(filter.ExtensionRef.Kind) != egv1a1.AuthenticationFilterKind:
-			return fmt.Errorf("invalid kind; must be %s", egv1a1.AuthenticationFilterKind)
-		default:
-			return nil
-		}
 	}
 
-	return fmt.Errorf("unsupported filter type: %v", filter.Type)
+	return &ir.TLSListenerConfig{
+		ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
+		PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
+	}
 }
