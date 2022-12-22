@@ -213,7 +213,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			expect:  false,
 		},
 		{
-			name: "route service routes exist",
+			name: "http route service routes exist",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
@@ -230,6 +230,28 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "tls route service routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+				test.GetTLSRoute(types.NamespacedName{Name: "tlsroute-test"}, "scheduled-status-test",
+					types.NamespacedName{Name: "service"}),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  true,
+		},
+		{
+			name: "udp route service routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+				test.GetUDPRoute(types.NamespacedName{Name: "udproute-test"}, "scheduled-status-test",
+					types.NamespacedName{Name: "service"}),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
@@ -251,6 +273,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)
