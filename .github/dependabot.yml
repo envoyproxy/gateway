@@ -18,10 +18,6 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: gomod
-    directory: /tools/src/controller-gen
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
     directory: /tools/src/golangci-lint
     schedule:
       interval: weekly
