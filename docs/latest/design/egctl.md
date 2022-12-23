@@ -16,7 +16,7 @@ This tool is named `egctl`.
 Use the following syntax to run `egctl` commands from your terminal window:
 
 ```console
-egctl [command] [entry] [name] [flags]
+egctl [command] [entity] [name] [flags]
 ```
 
 where `command`, `name`, and `flags` are:
@@ -24,7 +24,7 @@ where `command`, `name`, and `flags` are:
 * `command`: Specifies the operation that you want to perform on one or more resources,
   for example `install`, `uninstall`, `config`, `version`.
 
-* `entry`: Specifies the entity the operation is being performed on such as `envoy-proxy` or `envoy-gateway`.
+* `entity`: Specifies the entity the operation is being performed on such as `envoy-proxy` or `envoy-gateway`.
 
 * `name`: Specifies the name of the specified instance. 
 
@@ -41,8 +41,8 @@ The following table includes short descriptions and the general syntax for all t
 | `version`   | `egctl version`                  | Prints out build version information.                                       |
 | `install`   | `egctl install -c CUSTOMPROFILE` | Install or reconfigure EG on a cluster.                                     |
 | `uninstall` | `egctl uninstall`                | Uninstall EG from a cluster                                                 |
-| `config`    | `egctl config ENTRY`             | Retrieve information about proxy configuration from envoy proxy and gateway |
-| `log`       | `egctl log ENTRY --level trace`  | Change envoy proxy's log level                                              |
+| `config`    | `egctl config ENTITY`            | Retrieve information about proxy configuration from envoy proxy and gateway |
+| `log`       | `egctl log ENTITY --level trace` | Change envoy proxy's log level                                              |
 | `analyze`   | `egctl analyze`                  | Analyze configuration and print validation messages                         |
 
 ## Examples
