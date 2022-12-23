@@ -5,8 +5,8 @@
 
 package kubernetes
 
-// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses;gateways;httproutes;tlsroutes;referencepolicies;referencegrants,verbs=get;list;watch;update
-// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;httproutes/status;tlsroutes/status,verbs=update
+// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses;gateways;httproutes;tlsroutes;udproutes;referencepolicies;referencegrants,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;httproutes/status;tlsroutes/status;udproutes/status,verbs=update
 // +kubebuilder:rbac:groups="gateway.envoyproxy.io",resources=authenticationfilters,verbs=get;list;watch;update
 
 // RBAC for watched resources of Gateway API controllers.

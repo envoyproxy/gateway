@@ -41,6 +41,7 @@ rules:
   - referencegrants
   - referencepolicies
   - tlsroutes
+  - udproutes
   verbs:
   - get
   - list
@@ -53,5 +54,6 @@ rules:
   - gateways/status
   - httproutes/status
   - tlsroutes/status
+  - udproutes/status
   verbs:
   - update
