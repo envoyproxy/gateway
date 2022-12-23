@@ -84,7 +84,7 @@ Refer to [PR 773][] for the detailed AuthenticationFilter API spec.
 The status subresource is not included in the AuthenticationFilter API. Status will be surfaced by an HTTPRoute that
 references an AuthenticationFilter. For example, an HTTPRoute will surface the `ResolvedRefs=False` status condition if it
 references an AuthenticationFilter that does not exist. It may be beneficial to add AuthenticationFilter status fields in the future
-based on defined use-cases. For example, a remote JWKS can be validated based on the specified URI and have an
+based on defined use-cases. For example, a remote [JWKS][] can be validated based on the specified URI and have an
 appropriate status condition surfaced.
 
 #### AuthenticationFilter Example
@@ -145,7 +145,7 @@ backend service named "backend".
 ## Implementation Details
 
 The JWT authentication type is translated to an Envoy [JWT authentication filter][] and a cluster is created for each
-remote JWKS. The following examples provide additional details on how Gateway API and AuthenticationFilter resources are
+remote [JWKS][]. The following examples provide additional details on how Gateway API and AuthenticationFilter resources are
 translated into Envoy configuration.
 
 ### Example 1: One Route with One JWT Provider
@@ -198,7 +198,7 @@ dynamic_resources:
 
 This JWT authentication HTTP filter contains two fields:
 * The `providers` field specifies how a JWT should be verified, such as where to extract the token, where to fetch the
-  public key (JWKS) and where to output its payload. This field is built from the source resource `namespace-name`, and
+  public key ([JWKS][]) and where to output its payload. This field is built from the source resource `namespace-name`, and
   the JWT provider name of an AuthenticationFilter.
 * The `rules` field specifies matching rules and their requirements. If a request matches a rule, its requirement
   applies. The requirement specifies which JWT providers should be used. This field is built from a HTTPRoute
@@ -494,9 +494,9 @@ The AuthenticationFilter API should support additional authentication types in t
 ## Outstanding Questions
 
 - If Envoy Gateway owns the AuthenticationFilter API, is an xDS IR equivalent needed?
-- Should local JWKS be implemented before remote JWKS?
-- How should Envoy obtain the trusted CA for a remote JWKS?
-- Should HTTPS be the only supported scheme for remote JWKS?
+- Should local [JWKS][] be implemented before remote [JWKS][]?
+- How should Envoy obtain the trusted CA for a remote [JWKS][]?
+- Should HTTPS be the only supported scheme for remote [JWKS][]?
 - Should OR'ing JWT providers be supported?
 - Should Authentication provide status?
 - Are the API field validation rules acceptable?
