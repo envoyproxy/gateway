@@ -256,5 +256,4 @@ kubectl delete secret/foo-cert
 
 Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
 
-[kind]: https://kind.sigs.k8s.io/
 [ReferenceGrant]: https://gateway-api.sigs.k8s.io/api-types/referencegrant/
