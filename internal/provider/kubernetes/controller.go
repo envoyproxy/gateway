@@ -39,10 +39,12 @@ const (
 	classGatewayIndex          = "classGatewayIndex"
 	gatewayTLSRouteIndex       = "gatewayTLSRouteIndex"
 	gatewayHTTPRouteIndex      = "gatewayHTTPRouteIndex"
+	gatewayUDPRouteIndex       = "gatewayUDPRouteIndex"
 	secretGatewayIndex         = "secretGatewayIndex"
 	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
 	serviceHTTPRouteIndex      = "serviceHTTPRouteIndex"
 	serviceTLSRouteIndex       = "serviceTLSRouteIndex"
+	serviceUDPRouteIndex       = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex = "authenHTTPRouteIndex"
 )
 
@@ -118,6 +120,17 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		return err
 	}
 	if err := addTLSRouteIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
+	// Watch UDPRoute CRUDs and process affected Gateways.
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1a2.UDPRoute{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return err
+	}
+	if err := addUDPRouteIndexers(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -340,6 +353,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 
 		// Get HTTPRoute objects and check if it exists.
 		if err := r.processHTTPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Get UDPRoute objects and check if it exists.
+		if err := r.processUDPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -642,6 +660,56 @@ func serviceTLSRouteIndexFunc(rawObj client.Object) []string {
 	return services
 }
 
+// addUDPRouteIndexers adds indexing on UDPRoute, for Service objects that are
+// referenced in UDPRoute objects via `.spec.rules.backendRefs`. This helps in
+// querying for UDPRoutes that are affected by a particular Service CRUD.
+func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, gatewayUDPRouteIndex, func(rawObj client.Object) []string {
+		udpRoute := rawObj.(*gwapiv1a2.UDPRoute)
+		var gateways []string
+		for _, parent := range udpRoute.Spec.ParentRefs {
+			if string(*parent.Kind) == gatewayapi.KindGateway {
+				// If an explicit Gateway namespace is not provided, use the UDPRoute namespace to
+				// lookup the provided Gateway Name.
+				gateways = append(gateways,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOrAlpha(parent.Namespace, udpRoute.Namespace),
+						Name:      string(parent.Name),
+					}.String(),
+				)
+			}
+		}
+		return gateways
+	}); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func serviceUDPRouteIndexFunc(rawObj client.Object) []string {
+	udproute := rawObj.(*gwapiv1a2.UDPRoute)
+	var services []string
+	for _, rule := range udproute.Spec.Rules {
+		for _, backend := range rule.BackendRefs {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+				// If an explicit Service namespace is not provided, use the UDPRoute namespace to
+				// lookup the provided Gateway Name.
+				services = append(services,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, udproute.Namespace),
+						Name:      string(backend.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return services
+}
+
 // addGatewayIndexers adds indexing on Gateway, for Secret objects that are
 // referenced in Gateway objects. This helps in querying for Gateways that are
 // affected by a particular Secret CRUD.
@@ -819,4 +887,31 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		r.log.Info("tlsRoute status subscriber shutting down")
 	}()
 
+	// UDPRoute object status updater
+	go func() {
+		message.HandleSubscription(r.resources.UDPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRoute]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(gwapiv1a2.UDPRoute),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*gwapiv1a2.UDPRoute)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status.Parents = val.Status.Parents
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("udpRoute status subscriber shutting down")
+	}()
 }

@@ -317,6 +317,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 				OnNoMatch: &matcher.Matcher_OnMatch{
 					OnMatch: &matcher.Matcher_OnMatch_Action{
 						Action: &xdscore.TypedExtensionConfig{
+							Name:        "route",
 							TypedConfig: routeAny,
 						},
 					},
@@ -327,15 +328,6 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 	udpProxyAny, err := anypb.New(udpProxy)
 	if err != nil {
 		return nil, err
-	}
-
-	filterChain := &listener.FilterChain{
-		Filters: []*listener.Filter{{
-			Name: "envoy.filters.udp_listener.udp_proxy",
-			ConfigType: &listener.Filter_TypedConfig{
-				TypedConfig: udpProxyAny,
-			},
-		}},
 	}
 
 	xdsListener := &listener.Listener{
@@ -357,7 +349,12 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 				},
 			},
 		},
-		FilterChains: []*listener.FilterChain{filterChain},
+		ListenerFilters: []*listener.ListenerFilter{{
+			Name: "envoy.filters.udp_listener.udp_proxy",
+			ConfigType: &listener.ListenerFilter_TypedConfig{
+				TypedConfig: udpProxyAny,
+			},
+		}},
 	}
 
 	return xdsListener, nil

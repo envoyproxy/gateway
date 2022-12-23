@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -100,6 +101,62 @@ func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.
 								BackendObjectReference: gwapiv1b1.BackendObjectReference{
 									Name: gwapiv1b1.ObjectName(serviceName.Name),
 								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GetTLSRoute returns a sample TLSRoute with a parent reference.
+func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.TLSRoute {
+	return &gwapiv1a2.TLSRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+		},
+		Spec: gwapiv1a2.TLSRouteSpec{
+			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+				ParentRefs: []gwapiv1a2.ParentReference{
+					{Name: gwapiv1a2.ObjectName(parent)},
+				},
+			},
+			Rules: []gwapiv1a2.TLSRouteRule{
+				{
+					BackendRefs: []gwapiv1a2.BackendRef{
+						{
+							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								Name: gwapiv1a2.ObjectName(serviceName.Name),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GetUDPRoute returns a sample UDPRoute with a parent reference.
+func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.UDPRoute {
+	return &gwapiv1a2.UDPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+		},
+		Spec: gwapiv1a2.UDPRouteSpec{
+			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+				ParentRefs: []gwapiv1a2.ParentReference{
+					{Name: gwapiv1a2.ObjectName(parent)},
+				},
+			},
+			Rules: []gwapiv1a2.UDPRouteRule{
+				{
+					BackendRefs: []gwapiv1a2.BackendRef{
+						{
+							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								Name: gwapiv1a2.ObjectName(serviceName.Name),
 							},
 						},
 					},
