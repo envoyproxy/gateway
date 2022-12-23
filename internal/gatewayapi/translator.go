@@ -13,6 +13,7 @@ import (
 const (
 	KindGateway   = "Gateway"
 	KindHTTPRoute = "HTTPRoute"
+	KindGRPCRoute = "GRPCRoute"
 	KindTLSRoute  = "TLSRoute"
 	KindUDPRoute  = "UDPRoute"
 	KindService   = "Service"

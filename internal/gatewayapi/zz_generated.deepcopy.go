@@ -42,6 +42,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.GRPCRoutes != nil {
+		in, out := &in.GRPCRoutes, &out.GRPCRoutes
+		*out = make([]*v1alpha2.GRPCRoute, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha2.GRPCRoute)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.TLSRoutes != nil {
 		in, out := &in.TLSRoutes, &out.TLSRoutes
 		*out = make([]*v1alpha2.TLSRoute, len(*in))

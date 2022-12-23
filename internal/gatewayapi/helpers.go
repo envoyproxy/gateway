@@ -176,7 +176,7 @@ func HasReadyListener(listeners []*ListenerContext) bool {
 	return false
 }
 
-// ValidateHTTPRouteFilter validates the provided filter.
+// ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
 	switch {
 	case filter == nil:
@@ -184,7 +184,8 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
 	case filter.Type == v1beta1.HTTPRouteFilterRequestMirror ||
 		filter.Type == v1beta1.HTTPRouteFilterURLRewrite ||
 		filter.Type == v1beta1.HTTPRouteFilterRequestRedirect ||
-		filter.Type == v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		filter.Type == v1beta1.HTTPRouteFilterRequestHeaderModifier ||
+		filter.Type == v1beta1.HTTPRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == v1beta1.HTTPRouteFilterExtensionRef:
 		switch {
@@ -200,6 +201,20 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
 	}
 
 	return fmt.Errorf("unsupported filter type: %v", filter.Type)
+}
+
+// ValidateGRPCPRouteFilter validates the provided filter within GRPCRoute.
+func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
+	switch {
+	case filter == nil:
+		return errors.New("filter is nil")
+	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
+		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
+		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		return nil
+	default:
+		return fmt.Errorf("unsupported filter type: %v", filter.Type)
+	}
 }
 
 // GatewayOwnerLabels returns the Gateway Owner labels using

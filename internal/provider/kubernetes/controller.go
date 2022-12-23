@@ -39,10 +39,12 @@ const (
 	classGatewayIndex          = "classGatewayIndex"
 	gatewayTLSRouteIndex       = "gatewayTLSRouteIndex"
 	gatewayHTTPRouteIndex      = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex      = "gatewayGRPCRouteIndex"
 	gatewayUDPRouteIndex       = "gatewayUDPRouteIndex"
 	secretGatewayIndex         = "secretGatewayIndex"
 	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
 	serviceHTTPRouteIndex      = "serviceHTTPRouteIndex"
+	serviceGRPCRouteIndex      = "serviceGRPCRouteIndex"
 	serviceTLSRouteIndex       = "serviceTLSRouteIndex"
 	serviceUDPRouteIndex       = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex = "authenHTTPRouteIndex"
@@ -109,6 +111,17 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		return err
 	}
 	if err := addHTTPRouteIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
+	// Watch GRPCRoute CRUDs and process affected Gateways.
+	if err := c.Watch(
+		&source.Kind{Type: &gwapiv1a2.GRPCRoute{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return err
+	}
+	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -353,6 +366,11 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 
 		// Get HTTPRoute objects and check if it exists.
 		if err := r.processHTTPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Get GRPCRoute objects and check if it exists.
+		if err := r.processGRPCRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -610,6 +628,59 @@ func serviceHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return services
 }
 
+// addGRPCRouteIndexers adds indexing on GRPCRoute, for Service objects that are
+// referenced in GRPCRoute objects via `.spec.rules.backendRefs`. This helps in
+// querying for GRPCRoutes that are affected by a particular Service CRUD.
+func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var gateways []string
+	for _, parent := range grpcroute.Spec.ParentRefs {
+		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
+			// If an explicit Gateway namespace is not provided, use the GRPCRoute namespace to
+			// lookup the provided Gateway Name.
+			gateways = append(gateways,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, grpcroute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
+		}
+	}
+	return gateways
+}
+
+func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var services []string
+	for _, rule := range grpcroute.Spec.Rules {
+		for _, backend := range rule.BackendRefs {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+				// If an explicit Service namespace is not provided, use the GRPCRoute namespace to
+				// lookup the provided Gateway Name.
+				services = append(services,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, grpcroute.Namespace),
+						Name:      string(backend.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return services
+}
+
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are
 // referenced in TLSRoute objects via `.spec.rules.backendRefs`. This helps in
 // querying for TLSRoutes that are affected by a particular Service CRUD.
@@ -857,6 +928,34 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			},
 		)
 		r.log.Info("httpRoute status subscriber shutting down")
+	}()
+
+	// GRPCRoute object status updater
+	go func() {
+		message.HandleSubscription(r.resources.GRPCRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRoute]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(gwapiv1a2.GRPCRoute),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						h, ok := obj.(*gwapiv1a2.GRPCRoute)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						hCopy := h.DeepCopy()
+						hCopy.Status.Parents = val.Status.Parents
+						return hCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("grpcRoute status subscriber shutting down")
 	}()
 
 	// TLSRoute object status updater

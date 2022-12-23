@@ -76,6 +76,77 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 	return nil
 }
 
+// processGRPCRoutes finds GRPCRoutes corresponding to a gatewayNamespaceName, further checks for
+// the backend references and pushes the GRPCRoutes to the resourceTree.
+func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
+	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
+	}); err != nil {
+		r.log.Error(err, "failed to list GRPCRoutes")
+		return err
+	}
+	for _, grpcRoute := range grpcRouteList.Items {
+		grpcRoute := grpcRoute
+		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
+
+		for _, rule := range grpcRoute.Spec.Rules {
+			for _, backendRef := range rule.BackendRefs {
+				backendRef := backendRef
+				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
+					r.log.Error(err, "invalid backendRef")
+					continue
+				}
+
+				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
+				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
+					Namespace: backendNamespace,
+					Name:      string(backendRef.Name),
+				}] = struct{}{}
+
+				if backendNamespace != grpcRoute.Namespace {
+					from := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindGRPCRoute,
+						namespace: grpcRoute.Namespace,
+						name:      grpcRoute.Name,
+					}
+					to := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindService,
+						namespace: backendNamespace,
+						name:      string(backendRef.Name),
+					}
+					refGrant, err := r.findReferenceGrant(ctx, from, to)
+					switch {
+					case err != nil:
+						r.log.Error(err, "failed to find ReferenceGrant")
+					case refGrant == nil:
+						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+					default:
+						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
+					}
+				}
+			}
+
+			for i := range rule.Filters {
+				filter := rule.Filters[i]
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err != nil {
+					r.log.Error(err, "bypassing filter rule", "index", i)
+					continue
+				}
+			}
+		}
+
+		resourceMap.allAssociatedNamespaces[grpcRoute.Namespace] = struct{}{}
+		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, &grpcRoute)
+	}
+
+	return nil
+}
+
 // processHTTPRoutes finds HTTPRoutes corresponding to a gatewayNamespaceName, further checks for
 // the backend references and pushes the HTTPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
