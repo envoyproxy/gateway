@@ -26,7 +26,7 @@ decisions for the Envoy gateway project. It will also decide on any changes on i
 governance, marketing and future direction. Seats will be tied to organizations and not
 individuals and will be valid for 1 year from the start date.
 
-- Envoy core proxy maintainers [Member: Matt Klein; End Date: 5/16/2023]
+- Envoy core proxy maintainers [Member: Matt Klein]
 - Tetrate [Member: Varun Talwar; End Date: 5/16/2023]
 - VMware [Member: Winnie Kwon; End Date: 5/16/2023]
 - Ambassador Labs [Member: Richard Li; End Date: 5/16/2023]
