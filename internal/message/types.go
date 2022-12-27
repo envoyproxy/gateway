@@ -48,6 +48,14 @@ func (p *ProviderResources) GetResourcesKey() string {
 	return ""
 }
 
+func (p *ProviderResources) Close() {
+	p.GatewayAPIResources.Close()
+	p.GatewayStatuses.Close()
+	p.HTTPRouteStatuses.Close()
+	p.TLSRouteStatuses.Close()
+	p.UDPRouteStatuses.Close()
+}
+
 // XdsIR message
 type XdsIR struct {
 	watchable.Map[string, *ir.Xds]
