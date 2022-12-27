@@ -155,11 +155,7 @@ func setupRunners(cfg *config.Server) error {
 	// Wait until done
 	<-ctx.Done()
 	// Close messages
-	pResources.GatewayAPIResources.Close()
-	pResources.GatewayStatuses.Close()
-	pResources.HTTPRouteStatuses.Close()
-	pResources.TLSRouteStatuses.Close()
-	pResources.UDPRouteStatuses.Close()
+	pResources.Close()
 	xdsIR.Close()
 	infraIR.Close()
 	xds.Close()
