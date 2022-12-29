@@ -70,20 +70,26 @@ func (r *Runner) Name() string {
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
-	go r.subscribeAndTranslate(ctx)
-	go r.setupXdsServer(ctx)
-	r.Logger.Info("started")
-	return nil
-}
 
-func (r *Runner) setupXdsServer(ctx context.Context) {
 	// Set up the gRPC server and register the xDS handler.
+	// Create SnapshotCache beforce start subscribeAndTranslate,
+	// prevent panics in case cache is nil.
 	cfg := r.tlsConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
 	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
 
 	r.cache = cache.NewSnapshotCache(false, r.Logger)
 	registerServer(controlplane_server_v3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
+	// Start and listen xDS gRPC Server.
+	go r.serveXdsServer(ctx)
+
+	// Start message Subscription.
+	go r.subscribeAndTranslate(ctx)
+	r.Logger.Info("started")
+	return nil
+}
+
+func (r *Runner) serveXdsServer(ctx context.Context) {
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(XdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -126,9 +132,13 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			var err error
 			if update.Delete {
 				err = r.cache.GenerateNewSnapshot(key, nil)
-			} else {
-				// Update snapshot cache
-				err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
+			} else if val != nil && val.XdsResources != nil {
+				if r.cache == nil {
+					r.Logger.Error(err, "failed to init snapshot cache")
+				} else {
+					// Update snapshot cache
+					err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
+				}
 			}
 			if err != nil {
 				r.Logger.Error(err, "failed to generate a snapshot")
