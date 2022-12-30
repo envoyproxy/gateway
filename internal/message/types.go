@@ -24,6 +24,7 @@ type ProviderResources struct {
 
 	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRoute]
 	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
 	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRoute]
 }

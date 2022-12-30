@@ -22,6 +22,7 @@ type InfraIRMap map[string]*ir.Infra
 type Resources struct {
 	Gateways        []*v1beta1.Gateway
 	HTTPRoutes      []*v1beta1.HTTPRoute
+	GRPCRoutes      []*v1alpha2.GRPCRoute
 	TLSRoutes       []*v1alpha2.TLSRoute
 	UDPRoutes       []*v1alpha2.UDPRoute
 	ReferenceGrants []*v1alpha2.ReferenceGrant
@@ -35,6 +36,7 @@ func NewResources() *Resources {
 	return &Resources{
 		Gateways:        []*v1beta1.Gateway{},
 		HTTPRoutes:      []*v1beta1.HTTPRoute{},
+		GRPCRoutes:      []*v1alpha2.GRPCRoute{},
 		TLSRoutes:       []*v1alpha2.TLSRoute{},
 		Services:        []*v1.Service{},
 		Secrets:         []*v1.Secret{},
