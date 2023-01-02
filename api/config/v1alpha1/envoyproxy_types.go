@@ -29,6 +29,12 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Provider *ResourceProvider `json:"provider,omitempty"`
+
+	// Logging defines logging parameters for managed proxies. If unspecified,
+	// default settings apply.
+	//
+	// +kubebuilder:default={level: "Info"}
+	Logging ProxyLogging `json:"logging,omitempty"`
 }
 
 // ResourceProvider defines the desired state of a resource provider.
@@ -73,6 +79,31 @@ type EnvoyDeployment struct {
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
+
+// ProxyLogging defines logging parameters for managed proxies.
+type ProxyLogging struct {
+	// Level defines a log level for system logs.  If unspecified, default
+	// settings apply.
+	//
+	// +kubebuilder:default="Info"
+	Level LogLevel `json:"level,omitempty"`
+}
+
+// LogLevel defines a log level for system logs.
+//
+// +kubebuilder:validation:Enum=Debug;Info;Error
+type LogLevel string
+
+const (
+	// LogLevelDebug defines the "Debug" logging level.
+	LogLevelDebug LogLevel = "Debug"
+
+	// LogLevelInfo defines the "Info" logging level.
+	LogLevelInfo LogLevel = "Info"
+
+	// LogLevelError defines the "Error" logging level.
+	LogLevelError LogLevel = "Error"
+)
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy
 type EnvoyProxyStatus struct {

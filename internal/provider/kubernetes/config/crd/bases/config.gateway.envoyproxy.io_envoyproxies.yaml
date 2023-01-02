@@ -35,6 +35,22 @@ spec:
           spec:
             description: EnvoyProxySpec defines the desired state of EnvoyProxy.
             properties:
+              logging:
+                default:
+                  level: Info
+                description: Logging defines logging parameters for managed proxies.
+                  If unspecified, default settings apply.
+                properties:
+                  level:
+                    default: Info
+                    description: Level defines a log level for system logs.  If unspecified,
+                      default settings apply.
+                    enum:
+                    - Debug
+                    - Info
+                    - Error
+                    type: string
+                type: object
               provider:
                 description: Provider defines the desired resource provider and provider-specific
                   configuration. If unspecified, the "Kubernetes" resource provider
