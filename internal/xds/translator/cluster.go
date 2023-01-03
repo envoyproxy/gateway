@@ -11,6 +11,8 @@ import (
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -43,7 +45,7 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 	}
 
 	if isHTTP2 {
-		cluster.Http2ProtocolOptions = &core.Http2ProtocolOptions{}
+		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
 	}
 
 	return cluster
@@ -76,4 +78,23 @@ func buildXdsEndpoints(destinations []*ir.RouteDestination) []*endpoint.LbEndpoi
 		endpoints = append(endpoints, lbEndpoint)
 	}
 	return endpoints
+}
+
+func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
+
+	protocolOptions := httpv3.HttpProtocolOptions{
+		UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{},
+			},
+		},
+	}
+
+	anyProtocolOptions, _ := anypb.New(&protocolOptions)
+
+	extensionOptions := map[string]*anypb.Any{
+		"envoy.extensions.upstreams.http.v3.HttpProtocolOptions": anyProtocolOptions,
+	}
+
+	return extensionOptions
 }
