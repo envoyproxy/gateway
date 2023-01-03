@@ -30,28 +30,28 @@ where `command`, `name`, and `flags` are:
 
 * `flags`: Specifies optional flags. For example, you can use the `-c` or `--config` flags to specify the values for installing.
 
-If you need help, run `kubectl help` from the terminal window.
+If you need help, run `egctl help` from the terminal window.
 
 ## Operation
 
 The following table includes short descriptions and the general syntax for all the `egctl` operations:
 
-| Operation   | Syntax                           | Description                                                                 |
-| ----------- | -------------------------------- | --------------------------------------------------------------------------- |
-| `version`   | `egctl version`                  | Prints out build version information.                                       |
-| `install`   | `egctl install -c CUSTOMPROFILE` | Install or reconfigure EG on a cluster.                                     |
-| `uninstall` | `egctl uninstall`                | Uninstall EG from a cluster                                                 |
-| `config`    | `egctl config ENTITY`            | Retrieve information about proxy configuration from envoy proxy and gateway |
-| `log`       | `egctl log ENTITY --level trace` | Change envoy proxy's log level                                              |
-| `analyze`   | `egctl analyze`                  | Analyze configuration and print validation messages                         |
+| Operation   | Syntax                                 | Description                                                                 |
+| ----------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| `version`   | `egctl version`                        | Prints out build version information.                                       |
+| `install`   | `egctl install ENTITY -c EGCONFIGFILE` | Install or reconfigure EG on a cluster.                                     |
+| `uninstall` | `egctl uninstall`                      | Uninstall EG from a cluster                                                 |
+| `get`       | `egctl get ENTITY`                     | Retrieve information about proxy configuration from envoy proxy and gateway |
+| `log`       | `egctl log ENTITY --level trace`       | Change envoy proxy's log level                                              |
+| `analyze`   | `egctl analyze`                        | Analyze EG configuration and print validation messages                      |
 
 ## Examples
 
 Use the following set of examples to help you familiarize yourself with running the commonly used `egctl` operations:
 
 ```console
-# Install EG using the definition in custom profile file
-egctl install envoy-gateway -c custom-profile.yaml
+# Install EG using the definition in EG config file
+egctl install envoy-gateway -c egconfig.yaml
 
 # Install the managed Envoy Proxy fleet
 egctl install envoy-proxy
@@ -60,13 +60,13 @@ egctl install envoy-proxy
 egctl uninstall
 
 # Retrieve all information about proxy configuration from envoy
-egctl config envoy-proxy all <instance_name>
+egctl get envoy-proxy all <instance_name>
 
 # Retrieve listener information about proxy configuration from envoy 
-egctl config envoy-proxy listener <instance_name>
+egctl get envoy-proxy listener <instance_name>
 
 # Retrieve information about envoy gateway
-egctl config envoy-gateway
+egctl get envoy-gateway
 
 # Change log level of envoy proxy
 egctl log envoy-proxy <instance_name> --level trace
