@@ -37,19 +37,25 @@ spec:
             properties:
               logging:
                 default:
-                  level: Info
+                  level:
+                    system: info
                 description: Logging defines logging parameters for managed proxies.
                   If unspecified, default settings apply.
                 properties:
                   level:
-                    default: Info
-                    description: Level defines a log level for system logs.  If unspecified,
-                      default settings apply.
-                    enum:
-                    - Debug
-                    - Info
-                    - Error
-                    type: string
+                    additionalProperties:
+                      description: LogLevel defines a log level for system logs.
+                      enum:
+                      - debug
+                      - info
+                      - error
+                      type: string
+                    default:
+                      system: info
+                    description: 'Level is a map of logging level per component, where
+                      the component is the key and the log level is the value. If
+                      unspecified, defaults to "System: Info".'
+                    type: object
                 type: object
               provider:
                 description: Provider defines the desired resource provider and provider-specific
