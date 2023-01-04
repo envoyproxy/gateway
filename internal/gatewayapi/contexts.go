@@ -198,6 +198,9 @@ type RouteContext interface {
 	// GetHostnames returns the hosts targeted by the Route object.
 	GetHostnames() []string
 
+	// GetRouteStatus returns the RouteStatus object associated with the Route.
+	GetRouteStatus() *v1beta1.RouteStatus
+
 	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
 	// objects being implemented are of type v1beta1.
 	// GetParentReferences returns the ParentReference of the Route object.
@@ -230,6 +233,10 @@ func (h *HTTPRouteContext) GetHostnames() []string {
 
 func (h *HTTPRouteContext) GetParentReferences() []v1beta1.ParentReference {
 	return h.Spec.ParentRefs
+}
+
+func (h *HTTPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &h.Status.RouteStatus
 }
 
 func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
@@ -297,6 +304,10 @@ func (t *TLSRouteContext) GetHostnames() []string {
 		hostnames[idx] = string(s)
 	}
 	return hostnames
+}
+
+func (h *TLSRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &h.Status.RouteStatus
 }
 
 func (t *TLSRouteContext) GetParentReferences() []v1beta1.ParentReference {
@@ -389,6 +400,10 @@ func (u *UDPRouteContext) GetParentReferences() []v1beta1.ParentReference {
 	return parentReferences
 }
 
+func (h *UDPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &h.Status.RouteStatus
+}
+
 func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
 	if u.parentRefs == nil {
 		u.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
@@ -477,88 +492,36 @@ func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1be
 	}
 
 	idx := -1
-	switch route.GetRouteType() {
-	case KindHTTPRoute:
-		for i, existing := range r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions {
-			if existing.Type == cond.Type {
-				// return early if the condition is unchanged
-				if existing.Status == cond.Status &&
-					existing.Reason == cond.Reason &&
-					existing.Message == cond.Message {
-					return
-				}
-				idx = i
-				break
+	routeStatus := route.GetRouteStatus()
+	for i, existing := range routeStatus.Parents[r.routeParentStatusIdx].Conditions {
+		if existing.Type == cond.Type {
+			// return early if the condition is unchanged
+			if existing.Status == cond.Status &&
+				existing.Reason == cond.Reason &&
+				existing.Message == cond.Message {
+				return
 			}
+			idx = i
+			break
 		}
+	}
 
-		if idx > -1 {
-			r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
-		} else {
-			r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
-		}
-	case KindTLSRoute:
-		for i, existing := range r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions {
-			if existing.Type == cond.Type {
-				// return early if the condition is unchanged
-				if existing.Status == cond.Status &&
-					existing.Reason == cond.Reason &&
-					existing.Message == cond.Message {
-					return
-				}
-				idx = i
-				break
-			}
-		}
-
-		if idx > -1 {
-			r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
-		} else {
-			r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
-		}
-	case KindUDPRoute:
-		for i, existing := range r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions {
-			if existing.Type == cond.Type {
-				// return early if the condition is unchanged
-				if existing.Status == cond.Status &&
-					existing.Reason == cond.Reason &&
-					existing.Message == cond.Message {
-					return
-				}
-				idx = i
-				break
-			}
-		}
-
-		if idx > -1 {
-			r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
-		} else {
-			r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = append(r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions, cond)
-		}
+	if idx > -1 {
+		routeStatus.Parents[r.routeParentStatusIdx].Conditions[idx] = cond
+	} else {
+		routeStatus.Parents[r.routeParentStatusIdx].Conditions = append(routeStatus.Parents[r.routeParentStatusIdx].Conditions, cond)
 	}
 }
 
 func (r *RouteParentContext) ResetConditions(route RouteContext) {
-	switch route.GetRouteType() {
-	case KindHTTPRoute:
-		r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
-	case KindTLSRoute:
-		r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
-	case KindUDPRoute:
-		r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
-	}
+	routeStatus := route.GetRouteStatus()
+	routeStatus.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 }
 
 func (r *RouteParentContext) IsAccepted(route RouteContext) bool {
 	var conditions []metav1.Condition
-	switch route.GetRouteType() {
-	case KindHTTPRoute:
-		conditions = r.httpRoute.Status.Parents[r.routeParentStatusIdx].Conditions
-	case KindTLSRoute:
-		conditions = r.tlsRoute.Status.Parents[r.routeParentStatusIdx].Conditions
-	case KindUDPRoute:
-		conditions = r.udpRoute.Status.Parents[r.routeParentStatusIdx].Conditions
-	}
+	routeStatus := route.GetRouteStatus()
+	conditions = routeStatus.Parents[r.routeParentStatusIdx].Conditions
 	for _, cond := range conditions {
 		if cond.Type == string(v1beta1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
 			return true
