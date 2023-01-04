@@ -24,7 +24,8 @@ var (
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
 	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
 	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
-	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix or SafeRegex fields must be specified")
+	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid   = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
 	ErrRedirectUnsupportedStatus     = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
 	ErrRedirectUnsupportedScheme     = errors.New("only http and https are supported for the scheme in redirect filters")
@@ -476,6 +477,9 @@ type StringMatch struct {
 	Suffix *string
 	// SafeRegex match condition.
 	SafeRegex *string
+	// Distinct match condition.
+	// Used to match any and all possible unique values encountered within the Name field.
+	Distinct bool
 }
 
 // Validate the fields within the StringMatch structure
@@ -492,6 +496,12 @@ func (s StringMatch) Validate() error {
 		matchCount++
 	}
 	if s.SafeRegex != nil {
+		matchCount++
+	}
+	if s.Distinct {
+		if s.Name == "" {
+			errs = multierror.Append(errs, ErrStringMatchNameIsEmpty)
+		}
 		matchCount++
 	}
 

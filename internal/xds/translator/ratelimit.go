@@ -24,6 +24,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+// patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
+// if applicable and it does not already exist.
 func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	// Return early if rate limits dont exist
 	if !isRateLimitPresent(irListener) {
@@ -43,6 +45,7 @@ func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPLi
 	return nil
 }
 
+// isRateLimitPresent returns true if rate limit config exists for the listener.
 func isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	// Return true if rate limit config exists.
 	for _, route := range irListener.Routes {
@@ -82,7 +85,8 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcm.HttpFilter {
 	return rateLimitFilter
 }
 
-func PatchRouteWithRateLimit(xdsRouteAction *route.RouteAction, irRoute *ir.HTTPRoute) error {
+// patchRouteWithRateLimit builds rate limit actions and appends to the route.
+func patchRouteWithRateLimit(xdsRouteAction *route.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
 	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil {
 		return nil
@@ -100,8 +104,8 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		rlActions := []*route.RateLimit_Action{}
 		// Matches are ANDed
 		for mIdx, match := range rule.HeaderMatches {
-			// Case when header value is not set
-			if match.Exact == nil && match.Prefix == nil && match.SafeRegex == nil {
+			// Case for distinct match
+			if match.Distinct {
 				// Setup RequestHeader actions
 				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
 				action := &route.RateLimit_Action{
@@ -140,6 +144,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		// Case when header match is not set and the rate limit is applied
 		// to all traffic.
 		if len(rule.HeaderMatches) == 0 {
+			// Setup GenericKey action
 			action := &route.RateLimit_Action{
 				ActionSpecifier: &route.RateLimit_Action_GenericKey_{
 					GenericKey: &route.RateLimit_Action_GenericKey{
