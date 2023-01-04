@@ -113,10 +113,14 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 		// TODO: Make this into a generic interface for API Gateway features
 		// Check if a ratelimit cluster exists, if not, add it, if its needed.
 		if rlCluster := findXdsCluster(tCtx, getRateLimitServiceClusterName()); rlCluster == nil {
+<<<<<<< HEAD
 			rlCluster, err := buildRateLimitServiceCluster(httpListener)
 			if err != nil {
 				return multierror.Append(err, errors.New("error building ratelimit cluster"))
 			}
+=======
+			rlCluster := buildRateLimitServiceCluster(httpListener)
+>>>>>>> 80d769b... lint
 			// Add cluster
 			if rlCluster != nil {
 				tCtx.AddXdsResource(resource.ClusterType, rlCluster)

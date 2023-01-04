@@ -158,10 +158,10 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 	return rateLimits
 }
 
-func buildRateLimitServiceCluster(irListener *ir.HTTPListener) (*cluster.Cluster, error) {
+func buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
 	// Return early if rate limits dont exist.
 	if !isRateLimitPresent(irListener) {
-		return nil, nil
+		return nil
 	}
 
 	clusterName := getRateLimitServiceClusterName()
@@ -199,7 +199,7 @@ func buildRateLimitServiceCluster(irListener *ir.HTTPListener) (*cluster.Cluster
 		RespectDnsTtl:        true,
 		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
 	}
-	return rateLimitServerCluster, nil
+	return rateLimitServerCluster
 }
 
 func getRateLimitDescriptorKey(prefix string, ruleIndex, matchIndex int) string {
