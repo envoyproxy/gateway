@@ -260,6 +260,29 @@ The two levels of selectors/matches allow for flexibility and aim to hold match 
 of each configuration to be different. It also allows the `clientSelectors` field within the RateLimitFilter to be enhanced with other matchable
 attribute such as [IP subnet][] in the future that are not relevant in the [HTTPRoute][] API.
 
+## Implementation Details
+
+### Global Rate limiting
+
+*  [Global rate limiting][] in Envoy Proxy can be achieved using the following -
+  * [Actions][] can be conifgured per [xDS Route][].
+  * If the match criteria defined within these actions is met for a specific HTTP Request, a set of key value pairs called [descriptors][]
+  defined within the above actions is sent to a remote [rate limit service][], whose configuration (such as the URL for the rate limit service) is defined 
+  using a [rate limit filter][].
+  * Based on information received by the rate limit service and its programmed configuration, a decision is computed, whether to rate limit
+  the HTTP Request or not, and is sent back to Envoy, which enforces this decision on the data plane.
+* Envoy Gateway will leverage this Envoy Proxy feature by -
+  * Translating the user facing RateLimitFilter API into Rate limit [Actions][] as well as Rate limit service configuration to implement
+  the desired API intent.
+  * Envoy Gateway will use the existing [reference implementation][] of the rate limit service.
+    * The Infrastructure administrator will need to enable the rate limit service using new settings that will be defined in the [EnvoyGateway][] config API.
+  * The xDS IR will be enhanced to hold the user facing rate limit intent.
+  * The xDS Translator will be enhanced to translate the rate limit field within the xDS IR into Rate limit [Actions][] as well as instantiate the [rate limit filter][].
+  * A new runner called `rate-limit` will be added that subscribes to the xDS IR messages and translates it into a new Rate Limit Infra IR which contains
+  the [rate limit service configuration][] as well as other information needed to deploy the rate limit service.
+  * The infrastructure service will be enhanced to subscribe to the Rate Limit Infra IR and deploy a provider specific rate limit service runnable entity.
+  * A Status field within the RateLimitFilter API will be added to reflect whether the specific configuration was programmed correctly in these multiple locations or not.
+
 [PolicyAttachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPBackendRef
@@ -267,3 +290,12 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 [rule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
 [extensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilterType
 [IP subnet]: https://en.wikipedia.org/wiki/Subnetwork
+[Actions]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-ratelimit-action
+[descriptors]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter.html?highlight=descriptor#example-1
+[Global rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
+[xDS Route]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-routeaction
+[rate limit filter]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit 
+[rate limit service]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/rate_limit#config-rate-limit-service
+[reference implementation]: https://github.com/envoyproxy/ratelimit
+[EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/config/v1alpha1/envoygateway_types.go
+[rate limit service configuration]: https://github.com/envoyproxy/ratelimit#configuration
