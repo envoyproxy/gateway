@@ -306,8 +306,8 @@ func (t *TLSRouteContext) GetHostnames() []string {
 	return hostnames
 }
 
-func (h *TLSRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &h.Status.RouteStatus
+func (t *TLSRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &t.Status.RouteStatus
 }
 
 func (t *TLSRouteContext) GetParentReferences() []v1beta1.ParentReference {
@@ -400,8 +400,8 @@ func (u *UDPRouteContext) GetParentReferences() []v1beta1.ParentReference {
 	return parentReferences
 }
 
-func (h *UDPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &h.Status.RouteStatus
+func (u *UDPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &u.Status.RouteStatus
 }
 
 func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
