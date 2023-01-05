@@ -65,9 +65,9 @@ spec:
                   kubernetes:
                     description: Kubernetes defines the desired state of the Kubernetes
                       resource provider. Kubernetes provides infrastructure resources
-                      for running the data plane, e.g. Envoy proxy, and optional auxiliary
-                      control planes. If unspecified and type is "Kubernetes", default
-                      settings for managed Kubernetes resources are applied.
+                      for running the data plane, e.g. Envoy proxy. If unspecified
+                      and type is "Kubernetes", default settings for managed Kubernetes
+                      resources are applied.
                     properties:
                       envoyDeployment:
                         description: EnvoyDeployment defines the desired state of
@@ -86,8 +86,7 @@ spec:
                       resource provider provides infrastructure resources for running
                       the data plane, e.g. Envoy proxy, and optional auxiliary control
                       planes. Supported types are: \n * Kubernetes: Provides infrastructure
-                      resources for running the data plane, e.g. Envoy proxy, and
-                      optional auxiliary control planes."
+                      resources for running the data plane, e.g. Envoy proxy."
                     enum:
                     - Kubernetes
                     type: string
