@@ -7,20 +7,12 @@ package ir
 
 import (
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/tetratelabs/multierror"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
-)
-
-const (
-	maxJwtRules          = 4
-	maxHeaderMatches     = 8
-	maxQueryParamMatches = 4
-	maxJwtProviders      = 4
 )
 
 var (
@@ -45,11 +37,7 @@ var (
 	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrJwtRulesExceeded              = fmt.Errorf("jwt authentication exceeds the maximum of %d rules", maxJwtRules)
 	ErrRequestAuthenRequiresJwt      = errors.New("jwt field is required when request authentication is set")
-	ErrHeaderMatchesExceeded         = fmt.Errorf("request header matches exceeds the maximum of %d matches", maxHeaderMatches)
-	ErrQueryMatchesExceeded          = fmt.Errorf("query parameter matches exceeds the maximum of %d matches", maxQueryParamMatches)
-	ErrJwtProvidersExceeded          = fmt.Errorf("jwt authentication providers exceeds the maximum of %d providers", maxJwtProviders)
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -400,43 +388,17 @@ func (h HTTPRoute) Validate() error {
 func (j *JwtRequestAuthentication) Validate() error {
 	var errs error
 
-	if len(j.Rules) > maxJwtRules {
-		errs = multierror.Append(errs, ErrJwtRulesExceeded)
-	}
-
 	for _, rule := range j.Rules {
-		switch {
-		case rule.Match.PathMatch != nil:
+		if rule.Match.PathMatch != nil {
 			if err := rule.Match.PathMatch.Validate(); err != nil {
 				errs = multierror.Append(errs, err)
 			}
-		case len(rule.Match.HeaderMatches) > maxHeaderMatches:
-			errs = multierror.Append(errs, ErrHeaderMatchesExceeded)
-		case len(rule.Match.HeaderMatches) > 0 && len(rule.Match.HeaderMatches) <= maxJwtRules:
-			for _, header := range rule.Match.HeaderMatches {
-				if err := header.Validate(); err != nil {
-					errs = multierror.Append(errs, err)
-				}
-			}
-		case len(rule.Match.QueryParamMatches) > maxQueryParamMatches:
-			errs = multierror.Append(errs, ErrQueryMatchesExceeded)
-		case len(rule.Match.QueryParamMatches) > 0 && len(rule.Match.QueryParamMatches) <= maxJwtRules:
-			for _, query := range rule.Match.QueryParamMatches {
-				if err := query.Validate(); err != nil {
-					errs = multierror.Append(errs, err)
-				}
-			}
 		}
 		if rule.Requires != nil {
-			if len(rule.Requires.Providers) > maxJwtProviders {
-				errs = multierror.Append(errs, ErrJwtProvidersExceeded)
-			} else {
-				// Validate each JWT provider.
-				for i := range rule.Requires.Providers {
-					provider := rule.Requires.Providers[i]
-					if err := validation.ValidateJwtProvider(&provider); err != nil {
-						errs = multierror.Append(errs, err)
-					}
+			for i := range rule.Requires.Providers {
+				provider := rule.Requires.Providers[i]
+				if err := validation.ValidateJwtProvider(&provider); err != nil {
+					errs = multierror.Append(errs, err)
 				}
 			}
 		}
