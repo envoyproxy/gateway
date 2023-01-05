@@ -45,13 +45,13 @@ type ResourceProvider struct {
 	// optional auxiliary control planes. Supported types are:
 	//
 	//   * Kubernetes: Provides infrastructure resources for running the data plane,
-	//                 e.g. Envoy proxy, and optional auxiliary control planes.
+	//                 e.g. Envoy proxy.
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`
 	// Kubernetes defines the desired state of the Kubernetes resource provider.
 	// Kubernetes provides infrastructure resources for running the data plane,
-	// e.g. Envoy proxy, and optional auxiliary control planes. If unspecified
+	// e.g. Envoy proxy. If unspecified
 	// and type is "Kubernetes", default settings for managed Kubernetes resources
 	// are applied.
 	//
