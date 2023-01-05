@@ -11,6 +11,7 @@
         rateLimits:
         - actions:
           - headerValueMatch:
+              descriptorKey: first-route-key-rule-0-match-0
               descriptorValue: first-route-value-rule-0-match-0
               expectMatch: true
               headers:

@@ -119,6 +119,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 				rlActions = append(rlActions, action)
 			} else {
 				// Setup HeaderValueMatch actions
+				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
 				descriptorVal := getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
 				headerMatcher := &route.HeaderMatcher{
 					Name: match.Name,
@@ -129,6 +130,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 				action := &route.RateLimit_Action{
 					ActionSpecifier: &route.RateLimit_Action_HeaderValueMatch_{
 						HeaderValueMatch: &route.RateLimit_Action_HeaderValueMatch{
+							DescriptorKey:   descriptorKey,
 							DescriptorValue: descriptorVal,
 							ExpectMatch: &wrapperspb.BoolValue{
 								Value: true,

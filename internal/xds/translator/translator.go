@@ -112,6 +112,8 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 
 		// TODO: Make this into a generic interface for API Gateway features
 		// Check if a ratelimit cluster exists, if not, add it, if its needed.
+		// This is current O(n) right now, but it also leverages an existing
+		// object without allocating new memory. Consider improving it in the future.
 		if rlCluster := findXdsCluster(tCtx, getRateLimitServiceClusterName()); rlCluster == nil {
 <<<<<<< HEAD
 			rlCluster, err := buildRateLimitServiceCluster(httpListener)
