@@ -464,7 +464,7 @@ func (r HTTPPathModifier) Validate() error {
 }
 
 // StringMatch holds the various match conditions.
-// Only one of Exact, Prefix or SafeRegex can be set.
+// Only one of Exact, Prefix, SafeRegex or Distinct can be set.
 // +k8s:deepcopy-gen=true
 type StringMatch struct {
 	// Name of the field to match on.
