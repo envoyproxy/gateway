@@ -349,3 +349,22 @@ func GetRateLimitFilter(name, ns string) *egv1a1.RateLimitFilter {
 		},
 	}
 }
+
+func ContainsAuthenFilter(hroute *gwapiv1b1.HTTPRoute) bool {
+	if hroute == nil {
+		return false
+	}
+
+	for _, rule := range hroute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef &&
+				filter.ExtensionRef != nil &&
+				string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+				filter.ExtensionRef.Kind == egv1a1.KindAuthenticationFilter {
+				return true
+			}
+		}
+	}
+
+	return false
+}

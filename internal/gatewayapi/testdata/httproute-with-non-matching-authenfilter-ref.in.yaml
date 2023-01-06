@@ -39,17 +39,19 @@ httpRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: AuthenticationFilter
-          name: test
+          name: not-exist
 authenticationFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: AuthenticationFilter
   metadata:
+    name: example1
     namespace: default
-    name: test
   spec:
     type: JWT
     jwtProviders:
-    - name: test
-      issuer: https://www.test.local
-      remoteJWKS:
-        uri: https://test.local/jwt/public-key/jwks.json
+    - name: example1
+      issuer: https://www.example1.com
+      audiences:
+      - foo.com
+      remoteJwks:
+        uri: https://foo.com/jwt/public-key/jwks.json
