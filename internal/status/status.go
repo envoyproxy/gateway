@@ -160,6 +160,9 @@ func (u *UpdateWriter) Send(update Update) {
 //	Gateway
 //	HTTPRoute
 //	TLSRoute
+//	TCPRoute
+//	UDPRoute
+//	GRPCRoute
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime", "ObservedGeneration")
 	switch a := objA.(type) {
@@ -183,6 +186,24 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *gwapiv1a2.TLSRoute:
 		if b, ok := objB.(*gwapiv1a2.TLSRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1a2.TCPRoute:
+		if b, ok := objB.(*gwapiv1a2.TCPRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1a2.UDPRoute:
+		if b, ok := objB.(*gwapiv1a2.UDPRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *gwapiv1a2.GRPCRoute:
+		if b, ok := objB.(*gwapiv1a2.GRPCRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
