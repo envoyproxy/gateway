@@ -5,7 +5,6 @@
 EG should provide a command line tool with following capabilities:
 
 - Collect configuration from envoy proxy and gateway
-- Update admin options such as changing log level
 - Analyse system configuration to diagnose any issues in envoy gateway
 
 This tool is named `egctl`.
@@ -39,7 +38,6 @@ The following table includes short descriptions and the general syntax for all t
 | --------- | -------------------------------- | --------------------------------------------------------------------------- |
 | `version` | `egctl version`                  | Prints out build version information.                                       |
 | `config`  | `egctl config ENTITY`            | Retrieve information about proxy configuration from envoy proxy and gateway |
-| `log`     | `egctl log ENTITY --level trace` | Change envoy proxy's log level                                              |
 | `analyze` | `egctl analyze`                  | Analyze EG configuration and print validation messages                      |
 
 ## Examples
@@ -55,7 +53,4 @@ egctl config envoy-proxy listener <instance_name>
 
 # Retrieve information about envoy gateway
 egctl config envoy-gateway
-
-# Change log level of envoy proxy
-egctl log envoy-proxy <instance_name> --level trace
 ```
