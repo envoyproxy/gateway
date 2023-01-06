@@ -419,7 +419,7 @@ func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContex
 	for _, gateway := range gateways {
 		portListenerInfo := map[v1beta1.PortNumber]*portListeners{}
 		for _, listener := range gateway.listeners {
-			if listener.Protocol == v1beta1.UDPProtocolType {
+			if listener.Protocol == v1beta1.UDPProtocolType || listener.Protocol == v1beta1.TCPProtocolType {
 				continue
 			}
 			if portListenerInfo[listener.Port] == nil {

@@ -8,7 +8,7 @@ gateways:
       gatewayClassName: envoy-gateway-class
       listeners:
         - name: unsupported
-          protocol: TCP
+          protocol: GRPC
           port: 80
           allowedRoutes:
             namespaces:
@@ -21,7 +21,7 @@ gateways:
             - type: Accepted
               status: "False"
               reason: UnsupportedProtocol
-              message: Protocol TCP is unsupported, must be HTTP, HTTPS, or UDP.
+              message: Protocol GRPC is unsupported, must be HTTP, HTTPS, TCP or UDP.
             - type: Programmed
               status: "False"
               reason: Invalid

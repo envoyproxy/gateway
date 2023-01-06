@@ -88,6 +88,9 @@ const (
 	// TLSProtocolType accepts TLS sessions over TCP.
 	TLSProtocolType ProtocolType = "TLS"
 
+	// TCPProtocolType accepts TCP connection.
+	TCPProtocolType ProtocolType = "TCP"
+
 	// UDPProtocolType accepts UDP connection.
 	UDPProtocolType ProtocolType = "UDP"
 )

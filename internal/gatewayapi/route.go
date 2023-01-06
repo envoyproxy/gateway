@@ -20,6 +20,7 @@ var _ RoutesTranslator = (*Translator)(nil)
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
 	ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
+	ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
 }
 
@@ -375,7 +376,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			// Create the TCP Listener while parsing the TLSRoute since
 			// the listener directly links to a routeDestination.
 			irListener := &ir.TCPListener{
-				Name:    irTCPListenerName(listener, tlsRoute),
+				Name:    irTLSListenerName(listener, tlsRoute),
 				Address: "0.0.0.0",
 				Port:    uint32(containerPort),
 				TLS: &ir.TLSInspectorConfig{
@@ -536,6 +537,131 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
 				"Multiple routes on the same UDP listener",
+			)
+		}
+	}
+}
+
+func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways []*GatewayContext, resources *Resources,
+	xdsIR XdsIRMap) []*TCPRouteContext {
+	var relevantTCPRoutes []*TCPRouteContext
+
+	for _, tcp := range tcpRoutes {
+		if tcp == nil {
+			panic("received nil tcproute")
+		}
+		tcpRoute := &TCPRouteContext{TCPRoute: tcp}
+
+		// Find out if this route attaches to one of our Gateway's listeners,
+		// and if so, get the list of listeners that allow it to attach for each
+		// parentRef.
+		relevantRoute := t.processAllowedListenersForParentRefs(tcpRoute, gateways, resources)
+		if !relevantRoute {
+			continue
+		}
+
+		relevantTCPRoutes = append(relevantTCPRoutes, tcpRoute)
+
+		t.processTCPRouteParentRefs(tcpRoute, resources, xdsIR)
+	}
+
+	return relevantTCPRoutes
+}
+
+func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
+	for _, parentRef := range tcpRoute.parentRefs {
+		// Skip parent refs that did not accept the route
+		if !parentRef.IsAccepted(tcpRoute) {
+			continue
+		}
+
+		// Need to compute Route rules within the parentRef loop because
+		// any conditions that come out of it have to go on each RouteParentStatus,
+		// not on the Route as a whole.
+		var routeDestinations []*ir.RouteDestination
+
+		// compute backends
+		if len(tcpRoute.Spec.Rules) != 1 {
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"InvalidRule",
+				"One and only one rule is supported",
+			)
+			continue
+		}
+		if len(tcpRoute.Spec.Rules[0].BackendRefs) != 1 {
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"InvalidBackend",
+				"One and only one backend is supported",
+			)
+			continue
+		}
+
+		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
+		// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when TCPRoute graduates to v1beta1.
+		serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tcpRoute.Namespace)
+		service := resources.GetService(serviceNamespace, string(backendRef.Name))
+
+		if !t.validateBackendRef(&backendRef, parentRef, tcpRoute, resources, serviceNamespace, KindTCPRoute) {
+			continue
+		}
+
+		// weight is not used in tcp route destinations
+		routeDestinations = append(routeDestinations, &ir.RouteDestination{
+			Host: service.Spec.ClusterIP,
+			Port: uint32(*backendRef.Port),
+		})
+
+		accepted := false
+		for _, listener := range parentRef.listeners {
+			// only one route is allowed for a TCP listener
+			if listener.AttachedRoutes() > 0 {
+				continue
+			}
+			if !listener.IsReady() {
+				continue
+			}
+			accepted = true
+			irKey := irStringKey(listener.gateway)
+			containerPort := servicePortToContainerPort(int32(listener.Port))
+			// Create the TCP Listener while parsing the TCPRoute since
+			// the listener directly links to a routeDestination.
+			irListener := &ir.TCPListener{
+				Name:         irTCPListenerName(listener, tcpRoute),
+				Address:      "0.0.0.0",
+				Port:         uint32(containerPort),
+				Destinations: routeDestinations,
+			}
+			gwXdsIR := xdsIR[irKey]
+			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+
+			// Theoretically there should only be one parent ref per
+			// Route that attaches to a given Listener, so fine to just increment here, but we
+			// might want to check to ensure we're not double-counting.
+			if len(routeDestinations) > 0 {
+				listener.IncrementAttachedRoutes()
+			}
+		}
+
+		// If no negative conditions have been set, the route is considered "Accepted=True".
+		if accepted && parentRef.tcpRoute != nil &&
+			len(parentRef.tcpRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonAccepted,
+				"Route is accepted",
+			)
+		}
+		if !accepted {
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				v1beta1.RouteReasonUnsupportedValue,
+				"Multiple routes on the same TCP listener",
 			)
 		}
 	}

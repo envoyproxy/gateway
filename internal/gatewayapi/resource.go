@@ -24,6 +24,7 @@ type Resources struct {
 	HTTPRoutes      []*v1beta1.HTTPRoute
 	GRPCRoutes      []*v1alpha2.GRPCRoute
 	TLSRoutes       []*v1alpha2.TLSRoute
+	TCPRoutes       []*v1alpha2.TCPRoute
 	UDPRoutes       []*v1alpha2.UDPRoute
 	ReferenceGrants []*v1alpha2.ReferenceGrant
 	Namespaces      []*v1.Namespace

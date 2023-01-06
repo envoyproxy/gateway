@@ -22,6 +22,9 @@ import (
 const (
 	TCPProtocol = "TCP"
 	UDPProtocol = "UDP"
+
+	L4Protocol = "L4"
+	L7Protocol = "L7"
 )
 
 type protocolPort struct {
@@ -305,19 +308,24 @@ func hostnameMatchesWildcardHostname(hostname, wildcardHostname string) bool {
 
 func containsPort(ports []*protocolPort, port *protocolPort) bool {
 	for _, protocolPort := range ports {
-		if protocolPort.port == port.port && layer4Protocol(protocolPort) == layer4Protocol(port) {
+		curProtocol, curLevel := layer4Protocol(protocolPort)
+		myProtocol, myLevel := layer4Protocol(port)
+		if protocolPort.port == port.port && (curProtocol == myProtocol && curLevel == myLevel) {
 			return true
 		}
 	}
 	return false
 }
 
-func layer4Protocol(protocolPort *protocolPort) string {
+// layer4Protocol returns listener L4 protocol and listen protocol level
+func layer4Protocol(protocolPort *protocolPort) (string, string) {
 	switch protocolPort.protocol {
-	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.TLSProtocolType, v1beta1.TCPProtocolType:
-		return TCPProtocol
+	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.TLSProtocolType:
+		return TCPProtocol, L7Protocol
+	case v1beta1.TCPProtocolType:
+		return TCPProtocol, L4Protocol
 	default:
-		return UDPProtocol
+		return UDPProtocol, L4Protocol
 	}
 }
 
@@ -342,8 +350,12 @@ func irHTTPListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
-func irTCPListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
+func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
 	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
+}
+
+func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
+	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
 }
 
 func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {

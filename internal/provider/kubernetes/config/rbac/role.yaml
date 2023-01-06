@@ -41,6 +41,7 @@ rules:
   - httproutes
   - referencegrants
   - referencepolicies
+  - tcproutes
   - tlsroutes
   - udproutes
   verbs:
@@ -55,6 +56,7 @@ rules:
   - gateways/status
   - grpcroutes/status
   - httproutes/status
+  - tcproutes/status
   - tlsroutes/status
   - udproutes/status
   verbs:
