@@ -57,6 +57,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 			suite.SupportHTTPRouteQueryParamMatching:    true,
 			suite.SupportReferenceGrant:                 true,
 			suite.SupportHTTPResponseHeaderModification: true,
+			suite.SupportHTTPRouteMethodMatching:        true,
 		},
 	})
 	cSuite.Setup(t)
@@ -69,6 +70,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.HTTPExactPathMatching,
 		tests.HTTPRouteCrossNamespace,
 		tests.HTTPRouteHeaderMatching,
+		tests.HTTPRouteMethodMatching,
 		tests.HTTPRouteMatchingAcrossRoutes,
 		tests.HTTPRouteHostnameIntersection,
 		tests.HTTPRouteListenerHostnameMatching,
