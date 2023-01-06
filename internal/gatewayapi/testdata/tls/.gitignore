@@ -1,0 +1,2 @@
+# allow test keys to be checked-in to test folder only
+!*.key

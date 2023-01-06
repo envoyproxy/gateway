@@ -79,6 +79,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.GatewaySecretReferenceGrantSpecific,
 		tests.GatewaySecretMissingReferenceGrant,
 		tests.GatewaySecretInvalidReferenceGrant,
+		tests.GatewayInvalidTLSConfiguration,
 		tests.HTTPRouteReferenceGrant,
 		tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant,
 	}
