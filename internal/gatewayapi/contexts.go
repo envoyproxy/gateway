@@ -494,7 +494,7 @@ func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1be
 	idx := -1
 	routeStatus := route.GetRouteStatus()
 	for i, existing := range routeStatus.Parents[r.routeParentStatusIdx].Conditions {
-		if existing.Type == cond.Type {
+		if existing.Type == cond.Type && existing.ObservedGeneration == cond.ObservedGeneration {
 			// return early if the condition is unchanged
 			if existing.Status == cond.Status &&
 				existing.Reason == cond.Reason &&

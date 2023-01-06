@@ -2,8 +2,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1086
-    gateway.networking.k8s.io/bundle-version: v0.6.0-rc1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1538
+    gateway.networking.k8s.io/bundle-version: v0.6.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: referencegrants.gateway.networking.k8s.io
@@ -34,9 +34,11 @@ spec:
           add to the set of trusted sources of inbound references for the namespace
           they are defined within. \n All cross-namespace references in Gateway API
           (with the exception of cross-namespace Gateway-route attachment) require
-          a ReferenceGrant. \n ReferenceGrant is a form of runtime verification. Implementations
-          that support ReferenceGrant MUST respond to removal of a grant by revoking
-          the access that grant allowed. \n Support: Core"
+          a ReferenceGrant. \n ReferenceGrant is a form of runtime verification allowing
+          users to assert which cross-namespace object references are permitted. Implementations
+          that support ReferenceGrant MUST NOT permit cross-namespace references which
+          have no grant, and MUST respond to the removal of a grant by revoking the
+          access that the grant allowed. \n Support: Core"
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -157,9 +159,11 @@ spec:
           add to the set of trusted sources of inbound references for the namespace
           they are defined within. \n All cross-namespace references in Gateway API
           (with the exception of cross-namespace Gateway-route attachment) require
-          a ReferenceGrant. \n ReferenceGrant is a form of runtime verification. Implementations
-          that support ReferenceGrant MUST respond to removal of a grant by revoking
-          the access that grant allowed. \n Support: Core"
+          a ReferenceGrant. \n ReferenceGrant is a form of runtime verification allowing
+          users to assert which cross-namespace object references are permitted. Implementations
+          that support ReferenceGrant MUST NOT permit cross-namespace references which
+          have no grant, and MUST respond to the removal of a grant by revoking the
+          access that the grant allowed. \n Support: Core"
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

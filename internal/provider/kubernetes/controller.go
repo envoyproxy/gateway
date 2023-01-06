@@ -495,6 +495,14 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, sv
 			}
 			gCopy := g.DeepCopy()
 			gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, gtw.Status.Conditions...)
+			for index := range gCopy.Status.Conditions {
+				gCopy.Status.Conditions[index].ObservedGeneration = gtw.Generation
+			}
+			for listenerIndex, listener := range gCopy.Status.Listeners {
+				for index := range listener.Conditions {
+					gCopy.Status.Listeners[listenerIndex].Conditions[index].ObservedGeneration = gtw.Generation
+				}
+			}
 			gCopy.Status.Addresses = gtw.Status.Addresses
 			return gCopy
 		}),
@@ -894,6 +902,15 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 						}
 						gCopy := g.DeepCopy()
 						gCopy.Status.Listeners = val.Status.Listeners
+
+						for index := range gCopy.Status.Conditions {
+							gCopy.Status.Conditions[index].ObservedGeneration = gCopy.Generation
+						}
+						for listenerIndex, listener := range gCopy.Status.Listeners {
+							for index := range listener.Conditions {
+								gCopy.Status.Listeners[listenerIndex].Conditions[index].ObservedGeneration = gCopy.Generation
+							}
+						}
 						return gCopy
 					}),
 				})
@@ -922,6 +939,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 						}
 						hCopy := h.DeepCopy()
 						hCopy.Status.Parents = val.Status.Parents
+
+						for parentIndex, parent := range hCopy.Status.Parents {
+							for conditionIndex := range parent.Conditions {
+								hCopy.Status.Parents[parentIndex].Conditions[conditionIndex].ObservedGeneration = hCopy.Generation
+							}
+						}
 						return hCopy
 					}),
 				})
