@@ -7,44 +7,47 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-        - name: tls
-          protocol: TLS
-          hostname: foo.com
+        - name: http
+          protocol: HTTP
           port: 80
-          tls:
-            mode: Passthrough
           allowedRoutes:
             namespaces:
               from: All
             kinds:
               - group: gateway.networking.k8s.io
+                kind: FooRoute
+              - group: 
                 kind: HTTPRoute
     status:
       listeners:
-        - name: tls
+        - name: http
           attachedRoutes: 0
-          supportedKinds: []
+          supportedKinds:
+            - kind: HTTPRoute
           conditions:
             - type: ResolvedRefs
               status: "False"
               reason: InvalidRouteKinds
-              message: "HTTPRoute is not supported, kind must be TLSRoute"
+              message: "FooRoute is not supported, kind must be HTTPRoute"
             - type: Programmed
               status: "False"
               reason: Invalid
               message: Listener is invalid, see other Conditions for details.
-tlsRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TLSRoute
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: HTTPRoute
     metadata:
       namespace: default
-      name: tlsroute-1
+      name: httproute-1
     spec:
       parentRefs:
         - namespace: envoy-gateway
           name: gateway-1
       rules:
-        - backendRefs:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
             - name: service-1
               port: 8080
     status:
@@ -65,8 +68,8 @@ infraIR:
     proxy:
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
       image: envoyproxy/envoy:translator-tests
       listeners:
