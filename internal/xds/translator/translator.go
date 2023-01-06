@@ -115,14 +115,7 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 		// This is current O(n) right now, but it also leverages an existing
 		// object without allocating new memory. Consider improving it in the future.
 		if rlCluster := findXdsCluster(tCtx, getRateLimitServiceClusterName()); rlCluster == nil {
-<<<<<<< HEAD
-			rlCluster, err := buildRateLimitServiceCluster(httpListener)
-			if err != nil {
-				return multierror.Append(err, errors.New("error building ratelimit cluster"))
-			}
-=======
 			rlCluster := buildRateLimitServiceCluster(httpListener)
->>>>>>> 80d769b... lint
 			// Add cluster
 			if rlCluster != nil {
 				tCtx.AddXdsResource(resource.ClusterType, rlCluster)
