@@ -26,7 +26,23 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 
 	tCtx := new(types.ResourceVersionTable)
 
-	for _, httpListener := range ir.HTTP {
+	if err := processHTTPListenerXdsTranslation(tCtx, ir.HTTP); err != nil {
+		return nil, err
+	}
+
+	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP); err != nil {
+		return nil, err
+	}
+
+	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP); err != nil {
+		return nil, err
+	}
+
+	return tCtx, nil
+}
+
+func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
+	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *route.RouteConfiguration
 
@@ -46,14 +62,14 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 				addFilterChain = false
 				xdsRouteCfg = findXdsRouteConfig(tCtx, routeName)
 				if xdsRouteCfg == nil {
-					return nil, errors.New("unable to find xds route config")
+					return errors.New("unable to find xds route config")
 				}
 			}
 		}
 
 		if addFilterChain {
 			if err := addXdsHTTPFilterChain(xdsListener, httpListener); err != nil {
-				return nil, err
+				return err
 			}
 		}
 
@@ -89,13 +105,15 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 			}
 			xdsCluster := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2)
 			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
-
 		}
 
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
 	}
+	return nil
+}
 
-	for _, tcpListener := range ir.TCP {
+func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener) error {
+	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
 		xdsCluster := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */)
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
@@ -108,11 +126,14 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		}
 
 		if err := addXdsTCPFilterChain(xdsListener, tcpListener, xdsCluster.Name); err != nil {
-			return nil, err
+			return err
 		}
 	}
+	return nil
+}
 
-	for _, udpListener := range ir.UDP {
+func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener) error {
+	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
 		xdsCluster := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */)
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
@@ -121,11 +142,11 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 		// translator
 		xdsListener, err := buildXdsUDPListener(xdsCluster.Name, udpListener)
 		if err != nil {
-			return nil, multierror.Append(err, errors.New("error building xds cluster"))
+			return multierror.Append(err, errors.New("error building xds cluster"))
 		}
 		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
 	}
-	return tCtx, nil
+	return nil
 }
 
 // findXdsListener finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
@@ -161,23 +182,4 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *route.Ro
 	}
 
 	return nil
-}
-
-// Point to xds cluster.
-func makeConfigSource() *core.ConfigSource {
-	source := &core.ConfigSource{}
-	source.ResourceApiVersion = resource.DefaultAPIVersion
-	source.ConfigSourceSpecifier = &core.ConfigSource_ApiConfigSource{
-		ApiConfigSource: &core.ApiConfigSource{
-			TransportApiVersion:       resource.DefaultAPIVersion,
-			ApiType:                   core.ApiConfigSource_DELTA_GRPC,
-			SetNodeOnFirstMessageOnly: true,
-			GrpcServices: []*core.GrpcService{{
-				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
-					EnvoyGrpc: &core.GrpcService_EnvoyGrpc{ClusterName: "xds_cluster"},
-				},
-			}},
-		},
-	}
-	return source
 }

@@ -8,7 +8,7 @@ gateways:
       gatewayClassName: envoy-gateway-class
       listeners:
         - name: unsupported
-          protocol: TCP
+          protocol: GRPC
           port: 80
           allowedRoutes:
             namespaces:

@@ -149,6 +149,14 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
+	tcpRouteList := &gwapiv1a2.TCPRouteList{}
+	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceTCPRouteIndex, utils.NamespacedName(svc).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated TCPRoutes")
+		return false
+	}
+
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndex, utils.NamespacedName(svc).String()),
@@ -161,6 +169,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	allAssociatedRoutes := len(httpRouteList.Items) +
 		len(grpcRouteList.Items) +
 		len(tlsRouteList.Items) +
+		len(tcpRouteList.Items) +
 		len(udpRouteList.Items)
 
 	return allAssociatedRoutes != 0

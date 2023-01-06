@@ -69,6 +69,12 @@ var (
 		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
+	emptySNITCPListenerTLSPassthrough = TCPListener{
+		Name:         "empty-sni",
+		Address:      "0.0.0.0",
+		Port:         80,
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
 		Address:      "0.0.0.0",
 		Port:         80,
@@ -526,6 +532,11 @@ func TestValidateTCPListener(t *testing.T) {
 			want:  nil,
 		},
 		{
+			name:  "tcp empty SNIs",
+			input: emptySNITCPListenerTLSPassthrough,
+			want:  nil,
+		},
+		{
 			name:  "tls passthrough invalid name",
 			input: invalidNameTCPListenerTLSPassthrough,
 			want:  []error{ErrListenerNameEmpty},
@@ -794,7 +805,14 @@ func TestValidateRouteDestination(t *testing.T) {
 			want: ErrRouteDestinationHostInvalid,
 		},
 		{
-			name: "invalid port",
+			name: "missing ip",
+			input: RouteDestination{
+				Port: 8080,
+			},
+			want: ErrRouteDestinationHostInvalid,
+		},
+		{
+			name: "missing port",
 			input: RouteDestination{
 				Host: "10.11.12.13",
 			},

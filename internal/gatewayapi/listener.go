@@ -53,6 +53,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				t.validateAllowedRoutes(listener, KindTLSRoute)
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
 				t.validateAllowedRoutes(listener, KindHTTPRoute)
+			case v1beta1.TCPProtocolType:
+				t.validateAllowedRoutes(listener, KindTCPRoute)
 			case v1beta1.UDPProtocolType:
 				t.validateAllowedRoutes(listener, KindUDPRoute)
 			default:
@@ -60,8 +62,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					v1beta1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.ListenerReasonUnsupportedProtocol,
-					fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, or %s.", listener.Protocol,
-						v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.UDPProtocolType),
+					fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
+						v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.TCPProtocolType, v1beta1.UDPProtocolType),
 				)
 			}
 
@@ -114,6 +116,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					proto = ir.HTTPSProtocolType
 				case v1beta1.TLSProtocolType:
 					proto = ir.TLSProtocolType
+				case v1beta1.TCPProtocolType:
+					proto = ir.TCPProtocolType
 				case v1beta1.UDPProtocolType:
 					proto = ir.UDPProtocolType
 				}

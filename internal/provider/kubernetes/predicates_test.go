@@ -266,6 +266,17 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
 		},
+		{
+			name: "tcp route service routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+				test.GetTCPRoute(types.NamespacedName{Name: "tcproute-test"}, "scheduled-status-test",
+					types.NamespacedName{Name: "service"}),
+			},
+			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
+			expect:  true,
+		},
 	}
 
 	// Create the reconciler.
@@ -284,6 +295,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {

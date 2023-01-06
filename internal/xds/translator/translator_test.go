@@ -68,6 +68,21 @@ func TestTranslate(t *testing.T) {
 			name: "tls-route-passthrough",
 		},
 		{
+			name: "tcp-route-simple",
+		},
+		{
+			name: "tcp-route-complex",
+		},
+		{
+			name: "multiple-simple-tcp-route-same-port",
+		},
+		{
+			name: "http-route-weighted-backend",
+		},
+		{
+			name: "tcp-route-weighted-backend",
+		},
+		{
 			name:           "multiple-listeners-same-port",
 			requireSecrets: true,
 		},

@@ -111,6 +111,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(tlsRoute)
 				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
 			}
+			for _, tcpRoute := range result.TCPRoutes {
+				key := utils.NamespacedName(tcpRoute)
+				r.ProviderResources.TCPRouteStatuses.Store(key, tcpRoute)
+			}
 			for _, udpRoute := range result.UDPRoutes {
 				key := utils.NamespacedName(udpRoute)
 				r.ProviderResources.UDPRouteStatuses.Store(key, udpRoute)

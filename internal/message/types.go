@@ -26,6 +26,7 @@ type ProviderResources struct {
 	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
 	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRoute]
 	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
+	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRoute]
 	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRoute]
 }
 
@@ -54,6 +55,7 @@ func (p *ProviderResources) Close() {
 	p.GatewayStatuses.Close()
 	p.HTTPRouteStatuses.Close()
 	p.TLSRouteStatuses.Close()
+	p.TCPRouteStatuses.Close()
 	p.UDPRouteStatuses.Close()
 }
 

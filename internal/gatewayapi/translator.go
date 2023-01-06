@@ -15,6 +15,7 @@ const (
 	KindHTTPRoute = "HTTPRoute"
 	KindGRPCRoute = "GRPCRoute"
 	KindTLSRoute  = "TLSRoute"
+	KindTCPRoute  = "TCPRoute"
 	KindUDPRoute  = "UDPRoute"
 	KindService   = "Service"
 	KindSecret    = "Secret"
@@ -62,13 +63,14 @@ type TranslateResult struct {
 	Gateways   []*v1beta1.Gateway
 	HTTPRoutes []*v1beta1.HTTPRoute
 	TLSRoutes  []*v1alpha2.TLSRoute
+	TCPRoutes  []*v1alpha2.TCPRoute
 	UDPRoutes  []*v1alpha2.UDPRoute
 	XdsIR      XdsIRMap
 	InfraIR    InfraIRMap
 }
 
 func newTranslateResult(gateways []*GatewayContext,
-	httpRoutes []*HTTPRouteContext, tlsRoutes []*TLSRouteContext, udpRoutes []*UDPRouteContext, xdsIR XdsIRMap,
+	httpRoutes []*HTTPRouteContext, tlsRoutes []*TLSRouteContext, tcpRoutes []*TCPRouteContext, udpRoutes []*UDPRouteContext, xdsIR XdsIRMap,
 	infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -83,6 +85,9 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 	for _, tlsRoute := range tlsRoutes {
 		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
+	}
+	for _, tcpRoute := range tcpRoutes {
+		translateResult.TCPRoutes = append(translateResult.TCPRoutes, tcpRoute.TCPRoute)
 	}
 	for _, udpRoute := range udpRoutes {
 		translateResult.UDPRoutes = append(translateResult.UDPRoutes, udpRoute.UDPRoute)
@@ -107,13 +112,16 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant TLSRoutes.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, gateways, resources, xdsIR)
 
+	// Process all relevant TCPRoutes.
+	tcpRoutes := t.ProcessTCPRoutes(resources.TCPRoutes, gateways, resources, xdsIR)
+
 	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, tlsRoutes, udpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
 }
 
 func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {

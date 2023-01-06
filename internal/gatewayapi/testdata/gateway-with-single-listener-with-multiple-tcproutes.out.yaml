@@ -1,0 +1,103 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp
+          protocol: TCP
+          port: 162
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: tcp
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: TCPRoute
+          AttachedRoutes: 1
+          conditions:
+            - type: Programmed
+              status: "True"
+              reason: Programmed
+              message: Listener is ready
+tcpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-1
+              port: 8163
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Route is accepted
+  - apiVersion: gateway.networking.k8s.io/v1alpha2
+    kind: TCPRoute
+    metadata:
+      namespace: default
+      name: tcproute-2
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - backendRefs:
+            - name: service-2
+              port: 8163
+    status:
+      parents:
+        - parentRef:
+            namespace: envoy-gateway
+            name: gateway-1
+          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          conditions:
+            - type: Accepted
+              status: "False"
+              reason: UnsupportedValue
+              message: Multiple routes on the same TCP listener
+xdsIR:
+  envoy-gateway-gateway-1:
+    tcp:
+      - name: "envoy-gateway-gateway-1-tcp-tcproute-1"
+        address: "0.0.0.0"
+        port: 10162
+        destinations:
+          - host: "7.7.7.7"
+            port: 8163
+            weight: 0
+
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:translator-tests
+      listeners:
+        - address: ""
+          ports:
+            - name: tcp
+              protocol: "TCP"
+              servicePort: 162
+              containerPort: 10162

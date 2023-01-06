@@ -1,0 +1,40 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tcp
+          hostname: foo.com
+          protocol: TCP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+    status:
+      listeners:
+        - name: tcp
+          supportedKinds:
+            - group: gateway.networking.k8s.io
+              kind: TCPRoute
+          conditions:
+            - type: Programmed
+              status: "False"
+              reason: Invalid
+              message: Listener must not have hostname set when protocol is TCP.
+xdsIR:
+  envoy-gateway-gateway-1: {}
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:translator-tests
+      listeners:
+        - address: ""

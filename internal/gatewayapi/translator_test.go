@@ -64,6 +64,7 @@ func TestTranslate(t *testing.T) {
 							Ports: []v1.ServicePort{
 								{Port: 8080, Protocol: v1.ProtocolTCP},
 								{Port: 8443, Protocol: v1.ProtocolTCP},
+								{Port: 8163, Protocol: v1.ProtocolTCP},
 								{Port: 8162, Protocol: v1.ProtocolUDP},
 							},
 						},

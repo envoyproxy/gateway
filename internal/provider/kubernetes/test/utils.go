@@ -168,6 +168,34 @@ func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.N
 	}
 }
 
+// GetTCPRoute returns a sample TCPRoute with a parent reference.
+func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.TCPRoute {
+	return &gwapiv1a2.TCPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+		},
+		Spec: gwapiv1a2.TCPRouteSpec{
+			CommonRouteSpec: gwapiv1a2.CommonRouteSpec{
+				ParentRefs: []gwapiv1a2.ParentReference{
+					{Name: gwapiv1a2.ObjectName(parent)},
+				},
+			},
+			Rules: []gwapiv1a2.TCPRouteRule{
+				{
+					BackendRefs: []gwapiv1a2.BackendRef{
+						{
+							BackendObjectReference: gwapiv1a2.BackendObjectReference{
+								Name: gwapiv1a2.ObjectName(serviceName.Name),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // GetUDPRoute returns a sample UDPRoute with a parent reference.
 func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.UDPRoute {
 	return &gwapiv1a2.UDPRoute{

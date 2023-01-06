@@ -15,3 +15,4 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/http-response-headers
   user/secure-gateways
   user/tls-passthrough
+  user/tcp-routing

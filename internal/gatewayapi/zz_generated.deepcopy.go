@@ -64,6 +64,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.TCPRoutes != nil {
+		in, out := &in.TCPRoutes, &out.TCPRoutes
+		*out = make([]*v1alpha2.TCPRoute, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha2.TCPRoute)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.UDPRoutes != nil {
 		in, out := &in.UDPRoutes, &out.UDPRoutes
 		*out = make([]*v1alpha2.UDPRoute, len(*in))

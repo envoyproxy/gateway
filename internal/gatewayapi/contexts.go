@@ -193,11 +193,6 @@ type RouteContext interface {
 	// TLSRoute, TCPRoute, UDPRoute etc.
 	GetRouteType() string
 
-	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
-	// objects being implemented are of type v1beta1.
-	// GetHostnames returns the hosts targeted by the Route object.
-	GetHostnames() []string
-
 	// GetRouteStatus returns the RouteStatus object associated with the Route.
 	GetRouteStatus() *v1beta1.RouteStatus
 
@@ -387,11 +382,6 @@ func (u *UDPRouteContext) GetRouteType() string {
 	return KindUDPRoute
 }
 
-// GetHostnames return empty string array because UDPRoute has no hostnames
-func (u *UDPRouteContext) GetHostnames() []string {
-	return []string{""}
-}
-
 func (u *UDPRouteContext) GetParentReferences() []v1beta1.ParentReference {
 	parentReferences := make([]v1beta1.ParentReference, len(u.Spec.ParentRefs))
 	for idx, p := range u.Spec.ParentRefs {
@@ -461,6 +451,87 @@ func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	return ctx
 }
 
+// TCPRouteContext wraps a TCPRoute and provides helper methods for
+// accessing the route's parents.
+type TCPRouteContext struct {
+	*v1alpha2.TCPRoute
+
+	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (t *TCPRouteContext) GetRouteType() string {
+	return KindTCPRoute
+}
+
+func (t *TCPRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	parentReferences := make([]v1beta1.ParentReference, len(t.Spec.ParentRefs))
+	for idx, p := range t.Spec.ParentRefs {
+		parentReferences[idx] = UpgradeParentReference(p)
+	}
+	return parentReferences
+}
+
+func (t *TCPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &t.Status.RouteStatus
+}
+
+func (t *TCPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
+	if t.parentRefs == nil {
+		t.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+	}
+
+	if ctx := t.parentRefs[forParentRef]; ctx != nil {
+		return ctx
+	}
+
+	var parentRef *v1beta1.ParentReference
+	for i, p := range t.Spec.ParentRefs {
+		p := UpgradeParentReference(p)
+		if reflect.DeepEqual(p, forParentRef) {
+			upgraded := UpgradeParentReference(t.Spec.ParentRefs[i])
+			parentRef = &upgraded
+			break
+		}
+	}
+	if parentRef == nil {
+		panic("parentRef not found")
+	}
+
+	routeParentStatusIdx := -1
+	for i := range t.Status.Parents {
+		p := UpgradeParentReference(t.Status.Parents[i].ParentRef)
+		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
+		}
+		if reflect.DeepEqual(p, forParentRef) {
+			routeParentStatusIdx = i
+			break
+		}
+	}
+	if routeParentStatusIdx == -1 {
+		rParentStatus := v1alpha2.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      DowngradeParentReference(forParentRef),
+		}
+		t.Status.Parents = append(t.Status.Parents, rParentStatus)
+		routeParentStatusIdx = len(t.Status.Parents) - 1
+	}
+
+	ctx := &RouteParentContext{
+		ParentReference: parentRef,
+
+		tcpRoute:             t.TCPRoute,
+		routeParentStatusIdx: routeParentStatusIdx,
+	}
+	t.parentRefs[forParentRef] = ctx
+	return ctx
+}
+
 // RouteParentContext wraps a ParentReference and provides helper methods for
 // setting conditions and other status information on the associated
 // HTTPRoute, TLSRoute etc.
@@ -471,6 +542,7 @@ type RouteParentContext struct {
 	// a single field pointing to *v1beta1.RouteStatus.
 	httpRoute *v1beta1.HTTPRoute
 	tlsRoute  *v1alpha2.TLSRoute
+	tcpRoute  *v1alpha2.TCPRoute
 	udpRoute  *v1alpha2.UDPRoute
 
 	routeParentStatusIdx int
