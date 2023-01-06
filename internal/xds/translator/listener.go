@@ -92,6 +92,17 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 		}},
 	}
 
+	// Allow websocket upgrades for HTTP 1.1
+	// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+	if !irListener.IsHTTP2 {
+		mgr.UpgradeConfigs = []*hcm.HttpConnectionManager_UpgradeConfig{
+			{
+				UpgradeType: "websocket",
+			},
+		}
+
+	}
+
 	// TODO: Make this a generic interface for all API Gateway features.
 	if err := patchHCMWithRateLimit(mgr, irListener); err != nil {
 		return err
