@@ -331,6 +331,17 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			break
 		}
 
+		err := validateTLSSecretData(secret)
+		if err != nil {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidCertificateRef,
+				fmt.Sprintf("Secret %s/%s must contain valid %s and %s, %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey, err.Error()),
+			)
+			break
+		}
+
 		listener.SetTLSSecret(secret)
 	case v1beta1.TLSProtocolType:
 		if listener.TLS == nil {
