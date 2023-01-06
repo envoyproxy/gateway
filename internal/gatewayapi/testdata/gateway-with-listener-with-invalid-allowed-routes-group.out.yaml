@@ -19,6 +19,7 @@ gateways:
     status:
       listeners:
         - name: http
+          supportedKinds: []
           attachedRoutes: 0
           conditions:
             - type: ResolvedRefs

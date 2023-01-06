@@ -392,30 +392,38 @@ func (t *Translator) validateHostName(listener *ListenerContext) {
 func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKind v1beta1.Kind) {
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
 		listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: routeKind})
-	} else {
-		for _, kind := range listener.AllowedRoutes.Kinds {
-			if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidRouteKinds,
-					fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
-				)
-				continue
-			}
-
-			if kind.Kind != routeKind {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidRouteKinds,
-					fmt.Sprintf("Kind is not supported, kind must be %s", routeKind),
-				)
-				continue
-			}
-			listener.SetSupportedKinds(kind)
-		}
+		return
 	}
+
+	supportedKinds := make([]v1beta1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
+
+	for _, kind := range listener.AllowedRoutes.Kinds {
+
+		// if there is a group it must match `gateway.networking.k8s.io`
+		if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidRouteKinds,
+				fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
+			)
+			continue
+		}
+
+		if kind.Kind != routeKind {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidRouteKinds,
+				fmt.Sprintf("%s is not supported, kind must be %s", kind.Kind, routeKind),
+			)
+			continue
+		}
+
+		supportedKinds = append(supportedKinds, kind)
+	}
+
+	listener.SetSupportedKinds(supportedKinds...)
 }
 
 type portListeners struct {
