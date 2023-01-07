@@ -66,17 +66,7 @@ type KubernetesResourceProvider struct {
 	// are applied.
 	//
 	// +optional
-	EnvoyDeployment *EnvoyDeployment `json:"envoyDeployment,omitempty"`
-}
-
-// EnvoyDeployment defines the desired state of the Envoy deployment resource.
-type EnvoyDeployment struct {
-	// Replicas is the number of desired Envoy proxy pods. Defaults to 1.
-	//
-	// +optional
-	Replicas *int32 `json:"replicas,omitempty"`
-
-	// TODO: Expose config as use cases are better understood, e.g. labels.
+	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies.

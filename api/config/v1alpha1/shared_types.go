@@ -17,3 +17,13 @@ const (
 	// ProviderTypeFile defines the "File" provider.
 	ProviderTypeFile ProviderType = "File"
 )
+
+// KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
+type KubernetesDeploymentSpec struct {
+	// Replicas is the number of desired pods. Defaults to 1.
+	//
+	// +optional
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// TODO: Expose config as use cases are better understood, e.g. labels.
+}
