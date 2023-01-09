@@ -102,7 +102,8 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 			// return early if the condition is unchanged
 			if existing.Status == cond.Status &&
 				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message {
+				existing.Message == cond.Message &&
+				existing.ObservedGeneration == cond.ObservedGeneration {
 				return
 			}
 			idx = i
@@ -570,7 +571,8 @@ func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1be
 			// return early if the condition is unchanged
 			if existing.Status == cond.Status &&
 				existing.Reason == cond.Reason &&
-				existing.Message == cond.Message {
+				existing.Message == cond.Message &&
+				existing.ObservedGeneration == cond.ObservedGeneration {
 				return
 			}
 			idx = i

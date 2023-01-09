@@ -2,8 +2,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1086
-    gateway.networking.k8s.io/bundle-version: v0.6.0-rc1
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1538
+    gateway.networking.k8s.io/bundle-version: v0.6.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
@@ -90,8 +90,8 @@ spec:
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard    label
+                    2 notable exceptions: \n  1. IPs are not allowed.  2. A hostname
+                    may be prefixed with a wildcard label (`*.`). The wildcard     label
                     must appear by itself as the first label. \n Hostname can be \"precise\"
                     which is a domain name without the terminating dot of a network
                     host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
@@ -120,7 +120,12 @@ spec:
                   that may be collapsed by an implementation. For example, some implementations
                   may choose to merge compatible Gateway Listeners together. If that
                   is the case, the list of routes attached to those resources should
-                  also be merged."
+                  also be merged. \n Note that for ParentRefs that cross namespace
+                  boundaries, there are specific rules. Cross-namespace references
+                  are only valid if they are explicitly allowed by something in the
+                  namespace they are referring to. For example, Gateway has the AllowedRoutes
+                  field, and ReferenceGrant provides a generic way to enable any other
+                  kind of cross-namespace reference."
                 items:
                   description: "ParentReference identifies an API object (usually
                     a Gateway) that can be considered a parent of this resource (usually
@@ -157,6 +162,12 @@ spec:
                     namespace:
                       description: "Namespace is the namespace of the referent. When
                         unspecified, this refers to the local namespace of the Route.
+                        \n Note that there are specific rules for ParentRefs which
+                        cross namespace boundaries. Cross-namespace references are
+                        only valid if they are explicitly allowed by something in
+                        the namespace they are referring to. For example: Gateway
+                        has the AllowedRoutes field, and ReferenceGrant provides a
+                        generic way to enable any other kind of cross-namespace reference.
                         \n Support: Core"
                       maxLength: 63
                       minLength: 1
@@ -1460,8 +1471,8 @@ spec:
                           if all conditions are satisfied. \n For example, the match
                           below will match a HTTP request only if its path starts
                           with `/foo` AND it contains the `version: v1` header: \n
-                          ``` match:   path:     value: \"/foo\"   headers:   - name:
-                          \"version\"     value \"v1\" ```"
+                          ``` match: \n \tpath: \t  value: \"/foo\" \theaders: \t-
+                          name: \"version\" \t  value \"v1\" \n ```"
                         properties:
                           headers:
                             description: Headers specifies HTTP request header matchers.
@@ -1669,14 +1680,15 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, type FooStatus struct{
-                          \    // Represents the observations of a foo's current state.
-                          \    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
-                          \    // +patchStrategy=merge     // +listType=map     //
-                          +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                          patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                          \n     // other fields }"
+                          .status.conditions.  For example, \n \ttype FooStatus struct{
+                          \t    // Represents the observations of a foo's current
+                          state. \t    // Known .status.conditions.type are: \"Available\",
+                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
+                          \t    // +patchStrategy=merge \t    // +listType=map \t
+                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
+                          fields \t}"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -1789,7 +1801,13 @@ spec:
                         namespace:
                           description: "Namespace is the namespace of the referent.
                             When unspecified, this refers to the local namespace of
-                            the Route. \n Support: Core"
+                            the Route. \n Note that there are specific rules for ParentRefs
+                            which cross namespace boundaries. Cross-namespace references
+                            are only valid if they are explicitly allowed by something
+                            in the namespace they are referring to. For example: Gateway
+                            has the AllowedRoutes field, and ReferenceGrant provides
+                            a generic way to enable any other kind of cross-namespace
+                            reference. \n Support: Core"
                           maxLength: 63
                           minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
@@ -1934,8 +1952,8 @@ spec:
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard    label
+                    2 notable exceptions: \n  1. IPs are not allowed.  2. A hostname
+                    may be prefixed with a wildcard label (`*.`). The wildcard     label
                     must appear by itself as the first label. \n Hostname can be \"precise\"
                     which is a domain name without the terminating dot of a network
                     host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
@@ -1964,7 +1982,12 @@ spec:
                   that may be collapsed by an implementation. For example, some implementations
                   may choose to merge compatible Gateway Listeners together. If that
                   is the case, the list of routes attached to those resources should
-                  also be merged."
+                  also be merged. \n Note that for ParentRefs that cross namespace
+                  boundaries, there are specific rules. Cross-namespace references
+                  are only valid if they are explicitly allowed by something in the
+                  namespace they are referring to. For example, Gateway has the AllowedRoutes
+                  field, and ReferenceGrant provides a generic way to enable any other
+                  kind of cross-namespace reference."
                 items:
                   description: "ParentReference identifies an API object (usually
                     a Gateway) that can be considered a parent of this resource (usually
@@ -2001,6 +2024,12 @@ spec:
                     namespace:
                       description: "Namespace is the namespace of the referent. When
                         unspecified, this refers to the local namespace of the Route.
+                        \n Note that there are specific rules for ParentRefs which
+                        cross namespace boundaries. Cross-namespace references are
+                        only valid if they are explicitly allowed by something in
+                        the namespace they are referring to. For example: Gateway
+                        has the AllowedRoutes field, and ReferenceGrant provides a
+                        generic way to enable any other kind of cross-namespace reference.
                         \n Support: Core"
                       maxLength: 63
                       minLength: 1
@@ -3304,8 +3333,8 @@ spec:
                           if all conditions are satisfied. \n For example, the match
                           below will match a HTTP request only if its path starts
                           with `/foo` AND it contains the `version: v1` header: \n
-                          ``` match:   path:     value: \"/foo\"   headers:   - name:
-                          \"version\"     value \"v1\" ```"
+                          ``` match: \n \tpath: \t  value: \"/foo\" \theaders: \t-
+                          name: \"version\" \t  value \"v1\" \n ```"
                         properties:
                           headers:
                             description: Headers specifies HTTP request header matchers.
@@ -3513,14 +3542,15 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, type FooStatus struct{
-                          \    // Represents the observations of a foo's current state.
-                          \    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\"     // +patchMergeKey=type
-                          \    // +patchStrategy=merge     // +listType=map     //
-                          +listMapKey=type     Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                          patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`
-                          \n     // other fields }"
+                          .status.conditions.  For example, \n \ttype FooStatus struct{
+                          \t    // Represents the observations of a foo's current
+                          state. \t    // Known .status.conditions.type are: \"Available\",
+                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
+                          \t    // +patchStrategy=merge \t    // +listType=map \t
+                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
+                          fields \t}"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -3633,7 +3663,13 @@ spec:
                         namespace:
                           description: "Namespace is the namespace of the referent.
                             When unspecified, this refers to the local namespace of
-                            the Route. \n Support: Core"
+                            the Route. \n Note that there are specific rules for ParentRefs
+                            which cross namespace boundaries. Cross-namespace references
+                            are only valid if they are explicitly allowed by something
+                            in the namespace they are referring to. For example: Gateway
+                            has the AllowedRoutes field, and ReferenceGrant provides
+                            a generic way to enable any other kind of cross-namespace
+                            reference. \n Support: Core"
                           maxLength: 63
                           minLength: 1
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$

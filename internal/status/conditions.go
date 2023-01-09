@@ -125,5 +125,8 @@ func newCondition(t string, status metav1.ConditionStatus, reason, msg string, l
 }
 
 func conditionChanged(a, b metav1.Condition) bool {
-	return a.Status != b.Status || a.Reason != b.Reason || a.Message != b.Message
+	return (a.Status != b.Status) ||
+		(a.Reason != b.Reason) ||
+		(a.Message != b.Message) ||
+		(a.ObservedGeneration != b.ObservedGeneration)
 }
