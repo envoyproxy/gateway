@@ -276,22 +276,33 @@ func (r *gatewayAPIReconciler) getNamespace(ctx context.Context, name string) (*
 	return ns, nil
 }
 
-func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, svc *corev1.Service, deploy *appsv1.Deployment) {
+func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *gwapiv1b1.Gateway) {
 	// nil check for unit tests.
 	if r.statusUpdater == nil {
 		return
 	}
 
+	// Get deployment
+	deploy, err := r.envoyDeploymentForGateway(ctx, gtw)
+	if err != nil {
+		r.log.Info("failed to get Deployment for gateway",
+			"namespace", gtw.Namespace, "name", gtw.Name)
+	}
+
+	// Get service
+	svc, err := r.envoyServiceForGateway(ctx, gtw)
+	if err != nil {
+		r.log.Info("failed to get Service for gateway",
+			"namespace", gtw.Namespace, "name", gtw.Name)
+	}
 	// update scheduled condition
 	status.UpdateGatewayStatusScheduledCondition(gtw, true)
 	// update address field and ready condition
 	status.UpdateGatewayStatusReadyCondition(gtw, svc, deploy)
 
 	key := utils.NamespacedName(gtw)
+
 	// publish status
-	// do it inline since this code flow updates the
-	// Status.Addresses field whereas the message bus / subscriber
-	// does not.
 	r.statusUpdater.Send(status.Update{
 		NamespacedName: key,
 		Resource:       new(gwapiv1b1.Gateway),
@@ -303,6 +314,7 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, sv
 			gCopy := g.DeepCopy()
 			gCopy.Status.Conditions = gtw.Status.Conditions
 			gCopy.Status.Addresses = gtw.Status.Addresses
+			gCopy.Status.Listeners = gtw.Status.Listeners
 			return gCopy
 		}),
 	})
@@ -839,21 +851,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				if update.Delete {
 					return
 				}
-				key := update.Key
-				val := update.Value
-				r.statusUpdater.Send(status.Update{
-					NamespacedName: key,
-					Resource:       new(gwapiv1b1.Gateway),
-					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
-						g, ok := obj.(*gwapiv1b1.Gateway)
-						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
-						}
-						gCopy := g.DeepCopy()
-						gCopy.Status.Listeners = val.Status.Listeners
-						return gCopy
-					}),
-				})
+				r.statusUpdateForGateway(ctx, update.Value)
 			},
 		)
 		r.log.Info("gateway status subscriber shutting down")
