@@ -92,6 +92,11 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 		}},
 	}
 
+	// TODO: Make this a generic interface for all API Gateway features.
+	if err := patchHCMWithRateLimit(mgr, irListener); err != nil {
+		return err
+	}
+
 	mgrAny, err := anypb.New(mgr)
 	if err != nil {
 		return err

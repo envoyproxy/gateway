@@ -24,7 +24,8 @@ var (
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
 	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
 	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
-	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix or SafeRegex fields must be specified")
+	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
+	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid   = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
 	ErrRedirectUnsupportedStatus     = errors.New("only HTTP status codes 301 and 302 are supported for redirect filters")
 	ErrRedirectUnsupportedScheme     = errors.New("only http and https are supported for the scheme in redirect filters")
@@ -211,6 +212,9 @@ type HTTPRoute struct {
 	Destinations []*RouteDestination
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite
+	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
+	// the requests on this route.
+	RateLimit *RateLimit
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -460,7 +464,7 @@ func (r HTTPPathModifier) Validate() error {
 }
 
 // StringMatch holds the various match conditions.
-// Only one of Exact, Prefix or SafeRegex can be set.
+// Only one of Exact, Prefix, SafeRegex or Distinct can be set.
 // +k8s:deepcopy-gen=true
 type StringMatch struct {
 	// Name of the field to match on.
@@ -473,6 +477,9 @@ type StringMatch struct {
 	Suffix *string
 	// SafeRegex match condition.
 	SafeRegex *string
+	// Distinct match condition.
+	// Used to match any and all possible unique values encountered within the Name field.
+	Distinct bool
 }
 
 // Validate the fields within the StringMatch structure
@@ -489,6 +496,12 @@ func (s StringMatch) Validate() error {
 		matchCount++
 	}
 	if s.SafeRegex != nil {
+		matchCount++
+	}
+	if s.Distinct {
+		if s.Name == "" {
+			errs = multierror.Append(errs, ErrStringMatchNameIsEmpty)
+		}
 		matchCount++
 	}
 
@@ -590,4 +603,45 @@ func (h UDPListener) Validate() error {
 		}
 	}
 	return errs
+}
+
+// RateLimit holds the rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type RateLimit struct {
+	// Global rate limit settings.
+	Global *GlobalRateLimit
+}
+
+// GlobalRateLimit holds the global rate limiting configuration.
+// +k8s:deepcopy-gen=true
+type GlobalRateLimit struct {
+	// Rules for rate limiting.
+	Rules []*RateLimitRule
+}
+
+// RateLimitRule holds the match and limit configuration for ratelimiting.
+// +k8s:deepcopy-gen=true
+type RateLimitRule struct {
+	// HeaderMatches define the match conditions on the request headers for this route.
+	HeaderMatches []*StringMatch
+	// Limit holds the rate limit values.
+	Limit *RateLimitValue
+}
+
+type RateLimitUnit string
+
+const (
+	Second RateLimitUnit = "second"
+	Minute RateLimitUnit = "minute"
+	Hour   RateLimitUnit = "hour"
+	Day    RateLimitUnit = "day"
+)
+
+// RateLimitValue holds the
+// +k8s:deepcopy-gen=true
+type RateLimitValue struct {
+	// Requests are the number of requests that need to be rate limited.
+	Requests uint32
+	// Unit of rate limiting.
+	Unit RateLimitUnit
 }

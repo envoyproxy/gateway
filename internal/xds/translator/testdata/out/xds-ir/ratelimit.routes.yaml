@@ -1,0 +1,38 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        path: foo/bar
+      route:
+        cluster: first-route
+        rateLimits:
+        - actions:
+          - headerValueMatch:
+              descriptorKey: first-route-key-rule-0-match-0
+              descriptorValue: first-route-value-rule-0-match-0
+              expectMatch: true
+              headers:
+              - name: x-user-id
+                stringMatch:
+                  exact: one
+    - match:
+        path: example
+      route:
+        cluster: second-route
+        rateLimits:
+        - actions:
+          - requestHeaders:
+              descriptorKey: second-route-key-rule-0-match-0
+              headerName: x-user-id
+    - match:
+        path: test
+      route:
+        cluster: third-route
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: third-route-key-rule-0-match--1
+              descriptorValue: third-route-value-rule-0-match--1
