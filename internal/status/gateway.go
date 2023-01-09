@@ -58,6 +58,8 @@ func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Servic
 		}
 
 		gw.Status.Addresses = gwAddrs
+	} else {
+		gw.Status.Addresses = nil
 	}
 	// Update the ready condition.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayReadyCondition(gw, deployment))

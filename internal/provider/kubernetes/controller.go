@@ -301,7 +301,7 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(gtw *gwapiv1b1.Gateway, sv
 				panic(fmt.Sprintf("unsupported object type %T", obj))
 			}
 			gCopy := g.DeepCopy()
-			gCopy.Status.Conditions = status.MergeConditions(gCopy.Status.Conditions, gtw.Status.Conditions...)
+			gCopy.Status.Conditions = gtw.Status.Conditions
 			gCopy.Status.Addresses = gtw.Status.Addresses
 			return gCopy
 		}),

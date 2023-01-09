@@ -118,7 +118,6 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		if err != nil {
 			r.log.Info("failed to get Deployment for gateway",
 				"namespace", gtw.Namespace, "name", gtw.Name)
-			return false
 		}
 
 		r.statusUpdateForGateway(gtw, svc, deployment)
@@ -197,7 +196,6 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 			if err != nil {
 				r.log.Info("failed to get Service for gateway",
 					"namespace", gtw.Namespace, "name", gtw.Name)
-				return false
 			}
 
 			r.statusUpdateForGateway(gtw, svc, deployment)
