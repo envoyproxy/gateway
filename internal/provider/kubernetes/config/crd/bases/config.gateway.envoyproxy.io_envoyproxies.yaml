@@ -75,8 +75,8 @@ spec:
                           for the manged Envoy deployment resource are applied.
                         properties:
                           replicas:
-                            description: Replicas is the number of desired Envoy proxy
-                              pods. Defaults to 1.
+                            description: Replicas is the number of desired pods. Defaults
+                              to 1.
                             format: int32
                             type: integer
                         type: object
