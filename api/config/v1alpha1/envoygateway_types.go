@@ -49,6 +49,11 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	RateLimit *RateLimit `json:"rateLimit,omitempty"`
+
+	// Extension defines an extension to register for the Envoy Gateway Control Plane.
+	//
+	// +optional
+	Extension *Extension `json:"extensions,omitempty"`
 }
 
 // Gateway defines the desired Gateway API configuration of Envoy Gateway.
@@ -94,6 +99,22 @@ type FileProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 
+// TLSSecret defines the configuration for getting TLS certificates from a Secret.
+type TLSSecret struct {
+	// Name is the secret name to load the TLS certificate from
+	Name string `json:"name"`
+
+	// Namespace is the namespace where the secret is located.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// TLSFile defines the configuration for getting TLS certificates from a file.
+type TLSFile struct {
+	// TODO: Add config when we are ready to support this
+}
+
 // RateLimit defines the configuration associated with the Rate Limit Service
 // used for Global Rate Limiting.
 type RateLimit struct {
@@ -133,6 +154,56 @@ const (
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
 	URL string `json:"url"`
+}
+
+// Extension defines the configuration for registering an extension to
+// the Envoy Gateway control plane.
+type Extension struct {
+	// Resources defines the set of K8s resources the extension will handle.
+	Resources []*GroupVersionKind `json:"resources,omitempty"`
+
+	// Service defines the configuration of the extension service that the Envoy
+	// Gateway Control Plane will call through extension hooks.
+	Service *ExtensionService `json:"service"`
+}
+
+// ExtensionService defines the configuration for connecting to a registered extension service.
+type ExtensionService struct {
+	// Host define the extension service hostname.
+	Host string `json:"host"`
+
+	// Port defines the port the extension service is exposed on.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=80
+	Port int32 `json:"port,omitempty"`
+
+	// TLS defines TLS configuration for communication between Envoy Gateway and
+	// the extension service.
+	//
+	// +optional
+	TLS *ExtensionTLS `json:"tls,omitempty"`
+}
+
+// ExtensionTLS defines the TLS configuration when connecting to an extension service.
+type ExtensionTLS struct {
+	// Type is the method for how the TLS certificate is loaded. Supported types are:
+	//
+	//   * Secret: Load the TLS certificate from a K8s secret.
+	//
+	// +unionDiscriminator
+	Type TLSType `json:"type"`
+
+	// Secret defines which K8s secret to load the TLS certificate from.
+	//
+	// +optional
+	Secret *TLSSecret `json:"secret,omitempty"`
+
+	// File defines the configuration for loading the TLS certificate from the filesystem.
+	//
+	// +optional
+	File *TLSFile `json:"file,omitempty"`
 }
 
 func init() {

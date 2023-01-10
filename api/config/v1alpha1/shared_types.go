@@ -10,6 +10,14 @@ const (
 	DefaultEnvoyReplicas = 1
 )
 
+// GroupVersionKind unambiguously identifies a Kind.
+// It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
+type GroupVersionKind struct {
+	Group string `json:"group,omitempty"`
+	Version string `json:"version"`
+	Kind string `json:"kind"`
+}
+
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
 // +kubebuilder:validation:Enum=Kubernetes
@@ -22,6 +30,19 @@ const (
 	// ProviderTypeFile defines the "File" provider. This type is not implemented
 	// until https://github.com/envoyproxy/gateway/issues/1001 is fixed.
 	ProviderTypeFile ProviderType = "File"
+)
+
+// TLSType defines the types where TLS certificates can be loaded.
+//
+// +kubebuilder:validation:Enum=Secret
+type TLSType string
+
+const (
+	// TLSTypeSecret defines the "Secret" TLS type.
+	TLSTypeSecret TLSType = "Secret"
+
+	// TLSTypeFile defines the "File" TLS type. This type is not implemented
+	TLSTypeFile TLSType = "File"
 )
 
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
