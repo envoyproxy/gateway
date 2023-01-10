@@ -24,7 +24,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | Quarter |                        Release Manager                         |
 |:-------:|:--------------------------------------------------------------:|
 | 2022 Q4 |    Daneyon Hansen ([danehans](https://github.com/danehans))    |
-| 2023 Q1 |                              TBD                               |
+| 2023 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
 
 ## Release Schedule
 
@@ -34,7 +34,7 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 | Version |  Expected   |   Actual    | Difference | End of Life |
 |:-------:|:-----------:|:-----------:|:----------:|:-----------:|
 |  0.2.0  | 2022/10/22  | 2022/10/20  |   -2 day   |  2023/4/20  |
-|  0.3.0  | 2023/01/22  |             |            |             |
+|  0.3.0  | 2023/02/02  | 2023/02/09  |   +7 day   |  2023/08/09  |
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
 [release guide]: ../dev/releasing.md
