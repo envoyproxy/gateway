@@ -10,3 +10,6 @@ configMapGenerator:
 - name: envoy-gateway-config
   files:
   - envoy-gateway.yaml
+
+patchesStrategicMerge:
+- envs.yaml

@@ -8,6 +8,7 @@ package ir
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 
@@ -15,9 +16,18 @@ import (
 )
 
 const (
-	DefaultProxyName  = "default"
+	DefaultProxyName = "default"
+)
+
+var (
 	DefaultProxyImage = "envoyproxy/envoy-dev:latest"
 )
+
+func init() {
+	if proxyImageTag := os.Getenv("PROXY_IMAGE"); proxyImageTag != "" {
+		DefaultProxyImage = proxyImageTag
+	}
+}
 
 // Infra defines managed infrastructure.
 // +k8s:deepcopy-gen=true

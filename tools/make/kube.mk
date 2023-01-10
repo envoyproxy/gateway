@@ -8,6 +8,8 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 CONFORMANCE_UNIQUE_PORTS ?= true
 
+PROXY_IMAGE ?=
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -112,6 +114,7 @@ generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
 	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
 	mkdir -pv $(OUTPUT_DIR)/manifests/infra
 	cp -r $(KUBE_INFRA_DIR) $(OUTPUT_DIR)/manifests/infra
+	cat $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway/env.yaml | sed "s;ENVOY_PROXY_IMAGE;$(PROXY_IMAGE);g" > $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway/envs.yaml
 	cd $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
 	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default > $(OUTPUT_DIR)/envoy-gateway.yaml
 	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/infra/config/rbac > $(OUTPUT_DIR)/infra-manager-rbac.yaml
