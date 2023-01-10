@@ -159,7 +159,7 @@ func GetReferencedListeners(parentRef v1beta1.ParentReference, gateways []*Gatew
 
 		// The parentRef may be to the entire Gateway, or to a specific listener.
 		for _, listener := range gateway.listeners {
-			if parentRef.SectionName == nil || *parentRef.SectionName == listener.Name {
+			if (parentRef.SectionName == nil || *parentRef.SectionName == listener.Name) && (parentRef.Port == nil || *parentRef.Port == listener.Port) {
 				referencedListeners = append(referencedListeners, listener)
 			}
 		}
