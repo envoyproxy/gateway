@@ -204,7 +204,7 @@ func TestMergeConditions(t *testing.T) {
 				newCondition("available", "true", "Reason", "Message", middle, gen),
 			},
 			expected: []metav1.Condition{
-				newCondition("available", "true", "Reason", "Message", later, gen),
+				newCondition("available", "true", "Reason", "Message", middle, gen),
 			},
 		},
 		{
@@ -216,7 +216,7 @@ func TestMergeConditions(t *testing.T) {
 				newCondition("available", "false", "New Reason", "Message", middle, gen),
 			},
 			expected: []metav1.Condition{
-				newCondition("available", "false", "New Reason", "Message", start, gen),
+				newCondition("available", "false", "New Reason", "Message", middle, gen),
 			},
 		},
 		{
@@ -228,7 +228,31 @@ func TestMergeConditions(t *testing.T) {
 				newCondition("available", "false", "Reason", "New Message", middle, gen),
 			},
 			expected: []metav1.Condition{
-				newCondition("available", "false", "Reason", "New Message", start, gen),
+				newCondition("available", "false", "Reason", "New Message", middle, gen),
+			},
+		},
+		{
+			name: "observed generation updated",
+			current: []metav1.Condition{
+				newCondition("available", "false", "Reason", "Message", start, gen),
+			},
+			updates: []metav1.Condition{
+				newCondition("available", "false", "Reason", "Message", middle, gen+1),
+			},
+			expected: []metav1.Condition{
+				newCondition("available", "false", "Reason", "Message", middle, gen+1),
+			},
+		},
+		{
+			name: "status unchanged",
+			current: []metav1.Condition{
+				newCondition("available", "false", "Reason", "Message", start, gen),
+			},
+			updates: []metav1.Condition{
+				newCondition("available", "false", "Reason", "Message", middle, gen),
+			},
+			expected: []metav1.Condition{
+				newCondition("available", "false", "Reason", "Message", start, gen),
 			},
 		},
 	}
@@ -239,9 +263,7 @@ func TestMergeConditions(t *testing.T) {
 
 	for _, tc := range testCases {
 		got := MergeConditions(tc.current, tc.updates...)
-		if conditionChanged(tc.expected[0], got[0]) {
-			assert.Equal(t, tc.expected, got, tc.name)
-		}
+		assert.ElementsMatch(t, tc.expected, got, tc.name)
 	}
 }
 

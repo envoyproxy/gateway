@@ -109,19 +109,10 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
-	// Check if the Service belongs to a Gateway, if so, find the Gateway. If
+	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, svc.GetLabels())
 	if gtw != nil {
-		// Check if the Deployment for the Gateway also exists, if it does, proceed with
-		// the Gateway status update.
-		deployment, err := r.envoyDeploymentForGateway(ctx, gtw)
-		if err != nil {
-			r.log.Info("failed to get Deployment for gateway",
-				"namespace", gtw.Namespace, "name", gtw.Name)
-			return false
-		}
-
-		r.statusUpdateForGateway(gtw, svc, deployment)
+		r.statusUpdateForGateway(ctx, gtw)
 		return false
 	}
 
@@ -188,19 +179,11 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 
 	// Only deployments in the configured namespace should be reconciled.
 	if deployment.Namespace == r.namespace {
-		// Check if the deployment belongs to a Gateway, if so, find the Gateway.
+		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
 		gtw := r.findOwningGateway(ctx, deployment.GetLabels())
 		if gtw != nil {
-			// Check if the Service for the Gateway also exists, if it does, proceed with
-			// the Gateway status update.
-			svc, err := r.envoyServiceForGateway(ctx, gtw)
-			if err != nil {
-				r.log.Info("failed to get Service for gateway",
-					"namespace", gtw.Namespace, "name", gtw.Name)
-				return false
-			}
-
-			r.statusUpdateForGateway(gtw, svc, deployment)
+			r.statusUpdateForGateway(ctx, gtw)
+			return false
 		}
 	}
 
