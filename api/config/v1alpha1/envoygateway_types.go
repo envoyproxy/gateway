@@ -45,6 +45,7 @@ type EnvoyGatewaySpec struct {
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
 	// implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.
+	// This configuration will not be needed to enable Local Rate limiitng.
 	//
 	// +optional
 	RateLimit *RateLimit `json:"rateLimit,omitempty"`
@@ -95,7 +96,7 @@ type FileProvider struct {
 }
 
 // RateLimit defines the configuration associated with the Rate Limit Service
-// using for Global Rate Limiting.
+// used for Global Rate Limiting.
 type RateLimit struct {
 	// Backend holds the configuration associated with the
 	// database backend used by the rate limit service to store
@@ -105,6 +106,7 @@ type RateLimit struct {
 
 // RateLimitDatabaseBackend defines the configuration associated with
 // the database backend used by the rate limit service.
+// +union
 type RateLimitDatabaseBackend struct {
 	// Type is the type of database backend to use. Supported types are:
 	//	* Redis: Connects to a Redis database.
