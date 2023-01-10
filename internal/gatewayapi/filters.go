@@ -25,7 +25,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
-	processUnknownHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
+	processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources)
 	processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
 }
 
@@ -52,7 +52,10 @@ type HTTPFilterChains struct {
 }
 
 // ProcessHTTPFilters translate gateway api http filters to IRs.
-func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext, httpRoute *HTTPRouteContext, filters []v1beta1.HTTPRouteFilter) *HTTPFiltersContext {
+func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
+	httpRoute *HTTPRouteContext,
+	filters []v1beta1.HTTPRouteFilter,
+	resources *Resources) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef: parentRef,
 		HTTPRoute: httpRoute,
@@ -60,9 +63,14 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext, httpRoute
 		HTTPFilterChains: &HTTPFilterChains{},
 	}
 
-	for _, filter := range filters {
+	for i := range filters {
+		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
 		if httpFiltersContext.DirectResponse != nil {
+			break
+		}
+		if err := ValidateHTTPRouteFilter(&filter); err != nil {
+			t.processInvalidHTTPFilter(filter, httpFiltersContext, err)
 			break
 		}
 
@@ -76,7 +84,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext, httpRoute
 		case v1beta1.HTTPRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterExtensionRef:
-			t.processUnknownHTTPFilter(filter, httpFiltersContext)
+			t.processExtensionRefHTTPFilter(filter, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(filter, httpFiltersContext)
 		}
@@ -599,12 +607,38 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	}
 }
 
-func (t *Translator) processUnknownHTTPFilter(
-	filter v1beta1.HTTPRouteFilter,
-	filterContext *HTTPFiltersContext) {
-	// "If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
-	// Instead, requests that would have been processed by that filter MUST receive a HTTP error response."
-	errMsg := fmt.Sprintf("Unknown custom filter type: %s", filter.Type)
+func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources) {
+	// If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
+	// Instead, requests that would have been processed by that filter MUST receive an HTTP error
+	// response.
+	found := false
+
+	for _, f := range resources.AuthenFilters {
+		if f.Namespace == filterContext.HTTPRoute.Namespace && f.Name == string(filter.ExtensionRef.Name) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		errMsg := fmt.Sprintf("Reference not found for filter type: %s", filter.Type)
+		// Reset the conditions in case the Accepted=True condition exists.
+		filterContext.ParentRef.ResetConditions(filterContext.HTTPRoute)
+		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonBackendNotFound,
+			errMsg,
+		)
+		filterContext.DirectResponse = &ir.DirectResponse{
+			Body:       &errMsg,
+			StatusCode: 500,
+		}
+	}
+}
+
+func (t *Translator) processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext) {
+	errMsg := fmt.Sprintf("Unsupported filter type: %s", filter.Type)
 	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
 		v1beta1.RouteConditionAccepted,
 		metav1.ConditionFalse,
@@ -617,11 +651,8 @@ func (t *Translator) processUnknownHTTPFilter(
 	}
 }
 
-func (t *Translator) processUnsupportedHTTPFilter(
-	filter v1beta1.HTTPRouteFilter,
-	filterContext *HTTPFiltersContext) {
-	// Unsupported filters.
-	errMsg := fmt.Sprintf("Unsupported filter type: %s", filter.Type)
+func (t *Translator) processInvalidHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, err error) {
+	errMsg := fmt.Sprintf("Invalid filter %s: %v", filter.Type, err)
 	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
 		v1beta1.RouteConditionAccepted,
 		metav1.ConditionFalse,

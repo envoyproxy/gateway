@@ -89,7 +89,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range httpRoute.Spec.Rules {
-		httpFiltersContext := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters)
+		httpFiltersContext := t.ProcessHTTPFilters(parentRef, httpRoute, rule.Filters, resources)
 
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate

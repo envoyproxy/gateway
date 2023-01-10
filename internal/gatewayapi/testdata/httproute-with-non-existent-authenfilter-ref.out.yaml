@@ -49,9 +49,9 @@ httpRoutes:
       filters:
       - type: ExtensionRef
         extensionRef:
-          group: unsupported.group.io
-          kind: UnsupportedKind
-          name: unsupported
+          group: gateway.envoyproxy.io
+          kind: AuthenticationFilter
+          name: test
   status:
     parents:
     - parentRef:
@@ -60,10 +60,10 @@ httpRoutes:
         sectionName: http
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
-      - type: Accepted
+      - type: ResolvedRefs
         status: "False"
-        reason: UnsupportedValue
-        message: "Invalid filter ExtensionRef: invalid group; must be gateway.envoyproxy.io"
+        reason: BackendNotFound
+        message: "Reference not found for filter type: ExtensionRef"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -82,7 +82,7 @@ xdsIR:
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
         directResponse:
-          body: "Invalid filter ExtensionRef: invalid group; must be gateway.envoyproxy.io"
+          body: "Reference not found for filter type: ExtensionRef"
           statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:
