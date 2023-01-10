@@ -133,7 +133,7 @@ const (
 // a Redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
-	URL *string `json:"url"`
+	URL string `json:"url"`
 }
 
 func init() {
