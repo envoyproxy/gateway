@@ -14,7 +14,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -152,6 +151,17 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
+
+	// An HTTPRoute may reference an AuthenticationFilter, so add them to the resource map first (if they exist).
+	filters, err := r.getAuthenticationFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range filters {
+		filter := filters[i]
+		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayHTTPRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -162,7 +172,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		httpRoute := httpRoute
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
-		var authenFilters []*egv1a1.AuthenticationFilter
 		for _, rule := range httpRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
@@ -211,19 +220,20 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}
 
 				if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
-					authenFilter, err := r.getAuthenticationFilter(ctx, httpRoute.Namespace, string(filter.ExtensionRef.Name))
-					if err != nil {
-						r.log.Error(err, "bypassing filter rule", "index", i)
+					key := types.NamespacedName{
+						// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
+						Namespace: httpRoute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
+					}
+					filter, ok := resourceMap.authenFilters[key]
+					if !ok {
+						r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
 						continue
 					}
 
-					authenFilters = append(authenFilters, authenFilter)
+					resourceTree.AuthenFilters = append(resourceTree.AuthenFilters, filter)
 				}
 			}
-		}
-
-		if len(authenFilters) > 0 {
-			resourceMap.httpRouteToAuthenFilters[utils.NamespacedName(&httpRoute)] = authenFilters
 		}
 
 		resourceMap.allAssociatedNamespaces[httpRoute.Namespace] = struct{}{}

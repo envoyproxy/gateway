@@ -279,7 +279,7 @@ func GetService(nsname types.NamespacedName, labels map[string]string, ports map
 func GetAuthenticationFilter(name, ns string) *egv1a1.AuthenticationFilter {
 	return &egv1a1.AuthenticationFilter{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       egv1a1.AuthenticationFilterKind,
+			Kind:       egv1a1.KindAuthenticationFilter,
 			APIVersion: egv1a1.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{

@@ -196,8 +196,8 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
 			return errors.New("extensionRef field must be specified for an extended filter")
 		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
 			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
-		case string(filter.ExtensionRef.Kind) != egv1a1.AuthenticationFilterKind:
-			return fmt.Errorf("invalid kind; must be %s", egv1a1.AuthenticationFilterKind)
+		case string(filter.ExtensionRef.Kind) != egv1a1.KindAuthenticationFilter:
+			return fmt.Errorf("invalid kind; must be %s", egv1a1.KindAuthenticationFilter)
 		default:
 			return nil
 		}

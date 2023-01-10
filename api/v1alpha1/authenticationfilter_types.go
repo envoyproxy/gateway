@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	// AuthenticationFilterKind is the name of the AuthenticationFilter kind.
-	AuthenticationFilterKind = "AuthenticationFilter"
+	// KindAuthenticationFilter is the name of the AuthenticationFilter kind.
+	KindAuthenticationFilter = "AuthenticationFilter"
 )
 
 //+kubebuilder:object:root=true

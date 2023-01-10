@@ -98,9 +98,9 @@ type resourceMappings struct {
 	allAssociatedBackendRefs map[types.NamespacedName]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
 	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1a2.ReferenceGrant
-	// httpRouteToAuthenFilters is a map of httproute to authenticationfilter associations,
-	// where the key is the httproute namespaced name.
-	httpRouteToAuthenFilters map[types.NamespacedName][]*egv1a1.AuthenticationFilter
+	// authenFilters is a map of AuthenticationFilters, where the key is the
+	// namespaced name of the AuthenticationFilter.
+	authenFilters map[types.NamespacedName]*egv1a1.AuthenticationFilter
 }
 
 func newResourceMapping() *resourceMappings {
@@ -108,7 +108,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedNamespaces:  map[string]struct{}{},
 		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
-		httpRouteToAuthenFilters: map[types.NamespacedName][]*egv1a1.AuthenticationFilter{},
+		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
 	}
 }
 
@@ -199,13 +199,6 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		}
 
 		resourceTree.Namespaces = append(resourceTree.Namespaces, namespace)
-	}
-
-	// Add all AuthenticationFilters to the resourceTree.
-	for _, hroute := range resourceTree.HTTPRoutes {
-		if filters, ok := resourceMap.httpRouteToAuthenFilters[utils.NamespacedName(hroute)]; ok {
-			resourceTree.AuthenFilters = append(resourceTree.AuthenFilters, filters...)
-		}
 	}
 
 	if err := r.gatewayClassUpdater(ctx, acceptedGC, true); err != nil {
@@ -341,17 +334,13 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) getAuthenticationFilter(ctx context.Context, ns, name string) (*egv1a1.AuthenticationFilter, error) {
-	filter := new(egv1a1.AuthenticationFilter)
-	key := types.NamespacedName{
-		Namespace: ns,
-		Name:      name,
-	}
-	if err := r.client.Get(ctx, key, filter); err != nil {
-		return nil, err
+func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]egv1a1.AuthenticationFilter, error) {
+	authenList := new(egv1a1.AuthenticationFilterList)
+	if err := r.client.List(ctx, authenList); err != nil {
+		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
 	}
 
-	return filter, nil
+	return authenList.Items, nil
 }
 
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {

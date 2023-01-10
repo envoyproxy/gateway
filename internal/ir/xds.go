@@ -10,6 +10,9 @@ import (
 	"net"
 
 	"github.com/tetratelabs/multierror"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 var (
@@ -34,6 +37,7 @@ var (
 	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
+	ErrRequestAuthenRequiresJwt      = errors.New("jwt field is required when request authentication is set")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -215,6 +219,63 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit
+	// RequestAuthentication defines the schema for authenticating HTTP requests.
+	RequestAuthentication *RequestAuthentication
+}
+
+// RequestAuthentication defines the schema for authenticating HTTP requests.
+// Only one of "jwt" can be specified.
+//
+// TODO: Add support for additional request authentication providers, i.e. OIDC.
+//
+// +k8s:deepcopy-gen=true
+type RequestAuthentication struct {
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JwtRequestAuthentication
+}
+
+// JwtRequestAuthentication defines the schema for authenticating HTTP requests using
+// JSON Web Tokens (JWT).
+//
+// +k8s:deepcopy-gen=true
+type JwtRequestAuthentication struct {
+	// Rules define requirements for authenticating HTTP requests based on route matching criteria.
+	// The first matched requirement will be applied. A maximum of 4 items in the list is allowed.
+	Rules []JwtRule
+}
+
+// JwtRule defines a JWT requirement for a specific route condition.
+//
+// +k8s:deepcopy-gen=true
+type JwtRule struct {
+	// Match defines the schema for matching an HTTP request. The "requires" field only
+	// applies when the match is satisfied.
+	Match HTTPRequestMatch
+	// Requires specifies a JWT requirement. If unspecified, JWT verification is disabled.
+	Requires *JwtRequirement
+}
+
+// HTTPRequestMatch defines the schema for matching an HTTP request.
+//
+// +k8s:deepcopy-gen=true
+type HTTPRequestMatch struct {
+	// PathMatch defines a match condition based on path.
+	PathMatch *StringMatch
+	// HeaderMatches is a list of matching conditions based on request headers.
+	// A maximum of 4 items in the list is allowed.
+	HeaderMatches []StringMatch
+	// QueryParamMatches is a list of matching conditions based on query parameters.
+	// maxQueryParamMatches defines the maximum number of items in the list.
+	QueryParamMatches []StringMatch
+}
+
+// JwtRequirement defines the schema of a JWT requirement.
+//
+// +k8s:deepcopy-gen=true
+type JwtRequirement struct {
+	// Providers defines a list of JSON Web Token (JWT) authentication providers.
+	// maxQueryParamMatches defines the maximum number of items in the list.
+	Providers []egv1a1.JwtAuthenticationFilterProvider
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -311,6 +372,38 @@ func (h HTTPRoute) Validate() error {
 			}
 		}
 	}
+	if h.RequestAuthentication != nil {
+		switch {
+		case h.RequestAuthentication.JWT == nil:
+			errs = multierror.Append(errs, ErrRequestAuthenRequiresJwt)
+		default:
+			if err := h.RequestAuthentication.JWT.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+		}
+	}
+	return errs
+}
+
+func (j *JwtRequestAuthentication) Validate() error {
+	var errs error
+
+	for _, rule := range j.Rules {
+		if rule.Match.PathMatch != nil {
+			if err := rule.Match.PathMatch.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+		}
+		if rule.Requires != nil {
+			for i := range rule.Requires.Providers {
+				provider := rule.Requires.Providers[i]
+				if err := validation.ValidateJwtProvider(&provider); err != nil {
+					errs = multierror.Append(errs, err)
+				}
+			}
+		}
+	}
+
 	return errs
 }
 

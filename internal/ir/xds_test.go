@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 var (
@@ -395,6 +397,37 @@ var (
 		},
 	}
 
+	jwtAuthenHTTPRoute = HTTPRoute{
+		Name: "jwtauthen",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("jwtauthen"),
+		},
+		RequestAuthentication: &RequestAuthentication{
+			JWT: &JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+						},
+						Requires: &JwtRequirement{
+							Providers: []egv1a1.JwtAuthenticationFilterProvider{
+								{
+									Name: "test1",
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test1.local",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Host: "10.11.12.13",
@@ -769,6 +802,11 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: addResponseHeaderEmptyHTTPRoute,
 			want:  []error{ErrAddHeaderEmptyName},
 		},
+		{
+			name:  "jwt-authen-httproute",
+			input: jwtAuthenHTTPRoute,
+			want:  nil,
+		},
 	}
 	for _, test := range tests {
 		test := test
@@ -861,6 +899,78 @@ func TestValidateStringMatch(t *testing.T) {
 	}
 	for _, test := range tests {
 		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateJwtRequestAuthentication(t *testing.T) {
+	tests := []struct {
+		name  string
+		input JwtRequestAuthentication
+		want  error
+	}{
+		{
+			name: "nil rules",
+			input: JwtRequestAuthentication{
+				Rules: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "match path with no provider",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "match path with provider and remote jwks uri",
+			input: JwtRequestAuthentication{
+				Rules: []JwtRule{
+					{
+						Match: HTTPRequestMatch{
+							PathMatch: ptrTo(StringMatch{
+								Name:  "test",
+								Exact: ptrTo("/test"),
+							}),
+							HeaderMatches:     nil,
+							QueryParamMatches: nil,
+						},
+						Requires: &JwtRequirement{
+							Providers: []egv1a1.JwtAuthenticationFilterProvider{
+								{
+									Name:      "test",
+									Issuer:    "https://test.local",
+									Audiences: []string{"test1", "test2"},
+									RemoteJWKS: egv1a1.RemoteJWKS{
+										URI: "https://test.local",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
 				require.NoError(t, test.input.Validate())
