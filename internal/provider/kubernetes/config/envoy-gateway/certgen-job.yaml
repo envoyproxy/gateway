@@ -43,8 +43,8 @@ spec:
     spec:
       containers:
       - name: envoy-gateway-certgen
-        image: envoyproxy/gateway-dev:latest
-        imagePullPolicy: Always
+        image: docker.io/envoyproxy/gateway-dev:7f3c9b4
+        imagePullPolicy: IfNotPresent
         command:
         - envoy-gateway
         - certgen
