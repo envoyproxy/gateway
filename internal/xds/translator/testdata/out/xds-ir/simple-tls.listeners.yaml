@@ -37,6 +37,8 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         statPrefix: https
+        upgradeConfigs:
+        - upgradeType: websocket
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:

@@ -46,4 +46,6 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         statPrefix: http
+        upgradeConfigs:
+        - upgradeType: websocket
   name: first-listener
