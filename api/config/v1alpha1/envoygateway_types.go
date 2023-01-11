@@ -40,6 +40,15 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	Provider *Provider `json:"provider,omitempty"`
+
+	// RateLimit defines the configuration associated with the Rate Limit service
+	// deployed by Envoy Gateway required to implement the Global Rate limiting
+	// functionality. The specific rate limit service used here is the reference
+	// implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.
+	// This configuration will not be needed to enable Local Rate limiitng.
+	//
+	// +optional
+	RateLimit *RateLimit `json:"rateLimit,omitempty"`
 }
 
 // Gateway defines the desired Gateway API configuration of Envoy Gateway.
@@ -84,6 +93,47 @@ type KubernetesProvider struct {
 // FileProvider defines configuration for the File provider.
 type FileProvider struct {
 	// TODO: Add config as use cases are better understood.
+}
+
+// RateLimit defines the configuration associated with the Rate Limit Service
+// used for Global Rate Limiting.
+type RateLimit struct {
+	// Backend holds the configuration associated with the
+	// database backend used by the rate limit service to store
+	// state associated with global ratelimiting.
+	Backend RateLimitDatabaseBackend `json:"backend"`
+}
+
+// RateLimitDatabaseBackend defines the configuration associated with
+// the database backend used by the rate limit service.
+// +union
+type RateLimitDatabaseBackend struct {
+	// Type is the type of database backend to use. Supported types are:
+	//	* Redis: Connects to a Redis database.
+	//
+	// +unionDiscriminator
+	Type RateLimitDatabaseBackendType `json:"type"`
+	// Redis defines the settings needed to connect to a Redis database.
+	//
+	// +optional
+	Redis *RateLimitRedisSettings `json:"redis,omitempty"`
+}
+
+// RateLimitDatabaseBackendType specifies the types of database backend
+// to be used by the rate limit service.
+// +kubebuilder:validation:Enum=Redis
+type RateLimitDatabaseBackendType string
+
+const (
+	// RedisBackendType uses a redis database for the rate limit service.
+	RedisBackendType RateLimitDatabaseBackendType = "Redis"
+)
+
+// RateLimitRedisSettings defines the configuration for connecting to
+// a Redis database.
+type RateLimitRedisSettings struct {
+	// URL of the Redis Database.
+	URL string `json:"url"`
 }
 
 func init() {
