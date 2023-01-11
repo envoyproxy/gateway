@@ -58,6 +58,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 			suite.SupportReferenceGrant:                 true,
 			suite.SupportHTTPResponseHeaderModification: true,
 			suite.SupportHTTPRouteMethodMatching:        true,
+			suite.SupportRouteDestinationPortMatching:   true,
 		},
 	})
 	cSuite.Setup(t)
@@ -85,6 +86,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		tests.GatewayInvalidRouteKind,
 		tests.HTTPRouteReferenceGrant,
 		tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant,
+		tests.HTTPRouteInvalidParentRefNotMatchingListenerPort,
 	}
 	cSuite.Run(t, egTests)
 

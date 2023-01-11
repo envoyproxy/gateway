@@ -714,6 +714,16 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		// Reset conditions since they will be recomputed during translation
 		parentRefCtx.ResetConditions(routeContext)
 
+		if len(selectedListeners) == 0 {
+			parentRefCtx.SetCondition(routeContext,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				v1beta1.RouteReasonNoMatchingParent,
+				"No listeners match this parent ref",
+			)
+			continue
+		}
+
 		if !HasReadyListener(selectedListeners) {
 			parentRefCtx.SetCondition(routeContext,
 				v1beta1.RouteConditionAccepted,
