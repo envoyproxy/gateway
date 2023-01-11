@@ -24,12 +24,6 @@ spec:
     allowedRoutes:
       kinds:
       - kind: TCPRoute
-  - name: hello
-    protocol: TCP
-    port: 9000
-    allowedRoutes:
-      kinds:
-      - kind: TCPRoute
 ---
 apiVersion: v1
 kind: Service
@@ -44,20 +38,6 @@ spec:
     targetPort: 3000
   selector:
     app: backend-1
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: hello
-  labels:
-    app: hello
-spec:
-  ports:
-  - name: tcp
-    port: 50051
-    targetPort: 50051
-  selector:
-    app: hello
 ---
 apiVersion: v1
 kind: Service
@@ -153,44 +133,6 @@ spec:
   - backendRefs:
     - name: foo
       port: 3001
-# ---
-# apiVersion: v1
-# kind: ServiceAccount
-# metadata:
-#   name: hello
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hello
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: hello
-      version: v1
-  template:
-    metadata:
-      labels:
-        app: hello
-        version: v1
-    spec:
-      # serviceAccountName: hello
-      containers:
-        - image: quyenhoang/hello:lastest
-          imagePullPolicy: IfNotPresent
-          name: hello
-          ports:
-            - containerPort: 50051
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
@@ -204,16 +146,3 @@ spec:
   - backendRefs:
     - name: bar
       port: 3002
----
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: GRPCRoute
-metadata:
-  name: tcp-app-2
-spec:
-  parentRefs:
-  - name: tcp-gateway
-    sectionName: hello
-  rules:
-  - backendRefs:
-    - name: hello
-      port: 50051
