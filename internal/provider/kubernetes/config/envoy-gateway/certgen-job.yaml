@@ -43,7 +43,11 @@ spec:
     spec:
       containers:
       - name: envoy-gateway-certgen
+<<<<<<< HEAD
         image: docker.io/envoyproxy/gateway-dev:latest
+=======
+        image: envoyproxy/gateway-dev:latest
+>>>>>>> parent of 051f4a6 (update http2 for grpc web)
         imagePullPolicy: Always
         command:
         - envoy-gateway
