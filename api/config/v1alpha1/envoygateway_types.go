@@ -101,7 +101,7 @@ type RateLimit struct {
 	// Backend holds the configuration associated with the
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
-	Backend *RateLimitDatabaseBackend `json:"backend"`
+	Backend RateLimitDatabaseBackend `json:"backend"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
