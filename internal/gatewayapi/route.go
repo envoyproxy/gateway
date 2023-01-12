@@ -97,7 +97,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		var ruleRoutes []*ir.HTTPRoute = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 
 		for _, backendRef := range rule.BackendRefs {
-			destination, backendWeight := t.processRuleRouteDestination(backendRef, parentRef, httpRoute, resources)
+			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -217,6 +217,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
 			irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 		}
+		if len(httpFiltersContext.Mirrors) > 0 {
+			irRoute.Mirrors = httpFiltersContext.Mirrors
+		}
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
@@ -269,6 +272,7 @@ func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteConte
 					Redirect:              routeRoute.Redirect,
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
+					Mirrors:               routeRoute.Mirrors,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
@@ -667,10 +671,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 	}
 }
 
-// processRuleRouteDestination takes a backendRef and translates it into a destination or sets error statuses and
+// processRouteDestination takes a backendRef and translates it into a destination or sets error statuses and
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
-func (t *Translator) processRuleRouteDestination(backendRef v1beta1.HTTPBackendRef,
+func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 	parentRef *RouteParentContext,
 	httpRoute *HTTPRouteContext,
 	resources *Resources) (destination *ir.RouteDestination, backendWeight uint32) {
@@ -683,7 +687,7 @@ func (t *Translator) processRuleRouteDestination(backendRef v1beta1.HTTPBackendR
 	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if !t.validateBackendRef(&backendRef.BackendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
+	if !t.validateBackendRef(&backendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
 		return nil, weight
 	}
 
