@@ -207,6 +207,85 @@ type RouteContext interface {
 	GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext
 }
 
+// GRPCRouteContext wraps an GRPCRoute and provides helper methods for
+// accessing the route's parents.
+
+type GRPCRouteContext struct {
+	*v1alpha2.GRPCRoute
+
+	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (g *GRPCRouteContext) GetRouteType() string {
+	return KindGRPCRoute
+}
+
+func (g *GRPCRouteContext) GetHostnames() []string {
+	hostnames := make([]string, len(g.Spec.Hostnames))
+	for idx, s := range g.Spec.Hostnames {
+		hostnames[idx] = string(s)
+	}
+	return hostnames
+}
+
+func (g *GRPCRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	return g.Spec.ParentRefs
+}
+
+func (g *GRPCRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &g.Status.RouteStatus
+}
+
+func (g *GRPCRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
+	if g.parentRefs == nil {
+		g.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+	}
+
+	if ctx := g.parentRefs[forParentRef]; ctx != nil {
+		return ctx
+	}
+
+	var parentRef *v1beta1.ParentReference
+
+	for i, p := range g.Spec.ParentRefs {
+		if reflect.DeepEqual(p, forParentRef) {
+			parentRef = &g.Spec.ParentRefs[i]
+			break
+		}
+	}
+
+	if parentRef == nil {
+		panic("parentRef not found")
+	}
+
+	routeParentStatusIdx := -1
+	for i := range g.Status.Parents {
+		if reflect.DeepEqual(g.Status.Parents[i].ParentRef, forParentRef) {
+			routeParentStatusIdx = i
+			break
+		}
+	}
+
+	if routeParentStatusIdx == -1 {
+		rParentStatus := v1beta1.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      forParentRef,
+		}
+		g.Status.Parents = append(g.Status.Parents, rParentStatus)
+		routeParentStatusIdx = len(g.Status.Parents) - 1
+	}
+
+	ctx := &RouteParentContext{
+		ParentReference: parentRef,
+
+		grpcRoute:            g.GRPCRoute,
+		routeParentStatusIdx: routeParentStatusIdx,
+	}
+	g.parentRefs[forParentRef] = ctx
+	return ctx
+}
+
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
 // accessing the route's parents.
 type HTTPRouteContext struct {
@@ -542,6 +621,7 @@ type RouteParentContext struct {
 	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
 	// a single field pointing to *v1beta1.RouteStatus.
 	httpRoute *v1beta1.HTTPRoute
+	grpcRoute *v1alpha2.GRPCRoute
 	tlsRoute  *v1alpha2.TLSRoute
 	tcpRoute  *v1alpha2.TCPRoute
 	udpRoute  *v1alpha2.UDPRoute
