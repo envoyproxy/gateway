@@ -13,6 +13,7 @@ import (
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	grpc_web "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -92,15 +93,30 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 		}},
 	}
 
-	// Allow websocket upgrades for HTTP 1.1
-	// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-	if !irListener.IsHTTP2 {
+	if irListener.IsHTTP2 {
+		// Set codec to HTTP2
+		mgr.CodecType = hcm.HttpConnectionManager_HTTP2
+
+		// Enable grpc-web filter for HTTP2
+		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})
+		if err != nil {
+			return err
+		}
+
+		grpcWebFilter := &hcm.HttpFilter{
+			Name:       wellknown.GRPCWeb,
+			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcWebAny},
+		}
+		// Ensure router is the last filter
+		mgr.HttpFilters = append([]*hcm.HttpFilter{grpcWebFilter}, mgr.HttpFilters...)
+	} else {
+		// Allow websocket upgrades for HTTP 1.1
+		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
 		mgr.UpgradeConfigs = []*hcm.HttpConnectionManager_UpgradeConfig{
 			{
 				UpgradeType: "websocket",
 			},
 		}
-
 	}
 
 	// TODO: Make this a generic interface for all API Gateway features.
