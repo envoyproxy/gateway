@@ -7,6 +7,7 @@ package translator
 
 import (
 	"errors"
+	"fmt"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -106,6 +107,16 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 			}
 			xdsCluster := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2)
 			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+
+			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
+			for i, mirror := range httpRoute.Mirrors {
+				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
+				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
+					mirrorCluster := buildXdsCluster(mirrorClusterName, []*ir.RouteDestination{mirror}, httpListener.IsHTTP2)
+					tCtx.AddXdsResource(resource.ClusterType, mirrorCluster)
+				}
+
+			}
 		}
 
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)

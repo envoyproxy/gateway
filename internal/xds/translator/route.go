@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"fmt"
+
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
@@ -39,13 +41,26 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *route.Route {
 	case httpRoute.Redirect != nil:
 		ret.Action = &route.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
-		ret.Action = &route.Route_Route{Route: buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)}
+		routeAction := buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)
+		if len(httpRoute.Mirrors) > 0 {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+		}
+
+		ret.Action = &route.Route_Route{Route: routeAction}
 	default:
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
-			ret.Action = &route.Route_Route{Route: buildXdsWeightedRouteAction(httpRoute)}
+			routeAction := buildXdsWeightedRouteAction(httpRoute)
+			if len(httpRoute.Mirrors) > 0 {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+			}
+			ret.Action = &route.Route_Route{Route: routeAction}
 		} else {
-			ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)}
+			routeAction := buildXdsRouteAction(httpRoute.Name)
+			if len(httpRoute.Mirrors) > 0 {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+			}
+			ret.Action = &route.Route_Route{Route: routeAction}
 		}
 	}
 
@@ -264,6 +279,18 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *route.DirectResponseA
 	}
 
 	return ret
+}
+
+func buildXdsRequestMirrorPolicies(routeName string, mirrors []*ir.RouteDestination) []*route.RouteAction_RequestMirrorPolicy {
+	mirrorPolicies := []*route.RouteAction_RequestMirrorPolicy{}
+
+	for i := range mirrors {
+		mirrorPolicies = append(mirrorPolicies, &route.RouteAction_RequestMirrorPolicy{
+			Cluster: fmt.Sprintf("%s-mirror-%d", routeName, i),
+		})
+	}
+
+	return mirrorPolicies
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
