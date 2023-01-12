@@ -24,7 +24,7 @@ communications with the Envoy Gateway community, and the mechanics of the releas
 | Quarter |                        Release Manager                         |
 |:-------:|:--------------------------------------------------------------:|
 | 2022 Q4 |    Daneyon Hansen ([danehans](https://github.com/danehans))    |
-| 2023 Q1 |                              TBD                               |
+| 2023 Q1 |    Xunzhuo Liu ([Xunzhuo](https://github.com/Xunzhuo))         |
 
 ## Release Schedule
 
