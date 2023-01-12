@@ -17,6 +17,7 @@ import (
 	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	wkt "github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -163,6 +164,86 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 	}
 
 	return rateLimits
+}
+
+// BuildRateLimitServiceConfig builds the rate limit service configuration based on
+// https://github.com/envoyproxy/ratelimit#the-configuration-format
+func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *ratelimitserviceconfig.YamlRoot {
+	yamlDescs := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
+
+	for _, route := range irListener.Routes {
+		if route.RateLimit != nil && route.RateLimit.Global != nil {
+			descs := buildRateLimitServiceDescriptors(route.Name, route.RateLimit.Global)
+			yamlDescs = append(yamlDescs, descs...)
+		}
+	}
+
+	if len(yamlDescs) == 0 {
+		return nil
+	}
+
+	return &ratelimitserviceconfig.YamlRoot{
+		Domain:      getRateLimitDomain(irListener),
+		Descriptors: yamlDescs,
+	}
+}
+
+// buildRateLimitServiceDescriptors creates the rate limit service yaml descriptors based on the global rate limit IR config.
+func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.GlobalRateLimit) []ratelimitserviceconfig.YamlDescriptor {
+	yamlDescs := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
+
+	for rIdx, rule := range global.Rules {
+		var head, cur *ratelimitserviceconfig.YamlDescriptor
+		if len(rule.HeaderMatches) == 0 {
+			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
+			// GenericKey case
+			yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
+			yamlDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1)
+			rateLimit := ratelimitserviceconfig.YamlRateLimit{
+				RequestsPerUnit: rule.Limit.Requests,
+				Unit:            string(rule.Limit.Unit),
+			}
+			yamlDesc.RateLimit = &rateLimit
+
+			head = yamlDesc
+			cur = head
+		}
+
+		for mIdx, match := range rule.HeaderMatches {
+			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
+			// Case for distinct match
+			if match.Distinct {
+				// RequestHeader case
+				yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
+			} else {
+				// HeaderValueMatch case
+				yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
+				yamlDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
+
+			}
+
+			// Add the ratelimit values to the last descriptor
+			if mIdx == len(rule.HeaderMatches)-1 {
+				rateLimit := ratelimitserviceconfig.YamlRateLimit{
+					RequestsPerUnit: rule.Limit.Requests,
+					Unit:            string(rule.Limit.Unit),
+				}
+				yamlDesc.RateLimit = &rateLimit
+			}
+
+			if mIdx == 0 {
+				head = yamlDesc
+			} else {
+				cur.Descriptors = []ratelimitserviceconfig.YamlDescriptor{*yamlDesc}
+			}
+
+			cur = yamlDesc
+		}
+
+		yamlDescs = append(yamlDescs, *head)
+	}
+
+	return yamlDescs
 }
 
 func buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {

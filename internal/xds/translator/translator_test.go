@@ -11,14 +11,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	goyaml "gopkg.in/yaml.v3"
 	"sigs.k8s.io/yaml"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 var (
@@ -28,7 +29,7 @@ var (
 	inFiles embed.FS
 )
 
-func TestTranslate(t *testing.T) {
+func TestTranslateXds(t *testing.T) {
 	testCases := []struct {
 		name           string
 		requireSecrets bool
@@ -129,6 +130,40 @@ func TestTranslate(t *testing.T) {
 	}
 }
 
+func TestTranslateRateLimitConfig(t *testing.T) {
+	testCases := []struct {
+		name string
+	}{
+		{
+			name: "empty-header-matches",
+		},
+		{
+			name: "distinct-match",
+		},
+		{
+			name: "value-match",
+		},
+		{
+			name: "multiple-matches",
+		},
+		{
+			name: "multiple-rules",
+		},
+		{
+			name: "multiple-routes",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			in := requireXdsIRListenerFromInputTestData(t, "ratelimit-config", tc.name+".yaml")
+			out := BuildRateLimitServiceConfig(in)
+			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", tc.name+".yaml"), requireYamlRootToYAMLString(t, out))
+		})
+	}
+}
+
 func requireXdsIRFromInputTestData(t *testing.T, name ...string) *ir.Xds {
 	t.Helper()
 	elems := append([]string{"testdata", "in"}, name...)
@@ -140,12 +175,29 @@ func requireXdsIRFromInputTestData(t *testing.T, name ...string) *ir.Xds {
 	return ir
 }
 
+func requireXdsIRListenerFromInputTestData(t *testing.T, name ...string) *ir.HTTPListener {
+	t.Helper()
+	elems := append([]string{"testdata", "in"}, name...)
+	content, err := inFiles.ReadFile(filepath.Join(elems...))
+	require.NoError(t, err)
+	listener := &ir.HTTPListener{}
+	err = yaml.Unmarshal(content, listener)
+	require.NoError(t, err)
+	return listener
+}
+
 func requireTestDataOutFile(t *testing.T, name ...string) string {
 	t.Helper()
 	elems := append([]string{"testdata", "out"}, name...)
 	content, err := outFiles.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return string(content)
+}
+
+func requireYamlRootToYAMLString(t *testing.T, yamlRoot *ratelimitserviceconfig.YamlRoot) string {
+	data, err := goyaml.Marshal(*yamlRoot)
+	require.NoError(t, err)
+	return string(data)
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
