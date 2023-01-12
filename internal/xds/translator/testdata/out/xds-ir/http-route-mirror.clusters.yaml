@@ -1,0 +1,36 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: mirror-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: mirror-route
+  outlierDetection: {}
+  type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: mirror-route-mirror-0
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 2.3.4.5
+              portValue: 60000
+      loadBalancingWeight: 1
+      locality: {}
+  name: mirror-route-mirror-0
+  outlierDetection: {}
+  type: STATIC

@@ -427,10 +427,36 @@ var (
 			},
 		},
 	}
+	requestMirrorFilter = HTTPRoute{
+		Name: "mirrorfilter",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("mirrorfilter"),
+		},
+		Mirrors: []*RouteDestination{
+			&happyRouteDestination,
+		},
+	}
+
+	requestMirrorFilterMultiple = HTTPRoute{
+		Name: "mirrorfilterMultiple",
+		PathMatch: &StringMatch{
+			Exact: ptrTo("mirrorfiltermultiple"),
+		},
+		Mirrors: []*RouteDestination{
+			&happyRouteDestination,
+			&otherHappyRouteDestination,
+		},
+	}
 
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Host: "10.11.12.13",
+		Port: 8080,
+	}
+
+	// RouteDestination
+	otherHappyRouteDestination = RouteDestination{
+		Host: "11.12.13.14",
 		Port: 8080,
 	}
 )
@@ -805,6 +831,15 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name:  "jwt-authen-httproute",
 			input: jwtAuthenHTTPRoute,
+		},
+		{
+			name:  "mirror-filter",
+			input: requestMirrorFilter,
+			want:  nil,
+		},
+		{
+			name:  "mirror-filter-multiple",
+			input: requestMirrorFilterMultiple,
 			want:  nil,
 		},
 	}
