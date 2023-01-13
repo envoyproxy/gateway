@@ -212,6 +212,8 @@ type HTTPRoute struct {
 	DirectResponse *DirectResponse
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect
+	// Destinations that requests to this HTTPRoute will be mirrored to
+	Mirrors []*RouteDestination
 	// Destinations associated with this matched route.
 	Destinations []*RouteDestination
 	// Rewrite to be changed for this route.
@@ -319,6 +321,11 @@ func (h HTTPRoute) Validate() error {
 	}
 	if h.URLRewrite != nil {
 		if err := h.URLRewrite.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	for _, mirror := range h.Mirrors {
+		if err := mirror.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}

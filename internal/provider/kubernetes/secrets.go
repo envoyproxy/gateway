@@ -68,7 +68,7 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 // CreateOrUpdateSecrets creates the provided secrets if they don't exist or updates
 // them if they do.
 func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []corev1.Secret) ([]corev1.Secret, error) {
-	var ret []corev1.Secret
+	var tidySecrets []corev1.Secret
 	for i := range secrets {
 		secret := secrets[i]
 		current := new(corev1.Secret)
@@ -91,8 +91,8 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 				}
 			}
 		}
-		ret = append(ret, secret)
+		tidySecrets = append(tidySecrets, secret)
 	}
 
-	return ret, nil
+	return tidySecrets, nil
 }

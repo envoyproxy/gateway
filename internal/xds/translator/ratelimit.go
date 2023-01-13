@@ -13,7 +13,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	ratelimit "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	wkt "github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -71,7 +71,7 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcm.HttpFilter {
 		},
 	}
 
-	any, err := anypb.New(rateLimitFilterProto)
+	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
 	if err != nil {
 		return nil
 	}
@@ -79,14 +79,14 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcm.HttpFilter {
 	rateLimitFilter := &hcm.HttpFilter{
 		Name: wkt.HTTPRateLimit,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
-			TypedConfig: any,
+			TypedConfig: rateLimitFilterAny,
 		},
 	}
 	return rateLimitFilter
 }
 
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
-func patchRouteWithRateLimit(xdsRouteAction *route.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
+func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
 	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil {
 		return nil
@@ -97,20 +97,20 @@ func patchRouteWithRateLimit(xdsRouteAction *route.RouteAction, irRoute *ir.HTTP
 	return nil
 }
 
-func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) []*route.RateLimit {
-	rateLimits := []*route.RateLimit{}
+func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) []*routev3.RateLimit {
+	rateLimits := []*routev3.RateLimit{}
 	// Rules are ORed
 	for rIdx, rule := range global.Rules {
-		rlActions := []*route.RateLimit_Action{}
+		rlActions := []*routev3.RateLimit_Action{}
 		// Matches are ANDed
 		for mIdx, match := range rule.HeaderMatches {
 			// Case for distinct match
 			if match.Distinct {
 				// Setup RequestHeader actions
 				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
-				action := &route.RateLimit_Action{
-					ActionSpecifier: &route.RateLimit_Action_RequestHeaders_{
-						RequestHeaders: &route.RateLimit_Action_RequestHeaders{
+				action := &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RequestHeaders_{
+						RequestHeaders: &routev3.RateLimit_Action_RequestHeaders{
 							HeaderName:    match.Name,
 							DescriptorKey: descriptorKey,
 						},
@@ -121,21 +121,21 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 				// Setup HeaderValueMatch actions
 				descriptorKey := getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
 				descriptorVal := getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
-				headerMatcher := &route.HeaderMatcher{
+				headerMatcher := &routev3.HeaderMatcher{
 					Name: match.Name,
-					HeaderMatchSpecifier: &route.HeaderMatcher_StringMatch{
+					HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
 						StringMatch: buildXdsStringMatcher(match),
 					},
 				}
-				action := &route.RateLimit_Action{
-					ActionSpecifier: &route.RateLimit_Action_HeaderValueMatch_{
-						HeaderValueMatch: &route.RateLimit_Action_HeaderValueMatch{
+				action := &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_HeaderValueMatch_{
+						HeaderValueMatch: &routev3.RateLimit_Action_HeaderValueMatch{
 							DescriptorKey:   descriptorKey,
 							DescriptorValue: descriptorVal,
 							ExpectMatch: &wrapperspb.BoolValue{
 								Value: true,
 							},
-							Headers: []*route.HeaderMatcher{headerMatcher},
+							Headers: []*routev3.HeaderMatcher{headerMatcher},
 						},
 					},
 				}
@@ -147,9 +147,9 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 		// to all traffic.
 		if len(rule.HeaderMatches) == 0 {
 			// Setup GenericKey action
-			action := &route.RateLimit_Action{
-				ActionSpecifier: &route.RateLimit_Action_GenericKey_{
-					GenericKey: &route.RateLimit_Action_GenericKey{
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
+					GenericKey: &routev3.RateLimit_Action_GenericKey{
 						DescriptorKey:   getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1),
 						DescriptorValue: getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1),
 					},
@@ -158,7 +158,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			rlActions = append(rlActions, action)
 		}
 
-		rateLimit := &route.RateLimit{Actions: rlActions}
+		rateLimit := &routev3.RateLimit{Actions: rlActions}
 		rateLimits = append(rateLimits, rateLimit)
 	}
 

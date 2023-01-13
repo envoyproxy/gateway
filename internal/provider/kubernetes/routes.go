@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -219,7 +220,59 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					continue
 				}
 
-				if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
+				// Load in the backendRefs from any requestMirrorFilters on the HTTPRoute
+				if filter.Type == gwapiv1b1.HTTPRouteFilterRequestMirror {
+					// Make sure the config actually exists
+					mirrorFilter := filter.RequestMirror
+					if mirrorFilter == nil {
+						r.log.Error(errors.New("invalid requestMirror filter"), "bypassing filter rule", "index", i)
+						continue
+					}
+
+					mirrorBackendObj := mirrorFilter.BackendRef
+					// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
+					weight := int32(1)
+					mirrorBackendRef := gwapiv1b1.BackendRef{
+						BackendObjectReference: mirrorBackendObj,
+						Weight:                 &weight,
+					}
+
+					if err := validateBackendRef(&mirrorBackendRef); err != nil {
+						r.log.Error(err, "invalid backendRef")
+						continue
+					}
+
+					backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
+					resourceMap.allAssociatedBackendRefs[types.NamespacedName{
+						Namespace: backendNamespace,
+						Name:      string(mirrorBackendRef.Name),
+					}] = struct{}{}
+
+					if backendNamespace != httpRoute.Namespace {
+						from := ObjectKindNamespacedName{
+							kind:      gatewayapi.KindHTTPRoute,
+							namespace: httpRoute.Namespace,
+							name:      httpRoute.Name,
+						}
+						to := ObjectKindNamespacedName{
+							kind:      gatewayapi.KindService,
+							namespace: backendNamespace,
+							name:      string(mirrorBackendRef.Name),
+						}
+						refGrant, err := r.findReferenceGrant(ctx, from, to)
+						switch {
+						case err != nil:
+							r.log.Error(err, "failed to find ReferenceGrant")
+						case refGrant == nil:
+							r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+								"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+						default:
+							resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+							r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+								"name", refGrant.Name)
+						}
+					}
+				} else if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
 					key := types.NamespacedName{
 						// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
 						Namespace: httpRoute.Namespace,
