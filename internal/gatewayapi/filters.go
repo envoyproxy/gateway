@@ -49,6 +49,8 @@ type HTTPFilterChains struct {
 
 	AddResponseHeaders    []ir.AddHeader
 	RemoveResponseHeaders []string
+
+	Mirrors []*ir.RouteDestination
 }
 
 // ProcessHTTPFilters translate gateway api http filters to IRs.
@@ -83,6 +85,8 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 			t.processRequestHeaderModifierFilter(filter, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter, httpFiltersContext)
+		case v1beta1.HTTPRouteFilterRequestMirror:
+			t.processRequestMirrorFilter(filter, httpFiltersContext, resources)
 		case v1beta1.HTTPRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter, httpFiltersContext, resources)
 		default:
@@ -635,6 +639,49 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 			StatusCode: 500,
 		}
 	}
+}
+
+func (t *Translator) processRequestMirrorFilter(
+	filter v1beta1.HTTPRouteFilter,
+	filterContext *HTTPFiltersContext,
+	resources *Resources) {
+
+	// Make sure the config actually exists
+	mirrorFilter := filter.RequestMirror
+	if mirrorFilter == nil {
+		return
+	}
+
+	mirrorBackend := mirrorFilter.BackendRef
+
+	// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
+	weight := int32(1)
+	mirrorBackendRef := v1beta1.BackendRef{
+		BackendObjectReference: mirrorBackend,
+		Weight:                 &weight,
+	}
+
+	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
+	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterContext.HTTPRoute.Namespace)
+	if !t.validateBackendRef(&mirrorBackendRef, filterContext.ParentRef, filterContext.HTTPRoute,
+		resources, serviceNamespace, KindHTTPRoute) {
+		return
+	}
+
+	mirrorDest, _ := t.processRouteDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.HTTPRoute, resources)
+
+	// If we're already mirroring requests to this backend then there is no need to configure it twice
+	for _, mirror := range filterContext.Mirrors {
+		if mirror != nil {
+			if mirror.Host == mirrorDest.Host &&
+				mirror.Port == mirrorDest.Port {
+				return
+			}
+		}
+	}
+
+	filterContext.Mirrors = append(filterContext.Mirrors, mirrorDest)
+
 }
 
 func (t *Translator) processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext) {

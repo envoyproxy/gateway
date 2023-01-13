@@ -43,6 +43,9 @@ func TestTranslate(t *testing.T) {
 			name: "http-route-redirect",
 		},
 		{
+			name: "http-route-mirror",
+		},
+		{
 			name: "http-route-direct-response",
 		},
 		{
