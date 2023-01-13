@@ -33,9 +33,13 @@ func (i *Infra) expectedService(infra *ir.Infra) (*corev1.Service, error) {
 	for _, listener := range infra.Proxy.Listeners {
 		for _, port := range listener.Ports {
 			target := intstr.IntOrString{IntVal: port.ContainerPort}
+			protocol := corev1.ProtocolTCP
+			if port.Protocol == ir.UDPProtocolType {
+				protocol = corev1.ProtocolUDP
+			}
 			p := corev1.ServicePort{
 				Name:       port.Name,
-				Protocol:   corev1.ProtocolTCP,
+				Protocol:   protocol,
 				Port:       port.ServicePort,
 				TargetPort: target,
 			}
