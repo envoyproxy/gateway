@@ -8,7 +8,7 @@ package translator
 import (
 	"time"
 
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
@@ -19,7 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool) *cluster.Cluster {
+func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool) *clusterv3.Cluster {
 	localities := make([]*endpoint.LocalityLbEndpoints, 0, 1)
 	locality := &endpoint.LocalityLbEndpoints{
 		Locality:    &core.Locality{},
@@ -31,17 +31,17 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
 	localities = append(localities, locality)
 	clusterName := routeName
-	cluster := &cluster.Cluster{
+	cluster := &clusterv3.Cluster{
 		Name:                 clusterName,
 		ConnectTimeout:       durationpb.New(5 * time.Second),
-		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STATIC},
-		LbPolicy:             cluster.Cluster_ROUND_ROBIN,
+		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+		LbPolicy:             clusterv3.Cluster_ROUND_ROBIN,
 		LoadAssignment:       &endpoint.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities},
-		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
-		CommonLbConfig: &cluster.Cluster_CommonLbConfig{
-			LocalityConfigSpecifier: &cluster.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
-				LocalityWeightedLbConfig: &cluster.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
-		OutlierDetection: &cluster.OutlierDetection{},
+		DnsLookupFamily:      clusterv3.Cluster_V4_ONLY,
+		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
+			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
+				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
+		OutlierDetection: &clusterv3.OutlierDetection{},
 	}
 
 	if isHTTP2 {
@@ -49,7 +49,6 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 	}
 
 	return cluster
-
 }
 
 func buildXdsEndpoints(destinations []*ir.RouteDestination) []*endpoint.LbEndpoint {
@@ -81,7 +80,6 @@ func buildXdsEndpoints(destinations []*ir.RouteDestination) []*endpoint.LbEndpoi
 }
 
 func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
-
 	protocolOptions := httpv3.HttpProtocolOptions{
 		UpstreamProtocolOptions: &httpv3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &httpv3.HttpProtocolOptions_ExplicitHttpConfig{

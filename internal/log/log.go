@@ -12,9 +12,9 @@ import (
 )
 
 func NewLogger() (logr.Logger, error) {
-	zap, err := zap.NewDevelopment()
+	zapLogger, err := zap.NewDevelopment()
 	if err != nil {
 		return logr.Logger{}, err
 	}
-	return zapr.NewLogger(zap), nil
+	return zapr.NewLogger(zapLogger), nil
 }
