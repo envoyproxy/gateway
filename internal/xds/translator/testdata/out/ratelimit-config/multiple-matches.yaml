@@ -1,17 +1,17 @@
 domain: first-listener
 descriptors:
-    - key: first-route-key-rule-0-match-0
-      value: first-route-value-rule-0-match-0
-      rate_limit: null
-      descriptors:
-        - key: first-route-key-rule-0-match-1
-          value: first-route-value-rule-0-match-1
-          rate_limit:
-            requests_per_unit: 5
-            unit: second
-            unlimited: false
-            name: ""
-            replaces: []
-          descriptors: []
-          shadow_mode: false
-      shadow_mode: false
+  - key: first-route-key-rule-0-match-0
+    value: first-route-value-rule-0-match-0
+    rate_limit: null
+    descriptors:
+      - key: first-route-key-rule-0-match-1
+        value: first-route-value-rule-0-match-1
+        rate_limit:
+          requests_per_unit: 5
+          unit: second
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+    shadow_mode: false

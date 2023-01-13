@@ -195,9 +195,12 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 }
 
 func requireYamlRootToYAMLString(t *testing.T, yamlRoot *ratelimitserviceconfig.YamlRoot) string {
-	data, err := goyaml.Marshal(*yamlRoot)
+	var buf bytes.Buffer
+	enc := goyaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	err := enc.Encode(*yamlRoot)
 	require.NoError(t, err)
-	return string(data)
+	return buf.String()
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
