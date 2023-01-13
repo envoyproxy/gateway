@@ -37,7 +37,7 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 	gatewayClassController gwapiv1b1.GatewayController,
 	routeParentReferences []gwapiv1b1.ParentReference) ([]gwapiv1b1.Gateway, error) {
 
-	var ret []gwapiv1b1.Gateway
+	var gateways []gwapiv1b1.Gateway
 	for i := range routeParentReferences {
 		ref := routeParentReferences[i]
 		if ref.Kind != nil && *ref.Kind != "Gateway" {
@@ -69,11 +69,11 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 			return nil, fmt.Errorf("failed to get gatewayclass %s: %v", gcKey.Name, err)
 		}
 		if gc.Spec.ControllerName == gatewayClassController {
-			ret = append(ret, *gw)
+			gateways = append(gateways, *gw)
 		}
 	}
 
-	return ret, nil
+	return gateways, nil
 }
 
 type controlledClasses struct {
@@ -163,17 +163,17 @@ func isAccepted(gc *gwapiv1b1.GatewayClass) bool {
 
 // gatewaysOfClass returns a list of gateways that reference gc from the provided gwList.
 func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) []gwapiv1b1.Gateway {
-	var ret []gwapiv1b1.Gateway
+	var gateways []gwapiv1b1.Gateway
 	if gwList == nil || gc == nil {
-		return ret
+		return gateways
 	}
 	for i := range gwList.Items {
 		gw := gwList.Items[i]
 		if string(gw.Spec.GatewayClassName) == gc.Name {
-			ret = append(ret, gw)
+			gateways = append(gateways, gw)
 		}
 	}
-	return ret
+	return gateways
 }
 
 // terminatesTLS returns true if the provided gateway contains a listener configured
