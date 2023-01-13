@@ -14,6 +14,7 @@ The manifest installs a [GatewayClass][], [Gateway][], UDPRoute and a CoreDNS de
 Gateway is listening on UDP port 5300 and forward the UDP traffic to the port 53 of the backend CoreDNS service.  
 
 First, let's get the Gateway's address.
+
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/udp-gateway -o jsonpath='{.status.addresses[0].value}')
 ```
