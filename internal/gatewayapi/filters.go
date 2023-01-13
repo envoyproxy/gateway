@@ -25,6 +25,7 @@ type HTTPFiltersTranslator interface {
 	processRedirectFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
 	processRequestHeaderModifierFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
 	processResponseHeaderModifierFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
+	processRequestMirrorFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources)
 	processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources)
 	processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
 }
