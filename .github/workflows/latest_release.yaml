@@ -49,3 +49,10 @@ jobs:
           This release **might not be stable**.
 
           It is only intended for developers wishing to try out the latest features in Envoy Gateway, some of which may not be fully implemented.
+
+    # Check if latest release and tag are created properly,
+    # if not, the workflow needs to report an error, 
+    # let maintainers be aware of it and rerun it manually.
+    - name: Check Latest Release and Tag
+      run: | 
+        make latest-release-check
