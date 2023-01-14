@@ -524,7 +524,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, authenFilter))
 	}()
 
-	rateLimitFilter := test.GetRateLimitFilter("test-rateLimit", ns.Name)
+	rateLimitFilter := test.GetRateLimitFilter("test-ratelimit", ns.Name)
 
 	require.NoError(t, cli.Create(ctx, rateLimitFilter))
 
