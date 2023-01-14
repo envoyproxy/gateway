@@ -9,17 +9,35 @@ linters:
     - revive
     - gosec
     - misspell
-    - scopelint
+    - exportloopref
     - unconvert
     - unparam
     - goheader
     - gocritic
 
 linters-settings:
+  gci:
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/envoyproxy/gateway/) # Groups all imports with the specified Prefix.
+  goimports:
+    # put imports beginning with prefix after 3rd-party packages;
+    # it's a comma-separated list of prefixes
+    local-prefixes: github.com/envoyproxy/gateway/
   gofmt:
     simplify: true
   unparam:
     check-exported: false
+  goheader:
+    # Note that because the format is different (this needs no comment markers),
+    # updating this text means also updating /tools/boilerplate.txt so that
+    # `make generate` will update the generated files correctly.
+    template: |-
+      Copyright Envoy Gateway Authors
+      SPDX-License-Identifier: Apache-2.0
+      The full text of the Apache license is available in the LICENSE file at
+      the root of the repo.
 
 issues:
   exclude-rules:

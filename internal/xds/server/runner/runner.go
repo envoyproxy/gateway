@@ -15,13 +15,6 @@ import (
 	"os"
 	"strconv"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/xds/cache"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 	controlplane_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	controlplane_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	controlplane_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
@@ -30,6 +23,13 @@ import (
 	controlplane_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	controlplane_service_secret_v3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
 	controlplane_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/xds/cache"
+	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 const (
