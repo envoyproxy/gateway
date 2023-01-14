@@ -10,7 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	cmdver "github.com/envoyproxy/gateway/internal/cmd/version"
+	"github.com/envoyproxy/gateway/internal/cmd/version"
 )
 
 func NewVersionsCommand() *cobra.Command {
@@ -35,11 +35,14 @@ func (v *versionInfo) String() string {
 	return fmt.Sprintf("CLIENT_VERSION=%s", v.ClientVersion)
 }
 
-func versions() error {
-	v := &versionInfo{
-		ClientVersion: cmdver.EnvoyGatewayVersion,
+func Get() versionInfo {
+	return versionInfo{
+		ClientVersion: version.Get().EnvoyGatewayVersion,
 	}
+}
 
+func versions() error {
+	v := Get()
 	fmt.Println(v)
 
 	return nil
