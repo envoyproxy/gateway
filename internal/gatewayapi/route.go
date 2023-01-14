@@ -839,9 +839,9 @@ func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteConte
 
 			for _, routeRoute := range routeRoutes {
 				hostRoute := &ir.HTTPRoute{
-					Name:      fmt.Sprintf("%s-%s", routeRoute.Name, host),
-					PathMatch: routeRoute.PathMatch,
-					// HeaderMatches:         append(headerMatches, routeRoute.HeaderMatches...),
+					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
+					PathMatch:             routeRoute.PathMatch,
+					HeaderMatches:         append(headerMatches, routeRoute.HeaderMatches...),
 					QueryParamMatches:     routeRoute.QueryParamMatches,
 					AddRequestHeaders:     routeRoute.AddRequestHeaders,
 					RemoveRequestHeaders:  routeRoute.RemoveRequestHeaders,
