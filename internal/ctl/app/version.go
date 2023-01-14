@@ -11,10 +11,9 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
-	"sigs.k8s.io/yaml"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/cmd/version"
 	"github.com/envoyproxy/gateway/internal/ctl/options"
