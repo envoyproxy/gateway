@@ -9,13 +9,22 @@ linters:
     - revive
     - gosec
     - misspell
-    - scopelint
+    - exportloopref
     - unconvert
     - unparam
     - goheader
     - gocritic
 
 linters-settings:
+  gci:
+    sections:
+      - standard # Captures all standard packages if they do not match another section.
+      - default # Contains all imports that could not be matched to another section type.
+      - prefix(github.com/envoyproxy/gateway/) # Groups all imports with the specified Prefix.
+  goimports:
+    # put imports beginning with prefix after 3rd-party packages;
+    # it's a comma-separated list of prefixes
+    local-prefixes: github.com/envoyproxy/gateway/
   gofmt:
     simplify: true
   unparam:
