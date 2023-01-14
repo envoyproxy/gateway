@@ -80,3 +80,8 @@ gen-check: generate manifests
 licensecheck: ## Check license headers are present.
 	@$(LOG_TARGET)
 	tools/boilerplate/verify-boilerplate.sh
+
+.PHONY: latest-release-check
+latest-release-check: ## Check if latest release and tag are created properly.
+	@$(LOG_TARGET)
+	sh tools/hack/check-latest-release.sh

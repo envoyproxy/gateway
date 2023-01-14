@@ -6,18 +6,38 @@
 package version
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"runtime/debug"
 	"strings"
+
+	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+type Info struct {
+	EnvoyGatewayVersion string `json:"envoyGatewayVersion"`
+	GatewayAPIVersion   string `json:"gatewayAPIVersion"`
+	EnvoyVersion        string `json:"envoyVersion"`
+	GitCommitID         string `json:"gitCommitID"`
+}
+
+func Get() Info {
+	return Info{
+		EnvoyGatewayVersion: envoyGatewayVersion,
+		GatewayAPIVersion:   gatewayAPIVersion,
+		EnvoyVersion:        envoyVersion,
+		GitCommitID:         gitCommitID,
+	}
+}
+
 var (
-	EnvoyGatewayVersion string
-	GatewayAPIVersion   string
-	EnvoyVersion        = strings.Split(ir.DefaultProxyImage, ":")[1]
-	GitCommitID         string
+	envoyGatewayVersion string
+	gatewayAPIVersion   string
+	envoyVersion        = strings.Split(ir.DefaultProxyImage, ":")[1]
+	gitCommitID         string
 )
 
 func init() {
@@ -25,18 +45,30 @@ func init() {
 	if ok {
 		for _, dep := range bi.Deps {
 			if dep.Path == "sigs.k8s.io/gateway-api" {
-				GatewayAPIVersion = dep.Version
+				gatewayAPIVersion = dep.Version
 			}
 		}
 	}
 }
 
 // Print shows the versions of the Envoy Gateway.
-func Print() error {
-	fmt.Printf("ENVOY_GATEWAY_VERSION: %s\n", EnvoyGatewayVersion)
-	fmt.Printf("ENVOY_VERSION: %s\n", EnvoyVersion)
-	fmt.Printf("GATEWAYAPI_VERSION: %s\n", GatewayAPIVersion)
-	fmt.Printf("GIT_COMMIT_ID: %s\n", GitCommitID)
+func Print(w io.Writer, format string) error {
+	v := Get()
+	switch format {
+	case "json":
+		if marshalled, err := json.MarshalIndent(v, "", "  "); err == nil {
+			_, _ = fmt.Fprintln(w, string(marshalled))
+		}
+	case "yaml":
+		if marshalled, err := yaml.Marshal(v); err == nil {
+			_, _ = fmt.Fprintln(w, string(marshalled))
+		}
+	default:
+		_, _ = fmt.Fprintf(w, "ENVOY_GATEWAY_VERSION: %s\n", v.EnvoyGatewayVersion)
+		_, _ = fmt.Fprintf(w, "ENVOY_VERSION: %s\n", v.EnvoyVersion)
+		_, _ = fmt.Fprintf(w, "GATEWAYAPI_VERSION: %s\n", v.GatewayAPIVersion)
+		_, _ = fmt.Fprintf(w, "GIT_COMMIT_ID: %s\n", v.GitCommitID)
+	}
 
 	return nil
 }

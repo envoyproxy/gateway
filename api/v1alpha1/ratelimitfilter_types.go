@@ -25,7 +25,7 @@ type RateLimitFilter struct {
 // +kubebuilder:object:root=true
 
 // RateLimitFilterList contains a list of RateLimitFilter resources.
-type RateLimitList struct {
+type RateLimitFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []RateLimitFilter `json:"items"`
