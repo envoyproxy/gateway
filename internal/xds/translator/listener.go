@@ -95,7 +95,7 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
-		mgr.CodecType = hcm.HttpConnectionManager_HTTP2
+		mgr.CodecType = hcm.HttpConnectionManager_AUTO
 
 		// Enable grpc-web filter for HTTP2
 		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})
