@@ -8,10 +8,10 @@ package validation
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/stretchr/testify/require"
 )
 
 func TestValidateAuthenticationFilter(t *testing.T) {

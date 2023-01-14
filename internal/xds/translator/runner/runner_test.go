@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/stretchr/testify/require"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
-	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 func TestRunner(t *testing.T) {
