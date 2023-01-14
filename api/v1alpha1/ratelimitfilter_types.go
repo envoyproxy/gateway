@@ -9,6 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// KindRateLimitFilter is the name of the RateLimitFilter kind.
+	KindRateLimitFilter = "RateLimitFilter"
+)
+
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
@@ -162,3 +167,7 @@ type RateLimitValue struct {
 //
 // +kubebuilder:validation:Enum=Second;Minute;Hour;Day
 type RateLimitUnit string
+
+func init() {
+	SchemeBuilder.Register(&RateLimitFilter{}, &RateLimitFilterList{})
+}

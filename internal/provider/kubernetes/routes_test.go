@@ -58,10 +58,11 @@ func TestProcessHTTPRoutes(t *testing.T) {
 	gwNsName := utils.NamespacedName(gw).String()
 
 	testCases := []struct {
-		name     string
-		routes   []*gwapiv1b1.HTTPRoute
-		filters  []*egv1a1.AuthenticationFilter
-		expected bool
+		name             string
+		routes           []*gwapiv1b1.HTTPRoute
+		authenFilters    []*egv1a1.AuthenticationFilter
+		rateLimitFilters []*egv1a1.RateLimitFilter
+		expected         bool
 	}{
 		{
 			name: "valid httproute",
@@ -159,7 +160,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 					},
 				},
 			},
-			filters: []*egv1a1.AuthenticationFilter{
+			authenFilters: []*egv1a1.AuthenticationFilter{
 				{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       egv1a1.KindAuthenticationFilter,
@@ -178,6 +179,95 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Audiences: []string{"test.local"},
 								RemoteJWKS: egv1a1.RemoteJWKS{
 									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "httproute with one rateLimitfilter",
+			routes: []*gwapiv1b1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1b1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1b1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1b1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1b1.HTTPPathMatch{
+											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+											Value: gatewayapi.StringPtr("/"),
+										},
+									},
+								},
+								Filters: []gwapiv1b1.HTTPRouteFilter{
+									{
+										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1b1.LocalObjectReference{
+											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+											Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
+											Name:  gwapiv1b1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			rateLimitFilters: []*egv1a1.RateLimitFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindRateLimitFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: egv1a1.RateLimitFilterSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name:  "x-user-id",
+													Value: gatewayapi.StringPtr("one"),
+												},
+											},
+										},
+									},
+									Limit: egv1a1.RateLimitValue{
+										Requests: 5,
+										Unit:     "Second",
+									},
 								},
 							},
 						},
@@ -209,7 +299,10 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			for _, route := range tc.routes {
 				objs = append(objs, route)
 			}
-			for _, filter := range tc.filters {
+			for _, filter := range tc.authenFilters {
+				objs = append(objs, filter)
+			}
+			for _, filter := range tc.rateLimitFilters {
 				objs = append(objs, filter)
 			}
 			r.client = fakeclient.NewClientBuilder().
@@ -226,14 +319,24 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
-				if tc.filters != nil {
-					for i, filter := range tc.filters {
+				if tc.authenFilters != nil {
+					for i, filter := range tc.authenFilters {
 						key := types.NamespacedName{
 							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
 							Namespace: tc.routes[i].Namespace,
 							Name:      filter.Name,
 						}
 						require.Equal(t, filter, resourceMap.authenFilters[key])
+					}
+				}
+				if tc.rateLimitFilters != nil {
+					for i, filter := range tc.rateLimitFilters {
+						key := types.NamespacedName{
+							// The RateLimitFilter must be in the same namespace as the HTTPRoute.
+							Namespace: tc.routes[i].Namespace,
+							Name:      filter.Name,
+						}
+						require.Equal(t, filter, resourceMap.rateLimitFilters[key])
 					}
 				}
 			} else {

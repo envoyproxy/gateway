@@ -524,6 +524,14 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, authenFilter))
 	}()
 
+	rateLimitFilter := test.GetRateLimitFilter("test-rateLimit", ns.Name)
+
+	require.NoError(t, cli.Create(ctx, rateLimitFilter))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, rateLimitFilter))
+	}()
+
 	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
 	redirectPort := gwapiv1b1.PortNumber(8443)
 	redirectStatus := 301
