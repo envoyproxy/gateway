@@ -9,8 +9,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -18,13 +25,30 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
+// GatewayScheme returns a scheme will all known gateway-related types added
+var (
+	GatewayScheme = gatewayScheme()
+)
+
+func gatewayScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	utilruntime.Must(kubescheme.AddToScheme(scheme))
+	utilruntime.Must(apiextv1.AddToScheme(scheme))
+	return scheme
+}
+
 type CLIClient interface {
 	// RESTConfig returns the Kubernetes rest.Config used to configure the clients.
 	RESTConfig() *rest.Config
 
+	// PodsForSelector finds pods matching selector.
+	PodsForSelector(namespace string, labelSelectors ...string) (*corev1.PodList, error)
+
 	// PodExec takes a command and the pod data to run the command in the specified pod.
-	PodExec(podName, podNamespace, container string, command string) (stdout string, stderr string, err error)
+	PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error)
 }
+
+var _ CLIClient = &client{}
 
 type client struct {
 	config     *rest.Config
@@ -46,6 +70,7 @@ func newClientInternal(clientConfig clientcmd.ClientConfig) (*client, error) {
 	if err != nil {
 		return nil, err
 	}
+	setRestDefaults(c.config)
 
 	c.restClient, err = rest.RESTClientFor(c.config)
 	if err != nil {
@@ -60,6 +85,30 @@ func newClientInternal(clientConfig clientcmd.ClientConfig) (*client, error) {
 	return &c, err
 }
 
+func setRestDefaults(config *rest.Config) *rest.Config {
+	if config.GroupVersion == nil || config.GroupVersion.Empty() {
+		config.GroupVersion = &corev1.SchemeGroupVersion
+	}
+	if len(config.APIPath) == 0 {
+		if len(config.GroupVersion.Group) == 0 {
+			config.APIPath = "/api"
+		} else {
+			config.APIPath = "/apis"
+		}
+	}
+	if len(config.ContentType) == 0 {
+		config.ContentType = runtime.ContentTypeJSON
+	}
+	if config.NegotiatedSerializer == nil {
+		// This codec factory ensures the resources are not converted. Therefore, resources
+		// will not be round-tripped through internal versions. Defaulting does not happen
+		// on the client.
+		config.NegotiatedSerializer = serializer.NewCodecFactory(GatewayScheme).WithoutConversion()
+	}
+
+	return config
+}
+
 func (c *client) RESTConfig() *rest.Config {
 	if c.config == nil {
 		return nil
@@ -68,23 +117,29 @@ func (c *client) RESTConfig() *rest.Config {
 	return &cpy
 }
 
-func (c *client) PodExec(podName, podNamespace, container string, command string) (stdout string, stderr string, err error) {
+func (c *client) PodsForSelector(namespace string, podSelectors ...string) (*corev1.PodList, error) {
+	return c.kube.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
+		LabelSelector: strings.Join(podSelectors, ","),
+	})
+}
+
+func (c *client) PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error) {
 	defer func() {
 		if err != nil {
 			if len(stderr) > 0 {
-				err = fmt.Errorf("error exec'ing into %s/%s %s container: %v\n%s",
-					podNamespace, podName, container, err, stderr)
+				err = fmt.Errorf("error exec'ing into %s %s container: %v\n%s",
+					namespacedName, container, err, stderr)
 			} else {
-				err = fmt.Errorf("error exec'ing into %s/%s %s container: %v",
-					podNamespace, podName, container, err)
+				err = fmt.Errorf("error exec'ing into %s %s container: %v",
+					namespacedName, container, err)
 			}
 		}
 	}()
 
 	req := c.restClient.Post().
 		Resource("pods").
-		Name(podName).
-		Namespace(podNamespace).
+		Namespace(namespacedName.Namespace).
+		Name(namespacedName.Name).
 		SubResource("exec").
 		Param("container", container).
 		VersionedParams(&corev1.PodExecOptions{

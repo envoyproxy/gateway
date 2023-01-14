@@ -6,44 +6,95 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
+	"sigs.k8s.io/yaml"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/envoyproxy/gateway/internal/cmd/version"
+	"github.com/envoyproxy/gateway/internal/ctl/options"
+	"github.com/envoyproxy/gateway/internal/utils/kube"
 )
 
 func NewVersionsCommand() *cobra.Command {
+	var output string
+
 	versionCommand := &cobra.Command{
 		Use:     "versions",
 		Aliases: []string{"version"},
 		Short:   "Show versions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return versions()
+			return versions(cmd.OutOrStdout(), output)
 		},
 	}
+
+	flags := versionCommand.Flags()
+	options.AddKubeConfigFlags(flags)
+	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
 
 	return versionCommand
 }
 
-type versionInfo struct {
-	ClientVersion string
-	// TODO: support display server version
+type VersionInfo struct {
+	ClientVersion  string                   `json:"client"`
+	ServerVersions map[string]*version.Info `json:"servers,omitempty"`
 }
 
-func (v *versionInfo) String() string {
-	return fmt.Sprintf("CLIENT_VERSION=%s", v.ClientVersion)
-}
-
-func Get() versionInfo {
-	return versionInfo{
+func Get() VersionInfo {
+	return VersionInfo{
 		ClientVersion: version.Get().EnvoyGatewayVersion,
 	}
 }
 
-func versions() error {
+func versions(w io.Writer, output string) error {
 	v := Get()
-	fmt.Println(v)
+
+	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
+	if err != nil {
+		return fmt.Errorf("build CLI client fail: %w", err)
+	}
+
+	pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
+	if err != nil {
+		return fmt.Errorf("list EG pods fail: %w", err)
+	}
+
+	for _, pod := range pods.Items {
+		nn := types.NamespacedName{
+			Namespace: pod.Namespace,
+			Name:      pod.Name,
+		}
+		stdout, _, err := c.PodExec(nn, "envoy-gateway", "envoy-gateway version -ojson")
+		if err != nil {
+			return fmt.Errorf("pod exec on %s fail: %w", nn, err)
+		}
+
+		info := &version.Info{}
+		if err := json.Unmarshal([]byte(stdout), info); err != nil {
+			return fmt.Errorf("unmarshall pod %s exec result fail: %w", nn, err)
+		}
+
+		v.ServerVersions[nn.String()] = info
+	}
+
+	var out []byte
+	switch output {
+	case "yaml":
+		out, err = yaml.Marshal(v)
+	default:
+		out, err = json.MarshalIndent(v, "", "  ")
+
+	}
+
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(w, string(out))
 
 	return nil
 }
