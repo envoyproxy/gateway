@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -85,7 +84,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		routeRoutes := t.processGRPCRoutes(grpcRoute, parentRef, resources)
+		routeRoutes := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
 
 		var hasHostnameIntersection = t.processGRPCRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
@@ -145,9 +144,11 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processGRPCRoutes(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
 	var routeRoutes []*ir.HTTPRoute
+
 	for ruleIdx, rule := range grpcRoute.Spec.Rules {
+
 		var ruleRoutes []*ir.HTTPRoute
 
 		// First see if there are any filters in the rules. Then apply those filters to any irRoutes.
@@ -554,7 +555,7 @@ func (t *Translator) processGRPCRoutes(grpcRoute *GRPCRouteContext, parentRef *R
 		}
 
 		for _, backendRef := range rule.BackendRefs {
-			destination, backendWeight := buildRuleRouteDest(backendRef.BackendRef, parentRef, grpcRoute, grpcRoute.Namespace, resources)
+			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
@@ -1253,7 +1254,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // the same proportion as the backend would have otherwise received
 func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 	parentRef *RouteParentContext,
-	httpRoute *HTTPRouteContext,
+	route RouteContext,
 	resources *Resources) (destination *ir.RouteDestination, backendWeight uint32) {
 
 	weight := uint32(1)
@@ -1261,10 +1262,10 @@ func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 		weight = uint32(*backendRef.Weight)
 	}
 
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if !t.validateBackendRef(&backendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
+	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, KindHTTPRoute) {
 		return nil, weight
 	}
 
@@ -1273,7 +1274,6 @@ func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 		Port:   uint32(*backendRef.Port),
 		Weight: weight,
 	}, weight
-
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
@@ -1344,149 +1344,4 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		)
 	}
 	return relevantRoute
-}
-
-func buildRuleRouteDest(backendRef v1beta1.BackendRef,
-	parentRef *RouteParentContext,
-	route RouteContext,
-	routeNs string,
-	resources *Resources) (destination *ir.RouteDestination, backendWeight uint32) {
-
-	weight := uint32(1)
-	if backendRef.Weight != nil {
-		weight = uint32(*backendRef.Weight)
-	}
-
-	if backendRef.Group != nil && *backendRef.Group != "" {
-		parentRef.SetCondition(route,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonInvalidKind,
-			"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
-		)
-		return nil, weight
-	}
-
-	if backendRef.Kind != nil && *backendRef.Kind != KindService {
-		parentRef.SetCondition(route,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service is supported",
-		)
-		return nil, weight
-	}
-
-	if backendRef.Namespace != nil && string(*backendRef.Namespace) != "" && string(*backendRef.Namespace) != routeNs {
-		if !isValidCrossNamespaceRef(
-			crossNamespaceFrom{
-				group:     v1beta1.GroupName,
-				kind:      route.GetRouteType(),
-				namespace: routeNs,
-			},
-			crossNamespaceTo{
-				group:     "",
-				kind:      KindService,
-				namespace: string(*backendRef.Namespace),
-				name:      string(backendRef.Name),
-			},
-			resources.ReferenceGrants,
-		) {
-			parentRef.SetCondition(route,
-				v1beta1.RouteConditionResolvedRefs,
-				metav1.ConditionFalse,
-				v1beta1.RouteReasonRefNotPermitted,
-				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
-			)
-			return nil, weight
-		}
-	}
-
-	if backendRef.Port == nil {
-		parentRef.SetCondition(route,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotSpecified",
-			"A valid port number corresponding to a port on the Service must be specified",
-		)
-		return nil, weight
-	}
-
-	service := resources.GetService(NamespaceDerefOr(backendRef.Namespace, routeNs), string(backendRef.Name))
-	if service == nil {
-		parentRef.SetCondition(route,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonBackendNotFound,
-			fmt.Sprintf("Service %s/%s not found", NamespaceDerefOr(backendRef.Namespace, routeNs), string(backendRef.Name)),
-		)
-		return nil, weight
-	}
-
-	var portFound bool
-	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) &&
-			(port.Protocol == v1.ProtocolTCP || port.Protocol == "") { // Default protocol is TCP
-			portFound = true
-			break
-		}
-	}
-
-	if !portFound {
-		parentRef.SetCondition(route,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			"PortNotFound",
-			fmt.Sprintf("Port %d not found on service %s/%s", *backendRef.Port, NamespaceDerefOr(backendRef.Namespace, routeNs), string(backendRef.Name)),
-		)
-		return nil, weight
-	}
-
-	return &ir.RouteDestination{
-		Host:   service.Spec.ClusterIP,
-		Port:   uint32(*backendRef.Port),
-		Weight: weight,
-	}, weight
-
-}
-
-func isValidCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*v1alpha2.ReferenceGrant) bool {
-	for _, referenceGrant := range referenceGrants {
-		// The ReferenceGrant must be defined in the namespace of
-		// the "to" (the referent).
-		if referenceGrant.Namespace != to.namespace {
-			continue
-		}
-
-		// Check if the ReferenceGrant has a matching "from".
-		var fromAllowed bool
-		for _, refGrantFrom := range referenceGrant.Spec.From {
-			if string(refGrantFrom.Namespace) == from.namespace && string(refGrantFrom.Group) == from.group && string(refGrantFrom.Kind) == from.kind {
-				fromAllowed = true
-				break
-			}
-		}
-		if !fromAllowed {
-			continue
-		}
-
-		// Check if the ReferenceGrant has a matching "to".
-		var toAllowed bool
-		for _, refGrantTo := range referenceGrant.Spec.To {
-			if string(refGrantTo.Group) == to.group && string(refGrantTo.Kind) == to.kind && (refGrantTo.Name == nil || *refGrantTo.Name == "" || string(*refGrantTo.Name) == to.name) {
-				toAllowed = true
-				break
-			}
-		}
-		if !toAllowed {
-			continue
-		}
-
-		// If we got here, both the "from" and the "to" were allowed by this
-		// reference grant.
-		return true
-	}
-
-	// If we got here, no reference policy or reference grant allowed both the "from" and "to".
-	return false
 }
