@@ -232,6 +232,17 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 		*out = new(Redirect)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Mirrors != nil {
+		in, out := &in.Mirrors, &out.Mirrors
+		*out = make([]*RouteDestination, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(RouteDestination)
+				**out = **in
+			}
+		}
+	}
 	if in.Destinations != nil {
 		in, out := &in.Destinations, &out.Destinations
 		*out = make([]*RouteDestination, len(*in))

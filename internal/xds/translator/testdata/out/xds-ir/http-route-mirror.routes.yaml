@@ -1,0 +1,12 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        prefix: /
+      route:
+        cluster: mirror-route
+        requestMirrorPolicies:
+        - cluster: mirror-route-mirror-0

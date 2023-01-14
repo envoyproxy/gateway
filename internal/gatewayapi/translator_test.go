@@ -72,6 +72,21 @@ func TestTranslate(t *testing.T) {
 				)
 			}
 
+			resources.Services = append(resources.Services,
+				&v1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "mirror-service",
+					},
+					Spec: v1.ServiceSpec{
+						ClusterIP: "7.6.5.4",
+						Ports: []v1.ServicePort{
+							{Port: 8080, Protocol: v1.ProtocolTCP},
+						},
+					},
+				},
+			)
+
 			resources.Namespaces = append(resources.Namespaces, &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",

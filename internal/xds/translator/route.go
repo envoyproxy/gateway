@@ -6,64 +6,79 @@
 package translator
 
 import (
+	"fmt"
+
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) *route.Route {
-	ret := &route.Route{
+func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
+	router := &routev3.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}
 
 	if len(httpRoute.AddRequestHeaders) > 0 {
-		ret.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)
+		router.RequestHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddRequestHeaders)
 	}
 	if len(httpRoute.RemoveRequestHeaders) > 0 {
-		ret.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
+		router.RequestHeadersToRemove = httpRoute.RemoveRequestHeaders
 	}
 
 	if len(httpRoute.AddResponseHeaders) > 0 {
-		ret.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
+		router.ResponseHeadersToAdd = buildXdsAddedHeaders(httpRoute.AddResponseHeaders)
 	}
 	if len(httpRoute.RemoveResponseHeaders) > 0 {
-		ret.ResponseHeadersToRemove = httpRoute.RemoveResponseHeaders
+		router.ResponseHeadersToRemove = httpRoute.RemoveResponseHeaders
 	}
 
 	switch {
 	case httpRoute.DirectResponse != nil:
-		ret.Action = &route.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
+		router.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
 	case httpRoute.Redirect != nil:
-		ret.Action = &route.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
-		ret.Action = &route.Route_Route{Route: buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)}
+		routeAction := buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)
+		if len(httpRoute.Mirrors) > 0 {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+		}
+
+		router.Action = &routev3.Route_Route{Route: routeAction}
 	default:
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
-			ret.Action = &route.Route_Route{Route: buildXdsWeightedRouteAction(httpRoute)}
+			routeAction := buildXdsWeightedRouteAction(httpRoute)
+			if len(httpRoute.Mirrors) > 0 {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+			}
+			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
-			ret.Action = &route.Route_Route{Route: buildXdsRouteAction(httpRoute.Name)}
+			routeAction := buildXdsRouteAction(httpRoute.Name)
+			if len(httpRoute.Mirrors) > 0 {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+			}
+			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
 	}
 
 	// TODO: convert this into a generic interface for API Gateway features
-	if err := patchRouteWithRateLimit(ret.GetRoute(), httpRoute); err != nil {
+	if err := patchRouteWithRateLimit(router.GetRoute(), httpRoute); err != nil {
 		return nil
 	}
 
-	return ret
+	return router
 }
 
-func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *route.RouteMatch {
-	outMatch := &route.RouteMatch{}
+func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
+	outMatch := &routev3.RouteMatch{}
 
 	// Return early with a prefix match to '/' if no matches are specified
 	if pathMatch == nil && len(headerMatches) == 0 && len(queryParamMatches) == 0 {
 		// Setup default path specifier. It may be overwritten by :host:.
-		outMatch.PathSpecifier = &route.RouteMatch_Prefix{
+		outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
 			Prefix: "/",
 		}
 		return outMatch
@@ -73,15 +88,15 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 	//nolint:gocritic
 	if pathMatch != nil {
 		if pathMatch.Exact != nil {
-			outMatch.PathSpecifier = &route.RouteMatch_Path{
+			outMatch.PathSpecifier = &routev3.RouteMatch_Path{
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			outMatch.PathSpecifier = &route.RouteMatch_Prefix{
+			outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
 				Prefix: *pathMatch.Prefix,
 			}
 		} else if pathMatch.SafeRegex != nil {
-			outMatch.PathSpecifier = &route.RouteMatch_SafeRegex{
+			outMatch.PathSpecifier = &routev3.RouteMatch_SafeRegex{
 				SafeRegex: &matcher.RegexMatcher{
 					EngineType: &matcher.RegexMatcher_GoogleRe2{},
 					Regex:      *pathMatch.SafeRegex,
@@ -94,9 +109,9 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 	for _, headerMatch := range headerMatches {
 		stringMatcher := buildXdsStringMatcher(headerMatch)
 
-		headerMatcher := &route.HeaderMatcher{
+		headerMatcher := &routev3.HeaderMatcher{
 			Name: headerMatch.Name,
-			HeaderMatchSpecifier: &route.HeaderMatcher_StringMatch{
+			HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
 				StringMatch: stringMatcher,
 			},
 		}
@@ -107,9 +122,9 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 	for _, queryParamMatch := range queryParamMatches {
 		stringMatcher := buildXdsStringMatcher(queryParamMatch)
 
-		queryParamMatcher := &route.QueryParameterMatcher{
+		queryParamMatcher := &routev3.QueryParameterMatcher{
 			Name: queryParamMatch.Name,
-			QueryParameterMatchSpecifier: &route.QueryParameterMatcher_StringMatch{
+			QueryParameterMatchSpecifier: &routev3.QueryParameterMatcher_StringMatch{
 				StringMatch: stringMatcher,
 			},
 		}
@@ -157,16 +172,16 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcher.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(routeName string) *route.RouteAction {
-	return &route.RouteAction{
-		ClusterSpecifier: &route.RouteAction_Cluster{
+func buildXdsRouteAction(routeName string) *routev3.RouteAction {
+	return &routev3.RouteAction{
+		ClusterSpecifier: &routev3.RouteAction_Cluster{
 			Cluster: routeName,
 		},
 	}
 }
 
-func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
-	clusters := []*route.WeightedCluster_ClusterWeight{
+func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
+	clusters := []*routev3.WeightedCluster_ClusterWeight{
 		{
 			Name:   "invalid-backend-cluster",
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
@@ -176,101 +191,113 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *route.RouteAction {
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
 		},
 	}
-	return &route.RouteAction{
+	return &routev3.RouteAction{
 		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
-		ClusterNotFoundResponseCode: route.RouteAction_INTERNAL_SERVER_ERROR,
-		ClusterSpecifier: &route.RouteAction_WeightedClusters{
-			WeightedClusters: &route.WeightedCluster{
+		ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
+		ClusterSpecifier: &routev3.RouteAction_WeightedClusters{
+			WeightedClusters: &routev3.WeightedCluster{
 				Clusters: clusters,
 			},
 		},
 	}
 }
 
-func buildXdsRedirectAction(redirection *ir.Redirect) *route.RedirectAction {
-	ret := &route.RedirectAction{}
+func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
+	routeAction := &routev3.RedirectAction{}
 
 	if redirection.Scheme != nil {
-		ret.SchemeRewriteSpecifier = &route.RedirectAction_SchemeRedirect{
+		routeAction.SchemeRewriteSpecifier = &routev3.RedirectAction_SchemeRedirect{
 			SchemeRedirect: *redirection.Scheme,
 		}
 	}
 	if redirection.Path != nil {
 		if redirection.Path.FullReplace != nil {
-			ret.PathRewriteSpecifier = &route.RedirectAction_PathRedirect{
+			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PathRedirect{
 				PathRedirect: *redirection.Path.FullReplace,
 			}
 		} else if redirection.Path.PrefixMatchReplace != nil {
-			ret.PathRewriteSpecifier = &route.RedirectAction_PrefixRewrite{
+			routeAction.PathRewriteSpecifier = &routev3.RedirectAction_PrefixRewrite{
 				PrefixRewrite: *redirection.Path.PrefixMatchReplace,
 			}
 		}
 	}
 	if redirection.Hostname != nil {
-		ret.HostRedirect = *redirection.Hostname
+		routeAction.HostRedirect = *redirection.Hostname
 	}
 	if redirection.Port != nil {
-		ret.PortRedirect = *redirection.Port
+		routeAction.PortRedirect = *redirection.Port
 	}
 	if redirection.StatusCode != nil {
 		if *redirection.StatusCode == 302 {
-			ret.ResponseCode = route.RedirectAction_FOUND
+			routeAction.ResponseCode = routev3.RedirectAction_FOUND
 		} // no need to check for 301 since Envoy will use 301 as the default if the field is not configured
 	}
 
-	return ret
+	return routeAction
 }
 
-func buildXdsURLRewriteAction(routeName string, urlRewrite *ir.URLRewrite) *route.RouteAction {
-	ret := &route.RouteAction{
-		ClusterSpecifier: &route.RouteAction_Cluster{
+func buildXdsURLRewriteAction(routeName string, urlRewrite *ir.URLRewrite) *routev3.RouteAction {
+	routeAction := &routev3.RouteAction{
+		ClusterSpecifier: &routev3.RouteAction_Cluster{
 			Cluster: routeName,
 		},
 	}
 
 	if urlRewrite.Path != nil {
 		if urlRewrite.Path.FullReplace != nil {
-			ret.RegexRewrite = &matcher.RegexMatchAndSubstitute{
+			routeAction.RegexRewrite = &matcher.RegexMatchAndSubstitute{
 				Pattern: &matcher.RegexMatcher{
 					Regex: "/.+",
 				},
 				Substitution: *urlRewrite.Path.FullReplace,
 			}
 		} else if urlRewrite.Path.PrefixMatchReplace != nil {
-			ret.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
 		}
 	}
 
 	if urlRewrite.Hostname != nil {
-		ret.HostRewriteSpecifier = &route.RouteAction_HostRewriteLiteral{
+		routeAction.HostRewriteSpecifier = &routev3.RouteAction_HostRewriteLiteral{
 			HostRewriteLiteral: *urlRewrite.Hostname,
 		}
 
-		ret.AppendXForwardedHost = true
+		routeAction.AppendXForwardedHost = true
 	}
 
-	return ret
+	return routeAction
 }
 
-func buildXdsDirectResponseAction(res *ir.DirectResponse) *route.DirectResponseAction {
-	ret := &route.DirectResponseAction{Status: res.StatusCode}
+func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectResponseAction {
+	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
 
 	if res.Body != nil {
-		ret.Body = &core.DataSource{
+		routeAction.Body = &core.DataSource{
 			Specifier: &core.DataSource_InlineString{
 				InlineString: *res.Body,
 			},
 		}
 	}
 
-	return ret
+	return routeAction
+}
+
+func buildXdsRequestMirrorPolicies(routeName string, mirrors []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
+	mirrorPolicies := []*routev3.RouteAction_RequestMirrorPolicy{}
+
+	for i := range mirrors {
+		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+			Cluster: fmt.Sprintf("%s-mirror-%d", routeName, i),
+		})
+	}
+
+	return mirrorPolicies
 }
 
 func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
-	ret := make([]*core.HeaderValueOption, len(headersToAdd))
+	headerValueOptions := make([]*core.HeaderValueOption, len(headersToAdd))
 
 	for i, header := range headersToAdd {
-		ret[i] = &core.HeaderValueOption{
+		headerValueOptions[i] = &core.HeaderValueOption{
 			Header: &core.HeaderValue{
 				Key:   header.Name,
 				Value: header.Value,
@@ -280,9 +307,9 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption
 
 		// Allow empty headers to be set, but don't add the config to do so unless necessary
 		if header.Value == "" {
-			ret[i].KeepEmptyValue = true
+			headerValueOptions[i].KeepEmptyValue = true
 		}
 	}
 
-	return ret
+	return headerValueOptions
 }
