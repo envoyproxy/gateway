@@ -17,13 +17,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilclock "k8s.io/utils/clock"
 	fakeclock "k8s.io/utils/clock/testing"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 var clock utilclock.Clock = utilclock.RealClock{}

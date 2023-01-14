@@ -8,9 +8,10 @@ package gatewayapi
 import (
 	"fmt"
 
-	"github.com/envoyproxy/gateway/internal/ir"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)

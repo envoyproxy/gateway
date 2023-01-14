@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 func TestGatewaysOfClass(t *testing.T) {
