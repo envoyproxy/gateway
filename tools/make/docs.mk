@@ -9,7 +9,10 @@ docs: docs.clean $(tools/sphinx-build) ## Generate Envoy Gateway Docs Sources
 	mkdir -p $(DOCS_OUTPUT_DIR)
 	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
 	@for VERSION in $(RELEASE_VERSIONS); do \
-		env BUILD_VERSION=$$VERSION $(shell go run ./cmd/envoy-gateway versions --env) $(tools/sphinx-build) -j auto -b html docs/$$VERSION $(DOCS_OUTPUT_DIR)/$$VERSION; \
+		env BUILD_VERSION=$$VERSION \
+		ENVOY_VERSION=$(shell go run ./cmd/envoy-gateway versions -o json | jq -r ".envoyVersion"') \
+		GATEWAYAPI_VERSION=$(shell go run ./cmd/envoy-gateway versions -o json | jq -r ".gatewayAPIVersion"') \
+		$(tools/sphinx-build) -j auto -b html docs/$$VERSION $(DOCS_OUTPUT_DIR)/$$VERSION; \
 	done
 
 .PHONY: docs-release
