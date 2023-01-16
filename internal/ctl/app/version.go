@@ -46,7 +46,8 @@ type VersionInfo struct {
 
 func Get() VersionInfo {
 	return VersionInfo{
-		ClientVersion: version.Get().EnvoyGatewayVersion,
+		ClientVersion:  version.Get().EnvoyGatewayVersion,
+		ServerVersions: map[string]*version.Info{},
 	}
 }
 

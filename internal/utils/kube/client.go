@@ -127,10 +127,10 @@ func (c *client) PodExec(namespacedName types.NamespacedName, container string, 
 	defer func() {
 		if err != nil {
 			if len(stderr) > 0 {
-				err = fmt.Errorf("error exec'ing into %s %s container: %v\n%s",
+				err = fmt.Errorf("error exec into %s container %s: %v\n%s",
 					namespacedName, container, err, stderr)
 			} else {
-				err = fmt.Errorf("error exec'ing into %s %s container: %v",
+				err = fmt.Errorf("error exec into %s container %s: %v",
 					namespacedName, container, err)
 			}
 		}
@@ -144,7 +144,7 @@ func (c *client) PodExec(namespacedName types.NamespacedName, container string, 
 		Param("container", container).
 		VersionedParams(&corev1.PodExecOptions{
 			Container: container,
-			Command:   []string{command},
+			Command:   strings.Fields(command),
 			Stdin:     false,
 			Stdout:    true,
 			Stderr:    true,
