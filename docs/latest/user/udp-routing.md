@@ -1,31 +1,156 @@
 # UDP Routing
 
-The [UDPRoute][] resource allows users to configure UDP routing by matching UDP traffic and forwarding it to
-Kubernetes backends. To learn more about UDP routing, refer to the [Gateway API documentation][].
+The [UDPRoute](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute/)
+resource allows users to configure UDP routing by matching UDP traffic and forwarding it to
+Kubernetes backends. This guide will use a CoredDNS example to walk you through the steps required to configure
+ UDPRoute on Envoy Gateway.
 
-Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and then install the example
-resources used for this guide.
+## Prerequisites
+
+- A Kubernetes cluster with `kubectl` context configured for the cluster.
+
+__Note:__ Envoy Gateway is tested against Kubernetes v1.24.
+
+## Installation
+
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway.
+
+Install a CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on
+ the UDP port 53 for DNS lookups.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/udp-routing.yaml
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: coredns
+  namespace: default
+  labels:
+    app: coredns
+spec:
+  ports:
+    - name: udp-dns
+      port: 53
+      protocol: UDP
+      targetPort: 53
+  selector:
+    app: coredns
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coredns
+  labels:
+    app: coredns
+spec:
+  selector:
+    matchLabels:
+      app: coredns
+  template:
+    metadata:
+      labels:
+        app: coredns
+    spec:
+      containers:
+        - args:
+            - -conf
+            - /root/Corefile
+          image: coredns/coredns
+          name: coredns
+          volumeMounts:
+            - mountPath: /root
+              name: conf
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: coredns
+          name: conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+data:
+  Corefile: |
+    .:53 {
+        forward . 8.8.8.8 9.9.9.9
+        log
+        errors
+    }
+
+    foo.bar.com:53 {
+      whoami
+    }
+EOF
 ```
 
-The manifest installs a [GatewayClass][], [Gateway][], UDPRoute and a CoreDNS deployment and service for testing. The 
-Gateway is listening on UDP port 5300 and forward the UDP traffic to the port 53 of the backend CoreDNS service.  
-
-First, let's get the Gateway's address.
+Update the Gateway from the Quickstart guide to include a UDP listener that listens on the UDP port `5300`:
 
 ```shell
-export GATEWAY_HOST=$(kubectl get gateway/udp-gateway -o jsonpath='{.status.addresses[0].value}')
+kubectl patch gateway eg --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/listeners/-",
+   "value": {
+      "name": "coredns",
+      "protocol": "UDP",
+      "port": 5300,
+      "allowedRoutes": {
+         "kinds": [{
+            "kind": "UDPRoute"
+          }]
+      }
+    },
+}]'
 ```
 
-Use `dig` command to query the dns entry foo.bar.com on port 5003 of the Gateway.
+Verify the Gateway status:
+
+```shell
+kubectl get gateway/eg -o yaml
+```
+
+## UDPRoute
+
+Create a UDPRoute resource to route UDP traffic received on Gateway port 5300 to the CoredDNS backend.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: coredns
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: coredns
+  rules:
+    - backendRefs:
+        - name: coredns
+          port: 53
+EOF
+```
+
+Verify the UDPRoute status:
+
+```shell
+kubectl get udproute/coredns -o yaml
+```
+
+## Testing
+
+Get the External IP of the Gateway:
+
+```shell
+export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
+```
+
+Use `dig` command to query the dns entry foo.bar.com through the Gateway.
 
 ```shell
 dig @${GATEWAY_HOST} -p 5300 foo.bar.com
 ```
 
-You should see the result of the dns query as the below output, which means that the dns query has been successfully 
+You should see the result of the dns query as the below output, which means that the dns query has been successfully
 routed to the backend CoreDNS.
 
 ```bash
@@ -53,7 +178,19 @@ _udp.foo.bar.com.	0	IN	SRV	0 0 42376 .
 ;; MSG SIZE  rcvd: 114
 ```
 
-[UDPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute/
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
-[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
+## Clean-Up
+
+Follow the steps from the [Quickstart Guide](quickstart.md) to uninstall Envoy Gateway.
+
+Delete the CoreDNS example manifest and the UDPRoute:
+
+```shell
+kubectl delete deploy/coredns
+kubectl delete service/coredns
+kubectl delete cm/coredns
+kubectl delete udproute/coredns
+```
+
+## Next Steps
+
+Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
