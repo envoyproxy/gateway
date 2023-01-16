@@ -21,19 +21,23 @@ import (
 )
 
 func NewVersionsCommand() *cobra.Command {
-	var output string
+	var (
+		output string
+		remote bool
+	)
 
 	versionCommand := &cobra.Command{
 		Use:     "versions",
 		Aliases: []string{"version"},
 		Short:   "Show versions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return versions(cmd.OutOrStdout(), output)
+			return versions(cmd.OutOrStdout(), remote, output)
 		},
 	}
 
 	flags := versionCommand.Flags()
 	options.AddKubeConfigFlags(flags)
+	versionCommand.PersistentFlags().BoolVar(&remote, "remote", false, "if true, retrieve server version from cluster")
 	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
 
 	return versionCommand
@@ -51,7 +55,7 @@ func Get() VersionInfo {
 	}
 }
 
-func versions(w io.Writer, output string) error {
+func versions(w io.Writer, remote bool, output string) error {
 	v := Get()
 
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
@@ -59,27 +63,29 @@ func versions(w io.Writer, output string) error {
 		return fmt.Errorf("build CLI client fail: %w", err)
 	}
 
-	pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
-	if err != nil {
-		return fmt.Errorf("list EG pods fail: %w", err)
-	}
-
-	for _, pod := range pods.Items {
-		nn := types.NamespacedName{
-			Namespace: pod.Namespace,
-			Name:      pod.Name,
-		}
-		stdout, _, err := c.PodExec(nn, "envoy-gateway", "envoy-gateway version -ojson")
+	if remote {
+		pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
 		if err != nil {
-			return fmt.Errorf("pod exec on %s fail: %w", nn, err)
+			return fmt.Errorf("list EG pods fail: %w", err)
 		}
 
-		info := &version.Info{}
-		if err := json.Unmarshal([]byte(stdout), info); err != nil {
-			return fmt.Errorf("unmarshall pod %s exec result fail: %w", nn, err)
-		}
+		for _, pod := range pods.Items {
+			nn := types.NamespacedName{
+				Namespace: pod.Namespace,
+				Name:      pod.Name,
+			}
+			stdout, _, err := c.PodExec(nn, "envoy-gateway", "envoy-gateway version -ojson")
+			if err != nil {
+				return fmt.Errorf("pod exec on %s fail: %w", nn, err)
+			}
 
-		v.ServerVersions[nn.String()] = info
+			info := &version.Info{}
+			if err := json.Unmarshal([]byte(stdout), info); err != nil {
+				return fmt.Errorf("unmarshall pod %s exec result fail: %w", nn, err)
+			}
+
+			v.ServerVersions[nn.String()] = info
+		}
 	}
 
 	var out []byte
