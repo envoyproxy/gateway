@@ -25,3 +25,6 @@ vendor/
 *.crt
 *.csr
 *.key
+
+# GitHub Codespaces
+.devcontainer/
