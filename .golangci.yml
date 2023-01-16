@@ -4,18 +4,24 @@ run:
 linters:
   enable:
     - bodyclose
+    - depguard
+    - exportloopref
     - gofmt
     - goimports
-    - revive
-    - gosec
-    - misspell
-    - exportloopref
-    - unconvert
-    - unparam
     - goheader
     - gocritic
+    - gosec
+    - misspell
+    - revive
+    - unconvert
+    - unparam
 
 linters-settings:
+  depguard:
+    packages-with-error-message:
+      - github.com/gogo/protobuf: "gogo/protobuf is deprecated, use golang/protobuf"
+      - gopkg.in/yaml.v2: "use sigs.k8s.io/yaml instead"
+      - gopkg.in/yaml.v3: "use sigs.k8s.io/yaml instead"
   gci:
     sections:
       - standard # Captures all standard packages if they do not match another section.
