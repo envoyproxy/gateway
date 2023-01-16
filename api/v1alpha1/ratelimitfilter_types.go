@@ -15,7 +15,6 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // RateLimitFilter allows the user to limit the number of incoming requests
 // to a predefined value based on attributes within the traffic flow.
@@ -25,15 +24,6 @@ type RateLimitFilter struct {
 
 	// Spec defines the desired state of RateLimitFilter.
 	Spec RateLimitFilterSpec `json:"spec"`
-}
-
-// +kubebuilder:object:root=true
-
-// RateLimitFilterList contains a list of RateLimitFilter resources.
-type RateLimitFilterList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []RateLimitFilter `json:"items"`
 }
 
 // RateLimitFilterSpec defines the desired state of RateLimitFilter.
@@ -167,6 +157,15 @@ type RateLimitValue struct {
 //
 // +kubebuilder:validation:Enum=Second;Minute;Hour;Day
 type RateLimitUnit string
+
+//+kubebuilder:object:root=true
+
+// RateLimitFilterList contains a list of RateLimitFilter resources.
+type RateLimitFilterList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []RateLimitFilter `json:"items"`
+}
 
 func init() {
 	SchemeBuilder.Register(&RateLimitFilter{}, &RateLimitFilterList{})
