@@ -396,37 +396,40 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds
 			kinds[i] = v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: routeKind}
 		}
 		listener.SetSupportedKinds(kinds...)
-	} else {
-		for _, kind := range listener.AllowedRoutes.Kinds {
-			if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidRouteKinds,
-					fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
-				)
-				continue
-			}
+		return
+	}
+	supportedKinds := make([]v1beta1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
 
-			found := false
-			for _, routeKind := range routeKinds {
-				if kind.Kind == routeKind {
-					found = true
-					break
-				}
-			}
-			if !found {
+	for _, kind := range listener.AllowedRoutes.Kinds {
+
+		// if there is a group it must match `gateway.networking.k8s.io`
+		if kind.Group != nil && string(*kind.Group) != v1beta1.GroupName {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalidRouteKinds,
+				fmt.Sprintf("Group is not supported, group must be %s", v1beta1.GroupName),
+			)
+			continue
+		}
+
+		// if there is a kind it must match one of the route kinds
+		for _, routeKind := range routeKinds {
+			if kind.Kind != routeKind {
 				listener.SetCondition(
 					v1beta1.ListenerConditionResolvedRefs,
 					metav1.ConditionFalse,
 					v1beta1.ListenerReasonInvalidRouteKinds,
-					fmt.Sprintf("Kind is not supported, kind must be one of %v", routeKinds),
+					fmt.Sprintf("%s is not supported, kind must be %s", kind.Kind, routeKind),
 				)
 				continue
 			}
-			listener.SetSupportedKinds(kind)
+			supportedKinds = append(supportedKinds, kind)
 		}
 	}
+
+	listener.SetSupportedKinds(supportedKinds...)
+
 }
 
 type portListeners struct {
