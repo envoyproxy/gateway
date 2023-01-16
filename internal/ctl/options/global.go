@@ -17,7 +17,7 @@ var DefaultConfigFlags = genericclioptions.NewConfigFlags(true).
 
 func AddKubeConfigFlags(flags *pflag.FlagSet) {
 	flags.StringVar(DefaultConfigFlags.KubeConfig, "kubeconfig", *DefaultConfigFlags.KubeConfig,
-		"Paht to the kubeconfig file to use for CLI requests.")
+		"Path to the kubeconfig file to use for CLI requests.")
 	flags.StringVar(DefaultConfigFlags.Context, "context", *DefaultConfigFlags.Context,
 		"The name of the kubeconfig context to use.")
 }
