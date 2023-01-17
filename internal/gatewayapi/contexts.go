@@ -27,53 +27,6 @@ type GatewayContext struct {
 	listeners []*ListenerContext
 }
 
-// GetListenerContext returns the ListenerContext with listenerName.
-// If the listener exists in the Gateway Spec but NOT yet in the GatewayContext,
-// this creates a new ListenerContext for the listener and attaches it to the
-// GatewayContext.
-func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *ListenerContext {
-	if g.listeners == nil {
-		g.listeners = make([]*ListenerContext, 0)
-	}
-
-	for _, l := range g.listeners {
-		if l.Name == listenerName {
-			return l
-		}
-	}
-
-	var listener *v1beta1.Listener
-	for i, l := range g.Spec.Listeners {
-		if l.Name == listenerName {
-			listener = &g.Spec.Listeners[i]
-			break
-		}
-	}
-	if listener == nil {
-		panic("listener not found")
-	}
-
-	listenerStatusIdx := -1
-	for i := range g.Status.Listeners {
-		if g.Status.Listeners[i].Name == listenerName {
-			listenerStatusIdx = i
-			break
-		}
-	}
-	if listenerStatusIdx == -1 {
-		g.Status.Listeners = append(g.Status.Listeners, v1beta1.ListenerStatus{Name: listenerName})
-		listenerStatusIdx = len(g.Status.Listeners) - 1
-	}
-
-	ctx := &ListenerContext{
-		Listener:          listener,
-		gateway:           g.Gateway,
-		listenerStatusIdx: listenerStatusIdx,
-	}
-	g.listeners = append(g.listeners, ctx)
-	return ctx
-}
-
 // ResetListeners resets the listener statuses and re-generates the GatewayContext
 // ListenerContexts from the Gateway spec.
 func (g *GatewayContext) ResetListeners() {

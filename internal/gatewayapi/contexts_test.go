@@ -31,8 +31,10 @@ func TestContexts(t *testing.T) {
 	gctx := &GatewayContext{
 		Gateway: gateway,
 	}
+	gctx.ResetListeners()
+	require.Len(t, gctx.listeners, 1)
 
-	lctx := gctx.GetListenerContext("http")
+	lctx := gctx.listeners[0]
 	require.NotNil(t, lctx)
 
 	lctx.SetCondition(v1beta1.ListenerConditionAccepted, metav1.ConditionFalse, v1beta1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
@@ -113,7 +115,7 @@ func TestContextsStaleListener(t *testing.T) {
 
 	gCtx.ResetListeners()
 
-	require.EqualValues(t, 2, len(gCtx.listeners))
+	require.Len(t, gCtx.listeners, 2)
 
 	expectedListenerContexts := []*ListenerContext{
 		httpsListenerCtx,
@@ -121,7 +123,7 @@ func TestContextsStaleListener(t *testing.T) {
 	}
 	require.EqualValues(t, expectedListenerContexts, gCtx.listeners)
 
-	require.EqualValues(t, 2, len(gCtx.Status.Listeners))
+	require.Len(t, gCtx.Status.Listeners, 2)
 
 	expectedListenerStatuses := []v1beta1.ListenerStatus{
 		{
