@@ -74,6 +74,23 @@ func (g *GatewayContext) GetListenerContext(listenerName v1beta1.SectionName) *L
 	return ctx
 }
 
+// ResetListeners resets the listener statuses and re-generates the GatewayContext
+// ListenerContexts from the Gateway spec.
+func (g *GatewayContext) ResetListeners() {
+	numListeners := len(g.Spec.Listeners)
+	g.Status.Listeners = make([]v1beta1.ListenerStatus, numListeners)
+	g.listeners = make([]*ListenerContext, numListeners)
+	for i := range g.Spec.Listeners {
+		listener := &g.Spec.Listeners[i]
+		g.Status.Listeners[i] = v1beta1.ListenerStatus{Name: listener.Name}
+		g.listeners[i] = &ListenerContext{
+			Listener:          listener,
+			gateway:           g.Gateway,
+			listenerStatusIdx: i,
+		}
+	}
+}
+
 // ListenerContext wraps a Listener and provides helper methods for
 // setting conditions and other status information on the associated
 // Gateway, etc.

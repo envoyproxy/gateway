@@ -124,6 +124,8 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	return newTranslateResult(gateways, httpRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
 }
 
+// GetRelevantGateways returns GatewayContexts, containing a copy of the original
+// Gateway with the Listener statuses reset.
 func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {
 	var relevant []*GatewayContext
 
@@ -136,14 +138,7 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 			gc := &GatewayContext{
 				Gateway: gateway.DeepCopy(),
 			}
-
-			for _, listener := range gateway.Spec.Listeners {
-				l := gc.GetListenerContext(listener.Name)
-				// Reset conditions and attached route count
-				// since it will be recomputed during translation.
-				l.ResetConditions()
-				l.ResetAttachedRoutes()
-			}
+			gc.ResetListeners()
 
 			relevant = append(relevant, gc)
 		}

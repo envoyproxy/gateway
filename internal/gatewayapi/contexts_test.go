@@ -54,3 +54,96 @@ func TestContexts(t *testing.T) {
 	lctx.ResetConditions()
 	require.Len(t, gateway.Status.Listeners[0].Conditions, 0)
 }
+
+func TestContextsResetListeners(t *testing.T) {
+	gateway := &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "envoy-gateway",
+			Name:      "gateway-1",
+		},
+		Spec: v1beta1.GatewaySpec{
+			Listeners: []v1beta1.Listener{
+				{
+					Name: "https",
+				},
+				{
+					Name: "http",
+				},
+			},
+		},
+		Status: v1beta1.GatewayStatus{
+			Listeners: []v1beta1.ListenerStatus{
+				{
+					Name: "https",
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionStatus(v1beta1.ListenerConditionProgrammed),
+						},
+					}, 
+				},
+				{
+					Name: "http",
+					Conditions: []metav1.Condition{
+						{
+							Status: metav1.ConditionStatus(v1beta1.ListenerConditionProgrammed),
+						},
+					}, 
+				},
+			},
+		},
+	}
+
+	gCtx := &GatewayContext{Gateway: gateway}
+
+	httpsListenerCtx := &ListenerContext{
+		Listener: &v1beta1.Listener{
+			Name: "https",
+		},
+		gateway: gateway,
+		listenerStatusIdx: 0,
+	}
+
+	httpListenerCtx := &ListenerContext{
+		Listener: &v1beta1.Listener{
+			Name: "http",
+		},
+		gateway: gateway,
+		listenerStatusIdx: 1,
+	}
+
+	gCtx.ResetListeners()
+
+	require.EqualValues(t, 2, len(gCtx.listeners))
+
+	expectedListenerContexts := []*ListenerContext{
+		httpsListenerCtx,
+		httpListenerCtx,
+	}
+	require.EqualValues(t, expectedListenerContexts, gCtx.listeners)
+
+	require.EqualValues(t, 2, len(gCtx.Status.Listeners))
+
+	expectedListenerStatuses := []v1beta1.ListenerStatus{
+		{
+			Name: "https",
+		},
+		{
+			Name: "http",
+		},
+	}
+	require.EqualValues(t, expectedListenerStatuses, gCtx.Status.Listeners)
+
+	// Remove one of the listeners
+	gateway.Spec.Listeners = gateway.Spec.Listeners[:1]
+
+	gCtx.ResetListeners()
+
+	// Ensure the listener status has been updated and the stale listener has been
+	// removed.
+	expectedListenerStatus := []v1beta1.ListenerStatus{{Name: "https"}}
+	require.EqualValues(t, expectedListenerStatus, gCtx.Gateway.Status.Listeners)
+
+	// Ensure that the listeners within GatewayContext have been properly updated.
+	expectedGCtxListeners := []*ListenerContext{httpsListenerCtx}
+	require.EqualValues(t, expectedGCtxListeners, gCtx.listeners)
+}
