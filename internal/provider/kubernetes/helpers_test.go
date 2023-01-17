@@ -13,7 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
 func TestGatewaysOfClass(t *testing.T) {
@@ -124,7 +126,7 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 					Name: "test",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+					ControllerName: gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName),
 				},
 				Status: gwapiv1b1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
@@ -144,7 +146,7 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 					Name: "test",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+					ControllerName: gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName),
 				},
 				Status: gwapiv1b1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
@@ -164,7 +166,7 @@ func TestIsGatewayClassAccepted(t *testing.T) {
 					Name: "test",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+					ControllerName: gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName),
 				},
 				Status: gwapiv1b1.GatewayClassStatus{
 					Conditions: []metav1.Condition{
@@ -200,7 +202,7 @@ func TestGatewayOldestClass(t *testing.T) {
 				CreationTimestamp: metav1.NewTime(creationTime),
 			},
 			Spec: gwapiv1b1.GatewayClassSpec{
-				ControllerName: v1alpha1.GatewayControllerName,
+				ControllerName: egcfgv1a1.GatewayControllerName,
 			},
 		}
 	}
@@ -283,5 +285,368 @@ func TestGatewayOldestClass(t *testing.T) {
 		}
 
 		require.Equal(t, tc.oldest, cc.oldestClass.Name)
+	}
+}
+
+func TestRefsEnvoyProxy(t *testing.T) {
+	testCases := []struct {
+		name   string
+		gc     *gwapiv1b1.GatewayClass
+		expect bool
+	}{
+		{
+			name:   "nil gatewayclass",
+			gc:     nil,
+			expect: false,
+		},
+		{
+			name: "valid envoyproxy parameters ref",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:      "test",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "unspecified parameters ref",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "unsupported group parameters ref",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group("Unsupported"),
+						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:      "test",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "unsupported group parameters ref",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind("Unsupported"),
+						Name:      "test",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "unsupported group parameters ref",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind("Unsupported"),
+						Name:      "test",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "empty parameters ref name",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:      "",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			expect: false,
+		},
+		{
+			name: "unspecified parameters ref namespace",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: "test",
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group: gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:  gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:  "test",
+					},
+				},
+			},
+			expect: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			result := refsEnvoyProxy(tc.gc)
+			require.Equal(t, tc.expect, result)
+		})
+	}
+}
+
+func TestClassRefsEnvoyProxy(t *testing.T) {
+	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
+
+	testCases := []struct {
+		name     string
+		gc       *gwapiv1b1.GatewayClass
+		ep       *egcfgv1a1.EnvoyProxy
+		expected bool
+	}{
+		{
+			name:     "nil gatewayclass and envoyproxy",
+			gc:       nil,
+			ep:       nil,
+			expected: false,
+		},
+		{
+			name: "gatewayclass references envoyproxy",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:      "test-ep",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-ep",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "gatewayclass does not reference envoyproxy",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:      "not-test-ep",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-ep",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass references invalid kind",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind("UnsupportedKind"),
+						Name:      "test-ep",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-ep",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass references invalid group",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group:     gwapiv1b1.Group("UnsupportedGroup"),
+						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:      "test-ep",
+						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
+					},
+				},
+			},
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-ep",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "gatewayclass references envoyproxy without namespace",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+					ParametersRef: &gwapiv1b1.ParametersReference{
+						Group: gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+						Kind:  gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Name:  "test-ep",
+					},
+				},
+			},
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: config.DefaultNamespace,
+					Name:      "test-ep",
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Process the test case objects.
+			res := classRefsEnvoyProxy(tc.gc, tc.ep)
+			require.Equal(t, tc.expected, res)
+		})
+	}
+}
+
+func TestClassAccepted(t *testing.T) {
+	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
+
+	testCases := []struct {
+		name     string
+		gc       *gwapiv1b1.GatewayClass
+		expected bool
+	}{
+		{
+			name:     "nil gatewayclass",
+			gc:       nil,
+			expected: false,
+		},
+		{
+			name: "gatewayclass accepted",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+				},
+				Status: gwapiv1b1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "gatewayclass not accepted",
+			gc: &gwapiv1b1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gc",
+				},
+				Spec: gwapiv1b1.GatewayClassSpec{
+					ControllerName: gcCtrlName,
+				},
+				Status: gwapiv1b1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(gwapiv1b1.GatewayClassConditionStatusAccepted),
+							Status: metav1.ConditionFalse,
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Process the test case objects.
+			res := classAccepted(tc.gc)
+			require.Equal(t, tc.expected, res)
+		})
 	}
 }

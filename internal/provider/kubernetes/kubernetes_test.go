@@ -31,7 +31,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -69,6 +69,7 @@ func TestProvider(t *testing.T) {
 	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
 		"gatewayclass controller name":         testGatewayClassController,
 		"gatewayclass accepted status":         testGatewayClassAcceptedStatus,
+		"gatewayclass with parameters ref":     testGatewayClassWithParamRef,
 		"gateway scheduled status":             testGatewayScheduledStatus,
 		"httproute":                            testHTTPRoute,
 		"tlsroute":                             testTLSRoute,
@@ -98,7 +99,7 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-controllername", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-controllername", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -114,7 +115,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-accepted-status", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-accepted-status", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -143,10 +144,65 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 	}, defaultWait, defaultTick)
 }
 
+func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	// Create the namespace for the test case.
+	// Note: The namespace for the EnvoyProxy must match EG's configured namespace.
+	testNs := config.DefaultNamespace
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: testNs}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, ns))
+	}()
+
+	epName := "test-envoy-proxy"
+	ep := test.NewEnvoyProxy(testNs, epName)
+	require.NoError(t, cli.Create(ctx, ep))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, ep))
+	}()
+
+	gc := test.GetGatewayClass("gc-with-param-ref", egcfgv1a1.GatewayControllerName)
+	gc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
+		Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
+		Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+		Name:      epName,
+		Namespace: gatewayapi.NamespacePtr(testNs),
+	}
+	require.NoError(t, cli.Create(ctx, gc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Ensure the GatewayClass reports "Ready".
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
+	// Ensure the resource map contains the EnvoyProxy.
+	res, ok := resources.GatewayAPIResources.Load(gc.Name)
+	assert.Equal(t, ok, true)
+	assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+}
+
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("gc-scheduled-status-test", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("gc-scheduled-status-test", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -299,7 +355,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("envoy-gateway-class", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("envoy-gateway-class", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -401,7 +457,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("httproute-test", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("httproute-test", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -1018,7 +1074,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("tlsroute-test", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("tlsroute-test", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -1159,7 +1215,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("service-cleanup-test", v1alpha1.GatewayControllerName)
+	gc := test.GetGatewayClass("service-cleanup-test", egcfgv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))

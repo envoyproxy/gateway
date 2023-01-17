@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -32,6 +33,7 @@ type Resources struct {
 	Services        []*v1.Service
 	Secrets         []*v1.Secret
 	AuthenFilters   []*egv1a1.AuthenticationFilter
+	EnvoyProxy      *egcfgv1a1.EnvoyProxy
 }
 
 func NewResources() *Resources {
@@ -45,6 +47,7 @@ func NewResources() *Resources {
 		ReferenceGrants: []*v1alpha2.ReferenceGrant{},
 		Namespaces:      []*v1.Namespace{},
 		AuthenFilters:   []*egv1a1.AuthenticationFilter{},
+		EnvoyProxy:      new(egcfgv1a1.EnvoyProxy),
 	}
 }
 

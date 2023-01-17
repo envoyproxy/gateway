@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
@@ -221,4 +222,44 @@ func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
 	}
 
 	return nil
+}
+
+// classRefsEnvoyProxy returns true if the provided GatewayClass references the provided EnvoyProxy.
+func classRefsEnvoyProxy(gc *gwapiv1b1.GatewayClass, ep *egcfgv1a1.EnvoyProxy) bool {
+	if gc == nil || ep == nil {
+		return false
+	}
+
+	return refsEnvoyProxy(gc) &&
+		string(*gc.Spec.ParametersRef.Namespace) == ep.Namespace &&
+		gc.Spec.ParametersRef.Name == ep.Name
+}
+
+// refsEnvoyProxy returns true if the provided GatewayClass references an EnvoyProxy.
+func refsEnvoyProxy(gc *gwapiv1b1.GatewayClass) bool {
+	if gc == nil {
+		return false
+	}
+
+	return gc.Spec.ParametersRef != nil &&
+		string(gc.Spec.ParametersRef.Group) == egcfgv1a1.GroupVersion.Group &&
+		gc.Spec.ParametersRef.Kind == egcfgv1a1.KindEnvoyProxy &&
+		gc.Spec.ParametersRef.Namespace != nil &&
+		len(gc.Spec.ParametersRef.Name) > 0
+}
+
+// classAccepted returns true if the provided GatewayClass is accepted.
+func classAccepted(gc *gwapiv1b1.GatewayClass) bool {
+	if gc == nil {
+		return false
+	}
+
+	for _, cond := range gc.Status.Conditions {
+		if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) &&
+			cond.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
 }
