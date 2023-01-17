@@ -51,11 +51,11 @@ func TestContexts(t *testing.T) {
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
 	require.EqualValues(t, gateway.Status.Listeners[0].SupportedKinds[0].Kind, "HTTPRoute")
 
-	lctx.ResetConditions()
+	gctx.ResetListeners()
 	require.Len(t, gateway.Status.Listeners[0].Conditions, 0)
 }
 
-func TestContextsResetListeners(t *testing.T) {
+func TestContextsStaleListener(t *testing.T) {
 	gateway := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",

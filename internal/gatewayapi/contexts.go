@@ -135,17 +135,8 @@ func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionTy
 	}
 }
 
-func (l *ListenerContext) ResetConditions() {
-	l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions = make([]metav1.Condition, 0)
-}
-
 func (l *ListenerContext) SetSupportedKinds(kinds ...v1beta1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
-}
-
-func (l *ListenerContext) ResetAttachedRoutes() {
-	// Reset attached route count since it will be recomputed during translation.
-	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes = 0
 }
 
 func (l *ListenerContext) IncrementAttachedRoutes() {
