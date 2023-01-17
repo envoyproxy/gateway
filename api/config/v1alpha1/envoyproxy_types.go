@@ -9,6 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// KindEnvoyProxy is the name of the EnvoyProxy kind.
+	KindEnvoyProxy = "EnvoyProxy"
+)
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

@@ -13,6 +13,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
@@ -21,6 +22,16 @@ type ObjectKindNamespacedName struct {
 	Kind      string
 	Namespace string
 	Name      string
+}
+
+// NewEnvoyProxy returns an EnvoyProxy object with the provided ns/name.
+func NewEnvoyProxy(ns, name string) *egcfgv1a1.EnvoyProxy {
+	return &egcfgv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      name,
+		},
+	}
 }
 
 // GetGatewayClass returns a sample GatewayClass.

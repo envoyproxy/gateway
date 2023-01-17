@@ -18,7 +18,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	cfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -28,7 +28,7 @@ import (
 
 func TestProcessHTTPRoutes(t *testing.T) {
 	// The gatewayclass configured for the reconciler and referenced by test cases.
-	gcCtrlName := gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName)
+	gcCtrlName := gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName)
 	gc := &gwapiv1b1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -288,7 +288,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 						Name: "gc1",
 					},
 					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+						ControllerName: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName),
 					},
 				},
 			},
@@ -423,7 +423,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 						Name: "gc1",
 					},
 					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+						ControllerName: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName),
 					},
 				},
 			},
@@ -509,7 +509,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 						Name: "gc1",
 					},
 					Spec: gwapiv1b1.GatewayClassSpec{
-						ControllerName: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName),
+						ControllerName: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName),
 					},
 				},
 				{
@@ -568,7 +568,7 @@ func TestValidateHTTPRouteParentRefs(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	r := &gatewayAPIReconciler{classController: gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName)}
+	r := &gatewayAPIReconciler{classController: gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName)}
 	ctx := context.Background()
 
 	for _, tc := range testCases {
