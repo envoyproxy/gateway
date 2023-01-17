@@ -79,7 +79,7 @@ func TestContextsResetListeners(t *testing.T) {
 						{
 							Status: metav1.ConditionStatus(v1beta1.ListenerConditionProgrammed),
 						},
-					}, 
+					},
 				},
 				{
 					Name: "http",
@@ -87,7 +87,7 @@ func TestContextsResetListeners(t *testing.T) {
 						{
 							Status: metav1.ConditionStatus(v1beta1.ListenerConditionProgrammed),
 						},
-					}, 
+					},
 				},
 			},
 		},
@@ -99,7 +99,7 @@ func TestContextsResetListeners(t *testing.T) {
 		Listener: &v1beta1.Listener{
 			Name: "https",
 		},
-		gateway: gateway,
+		gateway:           gateway,
 		listenerStatusIdx: 0,
 	}
 
@@ -107,7 +107,7 @@ func TestContextsResetListeners(t *testing.T) {
 		Listener: &v1beta1.Listener{
 			Name: "http",
 		},
-		gateway: gateway,
+		gateway:           gateway,
 		listenerStatusIdx: 1,
 	}
 
