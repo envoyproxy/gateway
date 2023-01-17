@@ -159,6 +159,15 @@ func (p *ProxyInfra) GetProxyMetadata() *InfraMetadata {
 	return p.Metadata
 }
 
+// GetProxyConfig returns the ProxyInfra config.
+func (p *ProxyInfra) GetProxyConfig() *v1alpha1.EnvoyProxy {
+	if p.Config == nil {
+		p.Config = new(v1alpha1.EnvoyProxy)
+	}
+
+	return p.Config
+}
+
 // Validate validates the provided Infra.
 func (i *Infra) Validate() error {
 	if i == nil {

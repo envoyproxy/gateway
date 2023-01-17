@@ -5,6 +5,11 @@
 
 package v1alpha1
 
+const (
+	// DefaultEnvoyReplicas is the default number of Envoy replicas.
+	DefaultEnvoyReplicas = 1
+)
+
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
 // +kubebuilder:validation:Enum=Kubernetes

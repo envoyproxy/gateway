@@ -153,6 +153,16 @@ func TestExpectedDeployment(t *testing.T) {
 	for _, port := range ports {
 		checkContainerHasPort(t, deploy, port)
 	}
+
+	// Set the deployment replicas.
+	repl := int32(2)
+	infra.Proxy.GetProxyConfig().GetProvider().GetKubeResourceProvider().EnvoyDeployment.Replicas = &repl
+
+	deploy, err = kube.expectedDeployment(infra)
+	require.NoError(t, err)
+
+	// Check the number of replicas is as expected.
+	assert.Equal(t, repl, *deploy.Spec.Replicas)
 }
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
