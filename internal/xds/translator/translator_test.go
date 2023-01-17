@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
@@ -20,6 +19,8 @@ import (
 	"google.golang.org/protobuf/proto"
 	goyaml "gopkg.in/yaml.v3"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 var (
