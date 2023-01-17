@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -117,7 +118,14 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
-	deployment := &appsv1.Deployment{
+	// Get the EnvoyProxy config to configure the ret.
+	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
+	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+	deployCfg := provider.GetKubeResourceProvider().EnvoyDeployment
+
+	ret := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: "apps/v1",
@@ -128,7 +136,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: deployCfg.Replicas,
 			Selector: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -179,7 +187,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		},
 	}
 
-	return deployment, nil
+	return ret, nil
 }
 
 func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {

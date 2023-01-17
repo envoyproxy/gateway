@@ -39,6 +39,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		if len(t.ProxyImage) > 0 {
 			gwInfraIR.Proxy.Image = t.ProxyImage
 		}
+		if resources.EnvoyProxy != nil {
+			gwInfraIR.Proxy.Config = resources.EnvoyProxy
+		}
 
 		// save the IR references in the map before the translation starts
 		xdsIR[irKey] = gwXdsIR
