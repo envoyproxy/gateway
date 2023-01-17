@@ -73,6 +73,7 @@ func TestProvider(t *testing.T) {
 		"gateway scheduled status":             testGatewayScheduledStatus,
 		"httproute":                            testHTTPRoute,
 		"tlsroute":                             testTLSRoute,
+		"ratelimit filter":                     testRateLimitFilter,
 		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
 	}
 	for name, tc := range testcases {
@@ -454,6 +455,175 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
 }
 
+func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+	cli := provider.manager.GetClient()
+
+	gc := test.GetGatewayClass("ratelimit-test", egcfgv1a1.GatewayControllerName)
+	require.NoError(t, cli.Create(ctx, gc))
+
+	// Ensure the GatewayClass reports ready.
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the namespace for the Gateway under test.
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ratelimit-test"}}
+	require.NoError(t, cli.Create(ctx, ns))
+
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "ratelimit-test",
+			Namespace: ns.Name,
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "test",
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+					Protocol: gwapiv1b1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, gw))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw))
+	}()
+
+	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test"}, nil, map[string]int32{
+		"http":  80,
+		"https": 443,
+	})
+
+	require.NoError(t, cli.Create(ctx, svc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, svc))
+	}()
+
+	rateLimitFilter := test.GetRateLimitFilter("ratelimit-test", ns.Name)
+
+	require.NoError(t, cli.Create(ctx, rateLimitFilter))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, rateLimitFilter))
+	}()
+
+	var testCases = []struct {
+		name  string
+		route gwapiv1b1.HTTPRoute
+	}{
+		{
+			name: "ratelimit-test-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ratelimit-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/ratelimitfilter/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1b1.LocalObjectReference{
+										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+										Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
+										Name:  gwapiv1b1.ObjectName("ratelimit-test"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.NoError(t, cli.Create(ctx, &testCase.route))
+			defer func() {
+				require.NoError(t, cli.Delete(ctx, &testCase.route))
+			}()
+
+			require.Eventually(t, func() bool {
+				return resources.GatewayAPIResources.Len() != 0
+			}, defaultWait, defaultTick)
+
+			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
+			key := types.NamespacedName{
+				Namespace: testCase.route.Namespace,
+				Name:      testCase.route.Name,
+			}
+			require.Eventually(t, func() bool {
+				return cli.Get(ctx, key, &testCase.route) == nil
+			}, defaultWait, defaultTick)
+
+			require.Eventually(t, func() bool {
+				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
+				return ok && len(res.HTTPRoutes) != 0
+			}, defaultWait, defaultTick)
+			res, _ := resources.GatewayAPIResources.Load("ratelimit-test")
+			assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
+
+			// Ensure the RateLimitFilter is in the resource map.
+			require.Eventually(t, func() bool {
+				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
+				if !ok {
+					return false
+				}
+				if len(res.RateLimitFilters) == 0 {
+					return false
+				}
+				return true
+			}, defaultWait, defaultTick)
+			assert.Equal(t, rateLimitFilter.Spec, res.RateLimitFilters[0].Spec)
+		})
+	}
+}
+
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
@@ -522,14 +692,6 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, authenFilter))
-	}()
-
-	rateLimitFilter := test.GetRateLimitFilter("test-ratelimit", ns.Name)
-
-	require.NoError(t, cli.Create(ctx, rateLimitFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, rateLimitFilter))
 	}()
 
 	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
@@ -961,56 +1123,6 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
 										Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
 										Name:  gwapiv1b1.ObjectName("test-authen"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "ratelimitfilter-httproute",
-			route: gwapiv1b1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-ratelimitfilter-test",
-					Namespace: ns.Name,
-				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
-							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
-							},
-						},
-					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
-						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
-								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/ratelimitfilter/"),
-									},
-								},
-							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
-								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
-											Name: "test",
-										},
-									},
-								},
-							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
-								{
-									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-									ExtensionRef: &gwapiv1b1.LocalObjectReference{
-										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-										Name:  gwapiv1b1.ObjectName("test-ratelimit"),
 									},
 								},
 							},

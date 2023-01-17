@@ -276,6 +276,120 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "httproute with one authenticationfilter and ratelimitfilter",
+			routes: []*gwapiv1b1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1b1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1b1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1b1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1b1.HTTPPathMatch{
+											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+											Value: gatewayapi.StringPtr("/"),
+										},
+									},
+								},
+								Filters: []gwapiv1b1.HTTPRouteFilter{
+									{
+										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1b1.LocalObjectReference{
+											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+											Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
+											Name:  gwapiv1b1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			authenFilters: []*egv1a1.AuthenticationFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindAuthenticationFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: egv1a1.AuthenticationFilterSpec{
+						Type: egv1a1.JwtAuthenticationFilterProviderType,
+						JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+							{
+								Name:      "test",
+								Issuer:    "https://www.test.local",
+								Audiences: []string{"test.local"},
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			rateLimitFilters: []*egv1a1.RateLimitFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindRateLimitFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: egv1a1.RateLimitFilterSpec{
+						Type: egv1a1.GlobalRateLimitType,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name:  "x-user-id",
+													Value: gatewayapi.StringPtr("one"),
+												},
+											},
+										},
+									},
+									Limit: egv1a1.RateLimitValue{
+										Requests: 5,
+										Unit:     "Second",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for i := range testCases {
