@@ -55,9 +55,66 @@ func DefaultProvider() *Provider {
 	}
 }
 
+// GetProvider returns the Provider of EnvoyGateway or a default Provider if unspecified.
 func (e *EnvoyGateway) GetProvider() *Provider {
 	if e.Provider != nil {
 		return e.Provider
 	}
-	return DefaultProvider()
+	e.Provider = DefaultProvider()
+
+	return e.Provider
+}
+
+// DefaultResourceProvider returns a new ResourceProvider with default settings.
+func DefaultResourceProvider() *ResourceProvider {
+	return &ResourceProvider{
+		Type: ProviderTypeKubernetes,
+	}
+}
+
+// GetProvider returns the ResourceProvider of EnvoyProxy or a default ResourceProvider
+// if unspecified.
+func (e *EnvoyProxy) GetProvider() *ResourceProvider {
+	if e.Spec.Provider != nil {
+		return e.Spec.Provider
+	}
+	e.Spec.Provider = DefaultResourceProvider()
+
+	return e.Spec.Provider
+}
+
+// DefaultKubeResourceProvider returns a new KubernetesResourceProvider with default settings.
+func DefaultKubeResourceProvider() *KubernetesResourceProvider {
+	return &KubernetesResourceProvider{
+		EnvoyDeployment: DefaultKubernetesDeployment(),
+	}
+}
+
+// DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
+func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
+	repl := int32(DefaultEnvoyReplicas)
+	return &KubernetesDeploymentSpec{
+		Replicas: &repl,
+	}
+}
+
+// GetKubeResourceProvider returns the KubernetesResourceProvider of ResourceProvider or
+// a default KubernetesResourceProvider if unspecified. If ResourceProvider is not of
+// type "Kubernetes", a nil KubernetesResourceProvider is returned.
+func (r *ResourceProvider) GetKubeResourceProvider() *KubernetesResourceProvider {
+	if r.Type != ProviderTypeKubernetes {
+		return nil
+	}
+
+	if r.Kubernetes == nil {
+		r.Kubernetes = DefaultKubeResourceProvider()
+		return r.Kubernetes
+	}
+
+	if r.Kubernetes.EnvoyDeployment == nil {
+		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment()
+		return r.Kubernetes
+	}
+
+	return r.Kubernetes
 }
