@@ -970,6 +970,56 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 			},
 		},
 		{
+			name: "ratelimitfilter-httproute",
+			route: gwapiv1b1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "httproute-ratelimitfilter-test",
+					Namespace: ns.Name,
+				},
+				Spec: gwapiv1b1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+						ParentRefs: []gwapiv1b1.ParentReference{
+							{
+								Name: gwapiv1b1.ObjectName(gw.Name),
+							},
+						},
+					},
+					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1b1.HTTPRouteRule{
+						{
+							Matches: []gwapiv1b1.HTTPRouteMatch{
+								{
+									Path: &gwapiv1b1.HTTPPathMatch{
+										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+										Value: gatewayapi.StringPtr("/ratelimitfilter/"),
+									},
+								},
+							},
+							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+								{
+									BackendRef: gwapiv1b1.BackendRef{
+										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+											Name: "test",
+										},
+									},
+								},
+							},
+							Filters: []gwapiv1b1.HTTPRouteFilter{
+								{
+									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1b1.LocalObjectReference{
+										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+										Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
+										Name:  gwapiv1b1.ObjectName("test-ratelimit"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "mirror-httproute",
 			route: gwapiv1b1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
