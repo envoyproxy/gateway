@@ -5,10 +5,13 @@ HTTPRoute rules cannot use both filter types at once. Currently, Envoy Gateway o
 [HTTPRoute filters][] which consist of `RequestRedirect` and `RequestHeaderModifier` at the time of this writing. To
 learn more about HTTP routing, refer to the [Gateway API documentation][].
 
-Follow the steps from the [Secure Gateways](secure-gateways.md) to install Envoy Gateway and the example manifest. Do
-not proceed until you can curl the example backend from the Quickstart guide using HTTPS.
+## Prerequisites
+
+Follow the steps from the [Secure Gateways](secure-gateways.md) to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTPS.
 
 ## Redirects
+
 Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. A
 [`RequestRedirect` filter][req_filter] instructs Gateways to emit a redirect response to requests that match the rule.
 For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `requestRedirect.statusCode=301` and
@@ -68,6 +71,7 @@ If you followed the steps in the [Secure Gateways](secure-gateways.md) guide, yo
 location.
 
 ## Path Redirects
+
 Path redirects use an HTTP Path Modifier to replace either entire paths or path prefixes. For example, the HTTPRoute
 below will issue a 302 redirect to all `path.redirect.example` requests whose path begins with `/get` to `/status/200`.
 

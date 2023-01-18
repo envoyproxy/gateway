@@ -5,10 +5,7 @@ testing and demonstration purposes only.
 
 ## Prerequisites
 
-- A Kubernetes cluster with `kubectl` context configured for the cluster.
 - OpenSSL to generate TLS assets.
-
-__Note:__ Envoy Gateway is tested against Kubernetes v1.24.
 
 ## Installation
 

@@ -1,14 +1,17 @@
 # HTTP URL Rewrite
 
-[HTTPURLRewriteFilter](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPURLRewriteFilter) defines a filter that modifies a request during forwarding. At most one of these filters may be used on a Route rule. This MUST NOT be used on the same Route rule as a HTTPRequestRedirect filter.
+[HTTPURLRewriteFilter][] defines a filter that modifies a request during forwarding. At most one of these filters may be
+used on a Route rule. This MUST NOT be used on the same Route rule as a HTTPRequestRedirect filter.
 
-Follow the steps from the [Quickstart](quickstart.md) to install Envoy Gateway and the example manifest. Do
-not proceed until you can curl the example backend from the Quickstart guide using HTTP.
+## Prerequisites
+
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Rewrite URL Prefix Path
 
-You can configure to rewrite the prefix in the url like below. In this example, any curls to `http://${GATEWAY_HOST}:8080/get/xxx` will be
-rewrite to `http://${GATEWAY_HOST}:8080/replace/xxx`.
+You can configure to rewrite the prefix in the url like below. In this example, any curls to
+`http://${GATEWAY_HOST}:8080/get/xxx` will be rewritten to `http://${GATEWAY_HOST}:8080/replace/xxx`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -49,7 +52,8 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `http://${GATEWAY_HOST}:8080/get/origin/path` should rewrite to `http://${GATEWAY_HOST}:8080/replace/origin/path`.
+Querying `http://${GATEWAY_HOST}:8080/get/origin/path` should rewrite to
+`http://${GATEWAY_HOST}:8080/replace/origin/path`.
 
 ```console
 $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:8080/get/origin/path"
@@ -104,8 +108,9 @@ You can see that the `X-Envoy-Original-Path` is `/get/origin/path`, but the actu
 
 ## Rewrite URL Full Path
 
-You can configure to rewrite the fullpath in the url like below. In this example, any request sent to `http://${GATEWAY_HOST}:8080/get/origin/path/xxxx` will be
-rewritten to `http://${GATEWAY_HOST}:8080/force/replace/fullpath`.
+You can configure to rewrite the fullpath in the url like below. In this example, any request sent to
+`http://${GATEWAY_HOST}:8080/get/origin/path/xxxx` will be rewritten to
+`http://${GATEWAY_HOST}:8080/force/replace/fullpath`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -141,7 +146,8 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-url-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}:8080/get/origin/path/extra` should rewrite the request to `http://${GATEWAY_HOST}:8080/force/replace/fullpath`.
+Querying `http://${GATEWAY_HOST}:8080/get/origin/path/extra` should rewrite the request to
+`http://${GATEWAY_HOST}:8080/force/replace/fullpath`.
 
 ```console
 $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:8080/get/origin/path/extra"
@@ -192,11 +198,13 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:808
 ...
 ```
 
-You can see that the `X-Envoy-Original-Path` is `/get/origin/path/extra`, but the actual path is `/force/replace/fullpath`.
+You can see that the `X-Envoy-Original-Path` is `/get/origin/path/extra`, but the actual path is
+`/force/replace/fullpath`.
 
 ## Rewrite Host Name
 
-You can configure to rewrite the hostname like below. In this example, any requests sent to `http://${GATEWAY_HOST}:8080/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
+You can configure to rewrite the hostname like below. In this example, any requests sent to
+`http://${GATEWAY_HOST}:8080/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -230,7 +238,8 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-url-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}:8080/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
+Querying `http://${GATEWAY_HOST}:8080/get` with `--header "Host: path.rewrite.example"` will rewrite host into
+`envoygateway.io`.
 
 ```console
 $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:8080/get"
@@ -282,3 +291,5 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:808
 ```
 
 You can see that the `X-Forwarded-Host` is `path.rewrite.example`, but the actual host is `envoygateway.io`.
+
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPURLRewriteFilter
