@@ -33,11 +33,11 @@ updates:
     directory: /tools/src/setup-envtest
     schedule:
       interval: weekly
-# Enable once https://github.com/envoyproxy/gateway/issues/848 is fixed. 
-#  - package-ecosystem: pip
-#    directory: /tools/src/sphinx-build
-#    schedule:
-#      interval: weekly
+  # Enable once https://github.com/envoyproxy/gateway/issues/848 is fixed.
+  #  - package-ecosystem: pip
+  #    directory: /tools/src/sphinx-build
+  #    schedule:
+  #      interval: weekly
   - package-ecosystem: pip
     directory: /tools/src/yamllint
     schedule:

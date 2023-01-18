@@ -4,3 +4,8 @@ metadata:
   name: envoyproxy-sample
 spec:
   # TODO(user): Add fields here
+  provider:
+    type: kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 1
