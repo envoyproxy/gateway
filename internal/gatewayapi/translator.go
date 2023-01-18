@@ -74,6 +74,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
 	tlsRoutes []*TLSRouteContext,
+	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{

@@ -20,6 +20,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
       attachedRoutes: 1
       conditions:
       - type: Programmed
@@ -63,11 +65,11 @@ httpRoutes:
       - type: Accepted
         status: "False"
         reason: UnsupportedValue
-        message: "Reference default/test not found for filter type: ExtensionRef"
+        message: "Reference default/test not found for filter type: AuthenticationFilter"
       - type: ResolvedRefs
         status: "False"
         reason: BackendNotFound
-        message: "Reference default/test not found for filter type: ExtensionRef"
+        message: "Reference default/test not found for filter type: AuthenticationFilter"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -86,7 +88,7 @@ xdsIR:
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
         directResponse:
-          body: "Reference default/test not found for filter type: ExtensionRef"
+          body: "Reference default/test not found for filter type: AuthenticationFilter"
           statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:
