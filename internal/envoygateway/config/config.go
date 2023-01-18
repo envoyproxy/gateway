@@ -8,6 +8,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
 	"github.com/go-logr/logr"
 
@@ -56,17 +57,26 @@ func (s *Server) Validate() error {
 		return errors.New("server config is unspecified")
 	case s.EnvoyGateway == nil:
 		return errors.New("envoy gateway config is unspecified")
-	case s.EnvoyGateway.EnvoyGatewaySpec.Gateway == nil:
+	case s.EnvoyGateway.Gateway == nil:
 		return errors.New("gateway is unspecified")
-	case len(s.EnvoyGateway.EnvoyGatewaySpec.Gateway.ControllerName) == 0:
+	case len(s.EnvoyGateway.Gateway.ControllerName) == 0:
 		return errors.New("gateway controllerName is unspecified")
-	case s.EnvoyGateway.EnvoyGatewaySpec.Provider == nil:
+	case s.EnvoyGateway.Provider == nil:
 		return errors.New("provider is unspecified")
-	case s.EnvoyGateway.EnvoyGatewaySpec.Provider.Type != v1alpha1.ProviderTypeKubernetes:
-		return fmt.Errorf("unsupported provider %v", s.EnvoyGateway.EnvoyGatewaySpec.Provider.Type)
+	case s.EnvoyGateway.Provider.Type != v1alpha1.ProviderTypeKubernetes:
+		return fmt.Errorf("unsupported provider %v", s.EnvoyGateway.Provider.Type)
 	case len(s.Namespace) == 0:
 		return errors.New("namespace is empty string")
+	case s.EnvoyGateway.RateLimit != nil:
+		if s.EnvoyGateway.RateLimit.Backend.Type != v1alpha1.RedisBackendType {
+			return fmt.Errorf("unsupported ratelimit backend %v", s.EnvoyGateway.RateLimit.Backend.Type)
+		}
+		if s.EnvoyGateway.RateLimit.Backend.Redis == nil || s.EnvoyGateway.RateLimit.Backend.Redis.URL == "" {
+			return fmt.Errorf("empty ratelimit redis settings")
+		}
+		if _, err := url.Parse(s.EnvoyGateway.RateLimit.Backend.Redis.URL); err != nil {
+			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+		}
 	}
-
 	return nil
 }
