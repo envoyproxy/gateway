@@ -1,70 +1,70 @@
 http:
-  - name: "first-listener"
-    address: "0.0.0.0"
-    port: 10080
-    hostnames:
-      - "foo.com"
-    tls:
-      # byte slice representation of "cert-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-      # byte slice representation of "key-data"
-      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
-    routes:
-      - name: "first-route"
-        destinations:
-          - host: "1.2.3.4"
-            port: 50000
-  - name: "second-listener"
-    address: "0.0.0.0"
-    port: 10080
-    hostnames:
-      - "foo.net"
-    tls:
-      # byte slice representation of "cert-data"
-      serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
-      # byte slice representation of "key-data"
-      privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
-    routes:
-      - name: "second-route"
-        destinations:
-          - host: "1.2.3.4"
-            port: 50000
-  - name: "third-listener"
-    address: "0.0.0.0"
-    port: 10080
-    hostnames:
-      - "example.com"
-    routes:
-      - name: "third-route"
-        destinations:
-          - host: "1.2.3.4"
-            port: 50000
-  - name: "fourth-listener"
-    address: "0.0.0.0"
-    port: 10080
-    hostnames:
-      - "example.net"
-    routes:
-      - name: "fourth-route"
-        destinations:
-          - host: "1.2.3.4"
-            port: 50000
-tcp:
-  - name: "fifth-listener"
-    address: "0.0.0.0"
-    port: 10080
-    tls:
-      snis:
-        - bar.com
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "foo.com"
+  tls:
+    # byte slice representation of "cert-data"
+    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+    # byte slice representation of "key-data"
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "first-route" 
     destinations:
-      - host: "1.2.3.4"
-        port: 50000
-  - name: "sixth-listener"
-    address: "0.0.0.0"
-    port: 10080
-    tls:
-      snis:
-        - bar.net
-      destinations:
-        - host: "1.2.3.4"
-          port: 50000
+    - host: "1.2.3.4"
+      port: 50000
+- name: "second-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "foo.net"
+  tls:
+    # byte slice representation of "cert-data"
+    serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
+    # byte slice representation of "key-data"
+    privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
+  routes:
+  - name: "second-route" 
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
+- name: "third-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "example.com"
+  routes:
+  - name: "third-route" 
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
+- name: "fourth-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "example.net"
+  routes:
+  - name: "fourth-route" 
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
+tcp:
+- name: "fifth-listener"
+  address: "0.0.0.0"
+  port: 10080
+  tls:
+    snis:
+    - bar.com
+  destinations:
+  - host: "1.2.3.4"
+    port: 50000
+- name: "sixth-listener"
+  address: "0.0.0.0"
+  port: 10080
+  tls:
+    snis:
+    - bar.net 
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
