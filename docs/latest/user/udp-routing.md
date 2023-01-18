@@ -2,89 +2,35 @@
 
 The [UDPRoute](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute/)
 resource allows users to configure UDP routing by matching UDP traffic and forwarding it to
-Kubernetes backends. This guide will use a CoredDNS example to walk you through the steps required to configure
+Kubernetes backends. This guide will use CoreDNS example to walk you through the steps required to configure
  UDPRoute on Envoy Gateway.
+
+Note: UDPRoute allows Envoy Gateway to operate as a non-transparent proxy between a UDP client and server. 
+The lack of transparency means that the upstream server will see the source IP and port of the Gateway instead of the client. 
+For additional information, refer to Envoy's [UDP proxy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy).
 
 ## Prerequisites
 
 - A Kubernetes cluster with `kubectl` context configured for the cluster.
 
-__Note:__ Envoy Gateway is tested against Kubernetes v1.24.
-
 ## Installation
 
 Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway.
 
-Install a CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on
- the UDP port 53 for DNS lookups.
+Install CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on
+ UDP port 53 for DNS lookups.
 
 ```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Service
-metadata:
-  name: coredns
-  namespace: default
-  labels:
-    app: coredns
-spec:
-  ports:
-    - name: udp-dns
-      port: 53
-      protocol: UDP
-      targetPort: 53
-  selector:
-    app: coredns
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: coredns
-  labels:
-    app: coredns
-spec:
-  selector:
-    matchLabels:
-      app: coredns
-  template:
-    metadata:
-      labels:
-        app: coredns
-    spec:
-      containers:
-        - args:
-            - -conf
-            - /root/Corefile
-          image: coredns/coredns
-          name: coredns
-          volumeMounts:
-            - mountPath: /root
-              name: conf
-      volumes:
-        - configMap:
-            defaultMode: 420
-            name: coredns
-          name: conf
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns
-data:
-  Corefile: |
-    .:53 {
-        forward . 8.8.8.8 9.9.9.9
-        log
-        errors
-    }
-
-    foo.bar.com:53 {
-      whoami
-    }
-EOF
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/udp-routing-example-backend.yaml
 ```
 
-Update the Gateway from the Quickstart guide to include a UDP listener that listens on the UDP port `5300`:
+Wait for the CoreDNS deployment to become available:
+
+```shell
+kubectl wait --timeout=5m deployment/coredns --for=condition=Available
+```
+
+Update the Gateway from the Quickstart guide to include a UDP listener that listens on UDP port `5300`:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{
@@ -153,8 +99,10 @@ dig @${GATEWAY_HOST} -p 5300 foo.bar.com
 You should see the result of the dns query as the below output, which means that the dns query has been successfully
 routed to the backend CoreDNS.
 
+Note: 49.51.177.138 is the resolved address of GATEWAY_HOST.
+
 ```bash
-; <<>> DiG 9.18.1-1ubuntu1.1-Ubuntu <<>> @10.96.152.156 -p 5300 foo.bar.com
+; <<>> DiG 9.18.1-1ubuntu1.1-Ubuntu <<>> @49.51.177.138 -p 5300 foo.bar.com
 ; (1 server found)
 ;; global options: +cmd
 ;; Got answer:
@@ -173,7 +121,7 @@ foo.bar.com.		0	IN	A	10.244.0.19
 _udp.foo.bar.com.	0	IN	SRV	0 0 42376 .
 
 ;; Query time: 1 msec
-;; SERVER: 10.96.152.156#5300(10.96.152.156) (UDP)
+;; SERVER: 49.51.177.138#5300(49.51.177.138) (UDP)
 ;; WHEN: Fri Jan 13 10:20:34 UTC 2023
 ;; MSG SIZE  rcvd: 114
 ```

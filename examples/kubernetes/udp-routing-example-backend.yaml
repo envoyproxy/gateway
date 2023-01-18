@@ -1,3 +1,4 @@
+# This file contains the CoreDNS example for UDPRoute testing.
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,16 +60,3 @@ data:
     foo.bar.com:53 {
       whoami
     }
----
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: UDPRoute
-metadata:
-  name: coredns
-spec:
-  parentRefs:
-    - name: eg
-      sectionName: coredns
-  rules:
-    - backendRefs:
-        - name: coredns
-          port: 53
