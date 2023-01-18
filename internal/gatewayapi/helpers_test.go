@@ -109,6 +109,18 @@ func TestValidateAuthenFilterRef(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "valid rateLimitfilter",
+			filter: &gwapiv1b1.HTTPRouteFilter{
+				Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+					Kind:  egv1a1.KindRateLimitFilter,
+					Name:  "test",
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for _, tc := range testCases {

@@ -15,6 +15,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -153,14 +154,24 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
 
-	// An HTTPRoute may reference an AuthenticationFilter, so add them to the resource map first (if they exist).
-	filters, err := r.getAuthenticationFilters(ctx)
+	// An HTTPRoute may reference an AuthenticationFilter or RateLimitFilter,
+	// so add them to the resource map first (if they exist).
+	authenFilters, err := r.getAuthenticationFilters(ctx)
 	if err != nil {
 		return err
 	}
-	for i := range filters {
-		filter := filters[i]
+	for i := range authenFilters {
+		filter := authenFilters[i]
 		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	rateLimitFilters, err := r.getRateLimitFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range rateLimitFilters {
+		filter := rateLimitFilters[i]
+		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
 	}
 
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
@@ -273,19 +284,35 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						}
 					}
 				} else if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
-					key := types.NamespacedName{
-						// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
-						Namespace: httpRoute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
-					}
-					filter, ok := resourceMap.authenFilters[key]
-					if !ok {
-						r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
-						continue
-					}
+					if string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+						key := types.NamespacedName{
+							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
+							Namespace: httpRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						filter, ok := resourceMap.authenFilters[key]
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+							continue
+						}
 
-					resourceTree.AuthenFilters = append(resourceTree.AuthenFilters, filter)
+						resourceTree.AuthenFilters = append(resourceTree.AuthenFilters, filter)
+					} else if string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
+						key := types.NamespacedName{
+							// The RateLimitFilter must be in the same namespace as the HTTPRoute.
+							Namespace: httpRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						filter, ok := resourceMap.rateLimitFilters[key]
+						if !ok {
+							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
+							continue
+						}
+
+						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, filter)
+					}
 				}
+
 			}
 		}
 

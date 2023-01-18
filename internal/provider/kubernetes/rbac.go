@@ -10,8 +10,8 @@ package kubernetes
 // +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;httproutes/status;grpcroutes/status;tlsroutes/status;tcproutes/status;udproutes/status,verbs=update
 
 // RBAC for Envoy Gateway custom resources.
-// +kubebuilder:rbac:groups="gateway.envoyproxy.io",resources=authenticationfilters,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups="config.gateway.envoyproxy.io",resources=envoyproxies,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="gateway.envoyproxy.io",resources=authenticationfilters;ratelimitfilters,verbs=get;list;watch;update
 
 // RBAC for watched resources of Gateway API controllers.
 // +kubebuilder:rbac:groups="",resources=secrets;services;namespaces,verbs=get;list;watch

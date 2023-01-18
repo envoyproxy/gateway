@@ -4,7 +4,8 @@
 resources:
 - bases/config.gateway.envoyproxy.io_envoyproxies.yaml
 - bases/gateway.envoyproxy.io_authenticationfilters.yaml
-#+kubebuilder:scaffold:crdkustomizeresource
+- bases/gateway.envoyproxy.io_ratelimitfilters.yaml
+ #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
