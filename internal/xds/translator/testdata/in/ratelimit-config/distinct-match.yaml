@@ -1,0 +1,21 @@
+name: "first-listener"
+address: "0.0.0.0"
+port: 10080
+hostnames:
+- "*"
+routes:
+- name: "first-route"
+  rateLimit:
+    global:
+      rules:
+      - headerMatches:
+        - name: "x-user-id"
+          distinct: true
+        limit:
+          requests: 5
+          unit: second
+  pathMatch:
+    exact: "foo/bar"
+  destinations:
+  - host: "1.2.3.4"
+    port: 50000    
