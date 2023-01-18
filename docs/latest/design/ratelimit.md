@@ -57,7 +57,11 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - filters:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
     - type: ExtensionRef
       extensionRef:
         group: gateway.envoyproxy.io
@@ -97,7 +101,11 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - filters:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
     - type: ExtensionRef
       extensionRef:
         group: gateway.envoyproxy.io
@@ -142,7 +150,11 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - filters:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
     - type: ExtensionRef
       extensionRef:
         group: gateway.envoyproxy.io
@@ -200,7 +212,11 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - filters:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+    filters:
     - type: ExtensionRef
       extensionRef:
         group: gateway.envoyproxy.io
