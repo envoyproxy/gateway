@@ -53,6 +53,8 @@ type HTTPFilterChains struct {
 	RemoveResponseHeaders []string
 
 	Mirrors []*ir.RouteDestination
+
+	RequestAuthentication *ir.RequestAuthentication
 }
 
 // ProcessHTTPFilters translate gateway api http filters to IRs.
@@ -614,21 +616,15 @@ func (t *Translator) processResponseHeaderModifierFilter(
 }
 
 func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources) {
-	// If a reference to a custom filter type cannot be resolved, the filter MUST NOT be skipped.
-	// Instead, requests that would have been processed by that filter MUST receive an HTTP error
-	// response.
-	found := false
-
-	for _, f := range resources.AuthenFilters {
-		if f.Namespace == filterContext.HTTPRoute.Namespace && f.Name == string(filter.ExtensionRef.Name) {
-			found = true
-			break
-		}
+	// Make sure the config actually exists.
+	extFilter := filter.ExtensionRef
+	if extFilter == nil {
+		return
 	}
 
-	if !found {
-		errMsg := fmt.Sprintf("Reference not found for filter type: %s", filter.Type)
-		// Reset the conditions in case the Accepted=True condition exists.
+	// Set negative status condition and return early if the no AuthenticationFilters exist.
+	if len(resources.AuthenticationFilters) == 0 {
+		errMsg := fmt.Sprintf("Reference not found for filter type: %v", filter.Type)
 		filterContext.ParentRef.ResetConditions(filterContext.HTTPRoute)
 		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
 			v1beta1.RouteConditionResolvedRefs,
@@ -640,6 +636,35 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 			Body:       &errMsg,
 			StatusCode: 500,
 		}
+		return
+	}
+
+	// Set the filter context and return early if a matching AuthenticationFilter is found.
+	for _, authenFilter := range resources.AuthenticationFilters {
+		if authenFilter.Namespace == filterContext.HTTPRoute.Namespace &&
+			authenFilter.Name == string(extFilter.Name) {
+			filterContext.HTTPFilterChains.RequestAuthentication = &ir.RequestAuthentication{
+				JWT: &ir.JwtRequestAuthentication{
+					Providers: authenFilter.Spec.JwtProviders,
+				},
+			}
+			return
+		}
+	}
+
+	// Matching AuthenticationFilter not found, so set negative status condition.
+	errMsg := fmt.Sprintf("Reference %s/%s not found for filter type: %v", filterContext.HTTPRoute.Namespace,
+		filter.ExtensionRef.Name, filter.Type)
+	filterContext.ParentRef.ResetConditions(filterContext.HTTPRoute)
+	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		v1beta1.RouteConditionResolvedRefs,
+		metav1.ConditionFalse,
+		v1beta1.RouteReasonBackendNotFound,
+		errMsg,
+	)
+	filterContext.DirectResponse = &ir.DirectResponse{
+		Body:       &errMsg,
+		StatusCode: 500,
 	}
 }
 

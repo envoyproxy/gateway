@@ -131,8 +131,8 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.AuthenFilters != nil {
-		in, out := &in.AuthenFilters, &out.AuthenFilters
+	if in.AuthenticationFilters != nil {
+		in, out := &in.AuthenticationFilters, &out.AuthenticationFilters
 		*out = make([]*v1alpha1.AuthenticationFilter, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

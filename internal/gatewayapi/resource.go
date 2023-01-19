@@ -22,34 +22,34 @@ type InfraIRMap map[string]*ir.Infra
 // resources that the translators needs as inputs.
 // +k8s:deepcopy-gen=true
 type Resources struct {
-	Gateways         []*v1beta1.Gateway
-	HTTPRoutes       []*v1beta1.HTTPRoute
-	GRPCRoutes       []*v1alpha2.GRPCRoute
-	TLSRoutes        []*v1alpha2.TLSRoute
-	TCPRoutes        []*v1alpha2.TCPRoute
-	UDPRoutes        []*v1alpha2.UDPRoute
-	ReferenceGrants  []*v1alpha2.ReferenceGrant
-	Namespaces       []*v1.Namespace
-	Services         []*v1.Service
-	Secrets          []*v1.Secret
-	AuthenFilters    []*egv1a1.AuthenticationFilter
-	RateLimitFilters []*egv1a1.RateLimitFilter
-	EnvoyProxy       *egcfgv1a1.EnvoyProxy
+	Gateways              []*v1beta1.Gateway
+	HTTPRoutes            []*v1beta1.HTTPRoute
+	GRPCRoutes            []*v1alpha2.GRPCRoute
+	TLSRoutes             []*v1alpha2.TLSRoute
+	TCPRoutes             []*v1alpha2.TCPRoute
+	UDPRoutes             []*v1alpha2.UDPRoute
+	ReferenceGrants       []*v1alpha2.ReferenceGrant
+	Namespaces            []*v1.Namespace
+	Services              []*v1.Service
+	Secrets               []*v1.Secret
+	AuthenticationFilters []*egv1a1.AuthenticationFilter
+	RateLimitFilters      []*egv1a1.RateLimitFilter
+	EnvoyProxy            *egcfgv1a1.EnvoyProxy
 }
 
 func NewResources() *Resources {
 	return &Resources{
-		Gateways:         []*v1beta1.Gateway{},
-		HTTPRoutes:       []*v1beta1.HTTPRoute{},
-		GRPCRoutes:       []*v1alpha2.GRPCRoute{},
-		TLSRoutes:        []*v1alpha2.TLSRoute{},
-		Services:         []*v1.Service{},
-		Secrets:          []*v1.Secret{},
-		ReferenceGrants:  []*v1alpha2.ReferenceGrant{},
-		Namespaces:       []*v1.Namespace{},
-		AuthenFilters:    []*egv1a1.AuthenticationFilter{},
-		RateLimitFilters: []*egv1a1.RateLimitFilter{},
-		EnvoyProxy:       new(egcfgv1a1.EnvoyProxy),
+		Gateways:              []*v1beta1.Gateway{},
+		HTTPRoutes:            []*v1beta1.HTTPRoute{},
+		GRPCRoutes:            []*v1alpha2.GRPCRoute{},
+		TLSRoutes:             []*v1alpha2.TLSRoute{},
+		Services:              []*v1.Service{},
+		Secrets:               []*v1.Secret{},
+		ReferenceGrants:       []*v1alpha2.ReferenceGrant{},
+		Namespaces:            []*v1.Namespace{},
+		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
+		EnvoyProxy:            new(egcfgv1a1.EnvoyProxy),
+		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
 	}
 }
 

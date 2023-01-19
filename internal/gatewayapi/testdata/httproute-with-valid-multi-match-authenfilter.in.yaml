@@ -30,7 +30,21 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/"
+          type: Exact
+          value: "/test/path/1"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: AuthenticationFilter
+          name: test
+    - matches:
+      - path:
+          type: Exact
+          value: "/test/path/2"
       backendRefs:
       - name: service-1
         port: 8080

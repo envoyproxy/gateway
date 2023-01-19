@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -296,7 +297,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							continue
 						}
 
-						resourceTree.AuthenFilters = append(resourceTree.AuthenFilters, filter)
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
 					} else if string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
 						key := types.NamespacedName{
 							// The RateLimitFilter must be in the same namespace as the HTTPRoute.
@@ -435,4 +436,13 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	}
 
 	return nil
+}
+
+func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]egv1a1.AuthenticationFilter, error) {
+	authenList := new(egv1a1.AuthenticationFilterList)
+	if err := r.client.List(ctx, authenList); err != nil {
+		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
+	}
+
+	return authenList.Items, nil
 }

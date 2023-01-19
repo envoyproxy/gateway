@@ -85,7 +85,9 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext,
+	parentRef *RouteParentContext,
+	resources *Resources) []*ir.HTTPRoute {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -95,7 +97,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate
 		// a unique Xds IR HTTPRoute per match.
-		var ruleRoutes []*ir.HTTPRoute = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
+		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 
 		for _, backendRef := range rule.BackendRefs {
 			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
@@ -221,6 +223,9 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		if len(httpFiltersContext.Mirrors) > 0 {
 			irRoute.Mirrors = httpFiltersContext.Mirrors
 		}
+		if httpFiltersContext.RequestAuthentication != nil {
+			irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
+		}
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
@@ -274,6 +279,7 @@ func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteConte
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
+					RequestAuthentication: routeRoute.RequestAuthentication,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {

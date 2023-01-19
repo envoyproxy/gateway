@@ -404,23 +404,11 @@ var (
 		},
 		RequestAuthentication: &RequestAuthentication{
 			JWT: &JwtRequestAuthentication{
-				Rules: []JwtRule{
+				Providers: []egv1a1.JwtAuthenticationFilterProvider{
 					{
-						Match: HTTPRequestMatch{
-							PathMatch: ptrTo(StringMatch{
-								Name:  "test",
-								Exact: ptrTo("/test"),
-							}),
-						},
-						Requires: &JwtRequirement{
-							Providers: []egv1a1.JwtAuthenticationFilterProvider{
-								{
-									Name: "test1",
-									RemoteJWKS: egv1a1.RemoteJWKS{
-										URI: "https://test1.local",
-									},
-								},
-							},
+						Name: "test1",
+						RemoteJWKS: egv1a1.RemoteJWKS{
+							URI: "https://test1.local",
 						},
 					},
 				},
@@ -953,50 +941,20 @@ func TestValidateJwtRequestAuthentication(t *testing.T) {
 		{
 			name: "nil rules",
 			input: JwtRequestAuthentication{
-				Rules: nil,
+				Providers: nil,
 			},
 			want: nil,
 		},
 		{
-			name: "match path with no provider",
+			name: "provider with remote jwks uri",
 			input: JwtRequestAuthentication{
-				Rules: []JwtRule{
+				Providers: []egv1a1.JwtAuthenticationFilterProvider{
 					{
-						Match: HTTPRequestMatch{
-							PathMatch: ptrTo(StringMatch{
-								Name:  "test",
-								Exact: ptrTo("/test"),
-							}),
-						},
-					},
-				},
-			},
-			want: nil,
-		},
-		{
-			name: "match path with provider and remote jwks uri",
-			input: JwtRequestAuthentication{
-				Rules: []JwtRule{
-					{
-						Match: HTTPRequestMatch{
-							PathMatch: ptrTo(StringMatch{
-								Name:  "test",
-								Exact: ptrTo("/test"),
-							}),
-							HeaderMatches:     nil,
-							QueryParamMatches: nil,
-						},
-						Requires: &JwtRequirement{
-							Providers: []egv1a1.JwtAuthenticationFilterProvider{
-								{
-									Name:      "test",
-									Issuer:    "https://test.local",
-									Audiences: []string{"test1", "test2"},
-									RemoteJWKS: egv1a1.RemoteJWKS{
-										URI: "https://test.local",
-									},
-								},
-							},
+						Name:      "test",
+						Issuer:    "https://test.local",
+						Audiences: []string{"test1", "test2"},
+						RemoteJWKS: egv1a1.RemoteJWKS{
+							URI: "https://test.local",
 						},
 					},
 				},

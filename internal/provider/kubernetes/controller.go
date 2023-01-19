@@ -353,15 +353,6 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]egv1a1.AuthenticationFilter, error) {
-	authenList := new(egv1a1.AuthenticationFilterList)
-	if err := r.client.List(ctx, authenList); err != nil {
-		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
-	}
-
-	return authenList.Items, nil
-}
-
 func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a1.RateLimitFilter, error) {
 	rateLimitList := new(egv1a1.RateLimitFilterList)
 	if err := r.client.List(ctx, rateLimitList); err != nil {

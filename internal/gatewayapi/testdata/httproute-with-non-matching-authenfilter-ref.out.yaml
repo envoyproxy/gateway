@@ -51,7 +51,7 @@ httpRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: AuthenticationFilter
-          name: test
+          name: not-exist
   status:
     parents:
     - parentRef:
@@ -60,10 +60,10 @@ httpRoutes:
         sectionName: http
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Route is accepted
+      - type: ResolvedRefs
+        status: "False"
+        reason: BackendNotFound
+        message: "Reference default/not-exist not found for filter type: ExtensionRef"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -79,17 +79,11 @@ xdsIR:
         headerMatches:
         - name: ":authority"
           exact: gateway.envoyproxy.io
-        requestAuthentication:
-          jwt:
-            providers:
-            - name: test
-              issuer: https://www.test.local
-              remoteJWKS:
-                uri: https://test.local/jwt/public-key/jwks.json
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
+        # normally but leave out the filter config and set the status, but this behaviour can be changed.
+        directResponse:
+          body: "Reference default/not-exist not found for filter type: ExtensionRef"
+          statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
