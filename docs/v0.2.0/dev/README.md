@@ -1,6 +1,6 @@
 # Developer Guide
 
-Envoy Gateway is built using a [make][]-based build system. Our CI is based on [Github Actions][] using [workflows][].
+Envoy Gateway is built using a [make][]-based build system. Our CI is based on [Github Actions][].
 
 ## Prerequisites
 

@@ -1,5 +1,4 @@
 import os
-import re
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -9,6 +8,9 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'myst_parser',
 ]
+
+autosectionlabel_prefix_document = True
+myst_heading_anchors = 3
 
 html_theme = 'alabaster'
 
