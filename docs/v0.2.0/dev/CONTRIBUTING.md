@@ -1,6 +1,6 @@
 # Contributing
 
-We welcome contributions from the community. Please carefully review the [project goals](./GOALS.md)
+We welcome contributions from the community. Please carefully review the [project goals](GOALS.md)
 and following guidelines to streamline your contributions.
 
 ## Communication
@@ -10,7 +10,7 @@ and following guidelines to streamline your contributions.
 * A "major feature" is defined as any change that is > 100 LOC altered (not including tests), or
   changes any user-facing behavior. We will use the GitHub issue to discuss the feature and come to
   agreement. This is to prevent your time being wasted, as well as ours. The GitHub review process
-  for major features is also important so that [affiliations with commit access](./CODEOWNERS.md) can
+  for major features is also important so that [affiliations with commit access](CODEOWNERS.md) can
   come to agreement on the design. If it's appropriate to write a design document, the document must
   be hosted either in the GitHub issue, or linked to from the issue and hosted in a world-readable
   location.
