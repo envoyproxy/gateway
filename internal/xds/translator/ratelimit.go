@@ -200,7 +200,7 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
 			yamlDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1)
 			rateLimit := ratelimitserviceconfig.YamlRateLimit{
-				RequestsPerUnit: rule.Limit.Requests,
+				RequestsPerUnit: uint32(rule.Limit.Requests),
 				Unit:            string(rule.Limit.Unit),
 			}
 			yamlDesc.RateLimit = &rateLimit
@@ -225,7 +225,7 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			// Add the ratelimit values to the last descriptor
 			if mIdx == len(rule.HeaderMatches)-1 {
 				rateLimit := ratelimitserviceconfig.YamlRateLimit{
-					RequestsPerUnit: rule.Limit.Requests,
+					RequestsPerUnit: uint32(rule.Limit.Requests),
 					Unit:            string(rule.Limit.Unit),
 				}
 				yamlDesc.RateLimit = &rateLimit

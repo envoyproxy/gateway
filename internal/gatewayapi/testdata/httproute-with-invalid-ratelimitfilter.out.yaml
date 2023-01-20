@@ -50,7 +50,7 @@ httpRoutes:
       - type: ExtensionRef
         extensionRef:
           group: gateway.envoyproxy.io
-          kind: AuthenticationFilter
+          kind: RateLimitFilter
           name: test 
   status:
     parents:
@@ -63,11 +63,11 @@ httpRoutes:
       - type: Accepted
         status: "False"
         reason: UnsupportedValue
-        message: "Reference default/test not found for filter type: ExtensionRef"
+        message: "Unable to translate RateLimitFilter: default/test"
       - type: ResolvedRefs
         status: "False"
         reason: BackendNotFound
-        message: "Reference default/test not found for filter type: ExtensionRef"
+        message: "Unable to translate RateLimitFilter: default/test"
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -86,7 +86,7 @@ xdsIR:
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
         directResponse:
-          body: "Reference default/test not found for filter type: ExtensionRef"
+          body: "Unable to translate RateLimitFilter: default/test"
           statusCode: 500
 infraIR:
   envoy-gateway-gateway-1:

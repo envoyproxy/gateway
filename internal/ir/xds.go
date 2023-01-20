@@ -684,20 +684,13 @@ type RateLimitRule struct {
 	Limit *RateLimitValue
 }
 
-type RateLimitUnit string
-
-const (
-	Second RateLimitUnit = "second"
-	Minute RateLimitUnit = "minute"
-	Hour   RateLimitUnit = "hour"
-	Day    RateLimitUnit = "day"
-)
+type RateLimitUnit egv1a1.RateLimitUnit
 
 // RateLimitValue holds the
 // +k8s:deepcopy-gen=true
 type RateLimitValue struct {
 	// Requests are the number of requests that need to be rate limited.
-	Requests uint32
+	Requests uint
 	// Unit of rate limiting.
 	Unit RateLimitUnit
 }
