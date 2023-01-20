@@ -1,6 +1,6 @@
 # Developer Guide
 
-Envoy Gateway is built using a [make][]-based build system. Our CI is based on [Github Actions][].
+Envoy Gateway is built using a [make][]-based build system. Our CI is based on [Github Actions][] using [workflows][].
 
 ## Prerequisites
 
@@ -129,6 +129,7 @@ There are many other endpoints on the [Envoy admin interface][] that may be help
 [Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
+[workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
 [Kind]: https://kind.sigs.k8s.io/
 [conformance homepage]: https://gateway-api.sigs.k8s.io/concepts/conformance/
 [directly exposing]: https://kind.sigs.k8s.io/docs/user/loadbalancer/
