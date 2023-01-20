@@ -30,7 +30,8 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/"
+          type: Exact
+          value: "/test/path/1"
       backendRefs:
       - name: service-1
         port: 8080
@@ -39,17 +40,42 @@ httpRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: AuthenticationFilter
-          name: test
+          name: test1
+    - matches:
+      - path:
+          type: Exact
+          value: "/test/path/2"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: AuthenticationFilter
+          name: test2
 authenticationFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: AuthenticationFilter
   metadata:
     namespace: default
-    name: test
+    name: test1
   spec:
     type: JWT
     jwtProviders:
-    - name: test
-      issuer: https://www.test.local
+    - name: test1
+      issuer: https://www.test1.local
       remoteJWKS:
-        uri: https://test.local/jwt/public-key/jwks.json
+        uri: https://test1.local/jwt/public-key/jwks.json
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: AuthenticationFilter
+  metadata:
+    namespace: default
+    name: test2
+  spec:
+    type: JWT
+    jwtProviders:
+    - name: test2
+      issuer: https://www.test2.local
+      remoteJWKS:
+        uri: https://test2.local/jwt/public-key/jwks.json

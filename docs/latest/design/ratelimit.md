@@ -57,7 +57,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - clientSelectors:
+  - matches:
     - path:
         type: PathPrefix
         value: /foo
@@ -101,7 +101,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - clientSelectors:
+  - matches:
     - path:
         type: PathPrefix
         value: /foo
@@ -150,7 +150,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - clientSelectors:
+  - matches:
     - path:
         type: PathPrefix
         value: /foo
@@ -212,7 +212,7 @@ spec:
   hostnames:
   - www.example.com
   rules:
-  - clientSelectors:
+  - matches:
     - path:
         type: PathPrefix
         value: /foo

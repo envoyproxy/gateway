@@ -241,42 +241,7 @@ type RequestAuthentication struct {
 //
 // +k8s:deepcopy-gen=true
 type JwtRequestAuthentication struct {
-	// Rules define requirements for authenticating HTTP requests based on route matching criteria.
-	// The first matched requirement will be applied. A maximum of 4 items in the list is allowed.
-	Rules []JwtRule
-}
-
-// JwtRule defines a JWT requirement for a specific route condition.
-//
-// +k8s:deepcopy-gen=true
-type JwtRule struct {
-	// Match defines the schema for matching an HTTP request. The "requires" field only
-	// applies when the match is satisfied.
-	Match HTTPRequestMatch
-	// Requires specifies a JWT requirement. If unspecified, JWT verification is disabled.
-	Requires *JwtRequirement
-}
-
-// HTTPRequestMatch defines the schema for matching an HTTP request.
-//
-// +k8s:deepcopy-gen=true
-type HTTPRequestMatch struct {
-	// PathMatch defines a match condition based on path.
-	PathMatch *StringMatch
-	// HeaderMatches is a list of matching conditions based on request headers.
-	// A maximum of 4 items in the list is allowed.
-	HeaderMatches []StringMatch
-	// QueryParamMatches is a list of matching conditions based on query parameters.
-	// maxQueryParamMatches defines the maximum number of items in the list.
-	QueryParamMatches []StringMatch
-}
-
-// JwtRequirement defines the schema of a JWT requirement.
-//
-// +k8s:deepcopy-gen=true
-type JwtRequirement struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	// maxQueryParamMatches defines the maximum number of items in the list.
 	Providers []egv1a1.JwtAuthenticationFilterProvider
 }
 
@@ -395,19 +360,10 @@ func (h HTTPRoute) Validate() error {
 func (j *JwtRequestAuthentication) Validate() error {
 	var errs error
 
-	for _, rule := range j.Rules {
-		if rule.Match.PathMatch != nil {
-			if err := rule.Match.PathMatch.Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
-		}
-		if rule.Requires != nil {
-			for i := range rule.Requires.Providers {
-				provider := rule.Requires.Providers[i]
-				if err := validation.ValidateJwtProvider(&provider); err != nil {
-					errs = multierror.Append(errs, err)
-				}
-			}
+	for i := range j.Providers {
+		provider := j.Providers[i]
+		if err := validation.ValidateJwtProvider(&provider); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 

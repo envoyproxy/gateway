@@ -38,20 +38,21 @@ import (
 )
 
 const (
-	classGatewayIndex          = "classGatewayIndex"
-	gatewayTLSRouteIndex       = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex      = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex      = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex       = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex       = "gatewayUDPRouteIndex"
-	secretGatewayIndex         = "secretGatewayIndex"
-	targetRefGrantRouteIndex   = "targetRefGrantRouteIndex"
-	serviceHTTPRouteIndex      = "serviceHTTPRouteIndex"
-	serviceGRPCRouteIndex      = "serviceGRPCRouteIndex"
-	serviceTLSRouteIndex       = "serviceTLSRouteIndex"
-	serviceTCPRouteIndex       = "serviceTCPRouteIndex"
-	serviceUDPRouteIndex       = "serviceUDPRouteIndex"
-	authenFilterHTTPRouteIndex = "authenHTTPRouteIndex"
+	classGatewayIndex             = "classGatewayIndex"
+	gatewayTLSRouteIndex          = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex         = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex         = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex          = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex          = "gatewayUDPRouteIndex"
+	secretGatewayIndex            = "secretGatewayIndex"
+	targetRefGrantRouteIndex      = "targetRefGrantRouteIndex"
+	serviceHTTPRouteIndex         = "serviceHTTPRouteIndex"
+	serviceGRPCRouteIndex         = "serviceGRPCRouteIndex"
+	serviceTLSRouteIndex          = "serviceTLSRouteIndex"
+	serviceTCPRouteIndex          = "serviceTCPRouteIndex"
+	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
+	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
+	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -103,6 +104,9 @@ type resourceMappings struct {
 	// authenFilters is a map of AuthenticationFilters, where the key is the
 	// namespaced name of the AuthenticationFilter.
 	authenFilters map[types.NamespacedName]*egv1a1.AuthenticationFilter
+	// rateLimitFilters is a map of RateLimitFilters, where the key is the
+	// namespaced name of the RateLimitFilter.
+	rateLimitFilters map[types.NamespacedName]*egv1a1.RateLimitFilter
 }
 
 func newResourceMapping() *resourceMappings {
@@ -111,6 +115,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
 		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
+		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
 	}
 }
 
@@ -348,13 +353,13 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]egv1a1.AuthenticationFilter, error) {
-	authenList := new(egv1a1.AuthenticationFilterList)
-	if err := r.client.List(ctx, authenList); err != nil {
-		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
+func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a1.RateLimitFilter, error) {
+	rateLimitList := new(egv1a1.RateLimitFilterList)
+	if err := r.client.List(ctx, rateLimitList); err != nil {
+		return nil, fmt.Errorf("failed to list RateLimitFilters: %v", err)
 	}
 
-	return authenList.Items, nil
+	return rateLimitList.Items, nil
 }
 
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
@@ -474,7 +479,7 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
 //   - For Service objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
 //     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
-//   - For AuthenticationFilter objects that are referenced in HTTPRoute objects via
+//   - For AuthenticationFilter and RateLimitFilter objects that are referenced in HTTPRoute objects via
 //     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
 //     particular AuthenticationFilter CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -486,30 +491,56 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, authenFilterHTTPRouteIndex, func(obj client.Object) []string {
-		httproute := obj.(*gwapiv1b1.HTTPRoute)
-		var filters []string
-		for _, rule := range httproute.Spec.Rules {
-			for i := range rule.Filters {
-				filter := rule.Filters[i]
-				if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
-					if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
-						filters = append(filters,
-							types.NamespacedName{
-								Namespace: httproute.Namespace,
-								Name:      string(filter.ExtensionRef.Name),
-							}.String(),
-						)
-					}
-				}
-			}
-		}
-		return filters
-	}); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, authenFilterHTTPRouteIndex, authenFilterHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, rateLimitFilterHTTPRouteIndex, rateLimitFilterHTTPRouteIndexFunc); err != nil {
+		return err
+	}
 	return nil
+}
+
+func authenFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+	var filters []string
+	for _, rule := range httproute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef && string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: httproute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
+}
+
+func rateLimitFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
+	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
+	var filters []string
+	for _, rule := range httproute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef && string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
+				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: httproute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
 }
 
 func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
@@ -1130,6 +1161,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		&source.Kind{Type: &egv1a1.AuthenticationFilter{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)); err != nil {
+		return err
+	}
+
+	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
+	if err := c.Watch(
+		&source.Kind{Type: &egv1a1.RateLimitFilter{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)); err != nil {
 		return err
 	}
 

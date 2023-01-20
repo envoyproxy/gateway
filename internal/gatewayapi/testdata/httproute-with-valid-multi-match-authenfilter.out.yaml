@@ -20,8 +20,6 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
       attachedRoutes: 1
       conditions:
       - type: Programmed
@@ -44,7 +42,21 @@ httpRoutes:
     rules:
     - matches:
       - path:
-          value: "/"
+          type: Exact
+          value: "/test/path/1"
+      backendRefs:
+      - name: service-1
+        port: 8080
+      filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: AuthenticationFilter
+          name: test
+    - matches:
+      - path:
+          type: Exact
+          value: "/test/path/2"
       backendRefs:
       - name: service-1
         port: 8080
@@ -77,7 +89,24 @@ xdsIR:
       routes:
       - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
         pathMatch:
-          prefix: "/"
+          exact: "/test/path/1"
+        headerMatches:
+        - name: ":authority"
+          exact: gateway.envoyproxy.io
+        requestAuthentication:
+          jwt:
+            providers:
+            - name: test
+              issuer: https://www.test.local
+              remoteJWKS:
+                uri: https://test.local/jwt/public-key/jwks.json
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+      - name: default-httproute-1-rule-1-match-0-gateway.envoyproxy.io
+        pathMatch:
+          exact: "/test/path/2"
         headerMatches:
         - name: ":authority"
           exact: gateway.envoyproxy.io

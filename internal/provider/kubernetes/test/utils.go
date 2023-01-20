@@ -312,3 +312,59 @@ func GetAuthenticationFilter(name, ns string) *egv1a1.AuthenticationFilter {
 		},
 	}
 }
+
+// GetRateLimitFilter returns a pointer to an RateLimitFilter with dummy rules.
+func GetRateLimitFilter(name, ns string) *egv1a1.RateLimitFilter {
+	return &egv1a1.RateLimitFilter{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       egv1a1.KindRateLimitFilter,
+			APIVersion: egv1a1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      name,
+		},
+		Spec: egv1a1.RateLimitFilterSpec{
+			Type: egv1a1.GlobalRateLimitType,
+			Global: &egv1a1.GlobalRateLimit{
+				Rules: []egv1a1.RateLimitRule{
+					{
+						ClientSelectors: []egv1a1.RateLimitSelectCondition{
+							{
+								Headers: []egv1a1.HeaderMatch{
+									{
+										Name:  "x-user-id",
+										Value: gatewayapi.StringPtr("one"),
+									},
+								},
+							},
+						},
+						Limit: egv1a1.RateLimitValue{
+							Requests: 5,
+							Unit:     "Second",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func ContainsAuthenFilter(hroute *gwapiv1b1.HTTPRoute) bool {
+	if hroute == nil {
+		return false
+	}
+
+	for _, rule := range hroute.Spec.Rules {
+		for _, filter := range rule.Filters {
+			if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef &&
+				filter.ExtensionRef != nil &&
+				string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+				filter.ExtensionRef.Kind == egv1a1.KindAuthenticationFilter {
+				return true
+			}
+		}
+	}
+
+	return false
+}
