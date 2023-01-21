@@ -79,6 +79,15 @@ xdsIR:
         headerMatches:
         - name: ":authority"
           exact: gateway.envoyproxy.io
+        rateLimit:
+          global:
+            rules:
+            - headerMatches:
+              - name: "x-user-id"
+                exact: "one"
+              limit:
+                requests: 10
+                unit: Hour
         destinations:
         - host: 7.7.7.7
           port: 8080

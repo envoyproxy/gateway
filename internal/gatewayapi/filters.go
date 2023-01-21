@@ -650,12 +650,12 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 					t.processUnresolvedHTTPFilter(errMsg, filterContext)
 					return
 				}
-				filterContext.HTTPFilterChains.RateLimit = &ir.RateLimit{
+				rateLimit := &ir.RateLimit{
 					Global: &ir.GlobalRateLimit{
 						Rules: make([]*ir.RateLimitRule, len(rateLimitFilter.Spec.Global.Rules)),
 					},
 				}
-				rules := filterContext.HTTPFilterChains.RateLimit.Global.Rules
+				rules := rateLimit.Global.Rules
 				for i, rule := range rateLimitFilter.Spec.Global.Rules {
 					rules[i] = &ir.RateLimitRule{
 						Limit: &ir.RateLimitValue{
@@ -698,6 +698,7 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 					}
 
 				}
+				filterContext.HTTPFilterChains.RateLimit = rateLimit
 				return
 			}
 		}
