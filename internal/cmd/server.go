@@ -11,6 +11,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
+	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
 	"github.com/envoyproxy/gateway/internal/message"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
@@ -130,12 +131,14 @@ func setupRunners(cfg *config.Server) error {
 		return err
 	}
 
+	rateLimitInfraIR := new(message.RateLimitInfraIR)
 	// Start the Infra Manager Runner
 	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 	// resources such as K8s deployment and services.
 	infraRunner := infrarunner.New(&infrarunner.Config{
-		Server:  *cfg,
-		InfraIR: infraIR,
+		Server:           *cfg,
+		InfraIR:          infraIR,
+		RateLimitInfraIR: rateLimitInfraIR,
 	})
 	if err := infraRunner.Start(ctx); err != nil {
 		return err
@@ -152,12 +155,25 @@ func setupRunners(cfg *config.Server) error {
 		return err
 	}
 
+	// Start the Global RateLimit Runner
+	// It subscribes to the xds Resources and translates it to Envoy Ratelimit Service
+	// infrastructure and configuration.
+	rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
+		Server:           *cfg,
+		XdsIR:            xdsIR,
+		RateLimitInfraIR: rateLimitInfraIR,
+	})
+	if err := rateLimitRunner.Start(ctx); err != nil {
+		return err
+	}
+
 	// Wait until done
 	<-ctx.Done()
 	// Close messages
 	pResources.Close()
 	xdsIR.Close()
 	infraIR.Close()
+	rateLimitInfraIR.Close()
 	xds.Close()
 
 	cfg.Logger.Info("shutting down")

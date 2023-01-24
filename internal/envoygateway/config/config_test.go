@@ -99,6 +99,81 @@ func TestValidate(t *testing.T) {
 			},
 			expect: false,
 		},
+		{
+			name: "empty ratelimit",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:   v1alpha1.DefaultGateway(),
+						Provider:  v1alpha1.DefaultProvider(),
+						RateLimit: &v1alpha1.RateLimit{},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "empty ratelimit redis setting",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Backend: v1alpha1.RateLimitDatabaseBackend{
+								Type:  v1alpha1.RedisBackendType,
+								Redis: &v1alpha1.RateLimitRedisSettings{},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "unknown ratelimit redis url format",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Backend: v1alpha1.RateLimitDatabaseBackend{
+								Type: v1alpha1.RedisBackendType,
+								Redis: &v1alpha1.RateLimitRedisSettings{
+									URL: ":foo",
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "happy ratelimit redis settings",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Backend: v1alpha1.RateLimitDatabaseBackend{
+								Type: v1alpha1.RedisBackendType,
+								Redis: &v1alpha1.RateLimitRedisSettings{
+									URL: "localhost:6376",
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
