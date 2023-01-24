@@ -38,6 +38,23 @@ httpRoutes:
       - type: ExtensionRef
         extensionRef:
           group: gateway.envoyproxy.io
-          kind: AuthenticationFilter
-          name: non-exist 
-
+          kind: RateLimitFilter
+          name: test
+rateLimitFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: RateLimitFilter
+  metadata:
+    name: test
+    namespace: default
+  spec:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - type: Distinct
+            name: x-user-id
+            value: one
+        limit:
+          requests: 10
+          unit: Hour
