@@ -70,11 +70,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 func (r *Runner) translate(xdsIRs []*ir.Xds) (*ir.RateLimitInfra, error) {
 	rlInfra := new(ir.RateLimitInfra)
 
-	// Return empty IR if ratelimit has not been enabled yet in the EnvoyGateway API
-	if r.EnvoyGateway.RateLimit == nil {
-		return nil, nil
-	}
-
 	for _, xdsIR := range xdsIRs {
 		for _, listener := range xdsIR.HTTP {
 			config := translator.BuildRateLimitServiceConfig(listener)

@@ -45,8 +45,8 @@ var (
 		`"private_key":{"filename":"%s"}}}]}`, xdsTLSCertFilename, xdsTLSKeyFilename)
 )
 
-// expectedConfigMap returns the expected ConfigMap based on the provided infra.
-func (i *Infra) expectedConfigMap(infra *ir.Infra) (*corev1.ConfigMap, error) {
+// expectedProxyConfigMap returns the expected ConfigMap based on the provided infra.
+func (i *Infra) expectedProxyConfigMap(infra *ir.Infra) (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
@@ -56,7 +56,7 @@ func (i *Infra) expectedConfigMap(infra *ir.Infra) (*corev1.ConfigMap, error) {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedConfigMapName(infra.Proxy.Name),
+			Name:      expectedProxyConfigMapName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Data: map[string]string{
@@ -66,48 +66,103 @@ func (i *Infra) expectedConfigMap(infra *ir.Infra) (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-// createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
+// createOrUpdateProxyConfigMap creates a ConfigMap in the Kube api server based on the provided
 // infra, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateConfigMap(ctx context.Context, infra *ir.Infra) (*corev1.ConfigMap, error) {
-	cm, err := i.expectedConfigMap(infra)
+func (i *Infra) createOrUpdateProxyConfigMap(ctx context.Context, infra *ir.Infra) error {
+	cm, err := i.expectedProxyConfigMap(infra)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
+	return i.createOrUpdateConfigMap(ctx, cm)
+}
+
+// deleteProxyConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
+func (i *Infra) deleteProxyConfigMap(ctx context.Context, infra *ir.Infra) error {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      expectedProxyConfigMapName(infra.Proxy.Name),
+		},
+	}
+
+	return i.deleteConfigMap(ctx, cm)
+}
+
+func expectedProxyConfigMapName(proxyName string) string {
+	cMapName := utils.GetHashedName(proxyName)
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, cMapName)
+}
+
+// expectedRateLimitConfigMap returns the expected ConfigMap based on the provided infra.
+func (i *Infra) expectedRateLimitConfigMap(infra *ir.RateLimitInfra) (*corev1.ConfigMap, error) {
+	labels := rateLimitLabels()
+	data := make(map[string]string)
+
+	for _, config := range infra.Configs {
+		data[config.Name] = config.Config
+	}
+
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      rateLimitInfraName,
+			Labels:    labels,
+		},
+		Data: data,
+	}, nil
+}
+
+// createOrUpdateRateLimitConfigMap creates a ConfigMap in the Kube api server based on the provided
+// infra, if it doesn't exist and updates it if it does.
+func (i *Infra) createOrUpdateRateLimitConfigMap(ctx context.Context, infra *ir.RateLimitInfra) error {
+	cm, err := i.expectedRateLimitConfigMap(infra)
+	if err != nil {
+		return err
+	}
+
+	return i.createOrUpdateConfigMap(ctx, cm)
+}
+
+// deleteProxyConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
+func (i *Infra) deleteRateLimitConfigMap(ctx context.Context, infra *ir.RateLimitInfra) error {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      rateLimitInfraName,
+		},
+	}
+
+	return i.deleteConfigMap(ctx, cm)
+}
+
+func (i *Infra) createOrUpdateConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
 	current := &corev1.ConfigMap{}
 	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      expectedConfigMapName(infra.Proxy.Name),
+		Namespace: cm.Namespace,
+		Name:      cm.Name,
 	}
 
 	if err := i.Client.Get(ctx, key, current); err != nil {
 		// Create if not found.
 		if kerrors.IsNotFound(err) {
 			if err := i.Client.Create(ctx, cm); err != nil {
-				return nil, fmt.Errorf("failed to create configmap %s/%s: %w", cm.Namespace, cm.Name, err)
+				return fmt.Errorf("failed to create configmap %s/%s: %w", cm.Namespace, cm.Name, err)
 			}
 		}
 	} else {
 		// Update if current value is different.
 		if !reflect.DeepEqual(cm.Data, current.Data) {
 			if err := i.Client.Update(ctx, cm); err != nil {
-				return nil, fmt.Errorf("failed to update configmap %s/%s: %w", cm.Namespace, cm.Name, err)
+				return fmt.Errorf("failed to update configmap %s/%s: %w", cm.Namespace, cm.Name, err)
 			}
 		}
 	}
 
-	return cm, nil
+	return nil
 }
 
-// deleteConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
-func (i *Infra) deleteConfigMap(ctx context.Context, infra *ir.Infra) error {
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      expectedConfigMapName(infra.Proxy.Name),
-		},
-	}
-
+func (i *Infra) deleteConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
 	if err := i.Client.Delete(ctx, cm); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
@@ -116,9 +171,4 @@ func (i *Infra) deleteConfigMap(ctx context.Context, infra *ir.Infra) error {
 	}
 
 	return nil
-}
-
-func expectedConfigMapName(proxyName string) string {
-	cMapName := utils.GetHashedName(proxyName)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, cMapName)
 }

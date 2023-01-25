@@ -117,11 +117,11 @@ func TestExpectedDeployment(t *testing.T) {
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	deploy, err := kube.expectedDeployment(infra)
+	deploy, err := kube.expectedProxyDeployment(infra)
 	require.NoError(t, err)
 
 	// Check the deployment name is as expected.
-	assert.Equal(t, deploy.Name, expectedDeploymentName(infra.Proxy.Name))
+	assert.Equal(t, deploy.Name, expectedProxyDeploymentName(infra.Proxy.Name))
 
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
@@ -158,7 +158,7 @@ func TestExpectedDeployment(t *testing.T) {
 	repl := int32(2)
 	infra.Proxy.GetProxyConfig().GetProvider().GetKubeResourceProvider().EnvoyDeployment.Replicas = &repl
 
-	deploy, err = kube.expectedDeployment(infra)
+	deploy, err = kube.expectedProxyDeployment(infra)
 	require.NoError(t, err)
 
 	// Check the number of replicas is as expected.
@@ -185,7 +185,7 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	deploy, err := kube.expectedDeployment(infra)
+	deploy, err := kube.expectedProxyDeployment(infra)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -233,13 +233,13 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateDeployment(context.Background(), tc.in)
+			err := kube.createOrUpdateProxyDeployment(context.Background(), tc.in)
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      expectedDeploymentName(tc.in.Proxy.Name),
+					Name:      expectedProxyDeploymentName(tc.in.Proxy.Name),
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
@@ -248,7 +248,7 @@ func TestCreateOrUpdateDeployment(t *testing.T) {
 	}
 }
 
-func TestDeleteDeployment(t *testing.T) {
+func TestDeleteProxyDeployment(t *testing.T) {
 	testCases := []struct {
 		name   string
 		expect bool
@@ -268,7 +268,7 @@ func TestDeleteDeployment(t *testing.T) {
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-			err := kube.deleteDeployment(context.Background(), infra)
+			err := kube.deleteProxyDeployment(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

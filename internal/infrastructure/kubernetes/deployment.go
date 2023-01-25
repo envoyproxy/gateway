@@ -50,6 +50,13 @@ const (
 	envoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
 	envoyAdminAccessLogPath = "/dev/null"
+
+	// rateLimitInfraName is the name for rate-limit resources.
+	rateLimitInfraName = "envoy-ratelimit"
+	// rateLimitInfraHTTPPort is the http port that the rate limit service listens on.
+	rateLimitInfraHTTPPort = 8080
+	// rateLimitInfraImage is the container image for the rate limit service.
+	rateLimitInfraImage = "envoyproxy/ratelimit:latest"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -100,14 +107,14 @@ func (b *bootstrapConfig) render() error {
 	return nil
 }
 
-func expectedDeploymentName(proxyName string) string {
+func expectedProxyDeploymentName(proxyName string) string {
 	deploymentName := utils.GetHashedName(proxyName)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, deploymentName)
 }
 
-// expectedDeployment returns the expected Deployment based on the provided infra.
-func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
-	containers, err := expectedContainers(infra)
+// expectedProxyDeployment returns the expected Deployment based on the provided infra.
+func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
+	containers, err := expectedProxyContainers(infra)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +125,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
+	selector := getSelector(labels)
 	// Get the EnvoyProxy config to configure the ret.
 	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
 	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
@@ -132,19 +140,19 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedDeploymentName(infra.Proxy.Name),
+			Name:      expectedProxyDeploymentName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deployCfg.Replicas,
-			Selector: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels),
+			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: envoySelector(infra.GetProxyInfra().GetProxyMetadata().Labels).MatchLabels,
+					Labels: selector.MatchLabels,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            expectedServiceAccountName(infra.Proxy.Name),
+					ServiceAccountName:            expectedProxyServiceAccountName(infra.Proxy.Name),
 					AutomountServiceAccountToken:  pointer.Bool(false),
 					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -164,7 +172,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: expectedConfigMapName(infra.Proxy.Name),
+										Name: expectedProxyConfigMapName(infra.Proxy.Name),
 									},
 									Items: []corev1.KeyToPath{
 										{
@@ -190,7 +198,7 @@ func (i *Infra) expectedDeployment(infra *ir.Infra) (*appsv1.Deployment, error) 
 	return ret, nil
 }
 
-func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
+func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "http",
@@ -275,20 +283,181 @@ func expectedContainers(infra *ir.Infra) ([]corev1.Container, error) {
 	return containers, nil
 }
 
-// createDeployment creates a Deployment in the kube api server based on the provided
+// createOrUpdateProxyDeployment creates a Deployment in the kube api server based on the provided
 // infra, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) error {
-	deploy, err := i.expectedDeployment(infra)
+func (i *Infra) createOrUpdateProxyDeployment(ctx context.Context, infra *ir.Infra) error {
+	deploy, err := i.expectedProxyDeployment(infra)
 	if err != nil {
 		return err
 	}
 
-	current := &appsv1.Deployment{}
-	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      expectedDeploymentName(infra.Proxy.Name),
+	return i.createOrUpdateDeployment(ctx, deploy)
+}
+
+// deleteProxyDeployment deletes the Envoy Deployment in the kube api server, if it exists.
+func (i *Infra) deleteProxyDeployment(ctx context.Context, infra *ir.Infra) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      expectedProxyDeploymentName(infra.Proxy.Name),
+		},
 	}
 
+	return i.deleteDeployment(ctx, deploy)
+}
+
+// expectedRateLimitDeployment returns the expected rate limit Deployment based on the provided infra.
+func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) (*appsv1.Deployment, error) {
+	containers, err := expectedRateLimitContainers(infra)
+	if err != nil {
+		return nil, err
+	}
+
+	labels := rateLimitLabels()
+	selector := getSelector(labels)
+
+	ret := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      rateLimitInfraName,
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32(int32(1)),
+			Selector: selector,
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: selector.MatchLabels,
+				},
+				Spec: corev1.PodSpec{
+					Containers:                    containers,
+					ServiceAccountName:            rateLimitInfraName,
+					AutomountServiceAccountToken:  pointer.Bool(false),
+					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
+					DNSPolicy:                     corev1.DNSClusterFirst,
+					RestartPolicy:                 corev1.RestartPolicyAlways,
+					SchedulerName:                 "default-scheduler",
+					Volumes: []corev1.Volume{
+						{
+							Name: rateLimitInfraName,
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: rateLimitInfraName,
+									},
+									DefaultMode: pointer.Int32(int32(420)),
+									Optional:    pointer.Bool(false),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return ret, nil
+}
+
+func expectedRateLimitContainers(infra *ir.RateLimitInfra) ([]corev1.Container, error) {
+	ports := []corev1.ContainerPort{
+		{
+			Name:          "http",
+			ContainerPort: rateLimitInfraHTTPPort,
+			Protocol:      corev1.ProtocolTCP,
+		},
+	}
+
+	containers := []corev1.Container{
+		{
+			Name:            rateLimitInfraName,
+			Image:           rateLimitInfraImage,
+			ImagePullPolicy: corev1.PullIfNotPresent,
+			Command: []string{
+				"/bin/ratelimit",
+			},
+			Env: []corev1.EnvVar{
+				{
+					Name:  "REDIS_SOCKET_TYPE",
+					Value: "tcp",
+				},
+				{
+					Name:  "REDIS_URL",
+					Value: infra.Backend.Redis.URL,
+				},
+				{
+					Name:  "RUNTIME_ROOT",
+					Value: "/data",
+				},
+				{Name: "RUNTIME_SUBDIRECTORY",
+					Value: "ratelimit",
+				},
+				{
+					Name:  "RUNTIME_IGNOREDOTFILES",
+					Value: "true",
+				},
+				{
+					Name:  "RUNTIME_WATCH_ROOT",
+					Value: "false",
+				},
+				{
+					Name:  "LOG_LEVEL",
+					Value: "info",
+				},
+				{
+					Name:  "USE_STATSD",
+					Value: "false",
+				},
+			},
+			Ports: ports,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      rateLimitInfraName,
+					MountPath: "/data/ratelimit/config",
+					ReadOnly:  true,
+				},
+			},
+			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+			TerminationMessagePath:   "/dev/termination-log",
+		},
+	}
+
+	return containers, nil
+}
+
+// createOrUpdateRateLimitDeployment creates a Deployment in the kube api server based on the provided
+// infra, if it doesn't exist and updates it if it does.
+func (i *Infra) createOrUpdateRateLimitDeployment(ctx context.Context, infra *ir.RateLimitInfra) error {
+	deploy, err := i.expectedRateLimitDeployment(infra)
+	if err != nil {
+		return err
+	}
+
+	return i.createOrUpdateDeployment(ctx, deploy)
+}
+
+// deleteRateLimitDeployment deletes the Envoy RateLimit Deployment in the kube api server, if it exists.
+func (i *Infra) deleteRateLimitDeployment(ctx context.Context, infra *ir.RateLimitInfra) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      rateLimitInfraName,
+		},
+	}
+
+	return i.deleteDeployment(ctx, deploy)
+}
+
+func (i *Infra) createOrUpdateDeployment(ctx context.Context, deploy *appsv1.Deployment) error {
+	current := &appsv1.Deployment{}
+	key := types.NamespacedName{
+		Namespace: deploy.Namespace,
+		Name:      deploy.Name,
+	}
 	if err := i.Client.Get(ctx, key, current); err != nil {
 		// Create if not found.
 		if kerrors.IsNotFound(err) {
@@ -310,21 +479,12 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, infra *ir.Infra) e
 	return nil
 }
 
-// deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.
-func (i *Infra) deleteDeployment(ctx context.Context, infra *ir.Infra) error {
-	deploy := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      expectedDeploymentName(infra.Proxy.Name),
-		},
-	}
-
+func (i *Infra) deleteDeployment(ctx context.Context, deploy *appsv1.Deployment) error {
 	if err := i.Client.Delete(ctx, deploy); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("failed to delete deployment %s/%s: %w", deploy.Namespace, deploy.Name, err)
 	}
-
 	return nil
 }

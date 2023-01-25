@@ -155,16 +155,19 @@ func setupRunners(cfg *config.Server) error {
 		return err
 	}
 
-	// Start the Global RateLimit Runner
-	// It subscribes to the xds Resources and translates it to Envoy Ratelimit Service
-	// infrastructure and configuration.
-	rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
-		Server:           *cfg,
-		XdsIR:            xdsIR,
-		RateLimitInfraIR: rateLimitInfraIR,
-	})
-	if err := rateLimitRunner.Start(ctx); err != nil {
-		return err
+	// Start the global rateLimit runner if it has been enabled through the config
+	if cfg.EnvoyGateway.RateLimit != nil {
+		// Start the Global RateLimit Runner
+		// It subscribes to the xds Resources and translates it to Envoy Ratelimit Service
+		// infrastructure and configuration.
+		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
+			Server:           *cfg,
+			XdsIR:            xdsIR,
+			RateLimitInfraIR: rateLimitInfraIR,
+		})
+		if err := rateLimitRunner.Start(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Wait until done
