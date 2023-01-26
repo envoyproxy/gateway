@@ -28,6 +28,16 @@ Install the GatewayClass, Gateway, HTTPRoute and example app:
 kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
 ```
 
+**Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
+traffic on port 80 on its globally-routable IP address, to make it easy to use
+browsers to test Envoy Gateway. When Envoy Gateway sees that its Listener is
+using a privileged port (<1024), it will map this internally to an
+unprivileged port, so that Envoy Gateway doesn't need additional privileges.
+It's important to be aware of this mapping, since you may need to take it into
+consideration when debugging.
+
+[`quickstart.yaml`]: https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+
 ## Testing the Configuration
 
 Get the name of the Envoy service created the by the example Gateway:
@@ -39,7 +49,7 @@ export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gatewa
 Port forward to the Envoy service:
 
 ```shell
-kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:8080 &
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8888:80 &
 ```
 
 Curl the example app through Envoy proxy:
@@ -63,7 +73,7 @@ In certain environments, the load balancer may be exposed using a hostname, inst
 Curl the example app through Envoy proxy:
 
 ```shell
-curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST:8080/get
+curl --verbose --header "Host: www.example.com" http://$GATEWAY_HOST/get
 ```
 
 ## Clean-Up
