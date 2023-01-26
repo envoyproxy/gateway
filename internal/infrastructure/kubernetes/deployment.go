@@ -290,7 +290,6 @@ func (i *Infra) createOrUpdateProxyDeployment(ctx context.Context, infra *ir.Inf
 	if err != nil {
 		return err
 	}
-
 	return i.createOrUpdateDeployment(ctx, deploy)
 }
 
@@ -307,12 +306,8 @@ func (i *Infra) deleteProxyDeployment(ctx context.Context, infra *ir.Infra) erro
 }
 
 // expectedRateLimitDeployment returns the expected rate limit Deployment based on the provided infra.
-func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) (*appsv1.Deployment, error) {
-	containers, err := expectedRateLimitContainers(infra)
-	if err != nil {
-		return nil, err
-	}
-
+func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) *appsv1.Deployment {
+	containers := expectedRateLimitContainers(infra)
 	labels := rateLimitLabels()
 	selector := getSelector(labels)
 
@@ -360,10 +355,10 @@ func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) (*appsv1.D
 		},
 	}
 
-	return ret, nil
+	return ret
 }
 
-func expectedRateLimitContainers(infra *ir.RateLimitInfra) ([]corev1.Container, error) {
+func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "http",
@@ -426,22 +421,18 @@ func expectedRateLimitContainers(infra *ir.RateLimitInfra) ([]corev1.Container, 
 		},
 	}
 
-	return containers, nil
+	return containers
 }
 
 // createOrUpdateRateLimitDeployment creates a Deployment in the kube api server based on the provided
 // infra, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateRateLimitDeployment(ctx context.Context, infra *ir.RateLimitInfra) error {
-	deploy, err := i.expectedRateLimitDeployment(infra)
-	if err != nil {
-		return err
-	}
-
+	deploy := i.expectedRateLimitDeployment(infra)
 	return i.createOrUpdateDeployment(ctx, deploy)
 }
 
 // deleteRateLimitDeployment deletes the Envoy RateLimit Deployment in the kube api server, if it exists.
-func (i *Infra) deleteRateLimitDeployment(ctx context.Context, infra *ir.RateLimitInfra) error {
+func (i *Infra) deleteRateLimitDeployment(ctx context.Context, _ *ir.RateLimitInfra) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,

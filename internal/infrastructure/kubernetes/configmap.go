@@ -95,7 +95,7 @@ func expectedProxyConfigMapName(proxyName string) string {
 }
 
 // expectedRateLimitConfigMap returns the expected ConfigMap based on the provided infra.
-func (i *Infra) expectedRateLimitConfigMap(infra *ir.RateLimitInfra) (*corev1.ConfigMap, error) {
+func (i *Infra) expectedRateLimitConfigMap(infra *ir.RateLimitInfra) *corev1.ConfigMap {
 	labels := rateLimitLabels()
 	data := make(map[string]string)
 
@@ -110,22 +110,18 @@ func (i *Infra) expectedRateLimitConfigMap(infra *ir.RateLimitInfra) (*corev1.Co
 			Labels:    labels,
 		},
 		Data: data,
-	}, nil
+	}
 }
 
 // createOrUpdateRateLimitConfigMap creates a ConfigMap in the Kube api server based on the provided
 // infra, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdateRateLimitConfigMap(ctx context.Context, infra *ir.RateLimitInfra) error {
-	cm, err := i.expectedRateLimitConfigMap(infra)
-	if err != nil {
-		return err
-	}
-
+	cm := i.expectedRateLimitConfigMap(infra)
 	return i.createOrUpdateConfigMap(ctx, cm)
 }
 
 // deleteProxyConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
-func (i *Infra) deleteRateLimitConfigMap(ctx context.Context, infra *ir.RateLimitInfra) error {
+func (i *Infra) deleteRateLimitConfigMap(ctx context.Context, _ *ir.RateLimitInfra) error {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,

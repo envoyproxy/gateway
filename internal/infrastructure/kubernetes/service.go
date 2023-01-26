@@ -120,7 +120,7 @@ func (i *Infra) deleteProxyService(ctx context.Context, infra *ir.Infra) error {
 }
 
 // expectedRateLimitInfraService returns the expected rate limit Service based on the provided infra.
-func (i *Infra) expectedRateLimitService(infra *ir.RateLimitInfra) (*corev1.Service, error) {
+func (i *Infra) expectedRateLimitService(_ *ir.RateLimitInfra) *corev1.Service {
 	ports := []corev1.ServicePort{
 		{
 			Name:       "http",
@@ -148,22 +148,18 @@ func (i *Infra) expectedRateLimitService(infra *ir.RateLimitInfra) (*corev1.Serv
 		},
 	}
 
-	return svc, nil
+	return svc
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided infra,
 // if it doesn't exist or updates it if it does.
 func (i *Infra) createOrUpdateRateLimitService(ctx context.Context, infra *ir.RateLimitInfra) error {
-	svc, err := i.expectedRateLimitService(infra)
-	if err != nil {
-		return fmt.Errorf("failed to generate expected service: %w", err)
-	}
-
+	svc := i.expectedRateLimitService(infra)
 	return i.createOrUpdateService(ctx, svc)
 }
 
 // deleteRateLimitService deletes the rate limit Service in the kube api server, if it exists.
-func (i *Infra) deleteRateLimitService(ctx context.Context, infra *ir.RateLimitInfra) error {
+func (i *Infra) deleteRateLimitService(ctx context.Context, _ *ir.RateLimitInfra) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
