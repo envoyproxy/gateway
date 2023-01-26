@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -125,10 +126,15 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			}
 			err := kube.createOrUpdateProxyConfigMap(context.Background(), infra)
 			require.NoError(t, err)
-			require.Equal(t, tc.expect.Namespace, cm.Namespace)
-			require.Equal(t, tc.expect.Name, cm.Name)
-			assert.True(t, apiequality.Semantic.DeepEqual(tc.expect.Labels, cm.Labels))
-			require.Equal(t, tc.expect.Data, cm.Data)
+			actual := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: tc.expect.Namespace,
+					Name:      tc.expect.Name,
+				},
+			}
+			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.Equal(t, tc.expect.Data, actual.Data)
+			assert.True(t, apiequality.Semantic.DeepEqual(tc.expect.Labels, actual.Labels))
 		})
 	}
 }
