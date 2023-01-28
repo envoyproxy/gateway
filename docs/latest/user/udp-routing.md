@@ -1,21 +1,28 @@
 # UDP Routing
 
-The [UDPRoute](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute/)
-resource allows users to configure UDP routing by matching UDP traffic and forwarding it to
-Kubernetes backends. This guide will use CoreDNS example to walk you through the steps required to configure
- UDPRoute on Envoy Gateway.
+The [UDPRoute][] resource allows users to configure UDP routing by matching UDP traffic and forwarding it to Kubernetes
+backends. This guide will use CoreDNS example to walk you through the steps required to configure UDPRoute on Envoy
+Gateway.
 
-Note: UDPRoute allows Envoy Gateway to operate as a non-transparent proxy between a UDP client and server. 
-The lack of transparency means that the upstream server will see the source IP and port of the Gateway instead of the client. 
-For additional information, refer to Envoy's [UDP proxy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy).
+__Note:__ UDPRoute allows Envoy Gateway to operate as a non-transparent proxy between a UDP client and server. The lack
+of transparency means that the upstream server will see the source IP and port of the Gateway instead of the client.
+For additional information, refer to Envoy's [UDP proxy documentation][].
 
 ## Prerequisites
 
-- A Kubernetes cluster with `kubectl` context configured for the cluster.
+Install Envoy Gateway:
+
+```shell
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
+```
+
+Wait for Envoy Gateway to become available:
+
+```shell
+kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+```
 
 ## Installation
-
-Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway.
 
 Install CoreDNS in the Kubernetes cluster as the example backend. The installed CoreDNS is listening on
  UDP port 53 for DNS lookups.
@@ -55,7 +62,7 @@ Verify the Gateway status:
 kubectl get gateway/eg -o yaml
 ```
 
-## UDPRoute
+## Configuration
 
 Create a UDPRoute resource to route UDP traffic received on Gateway port 5300 to the CoredDNS backend.
 
@@ -142,3 +149,6 @@ kubectl delete udproute/coredns
 ## Next Steps
 
 Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
+
+[UDPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
+[UDP proxy documentation]: https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/udp_filters/udp_proxy

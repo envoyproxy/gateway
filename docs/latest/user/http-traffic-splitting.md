@@ -1,8 +1,13 @@
 # HTTPRoute Traffic Splitting
 
-The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams if they match the rules of the HTTPRoute. If an invalid backendRef is configured, then HTTP responses will be returned with status code `500` for all of the requests that would have been sent to that backend.
+The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams
+if they match the rules of the HTTPRoute. If an invalid backendRef is configured, then HTTP responses will be returned
+with status code `500` for all requests that would have been sent to that backend.
 
-Follow the steps from the [Quickstart Guide](QUICKSTART.md) to install Envoy Gateway and then install the example resources used for this guide.
+## Installation
+
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Single backendRef
 
@@ -44,8 +49,9 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `backends.example/get` should result in a `200` response from the example Gateway and the output from the example
-app should indicate which pod handled the request. There is only one pod in the deployment for the example app from the quickstart, so it will be the same on all subsequent requests.
+Querying `backends.example/get` should result in a `200` response from the example Gateway and the output from the
+example app should indicate which pod handled the request. There is only one pod in the deployment for the example app
+from the quickstart, so it will be the same on all subsequent requests.
 
 ```console
 $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
@@ -74,7 +80,8 @@ $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
 
 ## Multiple backendRefs
 
-If multiple backendRefs are configured, then traffic will be split between the backendRefs equally unless a weight is configured.
+If multiple backendRefs are configured, then traffic will be split between the backendRefs equally unless a weight is
+configured.
 
 First, create a second instance of the example app from the quickstart:
 
@@ -166,8 +173,9 @@ spec:
 EOF
 ```
 
-Querying `backends.example/get` should result in `200` responses from the example Gateway and the output from the example app
-that indicates which pod handled the request should switch between the first pod and the second one from the new deployment on subsequent requests.
+Querying `backends.example/get` should result in `200` responses from the example Gateway and the output from the
+example app that indicates which pod handled the request should switch between the first pod and the second one from the
+new deployment on subsequent requests.
 
 ```console
 $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
@@ -196,11 +204,16 @@ $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
 
 ## Weighted backendRefs
 
-If multiple backendRefs are configured and an un-even traffic split between the backends is desired, then the `weight` field can be used to control the weight of requests to each backend. If weight is not configured for a backendRef it is assumed to be `1`.
+If multiple backendRefs are configured and an un-even traffic split between the backends is desired, then the `weight`
+field can be used to control the weight of requests to each backend. If weight is not configured for a backendRef it is
+assumed to be `1`.
 
-The [weight field in a backendRef][backendRefs] controls the distribution of the traffic split. The proportion of requests to a single backendRef is calculated by dividing its `weight` by the sum of all backendRef weights in the HTTPRoute. The weight is not a percentage and the sum of all weights does not need to add up to 100.
+The [weight field in a backendRef][backendRefs] controls the distribution of the traffic split. The proportion of
+requests to a single backendRef is calculated by dividing its `weight` by the sum of all backendRef weights in the
+HTTPRoute. The weight is not a percentage and the sum of all weights does not need to add up to 100.
 
-The HTTPRoute below will configure the gateway to send 80% of the traffic to the backend service, and 20% to the backend-2 service.
+The HTTPRoute below will configure the gateway to send 80% of the traffic to the backend service, and 20% to the
+backend-2 service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -236,13 +249,17 @@ EOF
 
 backendRefs can be considered invalid for the following reasons:
 
-- The `group` field is configured to something other than `""`. Currently, only the core API group (specified by omitting the group field or setting it to an empty string) is supported
-- The `kind` field is configured to anything other than `Service`. Envoy Gateway currently only supports Kubernetes Service backendRefs
+- The `group` field is configured to something other than `""`. Currently, only the core API group (specified by
+  omitting the group field or setting it to an empty string) is supported
+- The `kind` field is configured to anything other than `Service`. Envoy Gateway currently only supports Kubernetes
+  Service backendRefs
 - The backendRef configures a service with a `namespace` not permitted by any existing ReferenceGrants
 - The `port` field is not configured or is configured to a port that does not exist on the Service
 - The named Service configured by the backendRef cannot be found
 
-Modifying the above example to make the backend-2 backendRef invalid by using a port that does not exist on the Service will result in 80% of the traffic being sent to the backend service, and 20% of the traffic receiving a HTTP response with status code `500`.
+Modifying the above example to make the backend-2 backendRef invalid by using a port that does not exist on the Service
+will result in 80% of the traffic being sent to the backend service, and 20% of the traffic receiving an HTTP response
+with status code `500`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
