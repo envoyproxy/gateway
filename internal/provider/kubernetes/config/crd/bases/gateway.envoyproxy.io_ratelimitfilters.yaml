@@ -104,8 +104,8 @@ spec:
                                 - name
                                 x-kubernetes-list-type: map
                               sourceIP:
-                                description: SourceIPs is source IP addresses to match
-                                  base on mask length.
+                                description: SourceIP defines the match attributes
+                                  for source IP addresses from “X-Forwarded-For“ header.
                                 properties:
                                   ipv4MaskLen:
                                     description: Ipv4MaskLen is the mask length for
