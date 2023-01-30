@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -55,6 +56,7 @@ type HTTPFilterChains struct {
 	Mirrors []*ir.RouteDestination
 
 	RequestAuthentication *ir.RequestAuthentication
+	RateLimit             *ir.RateLimit
 }
 
 // ProcessHTTPFilters translate gateway api http filters to IRs.
@@ -622,50 +624,90 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 		return
 	}
 
-	// Set negative status condition and return early if the no AuthenticationFilters exist.
-	if len(resources.AuthenticationFilters) == 0 {
-		errMsg := fmt.Sprintf("Reference not found for filter type: %v", filter.Type)
-		filterContext.ParentRef.ResetConditions(filterContext.HTTPRoute)
-		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
-			v1beta1.RouteConditionResolvedRefs,
-			metav1.ConditionFalse,
-			v1beta1.RouteReasonBackendNotFound,
-			errMsg,
-		)
-		filterContext.DirectResponse = &ir.DirectResponse{
-			Body:       &errMsg,
-			StatusCode: 500,
-		}
-		return
-	}
-
 	// Set the filter context and return early if a matching AuthenticationFilter is found.
-	for _, authenFilter := range resources.AuthenticationFilters {
-		if authenFilter.Namespace == filterContext.HTTPRoute.Namespace &&
-			authenFilter.Name == string(extFilter.Name) {
-			filterContext.HTTPFilterChains.RequestAuthentication = &ir.RequestAuthentication{
-				JWT: &ir.JwtRequestAuthentication{
-					Providers: authenFilter.Spec.JwtProviders,
-				},
+	if string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+		for _, authenFilter := range resources.AuthenticationFilters {
+			if authenFilter.Namespace == filterContext.HTTPRoute.Namespace &&
+				authenFilter.Name == string(extFilter.Name) {
+				filterContext.HTTPFilterChains.RequestAuthentication = &ir.RequestAuthentication{
+					JWT: &ir.JwtRequestAuthentication{
+						Providers: authenFilter.Spec.JwtProviders,
+					},
+				}
+				return
 			}
-			return
 		}
 	}
 
-	// Matching AuthenticationFilter not found, so set negative status condition.
+	// Set the filter context and return early if a matching RateLimitFilter is found.
+	if string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
+		for _, rateLimitFilter := range resources.RateLimitFilters {
+			if rateLimitFilter.Namespace == filterContext.HTTPRoute.Namespace &&
+				rateLimitFilter.Name == string(extFilter.Name) {
+				if rateLimitFilter.Spec.Global == nil {
+					errMsg := fmt.Sprintf("Global configuration empty for RateLimitFilter: %s/%s", filterContext.HTTPRoute.Namespace,
+						filter.ExtensionRef.Name)
+					t.processUnresolvedHTTPFilter(errMsg, filterContext)
+					return
+				}
+				rateLimit := &ir.RateLimit{
+					Global: &ir.GlobalRateLimit{
+						Rules: make([]*ir.RateLimitRule, len(rateLimitFilter.Spec.Global.Rules)),
+					},
+				}
+				rules := rateLimit.Global.Rules
+				for i, rule := range rateLimitFilter.Spec.Global.Rules {
+					rules[i] = &ir.RateLimitRule{
+						Limit: &ir.RateLimitValue{
+							Requests: rule.Limit.Requests,
+							Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+						},
+						HeaderMatches: make([]*ir.StringMatch, 0),
+					}
+					for _, match := range rule.ClientSelectors {
+						for _, header := range match.Headers {
+							switch {
+							case header.Type == nil && header.Value != nil:
+								fallthrough
+							case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
+								m := &ir.StringMatch{
+									Name:  header.Name,
+									Exact: header.Value,
+								}
+								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
+							case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+								m := &ir.StringMatch{
+									Name:      header.Name,
+									SafeRegex: header.Value,
+								}
+								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
+							case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value == nil:
+								m := &ir.StringMatch{
+									Name:     header.Name,
+									Distinct: true,
+								}
+								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
+							default:
+								// set negative status condition.
+								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterContext.HTTPRoute.Namespace,
+									filter.ExtensionRef.Name)
+								t.processUnresolvedHTTPFilter(errMsg, filterContext)
+								return
+							}
+						}
+					}
+
+				}
+				filterContext.HTTPFilterChains.RateLimit = rateLimit
+				return
+			}
+		}
+	}
+
+	// Matching filter not found, so set negative status condition.
 	errMsg := fmt.Sprintf("Reference %s/%s not found for filter type: %v", filterContext.HTTPRoute.Namespace,
 		filter.ExtensionRef.Name, filter.Type)
-	filterContext.ParentRef.ResetConditions(filterContext.HTTPRoute)
-	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
-		v1beta1.RouteConditionResolvedRefs,
-		metav1.ConditionFalse,
-		v1beta1.RouteReasonBackendNotFound,
-		errMsg,
-	)
-	filterContext.DirectResponse = &ir.DirectResponse{
-		Body:       &errMsg,
-		StatusCode: 500,
-	}
+	t.processUnresolvedHTTPFilter(errMsg, filterContext)
 }
 
 func (t *Translator) processRequestMirrorFilter(
@@ -709,6 +751,25 @@ func (t *Translator) processRequestMirrorFilter(
 
 	filterContext.Mirrors = append(filterContext.Mirrors, mirrorDest)
 
+}
+
+func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {
+	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		v1beta1.RouteConditionResolvedRefs,
+		metav1.ConditionFalse,
+		v1beta1.RouteReasonBackendNotFound,
+		errMsg,
+	)
+	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		v1beta1.RouteConditionAccepted,
+		metav1.ConditionFalse,
+		v1beta1.RouteReasonUnsupportedValue,
+		errMsg,
+	)
+	filterContext.DirectResponse = &ir.DirectResponse{
+		Body:       &errMsg,
+		StatusCode: 500,
+	}
 }
 
 func (t *Translator) processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext) {

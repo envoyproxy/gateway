@@ -1,18 +1,17 @@
 # TLS Passthrough
 
-This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
+This guide will walk through the steps required to configure TLS Passthrough via Envoy Gateway. Unlike configuring
+Secure Gateways, where the Gateway terminates the client TLS connection, TLS Passthrough allows the application itself
+to terminate the TLS connection, while the Gateway routes the requests to the application based on SNI headers.
 
 ## Prerequisites
 
-- A Kubernetes cluster with `kubectl` context configured for the cluster.
 - OpenSSL to generate TLS assets.
-
-__Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
 
 ## Installation
 
 Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to curl the example backend using HTTP.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ## TLS Certificates
 
@@ -48,7 +47,8 @@ Deploy TLS Passthrough application Deployment, Service and TLSRoute:
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/tls-passthrough.yaml
 ```
 
-Patch the Gateway from the Quickstart guide to include a TLS listener that listens on port `6443` and is configured for TLS mode Passthrough:
+Patch the Gateway from the Quickstart guide to include a TLS listener that listens on port `6443` and is configured for
+TLS mode Passthrough:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{

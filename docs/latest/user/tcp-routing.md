@@ -1,14 +1,32 @@
 # TCP Routing
 
-[TCPRoute][] provides a way to route TCP requests. When combined with a Gateway listener, it can be used to forward connections on the port specified by the listener to a set of backends specified by the TCPRoute. To learn more about HTTP routing, refer to the [Gateway API documentation][].
+[TCPRoute][] provides a way to route TCP requests. When combined with a Gateway listener, it can be used to forward
+connections on the port specified by the listener to a set of backends specified by the TCPRoute. To learn more about
+HTTP routing, refer to the [Gateway API documentation][].
 
-Follow the steps to install Envoy Gateway and the example manifest.
+## Installation
 
-In this example, we have one Gateway resource and two TCPRoute resources that distribute the traffic with the following rules:
+Install Envoy Gateway:
+
+```shell
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
+```
+
+Wait for Envoy Gateway to become available:
+
+```shell
+kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+```
+
+## Configuration
+
+In this example, we have one Gateway resource and two TCPRoute resources that distribute the traffic with the following
+rules:
 
 All TCP streams on port `8088` of the Gateway are forwarded to port 3001 of `foo` Kubernetes Service.
 All TCP streams on port `8089` of the Gateway are forwarded to port 3002 of `bar` Kubernetes Service.
-In this example two TCP listeners will be applied to the Gateway in order to route them to two separate backend TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
+In this example two TCP listeners will be applied to the Gateway in order to route them to two separate backend
+TCPRoutes, note that the protocol set for the listeners on the Gateway is TCP:
 
 Install the GatewayClass and a `tcp-gateway` Gateway first.
 
@@ -177,7 +195,8 @@ spec:
 EOF
 ```
 
-In the above example we separate the traffic for the two separate backend TCP Services by using the sectionName field in the parentRefs:
+In the above example we separate the traffic for the two separate backend TCP Services by using the sectionName field in
+the parentRefs:
 
 ``` yaml
 spec:

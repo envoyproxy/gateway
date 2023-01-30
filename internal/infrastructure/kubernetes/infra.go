@@ -85,3 +85,15 @@ func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
 
 	return nil
 }
+
+// CreateOrUpdateRateLimitInfra creates the managed kube rate limit infra, if it doesn't exist.
+func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
+	// TODO
+	return nil
+}
+
+// DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
+func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
+	// TODO
+	return nil
+}

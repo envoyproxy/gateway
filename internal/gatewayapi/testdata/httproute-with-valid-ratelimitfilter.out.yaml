@@ -20,8 +20,6 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
-      - group: gateway.networking.k8s.io
-        kind: GRPCRoute
       attachedRoutes: 1
       conditions:
       - type: Programmed
@@ -52,8 +50,8 @@ httpRoutes:
       - type: ExtensionRef
         extensionRef:
           group: gateway.envoyproxy.io
-          kind: AuthenticationFilter
-          name: non-exist 
+          kind: RateLimitFilter
+          name: test
   status:
     parents:
     - parentRef:
@@ -63,13 +61,9 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       conditions:
       - type: Accepted
-        status: "False"
-        reason: UnsupportedValue
-        message: "Reference default/non-exist not found for filter type: ExtensionRef"
-      - type: ResolvedRefs
-        status: "False"
-        reason: BackendNotFound
-        message: "Reference default/non-exist not found for filter type: ExtensionRef"
+        status: "True"
+        reason: Accepted
+        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -85,11 +79,19 @@ xdsIR:
         headerMatches:
         - name: ":authority"
           exact: gateway.envoyproxy.io
-        # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
-        # normally but leave out the filter config and set the status, but this behaviour can be changed.
-        directResponse:
-          body: "Reference default/non-exist not found for filter type: ExtensionRef"
-          statusCode: 500
+        rateLimit:
+          global:
+            rules:
+            - headerMatches:
+              - name: "x-user-id"
+                exact: "one"
+              limit:
+                requests: 10
+                unit: Hour
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

@@ -25,8 +25,12 @@ var _ Manager = (*kubernetes.Infra)(nil)
 type Manager interface {
 	// CreateOrUpdateInfra creates or updates infra.
 	CreateOrUpdateInfra(ctx context.Context, infra *ir.Infra) error
-	// DeleteInfra deletes infra
+	// DeleteInfra deletes infra.
 	DeleteInfra(ctx context.Context, infra *ir.Infra) error
+	// CreateOrUpdateRateLimitInfra creates or updates rate limit infra.
+	CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error
+	// DeleteRateLimitInfra deletes rate limit infra.
+	DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error
 }
 
 // NewManager returns a new infrastructure Manager.

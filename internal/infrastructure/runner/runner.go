@@ -16,7 +16,8 @@ import (
 
 type Config struct {
 	config.Server
-	InfraIR *message.InfraIR
+	InfraIR          *message.InfraIR
+	RateLimitInfraIR *message.RateLimitInfraIR
 }
 
 type Runner struct {
@@ -40,12 +41,13 @@ func (r *Runner) Start(ctx context.Context) error {
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 	}
-	go r.subscribeAndTranslate(ctx)
+	go r.subscribeToInfraIR(ctx)
+	go r.subscribeToRateLimitInfraIR(ctx)
 	r.Logger.Info("started")
 	return nil
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+func (r *Runner) subscribeToInfraIR(ctx context.Context) {
 	// Subscribe to resources
 	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra]) {
@@ -63,5 +65,26 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 		},
 	)
-	r.Logger.Info("subscriber shutting down")
+	r.Logger.Info("infra subscriber shutting down")
+}
+
+func (r *Runner) subscribeToRateLimitInfraIR(ctx context.Context) {
+	// Subscribe to resources
+	message.HandleSubscription(r.RateLimitInfraIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.RateLimitInfra]) {
+			val := update.Value
+
+			if update.Delete {
+				if err := r.mgr.DeleteRateLimitInfra(ctx, val); err != nil {
+					r.Logger.Error(err, "failed to delete rate limit infra")
+				}
+			} else {
+				// Manage the rate limit infra.
+				if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx, val); err != nil {
+					r.Logger.Error(err, "failed to create new rate limit infra")
+				}
+			}
+		},
+	)
+	r.Logger.Info("ratelimit infra subscriber shutting down")
 }

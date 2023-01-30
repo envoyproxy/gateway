@@ -730,6 +730,10 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		if httpFiltersContext.RequestAuthentication != nil {
 			irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
 		}
+		if httpFiltersContext.RateLimit != nil {
+			irRoute.RateLimit = httpFiltersContext.RateLimit
+		}
+
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
@@ -856,6 +860,7 @@ func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteConte
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
+					RateLimit:             routeRoute.RateLimit,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {

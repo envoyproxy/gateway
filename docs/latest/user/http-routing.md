@@ -5,18 +5,35 @@ Kubernetes backends. Currently, the only supported backend supported by Envoy Ga
 shows how to route traffic based on host, header, and path fields and forward the traffic to different Kubernetes
 Services. To learn more about HTTP routing, refer to the [Gateway API documentation][].
 
-Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and then install the example
-resources used for this guide.
+## Prerequisites
+
+Install Envoy Gateway:
+
+```shell
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
+```
+
+Wait for Envoy Gateway to become available:
+
+```shell
+kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+```
+
+## Installation
+
+Install the HTTP routing example resources:
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/http-routing.yaml
 ```
 
 The manifest installs a [GatewayClass][], [Gateway][], four Deployments, four Services, and three HTTPRoute resources.
+The GatewayClass is a cluster-scoped resource that represents a class of Gateways that can be instantiated.
 
-The GatewayClass is a cluster-scoped resource that represents a class of Gateways that can be instantiated. Envoy
-Gateway is configured by default to manage GatewayClasses with
+__Note:__ Envoy Gateway is configured by default to manage a GatewayClass with
 `controllerName: gateway.envoyproxy.io/gatewayclass-controller`.
+
+## Verification
 
 Check the status of the GatewayClass:
 
@@ -51,8 +68,11 @@ kubectl get httproutes --selector=example=http-routing -o yaml
 ```
 
 The status for each HTTPRoute should surface "Accepted=True" and a `parentRef` that references the example Gateway.
-The `example-route` matches any traffic for "example.com" and forwards it to the "example-svc" Service. Before testing
-HTTP routing to the `example-svc` backend, get the Gateway's address.
+The `example-route` matches any traffic for "example.com" and forwards it to the "example-svc" Service.
+
+## Testing the Configuration
+
+Before testing HTTP routing to the `example-svc` backend, get the Gateway's address.
 
 ```shell
 export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')

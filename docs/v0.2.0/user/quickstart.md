@@ -6,7 +6,7 @@ This guide will help you get started with Envoy Gateway in a few simple steps.
 
 A Kubernetes cluster.
 
-__Note:__ Envoy Gateway is tested against Kubernetes v1.24.0.
+__Note:__ Refer to the [Compatibility Matrix](../intro/compatibility.rst) for supported Kubernetes versions.
 
 ## Installation
 
