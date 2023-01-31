@@ -103,23 +103,12 @@ spec:
                                 x-kubernetes-list-map-keys:
                                 - name
                                 x-kubernetes-list-type: map
-                              sourceIP:
-                                description: SourceIP defines the match attributes
-                                  for source IP addresses from “X-Forwarded-For“ header.
-                                properties:
-                                  ipv4MaskLen:
-                                    description: Ipv4MaskLen is the mask length for
-                                      IPv4 addresses. Defaults to 32.
-                                    type: integer
-                                  ipv6MaskLen:
-                                    description: Ipv6MaskLen is the mask length for
-                                      IPv6 addresses. Defaults to 128.
-                                    type: integer
-                                  value:
-                                    description: Value of source IP. For example,
-                                      “192.168.0.1/32" or “2001:db8::/64".
-                                    type: string
-                                type: object
+                              sourceIPCIDR:
+                                description: SourceIPCIDR defines the match attributes
+                                  for masked source IP addresses from `X-Forwarded-For`
+                                  header. For example, `192.168.0.1/32`, `192.168.0.0/24`,
+                                  `001:db8::/64`.
+                                type: string
                             type: object
                           maxItems: 8
                           type: array
