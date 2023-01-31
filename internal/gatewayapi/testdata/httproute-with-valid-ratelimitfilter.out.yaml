@@ -85,6 +85,8 @@ xdsIR:
             - headerMatches:
               - name: "x-user-id"
                 exact: "one"
+              - name: "x-org-id"
+                distinct: true
               limit:
                 requests: 10
                 unit: Hour
