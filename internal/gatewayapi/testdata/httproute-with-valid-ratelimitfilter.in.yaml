@@ -54,6 +54,8 @@ rateLimitFilters:
         - headers:
           - name: x-user-id
             value: one
+          - name: x-org-id
+            type: Distinct
         limit:
           requests: 10
           unit: Hour

@@ -681,7 +681,7 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 									SafeRegex: header.Value,
 								}
 								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-							case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value == nil:
+							case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
 								m := &ir.StringMatch{
 									Name:     header.Name,
 									Distinct: true,
