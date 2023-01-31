@@ -11,3 +11,7 @@ Learn about the internal details of Envoy Gateway.
   design/watching
   design/config-api
   design/tcp-udp-design
+  design/egctl
+  design/ratelimit
+  design/request-authentication
+  

@@ -10,6 +10,9 @@ extensions = [
     'myst_parser',
 ]
 
+autosectionlabel_prefix_document = True
+myst_heading_anchors = 3
+
 html_theme = 'alabaster'
 
 # The master toctree document.

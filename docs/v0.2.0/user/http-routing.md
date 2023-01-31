@@ -132,4 +132,4 @@ traffic was routed to the foo backend service.
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
-[spec]: /references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteSpec
+[spec]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteSpec

@@ -8,8 +8,6 @@ This document guides maintainers through the process of creating an Envoy Gatewa
 
 - Permissions to push to the Envoy Gateway repository.
 
-### Set Environment Variables
-
 Set environment variables for use in subsequent steps:
 
 ```shell
@@ -75,11 +73,11 @@ If you find any bugs in this process, please create an issue.
 
 ## Creating a Release Candidate
 
-### Prerequisites
+### RC Prerequisites
 
 - Permissions to push to the Envoy Gateway repository.
 
-### Set Environment Variables
+Set environment variables for use in subsequent steps:
 
 ```shell
 export MAJOR_VERSION=0
