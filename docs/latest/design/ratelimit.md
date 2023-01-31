@@ -180,8 +180,7 @@ spec:
   global:
     rules:
     - clientSelectors:
-      - sourceIP:
-          value: x.x.x.x/32
+      - sourceIP: x.x.x.x/32
       limit:
         requests: 10
         unit: Hour

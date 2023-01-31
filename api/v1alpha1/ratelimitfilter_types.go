@@ -100,22 +100,10 @@ type RateLimitSelectCondition struct {
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
-	// SourceIP defines the match attributes for source IP addresses from “X-Forwarded-For“ header.
+	// SourceIPCIDR defines the match attributes for masked source IP addresses from “X-Forwarded-For“ header.
+	// For example, “192.168.0.1/32", “192.168.0.0/24", “2001:db8::/64".
 	// +optional
-	SourceIP *SourceIPMatch `json:"sourceIP,omitempty"`
-}
-
-// SourceIPMatch defines the match attributes for source IP addresses from “X-Forwarded-For“ header.
-type SourceIPMatch struct {
-	// Ipv4MaskLen is the mask length for IPv4 addresses.
-	// Defaults to 32.
-	Ipv4MaskLen int `json:"ipv4MaskLen,omitempty"`
-	// Ipv6MaskLen is the mask length for IPv6 addresses.
-	// Defaults to 128.
-	Ipv6MaskLen int `json:"ipv6MaskLen,omitempty"`
-	// Value of source IP. For example, “192.168.0.1/32" or “2001:db8::/64".
-	// +optional
-	Value *string `json:"value,omitempty"`
+	SourceIPCIDR *string `json:"sourceIPCIDR,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
