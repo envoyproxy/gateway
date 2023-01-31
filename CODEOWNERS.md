@@ -1,4 +1,4 @@
-# Contributors
+# Maintainers
 
-## The following owners, listed in alphabetical order, own everything.
+## The following maintainers, listed in alphabetical order, own everything.
 *       @AliceProxy @arkodg @danehans @skriss @Xunzhuo @youngnick @zirain
