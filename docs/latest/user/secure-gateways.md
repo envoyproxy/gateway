@@ -35,7 +35,7 @@ Store the cert/key in a Secret:
 kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
 ```
 
-Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `8443` and references the
+Update the Gateway from the Quickstart guide to include an HTTPS listener that listens on port `443` and references the
 `example-cert` Secret:
 
 ```shell
@@ -45,7 +45,7 @@ kubectl patch gateway eg --type=json --patch '[{
    "value": {
       "name": "https",
       "protocol": "HTTPS",
-      "port": 8443,
+      "port": 443,
       "tls": {
         "mode": "Terminate",
         "certificateRefs": [{
@@ -77,14 +77,14 @@ export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gatewa
 Port forward to the Envoy service:
 
 ```shell
-kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8043:8443 &
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8443:443 &
 ```
 
 Query the example app through Envoy proxy:
 
 ```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:8043:127.0.0.1" \
---cacert example.com.crt https://www.example.com:8043/get
+curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
+--cacert example.com.crt https://www.example.com:8443/get
 ```
 
 ### Clusters with External LoadBalancer Support
@@ -98,8 +98,8 @@ export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].
 Query the example app through the Gateway:
 
 ```shell
-curl -v -HHost:www.example.com --resolve "www.example.com:8443:${GATEWAY_HOST}" \
---cacert example.com.crt https://www.example.com:8443/get
+curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
+--cacert example.com.crt https://www.example.com/get
 ```
 
 ## Multiple HTTPS Listeners
@@ -126,7 +126,7 @@ kubectl patch gateway eg --type=json --patch '[{
    "value": {
       "name": "https-foo",
       "protocol": "HTTPS",
-      "port": 8443,
+      "port": 443,
       "hostname": "foo.example.com",
       "tls": {
         "mode": "Terminate",
@@ -219,10 +219,10 @@ spec:
   listeners:
     - name: http
       protocol: HTTP
-      port: 8080
+      port: 80
     - name: https
       protocol: HTTPS
-      port: 8443
+      port: 443
       tls:
         mode: Terminate
         certificateRefs:

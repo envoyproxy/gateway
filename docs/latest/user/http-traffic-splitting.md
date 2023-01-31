@@ -54,14 +54,14 @@ example app should indicate which pod handled the request. There is only one pod
 from the quickstart, so it will be the same on all subsequent requests.
 
 ```console
-$ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
+$ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
 ...
 > GET /get HTTP/1.1
 > Host: backends.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > add-header: something
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -69,7 +69,7 @@ $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 ...
  "namespace": "default",
  "ingress": "",
@@ -178,14 +178,14 @@ example app that indicates which pod handled the request should switch between t
 new deployment on subsequent requests.
 
 ```console
-$ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
+$ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
 ...
 > GET /get HTTP/1.1
 > Host: backends.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > add-header: something
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -193,7 +193,7 @@ $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 ...
  "namespace": "default",
  "ingress": "",
@@ -294,12 +294,12 @@ EOF
 Querying `backends.example/get` should result in `200` responses 80% of the time, and `500` responses 20% of the time.
 
 ```console
-$ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}:8080/get"
+$ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
 > GET /get HTTP/1.1
 > Host: backends.example
 > User-Agent: curl/7.81.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 500 Internal Server Error
 < server: envoy

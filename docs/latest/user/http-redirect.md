@@ -35,7 +35,7 @@ spec:
           scheme: https
           statusCode: 301
           hostname: www.example.com
-          port: 8443
+          port: 443
       backendRefs:
       - name: backend
         port: 3000
@@ -60,10 +60,10 @@ Querying `redirect.example/get` should result in a `301` response from the examp
 configured redirect hostname.
 
 ```console
-$ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}:8080/get"
+$ curl -L -vvv --header "Host: redirect.example" "http://${GATEWAY_HOST}/get"
 ...
 < HTTP/1.1 301 Moved Permanently
-< location: https://www.example.com:8443/get
+< location: https://www.example.com/get
 ...
 ```
 
@@ -116,7 +116,7 @@ containing the configured redirect path.
 Query the `path.redirect.example` host:
 
 ```shell
-curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}:8080/get"
+curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}/get"
 ```
 
 You should receive a `302` with a redirect location of `http://path.redirect.example/status/200`.

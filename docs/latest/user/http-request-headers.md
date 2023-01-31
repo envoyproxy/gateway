@@ -70,14 +70,14 @@ example app should indicate that the upstream example app received the header `a
 `something,foo`
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" --header "add-header: something"
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --header "add-header: something"
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > add-header: something
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -85,7 +85,7 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 ...
  "headers": {
   "Accept": [
@@ -141,14 +141,14 @@ example app should indicate that the upstream example app received the header `a
 `something` replaced by `foo`.
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" --header "set-header: something"
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --header "set-header: something"
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > add-header: something
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -156,7 +156,7 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-<  
+<
  "headers": {
   "Accept": [
    "*/*"
@@ -210,14 +210,14 @@ example app should indicate that the upstream example app received the header `a
 `remove-header` that was sent by curl was removed before the upstream received the request.
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" --header "add-header: something" --header "remove-header: foo"
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" --header "add-header: something" --header "remove-header: foo"
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > add-header: something
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -225,8 +225,8 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
- 
+<
+
  "headers": {
   "Accept": [
    "*/*"

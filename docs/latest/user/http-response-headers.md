@@ -67,14 +67,14 @@ Querying `headers.example/get` should result in a `200` response from the exampl
 example app should indicate that the downstream client received the header `add-header` with the value: `foo`
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -H 'X-Echo-Set-Header: X-Foo: value1'
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" -H 'X-Echo-Set-Header: X-Foo: value1'
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > X-Echo-Set-Header: X-Foo: value1
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -84,7 +84,7 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < server: envoy
 < x-foo: value1
 < add-header: foo
-< 
+<
 ...
  "headers": {
   "Accept": [
@@ -139,14 +139,14 @@ example app should indicate that the downstream client received the header `set-
 replaced by `foo`.
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -H 'X-Echo-Set-Header: set-header: value1'
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" -H 'X-Echo-Set-Header: set-header: value1'
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
 > User-Agent: curl/7.81.0
 > Accept: */*
 > X-Echo-Set-Header: set-header: value1
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -209,7 +209,7 @@ example app should indicate that the header `remove-header` that was sent by cur
 received the response.
 
 ```console
-$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -H 'X-Echo-Set-Header: remove-header: value1'
+$ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}/get" -H 'X-Echo-Set-Header: remove-header: value1'
 ...
 > GET /get HTTP/1.1
 > Host: headers.example
@@ -224,8 +224,8 @@ $ curl -vvv --header "Host: headers.example" "http://${GATEWAY_HOST}:8080/get" -
 < content-length: 474
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
- 
+<
+
  "headers": {
   "Accept": [
    "*/*"

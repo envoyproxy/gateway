@@ -11,7 +11,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 ## Rewrite URL Prefix Path
 
 You can configure to rewrite the prefix in the url like below. In this example, any curls to
-`http://${GATEWAY_HOST}:8080/get/xxx` will be rewritten to `http://${GATEWAY_HOST}:8080/replace/xxx`.
+`http://${GATEWAY_HOST}/get/xxx` will be rewritten to `http://${GATEWAY_HOST}/replace/xxx`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -52,17 +52,17 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Querying `http://${GATEWAY_HOST}:8080/get/origin/path` should rewrite to
-`http://${GATEWAY_HOST}:8080/replace/origin/path`.
+Querying `http://${GATEWAY_HOST}/get/origin/path` should rewrite to
+`http://${GATEWAY_HOST}/replace/origin/path`.
 
 ```console
-$ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:8080/get/origin/path"
+$ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}/get/origin/path"
 ...
 > GET /get/origin/path HTTP/1.1
 > Host: path.rewrite.example
 > User-Agent: curl/7.85.0
 > Accept: */*
-> 
+>
 
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -71,7 +71,7 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:808
 < content-length: 503
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 {
  "path": "/replace/origin/path",
  "host": "path.rewrite.example",
@@ -109,8 +109,8 @@ You can see that the `X-Envoy-Original-Path` is `/get/origin/path`, but the actu
 ## Rewrite URL Full Path
 
 You can configure to rewrite the fullpath in the url like below. In this example, any request sent to
-`http://${GATEWAY_HOST}:8080/get/origin/path/xxxx` will be rewritten to
-`http://${GATEWAY_HOST}:8080/force/replace/fullpath`.
+`http://${GATEWAY_HOST}/get/origin/path/xxxx` will be rewritten to
+`http://${GATEWAY_HOST}/force/replace/fullpath`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -146,17 +146,17 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-url-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}:8080/get/origin/path/extra` should rewrite the request to
-`http://${GATEWAY_HOST}:8080/force/replace/fullpath`.
+Querying `http://${GATEWAY_HOST}/get/origin/path/extra` should rewrite the request to
+`http://${GATEWAY_HOST}/force/replace/fullpath`.
 
 ```console
-$ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:8080/get/origin/path/extra"
+$ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}/get/origin/path/extra"
 ...
 > GET /get/origin/path/extra HTTP/1.1
 > Host: path.rewrite.example
 > User-Agent: curl/7.85.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -165,7 +165,7 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:808
 < content-length: 512
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 {
  "path": "/force/replace/fullpath",
  "host": "path.rewrite.example",
@@ -204,7 +204,7 @@ You can see that the `X-Envoy-Original-Path` is `/get/origin/path/extra`, but th
 ## Rewrite Host Name
 
 You can configure to rewrite the hostname like below. In this example, any requests sent to
-`http://${GATEWAY_HOST}:8080/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
+`http://${GATEWAY_HOST}/get` with `--header "Host: path.rewrite.example"` will rewrite host into `envoygateway.io`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -238,17 +238,17 @@ The HTTPRoute status should indicate that it has been accepted and is bound to t
 kubectl get httproute/http-filter-url-rewrite -o yaml
 ```
 
-Querying `http://${GATEWAY_HOST}:8080/get` with `--header "Host: path.rewrite.example"` will rewrite host into
+Querying `http://${GATEWAY_HOST}/get` with `--header "Host: path.rewrite.example"` will rewrite host into
 `envoygateway.io`.
 
 ```console
-$ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:8080/get"
+$ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}/get"
 ...
 > GET /get HTTP/1.1
 > Host: path.rewrite.example
 > User-Agent: curl/7.85.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < content-type: application/json
@@ -257,7 +257,7 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}:808
 < content-length: 481
 < x-envoy-upstream-service-time: 0
 < server: envoy
-< 
+<
 {
  "path": "/get",
  "host": "envoygateway.io",
