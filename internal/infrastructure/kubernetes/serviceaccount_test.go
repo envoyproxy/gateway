@@ -25,7 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestExpectedServiceAccount(t *testing.T) {
+func TestExpectedProxyServiceAccount(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
@@ -34,17 +34,17 @@ func TestExpectedServiceAccount(t *testing.T) {
 
 	// An infra without Gateway owner labels should trigger
 	// an error.
-	_, err = kube.expectedServiceAccount(infra)
+	_, err = kube.expectedProxyServiceAccount(infra)
 	require.NotNil(t, err)
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	sa, err := kube.expectedServiceAccount(infra)
+	sa, err := kube.expectedProxyServiceAccount(infra)
 	require.NoError(t, err)
 
 	// Check the serviceaccount name is as expected.
-	assert.Equal(t, sa.Name, expectedServiceAccountName(infra.Proxy.Name))
+	assert.Equal(t, sa.Name, expectedProxyServiceAccountName(infra.Proxy.Name))
 
 	wantLabels := envoyAppLabel()
 	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
@@ -52,7 +52,7 @@ func TestExpectedServiceAccount(t *testing.T) {
 	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, sa.Labels))
 }
 
-func TestCreateOrUpdateServiceAccount(t *testing.T) {
+func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 	testCases := []struct {
 		name    string
 		ns      string
@@ -194,13 +194,13 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateServiceAccount(context.Background(), tc.in)
+			err := kube.createOrUpdateProxyServiceAccount(context.Background(), tc.in)
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      expectedServiceAccountName(tc.in.Proxy.Name),
+					Name:      expectedProxyServiceAccountName(tc.in.Proxy.Name),
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
@@ -211,7 +211,7 @@ func TestCreateOrUpdateServiceAccount(t *testing.T) {
 	}
 }
 
-func TestDeleteServiceAccount(t *testing.T) {
+func TestDeleteProxyServiceAccount(t *testing.T) {
 	testCases := []struct {
 		name   string
 		expect bool
@@ -230,7 +230,7 @@ func TestDeleteServiceAccount(t *testing.T) {
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-			err := kube.deleteServiceAccount(context.Background(), infra)
+			err := kube.deleteProxyServiceAccount(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

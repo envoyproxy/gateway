@@ -32,8 +32,8 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	}
 }
 
-// CreateOrUpdateInfra creates the managed kube infra, if it doesn't exist.
-func (i *Infra) CreateOrUpdateInfra(ctx context.Context, infra *ir.Infra) error {
+// CreateOrUpdateProxyInfra creates the managed kube infra, if it doesn't exist.
+func (i *Infra) CreateOrUpdateProxyInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}
@@ -42,44 +42,44 @@ func (i *Infra) CreateOrUpdateInfra(ctx context.Context, infra *ir.Infra) error 
 		return errors.New("infra proxy ir is nil")
 	}
 
-	if err := i.createOrUpdateServiceAccount(ctx, infra); err != nil {
+	if err := i.createOrUpdateProxyServiceAccount(ctx, infra); err != nil {
 		return err
 	}
 
-	if _, err := i.createOrUpdateConfigMap(ctx, infra); err != nil {
+	if err := i.createOrUpdateProxyConfigMap(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.createOrUpdateDeployment(ctx, infra); err != nil {
+	if err := i.createOrUpdateProxyDeployment(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.createOrUpdateService(ctx, infra); err != nil {
+	if err := i.createOrUpdateProxyService(ctx, infra); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// DeleteInfra removes the managed kube infra, if it doesn't exist.
-func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
+// DeleteProxyInfra removes the managed kube infra, if it doesn't exist.
+func (i *Infra) DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error {
 	if infra == nil {
 		return errors.New("infra ir is nil")
 	}
 
-	if err := i.deleteService(ctx, infra); err != nil {
+	if err := i.deleteProxyService(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.deleteDeployment(ctx, infra); err != nil {
+	if err := i.deleteProxyDeployment(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.deleteConfigMap(ctx, infra); err != nil {
+	if err := i.deleteProxyConfigMap(ctx, infra); err != nil {
 		return err
 	}
 
-	if err := i.deleteServiceAccount(ctx, infra); err != nil {
+	if err := i.deleteProxyServiceAccount(ctx, infra); err != nil {
 		return err
 	}
 
@@ -88,12 +88,50 @@ func (i *Infra) DeleteInfra(ctx context.Context, infra *ir.Infra) error {
 
 // CreateOrUpdateRateLimitInfra creates the managed kube rate limit infra, if it doesn't exist.
 func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
-	// TODO
+	if infra == nil {
+		return errors.New("ratelimit infra ir is nil")
+	}
+
+	if err := i.deleteRateLimitService(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.deleteRateLimitDeployment(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.deleteRateLimitConfigMap(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.deleteRateLimitServiceAccount(ctx, infra); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
-	// TODO
+	if infra == nil {
+		return errors.New("ratelimit infra ir is nil")
+	}
+	if err := i.createOrUpdateRateLimitServiceAccount(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.createOrUpdateRateLimitConfigMap(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.createOrUpdateRateLimitDeployment(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.createOrUpdateRateLimitService(ctx, infra); err != nil {
+		return err
+	}
+
 	return nil
+
 }

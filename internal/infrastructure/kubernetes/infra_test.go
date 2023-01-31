@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestCreateInfra(t *testing.T) {
+func TestCreateProxyInfra(t *testing.T) {
 	// Infra with Gateway owner labels.
 	infraWithLabels := ir.NewInfra()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = envoyAppLabel()
@@ -66,7 +66,7 @@ func TestCreateInfra(t *testing.T) {
 				Namespace: "default",
 			}
 			// Create or update the proxy infra.
-			err := kube.CreateOrUpdateInfra(context.Background(), tc.in)
+			err := kube.CreateOrUpdateProxyInfra(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)
 			} else {
@@ -76,7 +76,7 @@ func TestCreateInfra(t *testing.T) {
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedServiceAccountName(tc.in.Proxy.Name),
+						Name:      expectedProxyServiceAccountName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
@@ -84,7 +84,7 @@ func TestCreateInfra(t *testing.T) {
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedConfigMapName(tc.in.Proxy.Name),
+						Name:      expectedProxyConfigMapName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
@@ -92,7 +92,7 @@ func TestCreateInfra(t *testing.T) {
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedDeploymentName(tc.in.Proxy.Name),
+						Name:      expectedProxyDeploymentName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
@@ -100,7 +100,7 @@ func TestCreateInfra(t *testing.T) {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedServiceName(tc.in.Proxy.Name),
+						Name:      expectedProxyServiceName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))
@@ -109,7 +109,7 @@ func TestCreateInfra(t *testing.T) {
 	}
 }
 
-func TestDeleteInfra(t *testing.T) {
+func TestDeleteProxyInfra(t *testing.T) {
 	testCases := []struct {
 		name   string
 		in     *ir.Infra
@@ -134,7 +134,7 @@ func TestDeleteInfra(t *testing.T) {
 			kube := &Infra{
 				Client: fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 			}
-			err := kube.DeleteInfra(context.Background(), tc.in)
+			err := kube.DeleteProxyInfra(context.Background(), tc.in)
 			if !tc.expect {
 				require.Error(t, err)
 			} else {

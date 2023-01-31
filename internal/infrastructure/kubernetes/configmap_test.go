@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -22,7 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestExpectedConfigMap(t *testing.T) {
+func TestExpectedProxyConfigMap(t *testing.T) {
 	// Setup the infra.
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	cfg, err := config.New()
@@ -35,13 +36,13 @@ func TestExpectedConfigMap(t *testing.T) {
 
 	// An infra without Gateway owner labels should trigger
 	// an error.
-	_, err = kube.expectedConfigMap(infra)
+	_, err = kube.expectedProxyConfigMap(infra)
 	require.NotNil(t, err)
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-	cm, err := kube.expectedConfigMap(infra)
+	cm, err := kube.expectedProxyConfigMap(infra)
 	require.NoError(t, err)
 
 	require.Equal(t, "envoy-test-74657374", cm.Name)
@@ -57,7 +58,7 @@ func TestExpectedConfigMap(t *testing.T) {
 	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, cm.Labels))
 }
 
-func TestCreateOrUpdateConfigMap(t *testing.T) {
+func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	kube := NewInfra(nil, cfg)
@@ -123,17 +124,22 @@ func TestCreateOrUpdateConfigMap(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			cm, err := kube.createOrUpdateConfigMap(context.Background(), infra)
+			err := kube.createOrUpdateProxyConfigMap(context.Background(), infra)
 			require.NoError(t, err)
-			require.Equal(t, tc.expect.Namespace, cm.Namespace)
-			require.Equal(t, tc.expect.Name, cm.Name)
-			assert.True(t, apiequality.Semantic.DeepEqual(tc.expect.Labels, cm.Labels))
-			require.Equal(t, tc.expect.Data, cm.Data)
+			actual := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: tc.expect.Namespace,
+					Name:      tc.expect.Name,
+				},
+			}
+			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+			require.Equal(t, tc.expect.Data, actual.Data)
+			assert.True(t, apiequality.Semantic.DeepEqual(tc.expect.Labels, actual.Labels))
 		})
 	}
 }
 
-func TestDeleteConfigMap(t *testing.T) {
+func TestDeleteConfigProxyMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
@@ -173,7 +179,7 @@ func TestDeleteConfigMap(t *testing.T) {
 			t.Parallel()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
-			err := kube.deleteConfigMap(context.Background(), infra)
+			err := kube.deleteProxyConfigMap(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

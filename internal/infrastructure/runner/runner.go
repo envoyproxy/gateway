@@ -41,25 +41,29 @@ func (r *Runner) Start(ctx context.Context) error {
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 	}
-	go r.subscribeToInfraIR(ctx)
-	go r.subscribeToRateLimitInfraIR(ctx)
+	go r.subscribeToProxyInfraIR(ctx)
+
+	// subscribe to rate limit infra IR if ratelimit has been enabled in the config.
+	if r.EnvoyGateway.RateLimit != nil {
+		go r.subscribeToRateLimitInfraIR(ctx)
+	}
 	r.Logger.Info("started")
 	return nil
 }
 
-func (r *Runner) subscribeToInfraIR(ctx context.Context) {
+func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
 	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra]) {
 			val := update.Value
 
 			if update.Delete {
-				if err := r.mgr.DeleteInfra(ctx, val); err != nil {
+				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to delete infra")
 				}
 			} else {
 				// Manage the proxy infra.
-				if err := r.mgr.CreateOrUpdateInfra(ctx, val); err != nil {
+				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
 				}
 			}

@@ -66,7 +66,7 @@ func checkServiceHasLabels(t *testing.T, svc *corev1.Service, expected map[strin
 	t.Errorf("service has unexpected %q labels", svc.Labels)
 }
 
-func TestDesiredService(t *testing.T) {
+func TestDesiredProxyService(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
@@ -88,11 +88,11 @@ func TestDesiredService(t *testing.T) {
 			ContainerPort: 2443,
 		},
 	}
-	svc, err := kube.expectedService(infra)
+	svc, err := kube.expectedProxyService(infra)
 	require.NoError(t, err)
 
 	// Check the service name is as expected.
-	assert.Equal(t, svc.Name, expectedDeploymentName(infra.Proxy.Name))
+	assert.Equal(t, svc.Name, expectedProxyDeploymentName(infra.Proxy.Name))
 
 	checkServiceHasPort(t, svc, 80)
 	checkServiceHasPort(t, svc, 443)
@@ -110,7 +110,7 @@ func TestDesiredService(t *testing.T) {
 	}
 }
 
-func TestDeleteService(t *testing.T) {
+func TestDeleteProxyService(t *testing.T) {
 	testCases := []struct {
 		name string
 	}{
@@ -127,7 +127,7 @@ func TestDeleteService(t *testing.T) {
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-			err := kube.deleteService(context.Background(), infra)
+			err := kube.deleteProxyService(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}
