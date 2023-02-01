@@ -20,9 +20,14 @@ import (
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
+const (
+	yamlOutput = "yaml"
+)
+
 func NewVersionsCommand() *cobra.Command {
 	var (
-		output string
+		output          string
+		egContainerName string
 	)
 
 	versionCommand := &cobra.Command{
@@ -30,14 +35,15 @@ func NewVersionsCommand() *cobra.Command {
 		Aliases: []string{"version"},
 		Short:   "Show versions",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return versions(cmd.OutOrStdout(), output)
+			return versions(cmd.OutOrStdout(), egContainerName, output)
 		},
 	}
 
 	flags := versionCommand.Flags()
 	options.AddKubeConfigFlags(flags)
 
-	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", "yaml", "One of 'yaml' or 'json'")
+	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
+	versionCommand.PersistentFlags().StringVar(&egContainerName, "eg-container-name", "envoy-gateway", "Name of the Envoy Gateway container")
 
 	return versionCommand
 }
@@ -54,7 +60,7 @@ func Get() VersionInfo {
 	}
 }
 
-func versions(w io.Writer, output string) error {
+func versions(w io.Writer, containerName, output string) error {
 	v := Get()
 
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
@@ -72,7 +78,7 @@ func versions(w io.Writer, output string) error {
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
 		}
-		stdout, _, err := c.PodExec(nn, "envoy-gateway", "envoy-gateway version -ojson")
+		stdout, _, err := c.PodExec(nn, containerName, "envoy-gateway version -ojson")
 		if err != nil {
 			return fmt.Errorf("pod exec on %s failed: %w", nn, err)
 		}
@@ -87,7 +93,7 @@ func versions(w io.Writer, output string) error {
 
 	var out []byte
 	switch output {
-	case "yaml":
+	case yamlOutput:
 		out, err = yaml.Marshal(v)
 	default:
 		out, err = json.MarshalIndent(v, "", "  ")
