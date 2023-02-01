@@ -12,30 +12,18 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
-	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-)
 
-// GatewayScheme returns a scheme will all known gateway-related types added
-var (
-	GatewayScheme = gatewayScheme()
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
-
-func gatewayScheme() *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	utilruntime.Must(kubescheme.AddToScheme(scheme))
-	utilruntime.Must(apiextv1.AddToScheme(scheme))
-	return scheme
-}
 
 type CLIClient interface {
 	// RESTConfig returns the Kubernetes rest.Config used to configure the clients.
@@ -103,7 +91,7 @@ func setRestDefaults(config *rest.Config) *rest.Config {
 		// This codec factory ensures the resources are not converted. Therefore, resources
 		// will not be round-tripped through internal versions. Defaulting does not happen
 		// on the client.
-		config.NegotiatedSerializer = serializer.NewCodecFactory(GatewayScheme).WithoutConversion()
+		config.NegotiatedSerializer = serializer.NewCodecFactory(envoygateway.GetScheme()).WithoutConversion()
 	}
 
 	return config
