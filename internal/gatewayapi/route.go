@@ -138,6 +138,19 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext,
 func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule v1beta1.HTTPRouteRule) []*ir.HTTPRoute {
 	var ruleRoutes []*ir.HTTPRoute
 
+	// If no matches are specified, the default is a prefix
+	// path match on "/", which has the effect of matching every
+	// HTTP request.
+	if len(rule.Matches) == 0 {
+		irRoute := &ir.HTTPRoute{
+			Name: routeName(httpRoute, ruleIdx, -1),
+			PathMatch: &ir.StringMatch{
+				Prefix: StringPtr("/"),
+			},
+		}
+		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		ruleRoutes = append(ruleRoutes, irRoute)
+	}
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
@@ -197,43 +210,45 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				Exact: StringPtr(string(*match.Method)),
 			})
 		}
-
-		// Add the redirect filter or direct response that were created earlier to all the irRoutes
-		if httpFiltersContext.RedirectResponse != nil {
-			irRoute.Redirect = httpFiltersContext.RedirectResponse
-		}
-		if httpFiltersContext.DirectResponse != nil {
-			irRoute.DirectResponse = httpFiltersContext.DirectResponse
-		}
-		if httpFiltersContext.URLRewrite != nil {
-			irRoute.URLRewrite = httpFiltersContext.URLRewrite
-		}
-		if len(httpFiltersContext.AddRequestHeaders) > 0 {
-			irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
-		}
-		if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
-			irRoute.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
-		}
-		if len(httpFiltersContext.AddResponseHeaders) > 0 {
-			irRoute.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
-		}
-		if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
-			irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
-		}
-		if len(httpFiltersContext.Mirrors) > 0 {
-			irRoute.Mirrors = httpFiltersContext.Mirrors
-		}
-		if httpFiltersContext.RequestAuthentication != nil {
-			irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
-		}
-		if httpFiltersContext.RateLimit != nil {
-			irRoute.RateLimit = httpFiltersContext.RateLimit
-		}
-
+		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
-
 	return ruleRoutes
+}
+
+func applyHTTPFiltersContexttoIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
+	// Add the redirect filter or direct response that were created earlier to all the irRoutes
+	if httpFiltersContext.RedirectResponse != nil {
+		irRoute.Redirect = httpFiltersContext.RedirectResponse
+	}
+	if httpFiltersContext.DirectResponse != nil {
+		irRoute.DirectResponse = httpFiltersContext.DirectResponse
+	}
+	if httpFiltersContext.URLRewrite != nil {
+		irRoute.URLRewrite = httpFiltersContext.URLRewrite
+	}
+	if len(httpFiltersContext.AddRequestHeaders) > 0 {
+		irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
+	}
+	if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
+		irRoute.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
+	}
+	if len(httpFiltersContext.AddResponseHeaders) > 0 {
+		irRoute.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
+	}
+	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
+		irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
+	}
+	if len(httpFiltersContext.Mirrors) > 0 {
+		irRoute.Mirrors = httpFiltersContext.Mirrors
+	}
+	if httpFiltersContext.RequestAuthentication != nil {
+		irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
+	}
+	if httpFiltersContext.RateLimit != nil {
+		irRoute.RateLimit = httpFiltersContext.RateLimit
+	}
+
 }
 
 func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
