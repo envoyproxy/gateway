@@ -288,6 +288,7 @@ func GetService(nsname types.NamespacedName, labels map[string]string, ports map
 // provided ns/name. The AuthenticationFilter uses a JWT provider with dummy issuer,
 // audiences, and remoteJWKS settings.
 func GetAuthenticationFilter(name, ns string) *egv1a1.AuthenticationFilter {
+	provider := GetAuthenticationProvider("test")
 	return &egv1a1.AuthenticationFilter{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       egv1a1.KindAuthenticationFilter,
@@ -298,23 +299,27 @@ func GetAuthenticationFilter(name, ns string) *egv1a1.AuthenticationFilter {
 			Name:      name,
 		},
 		Spec: egv1a1.AuthenticationFilterSpec{
-			Type: egv1a1.JwtAuthenticationFilterProviderType,
-			JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
-				{
-					Name:      "test",
-					Issuer:    "https://www.test.local",
-					Audiences: []string{"test.local"},
-					RemoteJWKS: egv1a1.RemoteJWKS{
-						URI: "https://test.local/jwt/public-key/jwks.json",
-					},
-				},
-			},
+			Type:         egv1a1.JwtAuthenticationFilterProviderType,
+			JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{provider},
+		},
+	}
+}
+
+// GetAuthenticationProvider returns a JwtAuthenticationFilterProvider using the provided name.
+func GetAuthenticationProvider(name string) egv1a1.JwtAuthenticationFilterProvider {
+	return egv1a1.JwtAuthenticationFilterProvider{
+		Name:      name,
+		Issuer:    "https://www.test.local",
+		Audiences: []string{"test.local"},
+		RemoteJWKS: egv1a1.RemoteJWKS{
+			URI: "https://test.local/jwt/public-key/jwks.json",
 		},
 	}
 }
 
 // GetRateLimitFilter returns a pointer to an RateLimitFilter with dummy rules.
 func GetRateLimitFilter(name, ns string) *egv1a1.RateLimitFilter {
+	rule := GetRateLimitGlobalRule("one")
 	return &egv1a1.RateLimitFilter{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       egv1a1.KindRateLimitFilter,
@@ -327,25 +332,29 @@ func GetRateLimitFilter(name, ns string) *egv1a1.RateLimitFilter {
 		Spec: egv1a1.RateLimitFilterSpec{
 			Type: egv1a1.GlobalRateLimitType,
 			Global: &egv1a1.GlobalRateLimit{
-				Rules: []egv1a1.RateLimitRule{
+				Rules: []egv1a1.RateLimitRule{rule},
+			},
+		},
+	}
+}
+
+// GetRateLimitGlobalRule returns a RateLimitRule using the val as the ClientSelectors
+// headers value.
+func GetRateLimitGlobalRule(val string) egv1a1.RateLimitRule {
+	return egv1a1.RateLimitRule{
+		ClientSelectors: []egv1a1.RateLimitSelectCondition{
+			{
+				Headers: []egv1a1.HeaderMatch{
 					{
-						ClientSelectors: []egv1a1.RateLimitSelectCondition{
-							{
-								Headers: []egv1a1.HeaderMatch{
-									{
-										Name:  "x-user-id",
-										Value: gatewayapi.StringPtr("one"),
-									},
-								},
-							},
-						},
-						Limit: egv1a1.RateLimitValue{
-							Requests: 5,
-							Unit:     "Second",
-						},
+						Name:  "x-user-id",
+						Value: gatewayapi.StringPtr(val),
 					},
 				},
 			},
+		},
+		Limit: egv1a1.RateLimitValue{
+			Requests: 5,
+			Unit:     "Second",
 		},
 	}
 }
