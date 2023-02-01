@@ -80,12 +80,12 @@ func versions(w io.Writer, containerName, output string) error {
 		}
 		stdout, _, err := c.PodExec(nn, containerName, "envoy-gateway version -ojson")
 		if err != nil {
-			return fmt.Errorf("pod exec on %s failed: %w", nn, err)
+			return fmt.Errorf("pod exec on %s/%s failed: %w", nn.Namespace, nn.Name, err)
 		}
 
 		info := &version.Info{}
 		if err := json.Unmarshal([]byte(stdout), info); err != nil {
-			return fmt.Errorf("unmarshall pod %s exec result failed: %w", nn, err)
+			return fmt.Errorf("unmarshall pod %s/%s exec result failed: %w", nn.Namespace, nn.Name, err)
 		}
 
 		v.ServerVersions[nn.String()] = info

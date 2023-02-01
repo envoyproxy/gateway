@@ -115,11 +115,11 @@ func (c *client) PodExec(namespacedName types.NamespacedName, container string, 
 	defer func() {
 		if err != nil {
 			if len(stderr) > 0 {
-				err = fmt.Errorf("error exec into %s container %s: %v\n%s",
-					namespacedName, container, err, stderr)
+				err = fmt.Errorf("error exec into %s/%s container %s: %v\n%s",
+					namespacedName.Namespace, namespacedName.Name, container, err, stderr)
 			} else {
-				err = fmt.Errorf("error exec into %s container %s: %v",
-					namespacedName, container, err)
+				err = fmt.Errorf("error exec into %s/%s container %s: %v",
+					namespacedName.Namespace, namespacedName.Name, container, err)
 			}
 		}
 	}()
