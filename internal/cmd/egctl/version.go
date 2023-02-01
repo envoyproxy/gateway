@@ -60,13 +60,13 @@ func versions(w io.Writer, remote bool, output string) error {
 
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
-		return fmt.Errorf("build CLI client fail: %w", err)
+		return fmt.Errorf("failed to build kubernete client: %w", err)
 	}
 
 	if remote {
 		pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
 		if err != nil {
-			return fmt.Errorf("list EG pods fail: %w", err)
+			return fmt.Errorf("list EG pods failed: %w", err)
 		}
 
 		for _, pod := range pods.Items {
@@ -76,12 +76,12 @@ func versions(w io.Writer, remote bool, output string) error {
 			}
 			stdout, _, err := c.PodExec(nn, "envoy-gateway", "envoy-gateway version -ojson")
 			if err != nil {
-				return fmt.Errorf("pod exec on %s fail: %w", nn, err)
+				return fmt.Errorf("pod exec on %s failed: %w", nn, err)
 			}
 
 			info := &version.Info{}
 			if err := json.Unmarshal([]byte(stdout), info); err != nil {
-				return fmt.Errorf("unmarshall pod %s exec result fail: %w", nn, err)
+				return fmt.Errorf("unmarshall pod %s exec result failed: %w", nn, err)
 			}
 
 			v.ServerVersions[nn.String()] = info

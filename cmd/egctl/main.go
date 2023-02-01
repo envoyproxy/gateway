@@ -24,7 +24,7 @@ func main() {
 func rootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:               "egctl",
-		Long:              "Envoy Gateway configuration command line utility for operators to debug and diagnose their gateway",
+		Long:              "A command line utility for operating Envoy Gateway",
 		SilenceUsage:      true,
 		DisableAutoGenTag: true,
 	}
