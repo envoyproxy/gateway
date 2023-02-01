@@ -65,7 +65,7 @@ func versions(w io.Writer, containerName, output string) error {
 
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
-		return fmt.Errorf("failed to build kubernete client: %w", err)
+		return fmt.Errorf("failed to build kubernetes client: %w", err)
 	}
 
 	pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
