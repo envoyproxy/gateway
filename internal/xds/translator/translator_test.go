@@ -108,6 +108,18 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "ratelimit",
 		},
+		{
+			name: "authn-single-route-single-match",
+		},
+		{
+			name: "authn-multi-route-single-provider",
+		},
+		{
+			name: "authn-multi-route-multi-provider",
+		},
+		{
+			name: "authn-ratelimit",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -117,6 +117,10 @@ xdsIR:
               issuer: https://www.test2.local
               remoteJWKS:
                 uri: https://test2.local/jwt/public-key/jwks.json
+            - name: test3
+              issuer: https://www.test3.local
+              remoteJWKS:
+                uri: https://test3.local/jwt/public-key/jwks.json
         destinations:
         - host: 7.7.7.7
           port: 8080

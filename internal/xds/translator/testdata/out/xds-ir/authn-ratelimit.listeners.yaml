@@ -1,0 +1,69 @@
+- accessLog:
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /dev/stdout
+  address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        accessLog:
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/stdout
+        httpFilters:
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              first-route-example:
+                audiences:
+                - foo.com
+                issuer: https://www.example.com
+                payloadInMetadata: https://www.example.com
+                remoteJwks:
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 5s
+                    uri: https://localhost/jwt/public-key/jwks.json
+            requirementMap:
+              first-route:
+                providerName: first-route-example
+        - name: envoy.filters.http.ratelimit
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
+            domain: first-listener
+            rateLimitService:
+              grpcService:
+                envoyGrpc:
+                  clusterName: ratelimit_cluster
+              transportApiVersion: V3
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        rds:
+          configSource:
+            apiConfigSource:
+              apiType: DELTA_GRPC
+              grpcServices:
+              - envoyGrpc:
+                  clusterName: xds_cluster
+              setNodeOnFirstMessageOnly: true
+              transportApiVersion: V3
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        statPrefix: http
+        upgradeConfigs:
+        - upgradeType: websocket
+  name: first-listener

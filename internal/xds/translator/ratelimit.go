@@ -29,23 +29,22 @@ import (
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
-func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) {
 	// Return early if rate limits dont exist
 	if !isRateLimitPresent(irListener) {
-		return nil
+		return
 	}
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
 		if httpFilter.Name == wkt.HTTPRateLimit {
-			return nil
+			return
 		}
 	}
 
 	rateLimitFilter := buildRateLimitFilter(irListener)
-	// Make sure the router filter is the terminal filter in the chain
+	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcm.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
-	return nil
 }
 
 // isRateLimitPresent returns true if rate limit config exists for the listener.

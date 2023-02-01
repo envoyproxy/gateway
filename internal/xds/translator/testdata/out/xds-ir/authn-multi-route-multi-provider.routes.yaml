@@ -1,0 +1,22 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        path: foo/bar
+      route:
+        cluster: first-route-www.test.com
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: first-route-www.test.com
+    - match:
+        path: foo/baz
+      route:
+        cluster: second-route-www.test.com
+      typedPerFilterConfig:
+        envoy.filters.http.jwt_authn:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+          requirementName: second-route-www.test.com

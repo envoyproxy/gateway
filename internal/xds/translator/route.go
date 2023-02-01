@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -16,7 +17,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listener.Listener) *routev3.Route {
 	router := &routev3.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}
@@ -64,8 +65,14 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 		}
 	}
 
-	// TODO: convert this into a generic interface for API Gateway features
+	// TODO: Convert this into a generic interface for API Gateway features.
+	//       https://github.com/envoyproxy/gateway/issues/882
 	if err := patchRouteWithRateLimit(router.GetRoute(), httpRoute); err != nil {
+		return nil
+	}
+
+	// Add the jwt per route config to the route, if needed.
+	if err := patchRouteWithJwtConfig(router, httpRoute, listener); err != nil {
 		return nil
 	}
 

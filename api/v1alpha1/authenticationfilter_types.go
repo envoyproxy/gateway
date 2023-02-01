@@ -66,12 +66,17 @@ type JwtAuthenticationFilterProvider struct {
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name"`
 
-	// Issuer is the principal that issued the JWT.	For additional details, see:
+	// Issuer is the principal that issued the JWT and takes the form of a URL or email address.
+	// For additional details, see:
 	//
-	//   https://tools.ietf.org/html/rfc7519#section-4.1.1
+	//   URL format: https://tools.ietf.org/html/rfc7519#section-4.1.1
+	//   Email format: https://rfc-editor.org/rfc/rfc5322.html
 	//
-	// Example:
+	// URL Example:
 	//  issuer: https://auth.example.com
+	//
+	// Email Example:
+	//  issuer: jdoe@example.com
 	//
 	// If not provided, the JWT issuer is not checked.
 	//
@@ -104,8 +109,8 @@ type JwtAuthenticationFilterProvider struct {
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
 // HTTP/HTTPS endpoint.
 type RemoteJWKS struct {
-	// URI is the HTTP/HTTPS URI to fetch the JWKS. When using an HTTPS endpoint,
-	// Envoy's system trust bundle is used to validate the server certificate.
+	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to
+	// validate the server certificate.
 	//
 	// Example:
 	//  uri: https://www.foo.com/oauth2/v1/certs
