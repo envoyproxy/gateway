@@ -604,23 +604,30 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 
 			require.Eventually(t, func() bool {
 				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok && len(res.HTTPRoutes) != 0
+				return ok &&
+					len(res.HTTPRoutes) != 0 &&
+					assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
 			}, defaultWait, defaultTick)
-			res, _ := resources.GatewayAPIResources.Load("ratelimit-test")
-			assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
 
 			// Ensure the RateLimitFilter is in the resource map.
 			require.Eventually(t, func() bool {
 				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				if !ok {
-					return false
-				}
-				if len(res.RateLimitFilters) == 0 {
-					return false
-				}
-				return true
+				return ok &&
+					len(res.RateLimitFilters) != 0 &&
+					assert.Equal(t, rateLimitFilter.Spec, res.RateLimitFilters[0].Spec)
 			}, defaultWait, defaultTick)
-			assert.Equal(t, rateLimitFilter.Spec, res.RateLimitFilters[0].Spec)
+
+			// Update the rate limit filter.
+			rateLimitFilter.Spec.Global.Rules = append(rateLimitFilter.Spec.Global.Rules, test.GetRateLimitGlobalRule("two"))
+			require.NoError(t, cli.Update(ctx, rateLimitFilter))
+
+			// Ensure the RateLimitFilter in the resource map has been updated.
+			require.Eventually(t, func() bool {
+				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
+				return ok &&
+					len(res.RateLimitFilters) != 0 &&
+					assert.Equal(t, 2, len(res.RateLimitFilters[0].Spec.Global.Rules))
+			}, defaultWait, defaultTick)
 		})
 	}
 }
@@ -773,23 +780,30 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 
 			require.Eventually(t, func() bool {
 				res, ok := resources.GatewayAPIResources.Load("authen-test")
-				return ok && len(res.HTTPRoutes) != 0
+				return ok &&
+					len(res.HTTPRoutes) != 0 &&
+					assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
 			}, defaultWait, defaultTick)
-			res, _ := resources.GatewayAPIResources.Load("authen-test")
-			assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
 
 			// Ensure the AuthenticationFilter is in the resource map.
 			require.Eventually(t, func() bool {
 				res, ok := resources.GatewayAPIResources.Load("authen-test")
-				if !ok {
-					return false
-				}
-				if len(res.AuthenticationFilters) == 0 {
-					return false
-				}
-				return true
+				return ok &&
+					len(res.AuthenticationFilters) != 0 &&
+					assert.Equal(t, authenFilter.Spec, res.AuthenticationFilters[0].Spec)
 			}, defaultWait, defaultTick)
-			assert.Equal(t, authenFilter.Spec, res.AuthenticationFilters[0].Spec)
+
+			// Update the authn filter.
+			authenFilter.Spec.JwtProviders = append(authenFilter.Spec.JwtProviders, test.GetAuthenticationProvider("test2"))
+			require.NoError(t, cli.Update(ctx, authenFilter))
+
+			// Ensure the AuthenticationFilter in the resource map has been updated.
+			require.Eventually(t, func() bool {
+				res, ok := resources.GatewayAPIResources.Load("authen-test")
+				return ok &&
+					len(res.AuthenticationFilters) != 0 &&
+					assert.Equal(t, 2, len(res.AuthenticationFilters[0].Spec.JwtProviders))
+			}, defaultWait, defaultTick)
 		})
 	}
 }

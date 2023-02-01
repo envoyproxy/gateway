@@ -208,7 +208,23 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
 	return fmt.Errorf("unsupported filter type: %v", filter.Type)
 }
 
-// ValidateGRPCPRouteFilter validates the provided filter within GRPCRoute.
+// IsAuthnHTTPFilter returns true if the provided filter is an AuthenticationFilter.
+func IsAuthnHTTPFilter(filter *v1beta1.HTTPRouteFilter) bool {
+	return filter.Type == v1beta1.HTTPRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
+}
+
+// IsRateLimitHTTPFilter returns true if the provided filter is a RateLimitFilter.
+func IsRateLimitHTTPFilter(filter *v1beta1.HTTPRouteFilter) bool {
+	return filter.Type == v1beta1.HTTPRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter
+}
+
+// ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
 func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 	switch {
 	case filter == nil:

@@ -507,8 +507,8 @@ func authenFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	for _, rule := range httproute.Spec.Rules {
 		for i := range rule.Filters {
 			filter := rule.Filters[i]
-			if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef && string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+			if gatewayapi.IsAuthnHTTPFilter(&filter) {
+				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
 					filters = append(filters,
 						types.NamespacedName{
 							Namespace: httproute.Namespace,
@@ -528,8 +528,8 @@ func rateLimitFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	for _, rule := range httproute.Spec.Rules {
 		for i := range rule.Filters {
 			filter := rule.Filters[i]
-			if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef && string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+			if gatewayapi.IsRateLimitHTTPFilter(&filter) {
+				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
 					filters = append(filters,
 						types.NamespacedName{
 							Namespace: httproute.Namespace,
