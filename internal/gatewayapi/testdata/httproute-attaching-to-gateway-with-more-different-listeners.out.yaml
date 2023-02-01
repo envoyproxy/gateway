@@ -69,8 +69,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -81,8 +82,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -93,8 +95,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -105,8 +108,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -117,8 +121,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -129,8 +134,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -141,8 +147,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -153,8 +160,9 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
+              #- group: gateway.networking.k8s.io
+              #kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
             - type: Programmed
