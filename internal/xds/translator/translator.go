@@ -98,7 +98,7 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute := buildXdsRoute(httpRoute)
+			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
@@ -121,7 +121,8 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
 
-		// TODO: Make this into a generic interface for API Gateway features
+		// TODO: Make this into a generic interface for API Gateway features.
+		//       https://github.com/envoyproxy/gateway/issues/882
 		// Check if a ratelimit cluster exists, if not, add it, if its needed.
 		// This is current O(n) right now, but it also leverages an existing
 		// object without allocating new memory. Consider improving it in the future.
@@ -131,6 +132,11 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 			if rlCluster != nil {
 				tCtx.AddXdsResource(resource.ClusterType, rlCluster)
 			}
+		}
+
+		// Create authn jwks clusters, if needed.
+		if err := createJwksClusters(tCtx, httpListener.Routes); err != nil {
+			return err
 		}
 	}
 	return nil

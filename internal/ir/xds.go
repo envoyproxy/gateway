@@ -360,11 +360,8 @@ func (h HTTPRoute) Validate() error {
 func (j *JwtRequestAuthentication) Validate() error {
 	var errs error
 
-	for i := range j.Providers {
-		provider := j.Providers[i]
-		if err := validation.ValidateJwtProvider(&provider); err != nil {
-			errs = multierror.Append(errs, err)
-		}
+	if err := validation.ValidateJwtProviders(j.Providers); err != nil {
+		errs = multierror.Append(errs, err)
 	}
 
 	return errs

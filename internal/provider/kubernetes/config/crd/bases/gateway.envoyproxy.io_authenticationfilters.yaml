@@ -55,10 +55,13 @@ spec:
                       maxItems: 8
                       type: array
                     issuer:
-                      description: "Issuer is the principal that issued the JWT.\tFor
-                        additional details, see: \n https://tools.ietf.org/html/rfc7519#section-4.1.1
-                        \n Example: issuer: https://auth.example.com \n If not provided,
-                        the JWT issuer is not checked."
+                      description: "Issuer is the principal that issued the JWT and
+                        takes the form of a URL or email address. For additional details,
+                        see: \n URL format: https://tools.ietf.org/html/rfc7519#section-4.1.1
+                        Email format: https://rfc-editor.org/rfc/rfc5322.html \n URL
+                        Example: issuer: https://auth.example.com \n Email Example:
+                        issuer: jdoe@example.com \n If not provided, the JWT issuer
+                        is not checked."
                       maxLength: 253
                       type: string
                     name:
@@ -73,10 +76,9 @@ spec:
                         Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
                       properties:
                         uri:
-                          description: "URI is the HTTP/HTTPS URI to fetch the JWKS.
-                            When using an HTTPS endpoint, Envoy's system trust bundle
-                            is used to validate the server certificate. \n Example:
-                            uri: https://www.foo.com/oauth2/v1/certs"
+                          description: "URI is the HTTPS URI to fetch the JWKS. Envoy's
+                            system trust bundle is used to validate the server certificate.
+                            \n Example: uri: https://www.foo.com/oauth2/v1/certs"
                           maxLength: 253
                           minLength: 1
                           type: string

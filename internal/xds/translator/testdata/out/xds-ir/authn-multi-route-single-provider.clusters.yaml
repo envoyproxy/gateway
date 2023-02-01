@@ -1,0 +1,61 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: first-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: first-route
+  outlierDetection: {}
+  type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: second-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 5.6.7.8
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: second-route
+  outlierDetection: {}
+  type: STATIC
+- connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  http2ProtocolOptions: {}
+  lbPolicy: RANDOM
+  loadAssignment:
+    clusterName: localhost_443
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 127.0.0.1
+              portValue: 443
+  name: localhost_443
+  respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        validationContext:
+          trustedCa:
+            filename: /etc/ssl/certs/ca-certificates.crt
+  type: STATIC

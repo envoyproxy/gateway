@@ -1,0 +1,103 @@
+- accessLog:
+  - filter:
+      responseFlagFilter:
+        flags:
+        - NR
+    name: envoy.access_loggers.file
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+      path: /dev/stdout
+  address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        accessLog:
+        - name: envoy.access_loggers.file
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/stdout
+        httpFilters:
+        - name: envoy.filters.http.jwt_authn
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+            providers:
+              first-route-www.test.com-example:
+                audiences:
+                - foo.com
+                issuer: https://www.example.com
+                payloadInMetadata: https://www.example.com
+                remoteJwks:
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 5s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              first-route-www.test.com-example2:
+                audiences:
+                - one.foo.com
+                - two.foo.com
+                issuer: https://www.two.example.com
+                payloadInMetadata: https://www.two.example.com
+                remoteJwks:
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_8080
+                    timeout: 5s
+                    uri: https://localhost:8080/jwt/public-key/jwks.json
+              second-route-www.test.com-example:
+                audiences:
+                - foo.com
+                issuer: https://www.example.com
+                payloadInMetadata: https://www.example.com
+                remoteJwks:
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_443
+                    timeout: 5s
+                    uri: https://localhost/jwt/public-key/jwks.json
+              second-route-www.test.com-example2:
+                audiences:
+                - one.foo.com
+                - two.foo.com
+                issuer: https://www.two.example.com
+                payloadInMetadata: https://www.two.example.com
+                remoteJwks:
+                  cacheDuration: 300s
+                  httpUri:
+                    cluster: localhost_8080
+                    timeout: 5s
+                    uri: https://localhost:8080/jwt/public-key/jwks.json
+            requirementMap:
+              first-route-www.test.com:
+                requiresAny:
+                  requirements:
+                  - providerName: first-route-www.test.com-example
+                  - providerName: first-route-www.test.com-example2
+              second-route-www.test.com:
+                requiresAny:
+                  requirements:
+                  - providerName: second-route-www.test.com-example
+                  - providerName: second-route-www.test.com-example2
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        rds:
+          configSource:
+            apiConfigSource:
+              apiType: DELTA_GRPC
+              grpcServices:
+              - envoyGrpc:
+                  clusterName: xds_cluster
+              setNodeOnFirstMessageOnly: true
+              transportApiVersion: V3
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        statPrefix: http
+        upgradeConfigs:
+        - upgradeType: websocket
+  name: first-listener

@@ -26,7 +26,7 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "valid authentication filter",
+			name: "valid authentication filter with url",
 			filter: &egv1a1.AuthenticationFilter{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       egv1a1.KindAuthenticationFilter,
@@ -53,6 +53,60 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "valid authentication filter with email",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "test",
+							Issuer:    "test@test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "unqualified authentication provider name",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "unqualified_...",
+							Issuer:    "https://www.test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
 			name: "unspecified provider name",
 			filter: &egv1a1.AuthenticationFilter{
 				TypeMeta: metav1.TypeMeta{
@@ -68,6 +122,49 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
 						{
 							Name:      "",
+							Issuer:    "https://www.test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "non unique provider names",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "unique",
+							Issuer:    "https://www.test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+						},
+						{
+							Name:      "non-unique",
+							Issuer:    "https://www.test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+						},
+						{
+							Name:      "non-unique",
 							Issuer:    "https://www.test.local",
 							Audiences: []string{"test.local"},
 							RemoteJWKS: egv1a1.RemoteJWKS{
@@ -99,6 +196,33 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 							Audiences: []string{"test.local"},
 							RemoteJWKS: egv1a1.RemoteJWKS{
 								URI: "http://www.test.local",
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "inivalid issuer email",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "test",
+							Issuer:    "test@!123...",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
 							},
 						},
 					},
