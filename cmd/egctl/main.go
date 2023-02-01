@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/envoyproxy/gateway/internal/ctl/app"
+	"github.com/envoyproxy/gateway/internal/cmd/egctl"
 )
 
 func main() {
@@ -29,7 +29,7 @@ func rootCommand() *cobra.Command {
 		DisableAutoGenTag: true,
 	}
 
-	rootCmd.AddCommand(app.NewVersionsCommand())
+	rootCmd.AddCommand(egctl.NewVersionsCommand())
 
 	return rootCmd
 }
