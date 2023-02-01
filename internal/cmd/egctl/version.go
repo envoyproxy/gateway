@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +32,8 @@ func NewVersionsCommand() *cobra.Command {
 	)
 
 	versionCommand := &cobra.Command{
-		Use:     "versions",
-		Aliases: []string{"version"},
+		Use:     "version",
+		Aliases: []string{"versions", "v"},
 		Short:   "Show versions",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return versions(cmd.OutOrStdout(), egContainerName, output)
@@ -49,14 +50,19 @@ func NewVersionsCommand() *cobra.Command {
 }
 
 type VersionInfo struct {
-	ClientVersion  string                   `json:"client"`
-	ServerVersions map[string]*version.Info `json:"servers,omitempty"`
+	ClientVersion  string           `json:"client"`
+	ServerVersions []*ServerVersion `json:"server,omitempty"`
+}
+
+type ServerVersion struct {
+	types.NamespacedName
+	version.Info
 }
 
 func Get() VersionInfo {
 	return VersionInfo{
 		ClientVersion:  version.Get().EnvoyGatewayVersion,
-		ServerVersions: map[string]*version.Info{},
+		ServerVersions: make([]*ServerVersion, 0),
 	}
 }
 
@@ -88,8 +94,19 @@ func versions(w io.Writer, containerName, output string) error {
 			return fmt.Errorf("unmarshall pod %s/%s exec result failed: %w", nn.Namespace, nn.Name, err)
 		}
 
-		v.ServerVersions[nn.String()] = info
+		v.ServerVersions = append(v.ServerVersions, &ServerVersion{
+			NamespacedName: nn,
+			Info:           *info,
+		})
 	}
+
+	sort.Slice(v.ServerVersions, func(i, j int) bool {
+		if v.ServerVersions[i].Namespace == v.ServerVersions[j].Namespace {
+			return v.ServerVersions[i].Name < v.ServerVersions[j].Name
+		}
+
+		return v.ServerVersions[i].Namespace < v.ServerVersions[j].Namespace
+	})
 
 	var out []byte
 	switch output {
