@@ -17,7 +17,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	"github.com/envoyproxy/gateway/internal/cmd/version"
-	"github.com/envoyproxy/gateway/internal/utils/kube"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 func NewVersionsCommand() *cobra.Command {
