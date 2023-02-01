@@ -103,9 +103,8 @@ spec:
                                 x-kubernetes-list-map-keys:
                                 - name
                                 x-kubernetes-list-type: map
-                              sourceIPCIDR:
-                                description: SourceIPCIDR defines the match attributes
-                                  for masked source IP addresses from `X-Forwarded-For`
+                              sourceIP:
+                                description: SourceIP is IP CIDR from `X-Forwarded-For`
                                   header. For example, `192.168.0.1/32`, `192.168.0.0/24`,
                                   `001:db8::/64`.
                                 type: string

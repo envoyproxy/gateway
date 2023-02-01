@@ -100,10 +100,10 @@ type RateLimitSelectCondition struct {
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
-	// SourceIPCIDR defines the match attributes for masked source IP addresses from `X-Forwarded-For` header.
+	// SourceIP is IP CIDR from `X-Forwarded-For` header.
 	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
 	// +optional
-	SourceIPCIDR *string `json:"sourceIPCIDR,omitempty"`
+	SourceIP *string `json:"sourceIP,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
