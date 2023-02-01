@@ -281,7 +281,6 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if !parentRef.IsAccepted(grpcRoute) {
 			continue
 		}
-
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -486,6 +485,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		irKey := irStringKey(listener.gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
+			if route.GetRouteType() == KindGRPCRoute {
+				irListener.IsHTTP2 = true
+			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
 		// Theoretically there should only be one parent ref per
