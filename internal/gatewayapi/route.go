@@ -175,6 +175,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
+
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
@@ -237,6 +238,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
+
 	return ruleRoutes
 }
 
@@ -360,6 +362,15 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule v1alpha2.GRPCRouteRule) []*ir.HTTPRoute {
 	var ruleRoutes []*ir.HTTPRoute
 
+	// If no matches are specified, the implementation MUST match every gRPC request.
+	if len(rule.Matches) == 0 {
+		irRoute := &ir.HTTPRoute{
+			Name: routeName(grpcRoute, ruleIdx, -1),
+		}
+		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		ruleRoutes = append(ruleRoutes, irRoute)
+	}
+
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
@@ -396,34 +407,12 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 			*/
 		}
 
-		// Add the redirect filter or direct response that were created earlier to all the irRoutes
-		if httpFiltersContext.RedirectResponse != nil {
-			irRoute.Redirect = httpFiltersContext.RedirectResponse
-		}
-		if httpFiltersContext.DirectResponse != nil {
-			irRoute.DirectResponse = httpFiltersContext.DirectResponse
-		}
-		if len(httpFiltersContext.AddRequestHeaders) > 0 {
-			irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
-		}
-		if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
-			irRoute.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
-		}
-		if len(httpFiltersContext.AddResponseHeaders) > 0 {
-			irRoute.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
-		}
-		if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
-			irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
-		}
-		if len(httpFiltersContext.Mirrors) > 0 {
-			irRoute.Mirrors = httpFiltersContext.Mirrors
-		}
-
 		ruleRoutes = append(ruleRoutes, irRoute)
+		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 	}
-
 	return ruleRoutes
 }
+
 func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
 	var hasHostnameIntersection bool
 

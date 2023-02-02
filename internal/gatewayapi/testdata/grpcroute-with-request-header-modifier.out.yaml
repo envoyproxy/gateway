@@ -40,12 +40,7 @@ grpcRoutes:
       name: gateway-1
       sectionName: http
     rules:
-    - matches:
-      - headers:
-        - type: Exact
-          name: magic
-          value: foo            
-      filters:
+    - filters:
       - type: RequestHeaderModifier
         requestHeaderModifier:
           add:
@@ -76,10 +71,7 @@ xdsIR:
       - "*"
       isHTTP2: true  
       routes:
-      - name: default-grpcroute-1-rule-0-match-0-*
-        headerMatches:
-        - name: "magic"       
-          exact: "foo"        
+      - name: default-grpcroute-1-rule-0-match--1-*
         addRequestHeaders:
         - name: "my-header"       
           value: "foo"
