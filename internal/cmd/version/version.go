@@ -20,7 +20,7 @@ import (
 type Info struct {
 	EnvoyGatewayVersion string `json:"envoyGatewayVersion"`
 	GatewayAPIVersion   string `json:"gatewayAPIVersion"`
-	EnvoyVersion        string `json:"envoyVersion"`
+	EnvoyProxyVersion   string `json:"envoyProxyVersion"`
 	GitCommitID         string `json:"gitCommitID"`
 }
 
@@ -28,7 +28,7 @@ func Get() Info {
 	return Info{
 		EnvoyGatewayVersion: envoyGatewayVersion,
 		GatewayAPIVersion:   gatewayAPIVersion,
-		EnvoyVersion:        envoyVersion,
+		EnvoyProxyVersion:   envoyProxyVersion,
 		GitCommitID:         gitCommitID,
 	}
 }
@@ -36,7 +36,7 @@ func Get() Info {
 var (
 	envoyGatewayVersion string
 	gatewayAPIVersion   string
-	envoyVersion        = strings.Split(ir.DefaultProxyImage, ":")[1]
+	envoyProxyVersion   = strings.Split(ir.DefaultProxyImage, ":")[1]
 	gitCommitID         string
 )
 
@@ -65,7 +65,7 @@ func Print(w io.Writer, format string) error {
 		}
 	default:
 		_, _ = fmt.Fprintf(w, "ENVOY_GATEWAY_VERSION: %s\n", v.EnvoyGatewayVersion)
-		_, _ = fmt.Fprintf(w, "ENVOY_VERSION: %s\n", v.EnvoyVersion)
+		_, _ = fmt.Fprintf(w, "ENVOY_PROXY_VERSION: %s\n", v.EnvoyProxyVersion)
 		_, _ = fmt.Fprintf(w, "GATEWAYAPI_VERSION: %s\n", v.GatewayAPIVersion)
 		_, _ = fmt.Fprintf(w, "GIT_COMMIT_ID: %s\n", v.GitCommitID)
 	}
