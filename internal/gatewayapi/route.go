@@ -20,6 +20,7 @@ var _ RoutesTranslator = (*Translator)(nil)
 
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
+	ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
 	ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
@@ -48,6 +49,31 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 	}
 
 	return relevantHTTPRoutes
+}
+
+func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext {
+	var relevantGRPCRoutes []*GRPCRouteContext
+
+	for _, g := range grpcRoutes {
+		if g == nil {
+			panic("received nil httproute")
+		}
+		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
+
+		// Find out if this route attaches to one of our Gateway's listeners,
+		// and if so, get the list of listeners that allow it to attach for each
+		// parentRef.
+		relevantRoute := t.processAllowedListenersForParentRefs(grpcRoute, gateways, resources)
+		if !relevantRoute {
+			continue
+		}
+
+		relevantGRPCRoutes = append(relevantGRPCRoutes, grpcRoute)
+
+		t.processGRPCRouteParentRefs(grpcRoute, resources, xdsIR)
+	}
+
+	return relevantGRPCRoutes
 }
 
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *Resources, xdsIR XdsIRMap) {
@@ -85,9 +111,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	}
 }
 
-func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext,
-	parentRef *RouteParentContext,
-	resources *Resources) []*ir.HTTPRoute {
+func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
 	var routeRoutes []*ir.HTTPRoute
 
 	// compute matches, filters, backends
@@ -151,6 +175,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
+
 	// A rule is matched if any one of its matches
 	// is satisfied (i.e. a logical "OR"), so generate
 	// a unique Xds IR HTTPRoute per match.
@@ -213,6 +238,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
+
 	return ruleRoutes
 }
 
@@ -251,11 +277,147 @@ func applyHTTPFiltersContexttoIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 
 }
 
-func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
+func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
+	for _, parentRef := range grpcRoute.parentRefs {
+		// Skip parent refs that did not accept the route
+		if !parentRef.IsAccepted(grpcRoute) {
+			continue
+		}
+		// Need to compute Route rules within the parentRef loop because
+		// any conditions that come out of it have to go on each RouteParentStatus,
+		// not on the Route as a whole.
+		routeRoutes := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
+
+		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
+		if !hasHostnameIntersection {
+			parentRef.SetCondition(grpcRoute,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				v1beta1.RouteReasonNoMatchingListenerHostname,
+				"There were no hostname intersections between the GRPCRoute and this parent ref's Listener(s).",
+			)
+		}
+
+		// If no negative conditions have been set, the route is considered "Accepted=True".
+		if parentRef.grpcRoute != nil &&
+			len(parentRef.grpcRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+			parentRef.SetCondition(grpcRoute,
+				v1beta1.RouteConditionAccepted,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonAccepted,
+				"Route is accepted",
+			)
+		}
+	}
+}
+
+func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRef *RouteParentContext, resources *Resources) []*ir.HTTPRoute {
+	var routeRoutes []*ir.HTTPRoute
+
+	// compute matches, filters, backends
+	for ruleIdx, rule := range grpcRoute.Spec.Rules {
+		httpFiltersContext := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
+
+		// A rule is matched if any one of its matches
+		// is satisfied (i.e. a logical "OR"), so generate
+		// a unique Xds IR HTTPRoute per match.
+		var ruleRoutes = t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
+
+		for _, backendRef := range rule.BackendRefs {
+			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
+			for _, route := range ruleRoutes {
+				// If the route already has a direct response or redirect configured, then it was from a filter so skip
+				// processing any destinations for this route.
+				if route.DirectResponse == nil && route.Redirect == nil {
+					if destination != nil {
+						route.Destinations = append(route.Destinations, destination)
+						route.BackendWeights.Valid += backendWeight
+
+					} else {
+						route.BackendWeights.Invalid += backendWeight
+					}
+				}
+			}
+		}
+
+		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
+		for _, ruleRoute := range ruleRoutes {
+			if ruleRoute.BackendWeights.Invalid > 0 && len(ruleRoute.Destinations) == 0 {
+				ruleRoute.DirectResponse = &ir.DirectResponse{
+					StatusCode: 500,
+				}
+			}
+		}
+
+		// TODO handle:
+		//	- sum of weights for valid backend refs is 0
+		//	- etc.
+
+		routeRoutes = append(routeRoutes, ruleRoutes...)
+	}
+
+	return routeRoutes
+}
+
+func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule v1alpha2.GRPCRouteRule) []*ir.HTTPRoute {
+	var ruleRoutes []*ir.HTTPRoute
+
+	// If no matches are specified, the implementation MUST match every gRPC request.
+	if len(rule.Matches) == 0 {
+		irRoute := &ir.HTTPRoute{
+			Name: routeName(grpcRoute, ruleIdx, -1),
+		}
+		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		ruleRoutes = append(ruleRoutes, irRoute)
+	}
+
+	// A rule is matched if any one of its matches
+	// is satisfied (i.e. a logical "OR"), so generate
+	// a unique Xds IR HTTPRoute per match.
+	for matchIdx, match := range rule.Matches {
+		irRoute := &ir.HTTPRoute{
+			Name: routeName(grpcRoute, ruleIdx, matchIdx),
+		}
+
+		for _, headerMatch := range match.Headers {
+			switch HeaderMatchTypeDerefOr(headerMatch.Type, v1beta1.HeaderMatchExact) {
+			case v1beta1.HeaderMatchExact:
+				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+					Name:  string(headerMatch.Name),
+					Exact: StringPtr(headerMatch.Value),
+				})
+			case v1beta1.HeaderMatchRegularExpression:
+				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+					Name:      string(headerMatch.Name),
+					SafeRegex: StringPtr(headerMatch.Value),
+				})
+			}
+		}
+
+		if match.Method != nil {
+			if match.Method.Method != nil {
+				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+					Name:  ":method",
+					Exact: match.Method.Method,
+				})
+			}
+			/* TODO
+			if match.Method.Service != nil {
+			}
+			*/
+		}
+
+		ruleRoutes = append(ruleRoutes, irRoute)
+		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+	}
+	return ruleRoutes
+}
+
+func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
-		hosts := computeHosts(httpRoute.GetHostnames(), listener.Hostname)
+		hosts := computeHosts(route.GetHostnames(), listener.Hostname)
 		if len(hosts) == 0 {
 			continue
 		}
@@ -312,6 +474,9 @@ func (t *Translator) processHTTPRouteParentRefListener(httpRoute *HTTPRouteConte
 		irKey := irStringKey(listener.gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
+			if route.GetRouteType() == KindGRPCRoute {
+				irListener.IsHTTP2 = true
+			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
 		// Theoretically there should only be one parent ref per
@@ -703,7 +868,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 // the same proportion as the backend would have otherwise received
 func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 	parentRef *RouteParentContext,
-	httpRoute *HTTPRouteContext,
+	route RouteContext,
 	resources *Resources) (destination *ir.RouteDestination, backendWeight uint32) {
 
 	weight := uint32(1)
@@ -711,10 +876,10 @@ func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 		weight = uint32(*backendRef.Weight)
 	}
 
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
+	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if !t.validateBackendRef(&backendRef, parentRef, httpRoute, resources, serviceNamespace, KindHTTPRoute) {
+	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, KindHTTPRoute) {
 		return nil, weight
 	}
 

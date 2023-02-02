@@ -102,7 +102,9 @@ func (l *ListenerContext) AttachedRoutes() int32 {
 
 func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
-		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") && allowed.Kind == kind.Kind {
+		// Remove GRPCRoute check once https://github.com/envoyproxy/gateway/issues/950 is fixed
+		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
+			(allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
 			return true
 		}
 	}
@@ -166,6 +168,11 @@ type RouteContext interface {
 	// GetRouteParentContext returns RouteParentContext by using the Route
 	// objects' ParentReference.
 	GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext
+
+	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
+	// objects being implemented are of type v1beta1.
+	// GetHostnames returns the hosts targeted by the Route object.
+	GetHostnames() []string
 }
 
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
@@ -240,6 +247,91 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 		routeParentStatusIdx: routeParentStatusIdx,
 	}
 	h.parentRefs[forParentRef] = ctx
+	return ctx
+}
+
+// GRPCRouteContext wraps an GRPCRoute and provides helper methods for
+// accessing the route's parents.
+type GRPCRouteContext struct {
+	*v1alpha2.GRPCRoute
+
+	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+}
+
+func (g *GRPCRouteContext) GetRouteType() string {
+	return KindGRPCRoute
+}
+
+func (g *GRPCRouteContext) GetHostnames() []string {
+	hostnames := make([]string, len(g.Spec.Hostnames))
+	for idx, s := range g.Spec.Hostnames {
+		hostnames[idx] = string(s)
+	}
+	return hostnames
+}
+
+func (g *GRPCRouteContext) GetParentReferences() []v1beta1.ParentReference {
+	return g.Spec.ParentRefs
+}
+
+func (g *GRPCRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
+	return &g.Status.RouteStatus
+}
+
+func (g *GRPCRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
+	if g.parentRefs == nil {
+		g.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+	}
+
+	if ctx := g.parentRefs[forParentRef]; ctx != nil {
+		return ctx
+	}
+
+	var parentRef *v1beta1.ParentReference
+	for i, p := range g.Spec.ParentRefs {
+		p := UpgradeParentReference(p)
+		if reflect.DeepEqual(p, forParentRef) {
+			upgraded := UpgradeParentReference(g.Spec.ParentRefs[i])
+			parentRef = &upgraded
+			break
+		}
+	}
+	if parentRef == nil {
+		panic("parentRef not found")
+	}
+
+	routeParentStatusIdx := -1
+	for i := range g.Status.Parents {
+		p := UpgradeParentReference(g.Status.Parents[i].ParentRef)
+		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
+		if forParentRef.Namespace == nil {
+			forParentRef.Namespace = &defaultNamespace
+		}
+		if p.Namespace == nil {
+			p.Namespace = &defaultNamespace
+		}
+		if reflect.DeepEqual(p, forParentRef) {
+			routeParentStatusIdx = i
+			break
+		}
+	}
+	if routeParentStatusIdx == -1 {
+		rParentStatus := v1alpha2.RouteParentStatus{
+			// TODO: get this value from the config
+			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ParentRef:      DowngradeParentReference(forParentRef),
+		}
+		g.Status.Parents = append(g.Status.Parents, rParentStatus)
+		routeParentStatusIdx = len(g.Status.Parents) - 1
+	}
+
+	ctx := &RouteParentContext{
+		ParentReference: parentRef,
+
+		grpcRoute:            g.GRPCRoute,
+		routeParentStatusIdx: routeParentStatusIdx,
+	}
+	g.parentRefs[forParentRef] = ctx
 	return ctx
 }
 
@@ -413,6 +505,10 @@ func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	return ctx
 }
 
+func (u *UDPRouteContext) GetHostnames() []string {
+	return nil
+}
+
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
 // accessing the route's parents.
 type TCPRouteContext struct {
@@ -494,6 +590,10 @@ func (t *TCPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	return ctx
 }
 
+func (t *TCPRouteContext) GetHostnames() []string {
+	return nil
+}
+
 // RouteParentContext wraps a ParentReference and provides helper methods for
 // setting conditions and other status information on the associated
 // HTTPRoute, TLSRoute etc.
@@ -503,6 +603,7 @@ type RouteParentContext struct {
 	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
 	// a single field pointing to *v1beta1.RouteStatus.
 	httpRoute *v1beta1.HTTPRoute
+	grpcRoute *v1alpha2.GRPCRoute
 	tlsRoute  *v1alpha2.TLSRoute
 	tcpRoute  *v1alpha2.TCPRoute
 	udpRoute  *v1alpha2.UDPRoute

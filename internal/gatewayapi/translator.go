@@ -62,6 +62,7 @@ type Translator struct {
 type TranslateResult struct {
 	Gateways   []*v1beta1.Gateway
 	HTTPRoutes []*v1beta1.HTTPRoute
+	GRPCRoutes []*v1alpha2.GRPCRoute
 	TLSRoutes  []*v1alpha2.TLSRoute
 	TCPRoutes  []*v1alpha2.TCPRoute
 	UDPRoutes  []*v1alpha2.UDPRoute
@@ -70,8 +71,12 @@ type TranslateResult struct {
 }
 
 func newTranslateResult(gateways []*GatewayContext,
-	httpRoutes []*HTTPRouteContext, tlsRoutes []*TLSRouteContext, tcpRoutes []*TCPRouteContext, udpRoutes []*UDPRouteContext, xdsIR XdsIRMap,
-	infraIR InfraIRMap) *TranslateResult {
+	httpRoutes []*HTTPRouteContext,
+	grpcRoutes []*GRPCRouteContext,
+	tlsRoutes []*TLSRouteContext,
+	tcpRoutes []*TCPRouteContext,
+	udpRoutes []*UDPRouteContext,
+	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
 		InfraIR: infraIR,
@@ -82,6 +87,9 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 	for _, httpRoute := range httpRoutes {
 		translateResult.HTTPRoutes = append(translateResult.HTTPRoutes, httpRoute.HTTPRoute)
+	}
+	for _, grpcRoute := range grpcRoutes {
+		translateResult.GRPCRoutes = append(translateResult.GRPCRoutes, grpcRoute.GRPCRoute)
 	}
 	for _, tlsRoute := range tlsRoutes {
 		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
@@ -109,6 +117,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
 
+	// Process all relevant GRPCRoutes.
+	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, gateways, resources, xdsIR)
+
 	// Process all relevant TLSRoutes.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, gateways, resources, xdsIR)
 
@@ -121,7 +132,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

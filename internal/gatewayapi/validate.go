@@ -389,13 +389,19 @@ func (t *Translator) validateHostName(listener *ListenerContext) {
 	}
 }
 
-func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKind v1beta1.Kind) {
+func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKinds ...v1beta1.Kind) {
+	canSupportKinds := make([]v1beta1.RouteGroupKind, len(routeKinds))
+	for i, routeKind := range routeKinds {
+		canSupportKinds[i] = v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: routeKind}
+	}
 	if listener.AllowedRoutes == nil || len(listener.AllowedRoutes.Kinds) == 0 {
-		listener.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: routeKind})
+		listener.SetSupportedKinds(canSupportKinds...)
 		return
 	}
 
-	supportedKinds := make([]v1beta1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
+	supportedRouteKinds := make([]v1beta1.Kind, 0)
+	supportedKinds := make([]v1beta1.RouteGroupKind, 0)
+	unSupportedKinds := make([]v1beta1.RouteGroupKind, 0)
 
 	for _, kind := range listener.AllowedRoutes.Kinds {
 
@@ -410,17 +416,34 @@ func (t *Translator) validateAllowedRoutes(listener *ListenerContext, routeKind 
 			continue
 		}
 
-		if kind.Kind != routeKind {
-			listener.SetCondition(
-				v1beta1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
-				v1beta1.ListenerReasonInvalidRouteKinds,
-				fmt.Sprintf("%s is not supported, kind must be %s", kind.Kind, routeKind),
-			)
-			continue
+		found := false
+		for _, routeKind := range routeKinds {
+			if kind.Kind == routeKind {
+				supportedKinds = append(supportedKinds, kind)
+				supportedRouteKinds = append(supportedRouteKinds, kind.Kind)
+				found = true
+				break
+			}
 		}
 
-		supportedKinds = append(supportedKinds, kind)
+		if !found {
+			unSupportedKinds = append(unSupportedKinds, kind)
+		}
+	}
+
+	for _, kind := range unSupportedKinds {
+		var printRouteKinds []v1beta1.Kind
+		if len(supportedKinds) == 0 {
+			printRouteKinds = routeKinds
+		} else {
+			printRouteKinds = supportedRouteKinds
+		}
+		listener.SetCondition(
+			v1beta1.ListenerConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.ListenerReasonInvalidRouteKinds,
+			fmt.Sprintf("%s is not supported, kind must be one of %v", string(kind.Kind), printRouteKinds),
+		)
 	}
 
 	listener.SetSupportedKinds(supportedKinds...)

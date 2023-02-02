@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -23,25 +24,25 @@ type FiltersTranslator interface {
 var _ FiltersTranslator = (*Translator)(nil)
 
 type HTTPFiltersTranslator interface {
-	processURLRewriteFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
-	processRedirectFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
-	processRequestHeaderModifierFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
-	processResponseHeaderModifierFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
-	processRequestMirrorFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources)
-	processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources)
-	processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext)
+	processURLRewriteFilter(rewrite *v1beta1.HTTPURLRewriteFilter, filterContext *HTTPFiltersContext)
+	processRedirectFilter(redirect *v1beta1.HTTPRequestRedirectFilter, filterContext *HTTPFiltersContext)
+	processRequestHeaderModifierFilter(headerModifier *v1beta1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
+	processResponseHeaderModifierFilter(headerModifier *v1beta1.HTTPHeaderFilter, filterContext *HTTPFiltersContext)
+	processRequestMirrorFilter(mirror *v1beta1.HTTPRequestMirrorFilter, filterContext *HTTPFiltersContext, resources *Resources)
+	processExtensionRefHTTPFilter(extRef *v1beta1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *Resources)
+	processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext)
 }
 
 // HTTPFiltersContext is the context of http filters processing.
 type HTTPFiltersContext struct {
-	*HTTPFilterChains
+	*HTTPFilterIR
 
 	ParentRef *RouteParentContext
-	HTTPRoute *HTTPRouteContext
+	Route     RouteContext
 }
 
-// HTTPFilterChains contains the ir processing results.
-type HTTPFilterChains struct {
+// HTTPFilterIR contains the ir processing results.
+type HTTPFilterIR struct {
 	DirectResponse   *ir.DirectResponse
 	RedirectResponse *ir.Redirect
 
@@ -61,14 +62,13 @@ type HTTPFilterChains struct {
 
 // ProcessHTTPFilters translate gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
-	httpRoute *HTTPRouteContext,
+	route RouteContext,
 	filters []v1beta1.HTTPRouteFilter,
 	resources *Resources) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
-		ParentRef: parentRef,
-		HTTPRoute: httpRoute,
-
-		HTTPFilterChains: &HTTPFilterChains{},
+		ParentRef:    parentRef,
+		Route:        route,
+		HTTPFilterIR: &HTTPFilterIR{},
 	}
 
 	for i := range filters {
@@ -78,25 +78,63 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 			break
 		}
 		if err := ValidateHTTPRouteFilter(&filter); err != nil {
-			t.processInvalidHTTPFilter(filter, httpFiltersContext, err)
+			t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
 			break
 		}
 
 		switch filter.Type {
 		case v1beta1.HTTPRouteFilterURLRewrite:
-			t.processURLRewriteFilter(filter, httpFiltersContext)
+			t.processURLRewriteFilter(filter.URLRewrite, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterRequestRedirect:
-			t.processRedirectFilter(filter, httpFiltersContext)
+			t.processRedirectFilter(filter.RequestRedirect, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterRequestHeaderModifier:
-			t.processRequestHeaderModifierFilter(filter, httpFiltersContext)
+			t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterResponseHeaderModifier:
-			t.processResponseHeaderModifierFilter(filter, httpFiltersContext)
+			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterRequestMirror:
-			t.processRequestMirrorFilter(filter, httpFiltersContext, resources)
+			t.processRequestMirrorFilter(filter.RequestMirror, httpFiltersContext, resources)
 		case v1beta1.HTTPRouteFilterExtensionRef:
-			t.processExtensionRefHTTPFilter(filter, httpFiltersContext, resources)
+			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
-			t.processUnsupportedHTTPFilter(filter, httpFiltersContext)
+			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
+		}
+	}
+
+	return httpFiltersContext
+}
+
+// ProcessGRPCFilters translate gateway api grpc filters to IRs.
+func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
+	route RouteContext,
+	filters []v1alpha2.GRPCRouteFilter,
+	resources *Resources) *HTTPFiltersContext {
+	httpFiltersContext := &HTTPFiltersContext{
+		ParentRef: parentRef,
+		Route:     route,
+
+		HTTPFilterIR: &HTTPFilterIR{},
+	}
+
+	for i := range filters {
+		filter := filters[i]
+		// If an invalid filter type has been configured then skip processing any more filters
+		if httpFiltersContext.DirectResponse != nil {
+			break
+		}
+		if err := ValidateGRPCRouteFilter(&filter); err != nil {
+			t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
+			break
+		}
+
+		switch filter.Type {
+		case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+			t.processRequestHeaderModifierFilter(filter.RequestHeaderModifier, httpFiltersContext)
+		case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
+		case v1alpha2.GRPCRouteFilterRequestMirror:
+			t.processRequestMirrorFilter(filter.RequestMirror, httpFiltersContext, resources)
+		default:
+			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}
 	}
 
@@ -104,10 +142,10 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 }
 
 func (t *Translator) processURLRewriteFilter(
-	filter v1beta1.HTTPRouteFilter,
+	rewrite *v1beta1.HTTPURLRewriteFilter,
 	filterContext *HTTPFiltersContext) {
 	if filterContext.URLRewrite != nil {
-		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		filterContext.ParentRef.SetCondition(filterContext.Route,
 			v1beta1.RouteConditionAccepted,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonUnsupportedValue,
@@ -116,7 +154,6 @@ func (t *Translator) processURLRewriteFilter(
 		return
 	}
 
-	rewrite := filter.URLRewrite
 	if rewrite == nil {
 		return
 	}
@@ -125,7 +162,7 @@ func (t *Translator) processURLRewriteFilter(
 
 	if rewrite.Hostname != nil {
 		if err := t.validateHostname(string(*rewrite.Hostname)); err != nil {
-			filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			filterContext.ParentRef.SetCondition(filterContext.Route,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
@@ -142,7 +179,7 @@ func (t *Translator) processURLRewriteFilter(
 		case v1beta1.FullPathHTTPPathModifier:
 			if rewrite.Path.ReplacePrefixMatch != nil {
 				errMsg := "ReplacePrefixMatch cannot be set when rewrite path type is \"ReplaceFullPath\""
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -152,7 +189,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 			if rewrite.Path.ReplaceFullPath == nil {
 				errMsg := "ReplaceFullPath must be set when rewrite path type is \"ReplaceFullPath\""
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -168,7 +205,7 @@ func (t *Translator) processURLRewriteFilter(
 		case v1beta1.PrefixMatchHTTPPathModifier:
 			if rewrite.Path.ReplaceFullPath != nil {
 				errMsg := "ReplaceFullPath cannot be set when rewrite path type is \"ReplacePrefixMatch\""
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -178,7 +215,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 			if rewrite.Path.ReplacePrefixMatch == nil {
 				errMsg := "ReplacePrefixMatch must be set when rewrite path type is \"ReplacePrefixMatch\""
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -193,7 +230,7 @@ func (t *Translator) processURLRewriteFilter(
 			}
 		default:
 			errMsg := fmt.Sprintf("Rewrite path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", rewrite.Path.Type)
-			filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			filterContext.ParentRef.SetCondition(filterContext.Route,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
@@ -207,11 +244,11 @@ func (t *Translator) processURLRewriteFilter(
 }
 
 func (t *Translator) processRedirectFilter(
-	filter v1beta1.HTTPRouteFilter,
+	redirect *v1beta1.HTTPRequestRedirectFilter,
 	filterContext *HTTPFiltersContext) {
 	// Can't have two redirects for the same route
 	if filterContext.RedirectResponse != nil {
-		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		filterContext.ParentRef.SetCondition(filterContext.Route,
 			v1beta1.RouteConditionAccepted,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonUnsupportedValue,
@@ -220,7 +257,6 @@ func (t *Translator) processRedirectFilter(
 		return
 	}
 
-	redirect := filter.RequestRedirect
 	if redirect == nil {
 		return
 	}
@@ -233,7 +269,7 @@ func (t *Translator) processRedirectFilter(
 			redir.Scheme = redirect.Scheme
 		} else {
 			errMsg := fmt.Sprintf("Scheme: %s is unsupported, only 'https' and 'http' are supported", *redirect.Scheme)
-			filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			filterContext.ParentRef.SetCondition(filterContext.Route,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
@@ -245,7 +281,7 @@ func (t *Translator) processRedirectFilter(
 
 	if redirect.Hostname != nil {
 		if err := t.validateHostname(string(*redirect.Hostname)); err != nil {
-			filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			filterContext.ParentRef.SetCondition(filterContext.Route,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
@@ -273,7 +309,7 @@ func (t *Translator) processRedirectFilter(
 			}
 		default:
 			errMsg := fmt.Sprintf("Redirect path type: %s is invalid, only \"ReplaceFullPath\" and \"ReplacePrefixMatch\" are supported", redirect.Path.Type)
-			filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			filterContext.ParentRef.SetCondition(filterContext.Route,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
@@ -290,7 +326,7 @@ func (t *Translator) processRedirectFilter(
 			redir.StatusCode = &redirectCode
 		} else {
 			errMsg := fmt.Sprintf("Status code %d is invalid, only 302 and 301 are supported", redirectCode)
-			filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+			filterContext.ParentRef.SetCondition(filterContext.Route,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
@@ -309,10 +345,9 @@ func (t *Translator) processRedirectFilter(
 }
 
 func (t *Translator) processRequestHeaderModifierFilter(
-	filter v1beta1.HTTPRouteFilter,
+	headerModifier *v1beta1.HTTPHeaderFilter,
 	filterContext *HTTPFiltersContext) {
 	// Make sure the header modifier config actually exists
-	headerModifier := filter.RequestHeaderModifier
 	if headerModifier == nil {
 		return
 	}
@@ -326,7 +361,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		for _, addHeader := range headersToAdd {
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -337,7 +372,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -377,7 +412,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -387,7 +422,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -427,7 +462,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -453,7 +488,7 @@ func (t *Translator) processRequestHeaderModifierFilter(
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddRequestHeaders) == 0 && len(filterContext.RemoveRequestHeaders) == 0 && !emptyFilterConfig {
-		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		filterContext.ParentRef.SetCondition(filterContext.Route,
 			v1beta1.RouteConditionAccepted,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonUnsupportedValue,
@@ -463,10 +498,9 @@ func (t *Translator) processRequestHeaderModifierFilter(
 }
 
 func (t *Translator) processResponseHeaderModifierFilter(
-	filter v1beta1.HTTPRouteFilter,
+	headerModifier *v1beta1.HTTPHeaderFilter,
 	filterContext *HTTPFiltersContext) {
 	// Make sure the header modifier config actually exists
-	headerModifier := filter.ResponseHeaderModifier
 	if headerModifier == nil {
 		return
 	}
@@ -480,7 +514,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		for _, addHeader := range headersToAdd {
 			emptyFilterConfig = false
 			if addHeader.Name == "" {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -491,7 +525,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(addHeader.Name), "/") || strings.Contains(string(addHeader.Name), ":") {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -531,7 +565,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		for _, setHeader := range headersToSet {
 
 			if setHeader.Name == "" {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -541,7 +575,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 			}
 			// Per Gateway API specification on HTTPHeaderName, : and / are invalid characters in header names
 			if strings.Contains(string(setHeader.Name), "/") || strings.Contains(string(setHeader.Name), ":") {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -581,7 +615,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 		}
 		for _, removedHeader := range headersToRemove {
 			if removedHeader == "" {
-				filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+				filterContext.ParentRef.SetCondition(filterContext.Route,
 					v1beta1.RouteConditionAccepted,
 					metav1.ConditionFalse,
 					v1beta1.RouteReasonUnsupportedValue,
@@ -608,7 +642,7 @@ func (t *Translator) processResponseHeaderModifierFilter(
 
 	// Update the status if the filter failed to configure any valid headers to add/remove
 	if len(filterContext.AddResponseHeaders) == 0 && len(filterContext.RemoveResponseHeaders) == 0 && !emptyFilterConfig {
-		filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+		filterContext.ParentRef.SetCondition(filterContext.Route,
 			v1beta1.RouteConditionAccepted,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonUnsupportedValue,
@@ -617,19 +651,19 @@ func (t *Translator) processResponseHeaderModifierFilter(
 	}
 }
 
-func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, resources *Resources) {
+func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjectReference, filterContext *HTTPFiltersContext, resources *Resources) {
 	// Make sure the config actually exists.
-	extFilter := filter.ExtensionRef
 	if extFilter == nil {
 		return
 	}
 
+	filterNs := filterContext.Route.GetNamespace()
 	// Set the filter context and return early if a matching AuthenticationFilter is found.
-	if string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+	if string(extFilter.Kind) == egv1a1.KindAuthenticationFilter {
 		for _, authenFilter := range resources.AuthenticationFilters {
-			if authenFilter.Namespace == filterContext.HTTPRoute.Namespace &&
+			if authenFilter.Namespace == filterNs &&
 				authenFilter.Name == string(extFilter.Name) {
-				filterContext.HTTPFilterChains.RequestAuthentication = &ir.RequestAuthentication{
+				filterContext.HTTPFilterIR.RequestAuthentication = &ir.RequestAuthentication{
 					JWT: &ir.JwtRequestAuthentication{
 						Providers: authenFilter.Spec.JwtProviders,
 					},
@@ -640,13 +674,13 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 	}
 
 	// Set the filter context and return early if a matching RateLimitFilter is found.
-	if string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
+	if string(extFilter.Kind) == egv1a1.KindRateLimitFilter {
 		for _, rateLimitFilter := range resources.RateLimitFilters {
-			if rateLimitFilter.Namespace == filterContext.HTTPRoute.Namespace &&
+			if rateLimitFilter.Namespace == filterNs &&
 				rateLimitFilter.Name == string(extFilter.Name) {
 				if rateLimitFilter.Spec.Global == nil {
-					errMsg := fmt.Sprintf("Global configuration empty for RateLimitFilter: %s/%s", filterContext.HTTPRoute.Namespace,
-						filter.ExtensionRef.Name)
+					errMsg := fmt.Sprintf("Global configuration empty for RateLimitFilter: %s/%s", filterNs,
+						extFilter.Name)
 					t.processUnresolvedHTTPFilter(errMsg, filterContext)
 					return
 				}
@@ -689,8 +723,8 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
 							default:
 								// set negative status condition.
-								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterContext.HTTPRoute.Namespace,
-									filter.ExtensionRef.Name)
+								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
+									extFilter.Name)
 								t.processUnresolvedHTTPFilter(errMsg, filterContext)
 								return
 							}
@@ -698,25 +732,24 @@ func (t *Translator) processExtensionRefHTTPFilter(filter v1beta1.HTTPRouteFilte
 					}
 
 				}
-				filterContext.HTTPFilterChains.RateLimit = rateLimit
+				filterContext.HTTPFilterIR.RateLimit = rateLimit
 				return
 			}
 		}
 	}
 
 	// Matching filter not found, so set negative status condition.
-	errMsg := fmt.Sprintf("Reference %s/%s not found for filter type: %v", filterContext.HTTPRoute.Namespace,
-		filter.ExtensionRef.Name, filter.Type)
+	errMsg := fmt.Sprintf("Reference %s/%s not found for filter type: %v", filterNs,
+		extFilter.Name, extFilter.Kind)
 	t.processUnresolvedHTTPFilter(errMsg, filterContext)
 }
 
 func (t *Translator) processRequestMirrorFilter(
-	filter v1beta1.HTTPRouteFilter,
+	mirrorFilter *v1beta1.HTTPRequestMirrorFilter,
 	filterContext *HTTPFiltersContext,
 	resources *Resources) {
 
 	// Make sure the config actually exists
-	mirrorFilter := filter.RequestMirror
 	if mirrorFilter == nil {
 		return
 	}
@@ -731,13 +764,14 @@ func (t *Translator) processRequestMirrorFilter(
 	}
 
 	// This sets the status on the HTTPRoute, should the usage be changed so that the status message reflects that the backendRef is from the filter?
-	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterContext.HTTPRoute.Namespace)
-	if !t.validateBackendRef(&mirrorBackendRef, filterContext.ParentRef, filterContext.HTTPRoute,
+	filterNs := filterContext.Route.GetNamespace()
+	serviceNamespace := NamespaceDerefOr(mirrorBackend.Namespace, filterNs)
+	if !t.validateBackendRef(&mirrorBackendRef, filterContext.ParentRef, filterContext.Route,
 		resources, serviceNamespace, KindHTTPRoute) {
 		return
 	}
 
-	mirrorDest, _ := t.processRouteDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.HTTPRoute, resources)
+	mirrorDest, _ := t.processRouteDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
 	// If we're already mirroring requests to this backend then there is no need to configure it twice
 	for _, mirror := range filterContext.Mirrors {
@@ -754,13 +788,13 @@ func (t *Translator) processRequestMirrorFilter(
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {
-	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+	filterContext.ParentRef.SetCondition(filterContext.Route,
 		v1beta1.RouteConditionResolvedRefs,
 		metav1.ConditionFalse,
 		v1beta1.RouteReasonBackendNotFound,
 		errMsg,
 	)
-	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+	filterContext.ParentRef.SetCondition(filterContext.Route,
 		v1beta1.RouteConditionAccepted,
 		metav1.ConditionFalse,
 		v1beta1.RouteReasonUnsupportedValue,
@@ -772,9 +806,9 @@ func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *H
 	}
 }
 
-func (t *Translator) processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext) {
-	errMsg := fmt.Sprintf("Unsupported filter type: %s", filter.Type)
-	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+func (t *Translator) processUnsupportedHTTPFilter(filterType string, filterContext *HTTPFiltersContext) {
+	errMsg := fmt.Sprintf("Unsupported filter type: %s", filterType)
+	filterContext.ParentRef.SetCondition(filterContext.Route,
 		v1beta1.RouteConditionAccepted,
 		metav1.ConditionFalse,
 		v1beta1.RouteReasonUnsupportedValue,
@@ -786,9 +820,9 @@ func (t *Translator) processUnsupportedHTTPFilter(filter v1beta1.HTTPRouteFilter
 	}
 }
 
-func (t *Translator) processInvalidHTTPFilter(filter v1beta1.HTTPRouteFilter, filterContext *HTTPFiltersContext, err error) {
-	errMsg := fmt.Sprintf("Invalid filter %s: %v", filter.Type, err)
-	filterContext.ParentRef.SetCondition(filterContext.HTTPRoute,
+func (t *Translator) processInvalidHTTPFilter(filterType string, filterContext *HTTPFiltersContext, err error) {
+	errMsg := fmt.Sprintf("Invalid filter %s: %v", filterType, err)
+	filterContext.ParentRef.SetCondition(filterContext.Route,
 		v1beta1.RouteConditionAccepted,
 		metav1.ConditionFalse,
 		v1beta1.RouteReasonUnsupportedValue,

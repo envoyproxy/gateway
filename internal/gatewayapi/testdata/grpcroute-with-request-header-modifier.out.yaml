@@ -10,7 +10,6 @@ gateways:
     - name: http
       protocol: HTTP
       port: 80
-      hostname: "*.envoyproxy.io"
       allowedRoutes:
         namespaces:
           from: All
@@ -22,39 +21,34 @@ gateways:
         kind: HTTPRoute
         # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
         #- group: gateway.networking.k8s.io
-        #kind: GRPCRoute
+        #kind: GRPCRoute              
       attachedRoutes: 1
       conditions:
       - type: Programmed
         status: "True"
         reason: Programmed
         message: Listener is ready
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
     namespace: default
-    name: httproute-1
+    name: grpcroute-1
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
       sectionName: http
     rules:
-    - matches:
-      - path:
-          value: "/"
+    - filters:
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          add:
+          - name: my-header
+            value: foo                 
       backendRefs:
       - name: service-1
         port: 8080
-      filters:
-      - type: URLRewrite
-        urlRewrite:
-          path:
-            type: ReplaceFullPath
-            replaceFullPath: /rewrite
   status:
     parents:
     - parentRef:
@@ -74,21 +68,18 @@ xdsIR:
       address: 0.0.0.0
       port: 10080
       hostnames:
-      - "*.envoyproxy.io"
+      - "*"
+      isHTTP2: true  
       routes:
-      - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
-        pathMatch:
-          prefix: "/"
-        headerMatches:
-        - name: ":authority"
-          exact: gateway.envoyproxy.io
+      - name: default-grpcroute-1-rule-0-match--1-*
+        addRequestHeaders:
+        - name: "my-header"       
+          value: "foo"
+          append: true
         destinations:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        urlRewrite:
-          path:
-            fullReplace: /rewrite
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
@@ -103,5 +94,5 @@ infraIR:
         ports:
         - name: http
           protocol: "HTTP"
-          containerPort: 10080
           servicePort: 80
+          containerPort: 10080

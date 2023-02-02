@@ -25,7 +25,7 @@ gateways:
             - type: ResolvedRefs
               status: "False"
               reason: InvalidRouteKinds
-              message: "FooRoute is not supported, kind must be HTTPRoute"
+              message: "FooRoute is not supported, kind must be one of [HTTPRoute]"
             - type: Programmed
               status: "False"
               reason: Invalid
