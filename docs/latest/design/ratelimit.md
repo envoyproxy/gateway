@@ -174,7 +174,7 @@ to a specific route by matching on source IP. In this case, requests from `x.x.x
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
 metadata:
-  name: ratelimit-per-user
+  name: ratelimit-per-ip
 spec:
   type: Global
   global:
