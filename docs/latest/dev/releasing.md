@@ -69,6 +69,9 @@ export GITHUB_REMOTE=origin
    (https://gateway.envoyproxy.io/releases/v${MAJOR_VERSION}.${MINOR_VERSION}.html) to learn more about the release.
    ```
 
+14. Submit a PR to revert the Envoy proxy image to `envoyproxy/envoy-dev:latest`. __Note:__ This should not be required
+    when [Issue #957][] is fixed.
+
 If you find any bugs in this process, please create an issue.
 
 ## Creating a Release Candidate
@@ -76,6 +79,8 @@ If you find any bugs in this process, please create an issue.
 ### RC Prerequisites
 
 - Permissions to push to the Envoy Gateway repository.
+- A PR has been merged that updates the Envoy proxy image to the version supported by the release.
+  __Note:__ This should not be required when [Issue #957][] is fixed.
 
 Set environment variables for use in subsequent steps:
 
@@ -140,3 +145,4 @@ It's important that the world knows about the release. Use the following steps t
 [image]: https://hub.docker.com/r/envoyproxy/gateway/tags
 [release]: https://github.com/envoyproxy/gateway/releases
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+[Issue #957]: https://github.com/envoyproxy/gateway/issues/957
