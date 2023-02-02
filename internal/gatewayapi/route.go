@@ -56,7 +56,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 
 	for _, g := range grpcRoutes {
 		if g == nil {
-			panic("received nil httproute")
+			panic("received nil grpcroute")
 		}
 		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
 

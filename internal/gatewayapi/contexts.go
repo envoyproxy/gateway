@@ -250,7 +250,7 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 	return ctx
 }
 
-// GRPCRouteContext wraps an GRPCRoute and provides helper methods for
+// GRPCRouteContext wraps a GRPCRoute and provides helper methods for
 // accessing the route's parents.
 type GRPCRouteContext struct {
 	*v1alpha2.GRPCRoute
