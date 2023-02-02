@@ -25,7 +25,6 @@ jobs:
           config_file: ".github/markdown_lint_config.json"
 
   docs-build:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: docs-lint
     steps:
