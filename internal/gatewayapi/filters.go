@@ -60,7 +60,7 @@ type HTTPFilterIR struct {
 	RateLimit             *ir.RateLimit
 }
 
-// ProcessHTTPFilters translate gateway api http filters to IRs.
+// ProcessHTTPFilters translates gateway api http filters to IRs.
 func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []v1beta1.HTTPRouteFilter,
@@ -103,7 +103,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	return httpFiltersContext
 }
 
-// ProcessGRPCFilters translate gateway api grpc filters to IRs.
+// ProcessGRPCFilters translates gateway api grpc filters to IRs.
 func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []v1alpha2.GRPCRouteFilter,
