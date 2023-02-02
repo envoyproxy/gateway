@@ -82,18 +82,15 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listener.Listener) *routev
 func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMatch, queryParamMatches []*ir.StringMatch) *routev3.RouteMatch {
 	outMatch := &routev3.RouteMatch{}
 
-	// Return early with a prefix match to '/' if no matches are specified
-	if pathMatch == nil && len(headerMatches) == 0 && len(queryParamMatches) == 0 {
+	// Add a prefix match to '/' if no matches are specified
+	if pathMatch == nil {
 		// Setup default path specifier. It may be overwritten by :host:.
 		outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
 			Prefix: "/",
 		}
-		return outMatch
-	}
-
-	// Path match
-	//nolint:gocritic
-	if pathMatch != nil {
+	} else {
+		// Path match
+		//nolint:gocritic
 		if pathMatch.Exact != nil {
 			outMatch.PathSpecifier = &routev3.RouteMatch_Path{
 				Path: *pathMatch.Exact,
@@ -111,7 +108,6 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 			}
 		}
 	}
-
 	// Header matches
 	for _, headerMatch := range headerMatches {
 		stringMatcher := buildXdsStringMatcher(headerMatch)
