@@ -19,7 +19,7 @@ master_doc = 'index'
 
 # General information about the project.
 version = os.environ["BUILD_VERSION"]
-envoyVersion = os.environ["ENVOY_VERSION"]
+envoyVersion = os.environ["ENVOY_PROXY_VERSION"]
 gatewayAPIVersion = os.environ["GATEWAYAPI_VERSION"]
 
 project = 'Envoy Gateway'

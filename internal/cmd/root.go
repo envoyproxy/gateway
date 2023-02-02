@@ -19,7 +19,7 @@ func GetRootCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(getServerCommand())
-	cmd.AddCommand(getVersionsCommand())
+	cmd.AddCommand(getVersionCommand())
 	cmd.AddCommand(getCertGenCommand())
 
 	return cmd
