@@ -20,6 +20,7 @@ you are interested in using or contributing to Envoy Gateway, the following reso
   dev_docs
   releases
   roadmap
+  api_references
   about_docs
   get_involved
 

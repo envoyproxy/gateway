@@ -17,6 +17,7 @@ tools/golangci-lint  = $(tools.bindir)/golangci-lint
 tools/kustomize      = $(tools.bindir)/kustomize
 tools/kind           = $(tools.bindir)/kind
 tools/setup-envtest  = $(tools.bindir)/setup-envtest
+tools/gen-crd-api-reference-docs       = $(tools.bindir)/gen-crd-api-reference-docs
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 

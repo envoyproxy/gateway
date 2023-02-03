@@ -53,3 +53,8 @@ docs-release-gen:
 		mv $(OUTPUT_DIR)/$(TAG)-$$DOC docs/$(TAG)/user/$$DOC ; \
 		$(call log, "Updated: docs/$(TAG)/user/$$DOC") ; \
 	done
+
+.PHONY: docs.apireference
+docs.apireference: $(tools/gen-crd-api-reference-docs)
+	@$(LOG_TARGET)
+	tools/hack/gen-api-doc.sh
