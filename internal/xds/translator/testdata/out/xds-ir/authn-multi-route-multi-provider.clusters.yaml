@@ -37,7 +37,6 @@
 - connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  http2ProtocolOptions: {}
   lbPolicy: RANDOM
   loadAssignment:
     clusterName: localhost_443
@@ -59,10 +58,14 @@
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
   type: STATIC
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions: {}
 - connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  http2ProtocolOptions: {}
   lbPolicy: RANDOM
   loadAssignment:
     clusterName: localhost_8080
@@ -84,3 +87,8 @@
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
   type: STATIC
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions: {}
