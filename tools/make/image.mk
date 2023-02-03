@@ -99,7 +99,7 @@ image.build.multiarch:
 .PHONY: image.push.multiarch
 image.push.multiarch:
 	@$(LOG_TARGET)
-	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --push
+	docker buildx build bin -f "$(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile" -t "${IMAGE}:${TAG}" --platform "${BUILDX_PLATFORMS}" --sbom=false --provenance=false --push
 
 ##@ Image
 
