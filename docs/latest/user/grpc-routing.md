@@ -22,7 +22,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the gRPC routing example resources:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/http-routing.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/grpc-routing.yaml
 ```
 
 The manifest installs a [GatewayClass][], [Gateway][], a Deployment, a Service, and a GRPCRoute resource.
@@ -56,7 +56,7 @@ services.
 Check the status of the GRPCRoute:
 
 ```shell
-kubectl get httproutes --selector=example=grpc-routing -o yaml
+kubectl get grpcroutes --selector=example=grpc-routing -o yaml
 ```
 
 The status for the GRPCRoute should surface "Accepted=True" and a `parentRef` that references the example Gateway.

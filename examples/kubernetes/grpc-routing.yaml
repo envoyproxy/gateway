@@ -31,7 +31,6 @@ spec:
   selector:
     matchLabels:
       app: yages
-      example: grpc-routing
   replicas: 1
   template:
     metadata:
@@ -39,11 +38,11 @@ spec:
         app: yages
     spec:
       containers:
-      - name: grpcsrv
-        image: quay.io/mhausenblas/yages:0.1.0
-        ports:
-        - containerPort: 9000
-          protocol: TCP
+        - name: grpcsrv
+          image: quay.io/mhausenblas/yages:0.1.0
+          ports:
+            - containerPort: 9000
+              protocol: TCP
 ---
 apiVersion: v1
 kind: Service
@@ -55,10 +54,10 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - name: http
-    port: 9000
-    protocol: TCP
-    targetPort: 9000
+    - name: http
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
   selector:
     app: yages
 ---
@@ -74,9 +73,9 @@ spec:
   hostnames:
     - "grpc-example.com"
   rules:
-  - backendRefs:
-    - group: ""
-      kind: Service
-      name: yages 
-      port: 9000
-      weight: 1
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: yages 
+          port: 9000
+          weight: 1
