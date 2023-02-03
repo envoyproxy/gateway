@@ -25,7 +25,7 @@ const (
 	yamlOutput = "yaml"
 )
 
-func NewVersionsCommand() *cobra.Command {
+func NewVersionCommand() *cobra.Command {
 	var (
 		output          string
 		egContainerName string
@@ -34,7 +34,7 @@ func NewVersionsCommand() *cobra.Command {
 	versionCommand := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"versions", "v"},
-		Short:   "Show versions",
+		Short:   "Show version",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return versions(cmd.OutOrStdout(), egContainerName, output)
 		},

@@ -29,7 +29,7 @@ func rootCommand() *cobra.Command {
 		DisableAutoGenTag: true,
 	}
 
-	rootCmd.AddCommand(egctl.NewVersionsCommand())
+	rootCmd.AddCommand(egctl.NewVersionCommand())
 
 	return rootCmd
 }
