@@ -24,7 +24,7 @@ export GITHUB_REMOTE=origin
 ```
 
 1. Clone the repo, checkout the `main` branch, ensure it’s up-to-date, and your local branch is clean.
-2. Create a topic branch for adding the release notes. Refer to previous [release notes][] for additional details.
+2. Create a topic branch for adding the release notes and updating the [VERSION][] file with the release version. Refer to previous [release notes][] and [VERSION][] for additional details.
 3. Sign, commit, and push your changes to your fork.
 4. Submit a [Pull Request][] to merge the changes into the `main` branch. Do not proceed until your PR has merged and
    the [Build and Test][] has successfully completed.
@@ -172,3 +172,4 @@ It's important that the world knows about the release. Use the following steps t
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
 [PR #958]: https://github.com/envoyproxy/gateway/pull/958
+[VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
