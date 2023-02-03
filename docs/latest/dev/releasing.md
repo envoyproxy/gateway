@@ -55,7 +55,7 @@ export GITHUB_REMOTE=origin
 11. Push the tag to the Envoy Gateway repository.
 
     ```shell
-    git push v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}
+    git push ${GITHUB_REMOTE} v${MAJOR_VERSION}.${MINOR_VERSION}.0-rc.${RELEASE_CANDIDATE_NUMBER}
     ```
 
 12. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
