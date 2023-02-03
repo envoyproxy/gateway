@@ -12,7 +12,7 @@
         - name: test
           stringMatch:
             suffix: end
-        path: foo/bar
+        prefix: /
         queryParameters:
         - name: debug
           stringMatch:

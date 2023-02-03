@@ -6,8 +6,6 @@ http:
   - "*"
   routes:
   - name: "first-route"
-    pathMatch:
-      exact: "foo/bar"
     headerMatches:
     - name: user
       stringMatch:
