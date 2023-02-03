@@ -77,7 +77,8 @@ grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Pin
 ```
 
 You should see the below response
-```
+
+```shell
 {
   "text": "pong"
 }
@@ -96,4 +97,3 @@ curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grp
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
 [gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
-[spec]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute 
