@@ -128,7 +128,9 @@ func TestTranslateXds(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
 			tr := &Translator{
-				GlobalRateLimitService: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+				},
 			}
 			tCtx, err := tr.Translate(ir)
 			require.NoError(t, err)

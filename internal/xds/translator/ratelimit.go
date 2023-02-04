@@ -30,9 +30,9 @@ import (
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
-func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) {
+func (t *Translator) patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) {
 	// Return early if rate limits dont exist
-	if !isRateLimitPresent(irListener) {
+	if !t.isRateLimitPresent(irListener) {
 		return
 	}
 
@@ -49,7 +49,11 @@ func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPLi
 }
 
 // isRateLimitPresent returns true if rate limit config exists for the listener.
-func isRateLimitPresent(irListener *ir.HTTPListener) bool {
+func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
+	// Return false if global ratelimiting is disabled.
+	if t.GlobalRateLimit == nil {
+		return false
+	}
 	// Return true if rate limit config exists.
 	for _, route := range irListener.Routes {
 		if route.RateLimit != nil && route.RateLimit.Global != nil {
@@ -259,7 +263,7 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 
 func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
 	// Return early if rate limits dont exist.
-	if !isRateLimitPresent(irListener) {
+	if !t.isRateLimitPresent(irListener) {
 		return nil
 	}
 
@@ -319,7 +323,7 @@ func getRateLimitDomain(irListener *ir.HTTPListener) string {
 }
 
 func (t *Translator) getRateLimitServiceGrpcHostPort() (string, int) {
-	u, err := url.Parse(t.GlobalRateLimitService)
+	u, err := url.Parse(t.GlobalRateLimit.ServiceURL)
 	if err != nil {
 		panic(err)
 	}

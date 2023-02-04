@@ -22,10 +22,15 @@ import (
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
-	// GlobalRateLimitService is the URL of the global
-	// rate limit service. It should only be set when
-	// global rate limiting is enabled.
-	GlobalRateLimitService string
+	// GlobalRateLimit holds the global rate limit settings
+	// required during xds translation.
+	GlobalRateLimit *GlobalRateLimitSettings
+}
+
+type GlobalRateLimitSettings struct {
+	// ServiceURL is the URL of the global
+	// rate limit service.
+	ServiceURL string
 }
 
 // Translate translates the XDS IR into xDS resources
@@ -78,7 +83,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		}
 
 		if addFilterChain {
-			if err := addXdsHTTPFilterChain(xdsListener, httpListener); err != nil {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener); err != nil {
 				return err
 			}
 		}

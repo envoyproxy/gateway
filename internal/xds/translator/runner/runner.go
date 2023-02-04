@@ -57,7 +57,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
-					t.GlobalRateLimitService = infra.GetRateLimitServiceURL(r.Namespace)
+					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
+						ServiceURL: infra.GetRateLimitServiceURL(r.Namespace),
+					}
 				}
 
 				result, err := t.Translate(val)
