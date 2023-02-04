@@ -17,7 +17,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	wkt "github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -37,7 +37,7 @@ func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPLi
 
 	// Return early if filter already exists.
 	for _, httpFilter := range mgr.HttpFilters {
-		if httpFilter.Name == wkt.HTTPRateLimit {
+		if httpFilter.Name == wellknown.HTTPRateLimit {
 			return
 		}
 	}
@@ -79,7 +79,7 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcm.HttpFilter {
 	}
 
 	rateLimitFilter := &hcm.HttpFilter{
-		Name: wkt.HTTPRateLimit,
+		Name: wellknown.HTTPRateLimit,
 		ConfigType: &hcm.HttpFilter_TypedConfig{
 			TypedConfig: rateLimitFilterAny,
 		},
