@@ -57,6 +57,10 @@ type Translator struct {
 	// the Infra IR. If unspecified, the default proxy
 	// image will be used.
 	ProxyImage string
+
+	// GlobalRateLimitEnabled is true when global
+	// ratelimiting has been configured by the admin.
+	GlobalRateLimitEnabled bool
 }
 
 type TranslateResult struct {
