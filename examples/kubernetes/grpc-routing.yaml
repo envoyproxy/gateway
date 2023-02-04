@@ -69,7 +69,7 @@ metadata:
     example: grpc-routing        
 spec:
   parentRefs:
-    - name: eg
+    - name: example-gateway 
   hostnames:
     - "grpc-example.com"
   rules:
