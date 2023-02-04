@@ -53,10 +53,10 @@ const (
 
 	// rateLimitInfraName is the name for rate-limit resources.
 	rateLimitInfraName = "envoy-ratelimit"
-	// rateLimitInfraHTTPPort is the http port that the rate limit service listens on.
-	rateLimitInfraHTTPPort = 8080
+	// rateLimitInfraGRPCPort is the grpc port that the rate limit service listens on.
+	rateLimitInfraGRPCPort = 8081
 	// rateLimitInfraImage is the container image for the rate limit service.
-	rateLimitInfraImage = "envoyproxy/ratelimit:latest"
+	rateLimitInfraImage = "envoyproxy/ratelimit:f28024e3"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -362,7 +362,7 @@ func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "http",
-			ContainerPort: rateLimitInfraHTTPPort,
+			ContainerPort: rateLimitInfraGRPCPort,
 			Protocol:      corev1.ProtocolTCP,
 		},
 	}
@@ -401,7 +401,7 @@ func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
 				},
 				{
 					Name:  "LOG_LEVEL",
-					Value: "info",
+					Value: "debug",
 				},
 				{
 					Name:  "USE_STATSD",

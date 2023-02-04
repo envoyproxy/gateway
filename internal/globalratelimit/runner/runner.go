@@ -48,9 +48,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 		var xdsIRs []*ir.Xds
 		snapshot := <-xdsIRCh
 		r.Logger.Info("received a notification")
+		// Skip translation if state is empty
+		if len(snapshot.State) == 0 {
+			continue
+		}
+
 		for _, value := range snapshot.State {
 			xdsIRs = append(xdsIRs, value)
 		}
+
 		// Translate to ratelimit infra IR
 		result, err := r.translate(xdsIRs)
 		if err != nil {

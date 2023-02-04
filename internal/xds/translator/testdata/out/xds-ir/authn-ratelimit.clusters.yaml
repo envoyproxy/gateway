@@ -64,7 +64,7 @@
           address:
             socketAddress:
               address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
-              portValue: 8080
+              portValue: 8081
   name: ratelimit_cluster
   respectDnsTtl: true
   type: STRICT_DNS
