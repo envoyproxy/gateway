@@ -40,8 +40,3 @@
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
   type: STATIC
-  typedExtensionProtocolOptions:
-    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-      explicitHttpConfig:
-        http2ProtocolOptions: {}

@@ -219,11 +219,10 @@ func buildClusterFromJwks(jwks *jwksCluster) (*cluster.Cluster, error) {
 				},
 			},
 		},
-		TypedExtensionProtocolOptions: buildTypedExtensionProtocolOptions(),
-		DnsRefreshRate:                durationpb.New(30 * time.Second),
-		RespectDnsTtl:                 true,
-		DnsLookupFamily:               cluster.Cluster_V4_ONLY,
-		TransportSocket:               tSocket,
+		DnsRefreshRate:  durationpb.New(30 * time.Second),
+		RespectDnsTtl:   true,
+		DnsLookupFamily: cluster.Cluster_V4_ONLY,
+		TransportSocket: tSocket,
 	}, nil
 }
 
