@@ -20,15 +20,23 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+// Translator translates the xDS IR into xDS resources.
+type Translator struct {
+	// GlobalRateLimitService is the URL of the global
+	// rate limit service. It should only be set when
+	// global rate limiting is enabled.
+	GlobalRateLimitService string
+}
+
 // Translate translates the XDS IR into xDS resources
-func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
+func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}
 
 	tCtx := new(types.ResourceVersionTable)
 
-	if err := processHTTPListenerXdsTranslation(tCtx, ir.HTTP); err != nil {
+	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP); err != nil {
 		return nil, err
 	}
 
@@ -43,7 +51,7 @@ func Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	return tCtx, nil
 }
 
-func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
+func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *route.RouteConfiguration
@@ -127,7 +135,7 @@ func processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpLis
 		// This is current O(n) right now, but it also leverages an existing
 		// object without allocating new memory. Consider improving it in the future.
 		if rlCluster := findXdsCluster(tCtx, getRateLimitServiceClusterName()); rlCluster == nil {
-			rlCluster := buildRateLimitServiceCluster(httpListener)
+			rlCluster := t.buildRateLimitServiceCluster(httpListener)
 			// Add cluster
 			if rlCluster != nil {
 				tCtx.AddXdsResource(resource.ClusterType, rlCluster)

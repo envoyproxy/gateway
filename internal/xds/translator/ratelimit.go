@@ -7,6 +7,7 @@ package translator
 
 import (
 	"bytes"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -256,14 +257,14 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 	return yamlDescs
 }
 
-func buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
+func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
 	// Return early if rate limits dont exist.
 	if !isRateLimitPresent(irListener) {
 		return nil
 	}
 
 	clusterName := getRateLimitServiceClusterName()
-	host, port := getRateLimitServiceGrpcHostPort()
+	host, port := t.getRateLimitServiceGrpcHostPort()
 	rateLimitServerCluster := &cluster.Cluster{
 		Name:                 clusterName,
 		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS},
@@ -317,6 +318,14 @@ func getRateLimitDomain(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
-func getRateLimitServiceGrpcHostPort() (string, int) {
-	return "TODO", 0
+func (t *Translator) getRateLimitServiceGrpcHostPort() (string, int) {
+	u, err := url.Parse(t.GlobalRateLimitService)
+	if err != nil {
+		panic(err)
+	}
+	p, err := strconv.Atoi(u.Port())
+	if err != nil {
+		panic(err)
+	}
+	return u.Hostname(), p
 }

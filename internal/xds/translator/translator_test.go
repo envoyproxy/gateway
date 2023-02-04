@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
 
+	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -126,7 +127,10 @@ func TestTranslateXds(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
-			tCtx, err := Translate(ir)
+			tr := &Translator{
+				GlobalRateLimitService: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+			}
+			tCtx, err := tr.Translate(ir)
 			require.NoError(t, err)
 			listeners := tCtx.XdsResources[resource.ListenerType]
 			routes := tCtx.XdsResources[resource.RouteType]

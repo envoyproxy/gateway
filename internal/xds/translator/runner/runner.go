@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
@@ -52,7 +53,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				r.Xds.Delete(key)
 			} else {
 				// Translate to xds resources
-				result, err := translator.Translate(val)
+				t := &translator.Translator{}
+
+				// Set the rate limit service URL if global rate limiting is enabled.
+				if r.EnvoyGateway.RateLimit != nil {
+					t.GlobalRateLimitService = infra.GetRateLimitServiceURL(r.Namespace)
+				}
+
+				result, err := t.Translate(val)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir")
 				} else {
