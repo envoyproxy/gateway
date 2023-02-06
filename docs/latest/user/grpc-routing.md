@@ -70,7 +70,7 @@ Before testing GRPC routing to the `yages` backend, get the Gateway's address.
 export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Test GRPC routing to the `yages` backend using the `grpcurl` command.
+Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 
 ```shell
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
@@ -96,4 +96,5 @@ curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grp
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [Envoy proxy]: https://www.envoyproxy.io/
+[grpcurl]: https://github.com/fullstorydev/grpcurl
 [gRPC-Web]: https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-WEB.md#protocol-differences-vs-grpc-over-http2
