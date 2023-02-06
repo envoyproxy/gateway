@@ -17,3 +17,4 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/tls-passthrough
   user/tcp-routing
   user/udp-routing
+  user/grpc-routing
