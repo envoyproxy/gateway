@@ -401,7 +401,7 @@ func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
 				},
 				{
 					Name:  "LOG_LEVEL",
-					Value: "debug",
+					Value: "info",
 				},
 				{
 					Name:  "USE_STATSD",
