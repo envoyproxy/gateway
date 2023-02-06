@@ -91,31 +91,6 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.Rate
 	if infra == nil {
 		return errors.New("ratelimit infra ir is nil")
 	}
-
-	if err := i.deleteRateLimitService(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.deleteRateLimitDeployment(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.deleteRateLimitConfigMap(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.deleteRateLimitServiceAccount(ctx, infra); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
-func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
-	if infra == nil {
-		return errors.New("ratelimit infra ir is nil")
-	}
 	if err := i.createOrUpdateRateLimitServiceAccount(ctx, infra); err != nil {
 		return err
 	}
@@ -134,4 +109,29 @@ func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInf
 
 	return nil
 
+}
+
+// DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
+func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
+	if infra == nil {
+		return errors.New("ratelimit infra ir is nil")
+	}
+
+	if err := i.deleteRateLimitService(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.deleteRateLimitDeployment(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.deleteRateLimitConfigMap(ctx, infra); err != nil {
+		return err
+	}
+
+	if err := i.deleteRateLimitServiceAccount(ctx, infra); err != nil {
+		return err
+	}
+
+	return nil
 }
