@@ -1,0 +1,81 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: example-gateway-class
+  labels:
+    example: grpc-routing
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: example-gateway
+  labels:
+    example: grpc-routing
+spec:
+  gatewayClassName: example-gateway-class
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: yages
+    example: grpc-routing
+  name: yages
+spec:
+  selector:
+    matchLabels:
+      app: yages
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: yages
+    spec:
+      containers:
+        - name: grpcsrv
+          image: quay.io/mhausenblas/yages:0.1.0
+          ports:
+            - containerPort: 9000
+              protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: yages
+    example: grpc-routing
+  name: yages
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+  selector:
+    app: yages
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing        
+spec:
+  parentRefs:
+    - name: example-gateway 
+  hostnames:
+    - "grpc-example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: yages 
+          port: 9000
+          weight: 1
