@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -154,7 +153,7 @@ func (i *Infra) expectedRateLimitService(_ *ir.RateLimitInfra) *corev1.Service {
 
 // GetRateLimitServiceURL returns the URL for the rate limit service.
 func GetRateLimitServiceURL(namespace string) string {
-	return "grpc://" + rateLimitInfraName + "." + namespace + ".svc.cluster.local:" + strconv.Itoa(rateLimitInfraGRPCPort)
+	return fmt.Sprintf("grpc://%s.%s.svc.cluster.local:%d", rateLimitInfraName, namespace, rateLimitInfraGRPCPort)
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided infra,
