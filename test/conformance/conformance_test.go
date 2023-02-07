@@ -49,11 +49,12 @@ func TestGatewayAPIConformance(t *testing.T) {
 	}
 
 	cSuite := suite.New(suite.Options{
-		Client:                   client,
-		GatewayClassName:         *flags.GatewayClassName,
-		Debug:                    *flags.ShowDebug,
-		CleanupBaseResources:     *flags.CleanupBaseResources,
-		ValidUniqueListenerPorts: validUniqueListenerPorts,
+		Client:                     client,
+		GatewayClassName:           *flags.GatewayClassName,
+		Debug:                      *flags.ShowDebug,
+		CleanupBaseResources:       *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts:   validUniqueListenerPorts,
+		EnableAllSupportedFeatures: true,
 	})
 
 	cSuite.Setup(t)
