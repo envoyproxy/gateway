@@ -24,7 +24,6 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	wkt "github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -314,7 +313,7 @@ func buildJwtPerRouteConfig(irRoute *ir.HTTPRoute, listener *listener.Listener) 
 	}
 
 	for _, filter := range filterCh.Filters {
-		if filter.Name == wkt.HTTPConnectionManager {
+		if filter.Name == wellknown.HTTPConnectionManager {
 			// Unmarshal the filter to a jwt authn config and validate it.
 			hcmProto := new(hcm.HttpConnectionManager)
 			hcmAny := filter.GetTypedConfig()
