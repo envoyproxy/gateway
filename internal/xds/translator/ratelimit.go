@@ -7,6 +7,7 @@ package translator
 
 import (
 	"bytes"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -29,9 +30,9 @@ import (
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
-func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) {
+func (t *Translator) patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) {
 	// Return early if rate limits dont exist
-	if !isRateLimitPresent(irListener) {
+	if !t.isRateLimitPresent(irListener) {
 		return
 	}
 
@@ -48,7 +49,11 @@ func patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPLi
 }
 
 // isRateLimitPresent returns true if rate limit config exists for the listener.
-func isRateLimitPresent(irListener *ir.HTTPListener) bool {
+func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
+	// Return false if global ratelimiting is disabled.
+	if t.GlobalRateLimit == nil {
+		return false
+	}
 	// Return true if rate limit config exists.
 	for _, route := range irListener.Routes {
 		if route.RateLimit != nil && route.RateLimit.Global != nil {
@@ -256,14 +261,14 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 	return yamlDescs
 }
 
-func buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
+func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
 	// Return early if rate limits dont exist.
-	if !isRateLimitPresent(irListener) {
+	if !t.isRateLimitPresent(irListener) {
 		return nil
 	}
 
 	clusterName := getRateLimitServiceClusterName()
-	host, port := getRateLimitServiceGrpcHostPort()
+	host, port := t.getRateLimitServiceGrpcHostPort()
 	rateLimitServerCluster := &cluster.Cluster{
 		Name:                 clusterName,
 		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS},
@@ -317,6 +322,14 @@ func getRateLimitDomain(irListener *ir.HTTPListener) string {
 	return irListener.Name
 }
 
-func getRateLimitServiceGrpcHostPort() (string, int) {
-	return "TODO", 0
+func (t *Translator) getRateLimitServiceGrpcHostPort() (string, int) {
+	u, err := url.Parse(t.GlobalRateLimit.ServiceURL)
+	if err != nil {
+		panic(err)
+	}
+	p, err := strconv.Atoi(u.Port())
+	if err != nil {
+		panic(err)
+	}
+	return u.Hostname(), p
 }
