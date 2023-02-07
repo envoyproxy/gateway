@@ -52,7 +52,7 @@ func buildXdsTCPListener(name, address string, port uint32) *listener.Listener {
 	}
 }
 
-func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPListener) error {
+func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPListener) error {
 	routerAny, err := anypb.New(&router.Router{})
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPLi
 
 	// TODO: Make this a generic interface for all API Gateway features.
 	//       https://github.com/envoyproxy/gateway/issues/882
-	patchHCMWithRateLimit(mgr, irListener)
+	t.patchHCMWithRateLimit(mgr, irListener)
 
 	// Add the jwt authn filter, if needed.
 	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
