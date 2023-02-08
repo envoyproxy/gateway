@@ -29,7 +29,6 @@ Lets install a Redis deployment in the `redis-system` namespce.
 
 ```shell
 cat <<EOF | kubectl apply -f -
----
 kind: Namespace
 apiVersion: v1
 metadata:
@@ -87,7 +86,7 @@ EOF
 
 ### Enable Global Rate limit in Envoy Gateway
 
-* The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attches it
+* The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attaches it
 using a `ConfigMap`. In the next step, we will update this resource to enable rate limit in Envoy Gateway
 as well as configure the URL for the Redis instance used for Global rate limiting.
 
@@ -113,6 +112,12 @@ data:
         redis:
           url: redis.redis-system.svc.cluster.local:6379
 EOF
+```
+
+* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
+
+```shell
+kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
 ## Rate limit specific user 
@@ -178,7 +183,7 @@ Get the Gateway's address:
 export GATEWAY_HOST=$(kubectl get gateway/eg -o jsonpath='{.status.addresses[0].value}')
 ```
 
-Lets query `headers.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests 
+Lets query `ratelimit.example/get` 4 times. We should receive a `200` response from the example Gateway for the first 3 requests 
 and then receive a `429` status code for the 4th request since the limit is set at 3 requests/Hour for the request which contains the header `x-user-id`
 and value `one`.
 
