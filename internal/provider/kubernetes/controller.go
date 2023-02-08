@@ -621,6 +621,7 @@ func addCustomGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error 
 
 func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+
 	var gateways []string
 	for _, parent := range grpcroute.Spec.ParentRefs {
 		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
@@ -639,9 +640,11 @@ func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 
 func gatewayCustomGRPCRouteIndexFunc(rawObj client.Object) []string {
 	customgrpcroute := rawObj.(*gwapiv1a2.CustomGRPCRoute)
+
 	var gateways []string
 	for _, parent := range customgrpcroute.Spec.ParentRefs {
 		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
+
 			// If an explicit Gateway namespace is not provided, use the CustomGRPCRoute namespace to
 			// lookup the provided Gateway Name.
 			gateways = append(gateways,
@@ -652,6 +655,7 @@ func gatewayCustomGRPCRouteIndexFunc(rawObj client.Object) []string {
 			)
 		}
 	}
+
 	return gateways
 }
 

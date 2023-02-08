@@ -21,6 +21,7 @@ var _ RoutesTranslator = (*Translator)(nil)
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
+	ProcessCustomGRPCRoutes(customgrpcRoutes []*v1alpha2.CustomGRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*CustomGRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
 	ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
@@ -474,7 +475,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		irKey := irStringKey(listener.gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
-			if route.GetRouteType() == KindGRPCRoute {
+			if route.GetRouteType() == KindGRPCRoute || route.GetRouteType() == KindCustomGRPCRoute {
 				irListener.IsHTTP2 = true
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
