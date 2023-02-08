@@ -19,3 +19,4 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/udp-routing
   user/grpc-routing
   user/authn
+  user/rate-limit
