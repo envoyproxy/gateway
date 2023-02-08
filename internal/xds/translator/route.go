@@ -96,8 +96,8 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
-				Prefix: *pathMatch.Prefix,
+			outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
+				PathSeparatedPrefix: *pathMatch.Prefix,
 			}
 		} else if pathMatch.SafeRegex != nil {
 			outMatch.PathSpecifier = &routev3.RouteMatch_SafeRegex{
