@@ -125,8 +125,8 @@ func (i *Infra) expectedRateLimitService(_ *ir.RateLimitInfra) *corev1.Service {
 		{
 			Name:       "http",
 			Protocol:   corev1.ProtocolTCP,
-			Port:       rateLimitInfraHTTPPort,
-			TargetPort: intstr.IntOrString{IntVal: rateLimitInfraHTTPPort},
+			Port:       rateLimitInfraGRPCPort,
+			TargetPort: intstr.IntOrString{IntVal: rateLimitInfraGRPCPort},
 		},
 	}
 
@@ -149,6 +149,11 @@ func (i *Infra) expectedRateLimitService(_ *ir.RateLimitInfra) *corev1.Service {
 	}
 
 	return svc
+}
+
+// GetRateLimitServiceURL returns the URL for the rate limit service.
+func GetRateLimitServiceURL(namespace string) string {
+	return fmt.Sprintf("grpc://%s.%s.svc.cluster.local:%d", rateLimitInfraName, namespace, rateLimitInfraGRPCPort)
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided infra,
