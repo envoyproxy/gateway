@@ -267,7 +267,7 @@ server: envoy
 
 ## Rate limit distinct users 
 
-Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differntiated based on the 
+Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
 and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`).
 
