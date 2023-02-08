@@ -294,6 +294,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithObjects(tc.configs...).
 			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1a2.CustomGRPCRoute{}, serviceCustomGRPCRouteIndex, serviceCustomGRPCRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
