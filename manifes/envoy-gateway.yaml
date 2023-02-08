@@ -1,0 +1,682 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: envoy-gateway
+  name: envoy-gateway-system
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: authenticationfilters.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    kind: AuthenticationFilter
+    listKind: AuthenticationFilterList
+    plural: authenticationfilters
+    singular: authenticationfilter
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of the AuthenticationFilter type.
+            properties:
+              jwtProviders:
+                description: "JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see: \n https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html"
+                items:
+                  description: 'JwtAuthenticationFilterProvider defines the JSON Web Token (JWT) authentication provider type and how JWTs should be verified:'
+                  properties:
+                    audiences:
+                      description: "Audiences is a list of JWT audiences allowed to access. For additional details, see: \n https://tools.ietf.org/html/rfc7519#section-4.1.3 \n Example: audiences: - foo.apps.example.com bar.apps.example.com \n If not provided, JWT audiences are not checked."
+                      items:
+                        type: string
+                      maxItems: 8
+                      type: array
+                    issuer:
+                      description: "Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see: \n URL format: https://tools.ietf.org/html/rfc7519#section-4.1.1 Email format: https://rfc-editor.org/rfc/rfc5322.html \n URL Example: issuer: https://auth.example.com \n Email Example: issuer: jdoe@example.com \n If not provided, the JWT issuer is not checked."
+                      maxLength: 253
+                      type: string
+                    name:
+                      description: Name defines a unique name for the JWT provider. A name can have a variety of forms, including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    remoteJWKS:
+                      description: RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+                      properties:
+                        uri:
+                          description: "URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate. \n Example: uri: https://www.foo.com/oauth2/v1/certs"
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                      required:
+                      - uri
+                      type: object
+                  required:
+                  - name
+                  - remoteJWKS
+                  type: object
+                maxItems: 4
+                type: array
+              type:
+                description: "Type defines the type of authentication provider to use. Supported provider types are: \n * JWT: A provider that uses JSON Web Token (JWT) for authenticating requests."
+                enum:
+                - JWT
+                type: string
+            required:
+            - type
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: envoyproxies.config.gateway.envoyproxy.io
+spec:
+  group: config.gateway.envoyproxy.io
+  names:
+    kind: EnvoyProxy
+    listKind: EnvoyProxyList
+    plural: envoyproxies
+    singular: envoyproxy
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: EnvoyProxy is the Schema for the envoyproxies API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EnvoyProxySpec defines the desired state of EnvoyProxy.
+            properties:
+              logging:
+                default:
+                  level:
+                    system: info
+                description: Logging defines logging parameters for managed proxies. If unspecified, default settings apply.
+                properties:
+                  level:
+                    additionalProperties:
+                      description: LogLevel defines a log level for system logs.
+                      enum:
+                      - debug
+                      - info
+                      - error
+                      type: string
+                    default:
+                      system: info
+                    description: 'Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "System: Info".'
+                    type: object
+                type: object
+              provider:
+                description: Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters.
+                properties:
+                  kubernetes:
+                    description: Kubernetes defines the desired state of the Kubernetes resource provider. Kubernetes provides infrastructure resources for running the data plane, e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings for managed Kubernetes resources are applied.
+                    properties:
+                      envoyDeployment:
+                        description: EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the manged Envoy deployment resource are applied.
+                        properties:
+                          replicas:
+                            description: Replicas is the number of desired pods. Defaults to 1.
+                            format: int32
+                            type: integer
+                        type: object
+                    type: object
+                  type:
+                    description: "Type is the type of resource provider to use. A resource provider provides infrastructure resources for running the data plane, e.g. Envoy proxy, and optional auxiliary control planes. Supported types are: \n * Kubernetes: Provides infrastructure resources for running the data plane, e.g. Envoy proxy."
+                    enum:
+                    - Kubernetes
+                    type: string
+                required:
+                - type
+                type: object
+            type: object
+          status:
+            description: EnvoyProxyStatus defines the observed state of EnvoyProxy
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: ratelimitfilters.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    kind: RateLimitFilter
+    listKind: RateLimitFilterList
+    plural: ratelimitfilters
+    singular: ratelimitfilter
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: RateLimitFilter allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of RateLimitFilter.
+            properties:
+              global:
+                description: Global rate limit configuration.
+                properties:
+                  rules:
+                    description: Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way i.e. if multiple rules get selected, each of their associated limits get applied, so a single traffic request might increase the rate limit counters for multiple rules if selected.
+                    items:
+                      description: RateLimitRule defines the semantics for matching attributes from the incoming requests, and setting limits for them.
+                      properties:
+                        clientSelectors:
+                          description: ClientSelectors holds the list of select conditions to select specific clients using attributes from the traffic flow. All individual select conditions must hold True for this rule and its limit to be applied. If this field is empty, it is equivalent to True, and the limit is applied.
+                          items:
+                            description: RateLimitSelectCondition specifies the attributes within the traffic flow that can be used to select a subset of clients to be ratelimited. All the individual conditions must hold True for the overall condition to hold True.
+                            properties:
+                              headers:
+                                description: Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers.
+                                items:
+                                  description: HeaderMatch defines the match attributes within the HTTP Headers of the request.
+                                  properties:
+                                    name:
+                                      description: Name of the HTTP header.
+                                      maxLength: 256
+                                      minLength: 1
+                                      type: string
+                                    type:
+                                      default: Exact
+                                      description: Type specifies how to match against the value of the header.
+                                      enum:
+                                      - Exact
+                                      - RegularExpression
+                                      - Distinct
+                                      type: string
+                                    value:
+                                      description: Value within the HTTP header. Due to the case-insensitivity of header names, "foo" and "Foo" are considered equivalent. Do not set this field when Type="Distinct", implying matching on any/all unique values within the header.
+                                      maxLength: 1024
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 16
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - name
+                                x-kubernetes-list-type: map
+                            type: object
+                          maxItems: 8
+                          type: array
+                        limit:
+                          description: Limit holds the rate limit values. This limit is applied for traffic flows when the selectors compute to True, causing the request to be counted towards the limit. The limit is enforced and the request is ratelimited, i.e. a response with 429 HTTP status code is sent back to the client when the selected requests have reached the limit.
+                          properties:
+                            requests:
+                              type: integer
+                            unit:
+                              description: "RateLimitUnit specifies the intervals for setting rate limits. Valid RateLimitUnit values are: \n * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
+                              enum:
+                              - Second
+                              - Minute
+                              - Hour
+                              - Day
+                              type: string
+                          required:
+                          - requests
+                          - unit
+                          type: object
+                      required:
+                      - limit
+                      type: object
+                    maxItems: 16
+                    type: array
+                required:
+                - rules
+                type: object
+              type:
+                description: "Type decides the scope for the RateLimits. Valid RateLimitType values are: \n * \"Global\" - In this mode, the rate limits are applied across all Envoy proxy instances."
+                enum:
+                - Global
+                type: string
+            required:
+            - type
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: certgen
+  namespace: envoy-gateway-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: certgen
+  namespace: envoy-gateway-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: leader-election-role
+  namespace: envoy-gateway-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: envoy-gateway-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - config.gateway.envoyproxy.io
+  resources:
+  - envoyproxies
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - gateway.envoyproxy.io
+  resources:
+  - authenticationfilters
+  - ratelimitfilters
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  - gateways
+  - grpcroutes
+  - customgrpcroutes
+  - httproutes
+  - referencegrants
+  - referencepolicies
+  - tcproutes
+  - tlsroutes
+  - udproutes
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses/status
+  - gateways/status
+  - grpcroutes/status
+  - customgrpcroutes/status
+  - httproutes/status
+  - tcproutes/status
+  - tlsroutes/status
+  - udproutes/status
+  verbs:
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metrics-reader
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: certgen
+  namespace: envoy-gateway-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: certgen
+subjects:
+- kind: ServiceAccount
+  name: certgen
+  namespace: envoy-gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: leader-election-rolebinding
+  namespace: envoy-gateway-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: envoy-gateway-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: envoy-gateway-role
+subjects:
+- kind: ServiceAccount
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: proxy-role
+subjects:
+- kind: ServiceAccount
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+---
+apiVersion: v1
+data:
+  envoy-gateway.yaml: |
+    apiVersion: config.gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: envoy-gateway
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  ports:
+  - name: grpc
+    port: 18000
+    targetPort: 18000
+  selector:
+    control-plane: envoy-gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: envoy-gateway
+  name: envoy-gateway-metrics-service
+  namespace: envoy-gateway-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: envoy-gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    control-plane: envoy-gateway
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: envoy-gateway
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: envoy-gateway
+      labels:
+        control-plane: envoy-gateway
+    spec:
+      containers:
+      - args:
+        - server
+        - --config-path=/config/envoy-gateway.yaml
+        env:
+        - name: ENVOY_GATEWAY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: docker.io/envoyproxy/gateway-dev:1bea44e
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: envoy-gateway
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /config
+          name: envoy-gateway-config
+          readOnly: true
+        - mountPath: /certs
+          name: certs
+          readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        image: gcr.io/kubebuilder/kube-rbac-proxy:v0.11.0
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+      securityContext:
+        runAsNonRoot: true
+      serviceAccountName: envoy-gateway
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: envoy-gateway-config
+        name: envoy-gateway-config
+      - name: certs
+        secret:
+          secretName: envoy-gateway
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: certgen
+  namespace: envoy-gateway-system
+spec:
+  backoffLimit: 1
+  completions: 1
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app: certgen
+    spec:
+      containers:
+      - command:
+        - envoy-gateway
+        - certgen
+        env:
+        - name: ENVOY_GATEWAY_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        image: docker.io/envoyproxy/gateway-dev:1bea44e
+        imagePullPolicy: IfNotPresent
+        name: envoy-gateway-certgen
+      restartPolicy: Never
+      securityContext:
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      serviceAccountName: certgen
+  ttlSecondsAfterFinished: 0

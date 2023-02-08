@@ -1,0 +1,3 @@
+[submodule "gateway-api"]
+	path = gateway-api
+	url = git@github.com:GeoComply/gateway-api.git

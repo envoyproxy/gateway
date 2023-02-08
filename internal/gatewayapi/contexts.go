@@ -104,7 +104,7 @@ func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
 		// Remove GRPCRoute check once https://github.com/envoyproxy/gateway/issues/950 is fixed
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
-			(allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
+			(allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute) || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
 			return true
 		}
 	}
@@ -602,11 +602,12 @@ type RouteParentContext struct {
 
 	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
 	// a single field pointing to *v1beta1.RouteStatus.
-	httpRoute *v1beta1.HTTPRoute
-	grpcRoute *v1alpha2.GRPCRoute
-	tlsRoute  *v1alpha2.TLSRoute
-	tcpRoute  *v1alpha2.TCPRoute
-	udpRoute  *v1alpha2.UDPRoute
+	httpRoute       *v1beta1.HTTPRoute
+	grpcRoute       *v1alpha2.GRPCRoute
+	customgrpcRoute *v1alpha2.CustomGRPCRoute
+	tlsRoute        *v1alpha2.TLSRoute
+	tcpRoute        *v1alpha2.TCPRoute
+	udpRoute        *v1alpha2.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
