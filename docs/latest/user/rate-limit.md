@@ -191,11 +191,212 @@ and value `one`.
 for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: one" http://${GATEWAY_HOST}/get ; sleep 1; done
 ```
 
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
 You should be able to send requests with the `x-user-id` header and a different value and receive successful responses from the server.
 
 ```shell
 for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: two" http://${GATEWAY_HOST}/get ; sleep 1; done
 ```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:36 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:37 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:38 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:34:39 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+```
+
+## Rate limit distinct users 
+
+Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differntiated based on the 
+value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
+and so will user `two` (recognised from the traffic flow using the header `x-user-id` and value `two`).
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-distinct-users
+spec:
+  type: Global
+  global:
+    rules:
+    - clientSelectors:
+      - headers:
+        - type: Distinct
+          name: x-user-id
+      limit:
+        requests: 3
+        unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-distinct-users
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+
+Lets run the same command again with the header `x-user-id` and value `one` set in the request. We should the first 3 requests succeeding and
+the 4th request being rate limited.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: one" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
+You should see the same behavior when the value for header `x-user-id` is set to `two` and 4 requests are sent.
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-id: two" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
 
 [Global rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [RateLimitFilter]: https://github.com/envoyproxy/gateway/blob/main/api/v1alpha1/ratelimitfilter_types.go
