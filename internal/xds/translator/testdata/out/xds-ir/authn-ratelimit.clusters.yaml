@@ -52,7 +52,9 @@
   name: third-route
   outlierDetection: {}
   type: STATIC
-- connectTimeout: 10s
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: RANDOM
@@ -65,7 +67,10 @@
             socketAddress:
               address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
               portValue: 8081
+      loadBalancingWeight: 1
+      locality: {}
   name: ratelimit_cluster
+  outlierDetection: {}
   respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:

@@ -13,7 +13,6 @@ import (
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	ratelimit "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
@@ -269,39 +268,19 @@ func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *
 
 	clusterName := getRateLimitServiceClusterName()
 	host, port := t.getRateLimitServiceGrpcHostPort()
-	rateLimitServerCluster := &cluster.Cluster{
-		Name:                 clusterName,
-		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS},
-		ConnectTimeout:       durationpb.New(10 * time.Second),
-		LbPolicy:             cluster.Cluster_RANDOM,
-		LoadAssignment: &endpoint.ClusterLoadAssignment{
-			ClusterName: clusterName,
-			Endpoints: []*endpoint.LocalityLbEndpoints{
-				{
-					LbEndpoints: []*endpoint.LbEndpoint{
-						{
-							HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-								Endpoint: &endpoint.Endpoint{
-									Address: &core.Address{
-										Address: &core.Address_SocketAddress{
-											SocketAddress: &core.SocketAddress{
-												Address:       host,
-												PortSpecifier: &core.SocketAddress_PortValue{PortValue: uint32(port)},
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		TypedExtensionProtocolOptions: buildTypedExtensionProtocolOptions(),
-		DnsRefreshRate:                durationpb.New(30 * time.Second),
-		RespectDnsTtl:                 true,
-		DnsLookupFamily:               cluster.Cluster_V4_ONLY,
-	}
+	var routeDestinations []*ir.RouteDestination
+	routeDestinations = append(routeDestinations, &ir.RouteDestination{
+		Host: host,
+		Port: uint32(port),
+	})
+
+	rateLimitServerCluster := buildXdsCluster(clusterName, routeDestinations, true)
+	rateLimitServerCluster.ConnectTimeout = durationpb.New(10 * time.Second)
+	rateLimitServerCluster.ClusterDiscoveryType = &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS}
+	rateLimitServerCluster.DnsRefreshRate = durationpb.New(30 * time.Second)
+	rateLimitServerCluster.LbPolicy = cluster.Cluster_RANDOM
+	rateLimitServerCluster.RespectDnsTtl = true
+
 	return rateLimitServerCluster
 }
 
