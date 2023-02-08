@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -53,13 +54,13 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Debug:                    *flags.ShowDebug,
 		CleanupBaseResources:     *flags.CleanupBaseResources,
 		ValidUniqueListenerPorts: validUniqueListenerPorts,
-		SupportedFeatures: map[suite.SupportedFeature]bool{
-			suite.SupportHTTPRouteQueryParamMatching:    true,
-			suite.SupportReferenceGrant:                 true,
-			suite.SupportHTTPResponseHeaderModification: true,
-			suite.SupportHTTPRouteMethodMatching:        true,
-			suite.SupportRouteDestinationPortMatching:   true,
-		},
+		SupportedFeatures: sets.New(
+			suite.SupportHTTPRouteQueryParamMatching,
+			suite.SupportReferenceGrant,
+			suite.SupportHTTPResponseHeaderModification,
+			suite.SupportHTTPRouteMethodMatching,
+			suite.SupportRouteDestinationPortMatching,
+		),
 	})
 	cSuite.Setup(t)
 	egTests := []suite.ConformanceTest{
