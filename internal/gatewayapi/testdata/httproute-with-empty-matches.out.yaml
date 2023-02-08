@@ -62,8 +62,6 @@ xdsIR:
       - "*"
       routes:
       - name: default-httproute-1-rule-0-match--1-*
-        pathMatch:
-          prefix: "/"
         destinations:
         - host: 7.7.7.7
           port: 8080
