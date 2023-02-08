@@ -397,6 +397,89 @@ transfer-encoding: chunked
 
 ```
 
+## Rate limit all requests 
+
+This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-all-requests
+spec:
+  type: Global
+  global:
+    rules:
+    - limit:
+        requests: 3
+        unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-all-requests
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:31 GMT
+content-length: 460
+x-envoy-upstream-service-time: 4
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:32 GMT
+content-length: 460
+x-envoy-upstream-service-time: 2
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Wed, 08 Feb 2023 02:33:33 GMT
+content-length: 460
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Wed, 08 Feb 2023 02:33:34 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
 
 [Global rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [RateLimitFilter]: https://github.com/envoyproxy/gateway/blob/main/api/v1alpha1/ratelimitfilter_types.go
