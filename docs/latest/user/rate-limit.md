@@ -203,6 +203,3 @@ for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "x-user-
 [EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/config/v1alpha1/envoygateway_types.go
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter
-[HTTPRoute filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
-[Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPHeaderFilter
