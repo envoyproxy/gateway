@@ -19,7 +19,8 @@ const (
 	// ProviderTypeKubernetes defines the "Kubernetes" provider.
 	ProviderTypeKubernetes ProviderType = "Kubernetes"
 
-	// ProviderTypeFile defines the "File" provider.
+	// ProviderTypeFile defines the "File" provider. This type is not implemented
+	// until https://github.com/envoyproxy/gateway/issues/1001 is fixed.
 	ProviderTypeFile ProviderType = "File"
 )
 
