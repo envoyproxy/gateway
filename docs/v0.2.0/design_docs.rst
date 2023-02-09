@@ -10,4 +10,3 @@ Learn about the internal details of Envoy Gateway.
   design/gatewayapi-translator
   design/watching
   design/config-api
-  design/gatewayapi-support
