@@ -56,8 +56,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			case v1beta1.TLSProtocolType:
 				t.validateAllowedRoutes(listener, KindTLSRoute)
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
-				// Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
-				t.validateAllowedRoutes(listener, KindHTTPRoute) // , KindGRPCRoute)
+				t.validateAllowedRoutes(listener, KindHTTPRoute, KindGRPCRoute)
 			case v1beta1.TCPProtocolType:
 				t.validateAllowedRoutes(listener, KindTCPRoute)
 			case v1beta1.UDPProtocolType:

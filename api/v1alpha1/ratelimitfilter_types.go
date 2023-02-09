@@ -30,13 +30,11 @@ type RateLimitFilter struct {
 // +union
 type RateLimitFilterSpec struct {
 	// Type decides the scope for the RateLimits.
-	// Valid RateLimitType values are:
-	//
-	// * "Global" - In this mode, the rate limits are applied across all Envoy proxy instances.
+	// Valid RateLimitType values are "Global".
 	//
 	// +unionDiscriminator
 	Type RateLimitType `json:"type"`
-	// Global rate limit configuration.
+	// Global defines global rate limit configuration.
 	//
 	// +optional
 	Global *GlobalRateLimit `json:"global,omitempty"`
@@ -51,7 +49,7 @@ const (
 	GlobalRateLimitType RateLimitType = "Global"
 )
 
-// GlobalRateLimit defines the global rate limit configuration.
+// GlobalRateLimit defines global rate limit configuration.
 type GlobalRateLimit struct {
 	// Rules are a list of RateLimit selectors and limits.
 	// Each rule and its associated limit is applied
@@ -116,29 +114,33 @@ type HeaderMatch struct {
 
 	// Value within the HTTP header. Due to the
 	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
-	// Do not set this field when Type="Distinct", implying matching on any/all unique values within the header.
+	// Do not set this field when Type="Distinct", implying matching on any/all unique
+	// values within the header.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=1024
 	Value *string `json:"value,omitempty"`
 }
 
-// HeaderMatchType specifies the semantics of how HTTP header values should be
-// compared. Valid HeaderMatchType values are:
-//
-//   - "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header.
-//   - "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header.
-//     The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax.
-//   - "Distinct": Use this type to match any and all possible unique values encountered in the specified HTTP Header.
-//     Note that each unique value will receive its own rate limit bucket.
+// HeaderMatchType specifies the semantics of how HTTP header values should be compared.
+// Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
 //
 // +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
 type HeaderMatchType string
 
 // HeaderMatchType constants.
 const (
-	HeaderMatchExact             HeaderMatchType = "Exact"
+	// HeaderMatchExact matches the exact value of the Value field against the value of
+	// the specified HTTP Header.
+	HeaderMatchExact HeaderMatchType = "Exact"
+	// HeaderMatchRegularExpression matches a regular expression against the value of the
+	// specified HTTP Header. The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
 	HeaderMatchRegularExpression HeaderMatchType = "RegularExpression"
-	HeaderMatchDistinct          HeaderMatchType = "Distinct"
+	// HeaderMatchDistinct matches any and all possible unique values encountered in the
+	// specified HTTP Header. Note that each unique value will receive its own rate limit
+	// bucket.
+	HeaderMatchDistinct HeaderMatchType = "Distinct"
 )
 
 // RateLimitValue defines the limits for rate limiting.
@@ -148,12 +150,7 @@ type RateLimitValue struct {
 }
 
 // RateLimitUnit specifies the intervals for setting rate limits.
-// Valid RateLimitUnit values are:
-//
-// * "Second"
-// * "Minute"
-// * "Hour"
-// * "Day"
+// Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
 //
 // +kubebuilder:validation:Enum=Second;Minute;Hour;Day
 type RateLimitUnit string
