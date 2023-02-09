@@ -73,7 +73,7 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.23.6, v1.24.0, v1.25.3 ]
+        version: [ v1.23.6, v1.24.0, v1.25.3, v1.26.0 ]
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps
