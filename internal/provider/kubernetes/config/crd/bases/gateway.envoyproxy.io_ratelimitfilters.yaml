@@ -104,9 +104,12 @@ spec:
                                 - name
                                 x-kubernetes-list-type: map
                               sourceIP:
-                                description: SourceIP is IP CIDR from `X-Forwarded-For`
-                                  header. For example, `192.168.0.1/32`, `192.168.0.0/24`,
-                                  `001:db8::/64`.
+                                description: SourceIP is the IP CIDR that represents
+                                  the range of Source IP Addresses of the client.
+                                  These could also be the intermediate addresses through
+                                  which the request has flown through and is part
+                                  of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`,
+                                  `192.168.0.0/24`, `001:db8::/64`.
                                 type: string
                             type: object
                           maxItems: 8
