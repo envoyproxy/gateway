@@ -18,11 +18,11 @@ const (
 
 //+kubebuilder:object:root=true
 
-// EnvoyGateway is the Schema for the envoygateways API.
+// EnvoyGateway is the schema for the envoygateways API.
 type EnvoyGateway struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// EnvoyGatewaySpec defines the desired state of Envoy Gateway.
+	// EnvoyGatewaySpec defines the desired state of EnvoyGateway.
 	EnvoyGatewaySpec `json:",inline"`
 }
 
@@ -45,7 +45,7 @@ type EnvoyGatewaySpec struct {
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
 	// implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit.
-	// This configuration will not be needed to enable Local Rate limiitng.
+	// This configuration is unneeded for "Local" rate limiting.
 	//
 	// +optional
 	RateLimit *RateLimit `json:"rateLimit,omitempty"`
@@ -56,8 +56,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//
-	// https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -66,12 +65,11 @@ type Gateway struct {
 // Provider defines the desired configuration of a provider.
 // +union
 type Provider struct {
-	// Type is the type of provider to use. Supported types are:
-	//
-	//   * Kubernetes: A provider that provides runtime configuration via the Kubernetes API.
+	// Type is the type of provider to use. Supported types are "Kubernetes".
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`
+
 	// Kubernetes defines the configuration of the Kubernetes provider. Kubernetes
 	// provides runtime configuration via the Kubernetes API.
 	//
@@ -79,7 +77,8 @@ type Provider struct {
 	Kubernetes *KubernetesProvider `json:"kubernetes,omitempty"`
 
 	// File defines the configuration of the File provider. File provides runtime
-	// configuration defined by one or more files.
+	// configuration defined by one or more files. This type is not implemented
+	// until https://github.com/envoyproxy/gateway/issues/1001 is fixed.
 	//
 	// +optional
 	File *FileProvider `json:"file,omitempty"`
