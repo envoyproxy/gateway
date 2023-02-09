@@ -48,10 +48,6 @@ func patchHCMWithJwtAuthnFilter(mgr *hcm.HttpConnectionManager, irListener *ir.H
 		return errors.New("ir listener is nil")
 	}
 
-	if len(irListener.Routes) == 0 {
-		return errors.New("ir listener contains no routes")
-	}
-
 	if !listenerContainsJwtAuthn(irListener) {
 		return nil
 	}
