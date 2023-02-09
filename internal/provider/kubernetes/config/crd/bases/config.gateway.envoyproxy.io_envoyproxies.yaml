@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: EnvoyProxy is the Schema for the envoyproxies API
+        description: EnvoyProxy is the schema for the envoyproxies API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -40,11 +40,14 @@ spec:
                   level:
                     system: info
                 description: Logging defines logging parameters for managed proxies.
-                  If unspecified, default settings apply.
+                  If unspecified, default settings apply. This type is not implemented
+                  until https://github.com/envoyproxy/gateway/issues/280 is fixed.
                 properties:
                   level:
                     additionalProperties:
-                      description: LogLevel defines a log level for system logs.
+                      description: LogLevel defines a log level for system logs. This
+                        type is not implemented until https://github.com/envoyproxy/gateway/issues/280
+                        is fixed.
                       enum:
                       - debug
                       - info
@@ -82,11 +85,10 @@ spec:
                         type: object
                     type: object
                   type:
-                    description: "Type is the type of resource provider to use. A
-                      resource provider provides infrastructure resources for running
-                      the data plane, e.g. Envoy proxy, and optional auxiliary control
-                      planes. Supported types are: \n * Kubernetes: Provides infrastructure
-                      resources for running the data plane, e.g. Envoy proxy."
+                    description: Type is the type of resource provider to use. A resource
+                      provider provides infrastructure resources for running the data
+                      plane, e.g. Envoy proxy, and optional auxiliary control planes.
+                      Supported types are "Kubernetes".
                     enum:
                     - Kubernetes
                     type: string
@@ -95,7 +97,7 @@ spec:
                 type: object
             type: object
           status:
-            description: EnvoyProxyStatus defines the observed state of EnvoyProxy
+            description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
             type: object
         type: object
     served: true
