@@ -81,5 +81,5 @@ spec:
           weight: 1
       matches:
         - method:
-            service: com.example.User
-            method: Login
+            service: yages.Echo
+            method: Ping
