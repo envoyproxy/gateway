@@ -109,7 +109,27 @@ export GITHUB_REMOTE=origin
    git checkout -b release/v${MAJOR_VERSION}.${MINOR_VERSION} $GITHUB_REMOTE/release/v${MAJOR_VERSION}.${MINOR_VERSION}
    ```
 
-6. Tag the head of your release branch with the release tag. For example:
+6. If the tip of the release branch does not match the tip of `main`, perform the following:
+
+   1. Create a topic branch from the release branch.
+   2. Cherry-pick the commits from `main` that differ from the release branch.
+   3. Run tests locally, e.g. `make lint`.
+   4. Sign, commit, and push your topic branch to your Envoy Gateway fork.
+   5. Submit a PR to merge the topic from of your fork into the Envoy Gateway release branch.
+   6. Do not proceed until the PR has merged and CI passes for the merged PR.
+   7. If you are still on your topic branch, change to the release branch:
+
+      ```shell
+      git checkout release/v${MAJOR_VERSION}.${MINOR_VERSION}
+      ```
+
+   8. Ensure your local release branch is up-to-date:
+
+      ```shell
+      git pull $GITHUB_REMOTE release/v${MAJOR_VERSION}.${MINOR_VERSION}
+      ```
+
+7. Tag the head of your release branch with the release tag. For example:
 
     ```shell
     git tag -a v${MAJOR_VERSION}.${MINOR_VERSION}.0 -m 'Envoy Gateway v${MAJOR_VERSION}.${MINOR_VERSION}.0 Release'
@@ -117,18 +137,18 @@ export GITHUB_REMOTE=origin
 
     __Note:__ The tag version differs from the release branch by including the `.0` patch version.
 
-7. Push the tag to the Envoy Gateway repository.
+8. Push the tag to the Envoy Gateway repository.
 
      ```shell
      git push origin v${MAJOR_VERSION}.${MINOR_VERSION}.0
      ```
 
-8. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
-9. Confirm that the [release workflow][] completed successfully.
-10. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
-11. Confirm that the [release][] was created.
-12. Confirm that the steps in the [Quickstart Guide][] work as expected.
-13. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
+9. This will trigger the [release GitHub action][] that generates the release, release artifacts, etc.
+10. Confirm that the [release workflow][] completed successfully.
+11. Confirm that the Envoy Gateway [image][] with the correct release tag was published to Docker Hub.
+12. Confirm that the [release][] was created.
+13. Confirm that the steps in the [Quickstart Guide][] work as expected.
+14. [Generate][] the GitHub changelog and include the following text at the beginning of the release page:
 
    ```console
    # Release Announcement
