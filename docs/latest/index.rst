@@ -18,6 +18,7 @@ you are interested in using or contributing to Envoy Gateway, the following reso
   user_docs
   design_docs
   dev_docs
+  api_docs
   releases
   roadmap
   about_docs
