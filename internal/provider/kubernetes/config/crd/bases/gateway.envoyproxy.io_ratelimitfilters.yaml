@@ -118,9 +118,9 @@ spec:
                             requests:
                               type: integer
                             unit:
-                              description: "RateLimitUnit specifies the intervals
-                                for setting rate limits. Valid RateLimitUnit values
-                                are: \n * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
+                              description: RateLimitUnit specifies the intervals for
+                                setting rate limits. Valid RateLimitUnit values are
+                                "Second", "Minute", "Hour", and "Day".
                               enum:
                               - Second
                               - Minute
