@@ -17,12 +17,14 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// EnvoyProxy is the Schema for the envoyproxies API
+// EnvoyProxy is the schema for the envoyproxies API.
 type EnvoyProxy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EnvoyProxySpec   `json:"spec,omitempty"`
+	// EnvoyProxySpec defines the desired state of EnvoyProxy.
+	Spec EnvoyProxySpec `json:"spec,omitempty"`
+	// EnvoyProxyStatus defines the actual state of EnvoyProxy.
 	Status EnvoyProxyStatus `json:"status,omitempty"`
 }
 
@@ -36,7 +38,8 @@ type EnvoyProxySpec struct {
 	Provider *ResourceProvider `json:"provider,omitempty"`
 
 	// Logging defines logging parameters for managed proxies. If unspecified,
-	// default settings apply.
+	// default settings apply. This type is not implemented until
+	// https://github.com/envoyproxy/gateway/issues/280 is fixed.
 	//
 	// +kubebuilder:default={level: {system: info}}
 	Logging ProxyLogging `json:"logging,omitempty"`
@@ -47,10 +50,7 @@ type EnvoyProxySpec struct {
 type ResourceProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
-	// optional auxiliary control planes. Supported types are:
-	//
-	//   * Kubernetes: Provides infrastructure resources for running the data plane,
-	//                 e.g. Envoy proxy.
+	// optional auxiliary control planes. Supported types are "Kubernetes".
 	//
 	// +unionDiscriminator
 	Type ProviderType `json:"type"`
@@ -74,7 +74,8 @@ type KubernetesResourceProvider struct {
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
 }
 
-// ProxyLogging defines logging parameters for managed proxies.
+// ProxyLogging defines logging parameters for managed proxies. This type is not
+// implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
 type ProxyLogging struct {
 	// Level is a map of logging level per component, where the component is the key
 	// and the log level is the value. If unspecified, defaults to "System: Info".
@@ -84,7 +85,8 @@ type ProxyLogging struct {
 }
 
 // LogComponent defines a component that supports a configured logging level.
-//
+// This type is not implemented until https://github.com/envoyproxy/gateway/issues/280
+// is fixed.
 // +kubebuilder:validation:Enum=system;upstream;http;connection;admin;client;filter;main;router;runtime
 type LogComponent string
 
@@ -121,8 +123,8 @@ const (
 	LogComponentRuntime LogComponent = "runtime"
 )
 
-// LogLevel defines a log level for system logs.
-//
+// LogLevel defines a log level for system logs. This type is not implemented until
+// https://github.com/envoyproxy/gateway/issues/280 is fixed.
 // +kubebuilder:validation:Enum=debug;info;error
 type LogLevel string
 
@@ -137,7 +139,8 @@ const (
 	LogLevelError LogLevel = "error"
 )
 
-// EnvoyProxyStatus defines the observed state of EnvoyProxy
+// EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
+// until https://github.com/envoyproxy/gateway/issues/1007 is fixed.
 type EnvoyProxyStatus struct {
 	// INSERT ADDITIONAL STATUS FIELDS - define observed state of cluster.
 	// Important: Run "make" to regenerate code after modifying this file.
