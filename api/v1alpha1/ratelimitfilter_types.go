@@ -148,12 +148,7 @@ type RateLimitValue struct {
 }
 
 // RateLimitUnit specifies the intervals for setting rate limits.
-// Valid RateLimitUnit values are:
-//
-// * "Second"
-// * "Minute"
-// * "Hour"
-// * "Day"
+// Valid RateLimitUnit values are "Second", "Minute", "Hour", and "Day".
 //
 // +kubebuilder:validation:Enum=Second;Minute;Hour;Day
 type RateLimitUnit string

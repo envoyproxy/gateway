@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean $(tools/sphinx-build) ## Generate Envoy Gateway Docs Sources
+docs: docs.clean $(tools/sphinx-build) docs-api ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	mkdir -p $(DOCS_OUTPUT_DIR)
 	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
@@ -31,6 +31,29 @@ clean: docs.clean
 docs.clean:
 	@$(LOG_TARGET)
 	rm -rf $(DOCS_OUTPUT_DIR)
+
+.PHONY: docs-api
+docs-api: docs-api-gen docs-api-headings
+
+.PHONY: docs-api-gen
+docs-api-gen: $(tools/crd-ref-docs)
+	$(tools/crd-ref-docs) \
+	--source-path=api/config \
+	--config=tools/crd-ref-docs/config.yaml \
+	--output-path=docs/latest/api/config_types.md \
+	--max-depth 10 \
+	--renderer=markdown
+	$(tools/crd-ref-docs) \
+	--source-path=api/v1alpha1 \
+	--config=tools/crd-ref-docs/config.yaml \
+	--output-path=docs/latest/api/extension_types.md \
+	--max-depth 10 \
+	--renderer=markdown
+
+.PHONY: docs-api-headings # Required since sphinx mst does not link to h4 headings.
+docs-api-headings:
+	@$(LOG_TARGET)
+	tools/hack/docs-headings.sh
 
 .PHONY: docs-release-prepare
 docs-release-prepare:
