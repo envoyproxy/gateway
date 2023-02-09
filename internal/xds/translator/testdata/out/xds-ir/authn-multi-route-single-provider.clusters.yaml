@@ -34,7 +34,9 @@
   name: second-route
   outlierDetection: {}
   type: STATIC
-- connectTimeout: 10s
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   lbPolicy: RANDOM
@@ -47,7 +49,10 @@
             socketAddress:
               address: 127.0.0.1
               portValue: 443
+      loadBalancingWeight: 1
+      locality: {}
   name: localhost_443
+  outlierDetection: {}
   respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
