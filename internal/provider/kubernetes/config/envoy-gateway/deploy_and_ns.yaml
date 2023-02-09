@@ -28,7 +28,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: envoy-gateway
-          image: docker.io/envoyproxy/gateway-dev:d883c7a
+          image: docker.io/envoyproxy/gateway-dev:889de31
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

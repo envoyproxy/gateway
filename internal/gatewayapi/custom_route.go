@@ -166,10 +166,12 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 					Exact: match.Method.Method,
 				})
 			}
-			/* TODO
+
 			if match.Method.Service != nil {
+				irRoute.PathMatch = &ir.StringMatch{
+					Prefix: StringPtr("/" + *match.Method.Service),
+				}
 			}
-			*/
 		}
 
 		ruleRoutes = append(ruleRoutes, irRoute)
