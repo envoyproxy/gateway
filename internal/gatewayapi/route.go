@@ -162,15 +162,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule v1beta1.HTTPRouteRule) []*ir.HTTPRoute {
 	var ruleRoutes []*ir.HTTPRoute
 
-	// If no matches are specified, the default is a prefix
-	// path match on "/", which has the effect of matching every
-	// HTTP request.
+	// If no matches are specified, the implementation MUST match every HTTP request.
 	if len(rule.Matches) == 0 {
 		irRoute := &ir.HTTPRoute{
 			Name: routeName(httpRoute, ruleIdx, -1),
-			PathMatch: &ir.StringMatch{
-				Prefix: StringPtr("/"),
-			},
 		}
 		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
