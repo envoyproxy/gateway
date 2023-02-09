@@ -6,7 +6,7 @@
 
 ## config.gateway.envoyproxy.io/v1alpha1
 
-Package v1alpha1 contains API Schema definitions for the config.gateway.envoyproxy.io
+Package v1alpha1 contains API schema definitions for the config.gateway.envoyproxy.io
 API group.
 
 
@@ -20,7 +20,7 @@ API group.
 
 
 
-EnvoyGateway is the Schema for the envoygateways API.
+EnvoyGateway is the schema for the envoygateways API.
 
 
 
@@ -28,7 +28,7 @@ EnvoyGateway is the Schema for the envoygateways API.
 | --- | --- |
 | `apiVersion` _string_ | `config.gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyGateway`
-| `EnvoyGatewaySpec` _[EnvoyGatewaySpec](#envoygatewayspec)_ | EnvoyGatewaySpec defines the desired state of Envoy Gateway. |
+| `EnvoyGatewaySpec` _[EnvoyGatewaySpec](#envoygatewayspec)_ | EnvoyGatewaySpec defines the desired state of EnvoyGateway. |
 
 
 ## EnvoyGatewaySpec
@@ -44,14 +44,14 @@ _Appears in:_
 | --- | --- |
 | `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
 | `provider` _[Provider](#provider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
-| `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration will not be needed to enable Local Rate limiitng. |
+| `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 
 
 ## EnvoyProxy
 
 
 
-EnvoyProxy is the Schema for the envoyproxies API
+EnvoyProxy is the schema for the envoyproxies API.
 
 
 
@@ -60,7 +60,7 @@ EnvoyProxy is the Schema for the envoyproxies API
 | `apiVersion` _string_ | `config.gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyProxy`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[EnvoyProxySpec](#envoyproxyspec)_ |  |
+| `spec` _[EnvoyProxySpec](#envoyproxyspec)_ | EnvoyProxySpec defines the desired state of EnvoyProxy. |
 
 
 ## EnvoyProxySpec
@@ -75,7 +75,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `provider` _[ResourceProvider](#resourceprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
-| `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. |
+| `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
 
 
 
@@ -102,8 +102,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `controllerName` _string_ | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: 
- https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass |
+| `controllerName` _string_ | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass |
 
 
 ## KubernetesDeploymentSpec
@@ -149,7 +148,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogComponent defines a component that supports a configured logging level.
+LogComponent defines a component that supports a configured logging level. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
 
 _Appears in:_
 - [ProxyLogging](#proxylogging)
@@ -160,7 +159,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogLevel defines a log level for system logs.
+LogLevel defines a log level for system logs. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
 
 _Appears in:_
 - [ProxyLogging](#proxylogging)
@@ -178,10 +177,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[ProviderType](#providertype)_ | Type is the type of provider to use. Supported types are: 
- * Kubernetes: A provider that provides runtime configuration via the Kubernetes API. |
+| `type` _[ProviderType](#providertype)_ | Type is the type of provider to use. Supported types are "Kubernetes". |
 | `kubernetes` _[KubernetesProvider](#kubernetesprovider)_ | Kubernetes defines the configuration of the Kubernetes provider. Kubernetes provides runtime configuration via the Kubernetes API. |
-| `file` _[FileProvider](#fileprovider)_ | File defines the configuration of the File provider. File provides runtime configuration defined by one or more files. |
+| `file` _[FileProvider](#fileprovider)_ | File defines the configuration of the File provider. File provides runtime configuration defined by one or more files. This type is not implemented until https://github.com/envoyproxy/gateway/issues/1001 is fixed. |
 
 
 ## ProviderType
@@ -200,7 +198,7 @@ _Appears in:_
 
 
 
-ProxyLogging defines logging parameters for managed proxies.
+ProxyLogging defines logging parameters for managed proxies. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
@@ -275,8 +273,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[ProviderType](#providertype)_ | Type is the type of resource provider to use. A resource provider provides infrastructure resources for running the data plane, e.g. Envoy proxy, and optional auxiliary control planes. Supported types are: 
- * Kubernetes: Provides infrastructure resources for running the data plane, e.g. Envoy proxy. |
+| `type` _[ProviderType](#providertype)_ | Type is the type of resource provider to use. A resource provider provides infrastructure resources for running the data plane, e.g. Envoy proxy, and optional auxiliary control planes. Supported types are "Kubernetes". |
 | `kubernetes` _[KubernetesResourceProvider](#kubernetesresourceprovider)_ | Kubernetes defines the desired state of the Kubernetes resource provider. Kubernetes provides infrastructure resources for running the data plane, e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings for managed Kubernetes resources are applied. |
 
 

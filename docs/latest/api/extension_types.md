@@ -6,7 +6,7 @@
 
 ## gateway.envoyproxy.io/v1alpha1
 
-Package v1alpha1 contains API Schema definitions for the gateway.envoyproxy.io API group.
+Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io API group.
 
 
 ### Resource Types
@@ -42,10 +42,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are: 
- * JWT: A provider that uses JSON Web Token (JWT) for authenticating requests. |
-| `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see: 
- https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html |
+| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT". |
+| `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 
 ## AuthenticationFilterType
@@ -63,7 +61,7 @@ _Appears in:_
 
 
 
-GlobalRateLimit defines the global rate limit configuration.
+GlobalRateLimit defines global rate limit configuration.
 
 _Appears in:_
 - [RateLimitFilterSpec](#ratelimitfilterspec)
@@ -93,8 +91,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-HeaderMatchType specifies the semantics of how HTTP header values should be compared. Valid HeaderMatchType values are: 
- - "Exact": Use this type to match the exact value of the Value field against the value of the specified HTTP Header. - "RegularExpression": Use this type to match a regular expression against the value of the specified HTTP Header. The regex string must adhere to the syntax documented in https://github.com/google/re2/wiki/Syntax. - "Distinct": Use this type to match any and all possible unique values encountered in the specified HTTP Header. Note that each unique value will receive its own rate limit bucket.
+HeaderMatchType specifies the semantics of how HTTP header values should be compared. Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
 
 _Appears in:_
 - [HeaderMatch](#headermatch)
@@ -113,15 +110,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name defines a unique name for the JWT provider. A name can have a variety of forms, including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels. |
-| `issuer` _string_ | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see: 
- URL format: https://tools.ietf.org/html/rfc7519#section-4.1.1 Email format: https://rfc-editor.org/rfc/rfc5322.html 
- URL Example: issuer: https://auth.example.com 
- Email Example: issuer: jdoe@example.com 
- If not provided, the JWT issuer is not checked. |
-| `audiences` _string array_ | Audiences is a list of JWT audiences allowed to access. For additional details, see: 
- https://tools.ietf.org/html/rfc7519#section-4.1.3 
- Example: audiences: - foo.apps.example.com bar.apps.example.com 
- If not provided, JWT audiences are not checked. |
+| `issuer` _string_ | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
+| `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
 
 
@@ -152,9 +142,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are: 
- * "Global" - In this mode, the rate limits are applied across all Envoy proxy instances. |
-| `global` _[GlobalRateLimit](#globalratelimit)_ | Global rate limit configuration. |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
 
 
 ## RateLimitRule
@@ -234,7 +223,6 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `uri` _string_ | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate. 
- Example: uri: https://www.foo.com/oauth2/v1/certs |
+| `uri` _string_ | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate. |
 
 
