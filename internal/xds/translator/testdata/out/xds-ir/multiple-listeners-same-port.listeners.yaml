@@ -39,6 +39,7 @@
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket
+        useRemoteAddress: true
   filterChains:
   - filterChainMatch:
       serverNames:
@@ -70,6 +71,7 @@
         statPrefix: https
         upgradeConfigs:
         - upgradeType: websocket
+        useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
