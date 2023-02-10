@@ -36,32 +36,29 @@ spec:
               type.
             properties:
               jwtProviders:
-                description: "JWT defines the JSON Web Token (JWT) authentication
-                  provider type. When multiple jwtProviders are specified, the JWT
-                  is considered valid if any of the providers successfully validate
-                  the JWT. For additional details, see: \n https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html"
+                description: JWT defines the JSON Web Token (JWT) authentication provider
+                  type. When multiple jwtProviders are specified, the JWT is considered
+                  valid if any of the providers successfully validate the JWT. For
+                  additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
                 items:
                   description: 'JwtAuthenticationFilterProvider defines the JSON Web
                     Token (JWT) authentication provider type and how JWTs should be
                     verified:'
                   properties:
                     audiences:
-                      description: "Audiences is a list of JWT audiences allowed to
-                        access. For additional details, see: \n https://tools.ietf.org/html/rfc7519#section-4.1.3
-                        \n Example: audiences: - foo.apps.example.com bar.apps.example.com
-                        \n If not provided, JWT audiences are not checked."
+                      description: Audiences is a list of JWT audiences allowed access.
+                        For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3.
+                        If not provided, JWT audiences are not checked.
                       items:
                         type: string
                       maxItems: 8
                       type: array
                     issuer:
-                      description: "Issuer is the principal that issued the JWT and
+                      description: Issuer is the principal that issued the JWT and
                         takes the form of a URL or email address. For additional details,
-                        see: \n URL format: https://tools.ietf.org/html/rfc7519#section-4.1.1
-                        Email format: https://rfc-editor.org/rfc/rfc5322.html \n URL
-                        Example: issuer: https://auth.example.com \n Email Example:
-                        issuer: jdoe@example.com \n If not provided, the JWT issuer
-                        is not checked."
+                        see https://tools.ietf.org/html/rfc7519#section-4.1.1 for
+                        URL format and https://rfc-editor.org/rfc/rfc5322.html for
+                        email format. If not provided, the JWT issuer is not checked.
                       maxLength: 253
                       type: string
                     name:
@@ -76,9 +73,8 @@ spec:
                         Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
                       properties:
                         uri:
-                          description: "URI is the HTTPS URI to fetch the JWKS. Envoy's
+                          description: URI is the HTTPS URI to fetch the JWKS. Envoy's
                             system trust bundle is used to validate the server certificate.
-                            \n Example: uri: https://www.foo.com/oauth2/v1/certs"
                           maxLength: 253
                           minLength: 1
                           type: string
@@ -92,9 +88,8 @@ spec:
                 maxItems: 4
                 type: array
               type:
-                description: "Type defines the type of authentication provider to
-                  use. Supported provider types are: \n * JWT: A provider that uses
-                  JSON Web Token (JWT) for authenticating requests."
+                description: Type defines the type of authentication provider to use.
+                  Supported provider types are "JWT".
                 enum:
                 - JWT
                 type: string
