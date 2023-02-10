@@ -54,10 +54,9 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 10s
+  connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  lbPolicy: RANDOM
   loadAssignment:
     clusterName: ratelimit_cluster
     endpoints:

@@ -54,10 +54,9 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 10s
+  connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  lbPolicy: RANDOM
   loadAssignment:
     clusterName: ratelimit_cluster
     endpoints:
@@ -80,10 +79,9 @@
         http2ProtocolOptions: {}
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 10s
+  connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  lbPolicy: RANDOM
   loadAssignment:
     clusterName: localhost_443
     endpoints:
@@ -91,7 +89,7 @@
       - endpoint:
           address:
             socketAddress:
-              address: 127.0.0.1
+              address: localhost
               portValue: 443
       loadBalancingWeight: 1
       locality: {}
@@ -106,4 +104,4 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
-  type: STATIC
+  type: STRICT_DNS

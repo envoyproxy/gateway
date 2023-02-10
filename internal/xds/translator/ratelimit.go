@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"net/url"
 	"strconv"
-	"time"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -20,7 +19,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
@@ -268,18 +266,8 @@ func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *
 
 	clusterName := getRateLimitServiceClusterName()
 	host, port := t.getRateLimitServiceGrpcHostPort()
-	var routeDestinations []*ir.RouteDestination
-	routeDestinations = append(routeDestinations, &ir.RouteDestination{
-		Host: host,
-		Port: uint32(port),
-	})
-
-	rateLimitServerCluster := buildXdsCluster(clusterName, routeDestinations, true)
-	rateLimitServerCluster.ConnectTimeout = durationpb.New(10 * time.Second)
-	rateLimitServerCluster.ClusterDiscoveryType = &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS}
-	rateLimitServerCluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-	rateLimitServerCluster.LbPolicy = cluster.Cluster_RANDOM
-	rateLimitServerCluster.RespectDnsTtl = true
+	routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port), 0)}
+	rateLimitServerCluster := buildXdsCluster(clusterName, routeDestinations, true /*isHTTP2 */, false /*isStatic */)
 
 	return rateLimitServerCluster
 }
