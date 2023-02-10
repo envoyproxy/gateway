@@ -1,4 +1,4 @@
-# egctl Design
+# Introduce egctl
 
 ## Motivation
 

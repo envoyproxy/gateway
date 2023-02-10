@@ -1,4 +1,4 @@
-# Request Authentication Design
+# Request Authentication
 
 ## Overview
 
