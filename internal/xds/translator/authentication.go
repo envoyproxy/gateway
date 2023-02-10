@@ -343,7 +343,7 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 	}
 
 	for _, route := range routes {
-		if routeContainsJwtAuthn(route) && len(route.RequestAuthentication.JWT.Providers) > 0 {
+		if routeContainsJwtAuthn(route) {
 			for i := range route.RequestAuthentication.JWT.Providers {
 				provider := route.RequestAuthentication.JWT.Providers[i]
 				jwks, err := newJwksCluster(&provider)
@@ -389,7 +389,6 @@ func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCl
 	if u.Port() != "" {
 		strPort = u.Port()
 	}
-
 	addrs, err := resolveHostname(u.Hostname())
 	if err != nil {
 		return nil, err
@@ -472,7 +471,8 @@ func routeContainsJwtAuthn(irRoute *ir.HTTPRoute) bool {
 	if irRoute != nil &&
 		irRoute.RequestAuthentication != nil &&
 		irRoute.RequestAuthentication.JWT != nil &&
-		irRoute.RequestAuthentication.JWT.Providers != nil {
+		irRoute.RequestAuthentication.JWT.Providers != nil &&
+		len(irRoute.RequestAuthentication.JWT.Providers) > 0 {
 		return true
 	}
 
