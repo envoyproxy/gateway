@@ -19,53 +19,70 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func TestExpectedProxyConfigMap(t *testing.T) {
-	// Setup the infra.
+var (
+	rateLimitListener = "ratelimit-listener"
+	rateLimitConfig   = `
+domain: first-listener
+descriptors:
+  - key: first-route-key-rule-0-match-0
+    value: first-route-value-rule-0-match-0
+    rate_limit:
+      requests_per_unit: 5
+      unit: second
+      unlimited: false
+      name: ""
+      replaces: []
+    descriptors: []
+    shadow_mode: false
+`
+)
+
+func TestExpectedRateLimitConfigMap(t *testing.T) {
+	// Setup the ratelimit infra.
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	cfg, err := config.New()
 	require.NoError(t, err)
 
 	kube := NewInfra(cli, cfg)
-	infra := ir.NewInfra()
 
-	infra.Proxy.Name = "test"
+	rateLimitInfra := new(ir.RateLimitInfra)
+
+	c := &ir.RateLimitServiceConfig{
+		Name:   rateLimitListener,
+		Config: rateLimitConfig,
+	}
+	rateLimitInfra.Configs = append(rateLimitInfra.Configs, c)
 
 	// An infra without Gateway owner labels should trigger
 	// an error.
-	_, err = kube.expectedProxyConfigMap(infra)
-	require.NotNil(t, err)
+	cm := kube.expectedRateLimitConfigMap(rateLimitInfra)
+	require.NotNil(t, cm)
 
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-
-	cm, err := kube.expectedProxyConfigMap(infra)
-	require.NoError(t, err)
-
-	require.Equal(t, "envoy-test-74657374", cm.Name)
+	require.Equal(t, "envoy-ratelimit", cm.Name)
 	require.Equal(t, "envoy-gateway-system", cm.Namespace)
-	require.Contains(t, cm.Data, sdsCAFilename)
-	assert.Equal(t, sdsCAConfigMapData, cm.Data[sdsCAFilename])
-	require.Contains(t, cm.Data, sdsCertFilename)
-	assert.Equal(t, sdsCertConfigMapData, cm.Data[sdsCertFilename])
+	require.Contains(t, cm.Data, rateLimitListener)
+	assert.Equal(t, rateLimitConfig, cm.Data[rateLimitListener])
 
-	wantLabels := envoyAppLabel()
-	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	wantLabels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	wantLabels := rateLimitLabels()
 	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, cm.Labels))
 }
 
-func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
+func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	kube := NewInfra(nil, cfg)
-	infra := ir.NewInfra()
-	infra.Proxy.Name = "test"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+	cfg.Namespace = "envoy-gateway-system"
+
+	rateLimitInfra := new(ir.RateLimitInfra)
+	c := &ir.RateLimitServiceConfig{
+		Name:   rateLimitListener,
+		Config: rateLimitConfig,
+	}
+	rateLimitInfra.Configs = append(rateLimitInfra.Configs, c)
 
 	testCases := []struct {
 		name    string
@@ -73,30 +90,26 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 		expect  *corev1.ConfigMap
 	}{
 		{
-			name: "create configmap",
+			name: "create ratelimit configmap",
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      "envoy-test-74657374",
+					Name:      rateLimitInfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name":       "envoy",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "test",
+						"app.gateway.envoyproxy.io/name": rateLimitInfraName,
 					},
 				},
-				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
+				Data: map[string]string{rateLimitListener: rateLimitConfig},
 			},
 		},
 		{
-			name: "update configmap",
+			name: "update ratelimit configmap",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      "envoy-test",
+					Name:      rateLimitInfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name":       "envoy",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "test",
+						"app.gateway.envoyproxy.io/name": rateLimitInfraName,
 					},
 				},
 				Data: map[string]string{"foo": "bar"},
@@ -104,14 +117,12 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      "envoy-test-74657374",
+					Name:      rateLimitInfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name":       "envoy",
-						gatewayapi.OwningGatewayNamespaceLabel: "default",
-						gatewayapi.OwningGatewayNameLabel:      "test",
+						"app.gateway.envoyproxy.io/name": rateLimitInfraName,
 					},
 				},
-				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
+				Data: map[string]string{rateLimitListener: rateLimitConfig},
 			},
 		},
 	}
@@ -124,7 +135,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			} else {
 				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateProxyConfigMap(context.Background(), infra)
+			err := kube.createOrUpdateRateLimitConfigMap(context.Background(), rateLimitInfra)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -139,12 +150,11 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 	}
 }
 
-func TestDeleteConfigProxyMap(t *testing.T) {
+func TestDeleteRateLimitConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	infra := ir.NewInfra()
-	infra.Proxy.Name = "test"
+	rateLimitInfra := new(ir.RateLimitInfra)
 
 	testCases := []struct {
 		name    string
@@ -152,7 +162,7 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 		expect  bool
 	}{
 		{
-			name: "delete configmap",
+			name: "delete ratelimit configmap",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
@@ -162,7 +172,7 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			expect: true,
 		},
 		{
-			name: "configmap not found",
+			name: "ratelimit configmap not found",
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
@@ -179,7 +189,11 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			t.Parallel()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
-			err := kube.deleteProxyConfigMap(context.Background(), infra)
+
+			err := kube.createOrUpdateRateLimitConfigMap(context.Background(), rateLimitInfra)
+			require.NoError(t, err)
+
+			err = kube.deleteRateLimitConfigMap(context.Background(), rateLimitInfra)
 			require.NoError(t, err)
 		})
 	}

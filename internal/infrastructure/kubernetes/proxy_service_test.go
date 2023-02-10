@@ -127,7 +127,14 @@ func TestDeleteProxyService(t *testing.T) {
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-			err := kube.deleteProxyService(context.Background(), infra)
+
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+			err := kube.createOrUpdateProxyService(context.Background(), infra)
+			require.NoError(t, err)
+
+			err = kube.deleteProxyService(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}
