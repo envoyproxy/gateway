@@ -351,7 +351,7 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 					return err
 				}
 				if existingCluster := findXdsCluster(tCtx, jwks.name); existingCluster == nil {
-					jwksServerCluster := buildXdsCluster(jwks.name, jwks.routeDestinations, false /*isHTTP2 */, false /*isStatic */)
+					jwksServerCluster := buildXdsCluster(jwks.name, jwks.routeDestinations, false /*isHTTP2 */, true /*isStatic */)
 					tSocket, err := buildXdsUpstreamTLSSocket()
 					if err != nil {
 						return err
@@ -390,6 +390,11 @@ func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCl
 		strPort = u.Port()
 	}
 
+	addrs, err := resolveHostname(u.Hostname())
+	if err != nil {
+		return nil, err
+	}
+
 	name := fmt.Sprintf("%s_%s", strings.ReplaceAll(u.Hostname(), ".", "_"), strPort)
 
 	port, err := strconv.Atoi(strPort)
@@ -397,7 +402,12 @@ func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCl
 		return nil, err
 	}
 
-	routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(u.Hostname(), uint32(port), 0)}
+	var routeDestinations []*ir.RouteDestination
+
+	for _, addr := range addrs {
+		routeDestinations = append(routeDestinations, ir.NewRouteDest(addr, uint32(port), 0))
+	}
+
 	return &jwksCluster{
 		name:              name,
 		routeDestinations: routeDestinations,

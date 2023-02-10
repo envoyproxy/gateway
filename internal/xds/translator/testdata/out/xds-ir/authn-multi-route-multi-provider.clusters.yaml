@@ -38,7 +38,6 @@
     localityWeightedLbConfig: {}
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
-  dnsRefreshRate: 30s
   loadAssignment:
     clusterName: localhost_443
     endpoints:
@@ -46,13 +45,12 @@
       - endpoint:
           address:
             socketAddress:
-              address: localhost
+              address: 127.0.0.1
               portValue: 443
       loadBalancingWeight: 1
       locality: {}
   name: localhost_443
   outlierDetection: {}
-  respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
@@ -61,12 +59,11 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
-  type: STRICT_DNS
+  type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
-  dnsRefreshRate: 30s
   loadAssignment:
     clusterName: localhost_8080
     endpoints:
@@ -74,13 +71,12 @@
       - endpoint:
           address:
             socketAddress:
-              address: localhost
+              address: 127.0.0.1
               portValue: 8080
       loadBalancingWeight: 1
       locality: {}
   name: localhost_8080
   outlierDetection: {}
-  respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
@@ -89,4 +85,4 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
-  type: STRICT_DNS
+  type: STATIC
