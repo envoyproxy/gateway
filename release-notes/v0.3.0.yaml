@@ -32,7 +32,7 @@ changes:
       Added Support for Global Rate Limiting
       Added Support for Routes ReferenceGrant
       Added Support for Namespace Server Config Type
-      Added Support for Managing EnvoyProxy Deployment
+      Added initial management of Envoy Proxy deployment via EnvoyProxy API
 
   - area: ci-tooling-testing
     change: |
@@ -51,6 +51,7 @@ changes:
       Enabled HTTPRouteMethodMatching conformance test
       Enabled HTTPRoutePartiallyInvalidViaInvalidReferenceGrant conformance test
       Enabled HTTPRouteInvalidParentRefNotMatchingListenerPort conformance test
+      (Currently EG passes all conformance tests except redirect and gateway/httproute ObservedGenerationBump tests. Redirect tests are failing due to a possible issue with the way upstream conformance tests have made assumptions. Skip them for now until below issues #992 #993 #994 are resolved)
 
   - area: ir
     change: |
