@@ -30,6 +30,8 @@ All of the following HTTPRoute filters are supported by Envoy Gateway.
 
 **Note:** currently the only [BackendRef][] kind (the destination where traffic should be sent to) that Envoy Gateway supports are [Kubernetes Services][]. Routing traffic to other destinations such as arbitrary URLs is not currently possible.
 
+**Note:** the `filters` field within [HTTPBackendRef][] is not supported.
+
 ## **TCPRoute**
 
 [TCPRoutes][] are used to configure routing of raw TCP traffic. Traffic can be forwarded to the desired BackendRef(s) based on a port.
@@ -52,9 +54,10 @@ Similar to HTTPRoutes, Envoy Gateway supports the following filters on GRPCRoute
 - `requestHeaderModifier`: [RequestHeaderModifiers](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter) can be used to modify or add request headers before the request is proxied to its destination.
 - `responseHeaderModifier`: [ResponseHeaderModifiers](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter) can be used to modify or add response headers before the response is sent back to the client.
 - `requestMirror`: [RequestMirrors](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter) configure destinations where the requests should also be mirrored to. Responses to mirrored requests will be ignored.
-- `extensionRef`: [ExtensionRefs] are used by Envoy Gateway to add additional support for Ratelimitg and Authentication. For more information about Envoy Gateay's implementation of these filters please refer to the [Ratelimiting][] and [Authentication][] documentation.
 
 **Note:** currently the only [BackendRef](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteFilter) kind (the destination where traffic should be sent to) that Envoy Gateway supports are [Kubernetes Services][]. Routing traffic to other destinations such as arbitrary URLs is not currently possible
+
+**Note:** the `filters` field within [HTTPBackendRef][] is not supported.
 
 ## **TLSRoute**
 
@@ -79,6 +82,7 @@ one of its BackendRefs. ReferenceGrants are commonly used to permit these types 
 [HTTPRoutes]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [Kubernetes Services]: https://kubernetes.io/docs/concepts/services-networking/service/
 [BackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.BackendRef
+[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPBackendRef
 [TCPRoutes]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
 [UDPRoutes]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.UDPRoute
 [GRPCRoutes]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
