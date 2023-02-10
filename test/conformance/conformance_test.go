@@ -48,46 +48,26 @@ func TestGatewayAPIConformance(t *testing.T) {
 	}
 
 	cSuite := suite.New(suite.Options{
-		Client:                   client,
-		GatewayClassName:         *flags.GatewayClassName,
-		Debug:                    *flags.ShowDebug,
-		CleanupBaseResources:     *flags.CleanupBaseResources,
-		ValidUniqueListenerPorts: validUniqueListenerPorts,
-		SupportedFeatures: map[suite.SupportedFeature]bool{
-			suite.SupportHTTPRouteQueryParamMatching:    true,
-			suite.SupportReferenceGrant:                 true,
-			suite.SupportHTTPResponseHeaderModification: true,
-			suite.SupportHTTPRouteMethodMatching:        true,
-			suite.SupportRouteDestinationPortMatching:   true,
+		Client:                     client,
+		GatewayClassName:           *flags.GatewayClassName,
+		Debug:                      *flags.ShowDebug,
+		CleanupBaseResources:       *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts:   validUniqueListenerPorts,
+		EnableAllSupportedFeatures: true,
+		SkipTests: []string{
+			// Remove once https://github.com/envoyproxy/gateway/issues/993 is fixed
+			tests.HTTPRouteRedirectPath.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/992 is fixed
+			tests.HTTPRouteRedirectHostAndStatus.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/994 is fixed
+			tests.HTTPRouteRedirectScheme.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/1016 is fixed
+			tests.GatewayObservedGenerationBump.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/1016 is fixed
+			tests.HTTPRouteObservedGenerationBump.ShortName,
 		},
 	})
 	cSuite.Setup(t)
-	egTests := []suite.ConformanceTest{
-		tests.HTTPRouteSimpleSameNamespace,
-		tests.HTTPRouteRequestHeaderModifier,
-		tests.HTTPRouteResponseHeaderModifier,
-		tests.HTTPRouteQueryParamMatching,
-		tests.HTTPRouteInvalidCrossNamespaceParentRef,
-		tests.HTTPExactPathMatching,
-		tests.HTTPRouteCrossNamespace,
-		tests.HTTPRouteHeaderMatching,
-		tests.HTTPRouteMethodMatching,
-		tests.HTTPRouteMatchingAcrossRoutes,
-		tests.HTTPRouteHostnameIntersection,
-		tests.HTTPRouteListenerHostnameMatching,
-		tests.HTTPRouteInvalidNonExistentBackendRef,
-		tests.HTTPRouteInvalidBackendRefUnknownKind,
-		tests.HTTPRouteInvalidCrossNamespaceBackendRef,
-		tests.GatewaySecretReferenceGrantAllInNamespace,
-		tests.GatewaySecretReferenceGrantSpecific,
-		tests.GatewaySecretMissingReferenceGrant,
-		tests.GatewaySecretInvalidReferenceGrant,
-		tests.GatewayInvalidTLSConfiguration,
-		tests.GatewayInvalidRouteKind,
-		tests.HTTPRouteReferenceGrant,
-		tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant,
-		tests.HTTPRouteInvalidParentRefNotMatchingListenerPort,
-	}
-	cSuite.Run(t, egTests)
+	cSuite.Run(t, tests.ConformanceTests)
 
 }

@@ -19,6 +19,8 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
       attachedRoutes: 1
       conditions:
       - type: Programmed
@@ -62,8 +64,6 @@ xdsIR:
       - "*"
       routes:
       - name: default-httproute-1-rule-0-match--1-*
-        pathMatch:
-          prefix: "/"
         destinations:
         - host: 7.7.7.7
           port: 8080

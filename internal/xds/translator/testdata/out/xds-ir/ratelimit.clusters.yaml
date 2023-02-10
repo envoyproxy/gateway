@@ -55,7 +55,6 @@
 - connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  http2ProtocolOptions: {}
   lbPolicy: RANDOM
   loadAssignment:
     clusterName: ratelimit_cluster
@@ -64,8 +63,13 @@
       - endpoint:
           address:
             socketAddress:
-              address: TODO
-              portValue: 0
+              address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
+              portValue: 8081
   name: ratelimit_cluster
   respectDnsTtl: true
   type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions: {}

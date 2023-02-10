@@ -19,9 +19,8 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
-              # Uncomment when https://github.com/envoyproxy/gateway/issues/950 is fixed
-              #- group: gateway.networking.k8s.io
-              #kind: GRPCRoute              
+            - group: gateway.networking.k8s.io
+              kind: GRPCRoute              
           attachedRoutes: 0
           conditions:
             - type: Programmed

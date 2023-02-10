@@ -37,7 +37,7 @@ spec:
             description: Spec defines the desired state of RateLimitFilter.
             properties:
               global:
-                description: Global rate limit configuration.
+                description: Global defines global rate limit configuration.
                 properties:
                   rules:
                     description: Rules are a list of RateLimit selectors and limits.
@@ -118,9 +118,9 @@ spec:
                             requests:
                               type: integer
                             unit:
-                              description: "RateLimitUnit specifies the intervals
-                                for setting rate limits. Valid RateLimitUnit values
-                                are: \n * \"Second\" * \"Minute\" * \"Hour\" * \"Day\""
+                              description: RateLimitUnit specifies the intervals for
+                                setting rate limits. Valid RateLimitUnit values are
+                                "Second", "Minute", "Hour", and "Day".
                               enum:
                               - Second
                               - Minute
@@ -140,9 +140,8 @@ spec:
                 - rules
                 type: object
               type:
-                description: "Type decides the scope for the RateLimits. Valid RateLimitType
-                  values are: \n * \"Global\" - In this mode, the rate limits are
-                  applied across all Envoy proxy instances."
+                description: Type decides the scope for the RateLimits. Valid RateLimitType
+                  values are "Global".
                 enum:
                 - Global
                 type: string

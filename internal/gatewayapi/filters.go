@@ -684,6 +684,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 					t.processUnresolvedHTTPFilter(errMsg, filterContext)
 					return
 				}
+				if !t.GlobalRateLimitEnabled {
+					errMsg := fmt.Sprintf("Enable Ratelimit in the EnvoyGateway config to configure RateLimitFilter: %s/%s",
+						filterNs, extFilter.Name)
+					t.processUnresolvedHTTPFilter(errMsg, filterContext)
+					return
+				}
 				rateLimit := &ir.RateLimit{
 					Global: &ir.GlobalRateLimit{
 						Rules: make([]*ir.RateLimitRule, len(rateLimitFilter.Spec.Global.Rules)),
