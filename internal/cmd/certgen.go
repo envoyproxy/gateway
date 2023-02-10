@@ -35,7 +35,7 @@ func getCertGenCommand() *cobra.Command {
 
 // certGen generates control plane certificates.
 func certGen() error {
-	cfg, err := getConfig()
+	cfg, err := getConfig(cfgPath)
 	if err != nil {
 		return err
 	}

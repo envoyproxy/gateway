@@ -42,7 +42,7 @@ func getServerCommand() *cobra.Command {
 
 // server serves Envoy Gateway.
 func server() error {
-	cfg, err := getConfig()
+	cfg, err := getConfig(cfgPath)
 	if err != nil {
 		return err
 	}
@@ -55,13 +55,10 @@ func server() error {
 }
 
 // getConfig gets the Server configuration
-func getConfig() (*config.Server, error) {
+func getConfig(cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
 	cfg, err := config.New()
 	if err != nil {
-		return nil, err
-	}
-	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -81,6 +78,10 @@ func getConfig() (*config.Server, error) {
 		// Set defaults for unset fields
 		eg.SetDefaults()
 		cfg.EnvoyGateway = eg
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return nil, err
 	}
 	return cfg, nil
 }

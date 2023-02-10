@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,4 +15,20 @@ import (
 func TestGetServerCommand(t *testing.T) {
 	got := getServerCommand()
 	assert.Equal(t, "server", got.Use)
+}
+
+func TestValidateUserConfig(t *testing.T) {
+	file, err := os.CreateTemp("", "config")
+	assert.NoError(t, err)
+	defer os.Remove(file.Name())
+
+	_, err = file.Write([]byte(`
+kind: EnvoyGateway
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+gateway: {}
+`))
+	assert.NoError(t, err)
+
+	_, err = getConfig(file.Name())
+	assert.Error(t, err)
 }
