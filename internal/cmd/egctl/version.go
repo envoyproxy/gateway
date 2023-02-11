@@ -22,13 +22,13 @@ import (
 )
 
 const (
-	yamlOutput = "yaml"
+	yamlOutput      = "yaml"
+	egContainerName = "envoy-gateway"
 )
 
 func NewVersionCommand() *cobra.Command {
 	var (
-		output          string
-		egContainerName string
+		output string
 	)
 
 	versionCommand := &cobra.Command{
@@ -44,7 +44,6 @@ func NewVersionCommand() *cobra.Command {
 	options.AddKubeConfigFlags(flags)
 
 	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
-	versionCommand.PersistentFlags().StringVar(&egContainerName, "eg-container-name", "envoy-gateway", "Name of the Envoy Gateway container")
 
 	return versionCommand
 }
