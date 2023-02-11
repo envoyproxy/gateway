@@ -107,7 +107,7 @@ func checkContainerImage(t *testing.T, container *corev1.Container, image string
 	t.Errorf("container is missing image %q", image)
 }
 
-func TestExpectedDeployment(t *testing.T) {
+func TestExpectedProxyDeployment(t *testing.T) {
 	svrCfg, err := config.New()
 	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
@@ -175,7 +175,7 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 	return dCopy
 }
 
-func TestCreateOrUpdateDeployment(t *testing.T) {
+func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
@@ -268,7 +268,14 @@ func TestDeleteProxyDeployment(t *testing.T) {
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-			err := kube.deleteProxyDeployment(context.Background(), infra)
+
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+			err := kube.createOrUpdateProxyDeployment(context.Background(), infra)
+			require.NoError(t, err)
+
+			err = kube.deleteProxyDeployment(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}
