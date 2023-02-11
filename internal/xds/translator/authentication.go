@@ -24,7 +24,6 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	wkt "github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -47,10 +46,6 @@ func patchHCMWithJwtAuthnFilter(mgr *hcm.HttpConnectionManager, irListener *ir.H
 
 	if irListener == nil {
 		return errors.New("ir listener is nil")
-	}
-
-	if len(irListener.Routes) == 0 {
-		return errors.New("ir listener contains no routes")
 	}
 
 	if !listenerContainsJwtAuthn(irListener) {
@@ -219,11 +214,10 @@ func buildClusterFromJwks(jwks *jwksCluster) (*cluster.Cluster, error) {
 				},
 			},
 		},
-		Http2ProtocolOptions: &core.Http2ProtocolOptions{},
-		DnsRefreshRate:       durationpb.New(30 * time.Second),
-		RespectDnsTtl:        true,
-		DnsLookupFamily:      cluster.Cluster_V4_ONLY,
-		TransportSocket:      tSocket,
+		DnsRefreshRate:  durationpb.New(30 * time.Second),
+		RespectDnsTtl:   true,
+		DnsLookupFamily: cluster.Cluster_V4_ONLY,
+		TransportSocket: tSocket,
 	}, nil
 }
 
@@ -315,7 +309,7 @@ func buildJwtPerRouteConfig(irRoute *ir.HTTPRoute, listener *listener.Listener) 
 	}
 
 	for _, filter := range filterCh.Filters {
-		if filter.Name == wkt.HTTPConnectionManager {
+		if filter.Name == wellknown.HTTPConnectionManager {
 			// Unmarshal the filter to a jwt authn config and validate it.
 			hcmProto := new(hcm.HttpConnectionManager)
 			hcmAny := filter.GetTypedConfig()

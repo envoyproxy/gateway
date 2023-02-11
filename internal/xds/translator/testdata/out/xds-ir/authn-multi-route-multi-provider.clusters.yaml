@@ -37,7 +37,6 @@
 - connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  http2ProtocolOptions: {}
   lbPolicy: RANDOM
   loadAssignment:
     clusterName: localhost_443
@@ -62,7 +61,6 @@
 - connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  http2ProtocolOptions: {}
   lbPolicy: RANDOM
   loadAssignment:
     clusterName: localhost_8080

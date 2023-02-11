@@ -29,18 +29,16 @@ type AuthenticationFilter struct {
 // AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
 // +union
 type AuthenticationFilterSpec struct {
-	// Type defines the type of authentication provider to use. Supported provider types are:
-	//
-	//   * JWT: A provider that uses JSON Web Token (JWT) for authenticating requests.
+	// Type defines the type of authentication provider to use. Supported provider types
+	// are "JWT".
 	//
 	// +unionDiscriminator
 	Type AuthenticationFilterType `json:"type"`
 
 	// JWT defines the JSON Web Token (JWT) authentication provider type. When multiple
 	// jwtProviders are specified, the JWT is considered valid if any of the providers
-	// successfully validate the JWT. For additional details, see:
-	//
-	//   https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html
+	// successfully validate the JWT. For additional details, see
+	// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html.
 	//
 	// +kubebuilder:validation:MaxItems=4
 	// +optional
@@ -52,7 +50,8 @@ type AuthenticationFilterSpec struct {
 type AuthenticationFilterType string
 
 const (
-	// JwtAuthenticationFilterProviderType is the JWT authentication provider type.
+	// JwtAuthenticationFilterProviderType is a provider that uses JSON Web Token (JWT)
+	// for authenticating requests..
 	JwtAuthenticationFilterProviderType AuthenticationFilterType = "JWT"
 )
 
@@ -67,33 +66,17 @@ type JwtAuthenticationFilterProvider struct {
 	Name string `json:"name"`
 
 	// Issuer is the principal that issued the JWT and takes the form of a URL or email address.
-	// For additional details, see:
-	//
-	//   URL format: https://tools.ietf.org/html/rfc7519#section-4.1.1
-	//   Email format: https://rfc-editor.org/rfc/rfc5322.html
-	//
-	// URL Example:
-	//  issuer: https://auth.example.com
-	//
-	// Email Example:
-	//  issuer: jdoe@example.com
-	//
-	// If not provided, the JWT issuer is not checked.
+	// For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for
+	// URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided,
+	// the JWT issuer is not checked.
 	//
 	// +kubebuilder:validation:MaxLength=253
 	// +optional
 	Issuer string `json:"issuer,omitempty"`
 
-	// Audiences is a list of JWT audiences allowed to access. For additional details, see:
-	//
-	//   https://tools.ietf.org/html/rfc7519#section-4.1.3
-	//
-	// Example:
-	//   audiences:
-	//   - foo.apps.example.com
-	//     bar.apps.example.com
-	//
-	// If not provided, JWT audiences are not checked.
+	// Audiences is a list of JWT audiences allowed access. For additional details, see
+	// https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences
+	// are not checked.
 	//
 	// +kubebuilder:validation:MaxItems=8
 	// +optional
@@ -111,9 +94,6 @@ type JwtAuthenticationFilterProvider struct {
 type RemoteJWKS struct {
 	// URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to
 	// validate the server certificate.
-	//
-	// Example:
-	//  uri: https://www.foo.com/oauth2/v1/certs
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253

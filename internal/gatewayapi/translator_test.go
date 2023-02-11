@@ -47,8 +47,9 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, string(output), want)
 
 			translator := &Translator{
-				GatewayClassName: "envoy-gateway-class",
-				ProxyImage:       "envoyproxy/envoy:translator-tests",
+				GatewayClassName:       "envoy-gateway-class",
+				ProxyImage:             "envoyproxy/envoy:translator-tests",
+				GlobalRateLimitEnabled: true,
 			}
 
 			// Add common test fixtures
