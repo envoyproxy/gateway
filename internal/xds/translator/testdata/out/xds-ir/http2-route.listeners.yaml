@@ -41,4 +41,5 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         statPrefix: http
+        useRemoteAddress: true
   name: first-listener
