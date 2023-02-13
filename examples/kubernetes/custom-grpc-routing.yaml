@@ -20,6 +20,16 @@ spec:
       protocol: HTTP
       port: 80
 ---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: CorsFilter
+metadata:
+  name: example-corsfilter
+spec:
+  cors:
+    allowMethods: GET, PUT, DELETE, POST, OPTIONS
+    allowHeaders: authorization,keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
+    exposeHeaders: grpc-status,grpc-message
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -74,8 +84,14 @@ spec:
     - "grpc-example.com"
   rules:
     - backendRefs:
-        - group: ""
-          kind: Service
-          name: yages 
-          port: 9000
-          weight: 1
+      - group: ""
+        kind: Service
+        name: yages 
+        port: 9000
+        weight: 1
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: CorsFilter
+          name: example-corsfilter
+        type: ExtensionRef

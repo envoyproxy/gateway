@@ -81,7 +81,7 @@ func (t *Translator) processCustomGRPCRouteRules(grpcRoute *CustomGRPCRouteConte
 
 	// compute matches, filters, backends
 	for ruleIdx, rule := range grpcRoute.Spec.Rules {
-		httpFiltersContext := t.ProcessGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
+		httpFiltersContext := t.ProcessCustomGRPCFilters(parentRef, grpcRoute, rule.Filters, resources)
 
 		// A rule is matched if any one of its matches
 		// is satisfied (i.e. a logical "OR"), so generate

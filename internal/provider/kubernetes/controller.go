@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -54,8 +55,9 @@ const (
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
 
-	gatewayCustomGRPCRouteIndex = "gatewayCustomGRPCRouteIndex"
-	serviceCustomGRPCRouteIndex = "serviceCustomGRPCRouteIndex"
+	gatewayCustomGRPCRouteIndex    = "gatewayCustomGRPCRouteIndex"
+	serviceCustomGRPCRouteIndex    = "serviceCustomGRPCRouteIndex"
+	corsFilterCustomGRPCRouteIndex = "corscorsFilterCustomGRPCRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -110,6 +112,9 @@ type resourceMappings struct {
 	// rateLimitFilters is a map of RateLimitFilters, where the key is the
 	// namespaced name of the RateLimitFilter.
 	rateLimitFilters map[types.NamespacedName]*egv1a1.RateLimitFilter
+	// corsFilters is a map of CorsFilters, where the key is the
+	// namespaced name of the CorsFilter.
+	corsFilters map[types.NamespacedName]*egv1a1.CorsFilter
 }
 
 func newResourceMapping() *resourceMappings {
@@ -119,6 +124,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
 		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
 		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
+		corsFilters:              map[types.NamespacedName]*egv1a1.CorsFilter{},
 	}
 }
 
@@ -551,6 +557,28 @@ func rateLimitFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return filters
 }
 
+func corsFilterCustomGRPCRouteIndexFunc(rawObj client.Object) []string {
+	customgrpcproute := rawObj.(*gwapiv1a2.CustomGRPCRoute)
+	var filters []string
+	for _, rule := range customgrpcproute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+
+			if gatewayapi.IsCorsCustomGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateCustomGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: customgrpcproute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
+}
+
 func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
 	var gateways []string
@@ -613,6 +641,10 @@ func addCustomGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error 
 	}
 
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.CustomGRPCRoute{}, serviceCustomGRPCRouteIndex, serviceCustomGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.CustomGRPCRoute{}, corsFilterCustomGRPCRouteIndex, corsFilterCustomGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -1125,6 +1157,12 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	}()
 }
 
+func prettyPrint(obj interface{}) {
+	b, _ := json.MarshalIndent(obj, "", "  ")
+
+	fmt.Println("printing.....", string(b))
+}
+
 // watchResources watches gateway api resources.
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
 	// Only enqueue GatewayClass objects that match this Envoy Gateway's controller name.
@@ -1265,6 +1303,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		&source.Kind{Type: &egv1a1.AuthenticationFilter{}},
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)); err != nil {
+		return err
+	}
+
+	// Watch CorsFilter CRUDs and enqueue associated CustomGRPCRoute objects.
+	if err := c.Watch(
+		&source.Kind{Type: &egv1a1.CorsFilter{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.customGRPCRoutesForCorsFilter)); err != nil {
 		return err
 	}
 

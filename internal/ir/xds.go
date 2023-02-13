@@ -223,6 +223,9 @@ type HTTPRoute struct {
 	RateLimit *RateLimit
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
 	RequestAuthentication *RequestAuthentication
+
+	// CorsPolicy defines the schema for CORS policy.
+	CorsPolicy *CorsPolicy
 }
 
 // RequestAuthentication defines the schema for authenticating HTTP requests.
@@ -656,6 +659,28 @@ func (h UDPListener) Validate() error {
 		}
 	}
 	return errs
+}
+
+// Cors
+// +k8s:deepcopy-gen=true
+type CorsPolicy struct {
+	// AllowOrigin specifies the origins that will be allowed to do CORS requests.
+	// An origin may contain a wildcard (*) to replace 0 or more characters (i.e.: http://*.domain.com).
+	// An origin may also contain a wildcard (*) to replace exactly 1 character (i.e.: http://domain.*.com).
+	// If this field is empty, the CORS Origin header will not be set.
+	AllowOriginStringMatch []StringMatch
+	// AllowMethods specifies the content for the Access-Control-Allow-Methods header.
+	// If this field is empty, the header will not be set.
+	AllowMethods string
+	// AllowHeaders specifies the content for the Access-Control-Allow-Headers header.
+	// If this field is empty, the header will not be set.
+	AllowHeaders string
+	// ExposeHeaders specifies the content for the Access-Control-Expose-Headers header.
+	// If this field is empty, the header will not be set.
+	MaxAge string
+	// MaxAge specifies the content for the Access-Control-Max-Age header.
+	// If this field is empty, the header will not be set.
+	ExposeHeaders string
 }
 
 // RateLimit holds the rate limiting configuration.

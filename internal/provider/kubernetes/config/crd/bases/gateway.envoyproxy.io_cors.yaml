@@ -1,0 +1,47 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: corsfilters.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    kind: CorsFilter
+    listKind: CorsFilterList
+    plural: corsfilters
+    singular: corsfilter
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              cors:
+                type: object
+                properties:
+                  allowOriginStringMatch:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        prefix:
+                          type: string
+                  allowMethods:
+                    type: string
+                  allowHeaders:
+                    type: string
+                  maxAge:
+                    type: string
+                  exposeHeaders:
+                    type: string
+        required:
+        - spec
+    served: true
+    storage: true

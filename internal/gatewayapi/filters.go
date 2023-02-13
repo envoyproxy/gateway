@@ -58,6 +58,8 @@ type HTTPFilterIR struct {
 
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
+
+	CorsPolicy *ir.CorsPolicy
 }
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
@@ -658,6 +660,24 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 	}
 
 	filterNs := filterContext.Route.GetNamespace()
+
+	// Set the filter context and return early if a matching CorsFilter is found.
+	if string(extFilter.Kind) == egv1a1.KindCorsFilter {
+		for _, corsFilter := range resources.CorsFilters {
+			if corsFilter.Namespace == filterNs &&
+				corsFilter.Name == string(extFilter.Name) {
+				filterContext.HTTPFilterIR.CorsPolicy = &ir.CorsPolicy{
+					AllowHeaders:  corsFilter.Spec.AllowHeaders,
+					AllowMethods:  corsFilter.Spec.AllowMethods,
+					ExposeHeaders: corsFilter.Spec.ExposeHeaders,
+					MaxAge:        corsFilter.Spec.MaxAge,
+				}
+				return
+			}
+
+		}
+	}
+
 	// Set the filter context and return early if a matching AuthenticationFilter is found.
 	if string(extFilter.Kind) == egv1a1.KindAuthenticationFilter {
 		for _, authenFilter := range resources.AuthenticationFilters {

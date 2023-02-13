@@ -37,6 +37,7 @@ type Resources struct {
 	EnvoyProxy            *egcfgv1a1.EnvoyProxy
 
 	CustomGRPCRoutes []*v1alpha2.CustomGRPCRoute
+	CorsFilters      []*egv1a1.CorsFilter
 }
 
 func NewResources() *Resources {
@@ -54,6 +55,7 @@ func NewResources() *Resources {
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
 
 		CustomGRPCRoutes: []*v1alpha2.CustomGRPCRoute{},
+		CorsFilters:      []*egv1a1.CorsFilter{},
 	}
 }
 
