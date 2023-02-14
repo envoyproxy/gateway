@@ -240,6 +240,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 
 func applyHTTPFiltersContexttoIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
 	// Add the redirect filter or direct response that were created earlier to all the irRoutes
+
 	if httpFiltersContext.RedirectResponse != nil {
 		irRoute.Redirect = httpFiltersContext.RedirectResponse
 	}
@@ -270,7 +271,9 @@ func applyHTTPFiltersContexttoIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.RateLimit != nil {
 		irRoute.RateLimit = httpFiltersContext.RateLimit
 	}
-
+	if httpFiltersContext.CorsPolicy != nil {
+		irRoute.CorsPolicy = httpFiltersContext.CorsPolicy
+	}
 }
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
@@ -458,6 +461,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
+					CorsPolicy:            routeRoute.CorsPolicy,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {

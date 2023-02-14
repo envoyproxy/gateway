@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -1155,12 +1154,6 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		)
 		r.log.Info("udpRoute status subscriber shutting down")
 	}()
-}
-
-func prettyPrint(obj interface{}) {
-	b, _ := json.MarshalIndent(obj, "", "  ")
-
-	fmt.Println("printing.....", string(b))
 }
 
 // watchResources watches gateway api resources.

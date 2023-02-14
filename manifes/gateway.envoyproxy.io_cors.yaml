@@ -2,9 +2,6 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
-  creationTimestamp: null
   name: corsfilters.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
@@ -23,24 +20,63 @@ spec:
           spec:
             type: object
             properties:
-              cors:
-                type: object
+              corsPolicy:
+                description: Cross-Origin Resource Sharing policy (CORS).
                 properties:
-                  allowOriginStringMatch:
-                    type: array
+                  allowCredentials:
+                    nullable: true
+                    type: boolean
+                  allowHeaders:
                     items:
-                      type: object
+                      type: string
+                    type: array
+                  allowMethods:
+                    description: List of HTTP methods allowed to access the
+                      resource.
+                    items:
+                      type: string
+                    type: array
+                  allowOrigin:
+                    description: The list of origins that are allowed to perform
+                      CORS requests.
+                    items:
+                      type: string
+                    type: array
+                  allowOrigins:
+                    description: String patterns that match allowed origins.
+                    items:
+                      oneOf:
+                      - not:
+                          anyOf:
+                          - required:
+                            - exact
+                          - required:
+                            - prefix
+                          - required:
+                            - regex
+                      - required:
+                        - exact
+                      - required:
+                        - prefix
+                      - required:
+                        - regex
                       properties:
+                        exact:
+                          type: string
                         prefix:
                           type: string
-                  allowMethods:
-                    type: string
-                  allowHeaders:
-                    type: string
-                  maxAge:
-                    type: string
+                        regex:
+                          description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
+                          type: string
+                      type: object
+                    type: array
                   exposeHeaders:
-                    type: string
+                    items:
+                      type: string
+                    type: array
+                  maxAge:
+                    type: number
+                type: object
         required:
         - spec
     served: true

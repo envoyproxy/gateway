@@ -133,6 +133,7 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 			Name: routeName(grpcRoute, ruleIdx, -1),
 		}
 		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 

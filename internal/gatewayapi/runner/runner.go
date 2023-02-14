@@ -59,6 +59,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
 			}
 			// Translate to IR
+
 			result := t.Translate(val)
 
 			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)

@@ -34,36 +34,39 @@ spec:
           spec:
             description: Spec defines the desired state of the CorsFilter type.
             properties:
-              allow_headers:
-                description: AllowHeaders defines a list of HTTP headers that will
-                  be allowed to do CORS requests. An HTTP header is allowed if it
-                  matches either an item in this list or the special "*" wildcard.
-                type: string
-              allow_methods:
-                description: AllowMethods defines a list of HTTP methods that will
-                  be allowed to do CORS requests. An HTTP method is allowed if it
-                  matches either an item in this list or the special "*" wildcard.
-                type: string
-              allow_origin_string_match:
-                description: AllowOriginStringMatch defines a list of origins that
-                  will be allowed to do CORS requests. An origin is allowed if it
-                  matches either an item in this list or the special "*" wildcard.
-                items:
-                  description: StringMatch defines a string match.
-                  properties:
-                    prefix:
-                      description: Prefix defines a string prefix match.
+              corsPolicy:
+                properties:
+                  allowCredentials:
+                    type: boolean
+                  allowHeaders:
+                    items:
                       type: string
-                  type: object
-                type: array
-              expose_headers:
-                description: ExposeHeaders defines a list of HTTP headers that will
-                  be exposed as part of the CORS response.
-                type: string
-              max_age:
-                description: MaxAge defines the duration that the results of a preflight
-                  request can be cached.
-                type: string
+                    type: array
+                  allowMethods:
+                    items:
+                      type: string
+                    type: array
+                  allowOrigin:
+                    items:
+                      type: string
+                    type: array
+                  allowOrigins:
+                    items:
+                      description: StringMatch defines a string match.
+                      properties:
+                        prefix:
+                          description: Prefix defines a string prefix match.
+                          type: string
+                      type: object
+                    type: array
+                  exposeHeaders:
+                    items:
+                      type: string
+                    type: array
+                  maxAge:
+                    format: int64
+                    type: integer
+                type: object
             type: object
         required:
         - spec

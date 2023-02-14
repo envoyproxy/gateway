@@ -25,10 +25,17 @@ kind: CorsFilter
 metadata:
   name: example-corsfilter
 spec:
-  cors:
-    allowMethods: GET, PUT, DELETE, POST, OPTIONS
-    allowHeaders: authorization,keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
-    exposeHeaders: grpc-status,grpc-message
+  corsPolicy:
+    allowOrigins:
+      - exact: geocomply.com
+    allowMethods:
+      - POST
+      - GET
+    allowCredentials: false
+    allowHeaders:
+      - X-User-Id
+      - X-Request-Id
+    maxAge: 1800000
 ---
 apiVersion: apps/v1
 kind: Deployment

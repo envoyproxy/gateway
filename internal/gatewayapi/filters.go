@@ -667,10 +667,12 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 			if corsFilter.Namespace == filterNs &&
 				corsFilter.Name == string(extFilter.Name) {
 				filterContext.HTTPFilterIR.CorsPolicy = &ir.CorsPolicy{
-					AllowHeaders:  corsFilter.Spec.AllowHeaders,
-					AllowMethods:  corsFilter.Spec.AllowMethods,
-					ExposeHeaders: corsFilter.Spec.ExposeHeaders,
-					MaxAge:        corsFilter.Spec.MaxAge,
+					// AllowOrigins:  corsFilter.Spec.CorsPolicy.AllowOrigins,
+					AllowMethods:     corsFilter.Spec.CorsPolicy.AllowMethods,
+					AllowHeaders:     corsFilter.Spec.CorsPolicy.AllowHeaders,
+					ExposeHeaders:    corsFilter.Spec.CorsPolicy.ExposeHeaders,
+					MaxAge:           corsFilter.Spec.CorsPolicy.MaxAge,
+					AllowCredentials: corsFilter.Spec.CorsPolicy.AllowCredentials,
 				}
 				return
 			}

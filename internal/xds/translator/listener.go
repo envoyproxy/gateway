@@ -13,6 +13,7 @@ import (
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	grpc_web "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -22,7 +23,6 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -58,6 +58,11 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	if err != nil {
 		return err
 	}
+	corsAny, err := anypb.New(&cors.Cors{})
+
+	if err != nil {
+		return err
+	}
 
 	accesslogAny, err := anypb.New(stdoutFileAccessLog)
 	if err != nil {
@@ -87,13 +92,17 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 				RouteConfigName: irListener.Name,
 			},
 		},
-		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		// Use only router.
-		HttpFilters: []*hcm.HttpFilter{{
-			Name:       wellknown.Router,
-			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
-		}},
+		HttpFilters: []*hcm.HttpFilter{
+			{
+				Name:       wellknown.CORS,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: corsAny},
+			},
+			{
+				Name:       wellknown.Router,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
+			},
+		},
 	}
 
 	if irListener.IsHTTP2 {

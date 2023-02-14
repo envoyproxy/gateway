@@ -1,6 +1,8 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 const (
 	// KindCorsFilterKind is the name of the CorsFilter kind.
@@ -23,42 +25,26 @@ type CorsFilter struct {
 // +union
 
 type CorsFilterSpec struct {
-	// AllowOriginStringMatch defines a list of origins that will be allowed to
-	// do CORS requests. An origin is allowed if it matches either
-	// an item in this list or the special "*" wildcard.
-	//
-	// +optional
-	AllowOriginStringMatch []StringMatch `json:"allow_origin_string_match,omitempty"`
-	// AllowMethods defines a list of HTTP methods that will be allowed to do
-	// CORS requests. An HTTP method is allowed if it matches either
-	// an item in this list or the special "*" wildcard.
-	//
-	// +optional
-	AllowMethods string `json:"allow_methods,omitempty"`
-	// AllowHeaders defines a list of HTTP headers that will be allowed to do
-	// CORS requests. An HTTP header is allowed if it matches either
-	// an item in this list or the special "*" wildcard.
-	//
-	// +optional
-	AllowHeaders string `json:"allow_headers,omitempty"`
-	// MaxAge defines the duration that the results of a preflight request
-	// can be cached.
-	//
-	// +optional
-	MaxAge string `json:"max_age,omitempty"`
-	// ExposeHeaders defines a list of HTTP headers that will be exposed as
-	// part of the CORS response.
-	//
-	// +optional
-	ExposeHeaders string `json:"expose_headers,omitempty"`
+	CorsPolicy CorsPolicy `json:"corsPolicy,omitempty"`
 }
 
-// StringMatch defines a string match.
+type CorsPolicy struct {
+	AllowOrigins []*StringMatch `json:"allowOrigins,omitempty"`
+
+	AllowMethods []string `json:"allowMethods,omitempty"`
+
+	AllowHeaders []string `json:"allowHeaders,omitempty"`
+
+	ExposeHeaders []string `json:"exposeHeaders,omitempty"`
+
+	MaxAge int64 `json:"maxAge,omitempty"`
+
+	AllowCredentials bool `json:"allowCredentials,omitempty"`
+}
 type StringMatch struct {
-	// Prefix defines a string prefix match.
-	//
-	// +optional
-	Prefix string `json:"prefix,omitempty"`
+	Exact  *string `json:"exact,omitempty"`
+	Prefix *string `json:"prefix,omitempty"`
+	Regex  *string `json:"regex,omitempty"`
 }
 
 type CorsFilterList struct {

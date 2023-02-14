@@ -142,6 +142,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.CorsFilters != nil {
+		in, out := &in.CorsFilters, &out.CorsFilters
+		*out = make([]*v1alpha1.CorsFilter, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha1.CorsFilter)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
 	if in.AuthenticationFilters != nil {
 		in, out := &in.AuthenticationFilters, &out.AuthenticationFilters
 		*out = make([]*v1alpha1.AuthenticationFilter, len(*in))
