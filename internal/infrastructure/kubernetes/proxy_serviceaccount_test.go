@@ -185,7 +185,6 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			kube := &Infra{
 				Namespace: tc.ns,
 			}
@@ -221,7 +220,6 @@ func TestDeleteProxyServiceAccount(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			kube := &Infra{
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 				Namespace: "test",
