@@ -56,6 +56,8 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, cm *corev1.ConfigMa
 	} else {
 		// Update if current value is different.
 		if !reflect.DeepEqual(cm.Data, current.Data) {
+			cm.ResourceVersion = current.ResourceVersion
+			cm.UID = current.UID
 			if err := i.Client.Update(ctx, cm); err != nil {
 				return fmt.Errorf("failed to update configmap %s/%s: %w", cm.Namespace, cm.Name, err)
 			}

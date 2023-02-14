@@ -8,12 +8,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -79,32 +76,7 @@ func (i *Infra) createOrUpdateProxyService(ctx context.Context, infra *ir.Infra)
 	if err != nil {
 		return fmt.Errorf("failed to generate expected service: %w", err)
 	}
-
-	current := &corev1.Service{}
-	key := types.NamespacedName{
-		Namespace: i.Namespace,
-		Name:      expectedProxyServiceName(infra.Proxy.Name),
-	}
-
-	if err := i.Client.Get(ctx, key, current); err != nil {
-		// Create if not found.
-		if kerrors.IsNotFound(err) {
-			if err := i.Client.Create(ctx, svc); err != nil {
-				return fmt.Errorf("failed to create service %s/%s: %w",
-					svc.Namespace, svc.Name, err)
-			}
-		}
-	} else {
-		// Update if current value is different.
-		if !reflect.DeepEqual(svc.Spec, current.Spec) {
-			if err := i.Client.Update(ctx, svc); err != nil {
-				return fmt.Errorf("failed to update service %s/%s: %w",
-					svc.Namespace, svc.Name, err)
-			}
-		}
-	}
-
-	return nil
+	return i.createOrUpdateService(ctx, svc)
 }
 
 // deleteProxyService deletes the Envoy Service in the kube api server, if it exists.

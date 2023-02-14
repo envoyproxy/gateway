@@ -32,6 +32,8 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, sa *corev1.Ser
 	} else {
 		// Since the ServiceAccount does not have a specific Spec field to compare
 		// just perform an update for now.
+		sa.ResourceVersion = current.ResourceVersion
+		sa.UID = current.UID
 		if err := i.Client.Update(ctx, sa); err != nil {
 			return fmt.Errorf("failed to update serviceaccount %s/%s: %w",
 				sa.Namespace, sa.Name, err)

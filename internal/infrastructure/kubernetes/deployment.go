@@ -15,26 +15,28 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (i *Infra) createOrUpdateDeployment(ctx context.Context, deploy *appsv1.Deployment) error {
+func (i *Infra) createOrUpdateDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
 	current := &appsv1.Deployment{}
 	key := types.NamespacedName{
-		Namespace: deploy.Namespace,
-		Name:      deploy.Name,
+		Namespace: deployment.Namespace,
+		Name:      deployment.Name,
 	}
 	if err := i.Client.Get(ctx, key, current); err != nil {
 		// Create if not found.
 		if kerrors.IsNotFound(err) {
-			if err := i.Client.Create(ctx, deploy); err != nil {
+			if err := i.Client.Create(ctx, deployment); err != nil {
 				return fmt.Errorf("failed to create deployment %s/%s: %w",
-					deploy.Namespace, deploy.Name, err)
+					deployment.Namespace, deployment.Name, err)
 			}
 		}
 	} else {
 		// Update if current value is different.
-		if !reflect.DeepEqual(deploy.Spec, current.Spec) {
-			if err := i.Client.Update(ctx, deploy); err != nil {
+		if !reflect.DeepEqual(deployment.Spec, current.Spec) {
+			deployment.ResourceVersion = current.ResourceVersion
+			deployment.UID = current.UID
+			if err := i.Client.Update(ctx, deployment); err != nil {
 				return fmt.Errorf("failed to update deployment %s/%s: %w",
-					deploy.Namespace, deploy.Name, err)
+					deployment.Namespace, deployment.Name, err)
 			}
 		}
 	}
