@@ -176,7 +176,6 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
 
