@@ -102,32 +102,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			tCtx.AddXdsResource(resource.SecretType, secret)
 		}
 
-		// Allocate virtual host for this httpListener.
-		// 1:1 between IR HTTPListener and xDS VirtualHost
-		// add cors
-
-		// coPolicy := &route.CorsPolicy{}
-		// coPolicy.AllowOriginStringMatch = []*matcher.StringMatcher{
-		// 	{
-		// 		MatchPattern: &matcher.StringMatcher_Prefix{
-		// 			Prefix: "*",
-		// 		},
-		// 	},
-		// }
-		// coPolicy.AllowCredentials = &wrappers.BoolValue{Value: true}
-		// //AllowHeaders
-		// coPolicy.AllowHeaders = "Content-Type,Authorization,X-Requested-With,Content-Length,Accept,Origin"
-		// //AllowMethods
-		// coPolicy.AllowMethods = "GET,HEAD,PUT,PATCH,POST,DELETE"
-		// //ExposeHeaders
-		// coPolicy.ExposeHeaders = "Content-Length,Content-Range"
-
 		vHost := &route.VirtualHost{
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
 		}
 
 		for _, httpRoute := range httpListener.Routes {
+
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 			vHost.Routes = append(vHost.Routes, xdsRoute)

@@ -46,16 +46,14 @@ spec:
                     items:
                       type: string
                     type: array
-                  allowOrigin:
-                    items:
-                      type: string
-                    type: array
                   allowOrigins:
                     items:
-                      description: StringMatch defines a string match.
                       properties:
+                        exact:
+                          type: string
                         prefix:
-                          description: Prefix defines a string prefix match.
+                          type: string
+                        regex:
                           type: string
                       type: object
                     type: array

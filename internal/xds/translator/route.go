@@ -7,17 +7,59 @@ package translator
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func buildXdsCorsPolicy(corsPolicy *ir.CorsPolicy) *routev3.CorsPolicy {
+	if corsPolicy == nil {
+		return nil
+	}
+
+	out := routev3.CorsPolicy{}
+
+	// TODO: handle corsPolicy.AllowOrigins
+	// default to allow all origins
+	out.AllowOriginStringMatch = []*matcher.StringMatcher{
+		{
+			MatchPattern: &matcher.StringMatcher_Prefix{
+				Prefix: "*",
+			},
+		},
+	}
+
+	out.EnabledSpecifier = &routev3.CorsPolicy_FilterEnabled{
+		FilterEnabled: &core.RuntimeFractionalPercent{
+			DefaultValue: &xdstype.FractionalPercent{
+				Numerator:   100,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
+	}
+
+	out.AllowCredentials = &wrapperspb.BoolValue{Value: corsPolicy.AllowCredentials}
+	out.AllowHeaders = strings.Join(corsPolicy.AllowHeaders, ",")
+	out.AllowMethods = strings.Join(corsPolicy.AllowMethods, ",")
+	out.ExposeHeaders = strings.Join(corsPolicy.ExposeHeaders, ",")
+
+	if corsPolicy.MaxAge != 0 {
+		out.MaxAge = strconv.FormatInt(corsPolicy.MaxAge, 10)
+	}
+	return &out
+}
+
 func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listener.Listener) *routev3.Route {
+
 	router := &routev3.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}
@@ -58,11 +100,18 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listener.Listener) *routev
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
 			routeAction := buildXdsRouteAction(httpRoute.Name)
+
 			if len(httpRoute.Mirrors) > 0 {
 				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
 			}
+
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
+
+		if httpRoute.CorsPolicy != nil {
+			router.Action.(*routev3.Route_Route).Route.Cors = buildXdsCorsPolicy(httpRoute.CorsPolicy)
+		}
+
 	}
 
 	// TODO: Convert this into a generic interface for API Gateway features.
@@ -322,3 +371,5 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption
 
 	return headerValueOptions
 }
+
+// buildXdsCorsPolicy builds a CorsPolicy from the given Cors object.

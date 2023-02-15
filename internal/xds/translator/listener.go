@@ -58,11 +58,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	if err != nil {
 		return err
 	}
-	corsAny, err := anypb.New(&cors.Cors{})
-
-	if err != nil {
-		return err
-	}
 
 	accesslogAny, err := anypb.New(stdoutFileAccessLog)
 	if err != nil {
@@ -76,6 +71,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	} else {
 		statPrefix = "http"
 	}
+
 	mgr := &hcm.HttpConnectionManager{
 		AccessLog: []*accesslog.AccessLog{
 			{
@@ -95,14 +91,27 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 		// Use only router.
 		HttpFilters: []*hcm.HttpFilter{
 			{
-				Name:       wellknown.CORS,
-				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: corsAny},
-			},
-			{
 				Name:       wellknown.Router,
 				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
 			},
 		},
+	}
+
+	for _, route := range irListener.Routes {
+		if route.CorsPolicy != nil {
+			corsAny, err := anypb.New(&cors.Cors{})
+
+			if err != nil {
+				return err
+			}
+
+			corsFilter := &hcm.HttpFilter{
+				Name:       wellknown.CORS,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: corsAny},
+			}
+			mgr.HttpFilters = append([]*hcm.HttpFilter{corsFilter}, mgr.HttpFilters...)
+			break
+		}
 	}
 
 	if irListener.IsHTTP2 {
