@@ -52,10 +52,11 @@
   name: third-route
   outlierDetection: {}
   type: STATIC
-- connectTimeout: 10s
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
-  lbPolicy: RANDOM
   loadAssignment:
     clusterName: ratelimit_cluster
     endpoints:
@@ -65,7 +66,10 @@
             socketAddress:
               address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
               portValue: 8081
+      loadBalancingWeight: 1
+      locality: {}
   name: ratelimit_cluster
+  outlierDetection: {}
   respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:
@@ -73,10 +77,10 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         http2ProtocolOptions: {}
-- connectTimeout: 10s
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
-  dnsRefreshRate: 30s
-  lbPolicy: RANDOM
   loadAssignment:
     clusterName: localhost_443
     endpoints:
@@ -86,8 +90,10 @@
             socketAddress:
               address: 127.0.0.1
               portValue: 443
+      loadBalancingWeight: 1
+      locality: {}
   name: localhost_443
-  respectDnsTtl: true
+  outlierDetection: {}
   transportSocket:
     name: envoy.transport_sockets.tls
     typedConfig:
