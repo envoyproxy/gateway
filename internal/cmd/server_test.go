@@ -17,7 +17,7 @@ func TestGetServerCommand(t *testing.T) {
 	assert.Equal(t, "server", got.Use)
 }
 
-func TestValidateUserConfig(t *testing.T) {
+func TestGetConfigValidate(t *testing.T) {
 	file, err := os.CreateTemp("", "config")
 	assert.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -29,6 +29,6 @@ gateway: {}
 `))
 	assert.NoError(t, err)
 
-	_, err = getConfig(file.Name())
+	_, err = getConfigByPath(file.Name())
 	assert.Error(t, err)
 }

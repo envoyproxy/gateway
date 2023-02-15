@@ -42,7 +42,7 @@ func getServerCommand() *cobra.Command {
 
 // server serves Envoy Gateway.
 func server() error {
-	cfg, err := getConfig(cfgPath)
+	cfg, err := getConfig()
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,12 @@ func server() error {
 }
 
 // getConfig gets the Server configuration
-func getConfig(cfgPath string) (*config.Server, error) {
+func getConfig() (*config.Server, error) {
+	return getConfigByPath(cfgPath)
+}
+
+// make `cfgPath` an argument to test it without polluting the global var
+func getConfigByPath(cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
 	cfg, err := config.New()
 	if err != nil {
