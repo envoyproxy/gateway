@@ -28,7 +28,9 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-      AttachedRoutes: 1
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
+      attachedRoutes: 1
       conditions:
       - type: Programmed
         status: "True"
