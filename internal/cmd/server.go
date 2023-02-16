@@ -56,14 +56,12 @@ func server() error {
 
 // getConfig gets the Server configuration
 func getConfig() (*config.Server, error) {
-	return getConfigByPath(cfgPath)
-}
-
-// make `cfgPath` an argument to test it without polluting the global var
-func getConfigByPath(cfgPath string) (*config.Server, error) {
 	// Initialize with default config parameters.
 	cfg, err := config.New()
 	if err != nil {
+		return nil, err
+	}
+	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
 
@@ -83,10 +81,6 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 		// Set defaults for unset fields
 		eg.SetDefaults()
 		cfg.EnvoyGateway = eg
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return nil, err
 	}
 	return cfg, nil
 }

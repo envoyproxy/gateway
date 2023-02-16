@@ -12,8 +12,11 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
+	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	jwtext "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/jwt_authn/v3"
@@ -182,6 +185,42 @@ func getJwksClusterName(provider *v1alpha1.JwtAuthenticationFilterProvider) (str
 	return fmt.Sprintf("%s_%s", strings.ReplaceAll(u.Hostname(), ".", "_"), strPort), nil
 }
 
+// buildClusterFromJwks creates an xDS Cluster from the provided jwks.
+func buildClusterFromJwks(jwks *jwksCluster) (*cluster.Cluster, error) {
+	if jwks == nil {
+		return nil, errors.New("jwks is nil")
+	}
+
+	endpoints, err := jwks.toLbEndpoints()
+	if err != nil {
+		return nil, err
+	}
+
+	tSocket, err := buildXdsUpstreamTLSSocket()
+	if err != nil {
+		return nil, err
+	}
+
+	return &cluster.Cluster{
+		Name:                 jwks.name,
+		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STATIC},
+		ConnectTimeout:       durationpb.New(10 * time.Second),
+		LbPolicy:             cluster.Cluster_RANDOM,
+		LoadAssignment: &endpoint.ClusterLoadAssignment{
+			ClusterName: jwks.name,
+			Endpoints: []*endpoint.LocalityLbEndpoints{
+				{
+					LbEndpoints: endpoints,
+				},
+			},
+		},
+		DnsRefreshRate:  durationpb.New(30 * time.Second),
+		RespectDnsTtl:   true,
+		DnsLookupFamily: cluster.Cluster_V4_ONLY,
+		TransportSocket: tSocket,
+	}, nil
+}
+
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
 // as the CA to authenticate server certificates.
 func buildXdsUpstreamTLSSocket() (*core.TransportSocket, error) {
@@ -325,8 +364,9 @@ func getJwtRequirement(filters []*hcm.HttpFilter, name string) (*jwtext.PerRoute
 }
 
 type jwksCluster struct {
-	name              string
-	routeDestinations []*ir.RouteDestination
+	name      string
+	addresses []string
+	port      int
 }
 
 // createJwksClusters creates JWKS clusters from the provided routes, if needed.
@@ -339,7 +379,10 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 	}
 
 	for _, route := range routes {
-		if routeContainsJwtAuthn(route) {
+		if route.RequestAuthentication != nil &&
+			route.RequestAuthentication.JWT != nil &&
+			len(route.RequestAuthentication.JWT.Providers) > 0 &&
+			routeContainsJwtAuthn(route) {
 			for i := range route.RequestAuthentication.JWT.Providers {
 				provider := route.RequestAuthentication.JWT.Providers[i]
 				jwks, err := newJwksCluster(&provider)
@@ -347,14 +390,11 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 					return err
 				}
 				if existingCluster := findXdsCluster(tCtx, jwks.name); existingCluster == nil {
-					jwksServerCluster := buildXdsCluster(jwks.name, jwks.routeDestinations, false /*isHTTP2 */, true /*isStatic */)
-					tSocket, err := buildXdsUpstreamTLSSocket()
-					if err != nil {
-						return err
+					cluster, buildErr := buildClusterFromJwks(jwks)
+					if buildErr != nil {
+						return buildErr
 					}
-					jwksServerCluster.TransportSocket = tSocket
-
-					tCtx.AddXdsResource(resource.ClusterType, jwksServerCluster)
+					tCtx.AddXdsResource(resource.ClusterType, cluster)
 				}
 			}
 		}
@@ -385,6 +425,7 @@ func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCl
 	if u.Port() != "" {
 		strPort = u.Port()
 	}
+
 	addrs, err := resolveHostname(u.Hostname())
 	if err != nil {
 		return nil, err
@@ -397,16 +438,40 @@ func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCl
 		return nil, err
 	}
 
-	var routeDestinations []*ir.RouteDestination
+	return &jwksCluster{
+		name:      name,
+		addresses: addrs,
+		port:      port,
+	}, nil
+}
 
-	for _, addr := range addrs {
-		routeDestinations = append(routeDestinations, ir.NewRouteDest(addr, uint32(port), 0))
+// toLbEndpoints returns load balancer endpoints for the jwksCluster.
+func (j *jwksCluster) toLbEndpoints() ([]*endpoint.LbEndpoint, error) {
+	var endpoints []*endpoint.LbEndpoint
+
+	if j == nil {
+		return endpoints, errors.New("nil jwks cluster")
 	}
 
-	return &jwksCluster{
-		name:              name,
-		routeDestinations: routeDestinations,
-	}, nil
+	for _, addr := range j.addresses {
+		ep := &endpoint.LbEndpoint{
+			HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+				Endpoint: &endpoint.Endpoint{
+					Address: &core.Address{
+						Address: &core.Address_SocketAddress{
+							SocketAddress: &core.SocketAddress{
+								Address:       addr,
+								PortSpecifier: &core.SocketAddress_PortValue{PortValue: uint32(j.port)},
+							},
+						},
+					},
+				},
+			},
+		}
+		endpoints = append(endpoints, ep)
+	}
+
+	return endpoints, nil
 }
 
 // resolveHostname looks up the provided hostname using the local resolver, returning the
@@ -467,8 +532,7 @@ func routeContainsJwtAuthn(irRoute *ir.HTTPRoute) bool {
 	if irRoute != nil &&
 		irRoute.RequestAuthentication != nil &&
 		irRoute.RequestAuthentication.JWT != nil &&
-		irRoute.RequestAuthentication.JWT.Providers != nil &&
-		len(irRoute.RequestAuthentication.JWT.Providers) > 0 {
+		irRoute.RequestAuthentication.JWT.Providers != nil {
 		return true
 	}
 

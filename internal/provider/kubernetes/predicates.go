@@ -137,6 +137,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		FieldSelector: fields.OneTermEqualSelector(serviceCustomGRPCRouteIndex, utils.NamespacedName(svc).String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated CustomGRPCRoutes")
+
 		return false
 	}
 

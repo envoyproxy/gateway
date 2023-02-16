@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -42,7 +43,7 @@ spec:
     spec:
       containers:
       - name: envoy-gateway-certgen
-        image: docker.io/envoyproxy/gateway-dev:92bb264
+        image: docker.io/envoyproxy/gateway-dev:4b24067
         imagePullPolicy: IfNotPresent
         command:
         - envoy-gateway

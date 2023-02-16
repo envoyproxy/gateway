@@ -168,7 +168,6 @@ skipped_dirs = [
     'third_party',
     'vendor',
     '.venv',
-    'gateway-api'
 ]
 
 # list all the files contain 'DO NOT EDIT', but are not generated

@@ -9,9 +9,11 @@ import (
 	"bytes"
 	"net/url"
 	"strconv"
+	"time"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	ratelimit "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
@@ -19,6 +21,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
@@ -266,9 +269,39 @@ func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *
 
 	clusterName := getRateLimitServiceClusterName()
 	host, port := t.getRateLimitServiceGrpcHostPort()
-	routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port), 0)}
-	rateLimitServerCluster := buildXdsCluster(clusterName, routeDestinations, true /*isHTTP2 */, false /*isStatic */)
-
+	rateLimitServerCluster := &cluster.Cluster{
+		Name:                 clusterName,
+		ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_STRICT_DNS},
+		ConnectTimeout:       durationpb.New(10 * time.Second),
+		LbPolicy:             cluster.Cluster_RANDOM,
+		LoadAssignment: &endpoint.ClusterLoadAssignment{
+			ClusterName: clusterName,
+			Endpoints: []*endpoint.LocalityLbEndpoints{
+				{
+					LbEndpoints: []*endpoint.LbEndpoint{
+						{
+							HostIdentifier: &endpoint.LbEndpoint_Endpoint{
+								Endpoint: &endpoint.Endpoint{
+									Address: &core.Address{
+										Address: &core.Address_SocketAddress{
+											SocketAddress: &core.SocketAddress{
+												Address:       host,
+												PortSpecifier: &core.SocketAddress_PortValue{PortValue: uint32(port)},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		TypedExtensionProtocolOptions: buildTypedExtensionProtocolOptions(),
+		DnsRefreshRate:                durationpb.New(30 * time.Second),
+		RespectDnsTtl:                 true,
+		DnsLookupFamily:               cluster.Cluster_V4_ONLY,
+	}
 	return rateLimitServerCluster
 }
 

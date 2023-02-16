@@ -118,15 +118,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			xdsCluster := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2, true /* isStatic */)
-
+			xdsCluster := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2)
 			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
 			for i, mirror := range httpRoute.Mirrors {
 				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
 				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
-					mirrorCluster := buildXdsCluster(mirrorClusterName, []*ir.RouteDestination{mirror}, httpListener.IsHTTP2, true /* isStatic */)
+					mirrorCluster := buildXdsCluster(mirrorClusterName, []*ir.RouteDestination{mirror}, httpListener.IsHTTP2)
 					tCtx.AddXdsResource(resource.ClusterType, mirrorCluster)
 				}
 
@@ -159,7 +158,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener) error {
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
-		xdsCluster := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */, true /* isStatic */)
+		xdsCluster := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */)
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		// Search for an existing listener, if it does not exist, create one.
@@ -179,7 +178,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener) error {
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
-		xdsCluster := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */, true /*isStatic */)
+		xdsCluster := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */)
 		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api

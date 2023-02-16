@@ -1,15 +1,13 @@
 run:
   deadline: 10m
-  skip-dirs:
-    - gateway-api
-    - bin
+
 linters:
   enable:
     - bodyclose
     - depguard
     - exportloopref
     - gofmt
-    # - goimports
+    - goimports
     - goheader
     - gocritic
     - gosec

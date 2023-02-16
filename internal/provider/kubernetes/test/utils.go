@@ -151,7 +151,7 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 	}
 }
 
-// GetCustomGRPCRoute returns a sample CustomGRPCRoute with a parent reference.
+// GetGRPCRoute returns a sample GRPCRoute with a parent reference.
 func GetCustomGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.CustomGRPCRoute {
 	return &gwapiv1a2.CustomGRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{

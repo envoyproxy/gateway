@@ -6,11 +6,10 @@
 package gatewayapi
 
 import (
+	"github.com/envoyproxy/gateway/internal/ir"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func (t *Translator) ProcessCustomGRPCRoutes(grpcRoutes []*v1alpha2.CustomGRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*CustomGRPCRouteContext {
@@ -145,21 +144,6 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 			Name: routeName(grpcRoute, ruleIdx, matchIdx),
 		}
 
-		for _, headerMatch := range match.Headers {
-			switch HeaderMatchTypeDerefOr(headerMatch.Type, v1beta1.HeaderMatchExact) {
-			case v1beta1.HeaderMatchExact:
-				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:  string(headerMatch.Name),
-					Exact: StringPtr(headerMatch.Value),
-				})
-			case v1beta1.HeaderMatchRegularExpression:
-				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:      string(headerMatch.Name),
-					SafeRegex: StringPtr(headerMatch.Value),
-				})
-			}
-		}
-
 		if match.Method != nil {
 			if match.Method.Method != nil {
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
@@ -167,10 +151,12 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 					Exact: match.Method.Method,
 				})
 			}
-			/* TODO
+
 			if match.Method.Service != nil {
+				irRoute.PathMatch = &ir.StringMatch{
+					Prefix: StringPtr("/" + *match.Method.Service),
+				}
 			}
-			*/
 		}
 
 		ruleRoutes = append(ruleRoutes, irRoute)

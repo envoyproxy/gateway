@@ -23,7 +23,6 @@ linters-settings:
       - gopkg.in/yaml.v2: "use sigs.k8s.io/yaml instead"
       - gopkg.in/yaml.v3: "use sigs.k8s.io/yaml instead"
   gci:
-    skip-dirs: ["gateway-api"]
     sections:
       # Captures all standard packages if they do not match another section.
       - standard

@@ -19,7 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool, isStatic bool) *clusterv3.Cluster {
+func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool) *clusterv3.Cluster {
 	localities := make([]*endpoint.LocalityLbEndpoints, 0, 1)
 	locality := &endpoint.LocalityLbEndpoints{
 		Locality:    &core.Locality{},
@@ -32,23 +32,16 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 	localities = append(localities, locality)
 	clusterName := routeName
 	cluster := &clusterv3.Cluster{
-		Name:            clusterName,
-		ConnectTimeout:  durationpb.New(5 * time.Second),
-		LbPolicy:        clusterv3.Cluster_ROUND_ROBIN,
-		LoadAssignment:  &endpoint.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities},
-		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
+		Name:                 clusterName,
+		ConnectTimeout:       durationpb.New(5 * time.Second),
+		ClusterDiscoveryType: &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC},
+		LbPolicy:             clusterv3.Cluster_ROUND_ROBIN,
+		LoadAssignment:       &endpoint.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities},
+		DnsLookupFamily:      clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
 		OutlierDetection: &clusterv3.OutlierDetection{},
-	}
-
-	if isStatic {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC}
-	} else {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
 	}
 
 	if isHTTP2 {

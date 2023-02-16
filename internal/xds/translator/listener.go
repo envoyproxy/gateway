@@ -22,7 +22,6 @@ import (
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -87,8 +86,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 				RouteConfigName: irListener.Name,
 			},
 		},
-		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
-		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		// Use only router.
 		HttpFilters: []*hcm.HttpFilter{{
 			Name:       wellknown.Router,
@@ -98,7 +95,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
-		mgr.CodecType = hcm.HttpConnectionManager_HTTP2
+		mgr.CodecType = hcm.HttpConnectionManager_AUTO
 
 		// Enable grpc-web filter for HTTP2
 		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})

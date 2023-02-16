@@ -5,8 +5,6 @@ ENVTEST_K8S_VERSION ?= 1.24.1
 GATEWAY_API_VERSION ?= v0.1.1
 
 GATEWAY_RELEASE_URL ?= https://github.com/GeoComply/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
-
-
 CONFORMANCE_UNIQUE_PORTS ?= true
 
 # Set Kubernetes Resources Directory Path
