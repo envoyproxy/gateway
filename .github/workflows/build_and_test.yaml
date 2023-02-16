@@ -23,7 +23,10 @@ jobs:
         submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make lint-deps
-    - run: make -k lint
+    - run: |
+       git submodule init
+       git submodule update
+       make -k lint
 
   gen-check:
     runs-on: ubuntu-latest
@@ -32,7 +35,10 @@ jobs:
       with:
         submodules: recursive
     - uses: ./tools/github-actions/setup-deps
-    - run: make -k gen-check
+    - run: |
+       git submodule init
+       git submodule update
+       make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
@@ -53,7 +59,10 @@ jobs:
 
     # test
     - name: Run Coverage Tests
-      run: make go.test.coverage
+      run: |
+        git submodule init
+        git submodule update
+        make go.test.coverage
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
@@ -72,7 +81,10 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
-      run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
+      run: |
+        git submodule init
+        git submodule update
+        make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
     - name: Upload EG Binaries
       uses: actions/upload-artifact@v3
