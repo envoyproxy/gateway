@@ -1,6 +1,7 @@
 run:
   deadline: 10m
-
+  skip-dirs:
+    - gateway-api
 linters:
   enable:
     - bodyclose
@@ -23,14 +24,13 @@ linters-settings:
       - gopkg.in/yaml.v2: "use sigs.k8s.io/yaml instead"
       - gopkg.in/yaml.v3: "use sigs.k8s.io/yaml instead"
   gci:
-    skip-dirs: ["gateway-api"]
     sections:
       # Captures all standard packages if they do not match another section.
       - standard
       # Contains all imports that could not be matched to another section type.
       - default
       # Groups all imports with the specified Prefix.
-      - prefix(github.com/envoyproxy/gateway/internal)
+      - prefix(github.com/envoyproxy/gateway/)
   goimports:
     # put imports beginning with prefix after 3rd-party packages;
     # it's a comma-separated list of prefixes
