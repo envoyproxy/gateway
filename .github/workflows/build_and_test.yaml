@@ -53,7 +53,8 @@ jobs:
 
     # test
     - name: Run Coverage Tests
-      run: make go.test.coverage
+      # run: make go.test.coverage
+      run: make go.test.coverage.custom
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
