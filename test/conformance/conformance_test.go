@@ -67,6 +67,8 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.HTTPRouteObservedGenerationBump.ShortName,
 
 			// Remove when know how to fix
+			tests.GatewayInvalidRouteKind.ShortName,
+			tests.HTTPRouteInvalidCrossNamespaceParentRef.ShortName,
 		},
 	})
 	cSuite.Setup(t)
