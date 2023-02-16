@@ -15,8 +15,27 @@ on:
 env:
   REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
+  gen-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
+    - run: make -k gen-check
+
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
+    - run: make -k licensecheck
+
   build:
     runs-on: ubuntu-latest
+    needs: [gen-check, license-check]
     steps:
     - uses: actions/checkout@v3
       with:
