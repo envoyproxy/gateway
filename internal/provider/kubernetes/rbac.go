@@ -6,8 +6,8 @@
 package kubernetes
 
 // RBAC for Gateway API resources.
-// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses;gateways;httproutes;grpcroutes;tlsroutes;tcproutes;udproutes;referencepolicies;referencegrants,verbs=get;list;watch;update
-// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;httproutes/status;grpcroutes/status;tlsroutes/status;tcproutes/status;udproutes/status,verbs=update
+// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses;gateways;httproutes;grpcroutes;customgrpcroutes;tlsroutes;tcproutes;udproutes;referencepolicies;referencegrants,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="gateway.networking.k8s.io",resources=gatewayclasses/status;gateways/status;httproutes/status;grpcroutes/status;customgrpcroutes/status;tlsroutes/status;tcproutes/status;udproutes/status,verbs=update
 
 // RBAC for Envoy Gateway custom resources.
 // +kubebuilder:rbac:groups="config.gateway.envoyproxy.io",resources=envoyproxies,verbs=get;list;watch;update
