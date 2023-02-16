@@ -4,10 +4,9 @@ Design Docs
 Learn about the internal details of Envoy Gateway.
 
 .. toctree::
-  :maxdepth: 1
+  :maxdepth: 2
 
   design/system-design
-  design/gatewayapi-support
   design/gatewayapi-translator
   design/watching
   design/config-api
@@ -15,3 +14,4 @@ Learn about the internal details of Envoy Gateway.
   design/egctl
   design/ratelimit
   design/request-authentication
+  design/gatewayapi-support

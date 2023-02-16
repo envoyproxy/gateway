@@ -145,21 +145,6 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 			Name: routeName(grpcRoute, ruleIdx, matchIdx),
 		}
 
-		for _, headerMatch := range match.Headers {
-			switch HeaderMatchTypeDerefOr(headerMatch.Type, v1beta1.HeaderMatchExact) {
-			case v1beta1.HeaderMatchExact:
-				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:  string(headerMatch.Name),
-					Exact: StringPtr(headerMatch.Value),
-				})
-			case v1beta1.HeaderMatchRegularExpression:
-				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:      string(headerMatch.Name),
-					SafeRegex: StringPtr(headerMatch.Value),
-				})
-			}
-		}
-
 		if match.Method != nil {
 			if match.Method.Method != nil {
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
@@ -167,10 +152,12 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 					Exact: match.Method.Method,
 				})
 			}
-			/* TODO
+
 			if match.Method.Service != nil {
+				irRoute.PathMatch = &ir.StringMatch{
+					Prefix: StringPtr("/" + *match.Method.Service),
+				}
 			}
-			*/
 		}
 
 		ruleRoutes = append(ruleRoutes, irRoute)

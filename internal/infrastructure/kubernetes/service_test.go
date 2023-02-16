@@ -120,21 +120,14 @@ func TestDeleteProxyService(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			kube := &Infra{
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-
-			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-
-			err := kube.createOrUpdateProxyService(context.Background(), infra)
-			require.NoError(t, err)
-
-			err = kube.deleteProxyService(context.Background(), infra)
+			err := kube.deleteProxyService(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

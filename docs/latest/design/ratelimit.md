@@ -165,51 +165,6 @@ spec:
       port: 3000
 ```
 
-### Rate limit per source IP
-
-* Here is an example of a rate limit implemented by the application developer that limits the total requests made
-to a specific route by matching on source IP. In this case, requests from `x.x.x.x` will be rate limited at 10 requests/hour.
-
-```yaml
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
-metadata:
-  name: ratelimit-per-ip
-spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - sourceIP: x.x.x.x/32
-      limit:
-        requests: 10
-        unit: Hour
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: HTTPRoute
-metadata:
-  name: example
-spec:
-  parentRefs:
-  - name: eg
-  hostnames:
-  - www.example.com
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /foo
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-per-user 
-    backendRefs:
-    - name: backend
-      port: 3000
-```
-
 ## Multiple RateLimitFilters, rules and clientSelectors
 * Users can create multiple `RateLimitFilter`s and apply it to the same `HTTPRoute`. In such a case each
 `RateLimitFilter` will be applied to the route and matched (and limited) in a mutually exclusive way, independent of each other.
