@@ -151,6 +151,36 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 	}
 }
 
+// GetCustomGRPCRoute returns a sample CustomGRPCRoute with a parent reference.
+func GetCustomGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.CustomGRPCRoute {
+	return &gwapiv1a2.CustomGRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nsName.Namespace,
+			Name:      nsName.Name,
+		},
+		Spec: gwapiv1a2.GRPCRouteSpec{
+			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+				ParentRefs: []gwapiv1b1.ParentReference{
+					{Name: gwapiv1b1.ObjectName(parent)},
+				},
+			},
+			Rules: []gwapiv1a2.GRPCRouteRule{
+				{
+					BackendRefs: []gwapiv1a2.GRPCBackendRef{
+						{
+							BackendRef: gwapiv1b1.BackendRef{
+								BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									Name: gwapiv1b1.ObjectName(serviceName.Name),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 // GetTLSRoute returns a sample TLSRoute with a parent reference.
 func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.TLSRoute {
 	return &gwapiv1a2.TLSRoute{
