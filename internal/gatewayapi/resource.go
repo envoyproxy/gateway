@@ -35,6 +35,8 @@ type Resources struct {
 	AuthenticationFilters []*egv1a1.AuthenticationFilter
 	RateLimitFilters      []*egv1a1.RateLimitFilter
 	EnvoyProxy            *egcfgv1a1.EnvoyProxy
+
+	CustomGRPCRoutes []*v1alpha2.CustomGRPCRoute
 }
 
 func NewResources() *Resources {
@@ -50,6 +52,8 @@ func NewResources() *Resources {
 		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
 		EnvoyProxy:            new(egcfgv1a1.EnvoyProxy),
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
+
+		CustomGRPCRoutes: []*v1alpha2.CustomGRPCRoute{},
 	}
 }
 

@@ -28,6 +28,8 @@ type ProviderResources struct {
 	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
 	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRoute]
 	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRoute]
+
+	CustomGRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.CustomGRPCRoute]
 }
 
 func (p *ProviderResources) GetResources() *gatewayapi.Resources {
