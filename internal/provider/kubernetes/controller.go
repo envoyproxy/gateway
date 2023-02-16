@@ -53,6 +53,9 @@ const (
 	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
+
+	gatewayCustomGRPCRouteIndex = "gatewayCustomGRPCRouteIndex"
+	serviceCustomGRPCRouteIndex = "serviceCustomGRPCRouteIndex"
 )
 
 type gatewayAPIReconciler struct {

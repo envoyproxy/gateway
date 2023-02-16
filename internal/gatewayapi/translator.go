@@ -33,6 +33,8 @@ const (
 	// wellKnownPortShift is the constant added to the well known port (1-1023)
 	// to convert it into an ephemeral port.
 	wellKnownPortShift = 10000
+
+	KindCustomGRPCRoute = "CustomGRPCRoute"
 )
 
 var _ TranslatorManager = (*Translator)(nil)

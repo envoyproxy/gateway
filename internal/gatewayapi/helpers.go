@@ -238,6 +238,20 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 	}
 }
 
+// ValidateCustomGRPCRouteFilter validates the provided filter within CustomGRPCRoute.
+func ValidateCustomGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
+	switch {
+	case filter == nil:
+		return errors.New("filter is nil")
+	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
+		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
+		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		return nil
+	default:
+		return fmt.Errorf("unsupported filter type: %v", filter.Type)
+	}
+}
+
 // GatewayOwnerLabels returns the Gateway Owner labels using
 // the provided namespace and name as the values.
 func GatewayOwnerLabels(namespace, name string) map[string]string {

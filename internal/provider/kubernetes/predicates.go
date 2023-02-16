@@ -132,6 +132,14 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
+	customgrpcRouteList := &gwapiv1a2.CustomGRPCRouteList{}
+	if err := r.client.List(ctx, customgrpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(serviceCustomGRPCRouteIndex, utils.NamespacedName(svc).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated CustomGRPCRoutes")
+		return false
+	}
+
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, utils.NamespacedName(svc).String()),
@@ -159,6 +167,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	// Check how many Route objects refer this Service
 	allAssociatedRoutes := len(httpRouteList.Items) +
 		len(grpcRouteList.Items) +
+		len(customgrpcRouteList.Items) +
 		len(tlsRouteList.Items) +
 		len(tcpRouteList.Items) +
 		len(udpRouteList.Items)
