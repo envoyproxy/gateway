@@ -112,7 +112,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(grpcRoute)
 				r.ProviderResources.GRPCRouteStatuses.Store(key, grpcRoute)
 			}
-
+			for _, customgrpcRoute := range result.CustomGRPCRoutes {
+				key := utils.NamespacedName(customgrpcRoute)
+				r.ProviderResources.CustomGRPCRouteStatuses.Store(key, customgrpcRoute)
+			}
 			for _, tlsRoute := range result.TLSRoutes {
 				key := utils.NamespacedName(tlsRoute)
 				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
