@@ -40,16 +40,17 @@ contributing to the project.
 - Rate Limiting [Issue #670][670].
 - Authentication [Issue #336][336].
 
-### [v0.4.0][v0.4.0]: More Advanced Features through Extension Mechanisms
+### [v0.4.0][v0.4.0]: Customizing Envoy Gateway
 
-- Allow users to configure xDS Resources [Issue #24][24].
+- Extending Envoy Gateway control plane [Issue #20][20]
+- Helm based installation for Envoy Gateway [Issue #650][650]
+- Customizing managed Envoy Proxy Kubernetes resource fields [Issue #648][648] 
+- Configuring xDS Resources [Issue #24][24] and [Issue #31][31].
 
-### [v0.5.0][v0.5.0]: Manageability and Scale
 
-- Tooling for devs/infra admins to aid in managing/maintaining EG
-- Support advanced provisioning use cases (e.g. multi-cluster, serverless, etc.)
-- Perf testing (EG specifically)
-- Support for Chaos engineering?
+### [v0.5.0][v0.5.0]: Observability and Scale
+
+- Observability for control plane and data plane [Issue #701][701]. 
 
 [issue]: https://github.com/envoyproxy/gateway/issues
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
@@ -60,7 +61,9 @@ contributing to the project.
 [v0.4.0]: https://github.com/envoyproxy/gateway/milestone/12
 [v0.5.0]: https://github.com/envoyproxy/gateway/milestone/13
 [17]: https://github.com/envoyproxy/gateway/issues/17
+[20]: https://github.com/envoyproxy/gateway/issues/20
 [24]: https://github.com/envoyproxy/gateway/issues/24
+[31]: https://github.com/envoyproxy/gateway/issues/31
 [60]: https://github.com/envoyproxy/gateway/issues/60
 [63]: https://github.com/envoyproxy/gateway/issues/63
 [64]: https://github.com/envoyproxy/gateway/issues/64
@@ -68,7 +71,10 @@ contributing to the project.
 [336]: https://github.com/envoyproxy/gateway/issues/336
 [641]: https://github.com/envoyproxy/gateway/issues/641
 [642]: https://github.com/envoyproxy/gateway/issues/642
+[648]: https://github.com/envoyproxy/gateway/issues/648
+[650]: https://github.com/envoyproxy/gateway/issues/650
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
 [675]: https://github.com/envoyproxy/gateway/issues/675
+[701]: https://github.com/envoyproxy/gateway/issues/701
 [707]: https://github.com/envoyproxy/gateway/issues/707
