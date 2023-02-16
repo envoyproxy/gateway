@@ -1,6 +1,5 @@
 keypair
 keypairs
-vendor
 gateway-api
-.github
-manifes
+bin
+vendor

@@ -12,7 +12,5 @@
 go.mod
 go.sum
 bin
-vendor
 gateway-api
-.github
-manifes
+vendor
