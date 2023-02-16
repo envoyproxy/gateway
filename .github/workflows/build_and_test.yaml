@@ -15,6 +15,16 @@ on:
 env:
   REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
+    - run: make lint-deps
+    - run: make -k lint
+
   gen-check:
     runs-on: ubuntu-latest
     steps:
@@ -32,6 +42,25 @@ jobs:
         submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
+  
+  coverage-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
+
+    # test
+    - name: Run Coverage Tests
+      run: make go.test.coverage
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        name: codecov-envoy-gateway
+        verbose: true
 
   build:
     runs-on: ubuntu-latest
