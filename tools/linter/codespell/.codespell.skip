@@ -14,3 +14,5 @@ go.sum
 bin
 vendor
 gateway-api
+.github
+manifes
