@@ -28,3 +28,6 @@ vendor/
 
 # GitHub Codespaces
 .devcontainer/
+
+gateway-api
+./gateway-api
