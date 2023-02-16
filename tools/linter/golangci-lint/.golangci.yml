@@ -9,7 +9,7 @@ linters:
     - depguard
     - exportloopref
     - gofmt
-    # - goimports
+    - goimports
     - goheader
     - gocritic
     - gosec

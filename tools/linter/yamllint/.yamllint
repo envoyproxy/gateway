@@ -9,6 +9,7 @@ ignore: |
   gateway-api
   vendor
   .github
+  manifes
 
 
 rules:
