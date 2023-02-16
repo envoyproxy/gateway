@@ -1,10 +1,9 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1538
-    gateway.networking.k8s.io/bundle-version: v0.6.1
-    gateway.networking.k8s.io/channel: experimental
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
 spec:
@@ -56,19 +55,19 @@ spec:
                   against the HTTP Host header to select a HTTPRoute to process the
                   request. This matches the RFC 1123 definition of a hostname with
                   2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname may
-                  be prefixed with a wildcard label (`*.`). The wildcard    label
-                  must appear by itself as the first label. \n If a hostname is specified
+                  be prefixed with a wildcard label (`*.`). The wildcard label must
+                  appear by itself as the first label. \n If a hostname is specified
                   by both the Listener and HTTPRoute, there must be at least one intersecting
                   hostname for the HTTPRoute to be attached to the Listener. For example:
                   \n * A Listener with `test.example.com` as the hostname matches
-                  HTTPRoutes   that have either not specified any hostnames, or have
-                  specified at   least one of `test.example.com` or `*.example.com`.
+                  HTTPRoutes that have either not specified any hostnames, or have
+                  specified at least one of `test.example.com` or `*.example.com`.
                   * A Listener with `*.example.com` as the hostname matches HTTPRoutes
-                  \  that have either not specified any hostnames or have specified
-                  at least   one hostname that matches the Listener hostname. For
-                  example,   `*.example.com`, `test.example.com`, and `foo.test.example.com`
-                  would   all match. On the other hand, `example.com` and `test.example.net`
-                  would   not match. \n Hostnames that are prefixed with a wildcard
+                  that have either not specified any hostnames or have specified at
+                  least one hostname that matches the Listener hostname. For example,
+                  `*.example.com`, `test.example.com`, and `foo.test.example.com`
+                  would all match. On the other hand, `example.com` and `test.example.net`
+                  would not match. \n Hostnames that are prefixed with a wildcard
                   label (`*.`) are interpreted as a suffix match. That means that
                   a match for `*.example.com` would match both `test.example.com`,
                   and `foo.test.example.com`, but not `example.com`. \n If both the
@@ -90,8 +89,8 @@ spec:
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n  1. IPs are not allowed.  2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard     label
+                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
+                    may be prefixed with a wildcard label (`*.`). The wildcard label
                     must appear by itself as the first label. \n Hostname can be \"precise\"
                     which is a domain name without the terminating dot of a network
                     host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
@@ -320,11 +319,10 @@ spec:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -367,11 +365,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -379,10 +376,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -618,11 +615,10 @@ spec:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -665,11 +661,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -677,10 +672,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -723,20 +718,20 @@ spec:
                                     to apply. As with other API fields, types are
                                     classified into three conformance levels: \n -
                                     Core: Filter types and their corresponding configuration
-                                    defined by   \"Support: Core\" in this package,
-                                    e.g. \"RequestHeaderModifier\". All   implementations
+                                    defined by \"Support: Core\" in this package,
+                                    e.g. \"RequestHeaderModifier\". All implementations
                                     must support core filters. \n - Extended: Filter
                                     types and their corresponding configuration defined
-                                    by   \"Support: Extended\" in this package, e.g.
-                                    \"RequestMirror\". Implementers   are encouraged
+                                    by \"Support: Extended\" in this package, e.g.
+                                    \"RequestMirror\". Implementers are encouraged
                                     to support extended filters. \n - Implementation-specific:
-                                    Filters that are defined and supported by   specific
-                                    vendors.   In the future, filters showing convergence
-                                    in behavior across multiple   implementations
-                                    will be considered for inclusion in extended or
-                                    core   conformance levels. Filter-specific configuration
-                                    for such filters   is specified using the ExtensionRef
-                                    field. `Type` should be set to   \"ExtensionRef\"
+                                    Filters that are defined and supported by specific
+                                    vendors. In the future, filters showing convergence
+                                    in behavior across multiple implementations will
+                                    be considered for inclusion in extended or core
+                                    conformance levels. Filter-specific configuration
+                                    for such filters is specified using the ExtensionRef
+                                    field. `Type` should be set to \"ExtensionRef\"
                                     for custom filters. \n Implementers are encouraged
                                     to define custom implementation types to extend
                                     the core API with implementation-specific behavior.
@@ -749,13 +744,11 @@ spec:
                                     a crash. \n Unknown values here must result in
                                     the implementation setting the Accepted Condition
                                     for the Route to `status: False`, with a Reason
-                                    of `UnsupportedValue`. \n "
+                                    of `UnsupportedValue`. \n <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                                   enum:
                                   - RequestHeaderModifier
-                                  - ResponseHeaderModifier
                                   - RequestMirror
                                   - RequestRedirect
-                                  - URLRewrite
                                   - ExtensionRef
                                   type: string
                                 urlRewrite:
@@ -902,7 +895,7 @@ spec:
                         type of filter: \n - ALL core filters MUST be supported by
                         all implementations. - Implementers are encouraged to support
                         extended filters. - Implementation-specific custom filters
-                        have no API guarantees across   implementations. \n Specifying
+                        have no API guarantees across implementations. \n Specifying
                         a core filter multiple times has unspecified or implementation-specific
                         conformance. \n All filters are expected to be compatible
                         with each other except for the URLRewrite and RequestRedirect
@@ -961,10 +954,9 @@ spec:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1004,10 +996,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -1015,9 +1007,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1239,10 +1231,9 @@ spec:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1282,10 +1273,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -1293,9 +1284,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1335,37 +1326,35 @@ spec:
                             description: "Type identifies the type of filter to apply.
                               As with other API fields, types are classified into
                               three conformance levels: \n - Core: Filter types and
-                              their corresponding configuration defined by   \"Support:
+                              their corresponding configuration defined by \"Support:
                               Core\" in this package, e.g. \"RequestHeaderModifier\".
-                              All   implementations must support core filters. \n
-                              - Extended: Filter types and their corresponding configuration
-                              defined by   \"Support: Extended\" in this package,
-                              e.g. \"RequestMirror\". Implementers   are encouraged
-                              to support extended filters. \n - Implementation-specific:
-                              Filters that are defined and supported by   specific
-                              vendors.   In the future, filters showing convergence
-                              in behavior across multiple   implementations will be
-                              considered for inclusion in extended or core   conformance
-                              levels. Filter-specific configuration for such filters
-                              \  is specified using the ExtensionRef field. `Type`
-                              should be set to   \"ExtensionRef\" for custom filters.
-                              \n Implementers are encouraged to define custom implementation
-                              types to extend the core API with implementation-specific
-                              behavior. \n If a reference to a custom filter type
-                              cannot be resolved, the filter MUST NOT be skipped.
-                              Instead, requests that would have been processed by
-                              that filter MUST receive a HTTP error response. \n Note
-                              that values may be added to this enum, implementations
-                              must ensure that unknown values will not cause a crash.
-                              \n Unknown values here must result in the implementation
-                              setting the Accepted Condition for the Route to `status:
-                              False`, with a Reason of `UnsupportedValue`. \n "
+                              All implementations must support core filters. \n -
+                              Extended: Filter types and their corresponding configuration
+                              defined by \"Support: Extended\" in this package, e.g.
+                              \"RequestMirror\". Implementers are encouraged to support
+                              extended filters. \n - Implementation-specific: Filters
+                              that are defined and supported by specific vendors.
+                              In the future, filters showing convergence in behavior
+                              across multiple implementations will be considered for
+                              inclusion in extended or core conformance levels. Filter-specific
+                              configuration for such filters is specified using the
+                              ExtensionRef field. `Type` should be set to \"ExtensionRef\"
+                              for custom filters. \n Implementers are encouraged to
+                              define custom implementation types to extend the core
+                              API with implementation-specific behavior. \n If a reference
+                              to a custom filter type cannot be resolved, the filter
+                              MUST NOT be skipped. Instead, requests that would have
+                              been processed by that filter MUST receive a HTTP error
+                              response. \n Note that values may be added to this enum,
+                              implementations must ensure that unknown values will
+                              not cause a crash. \n Unknown values here must result
+                              in the implementation setting the Accepted Condition
+                              for the Route to `status: False`, with a Reason of `UnsupportedValue`.
+                              \n <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                             enum:
                             - RequestHeaderModifier
-                            - ResponseHeaderModifier
                             - RequestMirror
                             - RequestRedirect
-                            - URLRewrite
                             - ExtensionRef
                             type: string
                           urlRewrite:
@@ -1439,25 +1428,25 @@ spec:
                         rule against incoming HTTP requests. Each match is independent,
                         i.e. this rule will be matched if **any** one of the matches
                         is satisfied. \n For example, take the following matches configuration:
-                        \n ``` matches: - path:     value: \"/foo\"   headers:   -
-                        name: \"version\"     value: \"v2\" - path:     value: \"/v2/foo\"
-                        ``` \n For a request to match against this rule, a request
-                        must satisfy EITHER of the two conditions: \n - path prefixed
-                        with `/foo` AND contains the header `version: v2` - path prefix
-                        of `/v2/foo` \n See the documentation for HTTPRouteMatch on
-                        how to specify multiple match conditions that should be ANDed
-                        together. \n If no matches are specified, the default is a
-                        prefix path match on \"/\", which has the effect of matching
-                        every HTTP request. \n Proxy or Load Balancer routing configuration
-                        generated from HTTPRoutes MUST prioritize matches based on
-                        the following criteria, continuing on ties. Across all rules
-                        specified on applicable Routes, precedence must be given to
-                        the match with the largest number of: \n * Characters in a
-                        matching path. * Header matches. * Query param matches. \n
-                        If ties still exist across multiple Routes, matching precedence
-                        MUST be determined in order of the following criteria, continuing
+                        \n ``` matches: - path: value: \"/foo\" headers: - name: \"version\"
+                        value: \"v2\" - path: value: \"/v2/foo\" ``` \n For a request
+                        to match against this rule, a request must satisfy EITHER
+                        of the two conditions: \n - path prefixed with `/foo` AND
+                        contains the header `version: v2` - path prefix of `/v2/foo`
+                        \n See the documentation for HTTPRouteMatch on how to specify
+                        multiple match conditions that should be ANDed together. \n
+                        If no matches are specified, the default is a prefix path
+                        match on \"/\", which has the effect of matching every HTTP
+                        request. \n Proxy or Load Balancer routing configuration generated
+                        from HTTPRoutes MUST prioritize matches based on the following
+                        criteria, continuing on ties. Across all rules specified on
+                        applicable Routes, precedence must be given to the match with
+                        the largest number of: \n * Characters in a matching path.
+                        * Header matches. * Query param matches. \n If ties still
+                        exist across multiple Routes, matching precedence MUST be
+                        determined in order of the following criteria, continuing
                         on ties: \n * The oldest Route based on creation timestamp.
-                        * The Route appearing first in alphabetical order by   \"{namespace}/{name}\".
+                        * The Route appearing first in alphabetical order by \"{namespace}/{name}\".
                         \n If ties still exist within an HTTPRoute, matching precedence
                         MUST be granted to the FIRST matching rule (in list order)
                         with a match meeting the above criteria. \n When no rules
@@ -1471,8 +1460,8 @@ spec:
                           if all conditions are satisfied. \n For example, the match
                           below will match a HTTP request only if its path starts
                           with `/foo` AND it contains the `version: v1` header: \n
-                          ``` match: \n \tpath: \t  value: \"/foo\" \theaders: \t-
-                          name: \"version\" \t  value \"v1\" \n ```"
+                          ``` match: \n path: value: \"/foo\" headers: - name: \"version\"
+                          value \"v1\" \n ```"
                         properties:
                           headers:
                             description: Headers specifies HTTP request header matchers.
@@ -1680,15 +1669,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -1701,7 +1689,6 @@ spec:
                           message:
                             description: message is a human readable message indicating
                               details about the transition. This may be an empty string.
-                            maxLength: 32768
                             type: string
                           observedGeneration:
                             description: observedGeneration represents the .metadata.generation
@@ -1710,7 +1697,6 @@ spec:
                               is 9, the condition is out of date with respect to the
                               current state of the instance.
                             format: int64
-                            minimum: 0
                             type: integer
                           reason:
                             description: reason contains a programmatic identifier
@@ -1719,17 +1705,10 @@ spec:
                               values and meanings for this field, and whether the
                               values are considered a guaranteed API. The value should
                               be a CamelCase string. This field may not be empty.
-                            maxLength: 1024
-                            minLength: 1
-                            pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                             type: string
                           status:
                             description: status of the condition, one of True, False,
                               Unknown.
-                            enum:
-                            - "True"
-                            - "False"
-                            - Unknown
                             type: string
                           type:
                             description: type of condition in CamelCase or in foo.example.com/CamelCase.
@@ -1738,8 +1717,6 @@ spec:
                               can be useful (see .node.status.conditions), the ability
                               to deconflict is important. The regex it matches is
                               (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                            maxLength: 316
-                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                             type: string
                         required:
                         - lastTransitionTime
@@ -1918,19 +1895,19 @@ spec:
                   against the HTTP Host header to select a HTTPRoute to process the
                   request. This matches the RFC 1123 definition of a hostname with
                   2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname may
-                  be prefixed with a wildcard label (`*.`). The wildcard    label
-                  must appear by itself as the first label. \n If a hostname is specified
+                  be prefixed with a wildcard label (`*.`). The wildcard label must
+                  appear by itself as the first label. \n If a hostname is specified
                   by both the Listener and HTTPRoute, there must be at least one intersecting
                   hostname for the HTTPRoute to be attached to the Listener. For example:
                   \n * A Listener with `test.example.com` as the hostname matches
-                  HTTPRoutes   that have either not specified any hostnames, or have
-                  specified at   least one of `test.example.com` or `*.example.com`.
+                  HTTPRoutes that have either not specified any hostnames, or have
+                  specified at least one of `test.example.com` or `*.example.com`.
                   * A Listener with `*.example.com` as the hostname matches HTTPRoutes
-                  \  that have either not specified any hostnames or have specified
-                  at least   one hostname that matches the Listener hostname. For
-                  example,   `*.example.com`, `test.example.com`, and `foo.test.example.com`
-                  would   all match. On the other hand, `example.com` and `test.example.net`
-                  would   not match. \n Hostnames that are prefixed with a wildcard
+                  that have either not specified any hostnames or have specified at
+                  least one hostname that matches the Listener hostname. For example,
+                  `*.example.com`, `test.example.com`, and `foo.test.example.com`
+                  would all match. On the other hand, `example.com` and `test.example.net`
+                  would not match. \n Hostnames that are prefixed with a wildcard
                   label (`*.`) are interpreted as a suffix match. That means that
                   a match for `*.example.com` would match both `test.example.com`,
                   and `foo.test.example.com`, but not `example.com`. \n If both the
@@ -1952,8 +1929,8 @@ spec:
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n  1. IPs are not allowed.  2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard     label
+                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
+                    may be prefixed with a wildcard label (`*.`). The wildcard label
                     must appear by itself as the first label. \n Hostname can be \"precise\"
                     which is a domain name without the terminating dot of a network
                     host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
@@ -2182,11 +2159,10 @@ spec:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2229,11 +2205,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -2241,10 +2216,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2480,11 +2455,10 @@ spec:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2527,11 +2501,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -2539,10 +2512,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2585,20 +2558,20 @@ spec:
                                     to apply. As with other API fields, types are
                                     classified into three conformance levels: \n -
                                     Core: Filter types and their corresponding configuration
-                                    defined by   \"Support: Core\" in this package,
-                                    e.g. \"RequestHeaderModifier\". All   implementations
+                                    defined by \"Support: Core\" in this package,
+                                    e.g. \"RequestHeaderModifier\". All implementations
                                     must support core filters. \n - Extended: Filter
                                     types and their corresponding configuration defined
-                                    by   \"Support: Extended\" in this package, e.g.
-                                    \"RequestMirror\". Implementers   are encouraged
+                                    by \"Support: Extended\" in this package, e.g.
+                                    \"RequestMirror\". Implementers are encouraged
                                     to support extended filters. \n - Implementation-specific:
-                                    Filters that are defined and supported by   specific
-                                    vendors.   In the future, filters showing convergence
-                                    in behavior across multiple   implementations
-                                    will be considered for inclusion in extended or
-                                    core   conformance levels. Filter-specific configuration
-                                    for such filters   is specified using the ExtensionRef
-                                    field. `Type` should be set to   \"ExtensionRef\"
+                                    Filters that are defined and supported by specific
+                                    vendors. In the future, filters showing convergence
+                                    in behavior across multiple implementations will
+                                    be considered for inclusion in extended or core
+                                    conformance levels. Filter-specific configuration
+                                    for such filters is specified using the ExtensionRef
+                                    field. `Type` should be set to \"ExtensionRef\"
                                     for custom filters. \n Implementers are encouraged
                                     to define custom implementation types to extend
                                     the core API with implementation-specific behavior.
@@ -2611,13 +2584,11 @@ spec:
                                     a crash. \n Unknown values here must result in
                                     the implementation setting the Accepted Condition
                                     for the Route to `status: False`, with a Reason
-                                    of `UnsupportedValue`. \n "
+                                    of `UnsupportedValue`. \n <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                                   enum:
                                   - RequestHeaderModifier
-                                  - ResponseHeaderModifier
                                   - RequestMirror
                                   - RequestRedirect
-                                  - URLRewrite
                                   - ExtensionRef
                                   type: string
                                 urlRewrite:
@@ -2764,7 +2735,7 @@ spec:
                         type of filter: \n - ALL core filters MUST be supported by
                         all implementations. - Implementers are encouraged to support
                         extended filters. - Implementation-specific custom filters
-                        have no API guarantees across   implementations. \n Specifying
+                        have no API guarantees across implementations. \n Specifying
                         a core filter multiple times has unspecified or implementation-specific
                         conformance. \n All filters are expected to be compatible
                         with each other except for the URLRewrite and RequestRedirect
@@ -2823,10 +2794,9 @@ spec:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -2866,10 +2836,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -2877,9 +2847,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -3101,10 +3071,9 @@ spec:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -3144,10 +3113,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -3155,9 +3124,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -3197,37 +3166,35 @@ spec:
                             description: "Type identifies the type of filter to apply.
                               As with other API fields, types are classified into
                               three conformance levels: \n - Core: Filter types and
-                              their corresponding configuration defined by   \"Support:
+                              their corresponding configuration defined by \"Support:
                               Core\" in this package, e.g. \"RequestHeaderModifier\".
-                              All   implementations must support core filters. \n
-                              - Extended: Filter types and their corresponding configuration
-                              defined by   \"Support: Extended\" in this package,
-                              e.g. \"RequestMirror\". Implementers   are encouraged
-                              to support extended filters. \n - Implementation-specific:
-                              Filters that are defined and supported by   specific
-                              vendors.   In the future, filters showing convergence
-                              in behavior across multiple   implementations will be
-                              considered for inclusion in extended or core   conformance
-                              levels. Filter-specific configuration for such filters
-                              \  is specified using the ExtensionRef field. `Type`
-                              should be set to   \"ExtensionRef\" for custom filters.
-                              \n Implementers are encouraged to define custom implementation
-                              types to extend the core API with implementation-specific
-                              behavior. \n If a reference to a custom filter type
-                              cannot be resolved, the filter MUST NOT be skipped.
-                              Instead, requests that would have been processed by
-                              that filter MUST receive a HTTP error response. \n Note
-                              that values may be added to this enum, implementations
-                              must ensure that unknown values will not cause a crash.
-                              \n Unknown values here must result in the implementation
-                              setting the Accepted Condition for the Route to `status:
-                              False`, with a Reason of `UnsupportedValue`. \n "
+                              All implementations must support core filters. \n -
+                              Extended: Filter types and their corresponding configuration
+                              defined by \"Support: Extended\" in this package, e.g.
+                              \"RequestMirror\". Implementers are encouraged to support
+                              extended filters. \n - Implementation-specific: Filters
+                              that are defined and supported by specific vendors.
+                              In the future, filters showing convergence in behavior
+                              across multiple implementations will be considered for
+                              inclusion in extended or core conformance levels. Filter-specific
+                              configuration for such filters is specified using the
+                              ExtensionRef field. `Type` should be set to \"ExtensionRef\"
+                              for custom filters. \n Implementers are encouraged to
+                              define custom implementation types to extend the core
+                              API with implementation-specific behavior. \n If a reference
+                              to a custom filter type cannot be resolved, the filter
+                              MUST NOT be skipped. Instead, requests that would have
+                              been processed by that filter MUST receive a HTTP error
+                              response. \n Note that values may be added to this enum,
+                              implementations must ensure that unknown values will
+                              not cause a crash. \n Unknown values here must result
+                              in the implementation setting the Accepted Condition
+                              for the Route to `status: False`, with a Reason of `UnsupportedValue`.
+                              \n <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef>"
                             enum:
                             - RequestHeaderModifier
-                            - ResponseHeaderModifier
                             - RequestMirror
                             - RequestRedirect
-                            - URLRewrite
                             - ExtensionRef
                             type: string
                           urlRewrite:
@@ -3301,25 +3268,25 @@ spec:
                         rule against incoming HTTP requests. Each match is independent,
                         i.e. this rule will be matched if **any** one of the matches
                         is satisfied. \n For example, take the following matches configuration:
-                        \n ``` matches: - path:     value: \"/foo\"   headers:   -
-                        name: \"version\"     value: \"v2\" - path:     value: \"/v2/foo\"
-                        ``` \n For a request to match against this rule, a request
-                        must satisfy EITHER of the two conditions: \n - path prefixed
-                        with `/foo` AND contains the header `version: v2` - path prefix
-                        of `/v2/foo` \n See the documentation for HTTPRouteMatch on
-                        how to specify multiple match conditions that should be ANDed
-                        together. \n If no matches are specified, the default is a
-                        prefix path match on \"/\", which has the effect of matching
-                        every HTTP request. \n Proxy or Load Balancer routing configuration
-                        generated from HTTPRoutes MUST prioritize matches based on
-                        the following criteria, continuing on ties. Across all rules
-                        specified on applicable Routes, precedence must be given to
-                        the match with the largest number of: \n * Characters in a
-                        matching path. * Header matches. * Query param matches. \n
-                        If ties still exist across multiple Routes, matching precedence
-                        MUST be determined in order of the following criteria, continuing
+                        \n ``` matches: - path: value: \"/foo\" headers: - name: \"version\"
+                        value: \"v2\" - path: value: \"/v2/foo\" ``` \n For a request
+                        to match against this rule, a request must satisfy EITHER
+                        of the two conditions: \n - path prefixed with `/foo` AND
+                        contains the header `version: v2` - path prefix of `/v2/foo`
+                        \n See the documentation for HTTPRouteMatch on how to specify
+                        multiple match conditions that should be ANDed together. \n
+                        If no matches are specified, the default is a prefix path
+                        match on \"/\", which has the effect of matching every HTTP
+                        request. \n Proxy or Load Balancer routing configuration generated
+                        from HTTPRoutes MUST prioritize matches based on the following
+                        criteria, continuing on ties. Across all rules specified on
+                        applicable Routes, precedence must be given to the match with
+                        the largest number of: \n * Characters in a matching path.
+                        * Header matches. * Query param matches. \n If ties still
+                        exist across multiple Routes, matching precedence MUST be
+                        determined in order of the following criteria, continuing
                         on ties: \n * The oldest Route based on creation timestamp.
-                        * The Route appearing first in alphabetical order by   \"{namespace}/{name}\".
+                        * The Route appearing first in alphabetical order by \"{namespace}/{name}\".
                         \n If ties still exist within an HTTPRoute, matching precedence
                         MUST be granted to the FIRST matching rule (in list order)
                         with a match meeting the above criteria. \n When no rules
@@ -3333,8 +3300,8 @@ spec:
                           if all conditions are satisfied. \n For example, the match
                           below will match a HTTP request only if its path starts
                           with `/foo` AND it contains the `version: v1` header: \n
-                          ``` match: \n \tpath: \t  value: \"/foo\" \theaders: \t-
-                          name: \"version\" \t  value \"v1\" \n ```"
+                          ``` match: \n path: value: \"/foo\" headers: - name: \"version\"
+                          value \"v1\" \n ```"
                         properties:
                           headers:
                             description: Headers specifies HTTP request header matchers.
@@ -3542,15 +3509,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -3563,7 +3529,6 @@ spec:
                           message:
                             description: message is a human readable message indicating
                               details about the transition. This may be an empty string.
-                            maxLength: 32768
                             type: string
                           observedGeneration:
                             description: observedGeneration represents the .metadata.generation
@@ -3572,7 +3537,6 @@ spec:
                               is 9, the condition is out of date with respect to the
                               current state of the instance.
                             format: int64
-                            minimum: 0
                             type: integer
                           reason:
                             description: reason contains a programmatic identifier
@@ -3581,17 +3545,10 @@ spec:
                               values and meanings for this field, and whether the
                               values are considered a guaranteed API. The value should
                               be a CamelCase string. This field may not be empty.
-                            maxLength: 1024
-                            minLength: 1
-                            pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                             type: string
                           status:
                             description: status of the condition, one of True, False,
                               Unknown.
-                            enum:
-                            - "True"
-                            - "False"
-                            - Unknown
                             type: string
                           type:
                             description: type of condition in CamelCase or in foo.example.com/CamelCase.
@@ -3600,8 +3557,6 @@ spec:
                               can be useful (see .node.status.conditions), the ability
                               to deconflict is important. The regex it matches is
                               (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                            maxLength: 316
-                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                             type: string
                         required:
                         - lastTransitionTime
@@ -3745,9 +3700,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

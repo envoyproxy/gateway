@@ -1,21 +1,20 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1538
-    gateway.networking.k8s.io/bundle-version: v0.6.1
-    gateway.networking.k8s.io/channel: experimental
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: udproutes.gateway.networking.k8s.io
+  name: tcproutes.gateway.networking.k8s.io
 spec:
   group: gateway.networking.k8s.io
   names:
     categories:
     - gateway-api
-    kind: UDPRoute
-    listKind: UDPRouteList
-    plural: udproutes
-    singular: udproute
+    kind: TCPRoute
+    listKind: TCPRouteList
+    plural: tcproutes
+    singular: tcproute
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -25,9 +24,9 @@ spec:
     name: v1alpha2
     schema:
       openAPIV3Schema:
-        description: UDPRoute provides a way to route UDP traffic. When combined with
-          a Gateway listener, it can be used to forward traffic on the port specified
-          by the listener to a set of backends specified by the UDPRoute.
+        description: TCPRoute provides a way to route TCP requests. When combined
+          with a Gateway listener, it can be used to forward connections on the port
+          specified by the listener to a set of backends specified by the TCPRoute.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -42,7 +41,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of UDPRoute.
+            description: Spec defines the desired state of TCPRoute.
             properties:
               parentRefs:
                 description: "ParentRefs references the resources (usually Gateways)
@@ -167,20 +166,20 @@ spec:
                 maxItems: 32
                 type: array
               rules:
-                description: Rules are a list of UDP matchers and actions.
+                description: Rules are a list of TCP matchers and actions.
                 items:
-                  description: UDPRouteRule is the configuration for a given rule.
+                  description: TCPRouteRule is the configuration for a given rule.
                   properties:
                     backendRefs:
                       description: "BackendRefs defines the backend(s) where matching
                         requests should be sent. If unspecified or invalid (refers
                         to a non-existent resource or a Service with no endpoints),
                         the underlying implementation MUST actively reject connection
-                        attempts to this backend. Packet drops must respect weight;
-                        if an invalid backend is requested to have 80% of the packets,
-                        then 80% of packets must be dropped instead. \n Support: Core
-                        for Kubernetes Service Support: Implementation-specific for
-                        any other resource \n Support for weight: Extended"
+                        attempts to this backend. Connection rejections must respect
+                        weight; if an invalid backend is requested to have 80% of
+                        connections, then 80% of connections must be rejected instead.
+                        \n Support: Core for Kubernetes Service \n Support: Implementation-specific
+                        for any other resource \n Support for weight: Extended"
                       items:
                         description: "BackendRef defines how a Route should forward
                           a request to a Kubernetes resource. \n Note that when a
@@ -267,7 +266,7 @@ spec:
             - rules
             type: object
           status:
-            description: Status defines the current state of UDPRoute.
+            description: Status defines the current state of TCPRoute.
             properties:
               parents:
                 description: "Parents is a list of parent resources (usually Gateways)
@@ -307,15 +306,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -328,7 +326,6 @@ spec:
                           message:
                             description: message is a human readable message indicating
                               details about the transition. This may be an empty string.
-                            maxLength: 32768
                             type: string
                           observedGeneration:
                             description: observedGeneration represents the .metadata.generation
@@ -337,7 +334,6 @@ spec:
                               is 9, the condition is out of date with respect to the
                               current state of the instance.
                             format: int64
-                            minimum: 0
                             type: integer
                           reason:
                             description: reason contains a programmatic identifier
@@ -346,17 +342,10 @@ spec:
                               values and meanings for this field, and whether the
                               values are considered a guaranteed API. The value should
                               be a CamelCase string. This field may not be empty.
-                            maxLength: 1024
-                            minLength: 1
-                            pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                             type: string
                           status:
                             description: status of the condition, one of True, False,
                               Unknown.
-                            enum:
-                            - "True"
-                            - "False"
-                            - Unknown
                             type: string
                           type:
                             description: type of condition in CamelCase or in foo.example.com/CamelCase.
@@ -365,8 +354,6 @@ spec:
                               can be useful (see .node.status.conditions), the ability
                               to deconflict is important. The regex it matches is
                               (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                            maxLength: 316
-                            pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                             type: string
                         required:
                         - lastTransitionTime
@@ -510,9 +497,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

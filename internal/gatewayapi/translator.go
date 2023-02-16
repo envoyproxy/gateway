@@ -66,19 +66,21 @@ type Translator struct {
 }
 
 type TranslateResult struct {
-	Gateways   []*v1beta1.Gateway
-	HTTPRoutes []*v1beta1.HTTPRoute
-	GRPCRoutes []*v1alpha2.GRPCRoute
-	TLSRoutes  []*v1alpha2.TLSRoute
-	TCPRoutes  []*v1alpha2.TCPRoute
-	UDPRoutes  []*v1alpha2.UDPRoute
-	XdsIR      XdsIRMap
-	InfraIR    InfraIRMap
+	Gateways         []*v1beta1.Gateway
+	HTTPRoutes       []*v1beta1.HTTPRoute
+	GRPCRoutes       []*v1alpha2.GRPCRoute
+	CustomGRPCRoutes []*v1alpha2.CustomGRPCRoute
+	TLSRoutes        []*v1alpha2.TLSRoute
+	TCPRoutes        []*v1alpha2.TCPRoute
+	UDPRoutes        []*v1alpha2.UDPRoute
+	XdsIR            XdsIRMap
+	InfraIR          InfraIRMap
 }
 
 func newTranslateResult(gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
+	customgrpcRoutes []*CustomGRPCRouteContext,
 	tlsRoutes []*TLSRouteContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
@@ -96,6 +98,9 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 	for _, grpcRoute := range grpcRoutes {
 		translateResult.GRPCRoutes = append(translateResult.GRPCRoutes, grpcRoute.GRPCRoute)
+	}
+	for _, customgrpcRoute := range customgrpcRoutes {
+		translateResult.CustomGRPCRoutes = append(translateResult.CustomGRPCRoutes, customgrpcRoute.CustomGRPCRoute)
 	}
 	for _, tlsRoute := range tlsRoutes {
 		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
@@ -126,6 +131,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant GRPCRoutes.
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, gateways, resources, xdsIR)
 
+	// Process all relevant GRPCRoutes.
+	customgrpcRoutes := t.ProcessCustomGRPCRoutes(resources.CustomGRPCRoutes, gateways, resources, xdsIR)
+
 	// Process all relevant TLSRoutes.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, gateways, resources, xdsIR)
 
@@ -138,7 +146,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, customgrpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

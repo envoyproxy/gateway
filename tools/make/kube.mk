@@ -2,9 +2,10 @@
 ENVTEST_K8S_VERSION ?= 1.24.1
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
-GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
+GATEWAY_API_VERSION ?= v0.1.1
 
-GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+GATEWAY_RELEASE_URL ?= https://github.com/GeoComply/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+
 
 CONFORMANCE_UNIQUE_PORTS ?= true
 
