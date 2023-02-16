@@ -5621,7 +5621,6 @@ spec:
         image: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev:latest
         imagePullPolicy: Always
         livenessProbe:
-        
           httpGet:
             path: /healthz
             port: 8081
