@@ -12,3 +12,4 @@
 go.mod
 go.sum
 bin
+gateway-api
