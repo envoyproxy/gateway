@@ -15,6 +15,15 @@ on:
 env:
   REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
+    - run: make lint-deps
+    - run: make -k lint
   build:
     runs-on: ubuntu-latest
     steps:
