@@ -102,7 +102,7 @@ xdsIR:
       routes:
       - name: default-grpcroute-1-rule-0-match-0-*
         pathMatch:
-          SafeRegex: "/com.example/Example"
+          SafeRegex: "^/com.example/Example"
         destinations:
         - host: 7.7.7.7
           port: 8080
