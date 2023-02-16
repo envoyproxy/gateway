@@ -13,6 +13,14 @@ import (
 )
 
 var (
+	validGatewayConfig = `
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyGateway
+provider:
+  type: Kubernetes
+gateway:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+`
 	invalidGatewayConfig = `
 kind: EnvoyGateway
 apiVersion: config.gateway.envoyproxy.io/v1alpha1
@@ -32,6 +40,11 @@ func TestGetConfigValidate(t *testing.T) {
 		errors []string
 	}{
 		{
+			name:   "valid gateway",
+			input:  validGatewayConfig,
+			errors: nil,
+		},
+		{
 			name:   "invalid gateway",
 			input:  invalidGatewayConfig,
 			errors: []string{"is unspecified"},
@@ -48,8 +61,12 @@ func TestGetConfigValidate(t *testing.T) {
 			assert.NoError(t, err)
 
 			_, err = getConfigByPath(file.Name())
-			for _, e := range test.errors {
-				assert.ErrorContains(t, err, e)
+			if test.errors == nil {
+				assert.NoError(t, err)
+			} else {
+				for _, e := range test.errors {
+					assert.ErrorContains(t, err, e)
+				}
 			}
 		})
 	}
