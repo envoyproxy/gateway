@@ -297,6 +297,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
 			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
 			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.CustomGRPCRoute{}, serviceCustomGRPCRouteIndex, serviceCustomGRPCRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)
