@@ -26,6 +26,11 @@ type RoutesTranslator interface {
 	ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
 }
 
+const (
+	GRPCServiceRegexPattern = "(?i)\\.?[a-z_][a-z_0-9]*(\\.[a-z_][a-z_0-9]*)*"
+	GRPCMethodRegexPattern  = "[A-Za-z_][A-Za-z_0-9]*"
+)
+
 func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext {
 	var relevantHTTPRoutes []*HTTPRouteContext
 
@@ -391,37 +396,30 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 
 		if match.Method != nil {
 			// GRPC's path is in the form of "/<service>/<method>"
-			//nolint:gocritic
-			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, v1alpha2.GRPCMethodMatchExact) {
-			case v1alpha2.GRPCMethodMatchExact:
-				if match.Method.Service != nil && match.Method.Method != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
-					}
-				} else if match.Method.Service != nil {
-					// Use prefix match if only the service name is specified
-					irRoute.PathMatch = &ir.StringMatch{
-						Prefix: StringPtr(fmt.Sprintf("/%s", *match.Method.Service)),
-					}
-				} else if match.Method.Method != nil {
-					// Use regex match if only the method name is specified to match any service
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("^/(?i)\\.?[a-z_][a-z_0-9]*(\\.[a-z_][a-z_0-9]*)*/%s$", *match.Method.Method)),
-					}
+			method := GRPCMethodRegexPattern
+			service := GRPCServiceRegexPattern
+			methodType := GRPCMethodMatchTypeDerefOr(match.Method.Type, v1alpha2.GRPCMethodMatchExact)
+			if match.Method.Method != nil {
+				method = *match.Method.Method
+			}
+			if match.Method.Service != nil {
+				service = *match.Method.Service
+			}
+			switch {
+			case methodType == v1alpha2.GRPCMethodMatchRegularExpression, match.Method.Service == nil:
+				// Use regex when the type is set to RegularExpression or when the service name is not specified
+				irRoute.PathMatch = &ir.StringMatch{
+					SafeRegex: StringPtr(fmt.Sprintf("^/%s/%s$", service, method)),
 				}
-			case v1alpha2.GRPCMethodMatchRegularExpression:
-				if match.Method.Service != nil && match.Method.Method != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("^/%s/%s", *match.Method.Service, *match.Method.Method)),
-					}
-				} else if match.Method.Service != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("^/%s/[A-Za-z_][A-Za-z_0-9]*$", *match.Method.Service)),
-					}
-				} else if match.Method.Method != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("^/(?i)\\.?[a-z_][a-z_0-9]*(\\.[a-z_][a-z_0-9]*)*/%s$", *match.Method.Method)),
-					}
+			case match.Method.Method == nil:
+				// Use prefix match if only the service name is specified
+				irRoute.PathMatch = &ir.StringMatch{
+					Prefix: StringPtr(fmt.Sprintf("/%s", service)),
+				}
+			default:
+				// Use exact match if both the service and method names are specified and the type is not set to regex
+				irRoute.PathMatch = &ir.StringMatch{
+					Exact: StringPtr(fmt.Sprintf("/%s/%s", service, method)),
 				}
 			}
 		}
