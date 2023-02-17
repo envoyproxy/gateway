@@ -141,7 +141,7 @@ func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
 
 		// Print results
 		if err := printXds(w, key, xRes); err != nil {
-			fmt.Errorf("failed to print result for key %s value %+v, error:%w", key, val, err)
+			return fmt.Errorf("failed to print result for key %s value %+v, error:%w", key, val, err)
 		}
 	}
 
