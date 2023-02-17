@@ -221,13 +221,13 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 			return "", nil, fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
-		specField := kobjVal.FieldByName("Spec")
+		spec := kobjVal.FieldByName("Spec")
 
 		switch gvk.Kind {
 		case gatewayapi.KindGatewayClass:
 			gcName = name
 		case gatewayapi.KindGateway:
-			typedSpec := specField.Interface()
+			typedSpec := spec.Interface()
 			gateway := &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -237,7 +237,7 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 			}
 			resources.Gateways = append(resources.Gateways, gateway)
 		case gatewayapi.KindHTTPRoute:
-			typedSpec := specField.Interface()
+			typedSpec := spec.Interface()
 			httpRoute := &v1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -254,7 +254,7 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 			}
 			resources.Namespaces = append(resources.Namespaces, namespace)
 		case gatewayapi.KindService:
-			typedSpec := specField.Interface()
+			typedSpec := spec.Interface()
 			service := &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
