@@ -15,6 +15,8 @@ import (
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
+	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,8 +28,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
-	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 const (
@@ -49,7 +49,9 @@ func NewTranslateCommand() *cobra.Command {
 	}
 
 	translateCommand.PersistentFlags().StringVarP(&inFile, "file", "f", "", "Location of input file.")
-	translateCommand.MarkPersistentFlagRequired("file")
+	if err := translateCommand.MarkPersistentFlagRequired("file"); err != nil {
+		return nil
+	}
 	translateCommand.PersistentFlags().StringVarP(&inType, "from", "", gatewayAPIType, getValidInputTypesStr())
 	translateCommand.PersistentFlags().StringVarP(&outType, "to", "", xdsType, getValidOutputTypesStr())
 	return translateCommand
@@ -146,7 +148,7 @@ func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
 	return nil
 }
 
-// printXds prints the xDS Ouput
+// printXds prints the xDS Output
 func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable) error {
 	fmt.Fprintf(w, "\nKey: %s\n", key)
 	bootsrapYAML, err := infra.GetRenderedBootstrapConfig()
