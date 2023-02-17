@@ -79,6 +79,12 @@ func versions(w io.Writer, containerName, output string) error {
 	}
 
 	for _, pod := range pods.Items {
+		if pod.Status.Phase != "Running" {
+			// skip non-running pods
+			// TODO: print log?
+			continue
+		}
+
 		nn := types.NamespacedName{
 			Namespace: pod.Namespace,
 			Name:      pod.Name,
