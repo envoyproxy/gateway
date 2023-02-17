@@ -16,3 +16,4 @@ Learn about the internal details of Envoy Gateway.
   design/ratelimit
   design/request-authentication
   design/bootstrap
+  design/extending-envoy-gateway
