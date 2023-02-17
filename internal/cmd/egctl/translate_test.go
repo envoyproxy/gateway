@@ -50,7 +50,7 @@ func TestTranslate(t *testing.T) {
 			assert.NoError(t, root.ExecuteContext(context.Background()))
 			out, err := ioutil.ReadAll(b)
 			assert.NoError(t, err)
-			require.Equal(t, requireTestDataOutFile(t, tc.name+".yaml"), string(out))
+			require.Equal(t, requireTestDataOutFile(t, tc.name+".out"), string(out))
 		})
 	}
 }
