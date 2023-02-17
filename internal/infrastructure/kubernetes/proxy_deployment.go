@@ -98,7 +98,7 @@ func (b *bootstrapConfig) render() error {
 	return nil
 }
 
-// GetRenderedBootstrapConfig renders the boostrap YAML string
+// GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig() (string, error) {
 
 	cfg := &bootstrapConfig{
