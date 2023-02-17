@@ -1,6 +1,6 @@
 # GRPC Routing
 
-The [GRPCRoute][] resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers. 
+The [GRPCRoute][] resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers.
 To learn more about gRPC routing, refer to the [Gateway API documentation][].
 
 ## Prerequisites
@@ -88,6 +88,52 @@ Envoy Gateway also supports [gRPC-Web][] requests for this configuration. The be
 
 ```shell
 curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grpc-example.com'   -H 'Content-Type: application/grpc-web-text'   -H 'Accept: application/grpc-web-text' -XPOST -d'AAAAAAA=' | base64 -d
+```
+
+## GRPCRoute Match
+The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and method names.
+The following example shows how to match requests for any method in the `yages.Echo` service and requests for the `ServerReflectionInfo` method in any service.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - "grpc-example.com"
+  rules:
+    - matches:
+      - method:
+          method: ServerReflectionInfo
+          type: RegularExpression
+      - method:
+          service: yages.Echo
+          type: Exact
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: yages
+          port: 9000
+          weight: 1
+EOF
+```
+
+Verify the GRPCRoute status:
+
+```shell
+kubectl get grpcroutes --selector=example=grpc-routing -o yaml
+```
+
+Test GRPC routing to the `yages` backend using the [grpcurl][] command.
+
+```shell
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
 ```
 
 
