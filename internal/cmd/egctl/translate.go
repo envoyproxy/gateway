@@ -9,14 +9,24 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/yaml"
 
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
-	"github.com/envoyproxy/gateway/internal/xds/types"
+	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
+	"github.com/envoyproxy/gateway/internal/xds/utils"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
@@ -81,10 +91,10 @@ func getValidOutputTypesStr() string {
 
 func translate(w io.Writer, inFile, inType, outType string) error {
 	if !isValidInputType(inType) {
-		return fmt.Errorf("%s is not a valid input type. %s", getValidInputTypesStr)
+		return fmt.Errorf("%s is not a valid input type. %s", inType, getValidInputTypesStr())
 	}
 	if !isValidOutputType(outType) {
-		return fmt.Errorf("%s is not a valid output type. %s", getValidOutputTypesStr)
+		return fmt.Errorf("%s is not a valid output type. %s", outType, getValidOutputTypesStr())
 	}
 	inBytes, err := os.ReadFile(inFile)
 	if err != nil {
@@ -99,54 +109,162 @@ func translate(w io.Writer, inFile, inType, outType string) error {
 }
 
 func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
-	resources := &gatewayapi.Resources{}
 
 	// Unmarshal input
-	err := yaml.UnmarshalStrict(inBytes, resources, yaml.DisallowUnknownFields)
+	gcName, resources, err := kubernetesYAMLToResources(string(inBytes))
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal input: %w", err)
 	}
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayClassName:       resources.GatewayClass.Name,
+		GatewayClassName:       v1beta1.ObjectName(gcName),
 		GlobalRateLimitEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 
 	// Translate from Xds IR to Xds
+	fmt.Fprintf(w, "\nxDS\n")
 	for key, val := range gRes.XdsIR {
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
-			GlobalRateLimit: &xds.GlobalRateLimitSettings{
+			GlobalRateLimit: &translator.GlobalRateLimitSettings{
 				ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway"),
 			},
 		}
 		xRes, err := xTranslator.Translate(val)
 		if err != nil {
-			return fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, value, err)
+			return fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
 		}
 
 		// Print results
-		printXds(w, xRes)
+		if err := printXds(w, key, xRes); err != nil {
+			fmt.Errorf("failed to print result for key %s value %+v, error:%w", key, val, err)
+		}
 	}
 
 	return nil
 }
 
-func printXds(w io.Writer, key string, tCtx *types.ResourceVersionTable) {
-	fmt.Fprintf(w, "\nKey: %s", key)
-	fmt.Fprintf(w, "\nTODO: Bootstrap:\n")
+// printXds prints the xDS Ouput
+func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable) error {
+	fmt.Fprintf(w, "\nKey: %s\n", key)
+	bootsrapYAML, err := infra.GetRenderedBootstrapConfig()
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "\nBootstrap:\n%s", bootsrapYAML)
 	listeners := tCtx.XdsResources[resource.ListenerType]
-	fmt.Fprintf(w, "\nListeners:\n%s", resourcesToYAMLString(listeners))
+	listenersYAML, err := resourcesToYAMLString(listeners)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "\nListeners:\n%s", listenersYAML)
 	routes := tCtx.XdsResources[resource.RouteType]
-	fmt.Fprintf(w, "\nRoutes:\n%s", resourcesToYAMLString(routes))
+	routesYAML, err := resourcesToYAMLString(routes)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "\nRoutes:\n%s", routesYAML)
 	clusters := tCtx.XdsResources[resource.ClusterType]
-	fmt.Fprintf(w, "\nClusters:\n%s", resourcesToYAMLString(clusters))
+	clustersYAML, err := resourcesToYAMLString(clusters)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(w, "\nClusters:\n%s", clustersYAML)
+
+	return nil
 }
 
-func resourcesToYAMLString(resources []types.Resource) string {
-	jsonBytes, err := xds_translator.MarshalResourcesToJSON(resources)
+// resourcesToYAMLString converts xDS Resource types into YAML string
+func resourcesToYAMLString(resources []types.Resource) (string, error) {
+	jsonBytes, err := utils.MarshalResourcesToJSON(resources)
+	if err != nil {
+		return "", err
+	}
 	data, err := yaml.JSONToYAML(jsonBytes)
-	return string(data)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
+func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error) {
+	resources := gatewayapi.NewResources()
+	var gcName string
+	yamls := strings.Split(str, "\n---")
+	combinedScheme := envoygateway.GetScheme()
+	for _, y := range yamls {
+		if strings.TrimSpace(y) == "" {
+			continue
+		}
+		var obj map[string]interface{}
+		err := yaml.Unmarshal([]byte(y), &obj)
+		if err != nil {
+			return "", nil, err
+		}
+		un := unstructured.Unstructured{Object: obj}
+		gvk := un.GroupVersionKind()
+		name, namespace := un.GetName(), un.GetNamespace()
+		kobj, err := combinedScheme.New(gvk)
+		if err != nil {
+			return "", nil, err
+		}
+		err = combinedScheme.Convert(&un, kobj, nil)
+		if err != nil {
+			return "", nil, err
+		}
+
+		objType := reflect.TypeOf(kobj)
+		if objType.Kind() != reflect.Ptr {
+			return "", nil, fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
+		}
+		kobjVal := reflect.ValueOf(kobj).Elem()
+		specField := kobjVal.FieldByName("Spec")
+
+		switch gvk.Kind {
+		case gatewayapi.KindGatewayClass:
+			gcName = name
+		case gatewayapi.KindGateway:
+			typedSpec := specField.Interface()
+			gateway := &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1beta1.GatewaySpec),
+			}
+			resources.Gateways = append(resources.Gateways, gateway)
+		case gatewayapi.KindHTTPRoute:
+			typedSpec := specField.Interface()
+			httpRoute := &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1beta1.HTTPRouteSpec),
+			}
+			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
+		case gatewayapi.KindNamespace:
+			namespace := &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: name,
+				},
+			}
+			resources.Namespaces = append(resources.Namespaces, namespace)
+		case gatewayapi.KindService:
+			typedSpec := specField.Interface()
+			service := &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1.ServiceSpec),
+			}
+			resources.Services = append(resources.Services, service)
+		}
+	}
+
+	return gcName, resources, nil
 }
