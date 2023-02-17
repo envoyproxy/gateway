@@ -49,7 +49,7 @@ go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.test.coverage.custom
-go.test.coverage: $(tools/setup-envtest) ## Run go unit tests in GitHub Actions
+go.test.coverage.custom: $(tools/setup-envtest) ## Run go unit tests in GitHub Actions
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -race -coverprofile=coverage.xml -covermode=atomic
 
