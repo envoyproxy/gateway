@@ -54,13 +54,13 @@ jobs:
     # test
     - name: Run Coverage Tests
       run: make go.test.coverage.custom
-    # - name: Upload coverage to Codecov
-    #   uses: codecov/codecov-action@v3
-    #   with:
-    #     fail_ci_if_error: true
-    #     files: ./coverage.xml
-    #     name: codecov-envoy-gateway
-    #     verbose: true
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        name: codecov-envoy-gateway
+        verbose: true
 
   build:
     runs-on: ubuntu-latest
