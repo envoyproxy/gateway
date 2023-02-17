@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func mustUnmarshal(t *testing.T, val string, out interface{}) {
-	require.NoError(t, yaml.UnmarshalStrict([]byte(val), out, yaml.DisallowUnknownFields))
+func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }
 
 func TestTranslate(t *testing.T) {
@@ -38,13 +38,13 @@ func TestTranslate(t *testing.T) {
 			require.NoError(t, err)
 
 			resources := &Resources{}
-			mustUnmarshal(t, string(input), resources)
+			mustUnmarshal(t, input, resources)
 
 			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
 			require.NoError(t, err)
 
 			want := &TranslateResult{}
-			mustUnmarshal(t, string(output), want)
+			mustUnmarshal(t, output, want)
 
 			translator := &Translator{
 				GatewayClassName:       "envoy-gateway-class",
