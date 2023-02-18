@@ -11,9 +11,11 @@ import (
 	"io"
 	"sort"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
@@ -35,8 +37,8 @@ func NewVersionCommand() *cobra.Command {
 		Use:     "version",
 		Aliases: []string{"versions", "v"},
 		Short:   "Show version",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return versions(cmd.OutOrStdout(), egContainerName, output)
+		Run: func(cmd *cobra.Command, args []string) {
+			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output))
 		},
 	}
 
@@ -75,7 +77,7 @@ func versions(w io.Writer, containerName, output string) error {
 
 	pods, err := c.PodsForSelector(metav1.NamespaceAll, "control-plane=envoy-gateway")
 	if err != nil {
-		return fmt.Errorf("list EG pods failed: %w", err)
+		return errors.Wrap(err, "list EG pods failed")
 	}
 
 	for _, pod := range pods.Items {
