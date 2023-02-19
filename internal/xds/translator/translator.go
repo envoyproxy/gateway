@@ -105,6 +105,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		vHost := &route.VirtualHost{
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
+			Cors:    buildXdsCorsPolicy(httpListener.CorsPolicy),
 		}
 
 		for _, httpRoute := range httpListener.Routes {

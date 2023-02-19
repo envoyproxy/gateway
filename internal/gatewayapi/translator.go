@@ -63,6 +63,10 @@ type Translator struct {
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
+
+	// GlobalCorsEnabled is true when global
+	// cors global has been configured by the admin.
+	GlobalCorsEnabled bool
 }
 
 type TranslateResult struct {

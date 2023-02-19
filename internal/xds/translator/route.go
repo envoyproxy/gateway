@@ -111,7 +111,6 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listener.Listener) *routev
 		if httpRoute.CorsPolicy != nil {
 			router.Action.(*routev3.Route_Route).Route.Cors = buildXdsCorsPolicy(httpRoute.CorsPolicy)
 		}
-
 	}
 
 	// TODO: Convert this into a generic interface for API Gateway features.

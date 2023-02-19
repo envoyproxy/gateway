@@ -98,7 +98,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	}
 
 	for _, route := range irListener.Routes {
-		if route.CorsPolicy != nil {
+		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
 			corsAny, err := anypb.New(&cors.Cors{})
 
 			if err != nil {

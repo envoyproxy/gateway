@@ -130,6 +130,8 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
 	IsHTTP2 bool
+	// CorsPolicy defines the schema for CORS policy.
+	CorsPolicy *CorsPolicy
 }
 
 // Validate the fields within the HTTPListener structure
