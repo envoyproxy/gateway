@@ -70,7 +70,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 
 			// Translate to IR
-
 			result := t.Translate(val)
 
 			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)

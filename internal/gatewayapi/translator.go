@@ -8,8 +8,6 @@ package gatewayapi
 import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
@@ -73,7 +71,6 @@ type Translator struct {
 
 type TranslateResult struct {
 	Gateways         []*v1beta1.Gateway
-	GlobalCors       *egv1a1.CorsPolicy
 	HTTPRoutes       []*v1beta1.HTTPRoute
 	GRPCRoutes       []*v1alpha2.GRPCRoute
 	CustomGRPCRoutes []*v1alpha2.CustomGRPCRoute
@@ -85,7 +82,6 @@ type TranslateResult struct {
 }
 
 func newTranslateResult(gateways []*GatewayContext,
-	corsGlobal *egv1a1.CorsPolicy,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
 	customgrpcRoutes []*CustomGRPCRouteContext,
@@ -121,26 +117,12 @@ func newTranslateResult(gateways []*GatewayContext,
 		translateResult.UDPRoutes = append(translateResult.UDPRoutes, udpRoute.UDPRoute)
 	}
 
-	if corsGlobal != nil {
-		translateResult.GlobalCors = corsGlobal
-	}
-
 	return translateResult
 }
 
 func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	xdsIR := make(XdsIRMap)
 	infraIR := make(InfraIRMap)
-
-	var corsGlobal *egv1a1.CorsPolicy
-	if t.GlobalCorsEnabled {
-		for _, corsFilter := range resources.CorsFilters {
-			if corsFilter.Spec.Type == egv1a1.GlobalCorsType {
-				corsGlobal = &corsFilter.Spec.CorsPolicy
-				break
-			}
-		}
-	}
 
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
@@ -169,7 +151,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, corsGlobal, httpRoutes, grpcRoutes, customgrpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, customgrpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
