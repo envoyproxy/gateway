@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -54,6 +55,11 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	}
 
 	return tCtx, nil
+}
+
+func prettyPrint(v interface{}) {
+	b, _ := json.MarshalIndent(v, "", "  ")
+	fmt.Println("printing...", string(b))
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {

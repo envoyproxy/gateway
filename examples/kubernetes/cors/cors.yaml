@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: CorsFilter
+metadata:
+  name: corsfilter
+  namespace: qat-idp
+spec:
+  corsPolicy:
+    allowOrigins:
+      - exact: geocomply.idp.com
+    allowMethods:
+      - POST
+    allowCredentials: false
+    allowHeaders:
+      - X-User-Id
+      - X-Request-Id
+    maxAge: 1800000
