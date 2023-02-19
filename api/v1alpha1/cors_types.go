@@ -30,8 +30,25 @@ type CorsFilter struct {
 // +union
 
 type CorsFilterSpec struct {
+	// Type decides the scope for the RateLimits.
+	// Valid CorsFilterType values are "Global".
+	//
+	// +unionDiscriminator
+	Type CorsType `json:"type"`
+	// Global defines global cors configuration.
+	//
+	// +optional
 	CorsPolicy CorsPolicy `json:"corsPolicy,omitempty"`
 }
+
+// CorsType specifies the types of Cors.
+// +kubebuilder:validation:Enum=Global
+type CorsType string
+
+const (
+	// GlobalCorsType allows the cors to be applied across all Envoy proxy instances.
+	GlobalCorsType CorsType = "Global"
+)
 
 type CorsPolicy struct {
 	AllowOrigins []*StringMatch `json:"allowOrigins,omitempty"`

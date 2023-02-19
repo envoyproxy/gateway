@@ -11,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -21,7 +22,6 @@ type ListenersTranslator interface {
 }
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
-
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.UDPProtocolType)
@@ -29,6 +29,17 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
+
+	var corsGlobal *egv1a1.CorsPolicy
+	if t.GlobalCorsEnabled {
+		for _, corsFilter := range resources.CorsFilters {
+			if corsFilter.Spec.Type == egv1a1.GlobalCorsType {
+				corsGlobal = &corsFilter.Spec.CorsPolicy
+				break
+			}
+		}
+	}
+
 	for _, gateway := range gateways {
 		// init IR per gateway
 		irKey := irStringKey(gateway.Gateway)
@@ -104,6 +115,15 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
+				}
+				if t.GlobalCorsEnabled {
+					irListener.CorsPolicy = &ir.CorsPolicy{
+						AllowCredentials: corsGlobal.AllowCredentials,
+						AllowHeaders:     corsGlobal.AllowHeaders,
+						AllowMethods:     corsGlobal.AllowMethods,
+						ExposeHeaders:    corsGlobal.ExposeHeaders,
+						MaxAge:           corsGlobal.MaxAge,
+					}
 				}
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			}

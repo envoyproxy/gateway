@@ -35,7 +35,6 @@ spec:
             description: Spec defines the desired state of the CorsFilter type.
             properties:
               corsPolicy:
-                description: Global defines global cors configuration.
                 properties:
                   allowCredentials:
                     type: boolean
@@ -66,14 +65,6 @@ spec:
                     format: int64
                     type: integer
                 type: object
-              type:
-                description: Type decides the scope for the RateLimits. Valid CorsFilterType
-                  values are "Global".
-                enum:
-                - Global
-                type: string
-            required:
-            - type
             type: object
         required:
         - spec

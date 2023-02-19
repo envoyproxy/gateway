@@ -3,8 +3,8 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: CorsFilter
 metadata:
   name: corsfilter
-  namespace: qat-idp
 spec:
+  type: "Global"
   corsPolicy:
     allowOrigins:
       - exact: geocomply.idp.com
