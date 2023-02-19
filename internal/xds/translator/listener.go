@@ -13,8 +13,12 @@ import (
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	grpc_web "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
+	"github.com/golang/protobuf/ptypes/wrappers"
+
+	health_check "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -96,6 +100,30 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 			},
 		},
 	}
+
+	healthCheck := &health_check.HealthCheck{
+		PassThroughMode: &wrappers.BoolValue{Value: false},
+		Headers: []*v31.HeaderMatcher{
+			{
+				Name: ":path",
+				HeaderMatchSpecifier: &v31.HeaderMatcher_ExactMatch{
+					ExactMatch: "/status",
+				},
+			},
+		},
+	}
+
+	healthCheckAny, err := anypb.New(healthCheck)
+	if err != nil {
+		return err
+	}
+
+	healthChecFilter := &hcm.HttpFilter{
+		Name:       wellknown.HealthCheck,
+		ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: healthCheckAny},
+	}
+
+	mgr.HttpFilters = append([]*hcm.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
 
 	for _, route := range irListener.Routes {
 		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
