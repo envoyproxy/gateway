@@ -83,6 +83,13 @@
                   requirements:
                   - providerName: second-route-www.test.com-example
                   - providerName: second-route-www.test.com-example2
+        - name: envoy.filters.http.health_check
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+            headers:
+            - exactMatch: /status
+              name: :path
+            passThroughMode: false
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
