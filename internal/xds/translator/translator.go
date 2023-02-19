@@ -102,14 +102,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			tCtx.AddXdsResource(resource.SecretType, secret)
 		}
 
-		// Allocate virtual host for this httpListener.
-		// 1:1 between IR HTTPListener and xDS VirtualHost
 		vHost := &route.VirtualHost{
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
 		}
 
 		for _, httpRoute := range httpListener.Routes {
+
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 			vHost.Routes = append(vHost.Routes, xdsRoute)

@@ -181,6 +181,7 @@ func HasReadyListener(listeners []*ListenerContext) bool {
 
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
 func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
+
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
@@ -224,6 +225,14 @@ func IsRateLimitHTTPFilter(filter *v1beta1.HTTPRouteFilter) bool {
 		string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter
 }
 
+// IsCorsCustomGRPCFilter returns true if the provided filter is a CorsFilter.
+func IsCorsCustomGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
+	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter
+}
+
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
 func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 	switch {
@@ -232,6 +241,16 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
 		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		return nil
+	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
+		switch {
+		case filter.ExtensionRef == nil:
+			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
+			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
+		case string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter:
+			return nil
+		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported filter type: %v", filter.Type)
@@ -246,6 +265,16 @@ func ValidateCustomGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
 		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		return nil
+	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
+		switch {
+		case filter.ExtensionRef == nil:
+			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
+			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
+		case string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter:
+			return nil
+		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported filter type: %v", filter.Type)

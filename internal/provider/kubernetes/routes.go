@@ -154,12 +154,23 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 func (r *gatewayAPIReconciler) processCustomGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	customgrpcRouteList := &gwapiv1a2.CustomGRPCRouteList{}
+
+	corsFilter, err := r.getCorsFilter(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range corsFilter {
+		filter := corsFilter[i]
+		resourceMap.corsFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
 	if err := r.client.List(ctx, customgrpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayCustomGRPCRouteIndex, gatewayNamespaceName),
 	}); err != nil {
 		r.log.Error(err, "failed to list CustomGRPCRoutes")
 		return err
 	}
+
 	for _, customgrpcRoute := range customgrpcRouteList.Items {
 		customgrpcRoute := customgrpcRoute
 		r.log.Info("processing CustomGRPCRoute", "namespace", customgrpcRoute.Namespace, "name", customgrpcRoute.Name)
@@ -209,6 +220,21 @@ func (r *gatewayAPIReconciler) processCustomGRPCRoutes(ctx context.Context, gate
 				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err != nil {
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
+				}
+
+				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
+					if string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter {
+						key := types.NamespacedName{
+							Namespace: customgrpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						filter, ok := resourceMap.corsFilters[key]
+						if !ok {
+							r.log.Error(err, "CorsFilter not found; bypassing rule", "index", i)
+							continue
+						}
+						resourceTree.CorsFilters = append(resourceTree.CorsFilters, filter)
+					}
 				}
 			}
 		}
@@ -516,4 +542,13 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 	}
 
 	return authenList.Items, nil
+}
+
+func (r *gatewayAPIReconciler) getCorsFilter(ctx context.Context) ([]egv1a1.CorsFilter, error) {
+	corsList := new(egv1a1.CorsFilterList)
+	if err := r.client.List(ctx, corsList); err != nil {
+		return nil, fmt.Errorf("failed to list CorsFilters: %v", err)
+	}
+
+	return corsList.Items, nil
 }

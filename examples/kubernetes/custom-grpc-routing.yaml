@@ -20,6 +20,23 @@ spec:
       protocol: HTTP
       port: 80
 ---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: CorsFilter
+metadata:
+  name: example-corsfilter
+spec:
+  corsPolicy:
+    allowOrigins:
+      - exact: geocomply.com
+    allowMethods:
+      - POST
+      - GET
+    allowCredentials: false
+    allowHeaders:
+      - X-User-Id
+      - X-Request-Id
+    maxAge: 1800000
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -74,12 +91,14 @@ spec:
     - "grpc-example.com"
   rules:
     - backendRefs:
-        - group: ""
-          kind: Service
-          name: yages 
-          port: 9000
-          weight: 1
-      matches:
-        - method:
-            service: yages.Echo
-            method: Ping
+      - group: ""
+        kind: Service
+        name: yages 
+        port: 9000
+        weight: 1
+      filters:
+      - extensionRef:
+          group: gateway.envoyproxy.io
+          kind: CorsFilter
+          name: example-corsfilter
+        type: ExtensionRef

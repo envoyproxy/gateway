@@ -13,6 +13,7 @@ import (
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	grpc_web "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -70,6 +71,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	} else {
 		statPrefix = "http"
 	}
+
 	mgr := &hcm.HttpConnectionManager{
 		AccessLog: []*accesslog.AccessLog{
 			{
@@ -87,10 +89,29 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 			},
 		},
 		// Use only router.
-		HttpFilters: []*hcm.HttpFilter{{
-			Name:       wellknown.Router,
-			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
-		}},
+		HttpFilters: []*hcm.HttpFilter{
+			{
+				Name:       wellknown.Router,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
+			},
+		},
+	}
+
+	for _, route := range irListener.Routes {
+		if route.CorsPolicy != nil {
+			corsAny, err := anypb.New(&cors.Cors{})
+
+			if err != nil {
+				return err
+			}
+
+			corsFilter := &hcm.HttpFilter{
+				Name:       wellknown.CORS,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: corsAny},
+			}
+			mgr.HttpFilters = append([]*hcm.HttpFilter{corsFilter}, mgr.HttpFilters...)
+			break
+		}
 	}
 
 	if irListener.IsHTTP2 {

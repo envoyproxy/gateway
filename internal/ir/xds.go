@@ -223,6 +223,9 @@ type HTTPRoute struct {
 	RateLimit *RateLimit
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
 	RequestAuthentication *RequestAuthentication
+
+	// CorsPolicy defines the schema for CORS policy.
+	CorsPolicy *CorsPolicy
 }
 
 // RequestAuthentication defines the schema for authenticating HTTP requests.
@@ -656,6 +659,22 @@ func (h UDPListener) Validate() error {
 		}
 	}
 	return errs
+}
+
+// Cors
+// +k8s:deepcopy-gen=true
+type CorsPolicy struct {
+	AllowOrigins []*StringMatch
+
+	AllowMethods []string
+
+	AllowHeaders []string
+
+	ExposeHeaders []string
+
+	MaxAge int64
+
+	AllowCredentials bool
 }
 
 // RateLimit holds the rate limiting configuration.
