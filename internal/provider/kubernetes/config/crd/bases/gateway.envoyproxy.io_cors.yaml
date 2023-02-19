@@ -2,71 +2,58 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: corsfilters.gateway.envoyproxy.io
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: cors.gateway.envoyproxy.io
 spec:
   group: gateway.envoyproxy.io
   names:
-    kind: CorsFilter
-    listKind: CorsFilterList
-    plural: corsfilters
-    singular: corsfilter
+    kind: Cors
+    listKind: CorsList
+    plural: cors
+    singular: cors
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        type: object
         properties:
-          spec:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
             type: object
+          spec:
+            description: Spec defines the desired state of the CorsFilter type.
             properties:
               corsPolicy:
-                description: Cross-Origin Resource Sharing policy (CORS).
                 properties:
                   allowCredentials:
-                    nullable: true
                     type: boolean
                   allowHeaders:
                     items:
                       type: string
                     type: array
                   allowMethods:
-                    description: List of HTTP methods allowed to access the
-                      resource.
-                    items:
-                      type: string
-                    type: array
-                  allowOrigin:
-                    description: The list of origins that are allowed to perform
-                      CORS requests.
                     items:
                       type: string
                     type: array
                   allowOrigins:
-                    description: String patterns that match allowed origins.
                     items:
-                      oneOf:
-                      - not:
-                          anyOf:
-                          - required:
-                            - exact
-                          - required:
-                            - prefix
-                          - required:
-                            - regex
-                      - required:
-                        - exact
-                      - required:
-                        - prefix
-                      - required:
-                        - regex
                       properties:
                         exact:
                           type: string
                         prefix:
                           type: string
                         regex:
-                          description: RE2 style regex-based match (https://github.com/google/re2/wiki/Syntax).
                           type: string
                       type: object
                     type: array
@@ -75,9 +62,12 @@ spec:
                       type: string
                     type: array
                   maxAge:
-                    type: string
+                    format: int64
+                    type: integer
                 type: object
+            type: object
         required:
         - spec
+        type: object
     served: true
     storage: true

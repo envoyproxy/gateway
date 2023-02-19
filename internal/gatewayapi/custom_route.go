@@ -6,10 +6,13 @@
 package gatewayapi
 
 import (
-	"github.com/envoyproxy/gateway/internal/ir"
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func (t *Translator) ProcessCustomGRPCRoutes(grpcRoutes []*v1alpha2.CustomGRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*CustomGRPCRouteContext {
@@ -146,16 +149,38 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 		}
 
 		if match.Method != nil {
-			if match.Method.Method != nil {
-				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:  ":method",
-					Exact: match.Method.Method,
-				})
-			}
-
-			if match.Method.Service != nil {
-				irRoute.PathMatch = &ir.StringMatch{
-					Prefix: StringPtr("/" + *match.Method.Service),
+			// CustomGRPC's path is in the form of "/<service>/<method>"
+			//nolint:gocritic
+			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, v1alpha2.GRPCMethodMatchExact) {
+			case v1alpha2.GRPCMethodMatchExact:
+				if match.Method.Service != nil && match.Method.Method != nil {
+					irRoute.PathMatch = &ir.StringMatch{
+						Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
+					}
+				} else if match.Method.Service != nil {
+					// Use prefix match if only the service name is specified
+					irRoute.PathMatch = &ir.StringMatch{
+						Prefix: StringPtr(fmt.Sprintf("/%s/", *match.Method.Service)),
+					}
+				} else if match.Method.Method != nil {
+					// Use regex match if only the method name is specified to match any service
+					irRoute.PathMatch = &ir.StringMatch{
+						SafeRegex: StringPtr(fmt.Sprintf("/[.a-zA-Z0-9-]+/%s", *match.Method.Method)),
+					}
+				}
+			case v1alpha2.GRPCMethodMatchRegularExpression:
+				if match.Method.Service != nil && match.Method.Method != nil {
+					irRoute.PathMatch = &ir.StringMatch{
+						SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
+					}
+				} else if match.Method.Service != nil {
+					irRoute.PathMatch = &ir.StringMatch{
+						SafeRegex: StringPtr(fmt.Sprintf("/%s/.+", *match.Method.Service)),
+					}
+				} else if match.Method.Method != nil {
+					irRoute.PathMatch = &ir.StringMatch{
+						SafeRegex: StringPtr(fmt.Sprintf("/[.a-zA-Z0-9-]+/%s", *match.Method.Method)),
+					}
 				}
 			}
 		}

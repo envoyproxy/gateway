@@ -5,6 +5,11 @@ ignore: |
   bin/gatewayapi-crds.yaml
   internal/provider/kubernetes/config/default/kustomization.yaml
   internal/provider/kubernetes/config/crd/kustomization.yaml
+  bin
+  gateway-api
+  vendor
+  .github
+  manifes
 
 
 rules:

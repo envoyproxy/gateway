@@ -54,17 +54,6 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.CustomGRPCRoutes != nil {
-		in, out := &in.CustomGRPCRoutes, &out.CustomGRPCRoutes
-		*out = make([]*v1alpha2.CustomGRPCRoute, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha2.CustomGRPCRoute)
-				(*in).DeepCopyInto(*out)
-			}
-		}
-	}
 	if in.TLSRoutes != nil {
 		in, out := &in.TLSRoutes, &out.TLSRoutes
 		*out = make([]*v1alpha2.TLSRoute, len(*in))
@@ -142,17 +131,6 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.CorsFilters != nil {
-		in, out := &in.CorsFilters, &out.CorsFilters
-		*out = make([]*v1alpha1.CorsFilter, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(v1alpha1.CorsFilter)
-				(*in).DeepCopyInto(*out)
-			}
-		}
-	}
 	if in.AuthenticationFilters != nil {
 		in, out := &in.AuthenticationFilters, &out.AuthenticationFilters
 		*out = make([]*v1alpha1.AuthenticationFilter, len(*in))
@@ -179,6 +157,28 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 		in, out := &in.EnvoyProxy, &out.EnvoyProxy
 		*out = new(configv1alpha1.EnvoyProxy)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.CustomGRPCRoutes != nil {
+		in, out := &in.CustomGRPCRoutes, &out.CustomGRPCRoutes
+		*out = make([]*v1alpha2.CustomGRPCRoute, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha2.CustomGRPCRoute)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.CorsFilters != nil {
+		in, out := &in.CorsFilters, &out.CorsFilters
+		*out = make([]*v1alpha1.CorsFilter, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(v1alpha1.CorsFilter)
+				(*in).DeepCopyInto(*out)
+			}
+		}
 	}
 }
 

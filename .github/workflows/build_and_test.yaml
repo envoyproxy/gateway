@@ -12,19 +12,25 @@ on:
     - "release/v*"
     paths-ignore:
     - "**/*.png"
+env:
+  REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make lint-deps
     - run: make -k lint
-
+  
   gen-check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
@@ -32,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
@@ -39,11 +47,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
-      run: make go.test.coverage
+      run: make go.test.coverage.custom
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
@@ -57,6 +67,8 @@ jobs:
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
@@ -76,6 +88,8 @@ jobs:
         version: [ v1.24.0, v1.25.3, v1.26.0 ]
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -88,7 +102,6 @@ jobs:
       run: |
         chmod +x bin/linux/amd64/envoy-gateway
         chmod +x bin/linux/arm64/envoy-gateway
-
     # conformance
     - name: Run Conformance Tests 
       env:
@@ -101,6 +114,8 @@ jobs:
     needs: [conformance-test]
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -113,14 +128,15 @@ jobs:
       run: |
         chmod +x bin/linux/amd64/envoy-gateway
         chmod +x bin/linux/arm64/envoy-gateway
-
-    # build and push image
-    - name: Login to DockerHub
-      if: github.event_name == 'push'
+      # build and push image
+    - name: Docker login
+      # only runs on merges to main
       uses: docker/login-action@v2
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        registry: ${{ secrets.ARTIFACTORY_FQDN }}
+        username: ${{ secrets.ARTIFACTORY_DEV_ACC }}
+        password: ${{ secrets.ARTIFACTORY_DEV_PWD }}
+        ecr: "false"
 
     - name: Setup Multiarch Environment
       if: github.event_name == 'push'
@@ -129,9 +145,9 @@ jobs:
     - name: Build and Push EG Commit Image
       if: github.event_name == 'push'
       # tag is set to the short SHA of the commit
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev

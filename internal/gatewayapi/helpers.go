@@ -437,3 +437,10 @@ func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
 		PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
 	}
 }
+
+func GRPCMethodMatchTypeDerefOr(matchType *v1alpha2.GRPCMethodMatchType, defaultType v1alpha2.GRPCMethodMatchType) v1alpha2.GRPCMethodMatchType {
+	if matchType != nil {
+		return *matchType
+	}
+	return defaultType
+}

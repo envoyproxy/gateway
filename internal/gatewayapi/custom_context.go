@@ -1,12 +1,18 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package gatewayapi
 
 import (
 	"reflect"
 
-	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 // CustomGRPCRouteContext wraps a CustomGRPCRoute and provides helper methods for
