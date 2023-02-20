@@ -98,6 +98,30 @@ func (b *bootstrapConfig) render() error {
 	return nil
 }
 
+// GetRenderedBootstrapConfig renders the bootstrap YAML string
+func GetRenderedBootstrapConfig() (string, error) {
+
+	cfg := &bootstrapConfig{
+		parameters: bootstrapParameters{
+			XdsServer: xdsServerParameters{
+				Address: envoyGatewayXdsServerHost,
+				Port:    xdsrunner.XdsServerPort,
+			},
+			AdminServer: adminServerParameters{
+				Address:       envoyAdminAddress,
+				Port:          envoyAdminPort,
+				AccessLogPath: envoyAdminAccessLogPath,
+			},
+		},
+	}
+
+	if err := cfg.render(); err != nil {
+		return "", err
+	}
+
+	return cfg.rendered, nil
+}
+
 func expectedProxyDeploymentName(proxyName string) string {
 	deploymentName := utils.GetHashedName(proxyName)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, deploymentName)
@@ -203,20 +227,8 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
-	cfg := bootstrapConfig{
-		parameters: bootstrapParameters{
-			XdsServer: xdsServerParameters{
-				Address: envoyGatewayXdsServerHost,
-				Port:    xdsrunner.XdsServerPort,
-			},
-			AdminServer: adminServerParameters{
-				Address:       envoyAdminAddress,
-				Port:          envoyAdminPort,
-				AccessLogPath: envoyAdminAccessLogPath,
-			},
-		},
-	}
-	if err := cfg.render(); err != nil {
+	cfg, err := GetRenderedBootstrapConfig()
+	if err != nil {
 		return nil, err
 	}
 
@@ -231,7 +243,7 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 			Args: []string{
 				fmt.Sprintf("--service-cluster %s", infra.Proxy.Name),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
-				fmt.Sprintf("--config-yaml %s", cfg.rendered),
+				fmt.Sprintf("--config-yaml %s", cfg),
 				"--log-level info",
 			},
 			Env: []corev1.EnvVar{
