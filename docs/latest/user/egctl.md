@@ -210,6 +210,7 @@ Listeners:
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true
+        useRemoteAddress: true
   name: default-eg-http
 
 Routes:

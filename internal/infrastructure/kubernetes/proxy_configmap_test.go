@@ -176,10 +176,13 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
-			err := kube.deleteProxyConfigMap(context.Background(), infra)
+
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+			err = kube.deleteProxyConfigMap(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}

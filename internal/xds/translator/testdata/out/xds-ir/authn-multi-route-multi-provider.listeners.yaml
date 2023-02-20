@@ -107,4 +107,5 @@
         statPrefix: http
         upgradeConfigs:
         - upgradeType: websocket
+        useRemoteAddress: true
   name: first-listener

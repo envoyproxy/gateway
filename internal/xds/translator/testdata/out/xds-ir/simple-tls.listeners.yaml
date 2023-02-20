@@ -46,6 +46,7 @@
         statPrefix: https
         upgradeConfigs:
         - upgradeType: websocket
+        useRemoteAddress: true
     transportSocket:
       name: envoy.transport_sockets.tls
       typedConfig:
