@@ -12,13 +12,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 const (
@@ -45,93 +39,6 @@ var (
 		`"private_key":{"filename":"%s"}}}]}`, xdsTLSCertFilename, xdsTLSKeyFilename)
 )
 
-// expectedProxyConfigMap returns the expected ConfigMap based on the provided infra.
-func (i *Infra) expectedProxyConfigMap(infra *ir.Infra) (*corev1.ConfigMap, error) {
-	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(infra.GetProxyInfra().GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
-		return nil, fmt.Errorf("missing owning gateway labels")
-	}
-
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      expectedProxyConfigMapName(infra.Proxy.Name),
-			Labels:    labels,
-		},
-		Data: map[string]string{
-			sdsCAFilename:   sdsCAConfigMapData,
-			sdsCertFilename: sdsCertConfigMapData,
-		},
-	}, nil
-}
-
-// createOrUpdateProxyConfigMap creates a ConfigMap in the Kube api server based on the provided
-// infra, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateProxyConfigMap(ctx context.Context, infra *ir.Infra) error {
-	cm, err := i.expectedProxyConfigMap(infra)
-	if err != nil {
-		return err
-	}
-
-	return i.createOrUpdateConfigMap(ctx, cm)
-}
-
-// deleteProxyConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
-func (i *Infra) deleteProxyConfigMap(ctx context.Context, infra *ir.Infra) error {
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      expectedProxyConfigMapName(infra.Proxy.Name),
-		},
-	}
-
-	return i.deleteConfigMap(ctx, cm)
-}
-
-func expectedProxyConfigMapName(proxyName string) string {
-	cMapName := utils.GetHashedName(proxyName)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, cMapName)
-}
-
-// expectedRateLimitConfigMap returns the expected ConfigMap based on the provided infra.
-func (i *Infra) expectedRateLimitConfigMap(infra *ir.RateLimitInfra) *corev1.ConfigMap {
-	labels := rateLimitLabels()
-	data := make(map[string]string)
-
-	for _, config := range infra.Configs {
-		data[config.Name] = config.Config
-	}
-
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      rateLimitInfraName,
-			Labels:    labels,
-		},
-		Data: data,
-	}
-}
-
-// createOrUpdateRateLimitConfigMap creates a ConfigMap in the Kube api server based on the provided
-// infra, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateRateLimitConfigMap(ctx context.Context, infra *ir.RateLimitInfra) error {
-	cm := i.expectedRateLimitConfigMap(infra)
-	return i.createOrUpdateConfigMap(ctx, cm)
-}
-
-// deleteProxyConfigMap deletes the Envoy ConfigMap in the kube api server, if it exists.
-func (i *Infra) deleteRateLimitConfigMap(ctx context.Context, _ *ir.RateLimitInfra) error {
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      rateLimitInfraName,
-		},
-	}
-
-	return i.deleteConfigMap(ctx, cm)
-}
-
 func (i *Infra) createOrUpdateConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
 	current := &corev1.ConfigMap{}
 	key := types.NamespacedName{
@@ -149,6 +56,8 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, cm *corev1.ConfigMa
 	} else {
 		// Update if current value is different.
 		if !reflect.DeepEqual(cm.Data, current.Data) {
+			cm.ResourceVersion = current.ResourceVersion
+			cm.UID = current.UID
 			if err := i.Client.Update(ctx, cm); err != nil {
 				return fmt.Errorf("failed to update configmap %s/%s: %w", cm.Namespace, cm.Name, err)
 			}

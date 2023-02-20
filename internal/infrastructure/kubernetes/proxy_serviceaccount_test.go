@@ -185,7 +185,6 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			kube := &Infra{
 				Namespace: tc.ns,
 			}
@@ -213,24 +212,27 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 
 func TestDeleteProxyServiceAccount(t *testing.T) {
 	testCases := []struct {
-		name   string
-		expect bool
+		name string
 	}{
 		{
-			name:   "delete service account",
-			expect: false,
+			name: "delete service account",
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
 			kube := &Infra{
 				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
 				Namespace: "test",
 			}
 			infra := ir.NewInfra()
-			err := kube.deleteProxyServiceAccount(context.Background(), infra)
+
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+			err := kube.createOrUpdateProxyServiceAccount(context.Background(), infra)
+			require.NoError(t, err)
+
+			err = kube.deleteProxyServiceAccount(context.Background(), infra)
 			require.NoError(t, err)
 		})
 	}
