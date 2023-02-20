@@ -92,6 +92,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 				RouteConfigName: irListener.Name,
 			},
 		},
+		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
+		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		// Use only router.
 		HttpFilters: []*hcm.HttpFilter{
 			{
