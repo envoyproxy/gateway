@@ -11,6 +11,8 @@ Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io A
 
 ### Resource Types
 - [AuthenticationFilter](#authenticationfilter)
+- [CorsFilter](#corsfilter)
+- [CorsFilterList](#corsfilterlist)
 - [RateLimitFilter](#ratelimitfilter)
 
 
@@ -54,6 +56,84 @@ AuthenticationFilterType is a type of authentication provider.
 
 _Appears in:_
 - [AuthenticationFilterSpec](#authenticationfilterspec)
+
+
+
+## CorsFilter
+
+
+
+
+
+_Appears in:_
+- [CorsFilterList](#corsfilterlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `CorsFilter`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CorsFilterSpec](#corsfilterspec)_ | Spec defines the desired state of the CorsFilter type. |
+
+
+## CorsFilterList
+
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `CorsFilterList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[CorsFilter](#corsfilter) array_ |  |
+
+
+## CorsFilterSpec
+
+
+
+
+
+_Appears in:_
+- [CorsFilter](#corsfilter)
+
+| Field | Description |
+| --- | --- |
+| `type` _[CorsType](#corstype)_ | Type decides the scope for the RateLimits. Valid CorsFilterType values are "Global". |
+| `corsPolicy` _[CorsPolicy](#corspolicy)_ | Global defines global cors configuration. |
+
+
+## CorsPolicy
+
+
+
+
+
+_Appears in:_
+- [CorsFilterSpec](#corsfilterspec)
+
+| Field | Description |
+| --- | --- |
+| `allowOrigins` _[StringMatch](#stringmatch) array_ |  |
+| `allowMethods` _string array_ |  |
+| `allowHeaders` _string array_ |  |
+| `exposeHeaders` _string array_ |  |
+| `maxAge` _integer_ |  |
+| `allowCredentials` _boolean_ |  |
+
+
+## CorsType
+
+_Underlying type:_ `string`
+
+CorsType specifies the types of Cors.
+
+_Appears in:_
+- [CorsFilterSpec](#corsfilterspec)
 
 
 
@@ -224,5 +304,21 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `uri` _string_ | URI is the HTTPS URI to fetch the JWKS. Envoy's system trust bundle is used to validate the server certificate. |
+
+
+## StringMatch
+
+
+
+
+
+_Appears in:_
+- [CorsPolicy](#corspolicy)
+
+| Field | Description |
+| --- | --- |
+| `exact` _string_ |  |
+| `prefix` _string_ |  |
+| `regex` _string_ |  |
 
 
