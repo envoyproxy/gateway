@@ -16,6 +16,14 @@ jobs:
     - name: Generate Release Manifests
       run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
+    - name: Build egctl latest multiarch binaries
+      run: | 
+        make build-multiarch BINS="egctl"
+        tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/
+        tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/
+        tar -zcvf egctl_latest_darwin_amd64.tar.gz bin/darwin/amd64/
+        tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/
+
     # Ignore the error when we delete the latest release, it might not exist.
     - name: Delete the Latest Release
       continue-on-error: true
@@ -43,6 +51,10 @@ jobs:
         files: |
           release-artifacts/install.yaml
           release-artifacts/quickstart.yaml
+          egctl_latest_linux_amd64.tar.gz
+          egctl_latest_linux_arm64.tar.gz
+          egctl_latest_darwin_amd64.tar.gz
+          egctl_latest_darwin_arm64.tar.gz
         body: |
           This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
           
