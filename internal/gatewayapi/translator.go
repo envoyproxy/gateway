@@ -11,14 +11,16 @@ import (
 )
 
 const (
-	KindGateway   = "Gateway"
-	KindHTTPRoute = "HTTPRoute"
-	KindGRPCRoute = "GRPCRoute"
-	KindTLSRoute  = "TLSRoute"
-	KindTCPRoute  = "TCPRoute"
-	KindUDPRoute  = "UDPRoute"
-	KindService   = "Service"
-	KindSecret    = "Secret"
+	KindGateway      = "Gateway"
+	KindGatewayClass = "GatewayClass"
+	KindGRPCRoute    = "GRPCRoute"
+	KindHTTPRoute    = "HTTPRoute"
+	KindNamespace    = "Namespace"
+	KindTLSRoute     = "TLSRoute"
+	KindTCPRoute     = "TCPRoute"
+	KindUDPRoute     = "UDPRoute"
+	KindService      = "Service"
+	KindSecret       = "Secret"
 
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
 	// The value should be the namespace of the accepted Envoy Gateway.

@@ -116,6 +116,11 @@ func (l *ListenerContext) AllowsNamespace(namespace *v1.Namespace) bool {
 	if namespace == nil {
 		return false
 	}
+
+	if l.AllowedRoutes == nil || l.AllowedRoutes.Namespaces == nil || l.AllowedRoutes.Namespaces.From == nil {
+		return l.gateway.Namespace == namespace.Name
+	}
+
 	switch *l.AllowedRoutes.Namespaces.From {
 	case v1beta1.NamespacesFromAll:
 		return true

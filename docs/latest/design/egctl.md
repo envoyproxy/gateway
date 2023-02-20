@@ -34,11 +34,12 @@ If you need help, run `egctl help` from the terminal window.
 
 The following table includes short descriptions and the general syntax for all the `egctl` operations:
 
-| Operation | Syntax                           | Description                                                                 |
-| --------- | -------------------------------- | --------------------------------------------------------------------------- |
-| `version` | `egctl version`                  | Prints out build version information.                                       |
-| `config`  | `egctl config ENTITY`            | Retrieve information about proxy configuration from envoy proxy and gateway |
-| `analyze` | `egctl analyze`                  | Analyze EG configuration and print validation messages                      |
+| Operation     | Syntax                           | Description                                                                          |
+| --------------| -------------------------------- | -------------------------------------------------------------------------------------|
+| `version`     | `egctl version`                  | Prints out build version information.                                                |
+| `config`      | `egctl config ENTITY`            | Retrieve information about proxy configuration from envoy proxy and gateway          |
+| `analyze`     | `egctl analyze`                  | Analyze EG configuration and print validation messages                               |
+| `experimental`| `egctl experimental`             | Subcommand for experimental features. These do not guarantee backwards compatibility |
 
 ## Examples
 

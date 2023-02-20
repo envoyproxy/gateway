@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"bytes"
 	"embed"
 	"path/filepath"
 	"testing"
@@ -15,12 +14,11 @@ import (
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
 
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
 
 var (
@@ -219,30 +217,9 @@ func requireYamlRootToYAMLString(t *testing.T, yamlRoot *ratelimitserviceconfig.
 }
 
 func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) string {
-	jsonBytes, err := marshalResourcesToJSON(resources)
+	jsonBytes, err := utils.MarshalResourcesToJSON(resources)
 	require.NoError(t, err)
 	data, err := yaml.JSONToYAML(jsonBytes)
 	require.NoError(t, err)
 	return string(data)
-}
-
-func marshalResourcesToJSON(resources []types.Resource) ([]byte, error) {
-	msgs := make([]proto.Message, 0)
-	for _, resource := range resources {
-		msgs = append(msgs, resource.(proto.Message))
-	}
-	var buffer bytes.Buffer
-	buffer.WriteByte('[')
-	for idx, msg := range msgs {
-		if idx != 0 {
-			buffer.WriteByte(',')
-		}
-		b, err := protojson.Marshal(msg)
-		if err != nil {
-			return nil, err
-		}
-		buffer.Write(b)
-	}
-	buffer.WriteByte(']')
-	return buffer.Bytes(), nil
 }
