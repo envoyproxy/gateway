@@ -8,7 +8,8 @@ package egctl
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -48,7 +49,7 @@ func TestTranslate(t *testing.T) {
 
 			root.SetArgs(args)
 			assert.NoError(t, root.ExecuteContext(context.Background()))
-			out, err := ioutil.ReadAll(b)
+			out, err := io.ReadAll(b)
 			assert.NoError(t, err)
 			require.Equal(t, requireTestDataOutFile(t, tc.name+".out"), string(out))
 		})
@@ -58,7 +59,7 @@ func TestTranslate(t *testing.T) {
 func requireTestDataOutFile(t *testing.T, name ...string) string {
 	t.Helper()
 	elems := append([]string{"testdata", "out"}, name...)
-	content, err := ioutil.ReadFile(filepath.Join(elems...))
+	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return string(content)
 }
