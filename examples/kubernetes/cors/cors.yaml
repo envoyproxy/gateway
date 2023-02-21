@@ -10,8 +10,13 @@ spec:
       - exact: geocomply.idp.com
     allowMethods:
       - POST
+      - GET
+      - OPTIONS
+      - PUT
+      - DELETE
     allowCredentials: false
     allowHeaders:
       - X-User-Id
       - X-Request-Id
+      - X-Forwarded-For
     maxAge: 1800000
