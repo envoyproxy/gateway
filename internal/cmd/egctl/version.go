@@ -82,8 +82,8 @@ func versions(w io.Writer, containerName, output string) error {
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase != "Running" {
-			// skip non-running pods
-			// TODO: print log?
+
+			fmt.Fprintf(w, "WARN: pod %s/%s is not running, skip", pod.Namespace, pod.Name)
 			continue
 		}
 
