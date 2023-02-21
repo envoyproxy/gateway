@@ -187,8 +187,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 
 	// add the global cors filter when corsFilters is not empty
 	if len(corsFilters.Items) > 0 {
-		for _, corsFilter := range corsFilters.Items {
-			resourceTree.CorsFilters = append(resourceTree.CorsFilters, &corsFilter)
+		for i := range corsFilters.Items {
+			resourceTree.CorsFilters = append(resourceTree.CorsFilters, &corsFilters.Items[i])
 		}
 	}
 
@@ -1001,21 +1001,6 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			},
 		)
 		r.log.Info("gateway status subscriber shutting down")
-	}()
-
-	// CorsFilter object status updater
-	go func() {
-		message.HandleSubscription(r.resources.CorsFilterStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *egv1a1.CorsFilter]) {
-				// skip delete updates.
-				panic("hihihi")
-				if update.Delete {
-					return
-				}
-				// r.statusUpdateForGateway(ctx, update.Value)
-			},
-		)
-		r.log.Info("cors status subscriber shutting down")
 	}()
 
 	// HTTPRoute object status updater
