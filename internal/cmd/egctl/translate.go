@@ -6,6 +6,7 @@
 package egctl
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -91,14 +92,44 @@ func getValidOutputTypesStr() string {
 	return fmt.Sprintf("Valid types are %v.", validOutputTypes())
 }
 
-func translate(w io.Writer, inFile, inType, outType string) error {
+func getInputBytes(inFile string) ([]byte, error) {
+
+	// Get input from stdin
+	if inFile == "-" {
+		scanner := bufio.NewScanner(os.Stdin)
+		var input string
+		for {
+			if !scanner.Scan() {
+				break
+			}
+			input += scanner.Text() + "\n"
+		}
+		return []byte(input), nil
+	}
+	// Get input from file
+	return os.ReadFile(inFile)
+}
+
+func validate(inFile, inType, outType string) error {
 	if !isValidInputType(inType) {
 		return fmt.Errorf("%s is not a valid input type. %s", inType, getValidInputTypesStr())
 	}
 	if !isValidOutputType(outType) {
 		return fmt.Errorf("%s is not a valid output type. %s", outType, getValidOutputTypesStr())
 	}
-	inBytes, err := os.ReadFile(inFile)
+	if inFile == "" {
+		return fmt.Errorf("--file must be specified")
+	}
+
+	return nil
+}
+
+func translate(w io.Writer, inFile, inType, outType string) error {
+	if err := validate(inFile, inType, outType); err != nil {
+		return err
+	}
+
+	inBytes, err := getInputBytes(inFile)
 	if err != nil {
 		return fmt.Errorf("unable to read input file: %w", err)
 	}
