@@ -10,7 +10,7 @@ In the below example, we will translate the Kubernetes resources (including the 
 resources.
 
 ```
-cat <<EOF >> gateway-api-config.yaml
+cat <<EOF | egctl x translate --from gateway-api --to xds -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
 metadata:
@@ -76,10 +76,10 @@ spec:
             type: PathPrefix
             value: /
 EOF
+
 ```
 
 ```
-egctl x translate --from gateway-api --to xds -f gateway-api-config.yaml
 
 xDS
 
