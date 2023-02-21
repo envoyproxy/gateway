@@ -35,10 +35,6 @@ type GlobalRateLimitSettings struct {
 
 // Translate translates the XDS IR into xDS resources
 func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
-	if ir == nil {
-		return nil, errors.New("ir is nil")
-	}
-
 	tCtx := new(types.ResourceVersionTable)
 
 	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP); err != nil {

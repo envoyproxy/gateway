@@ -6,14 +6,14 @@
 package message
 
 import (
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/ir"
+	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/ir"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // ProviderResources message
@@ -30,6 +30,7 @@ type ProviderResources struct {
 	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRoute]
 
 	CustomGRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.CustomGRPCRoute]
+	CorsFilterStatuses      watchable.Map[types.NamespacedName, *egv1a1.CorsFilter]
 }
 
 func (p *ProviderResources) GetResources() *gatewayapi.Resources {
@@ -55,6 +56,7 @@ func (p *ProviderResources) GetResourcesKey() string {
 func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
 	p.GatewayStatuses.Close()
+	p.CorsFilterStatuses.Close()
 	p.HTTPRouteStatuses.Close()
 	p.TLSRouteStatuses.Close()
 	p.TCPRouteStatuses.Close()
