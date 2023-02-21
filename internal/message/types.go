@@ -6,14 +6,15 @@
 package message
 
 import (
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/ir"
-	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/ir"
+	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // ProviderResources message
