@@ -20,11 +20,14 @@ import (
 )
 
 var (
-	output        string
-	podName       string
-	podNamespace  string
-	containerName string
-	adminPort     int32
+	output       string
+	podName      string
+	podNamespace string
+)
+
+const (
+	adminPort     = 19000   // TODO: make this configurable until EG support
+	containerName = "envoy" // TODO: make this configurable until EG support
 )
 
 func NewConfigCommand() *cobra.Command {
@@ -41,8 +44,6 @@ func NewConfigCommand() *cobra.Command {
 	options.AddKubeConfigFlags(flags)
 
 	cfgCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
-	cfgCommand.PersistentFlags().StringVar(&containerName, "container-name", "envoy", "Name of container where envoy proxy is installed.")
-	cfgCommand.PersistentFlags().Int32Var(&adminPort, "admin-port", 19000, "Admin port of envoy proxy.")
 	cfgCommand.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway", "Namespace where envoy proxy pod are installed.")
 
 	return cfgCommand
@@ -69,10 +70,10 @@ func allConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about all configuration for a given pod from Envoy.
   egctl config envoy-proxy all <pod-name> -n <pod-namespace>
 
-  # Retrieve full cluster dump as YAML
+  # Retrieve full configuration dump as YAML
   egctl config envoy-proxy all <pod-name> -n <pod-namespace> -o yaml
 
-  # Retrieve full cluster dump with short syntax
+  # Retrieve full configuration dump with short syntax
   egctl c proxy a <pod-name> -n <pod-namespace>
 `,
 		Aliases: []string{"a"},
