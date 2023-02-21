@@ -118,7 +118,7 @@ func validate(inFile, inType, outType string) error {
 		return fmt.Errorf("%s is not a valid output type. %s", outType, getValidOutputTypesStr())
 	}
 	if inFile == "" {
-		return fmt.Errorf("--file must be specified.")
+		return fmt.Errorf("--file must be specified")
 	}
 
 	return nil
