@@ -56,7 +56,8 @@ const (
 
 	gatewayCustomGRPCRouteIndex    = "gatewayCustomGRPCRouteIndex"
 	serviceCustomGRPCRouteIndex    = "serviceCustomGRPCRouteIndex"
-	corsFilterCustomGRPCRouteIndex = "corscorsFilterCustomGRPCRouteIndex"
+	corsFilterCustomGRPCRouteIndex = "corsFilterCustomGRPCRouteIndex"
+	corsFilterIndex                = "corsFilterIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -135,6 +136,14 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
 	}
 
+	// get all the corsfilter
+	var corsFilters egv1a1.CorsFilterList
+	if err := r.client.List(ctx, &corsFilters); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing corsfilters: %v", err)
+	}
+
+	// TODO: add a check to see if the global cors is valid
+
 	var cc controlledClasses
 
 	for _, gwClass := range gatewayClasses.Items {
@@ -175,6 +184,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Initialize resource types.
 	resourceTree := gatewayapi.NewResources()
 	resourceMap := newResourceMapping()
+
+	// add the global cors filter when corsFilters is not empty
+	if len(corsFilters.Items) > 0 {
+		for i := range corsFilters.Items {
+			resourceTree.CorsFilters = append(resourceTree.CorsFilters, &corsFilters.Items[i])
+		}
+	}
 
 	if err := r.processGateways(ctx, acceptedGC, resourceMap, resourceTree); err != nil {
 		return reconcile.Result{}, err
@@ -1188,6 +1204,18 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch CorsFilter CRUDs and reconcile affected Routes.
+	if err := c.Watch(
+		&source.Kind{Type: &egv1a1.CorsFilter{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return err
+	}
+
+	if err := addCorsFilterIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
 		&source.Kind{Type: &gwapiv1b1.HTTPRoute{}},
@@ -1398,4 +1426,21 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	return nil
+}
+
+func addCorsFilterIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.CorsFilter{}, corsFilterIndex, corsFilterIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func corsFilterIndexFunc(obj client.Object) []string {
+	cf, ok := obj.(*egv1a1.CorsFilter)
+	if !ok {
+		panic(fmt.Sprintf("unsupported object type %T", obj))
+	}
+
+	return []string{cf.Namespace + "/" + cf.Name}
 }
