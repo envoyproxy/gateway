@@ -93,7 +93,9 @@ curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grp
 ## GRPCRoute Match
 The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and/or method names.
 The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
-as well as a regular expression match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
+as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
+
+Current implementation supports only `Exact` match. `RegularExpression` match will be supported after https://github.com/kubernetes-sigs/gateway-api/issues/1746 is resolved.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -113,10 +115,8 @@ spec:
       - method:
           method: ServerReflectionInfo
           service: grpc.reflection.v1alpha.ServerReflection
-          type: Exact
       - method:
           method: Ping
-          type: RegularExpression
       backendRefs:
         - group: ""
           kind: Service
