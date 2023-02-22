@@ -65,8 +65,8 @@ func allConfigCmd() *cobra.Command {
 
 	allConfigCmd := &cobra.Command{
 		Use:   "all <pod-name>",
-		Short: "Retrieves all configuration for the Envoy in the specified pod",
-		Long:  `Retrieve information about all configuration for the Envoy instance in the specified pod.`,
+		Short: "Retrieves all Envoy xDS resources from the specified pod",
+		Long:  `Retrieves information about all Envoy xDS resources from the Envoy instance in the specified pod.`,
 		Example: `  # Retrieve summary about all configuration for a given pod from Envoy.
   egctl config envoy-proxy all <pod-name> -n <pod-namespace>
 
