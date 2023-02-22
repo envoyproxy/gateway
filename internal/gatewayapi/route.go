@@ -398,6 +398,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 					Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
 				}
 			case match.Method.Method != nil:
+				// Use a header match since the PathMatch doesn't support Suffix matching
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:   ":path",
 					Suffix: StringPtr(fmt.Sprintf("/%s", *match.Method.Method)),
