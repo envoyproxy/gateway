@@ -21,7 +21,7 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-      attachedRoutes: 2
+      attachedRoutes: 1
       conditions:
       - type: Programmed
         status: "True"
@@ -58,36 +58,6 @@ grpcRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    namespace: default
-    name: grpcroute-2
-  spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - matches:
-      - method:
-          service: com.ExampleRegex
-          type: RegularExpression
-      backendRefs:
-      - name: service-1
-        port: 8080
-  status:
-    parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-        sectionName: http
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Route is accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -98,13 +68,6 @@ xdsIR:
       - "*"
       isHTTP2: true
       routes:
-      - name: default-grpcroute-2-rule-0-match-0-*
-        pathMatch:
-          safeRegex: "^/com.ExampleRegex/[A-Za-z_][A-Za-z_0-9]*$"
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
       - name: default-grpcroute-1-rule-0-match-0-*
         pathMatch:
           prefix: "/com.ExampleExact"
