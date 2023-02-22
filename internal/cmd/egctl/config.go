@@ -74,9 +74,8 @@ func allConfigCmd() *cobra.Command {
   egctl config envoy-proxy all <pod-name> -n <pod-namespace> -o yaml
 
   # Retrieve full configuration dump with short syntax
-  egctl c proxy a <pod-name> -n <pod-namespace>
+  egctl c proxy all <pod-name> -n <pod-namespace>
 `,
-		Aliases: []string{"a"},
 		Run: func(c *cobra.Command, args []string) {
 			cmdutil.CheckErr(runAllConfig(c, args))
 		},
