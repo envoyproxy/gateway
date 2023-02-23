@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -38,7 +37,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 					Name: "test-gc",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: v1alpha1.GatewayControllerName,
+					ControllerName: egcfgv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{gatewayClassFinalizer},
@@ -51,7 +50,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{"fooFinalizer"},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: v1alpha1.GatewayControllerName,
+					ControllerName: egcfgv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{"fooFinalizer", gatewayClassFinalizer},
@@ -64,7 +63,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{gatewayClassFinalizer},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: v1alpha1.GatewayControllerName,
+					ControllerName: egcfgv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{gatewayClassFinalizer},
@@ -102,7 +101,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 					Name: "test-gc",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: v1alpha1.GatewayControllerName,
+					ControllerName: egcfgv1a1.GatewayControllerName,
 				},
 			},
 			expect: nil,
@@ -115,7 +114,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{"fooFinalizer"},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: v1alpha1.GatewayControllerName,
+					ControllerName: egcfgv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{"fooFinalizer"},
@@ -128,7 +127,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{gatewayClassFinalizer},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: v1alpha1.GatewayControllerName,
+					ControllerName: egcfgv1a1.GatewayControllerName,
 				},
 			},
 			expect: nil,
@@ -154,7 +153,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 }
 
 func TestEnqueueManagedClass(t *testing.T) {
-	gcCtrlName := gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName)
+	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
 
 	testCases := []struct {
 		name     string
@@ -348,7 +347,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 }
 
 func TestProcessParamsRef(t *testing.T) {
-	gcCtrlName := gwapiv1b1.GatewayController(v1alpha1.GatewayControllerName)
+	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
 
 	testCases := []struct {
 		name     string

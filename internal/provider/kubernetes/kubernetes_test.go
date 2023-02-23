@@ -87,7 +87,7 @@ func TestProvider(t *testing.T) {
 func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 	gwAPIs := filepath.Join(".", "testdata", "in")
-	egAPIs := filepath.Join(".", "config", "crd", "bases")
+	egAPIs := filepath.Join("..", "..", "..", "charts", "eg", "templates", "generated", "crd")
 	env := &envtest.Environment{
 		CRDDirectoryPaths: []string{gwAPIs, egAPIs},
 	}

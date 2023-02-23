@@ -19,13 +19,14 @@ KUBE_INFRA_DIR := $(ROOT_DIR)/internal/infrastructure/kubernetes/config
 endif
 
 ##@ Kubernetes Development
+
 YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: manifests
 manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=internal/provider/kubernetes/config/crd/bases output:rbac:artifacts:config=internal/provider/kubernetes/config/rbac
+	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/eg/templates/generated/crd output:rbac:artifacts:config=charts/eg/templates/generated/rbac
 
 .PHONY: generate
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -44,30 +45,37 @@ ifndef ignore-not-found
   ignore-not-found = true
 endif
 
+IMAGE_PULL_POLICY ?= Always
+
 .PHONY: kube-deploy
-kube-deploy: manifests $(tools/kustomize) generate-manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	kubectl apply -f $(OUTPUT_DIR)/install.yaml
+	helm install eg charts/eg --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
 
 .PHONY: kube-undeploy
-kube-undeploy: manifests $(tools/kustomize) ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	kubectl delete --ignore-not-found=$(ignore-not-found) -f $(OUTPUT_DIR)/install.yaml
+	helm uninstall eg -n envoy-gateway-system
+
+.PHONY: kube-demo-prepare
+kube-demo-prepare:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/kubernetes/quickstart.yaml -n default
+	kubectl wait --timeout=5m -n default gateway eg --for=condition=Programmed
 
 .PHONY: kube-demo
-kube-demo: ## Deploy a demo backend service, gatewayclass, gateway and httproute resource and test the configuration.
+kube-demo: kube-demo-prepare ## Deploy a demo backend service, gatewayclass, gateway and httproute resource and test the configuration.
 	@$(LOG_TARGET)
-	kubectl apply -f examples/kubernetes/quickstart.yaml
-	$(eval ENVOY_SERVICE := $(shell kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}'))
+	$(eval ENVOY_SERVICE := $(shell kubectl get service -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}'))
 	@echo -e "\nPort forward to the Envoy service using the command below"
-	@echo -e "kubectl -n envoy-gateway-system port-forward service/$(ENVOY_SERVICE) 8888:8080 &"
+	@echo -e "kubectl -n envoy-gateway-system port-forward service/$(ENVOY_SERVICE) 8888:80 &"
 	@echo -e "\nCurl the app through Envoy proxy using the command below"
 	@echo -e "curl --verbose --header \"Host: www.example.com\" http://localhost:8888/get\n"
 
 .PHONY: kube-demo-undeploy
 kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `make kube-demo` command.
 	@$(LOG_TARGET)
-	kubectl delete -f examples/kubernetes/quickstart.yaml --ignore-not-found=$(ignore-not-found)
+	kubectl delete -f examples/kubernetes/quickstart.yaml --ignore-not-found=$(ignore-not-found) -n default
 
 # Uncomment when https://github.com/envoyproxy/gateway/issues/256 is fixed.
 #.PHONY: run-kube-local
@@ -91,9 +99,9 @@ kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind 
 run-conformance: ## Run Gateway API conformance.
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
-	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/eg-envoy-gateway --for=condition=Available
 	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
-	kubectl apply -f internal/provider/kubernetes/config/samples/gatewayclass.yaml
+	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --use-unique-ports=$(CONFORMANCE_UNIQUE_PORTS)
 
 .PHONY: delete-cluster
@@ -102,24 +110,11 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
-generate-manifests: $(tools/kustomize) ## Generate Kubernetes release manifests.
+generate-manifests: ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	@$(call log, "Added: $(OUTPUT_DIR)/gatewayapi-crds.yaml")
-	mkdir -pv $(OUTPUT_DIR)/manifests/provider
-	cp -r $(KUBE_PROVIDER_DIR) $(OUTPUT_DIR)/manifests/provider
-	mkdir -pv $(OUTPUT_DIR)/manifests/infra
-	cp -r $(KUBE_INFRA_DIR) $(OUTPUT_DIR)/manifests/infra
-	cd $(OUTPUT_DIR)/manifests/provider/config/envoy-gateway && $(ROOT_DIR)/$(tools/kustomize) edit set image envoyproxy/gateway-dev=$(IMAGE):$(TAG)
-	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/provider/config/default > $(OUTPUT_DIR)/envoy-gateway.yaml
-	$(tools/kustomize) build $(OUTPUT_DIR)/manifests/infra/config/rbac > $(OUTPUT_DIR)/infra-manager-rbac.yaml
-	touch $(OUTPUT_DIR)/kustomization.yaml
-	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./envoy-gateway.yaml
-	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./infra-manager-rbac.yaml
-	cd $(OUTPUT_DIR) && $(ROOT_DIR)/$(tools/kustomize) edit add resource ./gatewayapi-crds.yaml
-	$(tools/kustomize) build $(OUTPUT_DIR) > $(OUTPUT_DIR)/install.yaml
+	helm template eg charts/eg --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")

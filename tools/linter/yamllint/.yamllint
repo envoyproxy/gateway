@@ -1,11 +1,8 @@
 ---
 
 ignore: |
-  # Remove when https://github.com/kubernetes-sigs/gateway-api/issues/1600 is fixed.
-  bin/gatewayapi-crds.yaml
-  internal/provider/kubernetes/config/default/kustomization.yaml
-  internal/provider/kubernetes/config/crd/kustomization.yaml
-
+  charts/eg/
+  bin/install.yaml
 
 rules:
   braces:
