@@ -19,14 +19,74 @@ import (
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
-		name string
-		from string
-		to   string
+		name         string
+		from         string
+		to           string
+		output       string
+		resourceType string
+		expect       bool
 	}{
 		{
-			name: "from-gateway-api-to-xds",
-			from: "gateway-api",
-			to:   "xds",
+			name:   "from-gateway-api-to-xds",
+			from:   "gateway-api",
+			to:     "xds",
+			output: jsonOutput,
+			expect: true,
+		},
+		{
+			name:   "from-gateway-api-to-xds",
+			from:   "gateway-api",
+			to:     "xds",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
+			name:   "from-gateway-api-to-xds",
+			from:   "gateway-api",
+			to:     "xds",
+			expect: true,
+		}, {
+			name:         "from-gateway-api-to-xds",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: "unknown",
+			expect:       false,
+		}, {
+			name:         "from-gateway-api-to-xds",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(AllEnvoyConfigType),
+			expect:       true,
+		}, {
+			name:         "from-gateway-api-to-xds",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(BootstrapEnvoyConfigType),
+			expect:       true,
+		}, {
+			name:         "from-gateway-api-to-xds",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(ClusterEnvoyConfigType),
+			expect:       true,
+		}, {
+			name:         "from-gateway-api-to-xds",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(ListenerEnvoyConfigType),
+			expect:       true,
+		}, {
+			name:         "from-gateway-api-to-xds",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(RouteEnvoyConfigType),
+			expect:       true,
 		},
 	}
 
@@ -47,11 +107,36 @@ func TestTranslate(t *testing.T) {
 				"testdata/in/" + tc.name + ".yaml",
 			}
 
+			if tc.output == yamlOutput {
+				args = append(args, "--output", yamlOutput)
+			} else if tc.output == jsonOutput {
+				args = append(args, "--output", jsonOutput)
+			}
+
+			var resourceType string
+			if tc.resourceType == "" {
+				resourceType = string(AllEnvoyConfigType)
+			} else {
+				resourceType = tc.resourceType
+				args = append(args, "--type", tc.resourceType)
+			}
+
 			root.SetArgs(args)
-			assert.NoError(t, root.ExecuteContext(context.Background()))
+			if tc.expect {
+				assert.NoError(t, root.ExecuteContext(context.Background()))
+			} else {
+				assert.Error(t, root.ExecuteContext(context.Background()))
+				return
+			}
+
 			out, err := io.ReadAll(b)
 			assert.NoError(t, err)
-			require.Equal(t, requireTestDataOutFile(t, tc.name+".out"), string(out))
+
+			if tc.output == jsonOutput {
+				require.JSONEq(t, requireTestDataOutFile(t, tc.name+"."+resourceType+".json"), string(out))
+			} else {
+				require.YAMLEq(t, requireTestDataOutFile(t, tc.name+"."+resourceType+".yaml"), string(out))
+			}
 		})
 	}
 }

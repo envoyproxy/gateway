@@ -67,14 +67,14 @@ static_resources:
               resource_api_version: V3
 layered_runtime:
   layers:
-    - name: runtime-0
-      rtds_layer:
-        rtds_config:
-          resource_api_version: V3
-          api_config_source:
-            transport_api_version: V3
-            api_type: DELTA_GRPC
-            grpc_services:
-              envoy_grpc:
-                cluster_name: xds_cluster
-        name: runtime-0
+  - name: runtime-0
+    rtds_layer:
+      rtds_config:
+        resource_api_version: V3
+        api_config_source:
+          transport_api_version: V3
+          api_type: DELTA_GRPC
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
+      name: runtime-0
