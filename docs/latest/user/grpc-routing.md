@@ -1,6 +1,6 @@
 # GRPC Routing
 
-The [GRPCRoute][] resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers. 
+The [GRPCRoute][] resource allows users to configure gRPC routing by matching HTTP/2 traffic and forwarding it to backend gRPC servers.
 To learn more about gRPC routing, refer to the [Gateway API documentation][].
 
 ## Prerequisites
@@ -88,6 +88,54 @@ Envoy Gateway also supports [gRPC-Web][] requests for this configuration. The be
 
 ```shell
 curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grpc-example.com'   -H 'Content-Type: application/grpc-web-text'   -H 'Accept: application/grpc-web-text' -XPOST -d'AAAAAAA=' | base64 -d
+```
+
+## GRPCRoute Match
+The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and/or method names.
+The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
+as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
+
+Current implementation supports only `Exact` match. `RegularExpression` match will be supported after https://github.com/kubernetes-sigs/gateway-api/issues/1746 is resolved.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - "grpc-example.com"
+  rules:
+    - matches:
+      - method:
+          method: ServerReflectionInfo
+          service: grpc.reflection.v1alpha.ServerReflection
+      - method:
+          method: Ping
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: yages
+          port: 9000
+          weight: 1
+EOF
+```
+
+Verify the GRPCRoute status:
+
+```shell
+kubectl get grpcroutes --selector=example=grpc-routing -o yaml
+```
+
+Test GRPC routing to the `yages` backend using the [grpcurl][] command.
+
+```shell
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
 ```
 
 
