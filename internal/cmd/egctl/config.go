@@ -95,25 +95,28 @@ func runAllConfig(c *cobra.Command, args []string) error {
 		return fmt.Errorf("pod namespace is required")
 	}
 
-	out, err := extractConfigDump(types.NamespacedName{
+	fw, err := portForwarder(types.NamespacedName{
 		Namespace: podNamespace,
 		Name:      podName,
 	})
 	if err != nil {
 		return err
 	}
-
-	if output == "yaml" {
-		out, err = yaml.JSONToYAML(out)
-		if err != nil {
-			return err
-		}
+	if err := fw.Start(); err != nil {
+		return err
 	}
+	defer fw.Stop()
+
+	out, err := extractConfigDump(fw, output)
+	if err != nil {
+		return err
+	}
+
 	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
 	return err
 }
 
-func extractConfigDump(nn types.NamespacedName) ([]byte, error) {
+func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
 		return nil, fmt.Errorf("build CLI client fail: %w", err)
@@ -132,12 +135,23 @@ func extractConfigDump(nn types.NamespacedName) ([]byte, error) {
 		return nil, err
 	}
 
-	if err := fw.Start(); err != nil {
+	return fw, nil
+}
+
+func extractConfigDump(fw kube.PortForwarder, output string) ([]byte, error) {
+	out, err := configDumpRequest(fw.Address())
+	if err != nil {
 		return nil, err
 	}
-	defer fw.Stop()
 
-	return configDumpRequest(fw.Address())
+	if output == "yaml" {
+		out, err = yaml.JSONToYAML(out)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return out, nil
 }
 
 func configDumpRequest(address string) ([]byte, error) {

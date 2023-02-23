@@ -8,7 +8,6 @@ package kubernetes
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 
@@ -17,10 +16,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-)
 
-const (
-	defaultLocalAddress = "localhost"
+	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
 type PortForwarder interface {
@@ -54,7 +51,7 @@ func NewLocalPortForwarder(client CLIClient, namespacedName types.NamespacedName
 	}
 	if f.localPort == 0 {
 		// get a random port
-		p, err := f.localAvailablePort()
+		p, err := netutil.LocalAvailablePort()
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get a local available port")
 		}
@@ -62,15 +59,6 @@ func NewLocalPortForwarder(client CLIClient, namespacedName types.NamespacedName
 	}
 
 	return f, nil
-}
-
-func (f *localForwarder) localAvailablePort() (int, error) {
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:0", defaultLocalAddress))
-	if err != nil {
-		return 0, err
-	}
-
-	return l.Addr().(*net.TCPAddr).Port, l.Close()
 }
 
 func (f *localForwarder) Start() error {
@@ -124,7 +112,7 @@ func (f *localForwarder) buildKubernetesPortForwarder(readyCh chan struct{}) (*p
 
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: roundTripper}, http.MethodPost, serverURL)
 	fw, err := portforward.NewOnAddresses(dialer,
-		[]string{defaultLocalAddress},
+		[]string{netutil.DefaultLocalAddress},
 		[]string{fmt.Sprintf("%d:%d", f.localPort, f.podPort)},
 		f.stopCh,
 		readyCh,
@@ -142,5 +130,5 @@ func (f *localForwarder) Stop() {
 }
 
 func (f *localForwarder) Address() string {
-	return fmt.Sprintf("%s:%d", defaultLocalAddress, f.localPort)
+	return fmt.Sprintf("%s:%d", netutil.DefaultLocalAddress, f.localPort)
 }
