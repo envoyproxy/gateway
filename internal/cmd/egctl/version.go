@@ -25,6 +25,7 @@ import (
 
 const (
 	yamlOutput      = "yaml"
+	jsonOutput      = "json"
 	egContainerName = "envoy-gateway"
 )
 
@@ -119,9 +120,10 @@ func versions(w io.Writer, containerName, output string) error {
 	switch output {
 	case yamlOutput:
 		out, err = yaml.Marshal(v)
+	case jsonOutput:
+		out, err = json.MarshalIndent(v, "", "  ")
 	default:
 		out, err = json.MarshalIndent(v, "", "  ")
-
 	}
 
 	if err != nil {

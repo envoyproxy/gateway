@@ -1,0 +1,20 @@
+'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+configKey: default-eg
+resourceType: route
+staticRouteConfigs:
+- routeConfig:
+    '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+    name: default-eg-http
+    virtualHosts:
+    - domains:
+      - '*'
+      name: default-eg-http
+      routes:
+      - match:
+          headers:
+          - name: :authority
+            stringMatch:
+              exact: www.example.com
+          prefix: /
+        route:
+          cluster: default-backend-rule-0-match-0-www.example.com

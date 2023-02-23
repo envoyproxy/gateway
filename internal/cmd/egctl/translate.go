@@ -7,6 +7,7 @@ package egctl
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -14,9 +15,12 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +32,6 @@ import (
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
-	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
 
 const (
@@ -38,14 +41,14 @@ const (
 
 func NewTranslateCommand() *cobra.Command {
 	var (
-		inFile, inType, outType string
+		inFile, inType, outType, output, resourceType string
 	)
 
 	translateCommand := &cobra.Command{
 		Use:   "translate",
 		Short: "Translate Configuration from an input type to an output type",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return translate(cmd.OutOrStdout(), inFile, inType, outType)
+			return translate(cmd.OutOrStdout(), inFile, inType, outType, output, resourceType)
 		},
 	}
 
@@ -55,6 +58,8 @@ func NewTranslateCommand() *cobra.Command {
 	}
 	translateCommand.PersistentFlags().StringVarP(&inType, "from", "", gatewayAPIType, getValidInputTypesStr())
 	translateCommand.PersistentFlags().StringVarP(&outType, "to", "", xdsType, getValidOutputTypesStr())
+	translateCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
+	translateCommand.PersistentFlags().StringVarP(&resourceType, "type", "t", string(AllEnvoyConfigType), getValidResourceTypesStr())
 	return translateCommand
 }
 
@@ -92,6 +97,37 @@ func getValidOutputTypesStr() string {
 	return fmt.Sprintf("Valid types are %v.", validOutputTypes())
 }
 
+type envoyConfigType string
+
+var (
+	BootstrapEnvoyConfigType envoyConfigType = "bootstrap"
+	ClusterEnvoyConfigType   envoyConfigType = "cluster"
+	ListenerEnvoyConfigType  envoyConfigType = "listener"
+	RouteEnvoyConfigType     envoyConfigType = "route"
+	AllEnvoyConfigType       envoyConfigType = "all"
+)
+
+func validResourceTypes() []envoyConfigType {
+	return []envoyConfigType{BootstrapEnvoyConfigType,
+		ClusterEnvoyConfigType,
+		ListenerEnvoyConfigType,
+		RouteEnvoyConfigType,
+		AllEnvoyConfigType}
+}
+
+func isValidResourceType(outType envoyConfigType) bool {
+	for _, vType := range validResourceTypes() {
+		if outType == vType {
+			return true
+		}
+	}
+	return false
+}
+
+func getValidResourceTypesStr() string {
+	return fmt.Sprintf("Valid types are %v.", validResourceTypes())
+}
+
 func getInputBytes(inFile string) ([]byte, error) {
 
 	// Get input from stdin
@@ -110,12 +146,15 @@ func getInputBytes(inFile string) ([]byte, error) {
 	return os.ReadFile(inFile)
 }
 
-func validate(inFile, inType, outType string) error {
+func validate(inFile, inType, outType, resourceType string) error {
 	if !isValidInputType(inType) {
 		return fmt.Errorf("%s is not a valid input type. %s", inType, getValidInputTypesStr())
 	}
 	if !isValidOutputType(outType) {
 		return fmt.Errorf("%s is not a valid output type. %s", outType, getValidOutputTypesStr())
+	}
+	if !isValidResourceType(envoyConfigType(resourceType)) {
+		return fmt.Errorf("%s is not a valid output type. %s", resourceType, getValidResourceTypesStr())
 	}
 	if inFile == "" {
 		return fmt.Errorf("--file must be specified")
@@ -124,8 +163,8 @@ func validate(inFile, inType, outType string) error {
 	return nil
 }
 
-func translate(w io.Writer, inFile, inType, outType string) error {
-	if err := validate(inFile, inType, outType); err != nil {
+func translate(w io.Writer, inFile, inType, outType, output, resourceType string) error {
+	if err := validate(inFile, inType, outType, resourceType); err != nil {
 		return err
 	}
 
@@ -135,14 +174,13 @@ func translate(w io.Writer, inFile, inType, outType string) error {
 	}
 
 	if inType == gatewayAPIType && outType == xdsType {
-		return translateFromGatewayAPIToXds(w, inBytes)
+		return translateFromGatewayAPIToXds(w, inBytes, output, resourceType)
 	}
 
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outType)
 }
 
-func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
-
+func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte, output, resourceType string) error {
 	// Unmarshal input
 	gcName, resources, err := kubernetesYAMLToResources(string(inBytes))
 	if err != nil {
@@ -157,7 +195,6 @@ func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
 	gRes := gTranslator.Translate(resources)
 
 	// Translate from Xds IR to Xds
-	fmt.Fprintf(w, "\nxDS\n")
 	for key, val := range gRes.XdsIR {
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
@@ -171,7 +208,7 @@ func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
 		}
 
 		// Print results
-		if err := printXds(w, key, xRes); err != nil {
+		if err := printXds(w, key, xRes, output, envoyConfigType(resourceType)); err != nil {
 			return fmt.Errorf("failed to print result for key %s value %+v, error:%w", key, val, err)
 		}
 	}
@@ -180,46 +217,170 @@ func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte) error {
 }
 
 // printXds prints the xDS Output
-func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable) error {
-	fmt.Fprintf(w, "\nKey: %s\n", key)
-	bootsrapYAML, err := infra.GetRenderedBootstrapConfig()
+func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, output string, resourceType envoyConfigType) (err error) {
+	globalConfigs, err := constructConfigDump(tCtx)
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(w, "\nBootstrap:\n%s", bootsrapYAML)
-	listeners := tCtx.XdsResources[resource.ListenerType]
-	listenersYAML, err := resourcesToYAMLString(listeners)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(w, "\nListeners:\n%s", listenersYAML)
-	routes := tCtx.XdsResources[resource.RouteType]
-	routesYAML, err := resourcesToYAMLString(routes)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(w, "\nRoutes:\n%s", routesYAML)
-	clusters := tCtx.XdsResources[resource.ClusterType]
-	clustersYAML, err := resourcesToYAMLString(clusters)
-	if err != nil {
-		return err
-	}
-	fmt.Fprintf(w, "\nClusters:\n%s", clustersYAML)
 
+	var (
+		out, data []byte
+	)
+	switch resourceType {
+	case AllEnvoyConfigType:
+		data, err = protojson.Marshal(globalConfigs)
+		if err != nil {
+			return err
+		}
+	case BootstrapEnvoyConfigType:
+		for _, config := range globalConfigs.Configs {
+			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.BootstrapConfigDump" {
+				data, err = protojson.Marshal(config)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	case ClusterEnvoyConfigType:
+		for _, config := range globalConfigs.Configs {
+			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.ClustersConfigDump" {
+				data, err = protojson.Marshal(config)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	case ListenerEnvoyConfigType:
+		for _, config := range globalConfigs.Configs {
+			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.ListenersConfigDump" {
+				data, err = protojson.Marshal(config)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	case RouteEnvoyConfigType:
+		for _, config := range globalConfigs.Configs {
+			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.RoutesConfigDump" {
+				data, err = protojson.Marshal(config)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	default:
+		return fmt.Errorf("unknown resourceType %s", resourceType)
+	}
+
+	wrapper := map[string]any{}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+
+	wrapper["configKey"] = key
+	wrapper["resourceType"] = resourceType
+
+	switch output {
+	case yamlOutput:
+		out, err = yaml.Marshal(wrapper)
+	case jsonOutput:
+		out, err = json.Marshal(wrapper)
+	default:
+		out, err = yaml.Marshal(wrapper)
+	}
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintln(w, string(out))
 	return nil
 }
 
-// resourcesToYAMLString converts xDS Resource types into YAML string
-func resourcesToYAMLString(resources []types.Resource) (string, error) {
-	jsonBytes, err := utils.MarshalResourcesToJSON(resources)
+// consructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
+func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
+	globalConfigs := &adminv3.ConfigDump{}
+	bootstrapConfigs := &adminv3.BootstrapConfigDump{}
+	bootstrap := &bootstrapv3.Bootstrap{}
+	listenerConfigs := &adminv3.ListenersConfigDump{}
+	routeConfigs := &adminv3.RoutesConfigDump{}
+	clusterConfigs := &adminv3.ClustersConfigDump{}
+
+	// construct bootstrap config
+	bootsrapYAML, err := infra.GetRenderedBootstrapConfig()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	data, err := yaml.JSONToYAML(jsonBytes)
+	jsonData, err := yaml.YAMLToJSON([]byte(bootsrapYAML))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(data), nil
+
+	if err := protojson.Unmarshal(jsonData, bootstrap); err != nil {
+		return nil, err
+	}
+	bootstrapConfigs.Bootstrap = bootstrap
+	if err := bootstrapConfigs.Validate(); err != nil {
+		return nil, err
+	}
+	if configs, err := anypb.New(bootstrapConfigs); err == nil {
+		globalConfigs.Configs = append(globalConfigs.Configs, configs)
+	}
+
+	// construct clusters config
+	clusters := tCtx.XdsResources[resource.ClusterType]
+	for _, cluster := range clusters {
+		c, err := anypb.New(cluster)
+		if err != nil {
+			return nil, err
+		}
+		clusterConfigs.StaticClusters = append(clusterConfigs.StaticClusters, &adminv3.ClustersConfigDump_StaticCluster{
+			Cluster: c,
+		})
+	}
+	if err := clusterConfigs.Validate(); err != nil {
+		return nil, err
+	}
+	if configs, err := anypb.New(clusterConfigs); err == nil {
+		globalConfigs.Configs = append(globalConfigs.Configs, configs)
+	}
+
+	// construct listeners config
+	listeners := tCtx.XdsResources[resource.ListenerType]
+	for _, listener := range listeners {
+		l, err := anypb.New(listener)
+		if err != nil {
+			return nil, err
+		}
+		listenerConfigs.StaticListeners = append(listenerConfigs.StaticListeners, &adminv3.ListenersConfigDump_StaticListener{
+			Listener: l,
+		})
+	}
+	if err := listenerConfigs.Validate(); err != nil {
+		return nil, err
+	}
+	if configs, err := anypb.New(listenerConfigs); err == nil {
+		globalConfigs.Configs = append(globalConfigs.Configs, configs)
+	}
+
+	// construct routes config
+	routes := tCtx.XdsResources[resource.RouteType]
+	for _, route := range routes {
+		r, err := anypb.New(route)
+		if err != nil {
+			return nil, err
+		}
+		routeConfigs.StaticRouteConfigs = append(routeConfigs.StaticRouteConfigs, &adminv3.RoutesConfigDump_StaticRouteConfig{
+			RouteConfig: r,
+		})
+	}
+	if err := routeConfigs.Validate(); err != nil {
+		return nil, err
+	}
+	if configs, err := anypb.New(routeConfigs); err == nil {
+		globalConfigs.Configs = append(globalConfigs.Configs, configs)
+	}
+
+	return globalConfigs, nil
 }
 
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources

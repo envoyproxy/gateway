@@ -11,6 +11,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"sigs.k8s.io/yaml"
 )
 
 func MarshalResourcesToJSON(resources []types.Resource) ([]byte, error) {
@@ -32,4 +33,17 @@ func MarshalResourcesToJSON(resources []types.Resource) ([]byte, error) {
 	}
 	buffer.WriteByte(']')
 	return buffer.Bytes(), nil
+}
+
+// ResourcesToYAMLString converts xDS Resource types into YAML string
+func ResourcesToYAMLString(resources []types.Resource) (string, error) {
+	jsonBytes, err := MarshalResourcesToJSON(resources)
+	if err != nil {
+		return "", err
+	}
+	data, err := yaml.JSONToYAML(jsonBytes)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
