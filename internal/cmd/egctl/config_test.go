@@ -14,9 +14,10 @@ import (
 	"path"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	netutil "github.com/envoyproxy/gateway/internal/utils/net"
-	"github.com/stretchr/testify/assert"
 )
 
 var _ kube.PortForwarder = &fakePortForwarder{}
@@ -40,7 +41,7 @@ func newFakePortForwarder(b []byte) (kube.PortForwarder, error) {
 		mux:          http.NewServeMux(),
 	}
 	fw.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(fw.responseBody)
+		_, _ = w.Write(fw.responseBody)
 	})
 
 	return fw, nil
@@ -54,6 +55,7 @@ func (fw *fakePortForwarder) Start() error {
 	fw.l = l
 
 	go func() {
+		// nolint: gosec
 		if err := http.Serve(l, fw.mux); err != nil {
 			log.Fatal(err)
 		}
