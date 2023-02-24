@@ -1,7 +1,6 @@
 '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
 configKey: default-eg
-resourceType: cluster
-staticClusters:
+dynamicActiveClusters:
 - cluster:
     '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
     commonLbConfig:
@@ -23,3 +22,4 @@ staticClusters:
     name: default-backend-rule-0-match-0-www.example.com
     outlierDetection: {}
     type: STATIC
+resourceType: cluster

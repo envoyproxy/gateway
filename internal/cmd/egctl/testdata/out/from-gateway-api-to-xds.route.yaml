@@ -1,7 +1,6 @@
 '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
 configKey: default-eg
-resourceType: route
-staticRouteConfigs:
+dynamicRouteConfigs:
 - routeConfig:
     '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
     name: default-eg-http
@@ -18,3 +17,4 @@ staticRouteConfigs:
           prefix: /
         route:
           cluster: default-backend-rule-0-match-0-www.example.com
+resourceType: route
