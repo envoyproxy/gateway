@@ -83,7 +83,7 @@ configs:
             explicitHttpConfig:
               http2ProtocolOptions: {}
 - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
-  staticClusters:
+  dynamicActiveClusters:
   - cluster:
       '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
       commonLbConfig:
@@ -106,54 +106,55 @@ configs:
       outlierDetection: {}
       type: STATIC
 - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
-  staticListeners:
-  - listener:
-      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-      accessLog:
-      - filter:
-          responseFlagFilter:
-            flags:
-            - NR
-        name: envoy.access_loggers.file
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-          path: /dev/stdout
-      address:
-        socketAddress:
-          address: 0.0.0.0
-          portValue: 10080
-      defaultFilterChain:
-        filters:
-        - name: envoy.filters.network.http_connection_manager
+  dynamicListeners:
+  - activeState:
+      listener:
+        '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+        accessLog:
+        - filter:
+            responseFlagFilter:
+              flags:
+              - NR
+          name: envoy.access_loggers.file
           typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-            accessLog:
-            - name: envoy.access_loggers.file
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                path: /dev/stdout
-            httpFilters:
-            - name: envoy.filters.http.router
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            rds:
-              configSource:
-                apiConfigSource:
-                  apiType: DELTA_GRPC
-                  grpcServices:
-                  - envoyGrpc:
-                      clusterName: xds_cluster
-                  setNodeOnFirstMessageOnly: true
-                  transportApiVersion: V3
-                resourceApiVersion: V3
-              routeConfigName: default-eg-http
-            statPrefix: http
-            upgradeConfigs:
-            - upgradeType: websocket
-            useRemoteAddress: true
-      name: default-eg-http
+            '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/stdout
+        address:
+          socketAddress:
+            address: 0.0.0.0
+            portValue: 10080
+        defaultFilterChain:
+          filters:
+          - name: envoy.filters.network.http_connection_manager
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              accessLog:
+              - name: envoy.access_loggers.file
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  path: /dev/stdout
+              httpFilters:
+              - name: envoy.filters.http.router
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              rds:
+                configSource:
+                  apiConfigSource:
+                    apiType: DELTA_GRPC
+                    grpcServices:
+                    - envoyGrpc:
+                        clusterName: xds_cluster
+                    setNodeOnFirstMessageOnly: true
+                    transportApiVersion: V3
+                  resourceApiVersion: V3
+                routeConfigName: default-eg-http
+              statPrefix: http
+              upgradeConfigs:
+              - upgradeType: websocket
+              useRemoteAddress: true
+        name: default-eg-http
 - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
-  staticRouteConfigs:
+  dynamicRouteConfigs:
   - routeConfig:
       '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
       name: default-eg-http

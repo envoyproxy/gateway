@@ -333,7 +333,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 		if err != nil {
 			return nil, err
 		}
-		clusterConfigs.StaticClusters = append(clusterConfigs.StaticClusters, &adminv3.ClustersConfigDump_StaticCluster{
+		clusterConfigs.DynamicActiveClusters = append(clusterConfigs.DynamicActiveClusters, &adminv3.ClustersConfigDump_DynamicCluster{
 			Cluster: c,
 		})
 	}
@@ -351,8 +351,10 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 		if err != nil {
 			return nil, err
 		}
-		listenerConfigs.StaticListeners = append(listenerConfigs.StaticListeners, &adminv3.ListenersConfigDump_StaticListener{
-			Listener: l,
+		listenerConfigs.DynamicListeners = append(listenerConfigs.DynamicListeners, &adminv3.ListenersConfigDump_DynamicListener{
+			ActiveState: &adminv3.ListenersConfigDump_DynamicListenerState{
+				Listener: l,
+			},
 		})
 	}
 	if err := listenerConfigs.Validate(); err != nil {
@@ -369,7 +371,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 		if err != nil {
 			return nil, err
 		}
-		routeConfigs.StaticRouteConfigs = append(routeConfigs.StaticRouteConfigs, &adminv3.RoutesConfigDump_StaticRouteConfig{
+		routeConfigs.DynamicRouteConfigs = append(routeConfigs.DynamicRouteConfigs, &adminv3.RoutesConfigDump_DynamicRouteConfig{
 			RouteConfig: r,
 		})
 	}
