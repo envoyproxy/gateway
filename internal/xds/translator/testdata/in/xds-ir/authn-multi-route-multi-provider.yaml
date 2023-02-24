@@ -23,7 +23,7 @@ http:
           - one.foo.com
           - two.foo.com
           remoteJWKS:
-            uri: https://localhost:8080/jwt/public-key/jwks.json
+            uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
     destinations:
     - host: "1.2.3.4"
       port: 50000
@@ -45,7 +45,7 @@ http:
           - one.foo.com
           - two.foo.com
           remoteJWKS:
-            uri: https://localhost:8080/jwt/public-key/jwks.json
+            uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
     destinations:
     - host: "5.6.7.8"
       port: 50000

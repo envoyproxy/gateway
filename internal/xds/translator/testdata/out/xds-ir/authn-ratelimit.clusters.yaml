@@ -82,17 +82,17 @@
   connectTimeout: 5s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
-    clusterName: localhost_443
+    clusterName: "192_168_1_250_443"
     endpoints:
     - lbEndpoints:
       - endpoint:
           address:
             socketAddress:
-              address: 127.0.0.1
+              address: 192.168.1.250
               portValue: 443
       loadBalancingWeight: 1
       locality: {}
-  name: localhost_443
+  name: "192_168_1_250_443"
   outlierDetection: {}
   transportSocket:
     name: envoy.transport_sockets.tls

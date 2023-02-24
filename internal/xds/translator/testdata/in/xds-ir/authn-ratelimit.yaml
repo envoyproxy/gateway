@@ -28,7 +28,7 @@ http:
           audiences:
           - foo.com
           remoteJWKS:
-            uri: https://localhost/jwt/public-key/jwks.json
+            uri: https://192.168.1.250/jwt/public-key/jwks.json
   - name: "second-route"
     rateLimit:
       global:
@@ -43,7 +43,7 @@ http:
       exact: "example"
     destinations:
     - host: "1.2.3.4"
-      port: 50000     
+      port: 50000
   - name: "third-route"
     rateLimit:
       global:
