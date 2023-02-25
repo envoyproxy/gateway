@@ -93,6 +93,13 @@ func PathMatchTypeDerefOr(matchType *v1beta1.PathMatchType, defaultType v1beta1.
 	return defaultType
 }
 
+func GRPCMethodMatchTypeDerefOr(matchType *v1alpha2.GRPCMethodMatchType, defaultType v1alpha2.GRPCMethodMatchType) v1alpha2.GRPCMethodMatchType {
+	if matchType != nil {
+		return *matchType
+	}
+	return defaultType
+}
+
 func HeaderMatchTypeDerefOr(matchType *v1beta1.HeaderMatchType, defaultType v1beta1.HeaderMatchType) v1beta1.HeaderMatchType {
 	if matchType != nil {
 		return *matchType
@@ -436,11 +443,4 @@ func irTLSConfig(tlsSecret *v1.Secret) *ir.TLSListenerConfig {
 		ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
 		PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
 	}
-}
-
-func GRPCMethodMatchTypeDerefOr(matchType *v1alpha2.GRPCMethodMatchType, defaultType v1alpha2.GRPCMethodMatchType) v1alpha2.GRPCMethodMatchType {
-	if matchType != nil {
-		return *matchType
-	}
-	return defaultType
 }

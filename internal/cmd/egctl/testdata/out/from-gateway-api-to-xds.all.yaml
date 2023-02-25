@@ -1,84 +1,3 @@
-# egctl
-
-`egctl` is a command line tool to provide additional functionality for Envoy Gateway users.
-
-## egctl experimental translate
-
-This subcommand allows users to translate from an input configuration type to an output configuration type.
-
-In the below example, we will translate the Kubernetes resources (including the Gateway API resources) into xDS
-resources.
-
-```shell
-cat <<EOF | egctl x translate --from gateway-api --to xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: eg
-  namespace: default
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: default 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  namespace: default
-  labels:
-    app: backend
-    service: backend
-spec:
-  clusterIP: "1.1.1.1"
-  type: ClusterIP
-  ports:
-    - name: http
-      port: 3000
-      targetPort: 3000
-      protocol: TCP
-  selector:
-    app: backend
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: HTTPRoute
-metadata:
-  name: backend
-  namespace: default
-spec:
-  parentRefs:
-    - name: eg
-  hostnames:
-    - "www.example.com"
-  rules:
-    - backendRefs:
-        - group: ""
-          kind: Service
-          name: backend
-          port: 3000
-          weight: 1
-      matches:
-        - path:
-            type: PathPrefix
-            value: /
-EOF
-```
-
-```yaml
 configKey: default-eg
 configs:
 - '@type': type.googleapis.com/envoy.admin.v3.BootstrapConfigDump
@@ -215,6 +134,13 @@ configs:
                   '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                   path: /dev/stdout
               httpFilters:
+              - name: envoy.filters.http.health_check
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                  headers:
+                  - exactMatch: /status
+                    name: :path
+                  passThroughMode: false
               - name: envoy.filters.http.router
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -253,99 +179,3 @@ configs:
           route:
             cluster: default-backend-rule-0-match-0-www.example.com
 resourceType: all
-```  
-
-You can also use the `--type`/`-t` flag to retrieve specific output types. In the below example, we will translate the 
-Kubernetes resources (including the Gateway API resources) into xDS `route` resources.
-
-```shell
-cat <<EOF | egctl x translate --from gateway-api --to xds -t route -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: Gateway
-metadata:
-  name: eg
-  namespace: default
-spec:
-  gatewayClassName: eg
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: default 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  namespace: default
-  labels:
-    app: backend
-    service: backend
-spec:
-  clusterIP: "1.1.1.1"
-  type: ClusterIP
-  ports:
-    - name: http
-      port: 3000
-      targetPort: 3000
-      protocol: TCP
-  selector:
-    app: backend
----
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: HTTPRoute
-metadata:
-  name: backend
-  namespace: default
-spec:
-  parentRefs:
-    - name: eg
-  hostnames:
-    - "www.example.com"
-  rules:
-    - backendRefs:
-        - group: ""
-          kind: Service
-          name: backend
-          port: 3000
-          weight: 1
-      matches:
-        - path:
-            type: PathPrefix
-            value: /
-EOF
-```
-
-```yaml
-'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
-configKey: default-eg
-dynamicRouteConfigs:
-- routeConfig:
-    '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
-    name: default-eg-http
-    virtualHosts:
-    - domains:
-      - '*'
-      name: default-eg-http
-      routes:
-      - match:
-          headers:
-          - name: :authority
-            stringMatch:
-              exact: www.example.com
-          prefix: /
-        route:
-          cluster: default-backend-rule-0-match-0-www.example.com
-resourceType: route
-```

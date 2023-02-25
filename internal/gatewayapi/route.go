@@ -394,16 +394,24 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		}
 
 		if match.Method != nil {
-			if match.Method.Method != nil {
+			// GRPC's path is in the form of "/<service>/<method>"
+			// TODO: support regex match type after https://github.com/kubernetes-sigs/gateway-api/issues/1746 is resolved
+			switch {
+			case match.Method.Service != nil && match.Method.Method != nil:
+				irRoute.PathMatch = &ir.StringMatch{
+					Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
+				}
+			case match.Method.Method != nil:
+				// Use a header match since the PathMatch doesn't support Suffix matching
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:  ":method",
-					Exact: match.Method.Method,
+					Name:   ":path",
+					Suffix: StringPtr(fmt.Sprintf("/%s", *match.Method.Method)),
 				})
+			case match.Method.Service != nil:
+				irRoute.PathMatch = &ir.StringMatch{
+					Prefix: StringPtr(fmt.Sprintf("/%s", *match.Method.Service)),
+				}
 			}
-			/* TODO
-			if match.Method.Service != nil {
-			}
-			*/
 		}
 
 		ruleRoutes = append(ruleRoutes, irRoute)

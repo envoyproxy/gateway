@@ -46,9 +46,9 @@
                 remoteJwks:
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_8080
+                    cluster: "192_168_1_250_8080"
                     timeout: 5s
-                    uri: https://localhost:8080/jwt/public-key/jwks.json
+                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
               second-route-www.test.com-example:
                 audiences:
                 - foo.com
@@ -69,9 +69,9 @@
                 remoteJwks:
                   cacheDuration: 300s
                   httpUri:
-                    cluster: localhost_8080
+                    cluster: "192_168_1_250_8080"
                     timeout: 5s
-                    uri: https://localhost:8080/jwt/public-key/jwks.json
+                    uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
             requirementMap:
               first-route-www.test.com:
                 requiresAny:

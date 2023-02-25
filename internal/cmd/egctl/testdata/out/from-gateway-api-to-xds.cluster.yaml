@@ -1,0 +1,25 @@
+'@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+configKey: default-eg
+dynamicActiveClusters:
+- cluster:
+    '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+    commonLbConfig:
+      localityWeightedLbConfig: {}
+    connectTimeout: 5s
+    dnsLookupFamily: V4_ONLY
+    loadAssignment:
+      clusterName: default-backend-rule-0-match-0-www.example.com
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: 1.1.1.1
+                portValue: 3000
+          loadBalancingWeight: 1
+        loadBalancingWeight: 1
+        locality: {}
+    name: default-backend-rule-0-match-0-www.example.com
+    outlierDetection: {}
+    type: STATIC
+resourceType: cluster

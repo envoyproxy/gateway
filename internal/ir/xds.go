@@ -397,6 +397,15 @@ func (r RouteDestination) Validate() error {
 	return errs
 }
 
+// NewRouteDest creates a new RouteDestination.
+func NewRouteDest(host string, port uint32, weight uint32) *RouteDestination {
+	return &RouteDestination{
+		Host:   host,
+		Port:   port,
+		Weight: weight,
+	}
+}
+
 // Add header configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
