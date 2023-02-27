@@ -44,7 +44,7 @@ bootstrap:
           resourceApiVersion: V3
   staticResources:
     clusters:
-    - connectTimeout: 1s
+    - connectTimeout: 10s
       loadAssignment:
         clusterName: xds_cluster
         endpoints:

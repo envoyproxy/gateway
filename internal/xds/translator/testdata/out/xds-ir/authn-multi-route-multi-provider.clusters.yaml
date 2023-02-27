@@ -1,6 +1,6 @@
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: first-route-www.test.com
@@ -18,7 +18,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: second-route-www.test.com
@@ -36,7 +36,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   loadAssignment:
@@ -64,7 +64,7 @@
   type: STRICT_DNS
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: "192_168_1_250_8080"
