@@ -33,7 +33,7 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 	clusterName := routeName
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
-		ConnectTimeout:  durationpb.New(5 * time.Second),
+		ConnectTimeout:  durationpb.New(10 * time.Second),
 		LbPolicy:        clusterv3.Cluster_ROUND_ROBIN,
 		LoadAssignment:  &endpoint.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities},
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,

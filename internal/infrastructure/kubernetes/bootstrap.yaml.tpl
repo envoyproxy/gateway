@@ -29,7 +29,7 @@ dynamic_resources:
       set_node_on_first_message_only: true
 static_resources:
   clusters:
-  - connect_timeout: 1s
+  - connect_timeout: 10s
     load_assignment:
       cluster_name: xds_cluster
       endpoints:
