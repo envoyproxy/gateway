@@ -30,8 +30,6 @@ spec:
       labels:
         control-plane: envoy-gateway
       {{- include "eg.selectorLabels" . | nindent 8 }}
-      annotations:
-        kubectl.kubernetes.io/default-container: envoy-gateway
     spec:
       containers:
       - args:

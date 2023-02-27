@@ -16,7 +16,7 @@ eg` to see the charts.
 To install the eg chart:
 
 ``` shell
-    helm install envoy-gateway --create-namespace charts/eg
+    helm install envoy-gateway --create-namespace charts/eg -n envoy-gateway-system
 ```
 
 To uninstall the chart:
