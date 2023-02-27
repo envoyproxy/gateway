@@ -1,6 +1,6 @@
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: tcp-route-simple
@@ -23,7 +23,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: tcp-route-simple-1
@@ -46,7 +46,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: tcp-route-simple-2
@@ -69,7 +69,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: tcp-route-simple-3
@@ -92,7 +92,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: tcp-route-simple-4

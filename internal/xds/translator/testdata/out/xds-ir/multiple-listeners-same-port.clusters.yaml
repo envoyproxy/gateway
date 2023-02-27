@@ -1,6 +1,6 @@
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: first-route
@@ -18,7 +18,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: second-route
@@ -36,7 +36,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: third-route
@@ -54,7 +54,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: fourth-route
@@ -72,7 +72,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: fifth-listener
@@ -90,7 +90,7 @@
   type: STATIC
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: sixth-listener

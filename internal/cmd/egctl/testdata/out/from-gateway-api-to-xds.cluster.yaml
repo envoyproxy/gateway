@@ -5,7 +5,7 @@ dynamicActiveClusters:
     '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
     commonLbConfig:
       localityWeightedLbConfig: {}
-    connectTimeout: 5s
+    connectTimeout: 10s
     dnsLookupFamily: V4_ONLY
     loadAssignment:
       clusterName: default-backend-rule-0-match-0-www.example.com

@@ -1,6 +1,6 @@
 - commonLbConfig:
     localityWeightedLbConfig: {}
-  connectTimeout: 5s
+  connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   loadAssignment:
     clusterName: tcp-route-simple
