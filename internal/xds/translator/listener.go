@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"encoding/base64"
 	"errors"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
@@ -26,7 +27,7 @@ import (
 	udp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 
-	// grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
+	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -128,6 +129,42 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	}
 
 	mgr.HttpFilters = append([]*hcm.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
+
+	// add GrpcJSONTranscoderFilter to httpFilters
+	if irListener.GrpcJSONTranscoderFilters != nil || len(irListener.GrpcJSONTranscoderFilters) > 0 {
+		for _, filter := range irListener.GrpcJSONTranscoderFilters {
+			bytt, err := base64.StdEncoding.DecodeString(filter.ProtoDescriptorBin)
+
+			if err != nil {
+				return err
+			}
+
+			grpcJSONTranscoderAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
+				AutoMapping:       filter.AutoMapping,
+				ConvertGrpcStatus: true,
+				Services:          filter.Services,
+				PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
+					AddWhitespace:              filter.PrintOptions.AddWhitespace,
+					AlwaysPrintPrimitiveFields: filter.PrintOptions.AlwaysPrintPrimitiveFields,
+					AlwaysPrintEnumsAsInts:     filter.PrintOptions.AlwaysPrintEnumsAsInts,
+					PreserveProtoFieldNames:    filter.PrintOptions.PreserveProtoFieldNames,
+				},
+				DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
+					ProtoDescriptorBin: bytt,
+				},
+			})
+
+			if err != nil {
+				return err
+			}
+
+			grpcJSONTranscoderFilter := &hcm.HttpFilter{
+				Name:       wellknown.GRPCJSONTranscoder,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
+			}
+			mgr.HttpFilters = append([]*hcm.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
+		}
+	}
 
 	for _, route := range irListener.Routes {
 		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {

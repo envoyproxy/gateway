@@ -132,6 +132,9 @@ type HTTPListener struct {
 	IsHTTP2 bool
 	// CorsPolicy defines the schema for CORS policy.
 	CorsPolicy *CorsPolicy
+	// GrpcJSONTranscoderFilters is a list of filters that will be applied to the listener.
+	// This is used to enable gRPC-JSON transcoding.
+	GrpcJSONTranscoderFilters []*GrpcJSONTranscoderFilter
 }
 
 // Validate the fields within the HTTPListener structure
@@ -670,6 +673,23 @@ func (h UDPListener) Validate() error {
 		}
 	}
 	return errs
+}
+
+// GrpcJSONTranscoderFilter
+// +k8s:deepcopy-gen=true
+type GrpcJSONTranscoderFilter struct {
+	ProtoDescriptorBin string
+	Services           []string
+	AutoMapping        bool
+	PrintOptions       *PrintOptions
+}
+
+// +k8s:deepcopy-gen=true
+type PrintOptions struct {
+	AddWhitespace              bool
+	AlwaysPrintPrimitiveFields bool
+	AlwaysPrintEnumsAsInts     bool
+	PreserveProtoFieldNames    bool
 }
 
 // Cors

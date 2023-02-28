@@ -125,6 +125,25 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 						MaxAge:           corsGlobal.MaxAge,
 					}
 				}
+
+				if resources.GrpcJSONTranscoderFilters != nil {
+					for _, grpcJSONTranscoderFilter := range resources.GrpcJSONTranscoderFilters {
+						grpcJSONTranscoderFilterAdd := &ir.GrpcJSONTranscoderFilter{
+							ProtoDescriptorBin: grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin,
+							Services:           grpcJSONTranscoderFilter.Spec.Services,
+							AutoMapping:        grpcJSONTranscoderFilter.Spec.AutoMapping,
+							PrintOptions: &ir.PrintOptions{
+								AddWhitespace:              grpcJSONTranscoderFilter.Spec.PrintOptions.AddWhitespace,
+								AlwaysPrintPrimitiveFields: grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintPrimitiveFields,
+								AlwaysPrintEnumsAsInts:     grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintEnumsAsInts,
+								PreserveProtoFieldNames:    grpcJSONTranscoderFilter.Spec.PrintOptions.PreserveProtoFieldNames,
+							},
+						}
+						irListener.GrpcJSONTranscoderFilters = append(irListener.GrpcJSONTranscoderFilters, grpcJSONTranscoderFilterAdd)
+					}
+
+				}
+
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			}
 

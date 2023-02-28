@@ -115,16 +115,21 @@ type resourceMappings struct {
 	// corsFilters is a map of CorsFilters, where the key is the
 	// namespaced name of the CorsFilter.
 	corsFilters map[types.NamespacedName]*egv1a1.CorsFilter
+
+	// GrpcJSONTranscoderFilters is a map of GrpcJSONTranscoderFilter, where the key is the
+	// namespaced name of the GrpcJSONTranscoderFilter.
+	grpcJSONTranscoderFilters map[types.NamespacedName]*egv1a1.GrpcJSONTranscoderFilter
 }
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
-		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
-		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
-		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
-		corsFilters:              map[types.NamespacedName]*egv1a1.CorsFilter{},
+		allAssociatedNamespaces:   map[string]struct{}{},
+		allAssociatedBackendRefs:  map[types.NamespacedName]struct{}{},
+		allAssociatedRefGrants:    map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
+		authenFilters:             map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
+		rateLimitFilters:          map[types.NamespacedName]*egv1a1.RateLimitFilter{},
+		corsFilters:               map[types.NamespacedName]*egv1a1.CorsFilter{},
+		grpcJSONTranscoderFilters: map[types.NamespacedName]*egv1a1.GrpcJSONTranscoderFilter{},
 	}
 }
 
@@ -195,6 +200,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	if len(corsFilters.Items) > 0 {
 		for i := range corsFilters.Items {
 			resourceTree.CorsFilters = append(resourceTree.CorsFilters, &corsFilters.Items[i])
+		}
+	}
+
+	// add the grpcjsontranscoder filter when grpcJSONTranscoderFilters is not empty
+	if len(grpcJSONTranscoderFilters.Items) > 0 {
+		for i := range grpcJSONTranscoderFilters.Items {
+			resourceTree.GrpcJSONTranscoderFilters = append(resourceTree.GrpcJSONTranscoderFilters, &grpcJSONTranscoderFilters.Items[i])
 		}
 	}
 
