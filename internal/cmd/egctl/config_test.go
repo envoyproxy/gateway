@@ -171,7 +171,6 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			resource, err := findXDSResourceFromConfigDump(tc.resourceType, configDump)
 			assert.NoError(t, err)
 			got, err := marshalEnvoyProxyConfig(resource, tc.output)
-			t.Log("GOT:-----------------\n\n", string(got), "\n\n\n")
 			assert.NoError(t, err)
 			out, err := readOutputConfig(tc.expected)
 			assert.NoError(t, err)

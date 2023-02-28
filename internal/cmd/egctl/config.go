@@ -10,14 +10,13 @@ import (
 	"io"
 	"net/http"
 
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"k8s.io/apimachinery/pkg/types"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
-
-	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
@@ -93,33 +92,7 @@ func allConfigCmd() *cobra.Command {
 }
 
 func runAllConfig(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("pod name is required")
-	}
-
-	podName = args[0]
-
-	if podName == "" {
-		return fmt.Errorf("pod name is required")
-	}
-
-	if podNamespace == "" {
-		return fmt.Errorf("pod namespace is required")
-	}
-
-	fw, err := portForwarder(types.NamespacedName{
-		Namespace: podNamespace,
-		Name:      podName,
-	})
-	if err != nil {
-		return err
-	}
-	if err := fw.Start(); err != nil {
-		return err
-	}
-	defer fw.Stop()
-
-	configDump, err := extractConfigDump(fw)
+	configDump, err := retrieveConfigDump(args)
 	if err != nil {
 		return err
 	}
@@ -136,9 +109,10 @@ func runAllConfig(c *cobra.Command, args []string) error {
 func bootstrapConfigCmd() *cobra.Command {
 
 	configCmd := &cobra.Command{
-		Use:   "bootstrap <pod-name>",
-		Short: "Retrieves bootstrap Envoy xDS resources from the specified pod",
-		Long:  `Retrieves information about bootstrap Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Use:     "bootstrap <pod-name>",
+		Aliases: []string{"b"},
+		Short:   "Retrieves bootstrap Envoy xDS resources from the specified pod",
+		Long:    `Retrieves information about bootstrap Envoy xDS resources from the Envoy instance in the specified pod.`,
 		Example: `  # Retrieve summary about bootstrap configuration for a given pod from Envoy.
   egctl config envoy-proxy bootstrap <pod-name> -n <pod-namespace>
 
@@ -146,7 +120,7 @@ func bootstrapConfigCmd() *cobra.Command {
   egctl config envoy-proxy bootstrap <pod-name> -n <pod-namespace> -o yaml
 
   # Retrieve full configuration dump with short syntax
-  egctl c proxy bootstrap <pod-name> -n <pod-namespace>
+  egctl c proxy b <pod-name> -n <pod-namespace>
 `,
 		Run: func(c *cobra.Command, args []string) {
 			cmdutil.CheckErr(runBootstrapConfig(c, args))
@@ -157,33 +131,7 @@ func bootstrapConfigCmd() *cobra.Command {
 }
 
 func runBootstrapConfig(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("pod name is required")
-	}
-
-	podName = args[0]
-
-	if podName == "" {
-		return fmt.Errorf("pod name is required")
-	}
-
-	if podNamespace == "" {
-		return fmt.Errorf("pod namespace is required")
-	}
-
-	fw, err := portForwarder(types.NamespacedName{
-		Namespace: podNamespace,
-		Name:      podName,
-	})
-	if err != nil {
-		return err
-	}
-	if err := fw.Start(); err != nil {
-		return err
-	}
-	defer fw.Stop()
-
-	configDump, err := extractConfigDump(fw)
+	configDump, err := retrieveConfigDump(args)
 	if err != nil {
 		return err
 	}
@@ -205,9 +153,10 @@ func runBootstrapConfig(c *cobra.Command, args []string) error {
 func clusterConfigCmd() *cobra.Command {
 
 	configCmd := &cobra.Command{
-		Use:   "cluster <pod-name>",
-		Short: "Retrieves cluster Envoy xDS resources from the specified pod",
-		Long:  `Retrieves information about cluster Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Use:     "cluster <pod-name>",
+		Short:   "Retrieves cluster Envoy xDS resources from the specified pod",
+		Aliases: []string{"c"},
+		Long:    `Retrieves information about cluster Envoy xDS resources from the Envoy instance in the specified pod.`,
 		Example: `  # Retrieve summary about cluster configuration for a given pod from Envoy.
   egctl config envoy-proxy cluster <pod-name> -n <pod-namespace>
 
@@ -215,7 +164,7 @@ func clusterConfigCmd() *cobra.Command {
   egctl config envoy-proxy cluster <pod-name> -n <pod-namespace> -o yaml
 
   # Retrieve full configuration dump with short syntax
-  egctl c proxy cluster <pod-name> -n <pod-namespace>
+  egctl c proxy c <pod-name> -n <pod-namespace>
 `,
 		Run: func(c *cobra.Command, args []string) {
 			cmdutil.CheckErr(runClusterConfig(c, args))
@@ -226,33 +175,7 @@ func clusterConfigCmd() *cobra.Command {
 }
 
 func runClusterConfig(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("pod name is required")
-	}
-
-	podName = args[0]
-
-	if podName == "" {
-		return fmt.Errorf("pod name is required")
-	}
-
-	if podNamespace == "" {
-		return fmt.Errorf("pod namespace is required")
-	}
-
-	fw, err := portForwarder(types.NamespacedName{
-		Namespace: podNamespace,
-		Name:      podName,
-	})
-	if err != nil {
-		return err
-	}
-	if err := fw.Start(); err != nil {
-		return err
-	}
-	defer fw.Stop()
-
-	configDump, err := extractConfigDump(fw)
+	configDump, err := retrieveConfigDump(args)
 	if err != nil {
 		return err
 	}
@@ -274,9 +197,10 @@ func runClusterConfig(c *cobra.Command, args []string) error {
 func listenerConfigCmd() *cobra.Command {
 
 	configCmd := &cobra.Command{
-		Use:   "listener <pod-name>",
-		Short: "Retrieves listener Envoy xDS resources from the specified pod",
-		Long:  `Retrieves information about listener Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Use:     "listener <pod-name>",
+		Aliases: []string{"l"},
+		Short:   "Retrieves listener Envoy xDS resources from the specified pod",
+		Long:    `Retrieves information about listener Envoy xDS resources from the Envoy instance in the specified pod.`,
 		Example: `  # Retrieve summary about listener configuration for a given pod from Envoy.
   egctl config envoy-proxy listener <pod-name> -n <pod-namespace>
 
@@ -284,7 +208,7 @@ func listenerConfigCmd() *cobra.Command {
   egctl config envoy-proxy listener <pod-name> -n <pod-namespace> -o yaml
 
   # Retrieve full configuration dump with short syntax
-  egctl c proxy listener <pod-name> -n <pod-namespace>
+  egctl c proxy l <pod-name> -n <pod-namespace>
 `,
 		Run: func(c *cobra.Command, args []string) {
 			cmdutil.CheckErr(runListenerConfig(c, args))
@@ -295,33 +219,7 @@ func listenerConfigCmd() *cobra.Command {
 }
 
 func runListenerConfig(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("pod name is required")
-	}
-
-	podName = args[0]
-
-	if podName == "" {
-		return fmt.Errorf("pod name is required")
-	}
-
-	if podNamespace == "" {
-		return fmt.Errorf("pod namespace is required")
-	}
-
-	fw, err := portForwarder(types.NamespacedName{
-		Namespace: podNamespace,
-		Name:      podName,
-	})
-	if err != nil {
-		return err
-	}
-	if err := fw.Start(); err != nil {
-		return err
-	}
-	defer fw.Stop()
-
-	configDump, err := extractConfigDump(fw)
+	configDump, err := retrieveConfigDump(args)
 	if err != nil {
 		return err
 	}
@@ -343,9 +241,10 @@ func runListenerConfig(c *cobra.Command, args []string) error {
 func routeConfigCmd() *cobra.Command {
 
 	configCmd := &cobra.Command{
-		Use:   "route <pod-name>",
-		Short: "Retrieves route Envoy xDS resources from the specified pod",
-		Long:  `Retrieves information about route Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Use:     "route <pod-name>",
+		Aliases: []string{"r"},
+		Short:   "Retrieves route Envoy xDS resources from the specified pod",
+		Long:    `Retrieves information about route Envoy xDS resources from the Envoy instance in the specified pod.`,
 		Example: `  # Retrieve summary about route configuration for a given pod from Envoy.
   egctl config envoy-proxy route <pod-name> -n <pod-namespace>
 
@@ -353,7 +252,7 @@ func routeConfigCmd() *cobra.Command {
   egctl config envoy-proxy route <pod-name> -n <pod-namespace> -o yaml
 
   # Retrieve full configuration dump with short syntax
-  egctl c proxy route <pod-name> -n <pod-namespace>
+  egctl c proxy r <pod-name> -n <pod-namespace>
 `,
 		Run: func(c *cobra.Command, args []string) {
 			cmdutil.CheckErr(runRouteConfig(c, args))
@@ -364,33 +263,7 @@ func routeConfigCmd() *cobra.Command {
 }
 
 func runRouteConfig(c *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("pod name is required")
-	}
-
-	podName = args[0]
-
-	if podName == "" {
-		return fmt.Errorf("pod name is required")
-	}
-
-	if podNamespace == "" {
-		return fmt.Errorf("pod namespace is required")
-	}
-
-	fw, err := portForwarder(types.NamespacedName{
-		Namespace: podNamespace,
-		Name:      podName,
-	})
-	if err != nil {
-		return err
-	}
-	if err := fw.Start(); err != nil {
-		return err
-	}
-	defer fw.Stop()
-
-	configDump, err := extractConfigDump(fw)
+	configDump, err := retrieveConfigDump(args)
 	if err != nil {
 		return err
 	}
@@ -407,6 +280,41 @@ func runRouteConfig(c *cobra.Command, args []string) error {
 
 	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
 	return err
+}
+
+func retrieveConfigDump(args []string) (*adminv3.ConfigDump, error) {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("pod name is required")
+	}
+
+	podName = args[0]
+
+	if podName == "" {
+		return nil, fmt.Errorf("pod name is required")
+	}
+
+	if podNamespace == "" {
+		return nil, fmt.Errorf("pod namespace is required")
+	}
+
+	fw, err := portForwarder(types.NamespacedName{
+		Namespace: podNamespace,
+		Name:      podName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := fw.Start(); err != nil {
+		return nil, err
+	}
+	defer fw.Stop()
+
+	configDump, err := extractConfigDump(fw)
+	if err != nil {
+		return nil, err
+	}
+
+	return configDump, nil
 }
 
 func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
