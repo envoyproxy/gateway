@@ -1,0 +1,172 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: accessloggingpolicies.gateway.envoyproxy.io
+spec:
+  group: gateway.envoyproxy.io
+  names:
+    kind: AccessLoggingPolicy
+    listKind: AccessLoggingPolicyList
+    plural: accessloggingpolicies
+    singular: accessloggingpolicy
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AccessLoggingPolicy allows the user to configure AccessLogging
+          for Listener.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of AccessLoggingPolicy.
+            properties:
+              filters:
+                items:
+                  properties:
+                    expression:
+                      description: "Expression is a valid CEL expression for selecting
+                        when requests/connections should be logged. \n Examples: ```
+                        response.code >= 400 request.url_path.contains('v1beta3')
+                        ```"
+                      type: string
+                  required:
+                  - expression
+                  type: object
+                type: array
+              json:
+                description: Json defines structured json based access logs.
+                properties:
+                  fields:
+                    additionalProperties:
+                      type: string
+                    description: Fields is additional attributes that describe the
+                      specific event occurrence. Structured format for the envoy access
+                      logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                      can be used as values for fields within the Struct.
+                    type: object
+                  path:
+                    description: Path defines the file path used to expose envoy access
+                      log(e.g. /dev/stdout). Empty value disables access logging.
+                    type: string
+                required:
+                - fields
+                - path
+                type: object
+              otel:
+                description: Otel defines configuration for OpenTelemetry log provider.
+                properties:
+                  fields:
+                    additionalProperties:
+                      type: string
+                    description: "Fields is additional attributes that describe the
+                      specific event occurrence. Structured format for the envoy access
+                      logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                      can be used as values for fields within the Struct. Alias to
+                      `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+                      \n Example: ``` fields: \n status: \"%RESPONSE_CODE%\" message:
+                      \"%LOCAL_REPLY_BODY%\" \n ```"
+                    type: object
+                  logName:
+                    description: LogName is the friendly name of the access log, empty
+                      value results in default `otel_envoy_accesslog`.
+                    type: string
+                  port:
+                    description: Port specifies the port of the service.
+                    format: int32
+                    type: integer
+                  resources:
+                    additionalProperties:
+                      type: string
+                    description: "Resources is a set of labels that describe the source
+                      of a log entry, including envoy node info. It's recommended
+                      to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+                      \n Example: ``` resources: \n k8s.cluster.name: \"cluster-xxxx\"
+                      \n ```"
+                    type: object
+                  service:
+                    description: "Service specifies the service that implements the
+                      Envoy ALS gRPC authorization service. \n Example: \"otel-collector.monitoring.svc.cluster.local\"."
+                    type: string
+                  text:
+                    description: "Text is the format for the proxy access log, following
+                      Envoy access logging formatting, empty value results in proxy's
+                      default access log format. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                      may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
+                      provides more information. Alias to `body` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+                      \n Example: `text: \"%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%\"`"
+                    type: string
+                type: object
+              targetRef:
+                description: TargetRef identifies an API object to apply policy to.
+                properties:
+                  group:
+                    description: Group is the group of the target resource.
+                    maxLength: 253
+                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  kind:
+                    description: Kind is kind of the target resource.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                    type: string
+                  name:
+                    description: Name is the name of the target resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the referent. When
+                      unspecified, the local namespace is inferred. Even when policy
+                      targets a resource in a different namespace, it MUST only apply
+                      to traffic originating from the same namespace as the policy.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                required:
+                - group
+                - kind
+                - name
+                type: object
+              text:
+                description: Text defines text based access logs.
+                properties:
+                  format:
+                    description: Format is the format for the proxy access log, following
+                      Envoy access logging formatting, empty value results in proxy's
+                      default access log format. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                      may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
+                      provides more information.
+                    type: string
+                  path:
+                    description: Path defines the file path used to expose envoy access
+                      log(e.g. /dev/stdout). Empty value disables access logging.
+                    type: string
+                required:
+                - path
+                type: object
+            required:
+            - targetRef
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
