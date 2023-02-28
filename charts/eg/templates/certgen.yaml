@@ -4,6 +4,8 @@ metadata:
   name: {{ include "eg.fullname" . }}-certgen
   labels:
   {{- include "eg.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install
 spec:
   backoffLimit: 1
   completions: 1
