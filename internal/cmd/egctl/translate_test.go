@@ -104,7 +104,7 @@ func TestTranslate(t *testing.T) {
 				"--to",
 				tc.to,
 				"--file",
-				"testdata/in/" + tc.name + ".yaml",
+				"testdata/translate/in/" + tc.name + ".yaml",
 			}
 
 			if tc.output == yamlOutput {
@@ -143,7 +143,7 @@ func TestTranslate(t *testing.T) {
 
 func requireTestDataOutFile(t *testing.T, name ...string) string {
 	t.Helper()
-	elems := append([]string{"testdata", "out"}, name...)
+	elems := append([]string{"testdata", "translate", "out"}, name...)
 	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return string(content)

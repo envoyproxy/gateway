@@ -98,16 +98,6 @@ func getValidOutputTypesStr() string {
 	return fmt.Sprintf("Valid types are %v.", validOutputTypes())
 }
 
-type envoyConfigType string
-
-var (
-	BootstrapEnvoyConfigType envoyConfigType = "bootstrap"
-	ClusterEnvoyConfigType   envoyConfigType = "cluster"
-	ListenerEnvoyConfigType  envoyConfigType = "listener"
-	RouteEnvoyConfigType     envoyConfigType = "route"
-	AllEnvoyConfigType       envoyConfigType = "all"
-)
-
 func validResourceTypes() []envoyConfigType {
 	return []envoyConfigType{BootstrapEnvoyConfigType,
 		ClusterEnvoyConfigType,
@@ -227,50 +217,21 @@ func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, out
 	var (
 		out, data []byte
 	)
-	switch resourceType {
-	case AllEnvoyConfigType:
+
+	if resourceType == AllEnvoyConfigType {
 		data, err = protojson.Marshal(globalConfigs)
 		if err != nil {
 			return err
 		}
-	case BootstrapEnvoyConfigType:
-		for _, config := range globalConfigs.Configs {
-			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.BootstrapConfigDump" {
-				data, err = protojson.Marshal(config)
-				if err != nil {
-					return err
-				}
-			}
+	} else {
+		config, err := findXDSResourceFromConfigDump(resourceType, globalConfigs)
+		if err != nil {
+			return err
 		}
-	case ClusterEnvoyConfigType:
-		for _, config := range globalConfigs.Configs {
-			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.ClustersConfigDump" {
-				data, err = protojson.Marshal(config)
-				if err != nil {
-					return err
-				}
-			}
+		data, err = protojson.Marshal(config)
+		if err != nil {
+			return err
 		}
-	case ListenerEnvoyConfigType:
-		for _, config := range globalConfigs.Configs {
-			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.ListenersConfigDump" {
-				data, err = protojson.Marshal(config)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	case RouteEnvoyConfigType:
-		for _, config := range globalConfigs.Configs {
-			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.RoutesConfigDump" {
-				data, err = protojson.Marshal(config)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	default:
-		return fmt.Errorf("unknown resourceType %s", resourceType)
 	}
 
 	wrapper := map[string]any{}

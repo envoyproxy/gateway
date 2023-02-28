@@ -10,7 +10,10 @@ import (
 	"io"
 	"net/http"
 
+	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"k8s.io/apimachinery/pkg/types"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
@@ -44,7 +47,7 @@ func NewConfigCommand() *cobra.Command {
 	options.AddKubeConfigFlags(flags)
 
 	cfgCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
-	cfgCommand.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway", "Namespace where envoy proxy pod are installed.")
+	cfgCommand.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
 
 	return cfgCommand
 }
@@ -57,13 +60,17 @@ func proxyCommand() *cobra.Command {
 	}
 
 	c.AddCommand(allConfigCmd())
+	c.AddCommand(bootstrapConfigCmd())
+	c.AddCommand(clusterConfigCmd())
+	c.AddCommand(listenerConfigCmd())
+	c.AddCommand(routeConfigCmd())
 
 	return c
 }
 
 func allConfigCmd() *cobra.Command {
 
-	allConfigCmd := &cobra.Command{
+	configCmd := &cobra.Command{
 		Use:   "all <pod-name>",
 		Short: "Retrieves all Envoy xDS resources from the specified pod",
 		Long:  `Retrieves information about all Envoy xDS resources from the Envoy instance in the specified pod.`,
@@ -81,22 +88,213 @@ func allConfigCmd() *cobra.Command {
 		},
 	}
 
-	return allConfigCmd
+	return configCmd
 }
 
 func runAllConfig(c *cobra.Command, args []string) error {
+	configDump, err := retrieveConfigDump(args)
+	if err != nil {
+		return err
+	}
+
+	out, err := marshalEnvoyProxyConfig(configDump, output)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
+	return err
+}
+
+func bootstrapConfigCmd() *cobra.Command {
+
+	configCmd := &cobra.Command{
+		Use:     "bootstrap <pod-name>",
+		Aliases: []string{"b"},
+		Short:   "Retrieves bootstrap Envoy xDS resources from the specified pod",
+		Long:    `Retrieves information about bootstrap Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Example: `  # Retrieve summary about bootstrap configuration for a given pod from Envoy.
+  egctl config envoy-proxy bootstrap <pod-name> -n <pod-namespace>
+
+  # Retrieve full configuration dump as YAML
+  egctl config envoy-proxy bootstrap <pod-name> -n <pod-namespace> -o yaml
+
+  # Retrieve full configuration dump with short syntax
+  egctl c proxy b <pod-name> -n <pod-namespace>
+`,
+		Run: func(c *cobra.Command, args []string) {
+			cmdutil.CheckErr(runBootstrapConfig(c, args))
+		},
+	}
+
+	return configCmd
+}
+
+func runBootstrapConfig(c *cobra.Command, args []string) error {
+	configDump, err := retrieveConfigDump(args)
+	if err != nil {
+		return err
+	}
+
+	bootstrap, err := findXDSResourceFromConfigDump(BootstrapEnvoyConfigType, configDump)
+	if err != nil {
+		return err
+	}
+
+	out, err := marshalEnvoyProxyConfig(bootstrap, output)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
+	return err
+}
+
+func clusterConfigCmd() *cobra.Command {
+
+	configCmd := &cobra.Command{
+		Use:     "cluster <pod-name>",
+		Short:   "Retrieves cluster Envoy xDS resources from the specified pod",
+		Aliases: []string{"c"},
+		Long:    `Retrieves information about cluster Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Example: `  # Retrieve summary about cluster configuration for a given pod from Envoy.
+  egctl config envoy-proxy cluster <pod-name> -n <pod-namespace>
+
+  # Retrieve full configuration dump as YAML
+  egctl config envoy-proxy cluster <pod-name> -n <pod-namespace> -o yaml
+
+  # Retrieve full configuration dump with short syntax
+  egctl c proxy c <pod-name> -n <pod-namespace>
+`,
+		Run: func(c *cobra.Command, args []string) {
+			cmdutil.CheckErr(runClusterConfig(c, args))
+		},
+	}
+
+	return configCmd
+}
+
+func runClusterConfig(c *cobra.Command, args []string) error {
+	configDump, err := retrieveConfigDump(args)
+	if err != nil {
+		return err
+	}
+
+	cluster, err := findXDSResourceFromConfigDump(ClusterEnvoyConfigType, configDump)
+	if err != nil {
+		return err
+	}
+
+	out, err := marshalEnvoyProxyConfig(cluster, output)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
+	return err
+}
+
+func listenerConfigCmd() *cobra.Command {
+
+	configCmd := &cobra.Command{
+		Use:     "listener <pod-name>",
+		Aliases: []string{"l"},
+		Short:   "Retrieves listener Envoy xDS resources from the specified pod",
+		Long:    `Retrieves information about listener Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Example: `  # Retrieve summary about listener configuration for a given pod from Envoy.
+  egctl config envoy-proxy listener <pod-name> -n <pod-namespace>
+
+  # Retrieve full configuration dump as YAML
+  egctl config envoy-proxy listener <pod-name> -n <pod-namespace> -o yaml
+
+  # Retrieve full configuration dump with short syntax
+  egctl c proxy l <pod-name> -n <pod-namespace>
+`,
+		Run: func(c *cobra.Command, args []string) {
+			cmdutil.CheckErr(runListenerConfig(c, args))
+		},
+	}
+
+	return configCmd
+}
+
+func runListenerConfig(c *cobra.Command, args []string) error {
+	configDump, err := retrieveConfigDump(args)
+	if err != nil {
+		return err
+	}
+
+	listener, err := findXDSResourceFromConfigDump(ListenerEnvoyConfigType, configDump)
+	if err != nil {
+		return err
+	}
+
+	out, err := marshalEnvoyProxyConfig(listener, output)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
+	return err
+}
+
+func routeConfigCmd() *cobra.Command {
+
+	configCmd := &cobra.Command{
+		Use:     "route <pod-name>",
+		Aliases: []string{"r"},
+		Short:   "Retrieves route Envoy xDS resources from the specified pod",
+		Long:    `Retrieves information about route Envoy xDS resources from the Envoy instance in the specified pod.`,
+		Example: `  # Retrieve summary about route configuration for a given pod from Envoy.
+  egctl config envoy-proxy route <pod-name> -n <pod-namespace>
+
+  # Retrieve full configuration dump as YAML
+  egctl config envoy-proxy route <pod-name> -n <pod-namespace> -o yaml
+
+  # Retrieve full configuration dump with short syntax
+  egctl c proxy r <pod-name> -n <pod-namespace>
+`,
+		Run: func(c *cobra.Command, args []string) {
+			cmdutil.CheckErr(runRouteConfig(c, args))
+		},
+	}
+
+	return configCmd
+}
+
+func runRouteConfig(c *cobra.Command, args []string) error {
+	configDump, err := retrieveConfigDump(args)
+	if err != nil {
+		return err
+	}
+
+	route, err := findXDSResourceFromConfigDump(RouteEnvoyConfigType, configDump)
+	if err != nil {
+		return err
+	}
+
+	out, err := marshalEnvoyProxyConfig(route, output)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
+	return err
+}
+
+func retrieveConfigDump(args []string) (*adminv3.ConfigDump, error) {
 	if len(args) == 0 {
-		return fmt.Errorf("pod name is required")
+		return nil, fmt.Errorf("pod name is required")
 	}
 
 	podName = args[0]
 
 	if podName == "" {
-		return fmt.Errorf("pod name is required")
+		return nil, fmt.Errorf("pod name is required")
 	}
 
 	if podNamespace == "" {
-		return fmt.Errorf("pod namespace is required")
+		return nil, fmt.Errorf("pod namespace is required")
 	}
 
 	fw, err := portForwarder(types.NamespacedName{
@@ -104,20 +302,19 @@ func runAllConfig(c *cobra.Command, args []string) error {
 		Name:      podName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := fw.Start(); err != nil {
-		return err
+		return nil, err
 	}
 	defer fw.Stop()
 
-	out, err := extractConfigDump(fw, output)
+	configDump, err := extractConfigDump(fw)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
-	return err
+	return configDump, nil
 }
 
 func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
@@ -142,8 +339,11 @@ func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
 	return fw, nil
 }
 
-func extractConfigDump(fw kube.PortForwarder, output string) ([]byte, error) {
-	out, err := configDumpRequest(fw.Address())
+func marshalEnvoyProxyConfig(configDump protoreflect.ProtoMessage, output string) ([]byte, error) {
+
+	out, err := protojson.MarshalOptions{
+		Multiline: true,
+	}.Marshal(configDump)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +356,20 @@ func extractConfigDump(fw kube.PortForwarder, output string) ([]byte, error) {
 	}
 
 	return out, nil
+}
+
+func extractConfigDump(fw kube.PortForwarder) (*adminv3.ConfigDump, error) {
+	out, err := configDumpRequest(fw.Address())
+	if err != nil {
+		return nil, err
+	}
+
+	configDump := &adminv3.ConfigDump{}
+	if err := protojson.Unmarshal(out, configDump); err != nil {
+		return nil, err
+	}
+
+	return configDump, nil
 }
 
 func configDumpRequest(address string) ([]byte, error) {
