@@ -449,9 +449,14 @@ spec:
               conditions:
               - lastTransitionTime: "1970-01-01T00:00:00Z"
                 message: Waiting for controller
-                reason: NotReconciled
+                reason: Pending
                 status: Unknown
                 type: Accepted
+              - lastTransitionTime: "1970-01-01T00:00:00Z"
+                message: Waiting for controller
+                reason: Pending
+                status: Unknown
+                type: Programmed
             description: Status defines the current state of Gateway.
             properties:
               addresses:
@@ -1123,9 +1128,14 @@ spec:
               conditions:
               - lastTransitionTime: "1970-01-01T00:00:00Z"
                 message: Waiting for controller
-                reason: NotReconciled
+                reason: Pending
                 status: Unknown
                 type: Accepted
+              - lastTransitionTime: "1970-01-01T00:00:00Z"
+                message: Waiting for controller
+                reason: Pending
+                status: Unknown
+                type: Programmed
             description: Status defines the current state of Gateway.
             properties:
               addresses:
