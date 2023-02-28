@@ -7,11 +7,7 @@ package kubernetes
 
 import (
 	"context"
-	// Register embed
-	_ "embed"
 	"fmt"
-	"strings"
-	"text/template"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
-	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 const (
@@ -33,94 +29,11 @@ const (
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
-	// envoyCfgFileName is the name of the Envoy configuration file.
-	envoyCfgFileName = "bootstrap.yaml"
 	// envoyHTTPPort is the container port number of Envoy's HTTP endpoint.
 	envoyHTTPPort = int32(8080)
 	// envoyHTTPSPort is the container port number of Envoy's HTTPS endpoint.
 	envoyHTTPSPort = int32(8443)
-	// envoyGatewayXdsServerHost is the DNS name of the Xds Server within Envoy Gateway.
-	// It defaults to the Envoy Gateway Kubernetes service.
-	envoyGatewayXdsServerHost = "envoy-gateway"
-	// envoyAdminAddress is the listening address of the envoy admin interface.
-	envoyAdminAddress = "127.0.0.1"
-	// envoyAdminPort is the port used to expose admin interface.
-	envoyAdminPort = 19000
-	// envoyAdminAccessLogPath is the path used to expose admin access log.
-	envoyAdminAccessLogPath = "/dev/null"
 )
-
-//go:embed bootstrap.yaml.tpl
-var bootstrapTmplStr string
-
-var bootstrapTmpl = template.Must(template.New(envoyCfgFileName).Parse(bootstrapTmplStr))
-
-// envoyBootstrap defines the envoy Bootstrap configuration.
-type bootstrapConfig struct {
-	// parameters defines configurable bootstrap configuration parameters.
-	parameters bootstrapParameters
-	// rendered is the rendered bootstrap configuration.
-	rendered string
-}
-
-// envoyBootstrap defines the envoy Bootstrap configuration.
-type bootstrapParameters struct {
-	// XdsServer defines the configuration of the XDS server.
-	XdsServer xdsServerParameters
-	// AdminServer defines the configuration of the Envoy admin interface.
-	AdminServer adminServerParameters
-}
-
-type xdsServerParameters struct {
-	// Address is the address of the XDS Server that Envoy is managed by.
-	Address string
-	// Port is the port of the XDS Server that Envoy is managed by.
-	Port int32
-}
-
-type adminServerParameters struct {
-	// Address is the address of the Envoy admin interface.
-	Address string
-	// Port is the port of the Envoy admin interface.
-	Port int32
-	// AccessLogPath is the path of the Envoy admin access log.
-	AccessLogPath string
-}
-
-// render the stringified bootstrap config in yaml format.
-func (b *bootstrapConfig) render() error {
-	buf := new(strings.Builder)
-	if err := bootstrapTmpl.Execute(buf, b.parameters); err != nil {
-		return fmt.Errorf("failed to render bootstrap config: %v", err)
-	}
-	b.rendered = buf.String()
-
-	return nil
-}
-
-// GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig() (string, error) {
-
-	cfg := &bootstrapConfig{
-		parameters: bootstrapParameters{
-			XdsServer: xdsServerParameters{
-				Address: envoyGatewayXdsServerHost,
-				Port:    xdsrunner.XdsServerPort,
-			},
-			AdminServer: adminServerParameters{
-				Address:       envoyAdminAddress,
-				Port:          envoyAdminPort,
-				AccessLogPath: envoyAdminAccessLogPath,
-			},
-		},
-	}
-
-	if err := cfg.render(); err != nil {
-		return "", err
-	}
-
-	return cfg.rendered, nil
-}
 
 func expectedProxyDeploymentName(proxyName string) string {
 	deploymentName := utils.GetHashedName(proxyName)
@@ -227,7 +140,7 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
-	cfg, err := GetRenderedBootstrapConfig()
+	cfg, err := bootstrap.GetRenderedBootstrapConfig()
 	if err != nil {
 		return nil, err
 	}

@@ -23,7 +23,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-	xdsrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 func checkEnvVar(t *testing.T, deploy *appsv1.Deployment, container, name string) {
@@ -131,22 +131,9 @@ func TestExpectedProxyDeployment(t *testing.T) {
 	checkLabels(t, deploy, deploy.Labels)
 
 	// Create a bootstrap config, render it into an arg, and ensure it's as expected.
-	cfg := &bootstrapConfig{
-		parameters: bootstrapParameters{
-			XdsServer: xdsServerParameters{
-				Address: envoyGatewayXdsServerHost,
-				Port:    xdsrunner.XdsServerPort,
-			},
-			AdminServer: adminServerParameters{
-				Address:       envoyAdminAddress,
-				Port:          envoyAdminPort,
-				AccessLogPath: envoyAdminAccessLogPath,
-			},
-		},
-	}
-	err = cfg.render()
+	bstrap, err := bootstrap.GetRenderedBootstrapConfig()
 	require.NoError(t, err)
-	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", cfg.rendered))
+	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", bstrap))
 
 	// Check container ports for the deployment are as expected.
 	ports := []int32{envoyHTTPPort, envoyHTTPSPort}
