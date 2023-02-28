@@ -142,6 +142,12 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, fmt.Errorf("error listing corsfilters: %v", err)
 	}
 
+	// get all the grpcjsontranscoderfilter
+	var grpcJSONTranscoderFilters egv1a1.GrpcJSONTranscoderFilterList
+	if err := r.client.List(ctx, &grpcJSONTranscoderFilters); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing grpcjsontranscoderfilters: %v", err)
+	}
+
 	// TODO: add a check to see if the global cors is valid
 
 	var cc controlledClasses
@@ -1201,6 +1207,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 	if err := addGatewayIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
+	// Watch GrpcJSONTranscoderFilter CRUDs and reconcile affected HttpFilter.
+	if err := c.Watch(
+		&source.Kind{Type: &egv1a1.GrpcJSONTranscoderFilter{}},
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
 		return err
 	}
 
