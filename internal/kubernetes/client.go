@@ -29,6 +29,9 @@ type CLIClient interface {
 	// RESTConfig returns the Kubernetes rest.Config used to configure the clients.
 	RESTConfig() *rest.Config
 
+	// Pod returns the pod for the given namespaced name.
+	Pod(namespacedName types.NamespacedName) (*corev1.Pod, error)
+
 	// PodsForSelector finds pods matching selector.
 	PodsForSelector(namespace string, labelSelectors ...string) (*corev1.PodList, error)
 
@@ -109,6 +112,10 @@ func (c *client) PodsForSelector(namespace string, podSelectors ...string) (*cor
 	return c.kube.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: strings.Join(podSelectors, ","),
 	})
+}
+
+func (c *client) Pod(namespacedName types.NamespacedName) (*corev1.Pod, error) {
+	return c.kube.CoreV1().Pods(namespacedName.Namespace).Get(context.TODO(), namespacedName.Name, metav1.GetOptions{})
 }
 
 func (c *client) PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error) {
