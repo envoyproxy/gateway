@@ -6,7 +6,9 @@
 package translator
 
 import (
+	"encoding/base64"
 	"errors"
+	"fmt"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -25,6 +27,8 @@ import (
 	tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+
+	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -126,6 +130,58 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	}
 
 	mgr.HttpFilters = append([]*hcm.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
+
+	// mgr.HttpFilters = append([]*hcm.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
+
+	// convert base64 as bellow to []byte
+	// CtgECg1hcGkveWluLnByb3RvEgN5aW4iHAoKR2V0UmVxdWVzdBIOCgJpZBgBIAEoA1ICaWQiKQoIR2V0UmVwbHkSHQoEaXRlbRgBIAEoCzIJLnlpbi5JdGVtUgRpdGVtIhwKBEl0ZW0SFAoFYnl0ZXMYASABKAlSBWJ5dGVzMi4KA1lpbhInCgNHZXQSDy55aW4uR2V0UmVxdWVzdBoNLnlpbi5HZXRSZXBseSIAQjNaMWdpdGh1Yi5jb20vR2VvQ29tcGx5L21vbm9yZXBvL2djaS95aW4vcGtnL2FwaTt5aW5K7QIKBhIEAAATAQoICgEMEgMAABIKCAoBAhIDAgAMCggKAQgSAwQASAoJCgIICxIDBABICgoKAgYAEgQGAAgBCgoKAwYAARIDBggLCgsKBAYAAgASAwcCKwoMCgUGAAIAARIDBwYJCgwKBQYAAgACEgMHChQKDAoFBgACAAMSAwcfJwoKCgIEABIECgAMAQoKCgMEAAESAwoIEgoLCgQEAAIAEgMLAg8KDAoFBAACAAUSAwsCBwoMCgUEAAIAARIDCwgKCgwKBQQAAgADEgMLDQ4KCgoCBAESBA0ADwEKCgoDBAEBEgMNCBAKCwoEBAECABIDDgIQCgwKBQQBAgAGEgMOAgYKDAoFBAECAAESAw4HCwoMCgUEAQIAAxIDDg4PCgoKAgQCEgQRABMBCgoKAwQCARIDEQgMCgsKBAQCAgASAxICEwoMCgUEAgIABRIDEgIICgwKBQQCAgABEgMSCQ4KDAoFBAICAAMSAxIREmIGcHJvdG8z
+	by := "CtgECg1hcGkveWluLnByb3RvEgN5aW4iHAoKR2V0UmVxdWVzdBIOCgJpZBgBIAEoA1ICaWQiKQoIR2V0UmVwbHkSHQoEaXRlbRgBIAEoCzIJLnlpbi5JdGVtUgRpdGVtIhwKBEl0ZW0SFAoFYnl0ZXMYASABKAlSBWJ5dGVzMi4KA1lpbhInCgNHZXQSDy55aW4uR2V0UmVxdWVzdBoNLnlpbi5HZXRSZXBseSIAQjNaMWdpdGh1Yi5jb20vR2VvQ29tcGx5L21vbm9yZXBvL2djaS95aW4vcGtnL2FwaTt5aW5K7QIKBhIEAAATAQoICgEMEgMAABIKCAoBAhIDAgAMCggKAQgSAwQASAoJCgIICxIDBABICgoKAgYAEgQGAAgBCgoKAwYAARIDBggLCgsKBAYAAgASAwcCKwoMCgUGAAIAARIDBwYJCgwKBQYAAgACEgMHChQKDAoFBgACAAMSAwcfJwoKCgIEABIECgAMAQoKCgMEAAESAwoIEgoLCgQEAAIAEgMLAg8KDAoFBAACAAUSAwsCBwoMCgUEAAIAARIDCwgKCgwKBQQAAgADEgMLDQ4KCgoCBAESBA0ADwEKCgoDBAEBEgMNCBAKCwoEBAECABIDDgIQCgwKBQQBAgAGEgMOAgYKDAoFBAECAAESAw4HCwoMCgUEAQIAAxIDDg4PCgoKAgQCEgQRABMBCgoKAwQCARIDEQgMCgsKBAQCAgASAxICEwoMCgUEAgIABRIDEgIICgwKBQQCAgABEgMSCQ4KDAoFBAICAAMSAxIREmIGcHJvdG8z"
+
+	bytt, err := base64.StdEncoding.DecodeString(by)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(bytt)
+
+	// add GrpcJsonTranscoder as default
+	// add as bellow
+	// "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
+	// 	proto_descriptor_bin: "CtgECg1hcGkveWluLnByb3RvEgN5aW4iHAoKR2V0UmVxdWVzdBIOCgJpZBgBIAEoA1ICaWQiKQoIR2V0UmVwbHkSHQoEaXRlbRgBIAEoCzIJLnlpbi5JdGVtUgRpdGVtIhwKBEl0ZW0SFAoFYnl0ZXMYASABKAlSBWJ5dGVzMi4KA1lpbhInCgNHZXQSDy55aW4uR2V0UmVxdWVzdBoNLnlpbi5HZXRSZXBseSIAQjNaMWdpdGh1Yi5jb20vR2VvQ29tcGx5L21vbm9yZXBvL2djaS95aW4vcGtnL2FwaTt5aW5K7QIKBhIEAAATAQoICgEMEgMAABIKCAoBAhIDAgAMCggKAQgSAwQASAoJCgIICxIDBABICgoKAgYAEgQGAAgBCgoKAwYAARIDBggLCgsKBAYAAgASAwcCKwoMCgUGAAIAARIDBwYJCgwKBQYAAgACEgMHChQKDAoFBgACAAMSAwcfJwoKCgIEABIECgAMAQoKCgMEAAESAwoIEgoLCgQEAAIAEgMLAg8KDAoFBAACAAUSAwsCBwoMCgUEAAIAARIDCwgKCgwKBQQAAgADEgMLDQ4KCgoCBAESBA0ADwEKCgoDBAEBEgMNCBAKCwoEBAECABIDDgIQCgwKBQQBAgAGEgMOAgYKDAoFBAECAAESAw4HCwoMCgUEAQIAAxIDDg4PCgoKAgQCEgQRABMBCgoKAwQCARIDEQgMCgsKBAQCAgASAxICEwoMCgUEAgIABRIDEgIICgwKBQQCAgABEgMSCQ4KDAoFBAICAAMSAxIREmIGcHJvdG8z"
+	// 	services:
+	// 	- yin.Yin
+	// 	auto_mapping: true
+	// 	print_options:
+	// 	add_whitespace: true
+	// 	always_print_primitive_fields: true
+	// 	always_print_enums_as_ints: false
+	// 	preserve_proto_field_names: false
+
+	cccAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
+		AutoMapping:       true,
+		ConvertGrpcStatus: true,
+		Services:          []string{"yin.Yin"},
+		PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
+			AddWhitespace:              true,
+			AlwaysPrintPrimitiveFields: true,
+			AlwaysPrintEnumsAsInts:     false,
+			PreserveProtoFieldNames:    false,
+		},
+		DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
+			ProtoDescriptorBin: bytt,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	cccFilter := &hcm.HttpFilter{
+		Name:       wellknown.GRPCJSONTranscoder,
+		ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: cccAny},
+	}
+
+	mgr.HttpFilters = append([]*hcm.HttpFilter{cccFilter}, mgr.HttpFilters...)
 
 	for _, route := range irListener.Routes {
 		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
