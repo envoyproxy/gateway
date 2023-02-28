@@ -1317,10 +1317,6 @@
                             ]
                         },
                         {
-                            "name": "envoy.dynamic.ot",
-                            "category": "envoy.tracers"
-                        },
-                        {
                             "name": "envoy.tracers.datadog",
                             "category": "envoy.tracers",
                             "type_urls": [

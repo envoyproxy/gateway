@@ -12,4 +12,3 @@
 go.mod
 go.sum
 bin
-./internal/cmd/egctl/testdata/config

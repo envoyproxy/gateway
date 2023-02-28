@@ -780,8 +780,6 @@ configs:
         type_urls:
         - envoy.extensions.filters.network.thrift_proxy.router.v3.Router
       - category: envoy.tracers
-        name: envoy.dynamic.ot
-      - category: envoy.tracers
         name: envoy.tracers.datadog
         type_urls:
         - envoy.config.trace.v3.DatadogConfig
