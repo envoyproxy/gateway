@@ -340,7 +340,10 @@ func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
 }
 
 func marshalEnvoyProxyConfig(configDump protoreflect.ProtoMessage, output string) ([]byte, error) {
-	out, err := protojson.Marshal(configDump)
+
+	out, err := protojson.MarshalOptions{
+		Multiline: true,
+	}.Marshal(configDump)
 	if err != nil {
 		return nil, err
 	}
