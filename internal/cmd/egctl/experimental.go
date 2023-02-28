@@ -15,6 +15,12 @@ func NewExperimentalCommand() *cobra.Command {
 		Use:     "experimental",
 		Aliases: []string{"x"},
 		Short:   "Experimental features",
+		Example: `  # Use experimental features of egctl.
+  egctl experimental [command]
+
+  # Use experimental features of egctl with short syntax.
+  egctl x [command]
+	  `,
 	}
 
 	experimentalCommand.AddCommand(NewTranslateCommand())
