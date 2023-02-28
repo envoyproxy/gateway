@@ -70,38 +70,134 @@ func (fw *fakePortForwarder) Address() string {
 	return fmt.Sprintf("localhost:%d", fw.localPort)
 }
 
-func TestExtractConfigDump(t *testing.T) {
-	fw, err := newFakePortForwarder(readConfig("in.json"))
+func TestExtractAllConfigDump(t *testing.T) {
+	input, err := readInputConfig("in.all.json")
+	assert.NoError(t, err)
+	fw, err := newFakePortForwarder(input)
 	assert.NoError(t, err)
 	err = fw.Start()
 	assert.NoError(t, err)
 
 	cases := []struct {
-		output   string
-		expected string
+		output       string
+		expected     string
+		resourceType string
 	}{
 		{
 			output:   "json",
-			expected: "out.json",
+			expected: "out.all.json",
 		},
 		{
 			output:   "yaml",
-			expected: "out.yaml",
+			expected: "out.all.yaml",
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.output, func(t *testing.T) {
-			got, err := extractConfigDump(fw, tc.output)
+			configDump, err := extractConfigDump(fw)
 			assert.NoError(t, err)
-			assert.Equal(t, string(readConfig(tc.expected)), string(got))
+			got, err := marshalEnvoyProxyConfig(configDump, tc.output)
+			assert.NoError(t, err)
+			out, err := readOutputConfig(tc.expected)
+			assert.NoError(t, err)
+			if tc.output == "yaml" {
+				assert.YAMLEq(t, string(out), string(got))
+			} else {
+				assert.JSONEq(t, string(out), string(got))
+			}
 		})
 	}
 
 	fw.Stop()
 }
 
-func readConfig(filename string) []byte {
-	b, _ := os.ReadFile(path.Join("testdata", "config", filename))
-	return b
+func TestExtractSubResourcesConfigDump(t *testing.T) {
+	input, err := readInputConfig("in.all.json")
+	assert.NoError(t, err)
+	fw, err := newFakePortForwarder(input)
+	assert.NoError(t, err)
+	err = fw.Start()
+	assert.NoError(t, err)
+
+	cases := []struct {
+		output       string
+		expected     string
+		resourceType envoyConfigType
+	}{
+		{
+			output:       "json",
+			resourceType: BootstrapEnvoyConfigType,
+			expected:     "out.bootstrap.json",
+		},
+		{
+			output:       "yaml",
+			resourceType: BootstrapEnvoyConfigType,
+			expected:     "out.bootstrap.yaml",
+		}, {
+			output:       "json",
+			resourceType: ClusterEnvoyConfigType,
+			expected:     "out.cluster.json",
+		},
+		{
+			output:       "yaml",
+			resourceType: ClusterEnvoyConfigType,
+			expected:     "out.cluster.yaml",
+		}, {
+			output:       "json",
+			resourceType: ListenerEnvoyConfigType,
+			expected:     "out.listener.json",
+		},
+		{
+			output:       "yaml",
+			resourceType: ListenerEnvoyConfigType,
+			expected:     "out.listener.yaml",
+		}, {
+			output:       "json",
+			resourceType: RouteEnvoyConfigType,
+			expected:     "out.route.json",
+		},
+		{
+			output:       "yaml",
+			resourceType: RouteEnvoyConfigType,
+			expected:     "out.route.yaml",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.output, func(t *testing.T) {
+			configDump, err := extractConfigDump(fw)
+			assert.NoError(t, err)
+			resource, err := findXDSResourceFromConfigDump(tc.resourceType, configDump)
+			assert.NoError(t, err)
+			got, err := marshalEnvoyProxyConfig(resource, tc.output)
+			t.Log("GOT:-----------------\n\n", string(got), "\n\n\n")
+			assert.NoError(t, err)
+			out, err := readOutputConfig(tc.expected)
+			assert.NoError(t, err)
+			if tc.output == "yaml" {
+				assert.YAMLEq(t, string(out), string(got))
+			} else {
+				assert.JSONEq(t, string(out), string(got))
+			}
+		})
+	}
+
+	fw.Stop()
+}
+
+func readInputConfig(filename string) ([]byte, error) {
+	b, err := os.ReadFile(path.Join("testdata", "config", "in", filename))
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func readOutputConfig(filename string) ([]byte, error) {
+	b, err := os.ReadFile(path.Join("testdata", "config", "out", filename))
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
 }
