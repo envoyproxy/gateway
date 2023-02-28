@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -32,11 +31,6 @@ type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
 	ServiceURL string
-}
-
-func prettyPrint(i interface{}) {
-	s, _ := json.MarshalIndent(i, "", " ")
-	fmt.Println(string(s))
 }
 
 // Translate translates the XDS IR into xDS resources

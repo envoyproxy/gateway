@@ -22,11 +22,6 @@ type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources)
 }
 
-func prettyPrint(i interface{}) {
-	s, _ := json.MarshalIndent(i, "", " ")
-	fmt.Println(string(s))
-}
-
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
@@ -35,9 +30,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
-
-	// prettyPrint(resources)
-	// panic("xxx")
 
 	var corsGlobal *egv1a1.CorsPolicy
 	if t.GlobalCorsEnabled {
