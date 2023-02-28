@@ -37,6 +37,7 @@ rules:
   resources:
   - authenticationfilters
   - corsfilters
+  - grpcjsontranscoderfilters
   - ratelimitfilters
   verbs:
   - get

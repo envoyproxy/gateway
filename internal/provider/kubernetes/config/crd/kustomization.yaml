@@ -6,6 +6,7 @@ resources:
 - bases/gateway.envoyproxy.io_authenticationfilters.yaml
 - bases/gateway.envoyproxy.io_ratelimitfilters.yaml
 - bases/gateway.envoyproxy.io_corsfilters.yaml
+- bases/gateway.envoyproxy.io_grpcjsontranscoderfilters.yaml
  #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
