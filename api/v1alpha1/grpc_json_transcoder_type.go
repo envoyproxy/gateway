@@ -10,33 +10,24 @@ import (
 )
 
 const (
-	// KindGrpcJsonTranscpderFilterKind is the name of the CorsFilter kind.
-	KindGrpcJsonTranscpderFilter = "KindGrpcJsonTranscpderFilter"
+	// KindGrpcJSONTranscoderFilterKind is the name of the GrpcJSONTranscoderFilter kind.
+	KindGrpcJSONTranscoderFilter = "KindGrpcJSONTranscoderFilter"
 )
 
 //+kubebuilder:object:root=true
 
-type GrpcJsonTranscpderFilter struct {
+type GrpcJSONTranscoderFilter struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of the GrpcJsonTranscpderFilter type.
-	Spec GrpcJsonTranscpderFilterSpec `json:"spec"`
+	// Spec defines the desired state of the GrpcJSONTranscoderFilter type.
+	Spec GrpcJSONTranscoderFilterSpec `json:"spec"`
 }
 
-// GrpcJsonTranscpderFilterSpec defines the desired state of the GrpcJsonTranscpderFilter type.
+// GrpcJSONTranscoderFilterSpec defines the desired state of the GrpcJSONTranscoderFilter type.
 // +union
-//
-//	proto_descriptor_bin: "CtgECg1hcGkveWluLnByb3RvEgN5aW4iHAoKR2V0UmVxdWVzdBIOCgJpZBgBIAEoA1ICaWQiKQoIR2V0UmVwbHkSHQoEaXRlbRgBIAEoCzIJLnlpbi5JdGVtUgRpdGVtIhwKBEl0ZW0SFAoFYnl0ZXMYASABKAlSBWJ5dGVzMi4KA1lpbhInCgNHZXQSDy55aW4uR2V0UmVxdWVzdBoNLnlpbi5HZXRSZXBseSIAQjNaMWdpdGh1Yi5jb20vR2VvQ29tcGx5L21vbm9yZXBvL2djaS95aW4vcGtnL2FwaTt5aW5K7QIKBhIEAAATAQoICgEMEgMAABIKCAoBAhIDAgAMCggKAQgSAwQASAoJCgIICxIDBABICgoKAgYAEgQGAAgBCgoKAwYAARIDBggLCgsKBAYAAgASAwcCKwoMCgUGAAIAARIDBwYJCgwKBQYAAgACEgMHChQKDAoFBgACAAMSAwcfJwoKCgIEABIECgAMAQoKCgMEAAESAwoIEgoLCgQEAAIAEgMLAg8KDAoFBAACAAUSAwsCBwoMCgUEAAIAARIDCwgKCgwKBQQAAgADEgMLDQ4KCgoCBAESBA0ADwEKCgoDBAEBEgMNCBAKCwoEBAECABIDDgIQCgwKBQQBAgAGEgMOAgYKDAoFBAECAAESAw4HCwoMCgUEAQIAAxIDDg4PCgoKAgQCEgQRABMBCgoKAwQCARIDEQgMCgsKBAQCAgASAxICEwoMCgUEAgIABRIDEgIICgwKBQQCAgABEgMSCQ4KDAoFBAICAAMSAxIREmIGcHJvdG8z"
-//	services:
-//	- yin.Yin
-//	auto_mapping: true
-//	print_options:
-//	add_whitespace: true
-//	always_print_primitive_fields: true
-//	always_print_enums_as_ints: false
-//	preserve_proto_field_names: false
-type GrpcJsonTranscpderFilterSpec struct {
+
+type GrpcJSONTranscoderFilterSpec struct {
 	// ProtoDescriptorBin is the base64 encoded binary representation of the proto descriptor.
 	// +kubebuilder:validation:Required
 	ProtoDescriptorBin string   `json:"proto_descriptor_bin"`
@@ -64,12 +55,12 @@ type PrintOptions struct {
 }
 
 // +kubebuilder:object:root=true
-type GrpcJsonTranscpderFilterList struct {
+type GrpcJSONTranscoderFilterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []GrpcJsonTranscpderFilter `json:"items"`
+	Items           []GrpcJSONTranscoderFilter `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&GrpcJsonTranscpderFilter{}, &GrpcJsonTranscpderFilterList{})
+	SchemeBuilder.Register(&GrpcJSONTranscoderFilter{}, &GrpcJSONTranscoderFilterList{})
 }
