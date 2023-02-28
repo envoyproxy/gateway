@@ -28,7 +28,7 @@ import (
 	udp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 
-	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
+	// grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -158,30 +158,30 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	// 	always_print_enums_as_ints: false
 	// 	preserve_proto_field_names: false
 
-	cccAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
-		AutoMapping:       true,
-		ConvertGrpcStatus: true,
-		Services:          []string{"yin.Yin"},
-		PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
-			AddWhitespace:              true,
-			AlwaysPrintPrimitiveFields: true,
-			AlwaysPrintEnumsAsInts:     false,
-			PreserveProtoFieldNames:    false,
-		},
-		DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
-			ProtoDescriptorBin: bytt,
-		},
-	})
-	if err != nil {
-		return err
-	}
+	// cccAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
+	// 	AutoMapping:       true,
+	// 	ConvertGrpcStatus: true,
+	// 	Services:          []string{"yin.Yin"},
+	// 	PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
+	// 		AddWhitespace:              true,
+	// 		AlwaysPrintPrimitiveFields: true,
+	// 		AlwaysPrintEnumsAsInts:     false,
+	// 		PreserveProtoFieldNames:    false,
+	// 	},
+	// 	DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
+	// 		ProtoDescriptorBin: bytt,
+	// 	},
+	// })
+	// if err != nil {
+	// 	return err
+	// }
 
-	cccFilter := &hcm.HttpFilter{
-		Name:       wellknown.GRPCJSONTranscoder,
-		ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: cccAny},
-	}
+	// cccFilter := &hcm.HttpFilter{
+	// 	Name:       wellknown.GRPCJSONTranscoder,
+	// 	ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: cccAny},
+	// }
 
-	mgr.HttpFilters = append([]*hcm.HttpFilter{cccFilter}, mgr.HttpFilters...)
+	// mgr.HttpFilters = append([]*hcm.HttpFilter{cccFilter}, mgr.HttpFilters...)
 
 	for _, route := range irListener.Routes {
 		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
