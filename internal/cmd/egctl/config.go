@@ -85,6 +85,10 @@ func allConfigCmd() *cobra.Command {
 }
 
 func runAllConfig(c *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("pod name is required")
+	}
+
 	podName = args[0]
 
 	if podName == "" {
