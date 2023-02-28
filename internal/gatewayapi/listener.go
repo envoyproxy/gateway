@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"encoding/json"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,6 +22,11 @@ type ListenersTranslator interface {
 	ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources)
 }
 
+func prettyPrint(i interface{}) {
+	s, _ := json.MarshalIndent(i, "", " ")
+	fmt.Println(string(s))
+}
+
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
@@ -29,6 +35,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
+
+	// prettyPrint(resources)
+	// panic("xxx")
 
 	var corsGlobal *egv1a1.CorsPolicy
 	if t.GlobalCorsEnabled {
@@ -125,6 +134,25 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 						MaxAge:           corsGlobal.MaxAge,
 					}
 				}
+
+				if resources.GrpcJSONTranscoderFilters != nil {
+					for _, grpcJSONTranscoderFilter := range resources.GrpcJSONTranscoderFilters {
+						grpcJSONTranscoderFilterAdd := &ir.GrpcJSONTranscoderFilter{
+							ProtoDescriptorBin: grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin,
+							Services:           grpcJSONTranscoderFilter.Spec.Services,
+							AutoMapping:        grpcJSONTranscoderFilter.Spec.AutoMapping,
+							PrintOptions: &ir.PrintOptions{
+								AddWhitespace:              grpcJSONTranscoderFilter.Spec.PrintOptions.AddWhitespace,
+								AlwaysPrintPrimitiveFields: grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintPrimitiveFields,
+								AlwaysPrintEnumsAsInts:     grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintEnumsAsInts,
+								PreserveProtoFieldNames:    grpcJSONTranscoderFilter.Spec.PrintOptions.PreserveProtoFieldNames,
+							},
+						}
+						irListener.GrpcJSONTranscoderFilters = append(irListener.GrpcJSONTranscoderFilters, grpcJSONTranscoderFilterAdd)
+					}
+
+				}
+
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			}
 
