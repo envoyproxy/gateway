@@ -30,6 +30,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -300,13 +301,13 @@ func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, out
 func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
 	globalConfigs := &adminv3.ConfigDump{}
 	bootstrapConfigs := &adminv3.BootstrapConfigDump{}
-	bootstrap := &bootstrapv3.Bootstrap{}
+	bstrap := &bootstrapv3.Bootstrap{}
 	listenerConfigs := &adminv3.ListenersConfigDump{}
 	routeConfigs := &adminv3.RoutesConfigDump{}
 	clusterConfigs := &adminv3.ClustersConfigDump{}
 
 	// construct bootstrap config
-	bootsrapYAML, err := infra.GetRenderedBootstrapConfig()
+	bootsrapYAML, err := bootstrap.GetRenderedBootstrapConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -315,10 +316,10 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 		return nil, err
 	}
 
-	if err := protojson.Unmarshal(jsonData, bootstrap); err != nil {
+	if err := protojson.Unmarshal(jsonData, bstrap); err != nil {
 		return nil, err
 	}
-	bootstrapConfigs.Bootstrap = bootstrap
+	bootstrapConfigs.Bootstrap = bstrap
 	if err := bootstrapConfigs.Validate(); err != nil {
 		return nil, err
 	}

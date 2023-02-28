@@ -31,6 +31,7 @@ func rootCommand() *cobra.Command {
 
 	rootCmd.AddCommand(egctl.NewVersionCommand())
 	rootCmd.AddCommand(egctl.NewExperimentalCommand())
+	rootCmd.AddCommand(egctl.NewConfigCommand())
 
 	return rootCmd
 }
