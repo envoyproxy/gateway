@@ -48,6 +48,30 @@ func NewTranslateCommand() *cobra.Command {
 	translateCommand := &cobra.Command{
 		Use:   "translate",
 		Short: "Translate Configuration from an input type to an output type",
+		Example: `  # Translate Gateway API Resources into All xDS Resources.
+  egctl experimental translate --from gateway-api --to xds --file <input file>
+
+  # Translate Gateway API Resources into All xDS Resources in JSON output.
+  egctl experimental translate --from gateway-api --to xds --type all --output json --file <input file>
+
+  # Translate Gateway API Resources into All xDS Resources in YAML output.
+  egctl experimental translate --from gateway-api --to xds --type all --output yaml --file <input file>
+
+  # Translate Gateway API Resources into Bootstrap xDS Resources.
+  egctl experimental translate --from gateway-api --to xds --type bootstrap --file <input file>
+
+  # Translate Gateway API Resources into Cluster xDS Resources.
+  egctl experimental translate --from gateway-api --to xds --type cluster --file <input file>
+
+  # Translate Gateway API Resources into Listener xDS Resources.
+  egctl experimental translate --from gateway-api --to xds --type listener --file <input file>
+
+  # Translate Gateway API Resources into Route xDS Resources.
+  egctl experimental translate --from gateway-api --to xds --type route --file <input file>
+
+  # Translate Gateway API Resources into Cluster xDS Resources with short syntax.
+  egctl x translate --from gateway-api --to xds -t cluster -o yaml -f <input file>
+	  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return translate(cmd.OutOrStdout(), inFile, inType, outType, output, resourceType)
 		},
