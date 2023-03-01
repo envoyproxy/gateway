@@ -32,14 +32,24 @@ const (
 func NewVersionCommand() *cobra.Command {
 	var (
 		output string
+		remote bool
 	)
 
 	versionCommand := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"versions", "v"},
 		Short:   "Show version",
+		Example: `  # Show versions of both client and server.
+  egctl version
+
+  # Show versions of both client and server in JSON format.
+  egctl version --output=json
+
+  # Show version of client without server.
+  egctl version --remote=false
+	  `,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output))
+			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output, remote))
 		},
 	}
 
@@ -47,6 +57,8 @@ func NewVersionCommand() *cobra.Command {
 	options.AddKubeConfigFlags(flags)
 
 	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
+
+	versionCommand.PersistentFlags().BoolVarP(&remote, "remote", "r", true, "If true, retrieve version from remote apiserver.")
 
 	return versionCommand
 }
@@ -68,8 +80,13 @@ func Get() VersionInfo {
 	}
 }
 
-func versions(w io.Writer, containerName, output string) error {
+func versions(w io.Writer, containerName, output string, remote bool) error {
 	v := Get()
+
+	if !remote {
+		fmt.Fprintln(w, v.ClientVersion)
+		return nil
+	}
 
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
