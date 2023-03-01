@@ -54,7 +54,7 @@ kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster spec
 .PHONY: custom-kube-deploy
 custom-kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm install eg charts/eg --set deployment.envoyGateway.image.repository=docker.io/envoyproxy/gateway-dev --set deployment.envoyGateway.image.tag= --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
+	helm install eg charts/eg --set deployment.envoyGateway.image.repository=docker.io/envoyproxy/gateway-dev --set deployment.envoyGateway.image.tag=latest --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
 
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
