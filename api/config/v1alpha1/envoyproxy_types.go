@@ -47,6 +47,8 @@ type EnvoyProxySpec struct {
 	// Bootstrap defines the Envoy Bootstrap as a YAML string.
 	// Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap
 	// to learn more about the syntax.
+	// If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Boostrtap configuration
+	// set by Envoy Gateway.
 	// Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources
 	// from it are not configurable and will result in the `EnvoyProxy` resource being rejected.
 	// We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default
