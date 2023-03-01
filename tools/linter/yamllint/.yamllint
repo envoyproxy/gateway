@@ -11,7 +11,8 @@ ignore: |
   .github
   manifes
   examples
-
+  charts/eg/
+  bin/install.yaml
 
 rules:
   braces:
