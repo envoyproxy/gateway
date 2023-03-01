@@ -25,7 +25,7 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 .PHONY: manifests
 manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./api" output:crd:artifacts:config=charts/eg/crds/generated output:rbac:artifacts:config=charts/eg/templates/generated/rbac
+	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./api/..." output:crd:artifacts:config=charts/eg/crds/generated output:rbac:artifacts:config=charts/eg/templates/generated/rbac
 
 .PHONY: generate
 generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
