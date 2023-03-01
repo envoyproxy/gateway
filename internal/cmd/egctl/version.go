@@ -32,15 +32,24 @@ const (
 func NewVersionCommand() *cobra.Command {
 	var (
 		output string
-		client bool
+		remote bool
 	)
 
 	versionCommand := &cobra.Command{
 		Use:     "version",
 		Aliases: []string{"versions", "v"},
 		Short:   "Show version",
+		Example: `  # Show versions of both client and server.
+  egctl version
+
+  # Show versions of both client and server in Json format.
+  egctl version --output=json
+
+  # Show version of client without server.
+  egctl version --remote=false
+	  `,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output, client))
+			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output, remote))
 		},
 	}
 
@@ -49,7 +58,7 @@ func NewVersionCommand() *cobra.Command {
 
 	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
 
-	versionCommand.PersistentFlags().BoolVarP(&client, "client", "c", false, "If only output client version")
+	versionCommand.PersistentFlags().BoolVarP(&remote, "remote", "r", true, "If retrieve version from remote apiserver.")
 
 	return versionCommand
 }
@@ -71,9 +80,10 @@ func Get() VersionInfo {
 	}
 }
 
-func versions(w io.Writer, containerName, output string, client bool) error {
+func versions(w io.Writer, containerName, output string, remote bool) error {
 	v := Get()
-	if client {
+
+	if !remote {
 		fmt.Fprintln(w, v.ClientVersion)
 		return nil
 	}
