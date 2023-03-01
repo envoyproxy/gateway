@@ -74,9 +74,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	// HTTP filter configuration
 	var statPrefix string
 	if irListener.TLS != nil {
-		statPrefix = "ingress_https"
+		statPrefix = "https"
 	} else {
-		statPrefix = "ingress_http"
+		statPrefix = "http"
 	}
 
 	mgr := &hcm.HttpConnectionManager{
@@ -185,7 +185,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
-		mgr.CodecType = hcm.HttpConnectionManager_HTTP2
+		mgr.CodecType = hcm.HttpConnectionManager_AUTO
 
 		// Enable grpc-web filter for HTTP2
 		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})
