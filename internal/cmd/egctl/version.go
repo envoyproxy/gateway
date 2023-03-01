@@ -32,6 +32,7 @@ const (
 func NewVersionCommand() *cobra.Command {
 	var (
 		output string
+		client bool
 	)
 
 	versionCommand := &cobra.Command{
@@ -39,7 +40,7 @@ func NewVersionCommand() *cobra.Command {
 		Aliases: []string{"versions", "v"},
 		Short:   "Show version",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output))
+			cmdutil.CheckErr(versions(cmd.OutOrStdout(), egContainerName, output, client))
 		},
 	}
 
@@ -47,6 +48,8 @@ func NewVersionCommand() *cobra.Command {
 	options.AddKubeConfigFlags(flags)
 
 	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
+
+	versionCommand.PersistentFlags().BoolVarP(&client, "client", "c", false, "If only output client version")
 
 	return versionCommand
 }
@@ -68,8 +71,12 @@ func Get() VersionInfo {
 	}
 }
 
-func versions(w io.Writer, containerName, output string) error {
+func versions(w io.Writer, containerName, output string, client bool) error {
 	v := Get()
+	if client {
+		fmt.Fprintln(w, v.ClientVersion)
+		return nil
+	}
 
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
