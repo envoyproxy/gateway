@@ -74,9 +74,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	// HTTP filter configuration
 	var statPrefix string
 	if irListener.TLS != nil {
-		statPrefix = "https"
+		statPrefix = "ingress_https"
 	} else {
-		statPrefix = "http"
+		statPrefix = "ingress_http"
 	}
 
 	mgr := &hcm.HttpConnectionManager{
