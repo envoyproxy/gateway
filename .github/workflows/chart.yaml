@@ -1,0 +1,65 @@
+name: Release Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "charts/eg/Chart.yaml"
+
+permissions: {}
+jobs:
+  release:
+    permissions:
+      contents: write 
+
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Get chart version
+        id: chart_version
+        run: |
+          set -euo pipefail
+          chart_version="$(grep -Po "(?<=^version: ).+" charts/eg/Chart.yaml)"
+          echo "chartVersion=$(echo ${chart_version})" >> $GITHUB_ENV
+
+      - name: Get changelog entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v1
+        with:
+          path: charts/eg/CHANGELOG.md
+          version: "v${{ env.chartVersion }}"
+
+      - name: Create release notes
+        run: |
+          set -euo pipefail
+          cat <<"EOF" > charts/eg/RELEASE.md
+          ${{ steps.changelog_reader.outputs.changes }}
+          EOF
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Set-up Helm
+        uses: azure/setup-helm@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          version: latest
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.5.0
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_RELEASE_NAME_TEMPLATE: "eg-helm-chart-{{ .Version }}"
+          CR_RELEASE_NOTES_FILE: RELEASE.md
+          CR_MAKE_RELEASE_LATEST: false
+          CR_SKIP_EXISTING: true
