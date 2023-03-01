@@ -42,7 +42,7 @@ func NewVersionCommand() *cobra.Command {
 		Example: `  # Show versions of both client and server.
   egctl version
 
-  # Show versions of both client and server in Json format.
+  # Show versions of both client and server in JSON format.
   egctl version --output=json
 
   # Show version of client without server.
@@ -58,7 +58,7 @@ func NewVersionCommand() *cobra.Command {
 
 	versionCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
 
-	versionCommand.PersistentFlags().BoolVarP(&remote, "remote", "r", true, "If retrieve version from remote apiserver.")
+	versionCommand.PersistentFlags().BoolVarP(&remote, "remote", "r", true, "If true, retrieve version from remote apiserver.")
 
 	return versionCommand
 }
