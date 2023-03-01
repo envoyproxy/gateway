@@ -51,6 +51,11 @@ kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster spec
 	@$(LOG_TARGET)
 	helm install eg charts/eg --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
 
+.PHONY: custom-kube-deploy
+custom-kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	@$(LOG_TARGET)
+	helm install eg charts/eg --set deployment.envoyGateway.image.repository=docker.io/envoyproxy/gateway-dev --set deployment.envoyGateway.image.tag= --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
+
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
@@ -83,6 +88,9 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 
 .PHONY: conformance
 conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+
+.PHONY: custom-conformance
+custom-conformance: create-cluster kube-install-image custom-kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.

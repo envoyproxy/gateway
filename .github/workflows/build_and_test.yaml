@@ -108,7 +108,7 @@ jobs:
         KIND_NODE_TAG: ${{ matrix.version }}
         CONFORMANCE_UNIQUE_PORTS: false
         IMAGE_PULL_POLICY: IfNotPresent
-      run: make conformance
+      run: make custom-conformance
 
   publish:
     runs-on: ubuntu-latest
