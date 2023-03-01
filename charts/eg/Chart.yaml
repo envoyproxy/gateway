@@ -1,0 +1,21 @@
+apiVersion: v3
+name: eg
+description: The Helm chart for Envoy Gateway
+type: application
+
+version: 0.1.0
+appVersion: "0.3.0"
+
+maintainers: # (optional)
+  - name: envoy-gateway-maintainers
+    url: https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS.md
+
+keywords:
+  - gateway-api
+  - envoyproxy
+  - envoy-gateway
+
+home: https://gateway.envoyproxy.io/
+
+sources:
+  - https://github.com/envoyproxy/gateway

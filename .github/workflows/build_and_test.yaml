@@ -94,6 +94,7 @@ jobs:
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
         CONFORMANCE_UNIQUE_PORTS: false
+        IMAGE_PULL_POLICY: IfNotPresent
       run: make conformance
 
   publish:
