@@ -148,39 +148,38 @@ func (t *Translator) processCustomGRPCRouteRule(grpcRoute *CustomGRPCRouteContex
 			Name: routeName(grpcRoute, ruleIdx, matchIdx),
 		}
 
+		for _, headerMatch := range match.Headers {
+			switch HeaderMatchTypeDerefOr(headerMatch.Type, v1beta1.HeaderMatchExact) {
+			case v1beta1.HeaderMatchExact:
+				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+					Name:  string(headerMatch.Name),
+					Exact: StringPtr(headerMatch.Value),
+				})
+			case v1beta1.HeaderMatchRegularExpression:
+				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+					Name:      string(headerMatch.Name),
+					SafeRegex: StringPtr(headerMatch.Value),
+				})
+			}
+		}
+
 		if match.Method != nil {
-			// CustomGRPC's path is in the form of "/<service>/<method>"
-			//nolint:gocritic
-			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, v1alpha2.GRPCMethodMatchExact) {
-			case v1alpha2.GRPCMethodMatchExact:
-				if match.Method.Service != nil && match.Method.Method != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
-					}
-				} else if match.Method.Service != nil {
-					// Use prefix match if only the service name is specified
-					irRoute.PathMatch = &ir.StringMatch{
-						Prefix: StringPtr(fmt.Sprintf("/%s/", *match.Method.Service)),
-					}
-				} else if match.Method.Method != nil {
-					// Use regex match if only the method name is specified to match any service
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("/[.a-zA-Z0-9-]+/%s", *match.Method.Method)),
-					}
+			// GRPC's path is in the form of "/<service>/<method>"
+			// TODO: support regex match type after https://github.com/kubernetes-sigs/gateway-api/issues/1746 is resolved
+			switch {
+			case match.Method.Service != nil && match.Method.Method != nil:
+				irRoute.PathMatch = &ir.StringMatch{
+					Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
 				}
-			case v1alpha2.GRPCMethodMatchRegularExpression:
-				if match.Method.Service != nil && match.Method.Method != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
-					}
-				} else if match.Method.Service != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("/%s/.+", *match.Method.Service)),
-					}
-				} else if match.Method.Method != nil {
-					irRoute.PathMatch = &ir.StringMatch{
-						SafeRegex: StringPtr(fmt.Sprintf("/[.a-zA-Z0-9-]+/%s", *match.Method.Method)),
-					}
+			case match.Method.Method != nil:
+				// Use a header match since the PathMatch doesn't support Suffix matching
+				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+					Name:   ":path",
+					Suffix: StringPtr(fmt.Sprintf("/%s", *match.Method.Method)),
+				})
+			case match.Method.Service != nil:
+				irRoute.PathMatch = &ir.StringMatch{
+					Prefix: StringPtr(fmt.Sprintf("/%s", *match.Method.Service)),
 				}
 			}
 		}
