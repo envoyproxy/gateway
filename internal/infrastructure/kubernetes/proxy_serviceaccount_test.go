@@ -44,7 +44,7 @@ func TestExpectedProxyServiceAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check the serviceaccount name is as expected.
-	assert.Equal(t, sa.Name, expectedProxyServiceAccountName(infra.Proxy.Name))
+	assert.Equal(t, sa.Name, expectedResourceHashedName(infra.Proxy.Name))
 
 	wantLabels := envoyAppLabel()
 	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
@@ -199,7 +199,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      expectedProxyServiceAccountName(tc.in.Proxy.Name),
+					Name:      expectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))

@@ -9,11 +9,11 @@ import (
 	"errors"
 	"fmt"
 
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -59,13 +59,13 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
-		var xdsRouteCfg *route.RouteConfiguration
+		var xdsRouteCfg *routev3.RouteConfiguration
 
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListener(tCtx, httpListener.Address, httpListener.Port, core.SocketAddress_TCP)
+		xdsListener := findXdsListener(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port)
-			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
 		} else if httpListener.TLS == nil {
 			// Find the route config associated with this listener that
 			// maps to the default filter chain for http traffic
@@ -90,21 +90,21 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// Create a route config if we have not found one yet
 		if xdsRouteCfg == nil {
-			xdsRouteCfg = &route.RouteConfiguration{
+			xdsRouteCfg = &routev3.RouteConfiguration{
 				Name: httpListener.Name,
 			}
-			tCtx.AddXdsResource(resource.RouteType, xdsRouteCfg)
+			tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg)
 		}
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
 			secret := buildXdsDownstreamTLSSecret(httpListener.Name, httpListener.TLS)
-			tCtx.AddXdsResource(resource.SecretType, secret)
+			tCtx.AddXdsResource(resourcev3.SecretType, secret)
 		}
 
 		// Allocate virtual host for this httpListener.
 		// 1:1 between IR HTTPListener and xDS VirtualHost
-		vHost := &route.VirtualHost{
+		vHost := &routev3.VirtualHost{
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
 		}
@@ -120,14 +120,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 			xdsCluster := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2, true /* isStatic */)
 
-			tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+			tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
 			for i, mirror := range httpRoute.Mirrors {
 				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
 				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
 					mirrorCluster := buildXdsCluster(mirrorClusterName, []*ir.RouteDestination{mirror}, httpListener.IsHTTP2, true /* isStatic */)
-					tCtx.AddXdsResource(resource.ClusterType, mirrorCluster)
+					tCtx.AddXdsResource(resourcev3.ClusterType, mirrorCluster)
 				}
 
 			}
@@ -144,7 +144,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			rlCluster := t.buildRateLimitServiceCluster(httpListener)
 			// Add cluster
 			if rlCluster != nil {
-				tCtx.AddXdsResource(resource.ClusterType, rlCluster)
+				tCtx.AddXdsResource(resourcev3.ClusterType, rlCluster)
 			}
 		}
 
@@ -160,13 +160,13 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
 		xdsCluster := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */, true /* isStatic */)
-		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+		tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
 
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, core.SocketAddress_TCP)
+		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port)
-			tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
 		}
 
 		if err := addXdsTCPFilterChain(xdsListener, tcpListener, xdsCluster.Name); err != nil {
@@ -180,7 +180,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
 		xdsCluster := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */, true /*isStatic */)
-		tCtx.AddXdsResource(resource.ClusterType, xdsCluster)
+		tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
@@ -188,7 +188,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		if err != nil {
 			return multierror.Append(err, errors.New("error building xds cluster"))
 		}
-		tCtx.AddXdsResource(resource.ListenerType, xdsListener)
+		tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
 	}
 	return nil
 
@@ -196,13 +196,13 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 // findXdsListener finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
 func findXdsListener(tCtx *types.ResourceVersionTable, address string, port uint32,
-	protocol core.SocketAddress_Protocol) *listener.Listener {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resource.ListenerType] == nil {
+	protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
+	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil
 	}
 
-	for _, r := range tCtx.XdsResources[resource.ListenerType] {
-		listener := r.(*listener.Listener)
+	for _, r := range tCtx.XdsResources[resourcev3.ListenerType] {
+		listener := r.(*listenerv3.Listener)
 		addr := listener.GetAddress()
 		if addr.GetSocketAddress().GetPortValue() == port && addr.GetSocketAddress().Address == address && addr.
 			GetSocketAddress().Protocol == protocol {
@@ -214,13 +214,13 @@ func findXdsListener(tCtx *types.ResourceVersionTable, address string, port uint
 }
 
 // findXdsCluster finds a xds cluster with the same name, and returns nil if there is no match.
-func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *cluster.Cluster {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resource.ClusterType] == nil {
+func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cluster {
+	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ClusterType] == nil {
 		return nil
 	}
 
-	for _, r := range tCtx.XdsResources[resource.ClusterType] {
-		cluster := r.(*cluster.Cluster)
+	for _, r := range tCtx.XdsResources[resourcev3.ClusterType] {
+		cluster := r.(*clusterv3.Cluster)
 		if cluster.Name == name {
 			return cluster
 		}
@@ -230,13 +230,13 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *cluster.Clus
 }
 
 // findXdsRouteConfig finds an xds route with the name and returns nil if there is no match.
-func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *route.RouteConfiguration {
-	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resource.RouteType] == nil {
+func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
+	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
 		return nil
 	}
 
-	for _, r := range tCtx.XdsResources[resource.RouteType] {
-		route := r.(*route.RouteConfiguration)
+	for _, r := range tCtx.XdsResources[resourcev3.RouteType] {
+		route := r.(*routev3.RouteConfiguration)
 		if route.Name == name {
 			return route
 		}

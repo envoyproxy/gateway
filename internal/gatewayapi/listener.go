@@ -21,7 +21,6 @@ type ListenersTranslator interface {
 }
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
-
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.UDPProtocolType)

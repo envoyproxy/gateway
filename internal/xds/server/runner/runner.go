@@ -15,14 +15,14 @@ import (
 	"os"
 	"strconv"
 
-	controlplane_service_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
-	controlplane_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	controlplane_service_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
-	controlplane_service_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
-	controlplane_service_route_v3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
-	controlplane_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
-	controlplane_service_secret_v3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
-	controlplane_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
+	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/service/endpoint/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/service/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/service/route/v3"
+	runtimev3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
+	secretv3 "github.com/envoyproxy/go-control-plane/envoy/service/secret/v3"
+	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -78,7 +78,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
 
 	r.cache = cache.NewSnapshotCache(false, r.Logger)
-	registerServer(controlplane_server_v3.NewServer(ctx, r.cache, r.cache), r.grpc)
+	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
 
 	// Start and listen xDS gRPC Server.
 	go r.serveXdsServer(ctx)
@@ -111,15 +111,15 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 
 // registerServer registers the given xDS protocol Server with the gRPC
 // runtime.
-func registerServer(srv controlplane_server_v3.Server, g *grpc.Server) {
+func registerServer(srv serverv3.Server, g *grpc.Server) {
 	// register services
-	controlplane_service_discovery_v3.RegisterAggregatedDiscoveryServiceServer(g, srv)
-	controlplane_service_secret_v3.RegisterSecretDiscoveryServiceServer(g, srv)
-	controlplane_service_cluster_v3.RegisterClusterDiscoveryServiceServer(g, srv)
-	controlplane_service_endpoint_v3.RegisterEndpointDiscoveryServiceServer(g, srv)
-	controlplane_service_listener_v3.RegisterListenerDiscoveryServiceServer(g, srv)
-	controlplane_service_route_v3.RegisterRouteDiscoveryServiceServer(g, srv)
-	controlplane_service_runtime_v3.RegisterRuntimeDiscoveryServiceServer(g, srv)
+	discoveryv3.RegisterAggregatedDiscoveryServiceServer(g, srv)
+	secretv3.RegisterSecretDiscoveryServiceServer(g, srv)
+	clusterv3.RegisterClusterDiscoveryServiceServer(g, srv)
+	endpointv3.RegisterEndpointDiscoveryServiceServer(g, srv)
+	listenerv3.RegisterListenerDiscoveryServiceServer(g, srv)
+	routev3.RegisterRouteDiscoveryServiceServer(g, srv)
+	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
@@ -147,7 +147,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	)
 
 	r.Logger.Info("subscriber shutting down")
-
 }
 
 func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {

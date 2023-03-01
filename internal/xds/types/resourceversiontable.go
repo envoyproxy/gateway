@@ -7,12 +7,12 @@ package types
 
 import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/proto"
 )
 
 // XdsResources represents all the xds resources
-type XdsResources = map[resource.Type][]types.Resource
+type XdsResources = map[resourcev3.Type][]types.Resource
 
 // ResourceVersionTable holds all the translated xds resources
 type ResourceVersionTable struct {
@@ -63,7 +63,7 @@ func (t *ResourceVersionTable) GetXdsResources() XdsResources {
 	return t.XdsResources
 }
 
-func (t *ResourceVersionTable) AddXdsResource(rType resource.Type, xdsResource types.Resource) {
+func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource types.Resource) {
 	if t.XdsResources == nil {
 		t.XdsResources = make(XdsResources)
 	}

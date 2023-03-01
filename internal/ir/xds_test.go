@@ -596,7 +596,7 @@ func TestValidateTCPListener(t *testing.T) {
 		{
 			name:  "tls passthrough empty SNIs",
 			input: invalidSNITCPListenerTLSPassthrough,
-			want:  []error{ErrTCPListenesSNIsEmpty},
+			want:  []error{ErrTCPListenerSNIsEmpty},
 		},
 	}
 	for _, test := range tests {

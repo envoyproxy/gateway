@@ -13,38 +13,38 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-// UpdateGatewayScheduledCondition updates the status condition for the provided Gateway based on the scheduled state.
+// UpdateGatewayStatusScheduledCondition updates the status condition for the provided Gateway based on the scheduled state.
 func UpdateGatewayStatusScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) *gwapiv1b1.Gateway {
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayScheduledCondition(gw, scheduled))
 	return gw
 }
 
-// UpdateGatewayStatusAddrs updates the status addresses for the provided gateway
+// UpdateGatewayStatusReadyCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Ready condition based on the
 // service and deployment state.
 func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment) {
-	var addrs, hostnames []string
+	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
 		for i := range svc.Status.LoadBalancer.Ingress {
 			switch {
 			case len(svc.Status.LoadBalancer.Ingress[i].IP) > 0:
-				addrs = append(addrs, svc.Status.LoadBalancer.Ingress[i].IP)
+				addresses = append(addresses, svc.Status.LoadBalancer.Ingress[i].IP)
 			case len(svc.Status.LoadBalancer.Ingress[i].Hostname) > 0:
 				// Remove when the following supports the hostname address type:
 				// https://github.com/kubernetes-sigs/gateway-api/blob/v0.5.0/conformance/utils/kubernetes/helpers.go#L201-L207
 				if svc.Status.LoadBalancer.Ingress[i].Hostname == "localhost" {
-					addrs = append(addrs, "127.0.0.1")
+					addresses = append(addresses, "127.0.0.1")
 				}
 				hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 			}
 		}
 
 		var gwAddrs []gwapiv1b1.GatewayAddress
-		for i := range addrs {
+		for i := range addresses {
 			addr := gwapiv1b1.GatewayAddress{
 				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
-				Value: addrs[i],
+				Value: addresses[i],
 			}
 			gwAddrs = append(gwAddrs, addr)
 		}

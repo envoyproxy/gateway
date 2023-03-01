@@ -25,27 +25,22 @@ const LevelInfo int = 0
 const LevelWarn int = -1
 
 func (l LogrWrapper) Debugf(template string, args ...interface{}) {
-
 	l.logr.V(LevelDebug).Info(fmt.Sprintf(template, args...))
 }
 
 func (l LogrWrapper) Infof(template string, args ...interface{}) {
-
 	l.logr.V(LevelInfo).Info(fmt.Sprintf(template, args...))
 }
 
 func (l LogrWrapper) Warnf(template string, args ...interface{}) {
-
 	l.logr.V(LevelWarn).Info(fmt.Sprintf(template, args...))
 }
 
 func (l LogrWrapper) Errorf(template string, args ...interface{}) {
-
 	l.logr.Error(fmt.Errorf(template, args...), "")
 }
 
 func NewLogrWrapper(log logr.Logger) *LogrWrapper {
-
 	return &LogrWrapper{
 		logr: log,
 	}

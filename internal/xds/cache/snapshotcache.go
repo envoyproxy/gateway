@@ -20,16 +20,16 @@ import (
 	"strconv"
 	"sync"
 
-	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	envoy_cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	envoy_server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
 
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-var Hash = envoy_cache_v3.IDHash{}
+var Hash = cachev3.IDHash{}
 
 // SnapshotCacheWithCallbacks uses the go-control-plane SimpleCache to store snapshots of
 // Envoy resources, sliced by Node ID so that we can do incremental xDS properly.
@@ -41,17 +41,17 @@ var Hash = envoy_cache_v3.IDHash{}
 // TODO(youngnick): Talk to the go-control-plane maintainers and see if we can upstream
 // this in a better way.
 type SnapshotCacheWithCallbacks interface {
-	envoy_cache_v3.SnapshotCache
-	envoy_server_v3.Callbacks
+	cachev3.SnapshotCache
+	serverv3.Callbacks
 	GenerateNewSnapshot(string, types.XdsResources) error
 }
 
-type snapshotMap map[string]*envoy_cache_v3.Snapshot
+type snapshotMap map[string]*cachev3.Snapshot
 
-type nodeInfoMap map[int64]*envoy_config_core_v3.Node
+type nodeInfoMap map[int64]*corev3.Node
 
-type snapshotcache struct {
-	envoy_cache_v3.SnapshotCache
+type snapshotCache struct {
+	cachev3.SnapshotCache
 	streamIDNodeInfo nodeInfoMap
 	snapshotVersion  int64
 	lastSnapshot     snapshotMap
@@ -61,15 +61,14 @@ type snapshotcache struct {
 
 // GenerateNewSnapshot takes a table of resources (the output from the IR->xDS
 // translator) and updates the snapshot version.
-func (s *snapshotcache) GenerateNewSnapshot(irKey string, resources types.XdsResources) error {
-
+func (s *snapshotCache) GenerateNewSnapshot(irKey string, resources types.XdsResources) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	version := s.newSnapshotVersion()
 
 	// Create a snapshot with all xDS resources.
-	snapshot, err := envoy_cache_v3.NewSnapshot(
+	snapshot, err := cachev3.NewSnapshot(
 		version,
 		resources,
 	)
@@ -88,13 +87,11 @@ func (s *snapshotcache) GenerateNewSnapshot(irKey string, resources types.XdsRes
 	}
 
 	return nil
-
 }
 
 // newSnapshotVersion increments the current snapshotVersion
 // and returns as a string.
-func (s *snapshotcache) newSnapshotVersion() string {
-
+func (s *snapshotCache) newSnapshotVersion() string {
 	// Reset the snapshotVersion if it ever hits max size.
 	if s.snapshotVersion == math.MaxInt64 {
 		s.snapshotVersion = 0
@@ -111,8 +108,8 @@ func (s *snapshotcache) newSnapshotVersion() string {
 func NewSnapshotCache(ads bool, logger logr.Logger) SnapshotCacheWithCallbacks {
 	// Set up the nasty wrapper hack.
 	wrappedLogger := NewLogrWrapper(logger)
-	return &snapshotcache{
-		SnapshotCache:    envoy_cache_v3.NewSnapshotCache(ads, &Hash, wrappedLogger),
+	return &snapshotCache{
+		SnapshotCache:    cachev3.NewSnapshotCache(ads, &Hash, wrappedLogger),
 		log:              wrappedLogger,
 		lastSnapshot:     make(snapshotMap),
 		streamIDNodeInfo: make(nodeInfoMap),
@@ -121,7 +118,7 @@ func NewSnapshotCache(ads bool, logger logr.Logger) SnapshotCacheWithCallbacks {
 
 // getNodeIDs retrieves the node ids from the node info map whose
 // cluster field matches the ir key
-func (s *snapshotcache) getNodeIDs(irKey string) []string {
+func (s *snapshotCache) getNodeIDs(irKey string) []string {
 	var nodeIDs []string
 	for _, node := range s.streamIDNodeInfo {
 		if node.Cluster == irKey {
@@ -130,13 +127,11 @@ func (s *snapshotcache) getNodeIDs(irKey string) []string {
 	}
 
 	return nodeIDs
-
 }
 
 // OnStreamOpen and the other OnStream* functions implement the callbacks for the
 // state-of-the-world stream types.
-func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
-
+func (s *snapshotCache) OnStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -145,18 +140,15 @@ func (s *snapshotcache) OnStreamOpen(ctx context.Context, streamID int64, typeUR
 	return nil
 }
 
-func (s *snapshotcache) OnStreamClosed(streamID int64, node *envoy_config_core_v3.Node) {
-
+func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
 	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	delete(s.streamIDNodeInfo, streamID)
-
 }
 
-func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest) error {
-
+func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.DiscoveryRequest) error {
 	s.mu.Lock()
 	// We could do this a little earlier than the defer, since the last half of this func is only logging
 	// but that seemed like a premature optimization.
@@ -217,8 +209,7 @@ func (s *snapshotcache) OnStreamRequest(streamID int64, req *envoy_service_disco
 	return nil
 }
 
-func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
-
+func (s *snapshotCache) OnStreamResponse(ctx context.Context, streamID int64, req *discoveryv3.DiscoveryRequest, resp *discoveryv3.DiscoveryResponse) {
 	// No mutex lock required here because no writing to the cache.
 	node := s.streamIDNodeInfo[streamID]
 	if node == nil {
@@ -231,8 +222,7 @@ func (s *snapshotcache) OnStreamResponse(ctx context.Context, streamID int64, re
 // OnDeltaStreamOpen and the other OnDeltaStream*/OnStreamDelta* functions implement
 // the callbacks for the incremental xDS versions.
 // Yes, the different ordering in the name is part of the go-control-plane interface.
-func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
-
+func (s *snapshotCache) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -242,17 +232,15 @@ func (s *snapshotcache) OnDeltaStreamOpen(ctx context.Context, streamID int64, t
 	return nil
 }
 
-func (s *snapshotcache) OnDeltaStreamClosed(streamID int64, node *envoy_config_core_v3.Node) {
-
+func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
 	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	delete(s.streamIDNodeInfo, streamID)
-
 }
 
-func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_discovery_v3.DeltaDiscoveryRequest) error {
+func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.DeltaDiscoveryRequest) error {
 	s.mu.Lock()
 	// We could do this a little earlier than with a defer, since the last half of this func is logging
 	// but that seemed like a premature optimization.
@@ -276,7 +264,7 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 	nodeID := s.streamIDNodeInfo[streamID].Id
 	cluster := s.streamIDNodeInfo[streamID].Cluster
 
-	// If no snapshot has been written into the snapshotcache yet, we can't do anything, so don't mess with
+	// If no snapshot has been written into the snapshotCache yet, we can't do anything, so don't mess with
 	// this request. go-control-plane will respond with an empty response, then send an update when a
 	// snapshot is generated.
 	if s.lastSnapshot[cluster] == nil {
@@ -315,7 +303,7 @@ func (s *snapshotcache) OnStreamDeltaRequest(streamID int64, req *envoy_service_
 	return nil
 }
 
-func (s *snapshotcache) OnStreamDeltaResponse(streamID int64, req *envoy_service_discovery_v3.DeltaDiscoveryRequest, resp *envoy_service_discovery_v3.DeltaDiscoveryResponse) {
+func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, req *discoveryv3.DeltaDiscoveryRequest, resp *discoveryv3.DeltaDiscoveryResponse) {
 	// No mutex lock required here because no writing to the cache.
 	node := s.streamIDNodeInfo[streamID]
 	if node == nil {
@@ -325,9 +313,9 @@ func (s *snapshotcache) OnStreamDeltaResponse(streamID int64, req *envoy_service
 	}
 }
 
-func (s *snapshotcache) OnFetchRequest(ctx context.Context, req *envoy_service_discovery_v3.DiscoveryRequest) error {
+func (s *snapshotCache) OnFetchRequest(ctx context.Context, req *discoveryv3.DiscoveryRequest) error {
 	return nil
 }
 
-func (s *snapshotcache) OnFetchResponse(req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
+func (s *snapshotCache) OnFetchResponse(req *discoveryv3.DiscoveryRequest, resp *discoveryv3.DiscoveryResponse) {
 }
