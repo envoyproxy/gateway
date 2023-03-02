@@ -38,11 +38,11 @@ const (
 // Connection Manager if applicable, and it does not already exist.
 func patchHCMWithJwtAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
-		return errors.New("hcmv3 is nil")
+		return errors.New("hcm is nil")
 	}
 
 	if irListener == nil {
-		return errors.New("ir listenerv3 is nil")
+		return errors.New("ir listener is nil")
 	}
 
 	if !listenerContainsJwtAuthn(irListener) {
@@ -197,7 +197,7 @@ func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute, listen
 		return errors.New("ir route is nil")
 	}
 	if listener == nil {
-		return errors.New("listenerv3 is nil")
+		return errors.New("listener is nil")
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
@@ -235,12 +235,12 @@ func buildJwtPerRouteConfig(irRoute *ir.HTTPRoute, listener *listenerv3.Listener
 		return nil, errors.New("ir route does not contain jwt authn")
 	}
 	if listener == nil {
-		return nil, errors.New("listenerv3 is nil")
+		return nil, errors.New("listener is nil")
 	}
 
 	filterCh := listener.GetDefaultFilterChain()
 	if filterCh == nil {
-		return nil, fmt.Errorf("listenerv3 %s does not contain the default filterchain", listener.Name)
+		return nil, fmt.Errorf("listener %s does not contain the default filterchain", listener.Name)
 	}
 
 	for _, filter := range filterCh.Filters {
