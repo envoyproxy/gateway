@@ -15,3 +15,4 @@ Learn about the internal details of Envoy Gateway.
   design/egctl
   design/ratelimit
   design/request-authentication
+  design/bootstrap
