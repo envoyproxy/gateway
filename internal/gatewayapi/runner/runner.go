@@ -54,7 +54,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 
 			// check is cors enabled and type is Global
-
 			corsIsGlobal := false
 			for _, cors := range val.CorsFilters {
 				if cors.Spec.Type == "Global" {

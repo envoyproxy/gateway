@@ -117,7 +117,23 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				if t.GlobalCorsEnabled {
+					allowOrigins := make([]*ir.StringMatch, 0)
+					for _, allowOrigin := range corsGlobal.AllowOrigins {
+						switch {
+						case allowOrigin.Exact != nil:
+							m := &ir.StringMatch{Exact: allowOrigin.Exact}
+							allowOrigins = append(allowOrigins, m)
+						case allowOrigin.Prefix != nil:
+							m := &ir.StringMatch{Prefix: allowOrigin.Prefix}
+							allowOrigins = append(allowOrigins, m)
+						default:
+							return
+						}
+
+					}
+
 					irListener.CorsPolicy = &ir.CorsPolicy{
+						AllowOrigins:     allowOrigins,
 						AllowCredentials: corsGlobal.AllowCredentials,
 						AllowHeaders:     corsGlobal.AllowHeaders,
 						AllowMethods:     corsGlobal.AllowMethods,

@@ -28,14 +28,25 @@ func buildXdsCorsPolicy(corsPolicy *ir.CorsPolicy) *routev3.CorsPolicy {
 
 	out := routev3.CorsPolicy{}
 
-	// TODO: handle corsPolicy.AllowOrigins
-	// default to allow all origins
-	out.AllowOriginStringMatch = []*matcherv3.StringMatcher{
-		{
-			MatchPattern: &matcherv3.StringMatcher_Prefix{
-				Prefix: "*",
-			},
-		},
+	if len(corsPolicy.AllowOrigins) > 0 {
+		out.AllowOriginStringMatch = []*matcherv3.StringMatcher{}
+		for _, origin := range corsPolicy.AllowOrigins {
+			switch {
+			case origin.Exact != nil:
+				out.AllowOriginStringMatch = append(out.AllowOriginStringMatch, &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
+						Exact: *origin.Exact,
+					},
+				})
+			case origin.Prefix != nil:
+				out.AllowOriginStringMatch = append(out.AllowOriginStringMatch, &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Prefix{
+						Prefix: *origin.Prefix,
+					},
+				})
+			}
+
+		}
 	}
 
 	out.EnabledSpecifier = &routev3.CorsPolicy_FilterEnabled{
@@ -55,6 +66,7 @@ func buildXdsCorsPolicy(corsPolicy *ir.CorsPolicy) *routev3.CorsPolicy {
 	if corsPolicy.MaxAge != 0 {
 		out.MaxAge = strconv.FormatInt(corsPolicy.MaxAge, 10)
 	}
+
 	return &out
 }
 
