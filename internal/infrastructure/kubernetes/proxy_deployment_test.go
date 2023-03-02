@@ -121,7 +121,7 @@ func TestExpectedProxyDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check the deployment name is as expected.
-	assert.Equal(t, deploy.Name, expectedProxyDeploymentName(infra.Proxy.Name))
+	assert.Equal(t, deploy.Name, expectedResourceHashedName(infra.Proxy.Name))
 
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
@@ -226,7 +226,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      expectedProxyDeploymentName(tc.in.Proxy.Name),
+					Name:      expectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))

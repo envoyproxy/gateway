@@ -21,7 +21,7 @@ import (
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
-	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -313,7 +313,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 	}
 
 	// construct clusters config
-	clusters := tCtx.XdsResources[resource.ClusterType]
+	clusters := tCtx.XdsResources[resourcev3.ClusterType]
 	for _, cluster := range clusters {
 		c, err := anypb.New(cluster)
 		if err != nil {
@@ -331,7 +331,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 	}
 
 	// construct listeners config
-	listeners := tCtx.XdsResources[resource.ListenerType]
+	listeners := tCtx.XdsResources[resourcev3.ListenerType]
 	for _, listener := range listeners {
 		l, err := anypb.New(listener)
 		if err != nil {
@@ -351,7 +351,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 	}
 
 	// construct routes config
-	routes := tCtx.XdsResources[resource.RouteType]
+	routes := tCtx.XdsResources[resourcev3.RouteType]
 	for _, route := range routes {
 		r, err := anypb.New(route)
 		if err != nil {

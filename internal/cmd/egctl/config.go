@@ -331,7 +331,7 @@ func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
 		return nil, fmt.Errorf("pod %s is not running", nn)
 	}
 
-	fw, err := kube.NewLocalPortForwarder(c, nn, 0, int(adminPort))
+	fw, err := kube.NewLocalPortForwarder(c, nn, 0, adminPort)
 	if err != nil {
 		return nil, err
 	}

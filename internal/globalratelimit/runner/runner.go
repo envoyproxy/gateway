@@ -78,9 +78,9 @@ func (r *Runner) translate(xdsIRs []*ir.Xds) (*ir.RateLimitInfra, error) {
 
 	for _, xdsIR := range xdsIRs {
 		for _, listener := range xdsIR.HTTP {
-			config := translator.BuildRateLimitServiceConfig(listener)
-			if config != nil {
-				str, err := translator.GetRateLimitServiceConfigStr(config)
+			cfg := translator.BuildRateLimitServiceConfig(listener)
+			if cfg != nil {
+				str, err := translator.GetRateLimitServiceConfigStr(cfg)
 				if err != nil {
 					return nil, fmt.Errorf("failed to get rate limit config string: %w", err)
 				}

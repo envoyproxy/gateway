@@ -13,18 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
-func expectedProxyServiceName(proxyName string) string {
-	svcName := utils.GetHashedName(proxyName)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, svcName)
-}
-
-// expectedproxyService returns the expected Service based on the provided infra.
+// expectedProxyService returns the expected Service based on the provided infra.
 func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 	var ports []corev1.ServicePort
 	for _, listener := range infra.Proxy.Listeners {
@@ -53,7 +46,7 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyServiceName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Spec: corev1.ServiceSpec{
@@ -69,7 +62,7 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 	return svc, nil
 }
 
-// createOrUpdateproxyService creates a Service in the kube api server based on the provided infra,
+// createOrUpdateProxyService creates a Service in the kube api server based on the provided infra,
 // if it doesn't exist or updates it if it does.
 func (i *Infra) createOrUpdateProxyService(ctx context.Context, infra *ir.Infra) error {
 	svc, err := i.expectedProxyService(infra)
@@ -84,7 +77,7 @@ func (i *Infra) deleteProxyService(ctx context.Context, infra *ir.Infra) error {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyServiceName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 		},
 	}
 

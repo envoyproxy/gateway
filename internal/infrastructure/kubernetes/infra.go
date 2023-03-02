@@ -6,9 +6,12 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 // Infra manages the creation and deletion of Kubernetes infrastructure
@@ -26,4 +29,10 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 		Client:    cli,
 		Namespace: cfg.Namespace,
 	}
+}
+
+// expectedResourceHashedName returns hashed resource name.
+func expectedResourceHashedName(name string) string {
+	hashedName := utils.GetHashedName(name)
+	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }

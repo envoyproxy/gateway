@@ -12,16 +12,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
-
-func expectedProxyServiceAccountName(proxyName string) string {
-	svcActName := utils.GetHashedName(proxyName)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, svcActName)
-}
 
 // expectedProxyServiceAccount returns the expected proxy serviceAccount.
 func (i *Infra) expectedProxyServiceAccount(infra *ir.Infra) (*corev1.ServiceAccount, error) {
@@ -38,7 +31,7 @@ func (i *Infra) expectedProxyServiceAccount(infra *ir.Infra) (*corev1.ServiceAcc
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyServiceAccountName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 	}, nil
@@ -60,7 +53,7 @@ func (i *Infra) deleteProxyServiceAccount(ctx context.Context, infra *ir.Infra) 
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyServiceAccountName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 		},
 	}
 

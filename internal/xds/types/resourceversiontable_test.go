@@ -11,7 +11,7 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -41,12 +41,12 @@ func TestDeepCopy(t *testing.T) {
 			name: "listener",
 			in: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resource.ListenerType: []types.Resource{testListener},
+					resourcev3.ListenerType: []types.Resource{testListener},
 				},
 			},
 			out: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resource.ListenerType: []types.Resource{testListener},
+					resourcev3.ListenerType: []types.Resource{testListener},
 				},
 			},
 		},
@@ -54,14 +54,14 @@ func TestDeepCopy(t *testing.T) {
 			name: "kitchen-sink",
 			in: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resource.ListenerType: []types.Resource{testListener},
-					resource.SecretType:   []types.Resource{testSecret},
+					resourcev3.ListenerType: []types.Resource{testListener},
+					resourcev3.SecretType:   []types.Resource{testSecret},
 				},
 			},
 			out: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resource.ListenerType: []types.Resource{testListener},
-					resource.SecretType:   []types.Resource{testSecret},
+					resourcev3.ListenerType: []types.Resource{testListener},
+					resourcev3.SecretType:   []types.Resource{testSecret},
 				},
 			},
 		},

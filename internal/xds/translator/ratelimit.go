@@ -10,12 +10,12 @@ import (
 	"net/url"
 	"strconv"
 
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	ratelimit "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	ratelimitfilter "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
-	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -27,7 +27,7 @@ import (
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
-func (t *Translator) patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irListener *ir.HTTPListener) {
+func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) {
 	// Return early if rate limits dont exist
 	if !t.isRateLimitPresent(irListener) {
 		return
@@ -42,7 +42,7 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcm.HttpConnectionManager, irLis
 
 	rateLimitFilter := buildRateLimitFilter(irListener)
 	// Make sure the router filter is the terminal filter in the chain.
-	mgr.HttpFilters = append([]*hcm.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
+	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
 
 // isRateLimitPresent returns true if rate limit config exists for the listener.
@@ -60,18 +60,18 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-func buildRateLimitFilter(irListener *ir.HTTPListener) *hcm.HttpFilter {
-	rateLimitFilterProto := &ratelimitfilter.RateLimit{
+func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: getRateLimitDomain(irListener),
-		RateLimitService: &ratelimit.RateLimitServiceConfig{
-			GrpcService: &core.GrpcService{
-				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
-					EnvoyGrpc: &core.GrpcService_EnvoyGrpc{
+		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
+			GrpcService: &corev3.GrpcService{
+				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
+					EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
 						ClusterName: getRateLimitServiceClusterName(),
 					},
 				},
 			},
-			TransportApiVersion: core.ApiVersion_V3,
+			TransportApiVersion: corev3.ApiVersion_V3,
 		},
 	}
 
@@ -80,9 +80,9 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcm.HttpFilter {
 		return nil
 	}
 
-	rateLimitFilter := &hcm.HttpFilter{
+	rateLimitFilter := &hcmv3.HttpFilter{
 		Name: wellknown.HTTPRateLimit,
-		ConfigType: &hcm.HttpFilter_TypedConfig{
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
 			TypedConfig: rateLimitFilterAny,
 		},
 	}
@@ -181,28 +181,28 @@ func GetRateLimitServiceConfigStr(yamlRoot *ratelimitserviceconfig.YamlRoot) (st
 // BuildRateLimitServiceConfig builds the rate limit service configuration based on
 // https://github.com/envoyproxy/ratelimit#the-configuration-format
 func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *ratelimitserviceconfig.YamlRoot {
-	yamlDescs := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
+	yamlDescriptors := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
 
 	for _, route := range irListener.Routes {
 		if route.RateLimit != nil && route.RateLimit.Global != nil {
-			descs := buildRateLimitServiceDescriptors(route.Name, route.RateLimit.Global)
-			yamlDescs = append(yamlDescs, descs...)
+			serviceDescriptors := buildRateLimitServiceDescriptors(route.Name, route.RateLimit.Global)
+			yamlDescriptors = append(yamlDescriptors, serviceDescriptors...)
 		}
 	}
 
-	if len(yamlDescs) == 0 {
+	if len(yamlDescriptors) == 0 {
 		return nil
 	}
 
 	return &ratelimitserviceconfig.YamlRoot{
 		Domain:      getRateLimitDomain(irListener),
-		Descriptors: yamlDescs,
+		Descriptors: yamlDescriptors,
 	}
 }
 
 // buildRateLimitServiceDescriptors creates the rate limit service yaml descriptors based on the global rate limit IR config.
 func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.GlobalRateLimit) []ratelimitserviceconfig.YamlDescriptor {
-	yamlDescs := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
+	yamlDescriptors := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
 
 	for rIdx, rule := range global.Rules {
 		var head, cur *ratelimitserviceconfig.YamlDescriptor
@@ -252,13 +252,13 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			cur = yamlDesc
 		}
 
-		yamlDescs = append(yamlDescs, *head)
+		yamlDescriptors = append(yamlDescriptors, *head)
 	}
 
-	return yamlDescs
+	return yamlDescriptors
 }
 
-func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *cluster.Cluster {
+func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *clusterv3.Cluster {
 	// Return early if rate limits dont exist.
 	if !t.isRateLimitPresent(irListener) {
 		return nil

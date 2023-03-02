@@ -92,7 +92,7 @@ func TestDesiredProxyService(t *testing.T) {
 	require.NoError(t, err)
 
 	// Check the service name is as expected.
-	assert.Equal(t, svc.Name, expectedProxyDeploymentName(infra.Proxy.Name))
+	assert.Equal(t, svc.Name, expectedResourceHashedName(infra.Proxy.Name))
 
 	checkServiceHasPort(t, svc, 80)
 	checkServiceHasPort(t, svc, 443)

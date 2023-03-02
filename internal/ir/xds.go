@@ -20,7 +20,7 @@ var (
 	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
 	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenesSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
+	ErrTCPListenerSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
@@ -186,7 +186,7 @@ func (t TLSListenerConfig) Validate() error {
 	return errs
 }
 
-// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
+// BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
 	Valid   uint32
 	Invalid uint32
@@ -409,7 +409,7 @@ func NewRouteDest(host string, port uint32, weight uint32) *RouteDestination {
 	}
 }
 
-// Add header configures a header to be added to a request or response.
+// AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
 	Name   string
@@ -427,7 +427,7 @@ func (h AddHeader) Validate() error {
 	return errs
 }
 
-// Direct response holds the details for returning a body and status code for a route.
+// DirectResponse holds the details for returning a body and status code for a route.
 // +k8s:deepcopy-gen=true
 type DirectResponse struct {
 	// Body configures the body of the direct response. Currently only a string response
@@ -447,7 +447,7 @@ func (r DirectResponse) Validate() error {
 	return errs
 }
 
-// Re holds the details for how to rewrite a request
+// URLRewrite holds the details for how to rewrite a request
 // +k8s:deepcopy-gen=true
 type URLRewrite struct {
 	// Path contains config for rewriting the path of the request.
@@ -637,7 +637,7 @@ type TLSInspectorConfig struct {
 func (t TLSInspectorConfig) Validate() error {
 	var errs error
 	if len(t.SNIs) == 0 {
-		errs = multierror.Append(errs, ErrTCPListenesSNIsEmpty)
+		errs = multierror.Append(errs, ErrTCPListenerSNIsEmpty)
 	}
 	return errs
 }

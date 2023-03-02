@@ -262,7 +262,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		}
 	}
 
-	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1b1.GatewayClassReasonAccepted), string(status.MsgValidGatewayClass)); err != nil {
+	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1b1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
 		return reconcile.Result{}, err
 	}
@@ -311,10 +311,10 @@ func (r *gatewayAPIReconciler) gatewayClassUpdater(ctx context.Context, gc *gwap
 		})
 	} else {
 		// this branch makes testing easier by not going through the status.Updater.
-		copy := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
+		duplicate := status.SetGatewayClassAccepted(gc.DeepCopy(), accepted, reason, msg)
 
-		if err := r.client.Status().Update(ctx, copy); err != nil && !kerrors.IsNotFound(err) {
-			return fmt.Errorf("error updating status of gatewayclass %s: %w", copy.Name, err)
+		if err := r.client.Status().Update(ctx, duplicate); err != nil && !kerrors.IsNotFound(err) {
+			return fmt.Errorf("error updating status of gatewayclass %s: %w", duplicate.Name, err)
 		}
 	}
 	return nil
@@ -383,8 +383,8 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 
 	for _, refGrant := range refGrantList.Items {
 		if refGrant.Namespace == to.namespace {
-			for _, source := range refGrant.Spec.From {
-				if source.Kind == gwapiv1a2.Kind(from.kind) && string(source.Namespace) == from.namespace {
+			for _, src := range refGrant.Spec.From {
+				if src.Kind == gwapiv1a2.Kind(from.kind) && string(src.Namespace) == from.namespace {
 					return &refGrant, nil
 				}
 			}

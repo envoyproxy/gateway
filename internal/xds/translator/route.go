@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"strings"
 
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	matcher "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -30,16 +30,16 @@ func buildXdsCorsPolicy(corsPolicy *ir.CorsPolicy) *routev3.CorsPolicy {
 
 	// TODO: handle corsPolicy.AllowOrigins
 	// default to allow all origins
-	out.AllowOriginStringMatch = []*matcher.StringMatcher{
+	out.AllowOriginStringMatch = []*matcherv3.StringMatcher{
 		{
-			MatchPattern: &matcher.StringMatcher_Prefix{
+			MatchPattern: &matcherv3.StringMatcher_Prefix{
 				Prefix: "*",
 			},
 		},
 	}
 
 	out.EnabledSpecifier = &routev3.CorsPolicy_FilterEnabled{
-		FilterEnabled: &core.RuntimeFractionalPercent{
+		FilterEnabled: &corev3.RuntimeFractionalPercent{
 			DefaultValue: &xdstype.FractionalPercent{
 				Numerator:   100,
 				Denominator: xdstype.FractionalPercent_HUNDRED,
@@ -58,7 +58,7 @@ func buildXdsCorsPolicy(corsPolicy *ir.CorsPolicy) *routev3.CorsPolicy {
 	return &out
 }
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listener.Listener) *routev3.Route {
+func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *routev3.Route {
 
 	router := &routev3.Route{
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
@@ -155,8 +155,8 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 			}
 		} else if pathMatch.SafeRegex != nil {
 			outMatch.PathSpecifier = &routev3.RouteMatch_SafeRegex{
-				SafeRegex: &matcher.RegexMatcher{
-					EngineType: &matcher.RegexMatcher_GoogleRe2{},
+				SafeRegex: &matcherv3.RegexMatcher{
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{},
 					Regex:      *pathMatch.SafeRegex,
 				},
 			}
@@ -191,35 +191,35 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 	return outMatch
 }
 
-func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcher.StringMatcher {
-	stringMatcher := new(matcher.StringMatcher)
+func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
+	stringMatcher := new(matcherv3.StringMatcher)
 
 	//nolint:gocritic
 	if irMatch.Exact != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Exact{
+		stringMatcher = &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Exact{
 				Exact: *irMatch.Exact,
 			},
 		}
 	} else if irMatch.Prefix != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Prefix{
+		stringMatcher = &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Prefix{
 				Prefix: *irMatch.Prefix,
 			},
 		}
 	} else if irMatch.Suffix != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_Suffix{
+		stringMatcher = &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_Suffix{
 				Suffix: *irMatch.Suffix,
 			},
 		}
 	} else if irMatch.SafeRegex != nil {
-		stringMatcher = &matcher.StringMatcher{
-			MatchPattern: &matcher.StringMatcher_SafeRegex{
-				SafeRegex: &matcher.RegexMatcher{
+		stringMatcher = &matcherv3.StringMatcher{
+			MatchPattern: &matcherv3.StringMatcher_SafeRegex{
+				SafeRegex: &matcherv3.RegexMatcher{
 					Regex: *irMatch.SafeRegex,
-					EngineType: &matcher.RegexMatcher_GoogleRe2{
-						GoogleRe2: &matcher.RegexMatcher_GoogleRE2{},
+					EngineType: &matcherv3.RegexMatcher_GoogleRe2{
+						GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
 					},
 				},
 			},
@@ -302,8 +302,8 @@ func buildXdsURLRewriteAction(routeName string, urlRewrite *ir.URLRewrite) *rout
 
 	if urlRewrite.Path != nil {
 		if urlRewrite.Path.FullReplace != nil {
-			routeAction.RegexRewrite = &matcher.RegexMatchAndSubstitute{
-				Pattern: &matcher.RegexMatcher{
+			routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
+				Pattern: &matcherv3.RegexMatcher{
 					Regex: "/.+",
 				},
 				Substitution: *urlRewrite.Path.FullReplace,
@@ -328,8 +328,8 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectRespons
 	routeAction := &routev3.DirectResponseAction{Status: res.StatusCode}
 
 	if res.Body != nil {
-		routeAction.Body = &core.DataSource{
-			Specifier: &core.DataSource_InlineString{
+		routeAction.Body = &corev3.DataSource{
+			Specifier: &corev3.DataSource_InlineString{
 				InlineString: *res.Body,
 			},
 		}
@@ -350,12 +350,12 @@ func buildXdsRequestMirrorPolicies(routeName string, mirrors []*ir.RouteDestinat
 	return mirrorPolicies
 }
 
-func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*core.HeaderValueOption {
-	headerValueOptions := make([]*core.HeaderValueOption, len(headersToAdd))
+func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOption {
+	headerValueOptions := make([]*corev3.HeaderValueOption, len(headersToAdd))
 
 	for i, header := range headersToAdd {
-		headerValueOptions[i] = &core.HeaderValueOption{
-			Header: &core.HeaderValue{
+		headerValueOptions[i] = &corev3.HeaderValueOption{
+			Header: &corev3.HeaderValue{
 				Key:   header.Name,
 				Value: header.Value,
 			},

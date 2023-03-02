@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	resource "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
@@ -132,14 +132,14 @@ func TestTranslateXds(t *testing.T) {
 			}
 			tCtx, err := tr.Translate(ir)
 			require.NoError(t, err)
-			listeners := tCtx.XdsResources[resource.ListenerType]
-			routes := tCtx.XdsResources[resource.RouteType]
-			clusters := tCtx.XdsResources[resource.ClusterType]
+			listeners := tCtx.XdsResources[resourcev3.ListenerType]
+			routes := tCtx.XdsResources[resourcev3.RouteType]
+			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 			if tc.requireSecrets {
-				secrets := tCtx.XdsResources[resource.SecretType]
+				secrets := tCtx.XdsResources[resourcev3.SecretType]
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
 		})
