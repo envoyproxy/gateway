@@ -3,7 +3,7 @@ deployment:
     image:
       repository: docker.io/envoyproxy/gateway-dev
       tag: latest
-    imagePullPolicy: Always
+    imagePullPolicy: IfNotPresent
     resources:
       limits:
         cpu: 500m

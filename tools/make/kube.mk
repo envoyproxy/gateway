@@ -44,7 +44,7 @@ ifndef ignore-not-found
   ignore-not-found = true
 endif
 
-IMAGE_PULL_POLICY ?= Always
+IMAGE_PULL_POLICY ?= IfNotPresent
 
 .PHONY: kube-deploy
 kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
