@@ -22,12 +22,12 @@ func NamespacedName(obj client.Object) types.NamespacedName {
 	}
 }
 
-// Returns a partially hashed name for the string including up to 48 characters of the original name before the hash
+// GetHashedName returns a partially hashed name for the string including up to 48 characters of the original name before the hash
 func GetHashedName(name string) string {
 
 	h := sha256.New() // Using sha256 instead of sha1 due to Blocklisted import crypto/sha1: weak cryptographic primitive (gosec)
-	hsha := h.Sum([]byte(name))
-	hashedName := strings.ToLower(fmt.Sprintf("%x", hsha))
+	hSum := h.Sum([]byte(name))
+	hashedName := strings.ToLower(fmt.Sprintf("%x", hSum))
 
 	if len(name) > 48 {
 		return fmt.Sprintf("%s-%s", name[0:48], hashedName[0:8])

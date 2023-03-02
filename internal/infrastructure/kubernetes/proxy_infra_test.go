@@ -76,7 +76,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedProxyServiceAccountName(tc.in.Proxy.Name),
+						Name:      expectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
@@ -84,7 +84,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedProxyConfigMapName(tc.in.Proxy.Name),
+						Name:      expectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
@@ -92,7 +92,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedProxyDeploymentName(tc.in.Proxy.Name),
+						Name:      expectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
@@ -100,7 +100,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      expectedProxyServiceName(tc.in.Proxy.Name),
+						Name:      expectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))

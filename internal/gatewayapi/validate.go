@@ -275,7 +275,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 		if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
 			if !t.validateCrossNamespaceRef(
 				crossNamespaceFrom{
-					group:     string(v1beta1.GroupName),
+					group:     v1beta1.GroupName,
 					kind:      KindGateway,
 					namespace: listener.gateway.Namespace,
 				},

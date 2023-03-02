@@ -15,10 +15,8 @@ import (
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -34,11 +32,6 @@ const (
 	// envoyHTTPSPort is the container port number of Envoy's HTTPS endpoint.
 	envoyHTTPSPort = int32(8443)
 )
-
-func expectedProxyDeploymentName(proxyName string) string {
-	deploymentName := utils.GetHashedName(proxyName)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, deploymentName)
-}
 
 // expectedProxyDeployment returns the expected Deployment based on the provided infra.
 func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
@@ -68,7 +61,7 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyDeploymentName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -80,7 +73,7 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            expectedProxyServiceAccountName(infra.Proxy.Name),
+					ServiceAccountName:            expectedResourceHashedName(infra.Proxy.Name),
 					AutomountServiceAccountToken:  pointer.Bool(false),
 					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -100,7 +93,7 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: expectedProxyConfigMapName(infra.Proxy.Name),
+										Name: expectedResourceHashedName(infra.Proxy.Name),
 									},
 									Items: []corev1.KeyToPath{
 										{
@@ -214,7 +207,7 @@ func (i *Infra) deleteProxyDeployment(ctx context.Context, infra *ir.Infra) erro
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyDeploymentName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 		},
 	}
 

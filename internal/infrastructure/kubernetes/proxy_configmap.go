@@ -12,10 +12,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
 // expectedProxyConfigMap returns the expected ConfigMap based on the provided infra.
@@ -29,7 +27,7 @@ func (i *Infra) expectedProxyConfigMap(infra *ir.Infra) (*corev1.ConfigMap, erro
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyConfigMapName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Data: map[string]string{
@@ -55,14 +53,9 @@ func (i *Infra) deleteProxyConfigMap(ctx context.Context, infra *ir.Infra) error
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
-			Name:      expectedProxyConfigMapName(infra.Proxy.Name),
+			Name:      expectedResourceHashedName(infra.Proxy.Name),
 		},
 	}
 
 	return i.deleteConfigMap(ctx, cm)
-}
-
-func expectedProxyConfigMapName(proxyName string) string {
-	cMapName := utils.GetHashedName(proxyName)
-	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, cMapName)
 }

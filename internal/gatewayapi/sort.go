@@ -48,8 +48,8 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 // defined in the Gateway API spec.
 // https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
 func sortXdsIRMap(xdsIR XdsIRMap) {
-	for _, ir := range xdsIR {
-		for _, http := range ir.HTTP {
+	for _, irItem := range xdsIR {
+		for _, http := range irItem.HTTP {
 			// descending order
 			sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
 		}
