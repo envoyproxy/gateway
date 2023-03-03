@@ -35,7 +35,7 @@ type EnvoyProxySpec struct {
 	// from it are not configurable and will result in the `EnvoyProxy` resource being rejected.
 	// We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default
 	// Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors.
-	Bootstrap string `json:"bootstrap,omitempty"`
+	Bootstrap *string `json:"bootstrap,omitempty"`
 }
 ```
 

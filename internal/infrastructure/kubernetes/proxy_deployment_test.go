@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -150,6 +151,35 @@ func TestExpectedProxyDeployment(t *testing.T) {
 
 	// Check the number of replicas is as expected.
 	assert.Equal(t, repl, *deploy.Spec.Replicas)
+}
+
+func TestExpectedBootstrap(t *testing.T) {
+	svrCfg, err := config.New()
+	require.NoError(t, err)
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	kube := NewInfra(cli, svrCfg)
+	infra := ir.NewInfra()
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+	// Set a custom bootstrap config into EnvoyProxy API and ensure the same
+	// value is set as the container arg.
+	bstrap := "blah"
+	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: egcfgv1a1.EnvoyProxySpec{
+			Bootstrap: &bstrap,
+		},
+	}
+
+	deploy, err := kube.expectedProxyDeployment(infra)
+	require.NoError(t, err)
+	container := checkContainer(t, deploy, envoyContainerName, true)
+	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", bstrap))
 }
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
