@@ -141,6 +141,7 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		cfg = *infra.Proxy.Config.Spec.Bootstrap
 	} else {
 		var err error
+		// Use the default Bootstrap
 		cfg, err = bootstrap.GetRenderedBootstrapConfig()
 		if err != nil {
 			return nil, err
