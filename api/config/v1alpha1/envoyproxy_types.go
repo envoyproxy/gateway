@@ -54,6 +54,8 @@ type EnvoyProxySpec struct {
 	// Backward compatibility across minor versions is not guaranteed.
 	// We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default
 	// Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors.
+	//
+	// +optional
 	Bootstrap *string `json:"bootstrap,omitempty"`
 }
 
