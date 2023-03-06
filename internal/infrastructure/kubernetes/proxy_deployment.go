@@ -133,9 +133,19 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
-	cfg, err := bootstrap.GetRenderedBootstrapConfig()
-	if err != nil {
-		return nil, err
+	var cfg string
+	// Get Bootstrap from EnvoyProxy API if set by the user
+	// The config should have been validated already
+	if infra.Proxy.Config != nil &&
+		infra.Proxy.Config.Spec.Bootstrap != nil {
+		cfg = *infra.Proxy.Config.Spec.Bootstrap
+	} else {
+		var err error
+		// Use the default Bootstrap
+		cfg, err = bootstrap.GetRenderedBootstrapConfig()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	containers := []corev1.Container{
