@@ -1,7 +1,7 @@
 deployment:
   envoyGateway:
     image:
-      repository: docker.io/envoyproxy/gateway-dev
+      repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
       tag: latest
     imagePullPolicy: IfNotPresent
     resources:
@@ -27,7 +27,6 @@ deployment:
     port: 18000
     targetPort: 18000
   replicas: 1
-
 rootNamespace: envoy-gateway-system
 
 config:
@@ -44,3 +43,5 @@ envoyGatewayMetricsService:
     protocol: TCP
     targetPort: https
 kubernetesClusterDomain: cluster.local
+
+
