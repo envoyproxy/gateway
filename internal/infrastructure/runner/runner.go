@@ -40,6 +40,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
+		return err
 	}
 	go r.subscribeToProxyInfraIR(ctx)
 
