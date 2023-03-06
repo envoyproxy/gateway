@@ -15,7 +15,7 @@ that level of complexity when managing their clusters.
 ## Goals
 
 - Provide a foundation for extending the Envoy Gateway control plane
-- Allow Extension Developers to introudce their own cusom resources for extending the Gateway-API via [ExtensionRefs][], [policyAttachments][] (future) and [backendRefs][] (future).
+- Allow Extension Developers to introduce their own custom resources for extending the Gateway-API via [ExtensionRefs][], [policyAttachments][] (future) and [backendRefs][] (future).
 - Extension developers should **NOT** have to maintain a custom fork of Envoy Gateway
 - Provide a system for extending Envoy Gateway which allows extension projects to ship updates independent of Envoy Gateway's release schedule
 - Extensions can hook into both the Envoy configuration pipeline and the infra manager pipeline
@@ -24,15 +24,15 @@ that level of complexity when managing their clusters.
 
 ## Non-Goals
 
-- The initial deisgn does not capture every hook that Envoy Gateway will eventually support.
+- The initial design does not capture every hook that Envoy Gateway will eventually support.
 - Extend [Gateway API Policy Attachments][]. At some point these will be addressed using this extension system, but the initial implementation omits these.
 - Guarantee that multiple extensions will work together without conflicts
 
 ## Overview
 
 Envoy Gateway can be extended by vendors by means of an extension server developed by the vendor and deployed alongside Envoy Gateway.
-An extension server can make use of one or more pre/post hooks inside Envoy Gateway before and after it's major components (translator, etc.) to allow the extension to modify the data going into or coming out of these components.
-An extension can be created external to Envoy Gateway as it's own Kubernetes deployment or loaded as a sidecar. gRPC is used for the calls between Envoy Gateway and an extension. In the hook call, Envoy Gateway sends data as well 
+An extension server can make use of one or more pre/post hooks inside Envoy Gateway before and after its major components (translator, etc.) to allow the extension to modify the data going into or coming out of these components.
+An extension can be created external to Envoy Gateway as its own Kubernetes deployment or loaded as a sidecar. gRPC is used for the calls between Envoy Gateway and an extension. In the hook call, Envoy Gateway sends data as well 
 as context information to the extension and expects a reply with a modified version of the data that was sent to the extension. Since extensions fundamentally alter the logic and data that Envoy Gateway provides, Extension projects assume responsibility for any bugs and issues 
 they create as a direct result of their modification of Envoy Gateway.
 
@@ -81,7 +81,7 @@ Gateway converts into [Envoy specific configuration (xDS)][] to send over to Env
 Gateway API offers [ExtensionRef filters][] and [Policy Attachments][] as extension points for implementers to use. Envoy Gateway extends the Gateway API using these extension points to provide support for [rate limiting][] 
 and [authentication][]. The initial design of Envoy Gateway extensions will primarily focus on ExtensionRef filters, where users can reference a custom resource as an HTTP Filter.
 
-When Envoy Gateway encounters an [HTTPRoute][] or [GRPCRoute][] that has an `ExtensionRef` `filter` with an `apiGroup` and `kind` that Envoy Gateway does not supoport, it will first
+When Envoy Gateway encounters an [HTTPRoute][] or [GRPCRoute][] that has an `ExtensionRef` `filter` with an `apiGroup` and `kind` that Envoy Gateway does not support, it will first
 check the list of registered extensions to determine if any of the registered extensions support the referenced object before considering it a configuration error.
 
 This allows users to be able to reference additional filters provided by extensions to Envoy Gateway, in their `HTTPRoute`s / `GRPCRoute`s:
@@ -146,9 +146,9 @@ latency between Envoy and the authentication service and also allows the end use
 
 ## Known Challenges
 
-Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does come with some know issues that will have to be worked around.
+Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does come with some known issues that will have to be worked around.
 
-- Extension server handling it's own state such as in the scenario where an extension establishes watches its own CRDs in the cluster can lead to a scenario where
+- Extension server handling its own state such as in the scenario where an extension establishes watches its own CRDs in the cluster can lead to a scenario where
 ensuring that the extension and Envoy Gateway are in-sync becomes a challenge.
   - A potential workaround to this issue would be to have the extension use hook points in Envoy Gateway to replace Envoy Gateway's Kubernetes provider (the component that watches resources such as the 
 Gateway API CRDs) with a custom provider that can enable Envoy Gateway to be a single source of truth for configuration coming from the cluster.
