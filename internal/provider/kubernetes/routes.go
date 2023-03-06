@@ -155,6 +155,17 @@ func (r *gatewayAPIReconciler) processCustomGRPCRoutes(ctx context.Context, gate
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	customgrpcRouteList := &gwapiv1a2.CustomGRPCRouteList{}
 
+	// An HTTPRoute may reference an AuthenticationFilter or RateLimitFilter,
+	// so add them to the resource map first (if they exist).
+	authenFilters, err := r.getAuthenticationFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range authenFilters {
+		filter := authenFilters[i]
+		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
 	corsFilter, err := r.getCorsFilter(ctx)
 	if err != nil {
 		return err
@@ -234,6 +245,19 @@ func (r *gatewayAPIReconciler) processCustomGRPCRoutes(ctx context.Context, gate
 							continue
 						}
 						resourceTree.CorsFilters = append(resourceTree.CorsFilters, filter)
+					} else if string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+						key := types.NamespacedName{
+							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
+							Namespace: customgrpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+
+						filter, ok := resourceMap.authenFilters[key]
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+							continue
+						}
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
 					}
 				}
 			}
