@@ -375,7 +375,7 @@ type RouteDestination struct {
 	Port uint32
 	// Weight associated with this destination.
 	// Note: Weight is not used in TCP/UDP route.
-	Weight uint32
+	Weight *uint32
 }
 
 // Validate the fields within the RouteDestination structure
@@ -393,12 +393,22 @@ func (r RouteDestination) Validate() error {
 }
 
 // NewRouteDest creates a new RouteDestination.
-func NewRouteDest(host string, port uint32, weight uint32) *RouteDestination {
+func NewRouteDest(host string, port uint32) *RouteDestination {
 	return &RouteDestination{
-		Host:   host,
-		Port:   port,
-		Weight: weight,
+		Host: host,
+		Port: port,
 	}
+}
+
+func NewRouteDestWithWeight(host string, port uint32, weight uint32) *RouteDestination {
+	rd := &RouteDestination{
+		Host: host,
+		Port: port,
+	}
+	if weight != 0 {
+		rd.Weight = &weight
+	}
+	return rd
 }
 
 // AddHeader configures a header to be added to a request or response.

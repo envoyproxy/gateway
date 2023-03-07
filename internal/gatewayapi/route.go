@@ -547,7 +547,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					weight = uint32(*backendRef.Weight)
 				}
 
-				routeDestinations = append(routeDestinations, ir.NewRouteDest(
+				routeDestinations = append(routeDestinations, ir.NewRouteDestWithWeight(
 					service.Spec.ClusterIP,
 					uint32(*backendRef.Port),
 					weight,
@@ -687,7 +687,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		routeDestinations = append(routeDestinations, ir.NewRouteDest(
 			service.Spec.ClusterIP,
 			uint32(*backendRef.Port),
-			0,
 		))
 
 		accepted := false
@@ -813,7 +812,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		routeDestinations = append(routeDestinations, ir.NewRouteDest(
 			service.Spec.ClusterIP,
 			uint32(*backendRef.Port),
-			0,
 		))
 
 		accepted := false
@@ -888,7 +886,8 @@ func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 		return nil, weight
 	}
 
-	return ir.NewRouteDest(
+	// we need to validate backendRef first before using its data to create routeDestination
+	return ir.NewRouteDestWithWeight(
 		service.Spec.ClusterIP,
 		uint32(*backendRef.Port),
 		weight,

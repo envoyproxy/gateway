@@ -99,14 +99,12 @@ xdsIR:
         destinations:
           - host: "7.7.7.7"
             port: 8163
-            weight: 0
       - name: "envoy-gateway-gateway-1-tcp2-tcproute-1"
         address: "0.0.0.0"
         port: 10162
         destinations:
           - host: "7.7.7.7"
             port: 8163
-            weight: 0
 
 infraIR:
   envoy-gateway-gateway-1:
