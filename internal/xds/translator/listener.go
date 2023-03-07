@@ -491,6 +491,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 func makeConfigSource() *core.ConfigSource {
 	source := &core.ConfigSource{}
 	source.ResourceApiVersion = resource.DefaultAPIVersion
+<<<<<<< HEAD
 	source.ConfigSourceSpecifier = &core.ConfigSource_ApiConfigSource{
 		ApiConfigSource: &core.ApiConfigSource{
 			TransportApiVersion:       resource.DefaultAPIVersion,
@@ -502,6 +503,10 @@ func makeConfigSource() *core.ConfigSource {
 				},
 			}},
 		},
+=======
+	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
+		Ads: &corev3.AggregatedConfigSource{},
+>>>>>>> 8033b1a (use ADS for all xDS resources (#1095))
 	}
 	return source
 }

@@ -40,13 +40,7 @@ dynamicListeners:
                 '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
             rds:
               configSource:
-                apiConfigSource:
-                  apiType: DELTA_GRPC
-                  grpcServices:
-                  - envoyGrpc:
-                      clusterName: xds_cluster
-                  setNodeOnFirstMessageOnly: true
-                  transportApiVersion: V3
+                ads: {}
                 resourceApiVersion: V3
               routeConfigName: default-eg-http
             statPrefix: http
