@@ -368,6 +368,7 @@ func (j *JwtRequestAuthentication) Validate() error {
 }
 
 // RouteDestination holds the destination details associated with the route
+// +kubebuilder:object:generate=true
 type RouteDestination struct {
 	// Host refers to the FQDN or IP address of the backend service.
 	Host string
