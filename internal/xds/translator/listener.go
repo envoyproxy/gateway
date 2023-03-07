@@ -404,17 +404,8 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 func makeConfigSource() *corev3.ConfigSource {
 	source := &corev3.ConfigSource{}
 	source.ResourceApiVersion = resource.DefaultAPIVersion
-	source.ConfigSourceSpecifier = &corev3.ConfigSource_ApiConfigSource{
-		ApiConfigSource: &corev3.ApiConfigSource{
-			TransportApiVersion:       resource.DefaultAPIVersion,
-			ApiType:                   corev3.ApiConfigSource_DELTA_GRPC,
-			SetNodeOnFirstMessageOnly: true,
-			GrpcServices: []*corev3.GrpcService{{
-				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
-					EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{ClusterName: "xds_cluster"},
-				},
-			}},
-		},
+	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
+		Ads: &corev3.AggregatedConfigSource{},
 	}
 	return source
 }

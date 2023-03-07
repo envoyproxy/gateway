@@ -11,37 +11,24 @@ bootstrap:
         address: 127.0.0.1
         portValue: 19000
   dynamicResources:
-    cdsConfig:
-      apiConfigSource:
-        apiType: DELTA_GRPC
-        grpcServices:
-        - envoyGrpc:
-            clusterName: xds_cluster
-        setNodeOnFirstMessageOnly: true
-        transportApiVersion: V3
-      resourceApiVersion: V3
+    adsConfig:
+      apiType: DELTA_GRPC
+      grpcServices:
+      - envoyGrpc:
+          clusterName: xds_cluster
+      setNodeOnFirstMessageOnly: true
+      transportApiVersion: V3
     ldsConfig:
-      apiConfigSource:
-        apiType: DELTA_GRPC
-        grpcServices:
-        - envoyGrpc:
-            clusterName: xds_cluster
-        setNodeOnFirstMessageOnly: true
-        transportApiVersion: V3
-      resourceApiVersion: V3
+      ads: {}
+    cdsConfig:
+      ads: {}
   layeredRuntime:
     layers:
     - name: runtime-0
       rtdsLayer:
         name: runtime-0
         rtdsConfig:
-          apiConfigSource:
-            apiType: DELTA_GRPC
-            grpcServices:
-            - envoyGrpc:
-                clusterName: xds_cluster
-            transportApiVersion: V3
-          resourceApiVersion: V3
+          ads: {}  
   staticResources:
     clusters:
     - connectTimeout: 10s

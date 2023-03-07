@@ -27,13 +27,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
         rds:
           configSource:
-            apiConfigSource:
-              apiType: DELTA_GRPC
-              grpcServices:
-              - envoyGrpc:
-                  clusterName: xds_cluster
-              setNodeOnFirstMessageOnly: true
-              transportApiVersion: V3
+            ads: {}
             resourceApiVersion: V3
           routeConfigName: third-listener
         statPrefix: http
@@ -59,13 +53,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
         rds:
           configSource:
-            apiConfigSource:
-              apiType: DELTA_GRPC
-              grpcServices:
-              - envoyGrpc:
-                  clusterName: xds_cluster
-              setNodeOnFirstMessageOnly: true
-              transportApiVersion: V3
+            ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
         statPrefix: https
@@ -80,13 +68,7 @@
           tlsCertificateSdsSecretConfigs:
           - name: first-listener
             sdsConfig:
-              apiConfigSource:
-                apiType: DELTA_GRPC
-                grpcServices:
-                - envoyGrpc:
-                    clusterName: xds_cluster
-                setNodeOnFirstMessageOnly: true
-                transportApiVersion: V3
+              ads: {}
               resourceApiVersion: V3
   - filterChainMatch:
       serverNames:
@@ -106,13 +88,7 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
         rds:
           configSource:
-            apiConfigSource:
-              apiType: DELTA_GRPC
-              grpcServices:
-              - envoyGrpc:
-                  clusterName: xds_cluster
-              setNodeOnFirstMessageOnly: true
-              transportApiVersion: V3
+            ads: {}
             resourceApiVersion: V3
           routeConfigName: second-listener
         statPrefix: https
@@ -127,13 +103,7 @@
           tlsCertificateSdsSecretConfigs:
           - name: second-listener
             sdsConfig:
-              apiConfigSource:
-                apiType: DELTA_GRPC
-                grpcServices:
-                - envoyGrpc:
-                    clusterName: xds_cluster
-                setNodeOnFirstMessageOnly: true
-                transportApiVersion: V3
+              ads: {}
               resourceApiVersion: V3
   - filterChainMatch:
       serverNames:
