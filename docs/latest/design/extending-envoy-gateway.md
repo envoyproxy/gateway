@@ -149,9 +149,13 @@ latency between Envoy and the authentication service and also allows the end use
 Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does come with some known issues that will have to be worked around.
 
 - Extension server handling its own state such as in the scenario where an extension establishes watches its own CRDs in the cluster can lead to a scenario where
-ensuring that the extension and Envoy Gateway are in-sync becomes a challenge.
-  - A potential workaround to this issue would be to have the extension use hook points in Envoy Gateway to replace Envoy Gateway's Kubernetes provider (the component that watches resources such as the 
-Gateway API CRDs) with a custom provider that can enable Envoy Gateway to be a single source of truth for configuration coming from the cluster.
+ensuring that the extension and Envoy Gateway are in-sync becomes a challenge. There are two potential solutions to this problem.
+  - Option 1: Create a new External Provider mechanism where an extension can take over all provider responsibility for Envoy Gateway. The current functionality of the provider would need to become a Library that EG would make use of 
+to watch gateway API resources. If an extension wanted to take over the responsibility of watching everything, it would then become an "External Provider" and could use the same library Envoy Gateway would be using and add watches for 
+all new resources introduced by the extension. Extension developers would get the benefit of re-using the community provided Gateway-API common logic and would allow an extension to have control over when reconciliation occurs in Envoy Gateway.
+  - Option 2: Make an addition to Envoy Gateway's Gateway-API provider so that it listens to Custom Resource API Groups/Kinds that are introduced by extension and trigger a validation hook when reconciling these resources 
+so the extension can do early validation of its resources. Envoy Gateway would then pass these resources back to the extension whenever a hook point is called. This way the extension does not need to create any watches on resources in the 
+Kubernetes API Server. This solution has the added benefit of extension developers not needing to take control over resource watching from Envoy Gateway and is less operationally complex.
 
 - Request time: since an extension would make use of one or more hook points in Envoy Gateway that use gRPC for communication, the time it takes to perform these requests could become a concern for some
 extension developers.
