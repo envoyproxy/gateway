@@ -684,11 +684,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		// weight is not used in udp route destinations
-		weight := uint32(0)
 		routeDestinations = append(routeDestinations, ir.NewRouteDest(
 			service.Spec.ClusterIP,
 			uint32(*backendRef.Port),
-			weight,
+			0,
 		))
 
 		accepted := false
@@ -811,11 +810,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		// weight is not used in tcp route destinations
-		weight := uint32(0)
 		routeDestinations = append(routeDestinations, ir.NewRouteDest(
 			service.Spec.ClusterIP,
 			uint32(*backendRef.Port),
-			weight,
+			0,
 		))
 
 		accepted := false
