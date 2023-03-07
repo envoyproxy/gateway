@@ -205,7 +205,7 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(RouteDestination)
-				**out = **in
+				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
@@ -216,7 +216,7 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(RouteDestination)
-				**out = **in
+				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
@@ -635,7 +635,7 @@ func (in *TCPListener) DeepCopyInto(out *TCPListener) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(RouteDestination)
-				**out = **in
+				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
@@ -706,7 +706,7 @@ func (in *UDPListener) DeepCopyInto(out *UDPListener) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(RouteDestination)
-				**out = **in
+				(*in).DeepCopyInto(*out)
 			}
 		}
 	}
