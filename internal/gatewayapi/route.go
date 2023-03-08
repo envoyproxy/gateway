@@ -547,11 +547,11 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					weight = uint32(*backendRef.Weight)
 				}
 
-				routeDestinations = append(routeDestinations, &ir.RouteDestination{
-					Host:   service.Spec.ClusterIP,
-					Port:   uint32(*backendRef.Port),
-					Weight: weight,
-				})
+				routeDestinations = append(routeDestinations, ir.NewRouteDestWithWeight(
+					service.Spec.ClusterIP,
+					uint32(*backendRef.Port),
+					weight,
+				))
 			}
 
 			// TODO handle:
@@ -684,10 +684,10 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		// weight is not used in udp route destinations
-		routeDestinations = append(routeDestinations, &ir.RouteDestination{
-			Host: service.Spec.ClusterIP,
-			Port: uint32(*backendRef.Port),
-		})
+		routeDestinations = append(routeDestinations, ir.NewRouteDest(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port),
+		))
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
@@ -809,10 +809,10 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		// weight is not used in tcp route destinations
-		routeDestinations = append(routeDestinations, &ir.RouteDestination{
-			Host: service.Spec.ClusterIP,
-			Port: uint32(*backendRef.Port),
-		})
+		routeDestinations = append(routeDestinations, ir.NewRouteDest(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port),
+		))
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
@@ -886,11 +886,12 @@ func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 		return nil, weight
 	}
 
-	return &ir.RouteDestination{
-		Host:   service.Spec.ClusterIP,
-		Port:   uint32(*backendRef.Port),
-		Weight: weight,
-	}, weight
+	// we need to validate backendRef first before using its data to create routeDestination
+	return ir.NewRouteDestWithWeight(
+		service.Spec.ClusterIP,
+		uint32(*backendRef.Port),
+		weight,
+	), weight
 
 }
 

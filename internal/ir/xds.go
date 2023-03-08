@@ -368,14 +368,15 @@ func (j *JwtRequestAuthentication) Validate() error {
 }
 
 // RouteDestination holds the destination details associated with the route
+// +kubebuilder:object:generate=true
 type RouteDestination struct {
 	// Host refers to the FQDN or IP address of the backend service.
 	Host string
 	// Port on the service to forward the request to.
 	Port uint32
 	// Weight associated with this destination.
-	// Note: Weight is not used in UDP route.
-	Weight uint32
+	// Note: Weight is not used in TCP/UDP route.
+	Weight *uint32
 }
 
 // Validate the fields within the RouteDestination structure
@@ -393,11 +394,18 @@ func (r RouteDestination) Validate() error {
 }
 
 // NewRouteDest creates a new RouteDestination.
-func NewRouteDest(host string, port uint32, weight uint32) *RouteDestination {
+func NewRouteDest(host string, port uint32) *RouteDestination {
+	return &RouteDestination{
+		Host: host,
+		Port: port,
+	}
+}
+
+func NewRouteDestWithWeight(host string, port uint32, weight uint32) *RouteDestination {
 	return &RouteDestination{
 		Host:   host,
 		Port:   port,
-		Weight: weight,
+		Weight: &weight,
 	}
 }
 
