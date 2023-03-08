@@ -402,14 +402,11 @@ func NewRouteDest(host string, port uint32) *RouteDestination {
 }
 
 func NewRouteDestWithWeight(host string, port uint32, weight uint32) *RouteDestination {
-	rd := &RouteDestination{
-		Host: host,
-		Port: port,
+	return &RouteDestination{
+		Host:   host,
+		Port:   port,
+		Weight: &weight,
 	}
-	if weight != 0 {
-		rd.Weight = &weight
-	}
-	return rd
 }
 
 // AddHeader configures a header to be added to a request or response.
