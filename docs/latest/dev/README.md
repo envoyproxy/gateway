@@ -34,7 +34,11 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ### Building
 
-* Run `make build` to build the Envoy Gateway binary. __Note:__ The binary gets generated in the `bin/` directory
+* Run `make build` to build all the binaries.
+* Run `make build BINS="envoy-gateway"` to build the Envoy Gateway binary.
+* Run `make build BINS="egctl"` to build the egctl binary.
+
+__Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for example, `bin/linux/amd64/`.
 
 ### Testing
 
