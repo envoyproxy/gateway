@@ -96,7 +96,7 @@ spec:
                             additionalProperties:
                               type: string
                             description: PodAnnotations are the annotations that should
-                              be appeneded to the pods.
+                              be appended to the pods.
                             type: object
                           replicas:
                             description: Replicas is the number of desired pods. Defaults
@@ -112,7 +112,7 @@ spec:
                           annotations:
                             additionalProperties:
                               type: string
-                            description: Annotations that should be appeneded to the
+                            description: Annotations that should be appended to the
                               service.
                             type: object
                         type: object

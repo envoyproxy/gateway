@@ -31,7 +31,7 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// PodAnnotations are the annotations that should be appeneded to the pods.
+	// PodAnnotations are the annotations that should be appended to the pods.
 	//
 	// +optional
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
@@ -41,7 +41,7 @@ type KubernetesDeploymentSpec struct {
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 type KubernetesServiceSpec struct {
-	// Annotations that should be appeneded to the service.
+	// Annotations that should be appended to the service.
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
