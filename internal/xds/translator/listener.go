@@ -12,7 +12,7 @@ import (
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
@@ -46,12 +46,12 @@ func buildXdsTCPListener(name, address string, port uint32) *listener.Listener {
 				Filter:     listenerAccessLogFilter,
 			},
 		},
-		Address: &core.Address{
-			Address: &core.Address_SocketAddress{
-				SocketAddress: &core.SocketAddress{
-					Protocol: core.SocketAddress_TCP,
+		Address: &corev3.Address{
+			Address: &corev3.Address_SocketAddress{
+				SocketAddress: &corev3.SocketAddress{
+					Protocol: corev3.SocketAddress_TCP,
 					Address:  address,
-					PortSpecifier: &core.SocketAddress_PortValue{
+					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: port,
 					},
 				},
@@ -373,7 +373,7 @@ func addXdsTLSInspectorFilter(xdsListener *listener.Listener) error {
 	return nil
 }
 
-func buildXdsDownstreamTLSSocket(listenerName string) (*core.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(listenerName string) (*corev3.TransportSocket, error) {
 	tlsCtx := &tls.DownstreamTlsContext{
 		CommonTlsContext: &tls.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: []*tls.SdsSecretConfig{{
@@ -390,9 +390,9 @@ func buildXdsDownstreamTLSSocket(listenerName string) (*core.TransportSocket, er
 		return nil, err
 	}
 
-	return &core.TransportSocket{
+	return &corev3.TransportSocket{
 		Name: wellknown.TransportSocketTls,
-		ConfigType: &core.TransportSocket_TypedConfig{
+		ConfigType: &corev3.TransportSocket_TypedConfig{
 			TypedConfig: tlsCtxAny,
 		},
 	}, nil
@@ -405,11 +405,11 @@ func buildXdsDownstreamTLSSecret(listenerName string,
 		Name: listenerName,
 		Type: &tls.Secret_TlsCertificate{
 			TlsCertificate: &tls.TlsCertificate{
-				CertificateChain: &core.DataSource{
-					Specifier: &core.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
+				CertificateChain: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
 				},
-				PrivateKey: &core.DataSource{
-					Specifier: &core.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
+				PrivateKey: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKey},
 				},
 			},
 		},
@@ -465,12 +465,12 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
 			},
 		},
-		Address: &core.Address{
-			Address: &core.Address_SocketAddress{
-				SocketAddress: &core.SocketAddress{
-					Protocol: core.SocketAddress_UDP,
+		Address: &corev3.Address{
+			Address: &corev3.Address_SocketAddress{
+				SocketAddress: &corev3.SocketAddress{
+					Protocol: corev3.SocketAddress_UDP,
 					Address:  udpListener.Address,
-					PortSpecifier: &core.SocketAddress_PortValue{
+					PortSpecifier: &corev3.SocketAddress_PortValue{
 						PortValue: udpListener.Port,
 					},
 				},
@@ -488,20 +488,11 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 }
 
 // Point to xds cluster.
-func makeConfigSource() *core.ConfigSource {
-	source := &core.ConfigSource{}
+func makeConfigSource() *corev3.ConfigSource {
+	source := &corev3.ConfigSource{}
 	source.ResourceApiVersion = resource.DefaultAPIVersion
-	source.ConfigSourceSpecifier = &core.ConfigSource_ApiConfigSource{
-		ApiConfigSource: &core.ApiConfigSource{
-			TransportApiVersion:       resource.DefaultAPIVersion,
-			ApiType:                   core.ApiConfigSource_DELTA_GRPC,
-			SetNodeOnFirstMessageOnly: true,
-			GrpcServices: []*core.GrpcService{{
-				TargetSpecifier: &core.GrpcService_EnvoyGrpc_{
-					EnvoyGrpc: &core.GrpcService_EnvoyGrpc{ClusterName: "xds_cluster"},
-				},
-			}},
-		},
+	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
+		Ads: &corev3.AggregatedConfigSource{},
 	}
 	return source
 }
