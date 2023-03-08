@@ -8,11 +8,12 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"google.golang.org/protobuf/encoding/protojson"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"reflect"
 	"sigs.k8s.io/yaml"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -82,10 +83,12 @@ func validateBootstrap(bstrap *string) error {
 	}
 
 	// Ensure dynamic resources config is same
+	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
 	if userBootstrap.DynamicResources == nil || !reflect.DeepEqual(*userBootstrap.DynamicResources, *defaultBootstrap.DynamicResources) {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
 	// Ensure layered runtime resources config is same
+	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
 	if userBootstrap.LayeredRuntime == nil || !reflect.DeepEqual(*userBootstrap.LayeredRuntime, *defaultBootstrap.LayeredRuntime) {
 		return fmt.Errorf("layered_runtime cannot be modified")
 	}
@@ -104,6 +107,7 @@ func validateBootstrap(bstrap *string) error {
 		}
 	}
 
+	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
 	if userXdsCluster == nil || !reflect.DeepEqual(*userXdsCluster.LoadAssignment, *defaultXdsCluster.LoadAssignment) {
 		return fmt.Errorf("xds_cluster's loadAssigntment cannot be modified")
 	}
