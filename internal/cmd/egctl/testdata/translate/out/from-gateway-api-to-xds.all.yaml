@@ -13,24 +13,37 @@ configs:
           address: 127.0.0.1
           portValue: 19000
     dynamicResources:
-      adsConfig:
-        apiType: DELTA_GRPC
-        grpcServices:
-        - envoyGrpc:
-            clusterName: xds_cluster
-        setNodeOnFirstMessageOnly: true
-        transportApiVersion: V3
       cdsConfig:
-        ads: {}
+        apiConfigSource:
+          apiType: DELTA_GRPC
+          grpcServices:
+          - envoyGrpc:
+              clusterName: xds_cluster
+          setNodeOnFirstMessageOnly: true
+          transportApiVersion: V3
+        resourceApiVersion: V3
       ldsConfig:
-        ads: {}
+        apiConfigSource:
+          apiType: DELTA_GRPC
+          grpcServices:
+          - envoyGrpc:
+              clusterName: xds_cluster
+          setNodeOnFirstMessageOnly: true
+          transportApiVersion: V3
+        resourceApiVersion: V3
     layeredRuntime:
       layers:
       - name: runtime-0
         rtdsLayer:
           name: runtime-0
           rtdsConfig:
-            ads: {}
+            apiConfigSource:
+              apiType: DELTA_GRPC
+              grpcServices:
+              - envoyGrpc:
+                  clusterName: xds_cluster
+              transportApiVersion: V3
+            resourceApiVersion: V3
     staticResources:
       clusters:
       - connectTimeout: 10s
@@ -133,7 +146,13 @@ configs:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
               rds:
                 configSource:
-                  ads: {}
+                  apiConfigSource:
+                    apiType: DELTA_GRPC
+                    grpcServices:
+                    - envoyGrpc:
+                        clusterName: xds_cluster
+                    setNodeOnFirstMessageOnly: true
+                    transportApiVersion: V3
                   resourceApiVersion: V3
                 routeConfigName: default-eg-http
               statPrefix: http

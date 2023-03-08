@@ -9,17 +9,24 @@ admin:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
 dynamic_resources:
-  ads_config:
-    api_type: DELTA_GRPC
-    transport_api_version: V3
-    grpc_services:
-    - envoy_grpc:
-        cluster_name: xds_cluster
-    set_node_on_first_message_only: true
-  lds_config:
-    ads: {}
   cds_config:
-    ads: {}
+    resource_api_version: V3
+    api_config_source:
+      api_type: DELTA_GRPC
+      transport_api_version: V3
+      grpc_services:
+      - envoy_grpc:
+          cluster_name: xds_cluster
+      set_node_on_first_message_only: true
+  lds_config:
+    resource_api_version: V3
+    api_config_source:
+      api_type: DELTA_GRPC
+      transport_api_version: V3
+      grpc_services:
+      - envoy_grpc:
+          cluster_name: xds_cluster
+      set_node_on_first_message_only: true
 static_resources:
   clusters:
   - connect_timeout: 10s
@@ -63,5 +70,11 @@ layered_runtime:
   - name: runtime-0
     rtds_layer:
       rtds_config:
-        ads: {}
+        resource_api_version: V3
+        api_config_source:
+          transport_api_version: V3
+          api_type: DELTA_GRPC
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
       name: runtime-0

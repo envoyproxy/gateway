@@ -45,48 +45,42 @@ func TestTranslate(t *testing.T) {
 			from:   "gateway-api",
 			to:     "xds",
 			expect: true,
-		},
-		{
+		}, {
 			name:         "from-gateway-api-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: "unknown",
 			expect:       false,
-		},
-		{
+		}, {
 			name:         "from-gateway-api-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: string(AllEnvoyConfigType),
 			expect:       true,
-		},
-		{
+		}, {
 			name:         "from-gateway-api-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: string(BootstrapEnvoyConfigType),
 			expect:       true,
-		},
-		{
+		}, {
 			name:         "from-gateway-api-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
-		},
-		{
+		}, {
 			name:         "from-gateway-api-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
 			resourceType: string(ListenerEnvoyConfigType),
 			expect:       true,
-		},
-		{
+		}, {
 			name:         "from-gateway-api-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
