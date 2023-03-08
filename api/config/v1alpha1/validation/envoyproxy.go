@@ -40,7 +40,7 @@ func validateEnvoyProxySpec(spec *egcfgv1a1.EnvoyProxySpec) error {
 	if spec == nil {
 		errs = append(errs, errors.New("spec is nil"))
 	}
-	if spec.Provider != nil && spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
+	if spec != nil && spec.Provider != nil && spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 		errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
 	}
 	if spec.Bootstrap != nil {
@@ -82,10 +82,12 @@ func validateBootstrap(bstrap *string) error {
 	}
 
 	// Ensure dynamic resources config is same
+	// nolint:copylocks
 	if userBootstrap.DynamicResources == nil || !reflect.DeepEqual(*userBootstrap.DynamicResources, *defaultBootstrap.DynamicResources) {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
 	// Ensure layered runtime resources config is same
+	// nolint:copylocks
 	if userBootstrap.LayeredRuntime == nil || !reflect.DeepEqual(*userBootstrap.LayeredRuntime, *defaultBootstrap.LayeredRuntime) {
 		return fmt.Errorf("layered_runtime cannot be modified")
 	}
