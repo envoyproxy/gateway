@@ -54,6 +54,12 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 	}
 	deployCfg := provider.GetKubeResourceProvider().EnvoyDeployment
 
+	// Get annotations
+	var annotations map[string]string
+	if deployCfg != nil {
+		annotations = deployCfg.PodAnnotations
+	}
+
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -69,7 +75,8 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: selector.MatchLabels,
+					Labels:      selector.MatchLabels,
+					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,

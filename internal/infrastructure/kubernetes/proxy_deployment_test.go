@@ -99,6 +99,16 @@ func checkContainerHasPort(t *testing.T, deploy *appsv1.Deployment, port int32) 
 	t.Errorf("container is missing containerPort %q", port)
 }
 
+func checkPodAnnotations(t *testing.T, deploy *appsv1.Deployment, expected map[string]string) {
+	t.Helper()
+
+	if apiequality.Semantic.DeepEqual(deploy.Spec.Template.Annotations, expected) {
+		return
+	}
+
+	t.Errorf("deployment has unexpected %q pod annotations ", deploy.Spec.Template.Annotations)
+}
+
 func checkContainerImage(t *testing.T, container *corev1.Container, image string) {
 	t.Helper()
 
@@ -151,6 +161,9 @@ func TestExpectedProxyDeployment(t *testing.T) {
 
 	// Check the number of replicas is as expected.
 	assert.Equal(t, repl, *deploy.Spec.Replicas)
+
+	// Make sure no pod annotations are set by default
+	checkPodAnnotations(t, deploy, nil)
 }
 
 func TestExpectedBootstrap(t *testing.T) {
@@ -180,6 +193,44 @@ func TestExpectedBootstrap(t *testing.T) {
 	require.NoError(t, err)
 	container := checkContainer(t, deploy, envoyContainerName, true)
 	checkContainerHasArg(t, container, fmt.Sprintf("--config-yaml %s", bstrap))
+}
+
+func TestExpectedPodAnnotations(t *testing.T) {
+	svrCfg, err := config.New()
+	require.NoError(t, err)
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	kube := NewInfra(cli, svrCfg)
+	infra := ir.NewInfra()
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+	// Set service annotations into EnvoyProxy API and ensure the same
+	// value is set in the generated service.
+	annotations := map[string]string{
+		"key1": "val1",
+		"key2": "val2",
+	}
+	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: egcfgv1a1.EnvoyProxySpec{
+			Provider: &egcfgv1a1.ResourceProvider{
+				Type: egcfgv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+					EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+						PodAnnotations: annotations,
+					},
+				},
+			},
+		},
+	}
+
+	deploy, err := kube.expectedProxyDeployment(infra)
+	require.NoError(t, err)
+	checkPodAnnotations(t, deploy, annotations)
 }
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {

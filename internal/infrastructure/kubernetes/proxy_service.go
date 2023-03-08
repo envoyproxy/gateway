@@ -43,11 +43,21 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
+	// Get annotations
+	var annotations map[string]string
+	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
+	svcCfg := provider.GetKubeResourceProvider().EnvoyService
+	if svcCfg != nil {
+		annotations = svcCfg.Annotations
+
+	}
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
-			Name:      expectedResourceHashedName(infra.Proxy.Name),
-			Labels:    labels,
+			Namespace:   i.Namespace,
+			Name:        expectedResourceHashedName(infra.Proxy.Name),
+			Labels:      labels,
+			Annotations: annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:            corev1.ServiceTypeLoadBalancer,

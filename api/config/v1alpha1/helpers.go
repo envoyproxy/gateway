@@ -87,15 +87,26 @@ func (e *EnvoyProxy) GetProvider() *ResourceProvider {
 func DefaultKubeResourceProvider() *KubernetesResourceProvider {
 	return &KubernetesResourceProvider{
 		EnvoyDeployment: DefaultKubernetesDeployment(),
+		EnvoyService:    DefaultKubernetesService(),
 	}
+}
+
+// DefaultKubernetesDeploymentReplicas returns the default replica settings.
+func DefaultKubernetesDeploymentReplicas() *int32 {
+	repl := int32(DefaultEnvoyReplicas)
+	return &repl
 }
 
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
 func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
-	repl := int32(DefaultEnvoyReplicas)
 	return &KubernetesDeploymentSpec{
-		Replicas: &repl,
+		Replicas: DefaultKubernetesDeploymentReplicas(),
 	}
+}
+
+// DefaultKubernetesService returns a new KubernetesServiceSpec with default settings.
+func DefaultKubernetesService() *KubernetesServiceSpec {
+	return &KubernetesServiceSpec{}
 }
 
 // GetKubeResourceProvider returns the KubernetesResourceProvider of ResourceProvider or
@@ -113,7 +124,14 @@ func (r *ResourceProvider) GetKubeResourceProvider() *KubernetesResourceProvider
 
 	if r.Kubernetes.EnvoyDeployment == nil {
 		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment()
-		return r.Kubernetes
+	}
+
+	if r.Kubernetes.EnvoyDeployment.Replicas == nil {
+		r.Kubernetes.EnvoyDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	}
+
+	if r.Kubernetes.EnvoyService == nil {
+		r.Kubernetes.EnvoyService = DefaultKubernetesService()
 	}
 
 	return r.Kubernetes
