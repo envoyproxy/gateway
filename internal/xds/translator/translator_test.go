@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package translator
+package translator_test
 
 import (
 	"embed"
@@ -18,6 +18,7 @@ import (
 
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/translator"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
 
@@ -125,8 +126,8 @@ func TestTranslateXds(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
-			tr := &Translator{
-				GlobalRateLimit: &GlobalRateLimitSettings{
+			tr := &translator.Translator{
+				GlobalRateLimit: &translator.GlobalRateLimitSettings{
 					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
 				},
 			}
@@ -174,7 +175,7 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, "ratelimit-config", tc.name+".yaml")
-			out := BuildRateLimitServiceConfig(in)
+			out := translator.BuildRateLimitServiceConfig(in)
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", tc.name+".yaml"), requireYamlRootToYAMLString(t, out))
 		})
 	}
@@ -211,7 +212,7 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 }
 
 func requireYamlRootToYAMLString(t *testing.T, yamlRoot *ratelimitserviceconfig.YamlRoot) string {
-	str, err := GetRateLimitServiceConfigStr(yamlRoot)
+	str, err := translator.GetRateLimitServiceConfigStr(yamlRoot)
 	require.NoError(t, err)
 	return str
 }
