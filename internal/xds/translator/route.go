@@ -108,8 +108,7 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 		} else if pathMatch.SafeRegex != nil {
 			outMatch.PathSpecifier = &routev3.RouteMatch_SafeRegex{
 				SafeRegex: &matcherv3.RegexMatcher{
-					EngineType: &matcherv3.RegexMatcher_GoogleRe2{},
-					Regex:      *pathMatch.SafeRegex,
+					Regex: *pathMatch.SafeRegex,
 				},
 			}
 		}
@@ -170,9 +169,6 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 			MatchPattern: &matcherv3.StringMatcher_SafeRegex{
 				SafeRegex: &matcherv3.RegexMatcher{
 					Regex: *irMatch.SafeRegex,
-					EngineType: &matcherv3.RegexMatcher_GoogleRe2{
-						GoogleRe2: &matcherv3.RegexMatcher_GoogleRE2{},
-					},
 				},
 			},
 		}
