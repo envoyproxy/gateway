@@ -78,8 +78,8 @@ func buildXdsEndpoints(destinations []*ir.RouteDestination) []*endpointv3.LbEndp
 				},
 			},
 		}
-		if destination.Weight != 0 {
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: destination.Weight}
+		if destination.Weight != nil {
+			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: *destination.Weight}
 		}
 		endpoints = append(endpoints, lbEndpoint)
 	}
