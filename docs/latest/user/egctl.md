@@ -22,23 +22,26 @@ From there, you should be able to run: `egctl help`.
 
 ### From Script
 
-`egctl` now has an installer script that will automatically grab the latest release version of egctl and install it locally. (You can only run this script when v0.4.0 gets released, or please pass `-v latest` to specify the latest development version of egctl binary, otherwise you can not get the binary correctly.)
+`egctl` now has an installer script that will automatically grab the latest release version of egctl and install it locally.
 
 You can fetch that script, and then execute it locally. It's well documented so that you can read through it and understand what it is doing before you run it.
 
 ```shell
- curl -fsSL -o get-egctl.sh https://raw.githubusercontent.com/envoyproxy/gateway/main/tools/hack/get-egctl.sh
- chmod 700 get-egctl.sh
+curl -fsSL -o get-egctl.sh https://gateway.envoyproxy.io/get-egctl.sh
+
+chmod +x get-egctl.sh
+
 # get help info of the 
-  bash get-egctl.sh --help
+bash get-egctl.sh --help
+
 # install the latest development version of egctl
-  bash get-egctl.sh -v latest
+bash VERSION=latest get-egctl.sh
 ```
 
-Yes, you can just execute below command if you want to live on the edge.
+Yes, you can just use the below command if you want to live on the edge.
 
 ```shell
- curl https://raw.githubusercontent.com/envoyproxy/gateway/main/tools/hack/get-egctl.sh | bash 
+curl https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash 
 ```
 
 ## egctl experimental translate

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 : "${BINARY_NAME:="egctl"}"
-: "${USE_SUDO:="true"}"
 : "${EGCTL_INSTALL_DIR:="/usr/local/bin"}"
+
+export VERSION
 
 HAS_CURL="$(type "curl" &> /dev/null && echo true || echo false)"
 HAS_WGET="$(type "wget" &> /dev/null && echo true || echo false)"
@@ -35,7 +36,7 @@ initOS() {
 
 # runs the given command as root (detects if we are root already)
 runAsRoot() {
-  if [ $EUID -ne 0 ] && [ "$USE_SUDO" == "true" ]; then
+  if [ $EUID -ne 0 ]; then
     sudo "${@}"
   else
     "${@}"
@@ -64,16 +65,14 @@ verifySupported() {
 
 # checkDesiredVersion checks if the desired version is available.
 checkDesiredVersion() {
-  if [ "$DESIRED_VERSION" == "" ]; then
+  if [ "$VERSION" == "" ]; then
     # Get tag from release URL
     local latest_release_url="https://github.com/envoyproxy/gateway/releases"
     if [ "${HAS_CURL}" == "true" ]; then
-      TAG=$(curl -Ls $latest_release_url | grep 'href="/envoyproxy/gateway/releases/tag/v[0-9]*.[0-9]*.[0-9]*\"' | sed -E 's/.*\/envoyproxy\/gateway\/releases\/tag\/(v[0-9\.]+)".*/\1/g' | head -1)
+      VERSION=$(curl -Ls $latest_release_url | grep 'href="/envoyproxy/gateway/releases/tag/v[0-9]*.[0-9]*.[0-9]*\"' | sed -E 's/.*\/envoyproxy\/gateway\/releases\/tag\/(v[0-9\.]+)".*/\1/g' | head -1)
     elif [ "${HAS_WGET}" == "true" ]; then
-      TAG=$(wget $latest_release_url -O - 2>&1 | grep 'href="/envoyproxy/gateway/releases/tag/v[0-9]*.[0-9]*.[0-9]*\"' | sed -E 's/.*\/envoyproxy\/gateway\/releases\/tag\/(v[0-9\.]+)".*/\1/g' | head -1)
+      VERSION=$(wget $latest_release_url -O - 2>&1 | grep 'href="/envoyproxy/gateway/releases/tag/v[0-9]*.[0-9]*.[0-9]*\"' | sed -E 's/.*\/envoyproxy\/gateway\/releases\/tag\/(v[0-9\.]+)".*/\1/g' | head -1)
     fi
-  else
-    TAG=$DESIRED_VERSION
   fi
 }
 
@@ -81,12 +80,12 @@ checkDesiredVersion() {
 # if it needs to be changed.
 checkEGCTLInstalledVersion() {
   if [[ -f "${EGCTL_INSTALL_DIR}/${BINARY_NAME}" ]]; then
-    version=$("${EGCTL_INSTALL_DIR}/${BINARY_NAME}" version | grep -Eo "v[0-9]+\.[0-9]+.*" )
-    if [[ "$version" == "$TAG" ]]; then
-      echo "egctl ${version} is already ${DESIRED_VERSION:-latest}"
+    version=$("${EGCTL_INSTALL_DIR}/${BINARY_NAME}" version --remote=false | grep -Eo "v[0-9]+\.[0-9]+.*" )
+    if [[ "$version" == "$VERSION" ]]; then
+      echo "egctl ${version} is already ${VERSION:-latest}"
       return 0
     else
-      echo "egctl ${TAG} is available. Changing from version ${version}."
+      echo "egctl ${VERSION} is available. Changing from version ${version}."
       return 1
     fi
   else
@@ -97,8 +96,8 @@ checkEGCTLInstalledVersion() {
 # downloadFile downloads the latest binary package
 # for that binary.
 downloadFile() {
-  EGCTL_DIST="egctl_${TAG}_${OS}_${ARCH}.tar.gz"
-  DOWNLOAD_URL="https://github.com/envoyproxy/gateway/releases/download/$TAG/$EGCTL_DIST"
+  EGCTL_DIST="egctl_${VERSION}_${OS}_${ARCH}.tar.gz"
+  DOWNLOAD_URL="https://github.com/envoyproxy/gateway/releases/download/$VERSION/$EGCTL_DIST"
   EGCTL_TMP_ROOT="$(mktemp -dt egctl-installer-XXXXXX)"
   EGCTL_TMP_FILE="$EGCTL_TMP_ROOT/$EGCTL_DIST"
   echo "Downloading $DOWNLOAD_URL"
@@ -126,7 +125,6 @@ fail_trap() {
   if [ "$result" != "0" ]; then
     if [[ -n "$INPUT_ARGUMENTS" ]]; then
       echo "Failed to install $BINARY_NAME with the arguments provided: $INPUT_ARGUMENTS"
-      help
     else
       echo "Failed to install $BINARY_NAME"
     fi
@@ -146,15 +144,6 @@ testVersion() {
   set -e
 }
 
-# help provides possible cli installation arguments
-help () {
-  echo "Accepted cli arguments are:"
-  echo -e "\t[--help|-h ] ->> prints this help"
-  echo -e "\t[--version|-v <desired_version>] . When not defined it fetches the latest release from GitHub"
-  echo -e "\t e.g. --version v3.0.0 or -v latest"
-  echo -e "\t[--no-sudo]  ->> install without sudo"
-}
-
 # cleanup temporary files.
 cleanup() {
   if [[ -d "${EGCTL_TMP_ROOT:-}" ]]; then
@@ -167,34 +156,6 @@ cleanup() {
 #Stop execution on any error
 trap "fail_trap" EXIT
 set -e
-
-# Parsing input arguments (if any)
-export INPUT_ARGUMENTS="${*}"
-set -u
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    '--version'|-v)
-       shift
-       if [[ $# -ne 0 ]]; then
-           export DESIRED_VERSION="${1}"
-       else
-           echo -e "Please provide the desired version. e.g. --version v3.0.0 or -v canary"
-           exit 0
-       fi
-       ;;
-    '--no-sudo')
-       USE_SUDO="false"
-       ;;
-    '--help'|-h)
-       help
-       exit 0
-       ;;
-    *) exit 1
-       ;;
-  esac
-  shift
-done
-set +u
 
 initArch
 initOS
