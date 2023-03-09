@@ -1,0 +1,20 @@
+'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+configKey: envoy-gateway-system-eg
+dynamicRouteConfigs:
+- routeConfig:
+    '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+    name: envoy-gateway-system-eg-http
+    virtualHosts:
+    - domains:
+      - '*'
+      name: envoy-gateway-system-eg-http
+      routes:
+      - match:
+          headers:
+          - name: :authority
+            stringMatch:
+              exact: www.example.com
+          prefix: /
+        route:
+          cluster: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+resourceType: route
