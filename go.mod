@@ -3,6 +3,7 @@ module github.com/envoyproxy/gateway
 go 1.19
 
 require (
+	github.com/agiledragon/gomonkey/v2 v2.9.0
 	github.com/cncf/xds/go v0.0.0-20230105202645-06c439db220b
 	github.com/envoyproxy/go-control-plane v0.11.0
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230109191524-5f3f5a4cf573
