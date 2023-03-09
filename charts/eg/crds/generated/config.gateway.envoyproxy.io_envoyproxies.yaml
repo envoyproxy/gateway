@@ -92,11 +92,30 @@ spec:
                           the Envoy deployment resource. If unspecified, default settings
                           for the manged Envoy deployment resource are applied.
                         properties:
+                          podAnnotations:
+                            additionalProperties:
+                              type: string
+                            description: PodAnnotations are the annotations that should
+                              be appended to the pods. By default, no pod annotations
+                              are appended.
+                            type: object
                           replicas:
                             description: Replicas is the number of desired pods. Defaults
                               to 1.
                             format: int32
                             type: integer
+                        type: object
+                      envoyService:
+                        description: EnvoyService defines the desired state of the
+                          Envoy service resource. If unspecified, default settings
+                          for the manged Envoy service resource are applied.
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            description: Annotations that should be appended to the
+                              service. By default, no annotations are appended.
+                            type: object
                         type: object
                     type: object
                   type:

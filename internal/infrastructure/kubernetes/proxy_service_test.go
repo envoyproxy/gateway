@@ -13,9 +13,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -66,6 +68,16 @@ func checkServiceHasLabels(t *testing.T, svc *corev1.Service, expected map[strin
 	t.Errorf("service has unexpected %q labels", svc.Labels)
 }
 
+func checkServiceHasAnnotations(t *testing.T, svc *corev1.Service, expected map[string]string) {
+	t.Helper()
+
+	if apiequality.Semantic.DeepEqual(svc.Annotations, expected) {
+		return
+	}
+
+	t.Errorf("service has unexpected %q annotations", svc.Annotations)
+}
+
 func TestDesiredProxyService(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
@@ -108,6 +120,47 @@ func TestDesiredProxyService(t *testing.T) {
 	for _, port := range infra.Proxy.Listeners[0].Ports {
 		checkServiceHasPortName(t, svc, port.Name)
 	}
+
+	// Make sure no service annotations are set by default
+	checkServiceHasAnnotations(t, svc, nil)
+}
+
+func TestExpectedAnnotations(t *testing.T) {
+	svrCfg, err := config.New()
+	require.NoError(t, err)
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	kube := NewInfra(cli, svrCfg)
+	infra := ir.NewInfra()
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+
+	// Set service annotations into EnvoyProxy API and ensure the same
+	// value is set in the generated service.
+	annotations := map[string]string{
+		"key1": "val1",
+		"key2": "val2",
+	}
+	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: egcfgv1a1.EnvoyProxySpec{
+			Provider: &egcfgv1a1.ResourceProvider{
+				Type: egcfgv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+					EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+						Annotations: annotations,
+					},
+				},
+			},
+		},
+	}
+
+	svc, err := kube.expectedProxyService(infra)
+	require.NoError(t, err)
+	checkServiceHasAnnotations(t, svc, annotations)
 }
 
 func TestDeleteProxyService(t *testing.T) {
