@@ -324,17 +324,11 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 				}
 				if existingCluster := findXdsCluster(tCtx, jwks.name); existingCluster == nil {
 					routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(jwks.hostname, jwks.port)}
-					jwksServerCluster, endpoints := buildXdsCluster(jwks.name, routeDestinations, false /*isHTTP2 */, jwks.isStatic)
 					tSocket, err := buildXdsUpstreamTLSSocket()
 					if err != nil {
 						return err
 					}
-					jwksServerCluster.TransportSocket = tSocket
-
-					tCtx.AddXdsResource(resource.ClusterType, jwksServerCluster)
-					if jwks.isStatic {
-						tCtx.AddXdsResource(resource.EndpointType, endpoints)
-					}
+					addXdsCluster(tCtx, jwks.name, routeDestinations, tSocket, false /*isHTTP2 */, jwks.isStatic)
 				}
 			}
 		}

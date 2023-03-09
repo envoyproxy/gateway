@@ -118,17 +118,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			xdsCluster, xdsEndpoints := buildXdsCluster(httpRoute.Name, httpRoute.Destinations, httpListener.IsHTTP2, true /* isStatic */)
-			tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
-			tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
+			addXdsCluster(tCtx, httpRoute.Name, httpRoute.Destinations, nil, httpListener.IsHTTP2, true /* isStatic */)
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
 			for i, mirror := range httpRoute.Mirrors {
 				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
 				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
-					mirrorCluster, endpoints := buildXdsCluster(mirrorClusterName, []*ir.RouteDestination{mirror}, httpListener.IsHTTP2, true /* isStatic */)
-					tCtx.AddXdsResource(resourcev3.ClusterType, mirrorCluster)
-					tCtx.AddXdsResource(resourcev3.EndpointType, endpoints)
+					addXdsCluster(tCtx, mirrorClusterName, []*ir.RouteDestination{mirror}, nil, httpListener.IsHTTP2, true /* isStatic */)
 				}
 
 			}
@@ -139,14 +135,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		// TODO: Make this into a generic interface for API Gateway features.
 		//       https://github.com/envoyproxy/gateway/issues/882
 		// Check if a ratelimit cluster exists, if not, add it, if its needed.
-		// This is current O(n) right now, but it also leverages an existing
-		// object without allocating new memory. Consider improving it in the future.
-		if rlCluster := findXdsCluster(tCtx, getRateLimitServiceClusterName()); rlCluster == nil {
-			rlCluster := t.buildRateLimitServiceCluster(httpListener)
-			// Add cluster
-			if rlCluster != nil {
-				tCtx.AddXdsResource(resourcev3.ClusterType, rlCluster)
-			}
+		if err := t.createRateLimitServiceCluster(tCtx, httpListener); err != nil {
+			return err
 		}
 
 		// Create authn jwks clusters, if needed.
@@ -160,9 +150,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener) error {
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
-		xdsCluster, xdsEndpoints := buildXdsCluster(tcpListener.Name, tcpListener.Destinations, false /*isHTTP2 */, true /* isStatic */)
-		tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
-		tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
+		addXdsCluster(tCtx, tcpListener.Name, tcpListener.Destinations, nil, false /*isHTTP2 */, true /* isStatic */)
 
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
@@ -171,7 +159,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, xdsCluster.Name); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Name); err != nil {
 			return err
 		}
 	}
@@ -181,13 +169,11 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener) error {
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
-		xdsCluster, xdsEndpoints := buildXdsCluster(udpListener.Name, udpListener.Destinations, false /*isHTTP2 */, true /*isStatic */)
-		tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
-		tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
+		addXdsCluster(tCtx, udpListener.Name, udpListener.Destinations, nil, false /*isHTTP2 */, true /*isStatic */)
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
-		xdsListener, err := buildXdsUDPListener(xdsCluster.Name, udpListener)
+		xdsListener, err := buildXdsUDPListener(udpListener.Name, udpListener)
 		if err != nil {
 			return multierror.Append(err, errors.New("error building xds cluster"))
 		}
@@ -230,6 +216,18 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 	}
 
 	return nil
+}
+
+func addXdsCluster(tCtx *types.ResourceVersionTable, name string, destinations []*ir.RouteDestination, tSocket *corev3.TransportSocket, isHTTP2 bool, isStatic bool) {
+	xdsCluster := buildXdsCluster(name, tSocket, isHTTP2, isStatic)
+	xdsEndpoints := buildXdsClusterLoadAssignment(name, destinations)
+	// Use EDS for static endpoints
+	if isStatic {
+		tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
+	} else {
+		xdsCluster.LoadAssignment = xdsEndpoints
+	}
+	tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
 }
 
 // findXdsRouteConfig finds an xds route with the name and returns nil if there is no match.

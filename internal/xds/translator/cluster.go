@@ -20,9 +20,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool, isStatic bool) (*clusterv3.Cluster, *endpointv3.ClusterLoadAssignment) {
+func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, isHTTP2 bool, isStatic bool) *clusterv3.Cluster {
 	clusterName := routeName
-	endpoints := buildXdsClusterLoadAssignment(clusterName, destinations)
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
@@ -32,6 +31,10 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
 		OutlierDetection: &clusterv3.OutlierDetection{},
+	}
+
+	if tSocket != nil {
+		cluster.TransportSocket = tSocket
 	}
 
 	if isStatic {
@@ -48,14 +51,13 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
 		cluster.RespectDnsTtl = true
-		cluster.LoadAssignment = endpoints
 	}
 
 	if isHTTP2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
 	}
 
-	return cluster, endpoints
+	return cluster
 }
 
 func buildXdsClusterLoadAssignment(clusterName string, destinations []*ir.RouteDestination) *endpointv3.ClusterLoadAssignment {
