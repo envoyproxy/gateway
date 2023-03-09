@@ -86,6 +86,13 @@ type KubernetesResourceProvider struct {
 	//
 	// +optional
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
+
+	// EnvoyService defines the desired state of the Envoy service resource.
+	// If unspecified, default settings for the manged Envoy service resource
+	// are applied.
+	//
+	// +optional
+	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies. This type is not

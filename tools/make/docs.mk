@@ -8,6 +8,7 @@ docs: docs.clean $(tools/sphinx-build) docs-api ## Generate Envoy Gateway Docs S
 	@$(LOG_TARGET)
 	mkdir -p $(DOCS_OUTPUT_DIR)
 	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
+	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)/get-egctl.sh
 	@for VERSION in $(RELEASE_VERSIONS); do \
 		env BUILD_VERSION=$$VERSION \
 		ENVOY_PROXY_VERSION=$(shell go run ./cmd/envoy-gateway versions -o json | jq -r ".envoyProxyVersion") \

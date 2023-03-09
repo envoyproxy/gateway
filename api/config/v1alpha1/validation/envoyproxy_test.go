@@ -3,15 +3,29 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package validation
+package validation_test
 
 import (
+	// Register embed
+	_ "embed"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
+)
+
+var (
+	//go:embed testdata/valid-user-bootstrap.yaml
+	validUserBootstrap string
+	//go:embed testdata/missing-admin-address-user-bootstrap.yaml
+	missingAdminAddressUserBootstrap string
+	//go:embed testdata/different-dynamic-resources-user-bootstrap.yaml
+	differentDynamicResourcesUserBootstrap string
+	//go:embed testdata/different-xds-cluster-address-bootstrap.yaml
+	differentXdsClusterAddressBootstrap string
 )
 
 func TestValidateEnvoyProxy(t *testing.T) {
@@ -53,12 +67,64 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "valid user bootstrap",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Bootstrap: &validUserBootstrap,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "user bootstrap with missing admin address",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Bootstrap: &missingAdminAddressUserBootstrap,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "user bootstrap with different dynamic resources",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Bootstrap: &differentDynamicResourcesUserBootstrap,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "user bootstrap with different xds_cluster endpoint",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Bootstrap: &differentXdsClusterAddressBootstrap,
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateEnvoyProxy(tc.obj)
+			err := validation.ValidateEnvoyProxy(tc.obj)
 			if tc.expected {
 				require.NoError(t, err)
 			} else {
