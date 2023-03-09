@@ -40,6 +40,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route",
 		},
 		{
+			name: "http-route-regex",
+		},
+		{
 			name: "http-route-redirect",
 		},
 		{
