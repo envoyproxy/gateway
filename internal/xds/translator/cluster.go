@@ -12,6 +12,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	httpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -19,23 +20,13 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool, isStatic bool) *clusterv3.Cluster {
-	localities := make([]*endpointv3.LocalityLbEndpoints, 0, 1)
-	locality := &endpointv3.LocalityLbEndpoints{
-		Locality:    &corev3.Locality{},
-		LbEndpoints: buildXdsEndpoints(destinations),
-		Priority:    0,
-		// Each locality gets the same weight 1. There is a single locality
-		// per priority, so the weight value does not really matter, but some
-		// load balancers need the value to be set.
-		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
-	localities = append(localities, locality)
+func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHTTP2 bool, isStatic bool) (*clusterv3.Cluster, *endpointv3.ClusterLoadAssignment) {
 	clusterName := routeName
+	endpoints := buildXdsClusterLoadAssignment(clusterName, destinations)
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
 		LbPolicy:        clusterv3.Cluster_ROUND_ROBIN,
-		LoadAssignment:  &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities},
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
@@ -44,21 +35,30 @@ func buildXdsCluster(routeName string, destinations []*ir.RouteDestination, isHT
 	}
 
 	if isStatic {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STATIC}
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
+		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
+			EdsConfig: &corev3.ConfigSource{
+				ResourceApiVersion: resource.DefaultAPIVersion,
+				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
+					Ads: &corev3.AggregatedConfigSource{},
+				},
+			},
+		}
 	} else {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
 		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
 		cluster.RespectDnsTtl = true
+		cluster.LoadAssignment = endpoints
 	}
 
 	if isHTTP2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
 	}
 
-	return cluster
+	return cluster, endpoints
 }
 
-func buildXdsEndpoints(destinations []*ir.RouteDestination) []*endpointv3.LbEndpoint {
+func buildXdsClusterLoadAssignment(clusterName string, destinations []*ir.RouteDestination) *endpointv3.ClusterLoadAssignment {
 	endpoints := make([]*endpointv3.LbEndpoint, 0, len(destinations))
 	for _, destination := range destinations {
 		lbEndpoint := &endpointv3.LbEndpoint{
@@ -83,7 +83,19 @@ func buildXdsEndpoints(destinations []*ir.RouteDestination) []*endpointv3.LbEndp
 		}
 		endpoints = append(endpoints, lbEndpoint)
 	}
-	return endpoints
+
+	localities := make([]*endpointv3.LocalityLbEndpoints, 0, 1)
+	locality := &endpointv3.LocalityLbEndpoints{
+		Locality:    &corev3.Locality{},
+		LbEndpoints: endpoints,
+		Priority:    0,
+		// Each locality gets the same weight 1. There is a single locality
+		// per priority, so the weight value does not really matter, but some
+		// load balancers need the value to be set.
+		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
+	localities = append(localities, locality)
+
+	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
 func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
