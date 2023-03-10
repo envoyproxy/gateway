@@ -2,38 +2,24 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: first-route-www.test.com
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: first-route-www.test.com
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: second-route-www.test.com
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 5.6.7.8
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: second-route-www.test.com
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
@@ -66,17 +52,10 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: "192_168_1_250_8080"
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 192.168.1.250
-              portValue: 8080
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: "192_168_1_250_8080"
   outlierDetection: {}
   transportSocket:
@@ -87,4 +66,4 @@
         validationContext:
           trustedCa:
             filename: /etc/ssl/certs/ca-certificates.crt
-  type: STATIC
+  type: EDS

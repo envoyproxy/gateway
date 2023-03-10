@@ -2,17 +2,10 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: first-route
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: first-route
   outlierDetection: {}
-  type: STATIC
+  type: EDS
