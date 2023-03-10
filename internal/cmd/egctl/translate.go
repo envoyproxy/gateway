@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -375,6 +376,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error) {
 	resources := gatewayapi.NewResources()
 	var gcName string
+	var useDefaultNamespace bool
 	yamls := strings.Split(str, "\n---")
 	combinedScheme := envoygateway.GetScheme()
 	for _, y := range yamls {
@@ -389,6 +391,13 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 		un := unstructured.Unstructured{Object: obj}
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
+		if namespace == "" {
+			// When kubectl apply a resource in yaml which doesn't have a namespace,
+			// the current namespace is applied. Here we do the same thing before translating
+			// the GatewayAPI resource. Otherwise the resource can't pass the namespace validation
+			useDefaultNamespace = true
+			namespace = config.DefaultNamespace
+		}
 		kobj, err := combinedScheme.New(gvk)
 		if err != nil {
 			return "", nil, err
@@ -445,6 +454,25 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 				Spec: typedSpec.(v1.ServiceSpec),
 			}
 			resources.Services = append(resources.Services, service)
+		}
+	}
+
+	if useDefaultNamespace {
+		var found bool
+		for _, ns := range resources.Namespaces {
+			if ns.GetName() == config.DefaultNamespace {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			namespace := &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: config.DefaultNamespace,
+				},
+			}
+			resources.Namespaces = append(resources.Namespaces, namespace)
 		}
 	}
 

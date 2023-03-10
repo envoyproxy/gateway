@@ -1,0 +1,18 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: regex-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: regex-route
+  outlierDetection: {}
+  type: STATIC

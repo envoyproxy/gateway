@@ -1,0 +1,21 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "regex-route"
+    pathMatch:
+      safeRegex: "/v1/.*"
+    headerMatches:
+    - name: re_header
+      stringMatch:
+      safeRegex: ".*"
+    queryParamMatches:
+    - name: re_query
+      stringMatch:
+      safeRegex: ".*"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000

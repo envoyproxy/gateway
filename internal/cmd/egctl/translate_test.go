@@ -94,6 +94,14 @@ func TestTranslate(t *testing.T) {
 			resourceType: string(RouteEnvoyConfigType),
 			expect:       true,
 		},
+		{
+			name:         "quickstart",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(RouteEnvoyConfigType),
+			expect:       true,
+		},
 	}
 
 	for _, tc := range testCases {
