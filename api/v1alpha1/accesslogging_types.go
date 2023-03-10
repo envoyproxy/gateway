@@ -35,9 +35,9 @@ type AccessLoggingPolicySpec struct {
 	// Text defines text based access logs.
 	// +optional
 	Text *TextFileEnvoyProxyAccessLog `json:"text,omitempty"`
-	// Json defines structured json based access logs.
+	// JSON defines structured json based access logs.
 	// +optional
-	Json *JsonFileEnvoyProxyAccessLog `json:"json,omitempty"`
+	JSON *JSONFileEnvoyProxyAccessLog `json:"json,omitempty"`
 	// Otel defines configuration for OpenTelemetry log provider.
 	// +optional
 	Otel *OpenTelemetryEnvoyProxyAccessLog `json:"otel,omitempty"`
@@ -65,7 +65,7 @@ type TextFileEnvoyProxyAccessLog struct {
 	Format string `json:"format,omitempty"`
 }
 
-type JsonFileEnvoyProxyAccessLog struct {
+type JSONFileEnvoyProxyAccessLog struct {
 	// Path defines the file path used to expose envoy access log(e.g. /dev/stdout).
 	// Empty value disables access logging.
 	Path string `json:"path"`

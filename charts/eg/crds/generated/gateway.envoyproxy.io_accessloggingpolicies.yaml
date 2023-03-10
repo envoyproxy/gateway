@@ -50,7 +50,7 @@ spec:
                   type: object
                 type: array
               json:
-                description: Json defines structured json based access logs.
+                description: JSON defines structured json based access logs.
                 properties:
                   fields:
                     additionalProperties:
