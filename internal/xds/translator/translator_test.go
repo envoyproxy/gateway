@@ -7,7 +7,6 @@ package translator
 
 import (
 	"embed"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -227,6 +226,5 @@ func requireResourcesToYAMLString(t *testing.T, resources []types.Resource) stri
 	require.NoError(t, err)
 	data, err := yaml.JSONToYAML(jsonBytes)
 	require.NoError(t, err)
-	fmt.Println(string(data))
 	return string(data)
 }
