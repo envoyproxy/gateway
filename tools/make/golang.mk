@@ -32,7 +32,7 @@ go.build.%:
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
-go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
+go.build: go.generate $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 
 # Build the envoy-gateway binaries in multi platforms
 # It will build the linux/amd64, linux/arm64, darwin/amd64, darwin/arm64 binaries out.
@@ -66,6 +66,11 @@ go.mod.lint:
 	else \
 		$(call log, "Go module looks clean!"); \
    	fi
+
+.PHONY: go.generate
+go.generate: ## Generate code from templates
+	@$(LOG_TARGET)
+	go generate ./...
 
 ##@ Golang
 
