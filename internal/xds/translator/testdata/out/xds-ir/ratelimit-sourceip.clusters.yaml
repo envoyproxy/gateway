@@ -1,0 +1,79 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: first-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: first-route
+  outlierDetection: {}
+  type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: second-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: second-route
+  outlierDetection: {}
+  type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  loadAssignment:
+    clusterName: third-route
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.2.3.4
+              portValue: 50000
+      loadBalancingWeight: 1
+      locality: {}
+  name: third-route
+  outlierDetection: {}
+  type: STATIC
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  loadAssignment:
+    clusterName: ratelimit_cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: envoy-ratelimit.envoy-gateway-system.svc.cluster.local
+              portValue: 8081
+      loadBalancingWeight: 1
+      locality: {}
+  name: ratelimit_cluster
+  outlierDetection: {}
+  respectDnsTtl: true
+  type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions: {}
