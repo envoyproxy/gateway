@@ -28,8 +28,8 @@ manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole
 	@$(LOG_TARGET)
 	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/eg/crds/generated output:rbac:artifacts:config=charts/eg/templates/generated/rbac output:webhook:artifacts:config=charts/eg/templates/generated/webhook
 
-.PHONY: generate
-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+.PHONY: kube-generate
+kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
