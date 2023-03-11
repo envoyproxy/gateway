@@ -7,6 +7,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -96,9 +97,10 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			if *pathMatch.Prefix == "/" {
+			// when the prefix ends with "/", use RouteMatch_Prefix
+			if strings.HasSuffix(*pathMatch.Prefix, "/") {
 				outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
-					Prefix: "/",
+					Prefix: *pathMatch.Prefix,
 				}
 			} else {
 				outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
