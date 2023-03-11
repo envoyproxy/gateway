@@ -78,6 +78,32 @@ configs:
       connectTimeout: 10s
       dnsLookupFamily: V4_ONLY
       loadAssignment:
+        clusterName: default-backend-rule-0-match-0-www.grpc-example.com
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 1.1.1.1
+                  portValue: 9000
+            loadBalancingWeight: 1
+          loadBalancingWeight: 1
+          locality: {}
+      name: default-backend-rule-0-match-0-www.grpc-example.com
+      outlierDetection: {}
+      type: STATIC
+      typedExtensionProtocolOptions:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicitHttpConfig:
+            http2ProtocolOptions: {}
+  - cluster:
+      '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+      commonLbConfig:
+        localityWeightedLbConfig: {}
+      connectTimeout: 10s
+      dnsLookupFamily: V4_ONLY
+      loadAssignment:
         clusterName: default-backend-rule-0-match-0-www.example.com
         endpoints:
         - lbEndpoints:
@@ -92,6 +118,11 @@ configs:
       name: default-backend-rule-0-match-0-www.example.com
       outlierDetection: {}
       type: STATIC
+      typedExtensionProtocolOptions:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicitHttpConfig:
+            http2ProtocolOptions: {}
 - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
   dynamicListeners:
   - activeState:
@@ -120,7 +151,11 @@ configs:
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                   path: /dev/stdout
+              codecType: HTTP2
               httpFilters:
+              - name: envoy.filters.http.grpc_web
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
               - name: envoy.filters.http.router
                 typedConfig:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -130,8 +165,6 @@ configs:
                   resourceApiVersion: V3
                 routeConfigName: default-eg-http
               statPrefix: http
-              upgradeConfigs:
-              - upgradeType: websocket
               useRemoteAddress: true
         name: default-eg-http
 - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
@@ -144,6 +177,14 @@ configs:
         - '*'
         name: default-eg-http
         routes:
+        - match:
+            headers:
+            - name: :authority
+              stringMatch:
+                exact: www.grpc-example.com
+            path: /com.example.Things/DoThing
+          route:
+            cluster: default-backend-rule-0-match-0-www.grpc-example.com
         - match:
             headers:
             - name: :authority

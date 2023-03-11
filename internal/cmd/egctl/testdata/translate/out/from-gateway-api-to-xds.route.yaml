@@ -13,6 +13,14 @@ dynamicRouteConfigs:
           headers:
           - name: :authority
             stringMatch:
+              exact: www.grpc-example.com
+          path: /com.example.Things/DoThing
+        route:
+          cluster: default-backend-rule-0-match-0-www.grpc-example.com
+      - match:
+          headers:
+          - name: :authority
+            stringMatch:
               exact: www.example.com
           prefix: /
         route:
