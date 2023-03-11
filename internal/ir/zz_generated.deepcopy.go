@@ -478,6 +478,11 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 			}
 		}
 	}
+	if in.IPMatch != nil {
+		in, out := &in.IPMatch, &out.IPMatch
+		*out = new(IPMatch)
+		**out = **in
+	}
 	if in.Limit != nil {
 		in, out := &in.Limit, &out.Limit
 		*out = new(RateLimitValue)

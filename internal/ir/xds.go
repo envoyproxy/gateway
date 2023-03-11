@@ -706,7 +706,7 @@ type IPMatch struct {
 	MaskLen int
 }
 
-func (r *RateLimitRule) MatchSetted() bool {
+func (r *RateLimitRule) IsMatchSet() bool {
 	return len(r.HeaderMatches) != 0 || r.IPMatch != nil
 }
 

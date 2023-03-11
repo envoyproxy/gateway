@@ -166,7 +166,7 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 
 		// Case when header match is not set and the rate limit is applied
 		// to all traffic.
-		if !rule.MatchSetted() {
+		if !rule.IsMatchSet() {
 			// Setup GenericKey action
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
@@ -223,7 +223,7 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 
 	for rIdx, rule := range global.Rules {
 		var head, cur *ratelimitserviceconfig.YamlDescriptor
-		if !rule.MatchSetted() {
+		if !rule.IsMatchSet() {
 			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
 			// GenericKey case
 			yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
