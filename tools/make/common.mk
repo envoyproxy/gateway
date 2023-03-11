@@ -113,6 +113,9 @@ Options:
 endef
 export USAGE_OPTIONS
 
+.PHONY: generate
+generate: kube-generate go.generate
+
 ## help: Show this help info.
 .PHONY: help
 help:

@@ -32,7 +32,7 @@ go.build.%:
 
 # Build the envoy-gateway binaries in the hosted platforms.
 .PHONY: go.build
-go.build: go.generate $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
+go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 
 # Build the envoy-gateway binaries in multi platforms
 # It will build the linux/amd64, linux/arm64, darwin/amd64, darwin/arm64 binaries out.
