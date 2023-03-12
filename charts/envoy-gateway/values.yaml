@@ -43,4 +43,5 @@ envoyGatewayMetricsService:
     port: 8443
     protocol: TCP
     targetPort: https
+
 kubernetesClusterDomain: cluster.local

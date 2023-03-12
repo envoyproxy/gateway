@@ -49,5 +49,5 @@ roleRef:
   name: '{{ include "eg.fullname" . }}-leader-election-role'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.fullname" . }}-envoy-gateway'
+  name: 'envoy-gateway'
   namespace: '{{ .Release.Namespace }}'

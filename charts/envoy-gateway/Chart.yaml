@@ -1,12 +1,14 @@
-apiVersion: v3
-name: eg
+apiVersion: v2
+name: envoy-gateway
 description: The Helm chart for Envoy Gateway
 type: application
 
-version: 0.1.0
-appVersion: "0.3.0"
+version: 0.0.0
+appVersion: "latest"
 
-maintainers: # (optional)
+maintainers:
+  - name: envoy-gateway-steering-committee
+    url: https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
   - name: envoy-gateway-maintainers
     url: https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS.md
 
