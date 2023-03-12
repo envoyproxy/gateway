@@ -35,7 +35,7 @@ kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, Dee
 	$(tools/controller-gen) $(CONTROLLERGEN_OBJECT_FLAGS) paths="{$(ROOT_DIR)/api/...,$(ROOT_DIR)/internal/ir/...,$(ROOT_DIR)/internal/gatewayapi/...}"
 
 .PHONY: kube-test
-kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
+kube-test: manifests kube-generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
 	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration ./... -coverprofile cover.out
 
