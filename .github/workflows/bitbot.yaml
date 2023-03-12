@@ -1,0 +1,187 @@
+name: Bitbot
+on:
+  issue_comment:
+    types:
+      - created
+      - edited
+
+  pull_request_review_comment:
+    types:
+      - created
+      - edited
+
+  pull_request_review:
+    types:
+      - submitted
+      - edited
+
+  pull_request_target:
+    types:
+      - opened
+
+  issues:
+    types:
+      - opened
+
+  schedule:
+    - cron: '0 * * * *'
+
+  workflow_dispatch:
+
+env:
+  # This commands is for anyone who can use it
+  COMMON_PLUGINS: |-
+    assign
+    unassign
+    kind
+    remove-kind
+    cc
+    uncc
+
+  # This commands is for author of issue or PR
+  AUTHOR_PLUGINS: |-
+    retest
+    close
+    reopen
+
+  # This commands is for organization member or repository member
+  MEMBERS_PLUGINS: |-
+    good-first-issue
+    help-wanted
+    close
+    reopen
+
+  # This commands is for in the REVIEWERS environment variable
+  REVIEWERS_PLUGINS: |-
+    area
+    remove-area
+    lgtm
+    hold
+    retitle
+
+  # This commands is for in the APPROVERS environment variable
+  APPROVERS_PLUGINS: |-
+    approve
+
+  # This commands is for in the MAINTAINERS environment variable
+  MAINTAINERS_PLUGINS: |-
+    milestone
+    remove-milestone
+    priority
+    remove-priority
+
+  # This commands is for in the ADMINS environment variable
+  ADMINS_PLUGINS: |-
+
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_REPOSITORY: ${{ github.repository }}
+  GH_DEBUG: true
+
+# https://docs.github.com/en/actions/security-guides/automatic-token-authentication#permissions-for-the-github_token
+permissions:
+  checks: read
+  discussions: read
+  repository-projects: read
+  statuses: read
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  bot:
+    name: Bot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Issue Opened
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'issues' }}
+        env:
+          LOGIN: ${{ github.event.issue.user.login }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          MESSAGE: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTHOR_ASSOCIATION: ${{ github.event.issue.author_association }}
+          ISSUE_KIND: issue
+          TYPE: created
+          GREETING: |-
+            Hi @${{ github.event.issue.user.login }},
+            Thanks for opening an issue! 🎉
+      - name: PR Opened
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'pull_request_target' }}
+        env:
+          LOGIN: ${{ github.event.pull_request.user.login }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          MESSAGE: ${{ github.event.pull_request.body }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+          AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+          ISSUE_KIND: pr
+          TYPE: created
+          GREETING: |-
+            Hi @${{ github.event.pull_request.user.login }}. Thanks for your PR! 🎉
+            If the PR is ready, use the `/cc` command to assign reviewer to review. 
+            <details>
+              <summary>Details</summary>
+            The full list of commands accepted by this bot can be found [here](https://github.com/Xunzhuo/bitbot/blob/main/COMMAND.md).
+            
+            The pull request process is described [here](https://github.com/Xunzhuo/bitbot/blob/main/PROCESS.md).
+            </details>
+
+      - name: Issue Commented
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'issue_comment' && !github.event.issue.pull_request }}
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          MESSAGE: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
+          ISSUE_KIND: issue
+          TYPE: comment
+
+      - name: PR Review Commented
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'pull_request_review_comment' }}
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          MESSAGE: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+          AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
+          ISSUE_KIND: pr
+          TYPE: comment
+
+      - name: PR Review
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'pull_request_review' }}
+        env:
+          LOGIN: ${{ github.event.review.user.login }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          MESSAGE: ${{ github.event.review.body }}
+          ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+          PR_STATE: ${{ github.event.review.state }}
+          AUTHOR_ASSOCIATION: ${{ github.event.review.author_association }}
+          ISSUE_KIND: pr
+          TYPE: comment
+
+      - name: PR Commented
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request }}
+        env:
+          LOGIN: ${{ github.event.comment.user.login }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          MESSAGE: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          AUTHOR_ASSOCIATION: ${{ github.event.comment.author_association }}
+          ISSUE_KIND: pr
+          TYPE: comment
+
+      - name: Merge PR
+        uses: Xunzhuo/bitbot@v1.0.0
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        env:
+          TYPE: schedule
