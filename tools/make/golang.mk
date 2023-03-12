@@ -72,6 +72,11 @@ go.mod.lint:
 		$(call log, "Go module looks clean!"); \
    	fi
 
+.PHONY: go.generate
+go.generate: ## Generate code from templates
+	@$(LOG_TARGET)
+	go generate ./...
+
 ##@ Golang
 
 .PHONY: build
