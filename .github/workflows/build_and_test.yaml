@@ -142,4 +142,4 @@ jobs:
       # use `0.0.0` as the default latest version.
       run: |
         helm registry login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin ${{ secrets.DOCKERHUB_PASSWORD }}
-        CHART_NAME=envoy-gateway OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0 TAG=latest make helm-package helm-push
+        CHART_NAME=gateway OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0 TAG=latest make helm-package helm-push

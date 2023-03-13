@@ -3,7 +3,7 @@
 # All make targets related to helmß are defined in this file.
 
 OCI_REGISTRY ?= oci://docker.io/envoyproxy
-CHART_NAME ?= envoy-gateway
+CHART_NAME ?= gateway
 CHART_VERSION ?= ${RELEASE_VERSION}
 
 ##@ Helm
