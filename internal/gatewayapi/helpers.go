@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -187,7 +188,7 @@ func HasReadyListener(listeners []*ListenerContext) bool {
 }
 
 // ValidateHTTPRouteFilter validates the provided filter within HTTPRoute.
-func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
+func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
@@ -208,11 +209,17 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter) error {
 		case string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
 			return nil
 		default:
+			for _, gk := range extGKs {
+				if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
+					filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {
+					return nil
+				}
+			}
 			return fmt.Errorf("unknown %s kind", string(filter.ExtensionRef.Kind))
 		}
+	default:
+		return fmt.Errorf("unsupported filter type: %v", filter.Type)
 	}
-
-	return fmt.Errorf("unsupported filter type: %v", filter.Type)
 }
 
 // IsAuthnHTTPFilter returns true if the provided filter is an AuthenticationFilter.
@@ -232,7 +239,7 @@ func IsRateLimitHTTPFilter(filter *v1beta1.HTTPRouteFilter) bool {
 }
 
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
-func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
+func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
@@ -240,6 +247,17 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
 		return nil
+	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
+		if filter.ExtensionRef == nil {
+			return errors.New("extensionRef field must be specified for an extended filter")
+		}
+		for _, gk := range extGKs {
+			if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
+				filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {
+				return nil
+			}
+		}
+		return fmt.Errorf("unknown %s kind", string(filter.ExtensionRef.Kind))
 	default:
 		return fmt.Errorf("unsupported filter type: %v", filter.Type)
 	}
