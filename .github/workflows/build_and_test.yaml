@@ -140,6 +140,4 @@ jobs:
     - name: Build and Push EG Latest Helm Chart
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # use `0.0.0` as the default latest version.
-      run: |
-        helm registry login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin ${{ secrets.DOCKERHUB_PASSWORD }}
-        CHART_NAME=envoy-gateway OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0 TAG=latest make helm-package helm-push
+      run: CHART_NAME=envoy-gateway OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=0.0.0 TAG=latest make helm-package helm-push
