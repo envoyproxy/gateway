@@ -1,34 +1,41 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
-  name: {{ include "eg.fullname" . }}-proxy-role
+  name: {{ include "eg.fullname" . }}-infra-manager
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 rules:
 - apiGroups:
-  - authentication.k8s.io
+  - ""
   resources:
-  - tokenreviews
+  - serviceaccounts
+  - services
   verbs:
   - create
+  - get
+  - update
+  - delete
 - apiGroups:
-  - authorization.k8s.io
+  - apps
   resources:
-  - subjectaccessreviews
+  - deployments
   verbs:
   - create
+  - get
+  - update
+  - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
-  name: {{ include "eg.fullname" . }}-proxy-rolebinding
+  name: {{ include "eg.fullname" . }}-infra-manager
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: '{{ include "eg.fullname" . }}-proxy-role'
+  kind: Role
+  name: '{{ include "eg.fullname" . }}-infra-manager'
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.fullname" . }}-envoy-gateway'
+  name: 'envoy-gateway'
   namespace: '{{ .Release.Namespace }}'

@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "eg.fullname" . }}-envoy-gateway
+  name: envoy-gateway
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "eg.fullname" . }}-envoy-gateway
+  name: envoy-gateway
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}
@@ -80,12 +80,12 @@ spec:
           }}
       securityContext:
         runAsNonRoot: true
-      serviceAccountName: {{ include "eg.fullname" . }}-envoy-gateway
+      serviceAccountName: envoy-gateway
       terminationGracePeriodSeconds: 10
       volumes:
       - configMap:
           defaultMode: 420
-          name: {{ include "eg.fullname" . }}-envoy-gateway-config
+          name: envoy-gateway-config
         name: envoy-gateway-config
       - name: certs
         secret:

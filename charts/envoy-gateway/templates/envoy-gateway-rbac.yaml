@@ -8,5 +8,5 @@ roleRef:
   name: envoy-gateway-role
 subjects:
 - kind: ServiceAccount
-  name: '{{ include "eg.fullname" . }}-envoy-gateway'
+  name: 'envoy-gateway'
   namespace: '{{ .Release.Namespace }}'

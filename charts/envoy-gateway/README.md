@@ -16,13 +16,13 @@ eg` to see the charts.
 To install the eg chart along with Gateway API CRDs and Envoy Gateway CRDs:
 
 ``` shell
-    helm install envoy-gateway --create-namespace charts/eg -n envoy-gateway-system
+    helm install envoy-gateway --create-namespace charts/envoy-gateway -n envoy-gateway-system
 ```
 
 You can also install the eg chart along without Gateway API CRDs and Envoy Gateway CRDs:
 
 ``` shell
-    helm install envoy-gateway --create-namespace charts/eg -n envoy-gateway-system --skip-crds
+    helm install envoy-gateway --create-namespace charts/envoy-gateway -n envoy-gateway-system --skip-crds
 ```
 
 To uninstall the chart:
