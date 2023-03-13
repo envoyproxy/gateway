@@ -102,6 +102,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-rewrite-url-prefix",
 		},
 		{
+			name: "http-route-rewrite-root-path-url-prefix",
+		},
+		{
 			name: "http-route-rewrite-url-fullpath",
 		},
 		{

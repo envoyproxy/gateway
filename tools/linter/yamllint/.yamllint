@@ -12,6 +12,7 @@ ignore: |
   manifes
   examples
   charts/eg/
+  charts/envoy-gateway/
   bin/install.yaml
 
 rules:

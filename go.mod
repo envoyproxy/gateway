@@ -5,12 +5,12 @@ go 1.19
 replace sigs.k8s.io/gateway-api => ./gateway-api
 
 require (
-	github.com/cncf/xds/go v0.0.0-20220314180256-7f1daf1720fc
+	github.com/cncf/xds/go v0.0.0-20230105202645-06c439db220b
 	github.com/envoyproxy/go-control-plane v0.11.0
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230109191524-5f3f5a4cf573
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.3
 	github.com/google/go-cmp v0.5.9
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.6.1
@@ -21,8 +21,8 @@ require (
 	github.com/tsaarni/certyaml v0.9.1
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	google.golang.org/grpc v1.52.3
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/grpc v1.53.0
+	google.golang.org/protobuf v1.29.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
@@ -101,7 +101,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20221118155620-16455021b5e6 // indirect
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	k8s.io/apiextensions-apiserver v0.26.1 // indirect
