@@ -114,6 +114,8 @@ Options:
 endef
 export USAGE_OPTIONS
 
+##@ Common
+
 .PHONY: generate
 generate: ## Generate go code from templates and tags
 generate: kube-generate go.generate
