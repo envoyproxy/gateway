@@ -2,101 +2,65 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: first-route
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: first-route
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: second-route
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: second-route
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: third-route
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: third-route
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: fourth-route
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: fourth-route
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: fifth-listener
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: 1.2.3.4
-              portValue: 50000
-      loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: fifth-listener
   outlierDetection: {}
-  type: STATIC
+  type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  loadAssignment:
-    clusterName: sixth-listener
-    endpoints:
-    - loadBalancingWeight: 1
-      locality: {}
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
   name: sixth-listener
   outlierDetection: {}
-  type: STATIC
+  type: EDS

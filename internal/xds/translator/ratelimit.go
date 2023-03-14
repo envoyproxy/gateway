@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"strconv"
 
-	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -23,6 +22,7 @@ import (
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -258,18 +258,19 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 	return yamlDescriptors
 }
 
-func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *clusterv3.Cluster {
+func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
 	// Return early if rate limits dont exist.
 	if !t.isRateLimitPresent(irListener) {
 		return nil
 	}
-
 	clusterName := getRateLimitServiceClusterName()
-	host, port := t.getRateLimitServiceGrpcHostPort()
-	routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
-	rateLimitServerCluster := buildXdsCluster(clusterName, routeDestinations, true /*isHTTP2 */, false /*isStatic */)
-
-	return rateLimitServerCluster
+	if rlCluster := findXdsCluster(tCtx, clusterName); rlCluster == nil {
+		// Create cluster if it does not exist
+		host, port := t.getRateLimitServiceGrpcHostPort()
+		routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
+		addXdsCluster(tCtx, clusterName, routeDestinations, nil, true /*isHTTP2 */, false /*isStatic */)
+	}
+	return nil
 }
 
 func getRateLimitDescriptorKey(prefix string, ruleIndex, matchIndex int) string {

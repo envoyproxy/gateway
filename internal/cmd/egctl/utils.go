@@ -17,6 +17,7 @@ type envoyConfigType string
 var (
 	BootstrapEnvoyConfigType envoyConfigType = "bootstrap"
 	ClusterEnvoyConfigType   envoyConfigType = "cluster"
+	EndpointEnvoyConfigType  envoyConfigType = "endpoint"
 	ListenerEnvoyConfigType  envoyConfigType = "listener"
 	RouteEnvoyConfigType     envoyConfigType = "route"
 	AllEnvoyConfigType       envoyConfigType = "all"
@@ -30,6 +31,13 @@ func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *
 				return config, nil
 			}
 		}
+	case EndpointEnvoyConfigType:
+		for _, config := range globalConfigs.Configs {
+			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.EndpointsConfigDump" {
+				return config, nil
+			}
+		}
+
 	case ClusterEnvoyConfigType:
 		for _, config := range globalConfigs.Configs {
 			if config.GetTypeUrl() == "type.googleapis.com/envoy.admin.v3.ClustersConfigDump" {
