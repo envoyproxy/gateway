@@ -12,9 +12,7 @@ admins:
 maintainers:
 
 - AliceProxy
-- alexgervais
 - arkodg
-- danehans
 - skriss
 - Xunzhuo
 - youngnick
@@ -23,6 +21,6 @@ maintainers:
 reviewers:
 
 - chauhanshubham
-- zhaohuabing
+- LanceEa
 - kflynn
-- sunjayBhatia
+- zhaohuabing
