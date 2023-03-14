@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"net"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -769,6 +770,23 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 									extFilter.Name)
 								t.processUnresolvedHTTPFilter(errMsg, filterContext)
 								return
+							}
+						}
+
+						if match.SourceIP != nil {
+							ip, ipn, err := net.ParseCIDR(*match.SourceIP)
+							if err != nil {
+								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
+									extFilter.Name)
+								t.processUnresolvedHTTPFilter(errMsg, filterContext)
+								return
+							}
+
+							mask, _ := ipn.Mask.Size()
+							rules[i].CIDRMatch = &ir.CIDRMatch{
+								CIDR:    ipn.String(),
+								IPv6:    ip.To4() == nil,
+								MaskLen: mask,
 							}
 						}
 					}

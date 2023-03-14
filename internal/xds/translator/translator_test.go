@@ -114,6 +114,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "ratelimit",
 		},
 		{
+			name: "ratelimit-sourceip",
+		},
+		{
 			name: "authn-single-route-single-match",
 		},
 		{
@@ -175,6 +178,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "multiple-routes",
+		},
+		{
+			name: "masked-remote-address-match",
 		},
 	}
 

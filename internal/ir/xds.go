@@ -735,8 +735,20 @@ type GlobalRateLimit struct {
 type RateLimitRule struct {
 	// HeaderMatches define the match conditions on the request headers for this route.
 	HeaderMatches []*StringMatch
+	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
+	CIDRMatch *CIDRMatch
 	// Limit holds the rate limit values.
 	Limit *RateLimitValue
+}
+
+type CIDRMatch struct {
+	CIDR    string
+	IPv6    bool
+	MaskLen int
+}
+
+func (r *RateLimitRule) IsMatchSet() bool {
+	return len(r.HeaderMatches) != 0 || r.CIDRMatch != nil
 }
 
 type RateLimitUnit egv1a1.RateLimitUnit

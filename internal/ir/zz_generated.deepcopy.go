@@ -580,6 +580,11 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 			}
 		}
 	}
+	if in.CIDRMatch != nil {
+		in, out := &in.CIDRMatch, &out.CIDRMatch
+		*out = new(CIDRMatch)
+		**out = **in
+	}
 	if in.Limit != nil {
 		in, out := &in.Limit, &out.Limit
 		*out = new(RateLimitValue)
