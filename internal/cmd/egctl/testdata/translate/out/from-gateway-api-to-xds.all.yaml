@@ -69,6 +69,21 @@ configs:
             '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
             explicitHttpConfig:
               http2ProtocolOptions: {}
+- '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
+  dynamicEndpointConfigs:
+  - endpointConfig:
+      '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+      clusterName: default-backend-rule-0-match-0-www.example.com
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: 1.1.1.1
+                portValue: 3000
+          loadBalancingWeight: 1
+        loadBalancingWeight: 1
+        locality: {}
 - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
   dynamicActiveClusters:
   - cluster:
@@ -77,21 +92,13 @@ configs:
         localityWeightedLbConfig: {}
       connectTimeout: 10s
       dnsLookupFamily: V4_ONLY
-      loadAssignment:
-        clusterName: default-backend-rule-0-match-0-www.example.com
-        endpoints:
-        - lbEndpoints:
-          - endpoint:
-              address:
-                socketAddress:
-                  address: 1.1.1.1
-                  portValue: 3000
-            loadBalancingWeight: 1
-          loadBalancingWeight: 1
-          locality: {}
+      edsClusterConfig:
+        edsConfig:
+          ads: {}
+          resourceApiVersion: V3
       name: default-backend-rule-0-match-0-www.example.com
       outlierDetection: {}
-      type: STATIC
+      type: EDS
 - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
   dynamicListeners:
   - activeState:
