@@ -11,7 +11,7 @@ routes:
       - cidrMatch:
           cidr: "192.168.0.0/16"
           ipv6: false
-          ones: 16
+          maskLen: 16
         limit:
           requests: 5
           unit: second

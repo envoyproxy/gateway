@@ -746,11 +746,11 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 								return
 							}
 
-							ones, _ := ipn.Mask.Size()
+							mask, _ := ipn.Mask.Size()
 							rules[i].CIDRMatch = &ir.CIDRMatch{
 								CIDR:    ipn.String(),
 								IPv6:    ip.To4() == nil,
-								MaskLen: ones,
+								MaskLen: mask,
 							}
 						}
 					}
