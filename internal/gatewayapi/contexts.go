@@ -102,9 +102,8 @@ func (l *ListenerContext) AttachedRoutes() int32 {
 
 func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
-		// Remove GRPCRoute check once https://github.com/envoyproxy/gateway/issues/950 is fixed
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
-			(allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute) || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
+			(allowed.Kind == kind.Kind || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
 			return true
 		}
 	}
