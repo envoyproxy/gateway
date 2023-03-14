@@ -9,7 +9,7 @@ http:
     rateLimit:
       global:
         rules:
-        - ipMatch:
+        - cidrMatch:
             cidr: 192.168.0.0/16
             maskLen: 16
           limit:
@@ -24,7 +24,7 @@ http:
     rateLimit:
       global:
         rules:
-        - ipMatch:
+        - cidrMatch:
             cidr: 192.168.0.0/24
             maskLen: 24
           limit:

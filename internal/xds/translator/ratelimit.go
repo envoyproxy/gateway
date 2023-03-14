@@ -147,11 +147,11 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			}
 		}
 
-		if rule.IPMatch != nil {
+		if rule.CIDRMatch != nil {
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
-			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.IPMatch.MaskLen)}
-			if rule.IPMatch.IPv6 {
+			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.CIDRMatch.MaskLen)}
+			if rule.CIDRMatch.IPv6 {
 				mra.V6PrefixMaskLen = maskLen
 			} else {
 				mra.V4PrefixMaskLen = maskLen
@@ -269,11 +269,11 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			cur = yamlDesc
 		}
 
-		if rule.IPMatch != nil {
+		if rule.CIDRMatch != nil {
 			// MaskedRemoteAddress case
 			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
 			yamlDesc.Key = "masked_remote_address"
-			yamlDesc.Value = rule.IPMatch.CIDR
+			yamlDesc.Value = rule.CIDRMatch.CIDR
 			rateLimit := ratelimitserviceconfig.YamlRateLimit{
 				RequestsPerUnit: uint32(rule.Limit.Requests),
 				Unit:            string(rule.Limit.Unit),

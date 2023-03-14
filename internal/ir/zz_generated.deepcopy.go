@@ -478,9 +478,9 @@ func (in *RateLimitRule) DeepCopyInto(out *RateLimitRule) {
 			}
 		}
 	}
-	if in.IPMatch != nil {
-		in, out := &in.IPMatch, &out.IPMatch
-		*out = new(IPMatch)
+	if in.CIDRMatch != nil {
+		in, out := &in.CIDRMatch, &out.CIDRMatch
+		*out = new(CIDRMatch)
 		**out = **in
 	}
 	if in.Limit != nil {

@@ -84,7 +84,7 @@ xdsIR:
         rateLimit:
           global:
             rules:
-            - ipMatch:
+            - cidrMatch:
                 cidr: "192.168.0.0/16"
                 maskLen: 16
               headerMatches: []              

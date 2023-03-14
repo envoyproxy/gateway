@@ -8,7 +8,7 @@ routes:
   rateLimit:
     global:
       rules:
-      - ipMatch:
+      - cidrMatch:
           cidr: "192.168.0.0/16"
           ipv6: false
           ones: 16
