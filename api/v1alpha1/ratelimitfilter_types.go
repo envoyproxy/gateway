@@ -97,6 +97,12 @@ type RateLimitSelectCondition struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
+
+	// SourceIP is the IP CIDR that represents the range of Source IP Addresses of the client.
+	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
+	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
+	// +optional
+	SourceIP *string `json:"sourceIP,omitempty"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.

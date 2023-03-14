@@ -7,16 +7,11 @@ spec:
   type: "Global"
   corsPolicy:
     allowOrigins:
-      - exact: geocomply.idp.com
+      - prefix: "*"
     allowMethods:
       - POST
       - GET
       - OPTIONS
       - PUT
       - DELETE
-    allowCredentials: false
-    allowHeaders:
-      - X-User-Id
-      - X-Request-Id
-      - X-Forwarded-For
     maxAge: 1800000
