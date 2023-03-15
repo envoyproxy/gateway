@@ -93,7 +93,8 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(XdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
-		r.Logger.Error(err, "failed to listen on address", addr)
+		r.Logger.Error(err, "failed to listen on address", "address", addr)
+		return
 	}
 	err = r.grpc.Serve(l)
 	if err != nil {
