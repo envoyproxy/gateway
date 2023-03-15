@@ -74,6 +74,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.HTTPRouteMethodMatching.ShortName,
 			tests.HTTPRouteListenerHostnameMatching.ShortName,
 			tests.HTTPRouteHostnameIntersection.ShortName,
+			test.HTTPRouteMatchingAcrossRoutes.ShortName,
 		},
 	})
 	cSuite.Setup(t)
