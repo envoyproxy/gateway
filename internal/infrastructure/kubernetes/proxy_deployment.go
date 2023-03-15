@@ -140,6 +140,22 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 		},
 	}
 
+	for _, listener := range infra.Proxy.Listeners {
+		for _, lp := range listener.Ports {
+			if corev1.Protocol(lp.Protocol) == corev1.ProtocolTCP {
+				if lp.ContainerPort == envoyHTTPPort || lp.ContainerPort == envoyHTTPSPort {
+					continue
+				}
+			}
+			port := corev1.ContainerPort{
+				Name:          lp.Name,
+				ContainerPort: lp.ContainerPort,
+				Protocol:      corev1.Protocol(lp.Protocol),
+			}
+			ports = append(ports, port)
+		}
+	}
+
 	var cfg string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
