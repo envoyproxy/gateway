@@ -4,7 +4,7 @@ go 1.20
 
 require github.com/golangci/golangci-lint v1.51.2
 
-// remove this after honnef.co/go/tools v0.4.2 released
+// remove this after honnef.co/go/tools v0.4.3 released
 replace honnef.co/go/tools => honnef.co/go/tools v0.5.0-0.dev.0.20230302022020-cc140e9b3719
 
 require (
