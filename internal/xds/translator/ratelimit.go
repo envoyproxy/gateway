@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"strconv"
 
-	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -23,6 +22,7 @@ import (
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -147,9 +147,26 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			}
 		}
 
+		if rule.CIDRMatch != nil {
+			// Setup MaskedRemoteAddress action
+			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
+			maskLen := &wrapperspb.UInt32Value{Value: uint32(rule.CIDRMatch.MaskLen)}
+			if rule.CIDRMatch.IPv6 {
+				mra.V6PrefixMaskLen = maskLen
+			} else {
+				mra.V4PrefixMaskLen = maskLen
+			}
+			action := &routev3.RateLimit_Action{
+				ActionSpecifier: &routev3.RateLimit_Action_MaskedRemoteAddress_{
+					MaskedRemoteAddress: mra,
+				},
+			}
+			rlActions = append(rlActions, action)
+		}
+
 		// Case when header match is not set and the rate limit is applied
 		// to all traffic.
-		if len(rule.HeaderMatches) == 0 {
+		if !rule.IsMatchSet() {
 			// Setup GenericKey action
 			action := &routev3.RateLimit_Action{
 				ActionSpecifier: &routev3.RateLimit_Action_GenericKey_{
@@ -206,7 +223,7 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 
 	for rIdx, rule := range global.Rules {
 		var head, cur *ratelimitserviceconfig.YamlDescriptor
-		if len(rule.HeaderMatches) == 0 {
+		if !rule.IsMatchSet() {
 			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
 			// GenericKey case
 			yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
@@ -252,24 +269,40 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			cur = yamlDesc
 		}
 
+		if rule.CIDRMatch != nil {
+			// MaskedRemoteAddress case
+			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
+			yamlDesc.Key = "masked_remote_address"
+			yamlDesc.Value = rule.CIDRMatch.CIDR
+			rateLimit := ratelimitserviceconfig.YamlRateLimit{
+				RequestsPerUnit: uint32(rule.Limit.Requests),
+				Unit:            string(rule.Limit.Unit),
+			}
+			yamlDesc.RateLimit = &rateLimit
+
+			head = yamlDesc
+			cur = head
+		}
+
 		yamlDescriptors = append(yamlDescriptors, *head)
 	}
 
 	return yamlDescriptors
 }
 
-func (t *Translator) buildRateLimitServiceCluster(irListener *ir.HTTPListener) *clusterv3.Cluster {
+func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
 	// Return early if rate limits dont exist.
 	if !t.isRateLimitPresent(irListener) {
 		return nil
 	}
-
 	clusterName := getRateLimitServiceClusterName()
-	host, port := t.getRateLimitServiceGrpcHostPort()
-	routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
-	rateLimitServerCluster := buildXdsCluster(clusterName, routeDestinations, true /*isHTTP2 */, false /*isStatic */)
-
-	return rateLimitServerCluster
+	if rlCluster := findXdsCluster(tCtx, clusterName); rlCluster == nil {
+		// Create cluster if it does not exist
+		host, port := t.getRateLimitServiceGrpcHostPort()
+		routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
+		addXdsCluster(tCtx, clusterName, routeDestinations, nil, true /*isHTTP2 */, false /*isStatic */)
+	}
+	return nil
 }
 
 func getRateLimitDescriptorKey(prefix string, ruleIndex, matchIndex int) string {

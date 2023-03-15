@@ -16,6 +16,17 @@ spec:
     - name: http
       protocol: HTTP
       port: 80
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+            group: gateway.networking.k8s.io
+    - name: grpc
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        kinds:
+          - kind: GRPCRoute
+            group: gateway.networking.k8s.io
 ---
 apiVersion: v1
 kind: Namespace

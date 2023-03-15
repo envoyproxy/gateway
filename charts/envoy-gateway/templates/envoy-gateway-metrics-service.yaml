@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "eg.fullname" . }}-envoy-gateway-metrics-service
+  name: envoy-gateway-metrics-service
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}

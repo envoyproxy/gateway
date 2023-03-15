@@ -62,6 +62,12 @@ jobs:
 
           It is only intended for developers wishing to try out the latest features in Envoy Gateway, some of which may not be fully implemented.
 
+          We use `0.0.0` as the latest chart version to install latest envoy-gateway:
+
+          ```shell
+          helm install eg oci://docker.io/envoyproxy/envoy-gateway --version 0.0.0 -n envoy-gateway-system --create-namespace
+          ```
+
     # Check if latest release and tag are created properly,
     # if not, the workflow needs to report an error, 
     # let maintainers be aware of it and rerun it manually.

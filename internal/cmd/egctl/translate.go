@@ -126,6 +126,7 @@ func getValidOutputTypesStr() string {
 
 func validResourceTypes() []envoyConfigType {
 	return []envoyConfigType{BootstrapEnvoyConfigType,
+		EndpointEnvoyConfigType,
 		ClusterEnvoyConfigType,
 		ListenerEnvoyConfigType,
 		RouteEnvoyConfigType,
@@ -292,6 +293,7 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 	listenerConfigs := &adminv3.ListenersConfigDump{}
 	routeConfigs := &adminv3.RoutesConfigDump{}
 	clusterConfigs := &adminv3.ClustersConfigDump{}
+	endpointConfigs := &adminv3.EndpointsConfigDump{}
 
 	// construct bootstrap config
 	bootsrapYAML, err := bootstrap.GetRenderedBootstrapConfig()
@@ -311,6 +313,24 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 		return nil, err
 	}
 	if configs, err := anypb.New(bootstrapConfigs); err == nil {
+		globalConfigs.Configs = append(globalConfigs.Configs, configs)
+	}
+
+	// construct endpoints config
+	endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+	for _, endpoint := range endpoints {
+		c, err := anypb.New(endpoint)
+		if err != nil {
+			return nil, err
+		}
+		endpointConfigs.DynamicEndpointConfigs = append(endpointConfigs.DynamicEndpointConfigs, &adminv3.EndpointsConfigDump_DynamicEndpointConfig{
+			EndpointConfig: c,
+		})
+	}
+	if err := endpointConfigs.Validate(); err != nil {
+		return nil, err
+	}
+	if configs, err := anypb.New(endpointConfigs); err == nil {
 		globalConfigs.Configs = append(globalConfigs.Configs, configs)
 	}
 

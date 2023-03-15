@@ -77,6 +77,7 @@ include tools/make/image.mk
 include tools/make/lint.mk
 include tools/make/kube.mk
 include tools/make/docs.mk
+include tools/make/helm.mk
 
 # Log the running target
 LOG_TARGET = echo -e "\033[0;32m===========> Running $@ ... \033[0m"
@@ -112,6 +113,12 @@ Options:
 		 Default is "linux_amd64 linux_arm64 darwin_amd64 darwin_arm64".
 endef
 export USAGE_OPTIONS
+
+##@ Common
+
+.PHONY: generate
+generate: ## Generate go code from templates and tags
+generate: kube-generate go.generate
 
 ## help: Show this help info.
 .PHONY: help

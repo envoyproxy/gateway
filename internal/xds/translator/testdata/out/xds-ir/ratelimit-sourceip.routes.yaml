@@ -1,0 +1,31 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - match:
+        path: foo/bar
+      route:
+        cluster: first-route
+        rateLimits:
+        - actions:
+          - maskedRemoteAddress:
+              v4PrefixMaskLen: 16
+    - match:
+        path: example
+      route:
+        cluster: second-route
+        rateLimits:
+        - actions:
+          - maskedRemoteAddress:
+              v4PrefixMaskLen: 24
+    - match:
+        path: test
+      route:
+        cluster: third-route
+        rateLimits:
+        - actions:
+          - genericKey:
+              descriptorKey: third-route-key-rule-0-match--1
+              descriptorValue: third-route-value-rule-0-match--1

@@ -102,6 +102,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-rewrite-url-prefix",
 		},
 		{
+			name: "http-route-rewrite-root-path-url-prefix",
+		},
+		{
 			name: "http-route-rewrite-url-fullpath",
 		},
 		{
@@ -109,6 +112,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "ratelimit",
+		},
+		{
+			name: "ratelimit-sourceip",
 		},
 		{
 			name: "authn-single-route-single-match",
@@ -138,9 +144,11 @@ func TestTranslateXds(t *testing.T) {
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
+			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
+			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 			if tc.requireSecrets {
 				secrets := tCtx.XdsResources[resourcev3.SecretType]
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
@@ -170,6 +178,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		},
 		{
 			name: "multiple-routes",
+		},
+		{
+			name: "masked-remote-address-match",
 		},
 	}
 
