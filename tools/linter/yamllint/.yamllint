@@ -13,6 +13,7 @@ ignore: |
   examples
   charts/eg/
   charts/envoy-gateway/
+  charts/gateway-helm/
   bin/install.yaml
 
 rules:
