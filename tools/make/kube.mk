@@ -51,6 +51,11 @@ kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster spec
 	@$(LOG_TARGET)
 	helm install eg charts/envoy-gateway --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
 
+.PHONY: kube-upgradedeploy
+kube-upgradedeploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	@$(LOG_TARGET)
+	helm upgrade eg charts/envoy-gateway --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
+
 .PHONY: custom-kube-deploy
 custom-kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)

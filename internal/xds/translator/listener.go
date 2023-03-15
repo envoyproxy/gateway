@@ -130,42 +130,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 
 	mgr.HttpFilters = append([]*hcm.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
 
-	// add GrpcJSONTranscoderFilter to httpFilters
-	if irListener.GrpcJSONTranscoderFilters != nil || len(irListener.GrpcJSONTranscoderFilters) > 0 {
-		for _, filter := range irListener.GrpcJSONTranscoderFilters {
-			bytt, err := base64.StdEncoding.DecodeString(filter.ProtoDescriptorBin)
-
-			if err != nil {
-				return err
-			}
-
-			grpcJSONTranscoderAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
-				AutoMapping:       filter.AutoMapping,
-				ConvertGrpcStatus: true,
-				Services:          filter.Services,
-				PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
-					AddWhitespace:              filter.PrintOptions.AddWhitespace,
-					AlwaysPrintPrimitiveFields: filter.PrintOptions.AlwaysPrintPrimitiveFields,
-					AlwaysPrintEnumsAsInts:     filter.PrintOptions.AlwaysPrintEnumsAsInts,
-					PreserveProtoFieldNames:    filter.PrintOptions.PreserveProtoFieldNames,
-				},
-				DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
-					ProtoDescriptorBin: bytt,
-				},
-			})
-
-			if err != nil {
-				return err
-			}
-
-			grpcJSONTranscoderFilter := &hcm.HttpFilter{
-				Name:       wellknown.GRPCJSONTranscoder,
-				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
-			}
-			mgr.HttpFilters = append([]*hcm.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
-		}
-	}
-
 	for _, route := range irListener.Routes {
 		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
 			corsAny, err := anypb.New(&cors.Cors{})
@@ -216,6 +180,42 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	// Add the jwt authn filter, if needed.
 	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
 		return err
+	}
+
+	// add GrpcJSONTranscoderFilter to httpFilters
+	if irListener.GrpcJSONTranscoderFilters != nil || len(irListener.GrpcJSONTranscoderFilters) > 0 {
+		for _, filter := range irListener.GrpcJSONTranscoderFilters {
+			bytt, err := base64.StdEncoding.DecodeString(filter.ProtoDescriptorBin)
+
+			if err != nil {
+				return err
+			}
+
+			grpcJSONTranscoderAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
+				AutoMapping:       filter.AutoMapping,
+				ConvertGrpcStatus: true,
+				Services:          filter.Services,
+				PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
+					AddWhitespace:              filter.PrintOptions.AddWhitespace,
+					AlwaysPrintPrimitiveFields: filter.PrintOptions.AlwaysPrintPrimitiveFields,
+					AlwaysPrintEnumsAsInts:     filter.PrintOptions.AlwaysPrintEnumsAsInts,
+					PreserveProtoFieldNames:    filter.PrintOptions.PreserveProtoFieldNames,
+				},
+				DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
+					ProtoDescriptorBin: bytt,
+				},
+			})
+
+			if err != nil {
+				return err
+			}
+
+			grpcJSONTranscoderFilter := &hcm.HttpFilter{
+				Name:       wellknown.GRPCJSONTranscoder,
+				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
+			}
+			mgr.HttpFilters = append([]*hcm.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
+		}
 	}
 
 	mgrAny, err := anypb.New(mgr)
