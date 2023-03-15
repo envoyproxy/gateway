@@ -108,6 +108,16 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Route is accepted",
 			)
 		}
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasUnResolvedRefs(httpRoute) {
+			parentRef.SetCondition(httpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
 	}
 }
 
@@ -301,6 +311,16 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				metav1.ConditionTrue,
 				v1beta1.RouteReasonAccepted,
 				"Route is accepted",
+			)
+		}
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasUnResolvedRefs(grpcRoute) {
+			parentRef.SetCondition(grpcRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
 			)
 		}
 	}
@@ -613,6 +633,16 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				"Route is accepted",
 			)
 		}
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasUnResolvedRefs(tlsRoute) {
+			parentRef.SetCondition(tlsRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
 	}
 }
 
@@ -730,6 +760,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				"Route is accepted",
 			)
 		}
+
 		if !accepted {
 			parentRef.SetCondition(udpRoute,
 				v1beta1.RouteConditionAccepted,
@@ -738,6 +769,17 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				"Multiple routes on the same UDP listener",
 			)
 		}
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasUnResolvedRefs(udpRoute) {
+			parentRef.SetCondition(udpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
+
 	}
 }
 
@@ -861,6 +903,16 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonUnsupportedValue,
 				"Multiple routes on the same TCP listener",
+			)
+		}
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasUnResolvedRefs(tcpRoute) {
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
 			)
 		}
 	}

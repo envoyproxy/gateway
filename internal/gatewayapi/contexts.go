@@ -670,3 +670,15 @@ func (r *RouteParentContext) IsAccepted(route RouteContext) bool {
 
 	return false
 }
+
+func (r *RouteParentContext) HasUnResolvedRefs(route RouteContext) bool {
+	var conditions []metav1.Condition
+	routeStatus := route.GetRouteStatus()
+	conditions = routeStatus.Parents[r.routeParentStatusIdx].Conditions
+	for _, cond := range conditions {
+		if cond.Type == string(v1beta1.RouteConditionResolvedRefs) && cond.Status == metav1.ConditionFalse {
+			return true
+		}
+	}
+	return false
+}
