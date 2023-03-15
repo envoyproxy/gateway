@@ -1,0 +1,25 @@
+name: Common check
+on:
+  push:
+    branches:
+    - "main"
+    - "release/v*"
+  pull_request:
+    branches:
+    - "main"
+    - "release/v*"
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
+    - run: make lint-deps
+    - run: make -k lint
+
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
+    - run: make -k licensecheck
