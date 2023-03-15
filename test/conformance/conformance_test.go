@@ -70,11 +70,11 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.GatewayInvalidRouteKind.ShortName,
 			tests.HTTPRouteInvalidCrossNamespaceParentRef.ShortName,
 			tests.GatewayWithAttachedRoutes.ShortName,
-			tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
-			tests.HTTPRouteMethodMatching.ShortName,
-			tests.HTTPRouteListenerHostnameMatching.ShortName,
-			tests.HTTPRouteHostnameIntersection.ShortName,
-			tests.HTTPRouteMatchingAcrossRoutes.ShortName,
+			// tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
+			// tests.HTTPRouteMethodMatching.ShortName,
+			// tests.HTTPRouteListenerHostnameMatching.ShortName,
+			// tests.HTTPRouteHostnameIntersection.ShortName,
+			// tests.HTTPRouteMatchingAcrossRoutes.ShortName,
 		},
 	})
 	cSuite.Setup(t)
