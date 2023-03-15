@@ -1,7 +1,7 @@
 ---
 
 ignore: |
-  charts/envoy-gateway/
+  charts/gateway-helm/
   bin/install.yaml
 
 rules:
