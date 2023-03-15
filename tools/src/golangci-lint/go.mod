@@ -4,6 +4,9 @@ go 1.20
 
 require github.com/golangci/golangci-lint v1.51.2
 
+// remove this after honnef.co/go/tools v0.4.2 released
+replace honnef.co/go/tools => honnef.co/go/tools v0.5.0-0.dev.0.20230302022020-cc140e9b3719
+
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect
 	4d63.com/gochecknoglobals v0.2.1 // indirect
