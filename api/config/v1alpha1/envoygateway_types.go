@@ -53,7 +53,7 @@ type EnvoyGatewaySpec struct {
 	// Extension defines an extension to register for the Envoy Gateway Control Plane.
 	//
 	// +optional
-	Extension *Extension `json:"extensions,omitempty"`
+	Extension *Extension `json:"extension,omitempty"`
 }
 
 // Gateway defines the desired Gateway API configuration of Envoy Gateway.
