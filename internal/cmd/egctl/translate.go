@@ -486,7 +486,19 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *g
 		}
 	}
 
-	if useDefaultNamespace || addMissingResources {
+	if useDefaultNamespace {
+		if _, found := providedNamespaceMap[config.DefaultNamespace]; !found {
+			namespace := &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: config.DefaultNamespace,
+				},
+			}
+			resources.Namespaces = append(resources.Namespaces, namespace)
+			providedNamespaceMap[config.DefaultNamespace] = struct{}{}
+		}
+	}
+
+	if addMissingResources {
 		for ns := range requiredNamespaceMap {
 			if _, found := providedNamespaceMap[ns]; !found {
 				namespace := &v1.Namespace{
