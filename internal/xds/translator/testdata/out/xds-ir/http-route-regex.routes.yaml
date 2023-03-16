@@ -17,5 +17,6 @@
               regex: .*
         safeRegex:
           regex: /v1/.*
+      name: regex-route
       route:
         cluster: regex-route
