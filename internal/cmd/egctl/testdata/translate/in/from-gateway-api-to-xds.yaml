@@ -86,6 +86,7 @@ metadata:
 spec:
   parentRefs:
     - name: eg
+      sectionName: grpc
   hostnames:
     - "www.grpc-example.com"
   rules:
