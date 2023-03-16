@@ -29,6 +29,7 @@ jobs:
       continue-on-error: true
       run: |
         gh release delete latest --repo $GITHUB_REPOSITORY
+        sleep 3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -36,8 +37,9 @@ jobs:
     # Ignore the error when we delete the latest tag, it might not exist.
     - name: Delete the Latest Tag
       continue-on-error: true
-      run:
+      run: |
         gh api --method DELETE /repos/$GITHUB_REPOSITORY/git/refs/tags/latest
+        sleep 3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -72,5 +74,6 @@ jobs:
     # if not, the workflow needs to report an error, 
     # let maintainers be aware of it and rerun it manually.
     - name: Check Latest Release and Tag
-      run: | 
+      run: |
+        sleep 3
         make latest-release-check
