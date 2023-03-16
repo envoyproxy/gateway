@@ -127,6 +127,31 @@ func TestExpectedProxyDeployment(t *testing.T) {
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	infra.Proxy.Listeners = []ir.ProxyListener{
+		{
+			Ports: []ir.ListenerPort{
+				{
+					Name:          "EnvoyHTTPPort",
+					Protocol:      ir.TCPProtocolType,
+					ContainerPort: envoyHTTPPort,
+				},
+				{
+					Name:          "EnvoyHTTPSPort",
+					Protocol:      ir.TCPProtocolType,
+					ContainerPort: envoyHTTPSPort,
+				},
+			},
+		},
+		{
+			Ports: []ir.ListenerPort{
+				{
+					Name:          "FooPort",
+					Protocol:      ir.UDPProtocolType,
+					ContainerPort: 8989,
+				},
+			},
+		},
+	}
 
 	deploy, err := kube.expectedProxyDeployment(infra)
 	require.NoError(t, err)
