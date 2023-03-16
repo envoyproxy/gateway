@@ -32,6 +32,7 @@ manifests: $(tools/controller-gen) upgrade-gwapi ## Generate WebhookConfiguratio
 upgrade-gwapi:
 upgrade-gwapi: ## Upgrade GWAPI and make it consistent with the go mod version.
 	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
