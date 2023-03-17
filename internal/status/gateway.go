@@ -13,7 +13,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-// UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accpeted state.
+// UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accepted state.
 func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) *gwapiv1b1.Gateway {
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayAcceptedCondition(gw, accepted))
 	return gw
