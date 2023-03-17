@@ -93,7 +93,7 @@ func allConfigCmd() *cobra.Command {
 }
 
 func runAllConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args)
+	configDump, err := retrieveConfigDump(args, true)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,6 @@ func runAllConfig(c *cobra.Command, args []string) error {
 }
 
 func bootstrapConfigCmd() *cobra.Command {
-
 	configCmd := &cobra.Command{
 		Use:     "bootstrap <pod-name>",
 		Aliases: []string{"b"},
@@ -132,7 +131,7 @@ func bootstrapConfigCmd() *cobra.Command {
 }
 
 func runBootstrapConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args)
+	configDump, err := retrieveConfigDump(args, false)
 	if err != nil {
 		return err
 	}
@@ -152,7 +151,6 @@ func runBootstrapConfig(c *cobra.Command, args []string) error {
 }
 
 func clusterConfigCmd() *cobra.Command {
-
 	configCmd := &cobra.Command{
 		Use:     "cluster <pod-name>",
 		Short:   "Retrieves cluster Envoy xDS resources from the specified pod",
@@ -176,7 +174,7 @@ func clusterConfigCmd() *cobra.Command {
 }
 
 func runClusterConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args)
+	configDump, err := retrieveConfigDump(args, false)
 	if err != nil {
 		return err
 	}
@@ -196,7 +194,6 @@ func runClusterConfig(c *cobra.Command, args []string) error {
 }
 
 func endpointConfigCmd() *cobra.Command {
-
 	configCmd := &cobra.Command{
 		Use:     "endpoint <pod-name>",
 		Short:   "Retrieves endpoint Envoy xDS resources from the specified pod",
@@ -220,7 +217,7 @@ func endpointConfigCmd() *cobra.Command {
 }
 
 func runEndpointConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args)
+	configDump, err := retrieveConfigDump(args, true)
 	if err != nil {
 		return err
 	}
@@ -240,7 +237,6 @@ func runEndpointConfig(c *cobra.Command, args []string) error {
 }
 
 func listenerConfigCmd() *cobra.Command {
-
 	configCmd := &cobra.Command{
 		Use:     "listener <pod-name>",
 		Aliases: []string{"l"},
@@ -264,7 +260,7 @@ func listenerConfigCmd() *cobra.Command {
 }
 
 func runListenerConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args)
+	configDump, err := retrieveConfigDump(args, false)
 	if err != nil {
 		return err
 	}
@@ -284,7 +280,6 @@ func runListenerConfig(c *cobra.Command, args []string) error {
 }
 
 func routeConfigCmd() *cobra.Command {
-
 	configCmd := &cobra.Command{
 		Use:     "route <pod-name>",
 		Aliases: []string{"r"},
@@ -308,7 +303,7 @@ func routeConfigCmd() *cobra.Command {
 }
 
 func runRouteConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args)
+	configDump, err := retrieveConfigDump(args, false)
 	if err != nil {
 		return err
 	}
@@ -327,7 +322,7 @@ func runRouteConfig(c *cobra.Command, args []string) error {
 	return err
 }
 
-func retrieveConfigDump(args []string) (*adminv3.ConfigDump, error) {
+func retrieveConfigDump(args []string, includeEds bool) (*adminv3.ConfigDump, error) {
 	if len(args) == 0 {
 		return nil, fmt.Errorf("pod name is required")
 	}
@@ -354,7 +349,7 @@ func retrieveConfigDump(args []string) (*adminv3.ConfigDump, error) {
 	}
 	defer fw.Stop()
 
-	configDump, err := extractConfigDump(fw)
+	configDump, err := extractConfigDump(fw, includeEds)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +380,6 @@ func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
 }
 
 func marshalEnvoyProxyConfig(configDump protoreflect.ProtoMessage, output string) ([]byte, error) {
-
 	out, err := protojson.MarshalOptions{
 		Multiline: true,
 	}.Marshal(configDump)
@@ -403,8 +397,8 @@ func marshalEnvoyProxyConfig(configDump protoreflect.ProtoMessage, output string
 	return out, nil
 }
 
-func extractConfigDump(fw kube.PortForwarder) (*adminv3.ConfigDump, error) {
-	out, err := configDumpRequest(fw.Address())
+func extractConfigDump(fw kube.PortForwarder, includeEds bool) (*adminv3.ConfigDump, error) {
+	out, err := configDumpRequest(fw.Address(), includeEds)
 	if err != nil {
 		return nil, err
 	}
@@ -417,8 +411,12 @@ func extractConfigDump(fw kube.PortForwarder) (*adminv3.ConfigDump, error) {
 	return configDump, nil
 }
 
-func configDumpRequest(address string) ([]byte, error) {
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/config_dump", address), nil)
+func configDumpRequest(address string, includeEds bool) ([]byte, error) {
+	url := fmt.Sprintf("http://%s/config_dump", address)
+	if includeEds {
+		url = fmt.Sprintf("%s?include_eds", url)
+	}
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}

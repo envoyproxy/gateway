@@ -20,6 +20,7 @@ import (
 
 func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *routev3.Route {
 	router := &routev3.Route{
+		Name:  httpRoute.Name,
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
 	}
 

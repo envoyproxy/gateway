@@ -95,7 +95,7 @@ func TestExtractAllConfigDump(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.output, func(t *testing.T) {
-			configDump, err := extractConfigDump(fw)
+			configDump, err := extractConfigDump(fw, true)
 			assert.NoError(t, err)
 			got, err := marshalEnvoyProxyConfig(configDump, tc.output)
 			assert.NoError(t, err)
@@ -162,11 +162,21 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			resourceType: RouteEnvoyConfigType,
 			expected:     "out.route.yaml",
 		},
+		{
+			output:       "json",
+			resourceType: EndpointEnvoyConfigType,
+			expected:     "out.endpoints.json",
+		},
+		{
+			output:       "yaml",
+			resourceType: EndpointEnvoyConfigType,
+			expected:     "out.endpoints.yaml",
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.output, func(t *testing.T) {
-			configDump, err := extractConfigDump(fw)
+			configDump, err := extractConfigDump(fw, false)
 			assert.NoError(t, err)
 			resource, err := findXDSResourceFromConfigDump(tc.resourceType, configDump)
 			assert.NoError(t, err)

@@ -79,8 +79,8 @@ configs:
         - endpoint:
             address:
               socketAddress:
-                address: 1.1.1.1
-                portValue: 3000
+                address: 127.0.0.1
+                portValue: 8000
           loadBalancingWeight: 1
         loadBalancingWeight: 1
         locality: {}
