@@ -58,6 +58,10 @@ httpRoutes:
         status: "False"
         reason: NoMatchingListenerHostname
         message: There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:

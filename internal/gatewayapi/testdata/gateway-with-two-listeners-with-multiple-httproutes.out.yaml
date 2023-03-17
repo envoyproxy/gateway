@@ -75,6 +75,10 @@ httpRoutes:
         status: "True"
         Reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
@@ -102,6 +106,10 @@ httpRoutes:
         status: "True"
         Reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:

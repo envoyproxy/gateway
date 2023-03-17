@@ -71,6 +71,10 @@ httpRoutes:
         status: "False"
         reason: UnsupportedValue
         message: "ResponseHeaderModifier Filter cannot set headers with a '/' or ':' character in them. Header: 'example:1'"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:

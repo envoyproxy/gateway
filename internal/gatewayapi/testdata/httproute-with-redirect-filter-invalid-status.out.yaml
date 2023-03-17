@@ -65,6 +65,10 @@ httpRoutes:
         status: "False"
         reason: UnsupportedValue
         message: "Status code 666 is invalid, only 302 and 301 are supported"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:

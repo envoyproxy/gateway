@@ -66,6 +66,10 @@ httpRoutes:
         status: "False"
         reason: UnsupportedValue
         message: "ResponseHeaderModifier Filter did not provide valid configuration to add/set/remove any headers"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:
