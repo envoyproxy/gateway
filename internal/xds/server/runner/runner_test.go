@@ -6,14 +6,17 @@
 package runner
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"net"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	gomonkey "github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tsaarni/certyaml"
@@ -181,4 +184,17 @@ func peekError(conn net.Conn) error {
 		}
 	}
 	return nil
+}
+
+func TestServeXdsServerListenFailed(t *testing.T) {
+	patches := gomonkey.ApplyFuncReturn(net.Listen, nil, errors.New("ouch"))
+	defer patches.Reset()
+
+	cfg, _ := config.New()
+	r := New(&Config{
+		Server: *cfg,
+	})
+	r.Logger = r.Logger.WithValues("runner", r.Name())
+	// Don't crash in this function
+	r.serveXdsServer(context.Background())
 }

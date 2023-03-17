@@ -10,3 +10,4 @@
         status: 500
       match:
         prefix: /
+      name: direct-route

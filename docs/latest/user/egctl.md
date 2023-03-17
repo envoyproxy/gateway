@@ -390,3 +390,71 @@ dynamicRouteConfigs:
           cluster: default-backend-rule-0-match-0-www.example.com
 resourceType: route
 ```
+
+You can pass the `--add-missing-resources` flag to use dummy non Gateway API resources instead of specifying them explicitly.
+
+For example, this will provide the same result as the above:
+
+```shell
+cat <<EOF | egctl x translate --add-missing-resources --from gateway-api --to xds -t route -f -
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: eg
+  namespace: default
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: default
+  labels:
+    app: backend
+    service: backend
+spec:
+  clusterIP: "1.1.1.1"
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      protocol: TCP
+  selector:
+    app: backend
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+EOF
+```

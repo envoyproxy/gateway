@@ -1282,3 +1282,23 @@ configs:
           sanType: DNS
         trustedCa:
           inlineBytes: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURHRENDQWdDZ0F3SUJBZ0lFSWFxd1VUQU5CZ2txaGtpRzl3MEJBUXNGQURBc01SWXdGQVlEVlFRREV3MWwKYm5admVTMW5ZWFJsZDJGNU1SSXdFQVlEVlFRRkV3azFOalE0TXpRek9EVXdIaGNOTWpNd01qRTNNRE0wTVRJNApXaGNOTWpRd01qRTRNRE0wTVRJNFdqQXNNUll3RkFZRFZRUURFdzFsYm5admVTMW5ZWFJsZDJGNU1SSXdFQVlEClZRUUZFd2sxTmpRNE16UXpPRFV3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRRDIKeFMrNkRWY2FvbHFkVVBzTHZwNUtQMEQyV0hrTkVEY0tPeml3bzZNYm9wczFLYWJnNXVYSVl5T21JRWNTTXNKNwpHbVAxMlJjK0J3V1dFWXRrTHVPU3BwQm1lSjN3aDRrUlVRVTRTemRFU1dDcU40RTNpcTJib3FFVm53SkFGQ1ZpCldldGVjZkZsODZFalliQUxxSnRCbGJCbFFQM1ZMZ1hva0VVamJ4QmFobE1wZitUWkVJNFBuam1zUWN5a21LeXIKaDJwdmM3cnZYb29HTlhTM0Q0eFc1VDY3dmxLYi94UlM3c2gwTkJEU0dtTE1jY2pxWFZXazVOR2lBWVB3dXBWSwpTWG02dnZXUFZCdEd1bkZhS0JSRGx4TlJrb0wzRUN6UkNtenoxR2ZYMGJkSm1leElOM2VIUFBRdkd0M0txeUlnCkgrYnc0OXpqdlVUb2dNcXFpTlcvQWdNQkFBR2pRakJBTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQQmdOVkhSTUIKQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJRVHN2L0l0Y2t0UkpZdXlqUGg5c3J3OXp5TkpqQU5CZ2txaGtpRwo5dzBCQVFzRkFBT0NBUUVBd2dvZEsxalhVWFZDVXBTSjE0cEo3S3ZobWZPT1hkaVNISmNSSzlIUzI1c2xwOWN2CkJDSndmWUZmanJ4Rmc5TnV4aVpiM01oVXk5MDBqenBPdk1QWStEeUxFWFVxTGd5ZlBMUzYveVliem8yZHdwdzMKOCtrTXlsQUFlZmtaSW9oT0VhYSsvNFFBVVVGZVp1a1B6bmF6RzZIWnZKQkNxWVdRNXBaSSt3WTI1dzhEU0VOMgpkOCswVkpzWU5IdUk4aXhneGZhUkRycW5LRHBMUGJ3Z3VaRDl6ZkV3dVFaNG1oeEd0Vk1wR0NLSndscWFhdXJ0CkF5aGhzOXBHNERndkpSY1BLeFY4bndRdzZtSm55dkIxcExxTW1aQTVqZWhxbFNvUGVpWUlBMk1neU83cTVPYmMKL040bzBNTVdvZ1piRWR6aTBnTXJRT2lpNE41Q0ZlakVrYStIMmc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+- '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
+  staticEndpointConfigs:
+  - endpointConfig:
+      '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+      clusterName: xds_cluster
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                address: 10.106.37.54
+                portValue: 18000
+            healthCheckConfig: {}
+            hostname: envoy-gateway
+          healthStatus: HEALTHY
+          loadBalancingWeight: 1
+          metadata: {}
+        locality: {}
+      policy:
+        overprovisioningFactor: 140
