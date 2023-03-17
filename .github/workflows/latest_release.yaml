@@ -25,11 +25,15 @@ jobs:
         tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/
 
     # Ignore the error when we delete the latest release, it might not exist.
+
+    # GitHub APIs take sometime to make effect, we should make sure before Recreate the Latest Release and Tag,
+    # tag and release all get deleted. So we sleep sometime after deleting tag and release to wait for it taking effect.
+
     - name: Delete the Latest Release
       continue-on-error: true
       run: |
         gh release delete latest --repo $GITHUB_REPOSITORY
-        sleep 3
+        sleep 4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -39,7 +43,7 @@ jobs:
       continue-on-error: true
       run: |
         gh api --method DELETE /repos/$GITHUB_REPOSITORY/git/refs/tags/latest
-        sleep 3
+        sleep 4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -73,7 +77,9 @@ jobs:
     # Check if latest release and tag are created properly,
     # if not, the workflow needs to report an error, 
     # let maintainers be aware of it and rerun it manually.
+    # After Recreate the Latest Release and Tag, we need to sleep some time to wait
+    # new tag and release are created before checking it.
     - name: Check Latest Release and Tag
       run: |
-        sleep 3
+        sleep 4
         make latest-release-check
