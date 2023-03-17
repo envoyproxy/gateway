@@ -35,6 +35,14 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
+.PHONY: generate-gwapi-manifests
+generate-gwapi-manifests:
+generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
+	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/
+	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
+	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+
 .PHONY: kube-generate
 kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 # Note that the paths can't just be "./..." with the header file, or the tool will panic on run. Sorry.
