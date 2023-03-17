@@ -32,19 +32,6 @@ const (
 	ProviderTypeFile ProviderType = "File"
 )
 
-// TLSType defines the types where TLS certificates can be loaded.
-//
-// +kubebuilder:validation:Enum=Secret
-type TLSType string
-
-const (
-	// TLSTypeSecret defines the "Secret" TLS type.
-	TLSTypeSecret TLSType = "Secret"
-
-	// TLSTypeFile defines the "File" TLS type. This type is not implemented
-	TLSTypeFile TLSType = "File"
-)
-
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
 	// Replicas is the number of desired pods. Defaults to 1.
@@ -71,3 +58,15 @@ type KubernetesServiceSpec struct {
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
+
+// ExtensionHook defines the types of hooks that an Envoy Gateway extension may support
+//
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;PostTranslation
+type ExtensionHook string
+
+const (
+	XDSVirtualHost     ExtensionHook = "XDSVirtualHost" 
+	XDSRoute	 	   ExtensionHook = "XDSRoute"
+	XDSHTTPListener    ExtensionHook = "XDSHTTPListener"
+	XDSPostTranslation ExtensionHook = "XDSPostTranslation"
+)

@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -99,22 +100,6 @@ type FileProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 
-// TLSSecret defines the configuration for getting TLS certificates from a Secret.
-type TLSSecret struct {
-	// Name is the secret name to load the TLS certificate from
-	Name string `json:"name"`
-
-	// Namespace is the namespace where the secret is located.
-	//
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-}
-
-// TLSFile defines the configuration for getting TLS certificates from a file.
-type TLSFile struct {
-	// TODO: Add config when we are ready to support this
-}
-
 // RateLimit defines the configuration associated with the Rate Limit Service
 // used for Global Rate Limiting.
 type RateLimit struct {
@@ -160,11 +145,20 @@ type RateLimitRedisSettings struct {
 // the Envoy Gateway control plane.
 type Extension struct {
 	// Resources defines the set of K8s resources the extension will handle.
-	Resources []*GroupVersionKind `json:"resources,omitempty"`
+	//
+	// +optional
+	Resources []GroupVersionKind `json:"resources,omitempty"`
+
+	// Hooks defines the set of hooks the extension supports
+	//
+	// +kubebuilder:validation:Required
+	Hooks []ExtensionHook `json:"hooks"`
 
 	// Service defines the configuration of the extension service that the Envoy
 	// Gateway Control Plane will call through extension hooks.
-	Service *ExtensionService `json:"service"`
+	//
+	// +kubebuilder:validation:Required
+	Service ExtensionService `json:"service"`
 }
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
@@ -186,24 +180,16 @@ type ExtensionService struct {
 	TLS *ExtensionTLS `json:"tls,omitempty"`
 }
 
-// ExtensionTLS defines the TLS configuration when connecting to an extension service.
+// ExtensionTLS defines the TLS configuration when connecting to an extension service
 type ExtensionTLS struct {
-	// Type is the method for how the TLS certificate is loaded. Supported types are:
+	// CertificateRef contains a references to objects (Kubernetes objects or otherwise) that
+	// contains a TLS certificate and private keys. These certificates are used to
+	// establish a TLS handshake to the extension server.
 	//
-	//   * Secret: Load the TLS certificate from a K8s secret.
+	// CertificateRef can only reference a Kubernetes Secret at this time.
 	//
-	// +unionDiscriminator
-	Type TLSType `json:"type"`
-
-	// Secret defines which K8s secret to load the TLS certificate from.
-	//
-	// +optional
-	Secret *TLSSecret `json:"secret,omitempty"`
-
-	// File defines the configuration for loading the TLS certificate from the filesystem.
-	//
-	// +optional
-	File *TLSFile `json:"file,omitempty"`
+	// +kubebuilder:validation:Required
+	CertificateRef *gwapiv1b1.SecretObjectReference `json:"certificateRef"`
 }
 
 func init() {
