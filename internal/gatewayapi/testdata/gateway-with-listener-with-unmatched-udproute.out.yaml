@@ -24,7 +24,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been programmed
+              message: Listener has been translated
 
 xdsIR:
   envoy-gateway-gateway-1: {}

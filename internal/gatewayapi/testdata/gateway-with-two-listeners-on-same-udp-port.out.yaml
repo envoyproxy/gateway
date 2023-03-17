@@ -30,7 +30,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been programmed
+              message: Listener has been translated
         - name: udp2
           supportedKinds:
             - group: gateway.networking.k8s.io

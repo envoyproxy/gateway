@@ -38,7 +38,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been programmed
+              message: Listener has been translated
         - name: tls-terminate
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -50,7 +50,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been programmed
+              message: Listener has been translated
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute
