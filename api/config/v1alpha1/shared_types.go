@@ -61,7 +61,7 @@ type KubernetesServiceSpec struct {
 
 // ExtensionHook defines the types of hooks that an Envoy Gateway extension may support
 //
-// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;PostTranslation
+// +kubebuilder:validation:Enum=XDSVirtualHost;XDSRoute;XDSHTTPListener;XDSPostTranslation
 type ExtensionHook string
 
 const (

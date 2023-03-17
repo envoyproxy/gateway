@@ -152,13 +152,14 @@ type Extension struct {
 	// Hooks defines the set of hooks the extension supports
 	//
 	// +kubebuilder:validation:Required
-	Hooks []ExtensionHook `json:"hooks"`
+	// +kubebuilder:validation:MinItems=1
+	Hooks []ExtensionHook `json:"hooks,omitempty"`
 
 	// Service defines the configuration of the extension service that the Envoy
 	// Gateway Control Plane will call through extension hooks.
 	//
 	// +kubebuilder:validation:Required
-	Service ExtensionService `json:"service"`
+	Service *ExtensionService `json:"service,omitempty"`
 }
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
@@ -189,7 +190,7 @@ type ExtensionTLS struct {
 	// CertificateRef can only reference a Kubernetes Secret at this time.
 	//
 	// +kubebuilder:validation:Required
-	CertificateRef *gwapiv1b1.SecretObjectReference `json:"certificateRef"`
+	CertificateRef gwapiv1b1.SecretObjectReference `json:"certificateRef"`
 }
 
 func init() {
