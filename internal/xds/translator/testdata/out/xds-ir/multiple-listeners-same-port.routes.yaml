@@ -6,6 +6,7 @@
     routes:
     - match:
         prefix: /
+      name: first-route
       route:
         cluster: first-route
 - name: second-listener
@@ -16,6 +17,7 @@
     routes:
     - match:
         prefix: /
+      name: second-route
       route:
         cluster: second-route
 - name: third-listener
@@ -26,6 +28,7 @@
     routes:
     - match:
         prefix: /
+      name: third-route
       route:
         cluster: third-route
   - domains:
@@ -34,5 +37,6 @@
     routes:
     - match:
         prefix: /
+      name: fourth-route
       route:
         cluster: fourth-route
