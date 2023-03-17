@@ -23,9 +23,17 @@ YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: manifests
-manifests: $(tools/controller-gen) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./api/..." output:crd:artifacts:config=charts/envoy-gateway/crds/generated output:rbac:artifacts:config=charts/envoy-gateway/templates/generated/rbac output:webhook:artifacts:config=charts/envoy-gateway/templates/generated/webhook
+
+.PHONY: generate-gwapi-manifests
+generate-gwapi-manifests:
+generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
+	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/
+	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
+	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
 .PHONY: kube-generate
 kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
