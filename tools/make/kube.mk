@@ -24,13 +24,13 @@ YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: manifests
-manifests: $(tools/controller-gen) upgrade-gwapi ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:rbac:artifacts:config=charts/gateway-helm/templates/generated/rbac output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
 
-.PHONY: upgrade-gwapi
-upgrade-gwapi:
-upgrade-gwapi: ## Upgrade GWAPI and make it consistent with the go mod version.
+.PHONY: generate-gwapi-manifests
+generate-gwapi-manifests:
+generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
 	@$(LOG_TARGET)
 	@mkdir -p $(OUTPUT_DIR)/
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
