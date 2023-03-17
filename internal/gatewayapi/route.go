@@ -79,7 +79,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range httpRoute.parentRefs {
 		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(httpRoute) {
+		if parentRef.HasCondition(httpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
 
@@ -110,7 +110,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
-		if !parentRef.HasUnResolvedRefs(httpRoute) {
+		if !parentRef.HasCondition(httpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(httpRoute,
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionTrue,
@@ -285,7 +285,7 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range grpcRoute.parentRefs {
 		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(grpcRoute) {
+		if parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
 		// Need to compute Route rules within the parentRef loop because
@@ -315,7 +315,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
-		if !parentRef.HasUnResolvedRefs(grpcRoute) {
+		if !parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(grpcRoute,
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionTrue,
@@ -541,7 +541,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tlsRoute.parentRefs {
 		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(tlsRoute) {
+		if parentRef.HasCondition(tlsRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
 
@@ -635,7 +635,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
-		if !parentRef.HasUnResolvedRefs(tlsRoute) {
+		if !parentRef.HasCondition(tlsRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(tlsRoute,
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionTrue,
@@ -675,7 +675,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range udpRoute.parentRefs {
 		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(udpRoute) {
+		if parentRef.HasCondition(udpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
 
@@ -771,7 +771,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
-		if !parentRef.HasUnResolvedRefs(udpRoute) {
+		if !parentRef.HasCondition(udpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(udpRoute,
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionTrue,
@@ -812,7 +812,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tcpRoute.parentRefs {
 		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(tcpRoute) {
+		if parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
 
@@ -907,7 +907,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
-		if !parentRef.HasUnResolvedRefs(tcpRoute) {
+		if !parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(tcpRoute,
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionTrue,

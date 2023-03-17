@@ -658,25 +658,12 @@ func (r *RouteParentContext) ResetConditions(route RouteContext) {
 	routeStatus.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 }
 
-func (r *RouteParentContext) IsAccepted(route RouteContext) bool {
+func (r *RouteParentContext) HasCondition(route RouteContext, condType v1beta1.RouteConditionType, status metav1.ConditionStatus) bool {
 	var conditions []metav1.Condition
 	routeStatus := route.GetRouteStatus()
 	conditions = routeStatus.Parents[r.routeParentStatusIdx].Conditions
-	for _, cond := range conditions {
-		if cond.Type == string(v1beta1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (r *RouteParentContext) HasUnResolvedRefs(route RouteContext) bool {
-	var conditions []metav1.Condition
-	routeStatus := route.GetRouteStatus()
-	conditions = routeStatus.Parents[r.routeParentStatusIdx].Conditions
-	for _, cond := range conditions {
-		if cond.Type == string(v1beta1.RouteConditionResolvedRefs) && cond.Status == metav1.ConditionFalse {
+	for _, c := range conditions {
+		if c.Type == string(condType) && c.Status == status {
 			return true
 		}
 	}
