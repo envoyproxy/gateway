@@ -6,6 +6,7 @@
     routes:
     - match:
         path: foo/bar
+      name: first-route-www.test.com
       route:
         cluster: first-route-www.test.com
       typedPerFilterConfig:
@@ -14,6 +15,7 @@
           requirementName: first-route-www.test.com
     - match:
         path: foo/baz
+      name: second-route-www.test.com
       route:
         cluster: second-route-www.test.com
       typedPerFilterConfig:
