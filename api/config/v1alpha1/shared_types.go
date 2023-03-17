@@ -65,8 +65,8 @@ type KubernetesServiceSpec struct {
 type ExtensionHook string
 
 const (
-	XDSVirtualHost     ExtensionHook = "XDSVirtualHost" 
-	XDSRoute	 	   ExtensionHook = "XDSRoute"
+	XDSVirtualHost     ExtensionHook = "XDSVirtualHost"
+	XDSRoute           ExtensionHook = "XDSRoute"
 	XDSHTTPListener    ExtensionHook = "XDSHTTPListener"
 	XDSPostTranslation ExtensionHook = "XDSPostTranslation"
 )
