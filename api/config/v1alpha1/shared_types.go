@@ -13,7 +13,7 @@ const (
 // GroupVersionKind unambiguously identifies a Kind.
 // It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
 type GroupVersionKind struct {
-	Group   string `json:"group,omitempty"`
+	Group   string `json:"group"`
 	Version string `json:"version"`
 	Kind    string `json:"kind"`
 }
