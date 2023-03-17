@@ -10,6 +10,7 @@
           stringMatch:
             exact: gateway.envoyproxy.io
         prefix: /origin/
+      name: rewrite-route
       route:
         cluster: rewrite-route
         prefixRewrite: /

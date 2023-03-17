@@ -14,5 +14,6 @@
         - name: debug
           stringMatch:
             exact: "yes"
+      name: first-route
       route:
         cluster: first-route
