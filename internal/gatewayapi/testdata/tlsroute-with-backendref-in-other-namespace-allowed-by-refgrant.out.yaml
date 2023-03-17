@@ -27,7 +27,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been translated
+              message: Listener has been successfully translated
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute

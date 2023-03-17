@@ -150,7 +150,7 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
 		listener.SetCondition(v1beta1.ListenerConditionProgrammed, metav1.ConditionTrue, v1beta1.ListenerReasonProgrammed,
-			"Listener has been programmed")
+			"Listener has been successfully translated")
 		return true
 
 	}

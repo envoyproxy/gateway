@@ -30,7 +30,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been translated
+              message: Listener has been successfully translated
         - name: tcp2
           supportedKinds:
             - group: gateway.networking.k8s.io
