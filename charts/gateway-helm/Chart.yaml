@@ -10,7 +10,7 @@ maintainers:
   - name: envoy-gateway-steering-committee
     url: https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
   - name: envoy-gateway-maintainers
-    url: https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS.md
+    url: https://github.com/envoyproxy/gateway/blob/main/CODEOWNERS
 
 keywords:
   - gateway-api

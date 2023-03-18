@@ -1,4 +1,5 @@
 # Charter
+
 The Envoy Gateway Steering Committee is the governing body of the Envoy Gateway project,
 providing decision-making and oversight pertaining to the Envoy Gateway project bylaws,
 sub-organizations, and financial planning. The Steering Committee is composed of end
@@ -8,12 +9,14 @@ users and system integrators and will be responsible for the following:
 - Defining the scope and boundaries of the project
 
 ## General Guidelines
+
 Envoy Gateway will be driven by a steering committee which will decide its direction and
 governance. In case of any conflict, steering will vote and decide on the direction of
 the project, though the goal will be that decisions are made unanimously and voting is
 not needed.
 
 ## Voting Procedure
+
 In the unlikely circumstance that a vote is required in order to make forward progress,
 a majority vote among steering committee members will be used. This implies that any vote
 must be a binary decision between two options. In the case of a tie (due to abstention or
@@ -21,6 +24,7 @@ future addition of committee seats), the Envoy core proxy maintainer seat will b
 tie with a super vote.
 
 ## Steering Committee
+
 The steering committee is a 6-member governing body that makes directional and strategic
 decisions for the Envoy gateway project. It will also decide on any changes on its
 governance, marketing and future direction. Seats will be tied to organizations and not
@@ -44,6 +48,7 @@ on the same yearly basis. This will be determined by a majority vote of the exis
 The exception to this is the Envoy core proxy maintainer seat which is a permanent seat.
 
 ## Schedule and Cadence
+
 The project will have one steering meeting every month.
 
 - Closed but recorded online meeting every 3rd Monday of the month at 9:30am PT.
