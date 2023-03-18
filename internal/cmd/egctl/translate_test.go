@@ -24,6 +24,7 @@ func TestTranslate(t *testing.T) {
 		to           string
 		output       string
 		resourceType string
+		extraArgs    []string
 		expect       bool
 	}{
 		{
@@ -95,6 +96,13 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
+			name:      "default-resources",
+			from:      "gateway-api",
+			to:        "xds",
+			expect:    true,
+			extraArgs: []string{"--add-missing-resources"},
+		},
+		{
 			name:         "quickstart",
 			from:         "gateway-api",
 			to:           "xds",
@@ -141,6 +149,10 @@ func TestTranslate(t *testing.T) {
 			} else {
 				resourceType = tc.resourceType
 				args = append(args, "--type", tc.resourceType)
+			}
+
+			if len(tc.extraArgs) > 0 {
+				args = append(args, tc.extraArgs...)
 			}
 
 			root.SetArgs(args)

@@ -6,6 +6,7 @@
     routes:
     - match:
         path: foo/bar
+      name: first-route
       route:
         cluster: first-route
         rateLimits:
@@ -20,6 +21,7 @@
                   exact: one
     - match:
         path: example
+      name: second-route
       route:
         cluster: second-route
         rateLimits:
@@ -29,6 +31,7 @@
               headerName: x-user-id
     - match:
         path: test
+      name: third-route
       route:
         cluster: third-route
         rateLimits:

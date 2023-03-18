@@ -1,9 +1,9 @@
 apiVersion: v2
-name: envoy-gateway
+name: gateway-helm
 description: The Helm chart for Envoy Gateway
 type: application
 
-version: 0.0.0
+version: v0.0.0-latest
 appVersion: "latest"
 
 maintainers:

@@ -25,10 +25,15 @@ jobs:
         tar -zcvf egctl_latest_darwin_arm64.tar.gz bin/darwin/arm64/
 
     # Ignore the error when we delete the latest release, it might not exist.
+
+    # GitHub APIs take sometime to make effect, we should make sure before Recreate the Latest Release and Tag,
+    # tag and release all get deleted. So we sleep sometime after deleting tag and release to wait for it taking effect.
+
     - name: Delete the Latest Release
       continue-on-error: true
       run: |
         gh release delete latest --repo $GITHUB_REPOSITORY
+        sleep 4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -36,8 +41,9 @@ jobs:
     # Ignore the error when we delete the latest tag, it might not exist.
     - name: Delete the Latest Tag
       continue-on-error: true
-      run:
+      run: |
         gh api --method DELETE /repos/$GITHUB_REPOSITORY/git/refs/tags/latest
+        sleep 4
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -62,15 +68,18 @@ jobs:
 
           It is only intended for developers wishing to try out the latest features in Envoy Gateway, some of which may not be fully implemented.
 
-          We use `0.0.0` as the latest chart version to install latest envoy-gateway:
+          We use `v0.0.0-latest` as the latest chart version to install latest envoy-gateway:
 
           ```shell
-          helm install eg oci://docker.io/envoyproxy/envoy-gateway --version 0.0.0 -n envoy-gateway-system --create-namespace
+          helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
           ```
 
     # Check if latest release and tag are created properly,
     # if not, the workflow needs to report an error, 
     # let maintainers be aware of it and rerun it manually.
+    # After Recreate the Latest Release and Tag, we need to sleep some time to wait
+    # new tag and release are created before checking it.
     - name: Check Latest Release and Tag
-      run: | 
+      run: |
+        sleep 4
         make latest-release-check

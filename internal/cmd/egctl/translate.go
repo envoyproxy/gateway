@@ -45,6 +45,7 @@ const (
 func NewTranslateCommand() *cobra.Command {
 	var (
 		inFile, inType, outType, output, resourceType string
+		addMissingResources                           bool
 	)
 
 	translateCommand := &cobra.Command{
@@ -73,9 +74,12 @@ func NewTranslateCommand() *cobra.Command {
 
   # Translate Gateway API Resources into Cluster xDS Resources with short syntax.
   egctl x translate --from gateway-api --to xds -t cluster -o yaml -f <input file>
-	  `,
+
+  # Translate Gateway API Resources into All xDS Resources with dummy resources added.
+  egctl x translate --from gateway-api --to xds -t cluster --add-missing-resources -f <input file>
+	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return translate(cmd.OutOrStdout(), inFile, inType, outType, output, resourceType)
+			return translate(cmd.OutOrStdout(), inFile, inType, outType, output, resourceType, addMissingResources)
 		},
 	}
 
@@ -87,6 +91,7 @@ func NewTranslateCommand() *cobra.Command {
 	translateCommand.PersistentFlags().StringVarP(&outType, "to", "", xdsType, getValidOutputTypesStr())
 	translateCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
 	translateCommand.PersistentFlags().StringVarP(&resourceType, "type", "t", string(AllEnvoyConfigType), getValidResourceTypesStr())
+	translateCommand.PersistentFlags().BoolVarP(&addMissingResources, "add-missing-resources", "", false, "Provides dummy resources if missed")
 	return translateCommand
 }
 
@@ -181,7 +186,7 @@ func validate(inFile, inType, outType, resourceType string) error {
 	return nil
 }
 
-func translate(w io.Writer, inFile, inType, outType, output, resourceType string) error {
+func translate(w io.Writer, inFile, inType, outType, output, resourceType string, addMissingResources bool) error {
 	if err := validate(inFile, inType, outType, resourceType); err != nil {
 		return err
 	}
@@ -192,15 +197,15 @@ func translate(w io.Writer, inFile, inType, outType, output, resourceType string
 	}
 
 	if inType == gatewayAPIType && outType == xdsType {
-		return translateFromGatewayAPIToXds(w, inBytes, output, resourceType)
+		return translateFromGatewayAPIToXds(w, inBytes, output, resourceType, addMissingResources)
 	}
 
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outType)
 }
 
-func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte, output, resourceType string) error {
+func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte, output, resourceType string, addMissingResources bool) error {
 	// Unmarshal input
-	gcName, resources, err := kubernetesYAMLToResources(string(inBytes))
+	gcName, resources, err := kubernetesYAMLToResources(string(inBytes), addMissingResources)
 	if err != nil {
 		return fmt.Errorf("unable to unmarshal input: %w", err)
 	}
@@ -394,10 +399,12 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 }
 
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
-func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error) {
+func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *gatewayapi.Resources, error) {
 	resources := gatewayapi.NewResources()
 	var gcName string
 	var useDefaultNamespace bool
+	providedNamespaceMap := map[string]struct{}{}
+	requiredNamespaceMap := map[string]struct{}{}
 	yamls := strings.Split(str, "\n---")
 	combinedScheme := envoygateway.GetScheme()
 	for _, y := range yamls {
@@ -419,6 +426,7 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
+		requiredNamespaceMap[namespace] = struct{}{}
 		kobj, err := combinedScheme.New(gvk)
 		if err != nil {
 			return "", nil, err
@@ -475,6 +483,7 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 				},
 			}
 			resources.Namespaces = append(resources.Namespaces, namespace)
+			providedNamespaceMap[name] = struct{}{}
 		case gatewayapi.KindService:
 			typedSpec := spec.Interface()
 			service := &v1.Service{
@@ -489,21 +498,27 @@ func kubernetesYAMLToResources(str string) (string, *gatewayapi.Resources, error
 	}
 
 	if useDefaultNamespace {
-		var found bool
-		for _, ns := range resources.Namespaces {
-			if ns.GetName() == config.DefaultNamespace {
-				found = true
-				break
-			}
-		}
-
-		if !found {
+		if _, found := providedNamespaceMap[config.DefaultNamespace]; !found {
 			namespace := &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: config.DefaultNamespace,
 				},
 			}
 			resources.Namespaces = append(resources.Namespaces, namespace)
+			providedNamespaceMap[config.DefaultNamespace] = struct{}{}
+		}
+	}
+
+	if addMissingResources {
+		for ns := range requiredNamespaceMap {
+			if _, found := providedNamespaceMap[ns]; !found {
+				namespace := &v1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: ns,
+					},
+				}
+				resources.Namespaces = append(resources.Namespaces, namespace)
+			}
 		}
 	}
 
