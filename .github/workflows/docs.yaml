@@ -45,7 +45,6 @@ jobs:
 
   # This workflow contains a single job called "build"
   docs-publish:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: docs-build
 
@@ -63,4 +62,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1.2.5
+        uses: actions/deploy-pages@v2.0.0
