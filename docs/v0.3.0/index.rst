@@ -7,7 +7,7 @@ Release: |version|
     :target: https://envoyproxy.slack.com/archives/C03E6NHLESV
     :alt: Join the Envoy Slack
 
-Envoy Gateway is an open source project for managing `Envoy Proxy`_ as a standalone or Kubernetes-based application
+PREVIEW: Envoy Gateway is an open source project for managing `Envoy Proxy`_ as a standalone or Kubernetes-based application
 gateway. `Gateway API`_ resources are used to dynamically provision and configure the managed Envoy Proxies. Whether
 you are interested in using or contributing to Envoy Gateway, the following resources will help you get started:
 
