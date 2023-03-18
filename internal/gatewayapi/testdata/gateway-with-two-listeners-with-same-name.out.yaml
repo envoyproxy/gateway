@@ -1,0 +1,68 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http-1
+      protocol: HTTP
+      port: 8080
+    - name: http-1
+      protocol: HTTP
+      port: 80
+  status:
+    listeners:
+    - name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+      conditions:
+      - type: Programmed
+        status: "True"
+        reason: Programmed
+        message: Listener is ready
+    - name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+      conditions:
+      - type: Conflicted
+        status: "True"
+        reason: Invalid
+        message: Listener must not have duplicate name http-1
+      - type: Programmed
+        status: "False"
+        reason: Invalid
+        message: Listener is invalid, see other Conditions for details.
+xdsIR:
+  envoy-gateway-gateway-1:
+    http:
+    - name: envoy-gateway-gateway-1-http-1
+      address: 0.0.0.0
+      port: 8080
+      hostnames:
+      - "*"
+      routes:
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+      name: envoy-gateway-gateway-1
+      image: envoyproxy/envoy:translator-tests
+      listeners:
+      - address: ""
+        ports:
+        - name: http-1
+          protocol: "HTTP"
+          containerPort: 8080
+          servicePort: 8080

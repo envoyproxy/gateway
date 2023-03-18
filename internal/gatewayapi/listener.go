@@ -49,6 +49,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		// Infra IR proxy ports must be unique.
 		var foundPorts []*protocolPort
 
+		// Listener name must be unique within a Gateway.
+		nameMap := map[v1beta1.SectionName]struct{}{}
+
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
@@ -78,6 +81,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 			// Process Hostname configuration
 			t.validateHostName(listener)
+
+			if _, found := nameMap[listener.Name]; found {
+				listener.SetCondition(
+					v1beta1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					v1beta1.ListenerReasonInvalid,
+					fmt.Sprintf("Listener must not have duplicate name %s", listener.Name),
+				)
+			}
+			nameMap[listener.Name] = struct{}{}
 
 			// Process conditions and check if the listener is ready
 			isReady := t.validateListenerConditions(listener)
