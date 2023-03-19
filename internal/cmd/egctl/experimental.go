@@ -9,8 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewExperimentalCommand() *cobra.Command {
-
+func newExperimentalCommand() *cobra.Command {
 	experimentalCommand := &cobra.Command{
 		Use:     "experimental",
 		Aliases: []string{"x"},

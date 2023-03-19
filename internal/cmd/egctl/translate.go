@@ -151,7 +151,6 @@ func getValidResourceTypesStr() string {
 }
 
 func getInputBytes(inFile string) ([]byte, error) {
-
 	// Get input from stdin
 	if inFile == "-" {
 		scanner := bufio.NewScanner(os.Stdin)
@@ -255,11 +254,11 @@ func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, out
 			return err
 		}
 	} else {
-		config, err := findXDSResourceFromConfigDump(resourceType, globalConfigs)
+		xdsResources, err := findXDSResourceFromConfigDump(resourceType, globalConfigs)
 		if err != nil {
 			return err
 		}
-		data, err = protojson.Marshal(config)
+		data, err = protojson.Marshal(xdsResources)
 		if err != nil {
 			return err
 		}
@@ -289,30 +288,30 @@ func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, out
 	return nil
 }
 
-// consructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
+// constructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
 func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
 	globalConfigs := &adminv3.ConfigDump{}
 	bootstrapConfigs := &adminv3.BootstrapConfigDump{}
-	bstrap := &bootstrapv3.Bootstrap{}
+	proxyBootstrap := &bootstrapv3.Bootstrap{}
 	listenerConfigs := &adminv3.ListenersConfigDump{}
 	routeConfigs := &adminv3.RoutesConfigDump{}
 	clusterConfigs := &adminv3.ClustersConfigDump{}
 	endpointConfigs := &adminv3.EndpointsConfigDump{}
 
 	// construct bootstrap config
-	bootsrapYAML, err := bootstrap.GetRenderedBootstrapConfig()
+	bootstrapYAML, err := bootstrap.GetRenderedBootstrapConfig()
 	if err != nil {
 		return nil, err
 	}
-	jsonData, err := yaml.YAMLToJSON([]byte(bootsrapYAML))
+	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapYAML))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := protojson.Unmarshal(jsonData, bstrap); err != nil {
+	if err := protojson.Unmarshal(jsonData, proxyBootstrap); err != nil {
 		return nil, err
 	}
-	bootstrapConfigs.Bootstrap = bstrap
+	bootstrapConfigs.Bootstrap = proxyBootstrap
 	if err := bootstrapConfigs.Validate(); err != nil {
 		return nil, err
 	}
