@@ -167,7 +167,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: routeName(httpRoute, ruleIdx, -1),
 		}
-		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
@@ -230,14 +230,14 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 				Exact: StringPtr(string(*match.Method)),
 			})
 		}
-		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
 	return ruleRoutes
 }
 
-func applyHTTPFiltersContexttoIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
+func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
 	// Add the redirect filter or direct response that were created earlier to all the irRoutes
 	if httpFiltersContext.RedirectResponse != nil {
 		irRoute.Redirect = httpFiltersContext.RedirectResponse
@@ -362,7 +362,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: routeName(grpcRoute, ruleIdx, -1),
 		}
-		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
 
@@ -411,7 +411,7 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		}
 
 		ruleRoutes = append(ruleRoutes, irRoute)
-		applyHTTPFiltersContexttoIRRoute(httpFiltersContext, irRoute)
+		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 	}
 	return ruleRoutes
 }
