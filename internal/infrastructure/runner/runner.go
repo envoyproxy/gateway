@@ -69,7 +69,7 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 					fmt.Println(err)
 					r.Logger.Error(err, "failed to create new infra")
 				}
-				// panic(1)
+				panic(1)
 			}
 		},
 	)

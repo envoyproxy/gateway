@@ -24,6 +24,8 @@ spec:
         control-plane: envoy-gateway
       {{- include "eg.selectorLabels" . | nindent 8 }}
     spec:
+      imagePullSecrets:
+        - name: {{ .Values.deployment.envoyGateway.imagePullSecret }}
       containers:
       - args:
         - server
