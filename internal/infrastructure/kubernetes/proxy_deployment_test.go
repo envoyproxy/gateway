@@ -142,15 +142,6 @@ func TestExpectedProxyDeployment(t *testing.T) {
 				},
 			},
 		},
-		{
-			Ports: []ir.ListenerPort{
-				{
-					Name:          "FooPort",
-					Protocol:      ir.UDPProtocolType,
-					ContainerPort: 8989,
-				},
-			},
-		},
 	}
 
 	deploy, err := kube.expectedProxyDeployment(infra)
@@ -256,6 +247,46 @@ func TestExpectedPodAnnotations(t *testing.T) {
 	deploy, err := kube.expectedProxyDeployment(infra)
 	require.NoError(t, err)
 	checkPodAnnotations(t, deploy, annotations)
+}
+
+func TestExpectedContainerPort(t *testing.T) {
+	const FooContainerPort, BarContainerPort = 7878, 8989
+
+	svrCfg, err := config.New()
+	require.NoError(t, err)
+	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
+	kube := NewInfra(cli, svrCfg)
+	infra := ir.NewInfra()
+
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
+	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+	infra.Proxy.Listeners = []ir.ProxyListener{
+		{
+			Ports: []ir.ListenerPort{
+				{
+					Name:          "FooPort",
+					Protocol:      ir.TCPProtocolType,
+					ContainerPort: FooContainerPort,
+				},
+			},
+		},
+		{
+			Ports: []ir.ListenerPort{
+				{
+					Name:          "BarPort",
+					Protocol:      ir.UDPProtocolType,
+					ContainerPort: BarContainerPort,
+				},
+			},
+		},
+	}
+
+	deploy, err := kube.expectedProxyDeployment(infra)
+	require.NoError(t, err)
+	ports := []int32{FooContainerPort, BarContainerPort}
+	for _, port := range ports {
+		checkContainerHasPort(t, deploy, port)
+	}
 }
 
 func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
