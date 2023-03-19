@@ -103,8 +103,9 @@ func (l *ListenerContext) AttachedRoutes() int32 {
 func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
-			(allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute) || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
+			// (allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute) || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
 			// (allowed.Kind == kind.Kind || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
+			(allowed.Kind == kind.Kind) {
 			return true
 		}
 	}
