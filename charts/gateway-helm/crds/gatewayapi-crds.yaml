@@ -10872,14 +10872,3 @@ spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 2000
----
-#
-# config/webhook/kustomization.yaml
-#
-resources:
-  - 0-namespace.yaml
-  - certificate_config.yaml
-  - admission_webhook.yaml
-images:
-  - name: gcr.io/k8s-staging-gateway-api/admission-server:v0.6.2
-    newTag: latest
