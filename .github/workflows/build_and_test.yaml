@@ -35,7 +35,22 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          code:
+            - '!docs/**'
+
   coverage-test:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
