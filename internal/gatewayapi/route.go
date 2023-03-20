@@ -80,6 +80,14 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 	for _, parentRef := range httpRoute.parentRefs {
 		// Skip parent refs that did not accept the route
 		if parentRef.HasCondition(httpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			// Set ResolvedRefs condition since its always expected to be set
+			parentRef.SetCondition(httpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"Skipped",
+				"Skipped resolving Object references since the Route is not Accepted",
+			)
+
 			continue
 		}
 
@@ -286,6 +294,14 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 	for _, parentRef := range grpcRoute.parentRefs {
 		// Skip parent refs that did not accept the route
 		if parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			// Set ResolvedRefs condition since its always expected to be set
+			parentRef.SetCondition(grpcRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"Skipped",
+				"Skipped resolving Object references since the Route is not Accepted",
+			)
+
 			continue
 		}
 		// Need to compute Route rules within the parentRef loop because
@@ -542,6 +558,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 	for _, parentRef := range tlsRoute.parentRefs {
 		// Skip parent refs that did not accept the route
 		if parentRef.HasCondition(tlsRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			// Set ResolvedRefs condition since its always expected to be set
+			parentRef.SetCondition(tlsRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"Skipped",
+				"Skipped resolving Object references since the Route is not Accepted",
+			)
+
 			continue
 		}
 
@@ -676,6 +700,13 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 	for _, parentRef := range udpRoute.parentRefs {
 		// Skip parent refs that did not accept the route
 		if parentRef.HasCondition(udpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			// Set ResolvedRefs condition since its always expected to be set
+			parentRef.SetCondition(udpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"Skipped",
+				"Skipped resolving Object references since the Route is not Accepted",
+			)
 			continue
 		}
 
@@ -813,6 +844,13 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 	for _, parentRef := range tcpRoute.parentRefs {
 		// Skip parent refs that did not accept the route
 		if parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			// Set ResolvedRefs condition since its always expected to be set
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionFalse,
+				"Skipped",
+				"Skipped resolving Object references since the Route is not Accepted",
+			)
 			continue
 		}
 

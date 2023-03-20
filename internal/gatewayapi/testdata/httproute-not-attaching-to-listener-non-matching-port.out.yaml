@@ -58,6 +58,10 @@ httpRoutes:
               status: "False"
               reason: NoMatchingParent
               message: No listeners match this parent ref
+            - type: ResolvedRefs 
+              status: "False"
+              reason: Skipped 
+              message: Skipped resolving Object references since the Route is not Accepted
 xdsIR:
   envoy-gateway-gateway-1:
     http:
