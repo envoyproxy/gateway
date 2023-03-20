@@ -14,4 +14,18 @@ dynamicEndpointConfigs:
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality: {}
+- endpointConfig:
+    '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+    clusterName: default-backend-rule-0-match-0-www.grpc-example.com
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.1.1.1
+              portValue: 9000
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality: {}
 resourceType: endpoint
+
