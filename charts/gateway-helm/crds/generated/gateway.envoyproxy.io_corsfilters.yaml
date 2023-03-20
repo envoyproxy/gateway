@@ -71,6 +71,7 @@ spec:
                   values are "Global".
                 enum:
                 - Global
+                - PerRoute
                 type: string
             required:
             - type

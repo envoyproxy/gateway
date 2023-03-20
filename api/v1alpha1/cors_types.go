@@ -42,7 +42,7 @@ type CorsFilterSpec struct {
 }
 
 // CorsType specifies the types of Cors.
-// +kubebuilder:validation:Enum=Global
+// +kubebuilder:validation:Enum=Global;PerRoute
 type CorsType string
 
 const (
