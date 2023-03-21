@@ -2,6 +2,8 @@ version: v1
 breaking:
   use:
     - FILE
+deps:
+  - buf.build/envoyproxy/envoy
 lint:
   use:
     - DEFAULT

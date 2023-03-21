@@ -3,3 +3,7 @@ plugins:
   - plugin: go
     out: ./
     path: tools/bin/protoc-gen-go
+  - plugin: go-grpc
+    out: ./
+    path: tools/bin/protoc-gen-go-grpc
+    opt: paths=source_relative
