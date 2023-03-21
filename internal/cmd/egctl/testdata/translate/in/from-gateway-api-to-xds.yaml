@@ -16,11 +16,22 @@ spec:
     - name: http
       protocol: HTTP
       port: 80
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+            group: gateway.networking.k8s.io
+    - name: grpc
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        kinds:
+          - kind: GRPCRoute
+            group: gateway.networking.k8s.io
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: default 
+  name: default
 ---
 apiVersion: v1
 kind: Service
@@ -38,6 +49,10 @@ spec:
       port: 3000
       targetPort: 3000
       protocol: TCP
+    - name: http
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
   selector:
     app: backend
 ---
@@ -62,3 +77,26 @@ spec:
         - path:
             type: PathPrefix
             value: /
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: grpc
+  hostnames:
+    - "www.grpc-example.com"
+  rules:
+    - matches:
+        - method:
+            service: com.example.Things
+            method: DoThing
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 9000
+          weight: 1

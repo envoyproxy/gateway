@@ -127,17 +127,16 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 }
 
 func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
-	ports := []corev1.ContainerPort{
-		{
-			Name:          "http",
-			ContainerPort: envoyHTTPPort,
-			Protocol:      corev1.ProtocolTCP,
-		},
-		{
-			Name:          "https",
-			ContainerPort: envoyHTTPSPort,
-			Protocol:      corev1.ProtocolTCP,
-		},
+	var ports []corev1.ContainerPort
+	for _, listener := range infra.Proxy.Listeners {
+		for _, p := range listener.Ports {
+			port := corev1.ContainerPort{
+				Name:          p.Name,
+				ContainerPort: p.ContainerPort,
+				Protocol:      corev1.Protocol(p.Protocol),
+			}
+			ports = append(ports, port)
+		}
 	}
 
 	var cfg string

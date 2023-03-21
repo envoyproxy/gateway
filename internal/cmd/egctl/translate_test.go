@@ -167,9 +167,11 @@ func TestTranslate(t *testing.T) {
 			assert.NoError(t, err)
 
 			if tc.output == jsonOutput {
-				require.JSONEq(t, requireTestDataOutFile(t, tc.name+"."+resourceType+".json"), string(out))
+				fn := tc.name + "." + resourceType + ".json"
+				require.JSONEq(t, requireTestDataOutFile(t, fn), string(out), "failure in "+fn)
 			} else {
-				require.YAMLEq(t, requireTestDataOutFile(t, tc.name+"."+resourceType+".yaml"), string(out))
+				fn := tc.name + "." + resourceType + ".yaml"
+				require.YAMLEq(t, requireTestDataOutFile(t, fn), string(out), "failure in "+fn)
 			}
 		})
 	}

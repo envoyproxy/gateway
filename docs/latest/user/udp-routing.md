@@ -13,7 +13,7 @@ For additional information, refer to Envoy's [UDP proxy documentation][].
 Install Envoy Gateway:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
