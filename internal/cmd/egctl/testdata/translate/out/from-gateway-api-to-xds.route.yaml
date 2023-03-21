@@ -18,4 +18,22 @@ dynamicRouteConfigs:
         name: default-backend-rule-0-match-0-www.example.com
         route:
           cluster: default-backend-rule-0-match-0-www.example.com
+- routeConfig:
+    '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+    name: default-eg-grpc
+    virtualHosts:
+    - domains:
+      - '*'
+      name: default-eg-grpc
+      routes:
+      - match:
+          headers:
+          - name: :authority
+            stringMatch:
+              exact: www.grpc-example.com
+          path: /com.example.Things/DoThing
+        name: default-backend-rule-0-match-0-www.grpc-example.com
+        route:
+          cluster: default-backend-rule-0-match-0-www.grpc-example.com
 resourceType: route
+

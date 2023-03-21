@@ -25,6 +25,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -465,6 +466,16 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *g
 				Spec: typedSpec.(v1beta1.HTTPRouteSpec),
 			}
 			resources.HTTPRoutes = append(resources.HTTPRoutes, httpRoute)
+		case gatewayapi.KindGRPCRoute:
+			typedSpec := spec.Interface()
+			grpcRoute := &v1alpha2.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1alpha2.GRPCRouteSpec),
+			}
+			resources.GRPCRoutes = append(resources.GRPCRoutes, grpcRoute)
 		case gatewayapi.KindNamespace:
 			namespace := &v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{

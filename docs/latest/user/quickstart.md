@@ -13,7 +13,7 @@ __Note:__ Refer to the [Compatibility Matrix](../intro/compatibility.rst) for su
 Install the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -25,7 +25,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the GatewayClass, Gateway, HTTPRoute and example app:
 
 ```shell
-kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml
+kubectl apply -f https://github.com/envoyproxy/gateway/releases/download/latest/quickstart.yaml -n default
 ```
 
 **Note**: [`quickstart.yaml`] defines that Envoy Gateway will listen for
@@ -89,7 +89,7 @@ kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest
 Delete the Gateway API CRDs and Envoy Gateway:
 
 ```shell
-kubectl delete -f https://github.com/envoyproxy/gateway/releases/download/latest/install.yaml --ignore-not-found=true
+helm uninstall eg -n envoy-gateway-system
 ```
 
 ## Next Steps

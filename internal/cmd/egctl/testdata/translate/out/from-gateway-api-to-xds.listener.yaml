@@ -41,4 +41,47 @@ dynamicListeners:
             - upgradeType: websocket
             useRemoteAddress: true
       name: default-eg-http
+- activeState:
+    listener:
+      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+      accessLog:
+      - filter:
+          responseFlagFilter:
+            flags:
+            - NR
+        name: envoy.access_loggers.file
+        typedConfig:
+          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          path: /dev/stdout
+      address:
+        socketAddress:
+          address: 0.0.0.0
+          portValue: 8080
+      defaultFilterChain:
+        filters:
+        - name: envoy.filters.network.http_connection_manager
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+            accessLog:
+            - name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                path: /dev/stdout
+            codecType: HTTP2
+            httpFilters:
+            - name: envoy.filters.http.grpc_web
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+            - name: envoy.filters.http.router
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            rds:
+              configSource:
+                ads: {}
+                resourceApiVersion: V3
+              routeConfigName: default-eg-grpc
+            statPrefix: http
+            useRemoteAddress: true
+      name: default-eg-grpc
 resourceType: listener
+
