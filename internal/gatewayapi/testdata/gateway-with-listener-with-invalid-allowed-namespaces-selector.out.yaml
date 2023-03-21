@@ -62,9 +62,9 @@ httpRoutes:
               reason: NoReadyListeners
               message: There are no ready listeners for this parent ref
             - type: ResolvedRefs 
-              status: "False"
-              reason: Skipped 
-              message: Skipped resolving Object references since the Route is not Accepted
+              status: "True"
+              reason: ResolvedRefs 
+              message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1: {}
 infraIR:
