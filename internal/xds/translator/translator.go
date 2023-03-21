@@ -108,6 +108,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
 		}
+		protocol := DefaultProtocol
+		if httpListener.IsHTTP2 {
+			protocol = HTTP2
+		}
 
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
@@ -122,8 +126,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				name:         httpRoute.Name,
 				destinations: httpRoute.Destinations,
 				tSocket:      nil,
-				isHTTP2:      httpListener.IsHTTP2,
-				isStatic:     true,
+				protocol:     protocol,
+				cluster:      Static,
 			})
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
@@ -134,8 +138,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 						name:         mirrorClusterName,
 						destinations: []*ir.RouteDestination{mirror},
 						tSocket:      nil,
-						isHTTP2:      httpListener.IsHTTP2,
-						isStatic:     true,
+						protocol:     protocol,
+						cluster:      Static,
 					})
 				}
 
@@ -166,8 +170,8 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			name:         tcpListener.Name,
 			destinations: tcpListener.Destinations,
 			tSocket:      nil,
-			isHTTP2:      false,
-			isStatic:     true,
+			protocol:     DefaultProtocol,
+			cluster:      Static,
 		})
 
 		// Search for an existing listener, if it does not exist, create one.
@@ -191,8 +195,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			name:         udpListener.Name,
 			destinations: udpListener.Destinations,
 			tSocket:      nil,
-			isHTTP2:      false,
-			isStatic:     true,
+			protocol:     DefaultProtocol,
+			cluster:      Static,
 		})
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
@@ -243,10 +247,10 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 }
 
 func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) {
-	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.isHTTP2, args.isStatic)
+	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.cluster)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.destinations)
 	// Use EDS for static endpoints
-	if args.isStatic {
+	if args.cluster == Static {
 		tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
 	} else {
 		xdsCluster.LoadAssignment = xdsEndpoints
@@ -274,6 +278,23 @@ type addXdsClusterArgs struct {
 	name         string
 	destinations []*ir.RouteDestination
 	tSocket      *corev3.TransportSocket
-	isHTTP2      bool
-	isStatic     bool
+	protocol     ProtocolType
+	cluster      ClusterType
 }
+
+type ProtocolType int
+type ClusterType int
+
+const (
+	DefaultProtocol ProtocolType = iota
+	TCP
+	UDP
+	HTTP
+	HTTP2
+)
+
+const (
+	DefaultCluster ClusterType = iota
+	Static
+	EDS
+)
