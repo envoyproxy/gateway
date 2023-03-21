@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -44,8 +45,9 @@ const (
 
 func NewTranslateCommand() *cobra.Command {
 	var (
-		inFile, inType, outType, output, resourceType string
-		addMissingResources                           bool
+		inFile, inType, output, resourceType string
+		addMissingResources                  bool
+		outTypes                             []string
 	)
 
 	translateCommand := &cobra.Command{
@@ -77,9 +79,13 @@ func NewTranslateCommand() *cobra.Command {
 
   # Translate Gateway API Resources into All xDS Resources with dummy resources added.
   egctl x translate --from gateway-api --to xds -t cluster --add-missing-resources -f <input file>
+
+  # Translate Gateway API Resources into All xDS Resources in YAML output,
+  # also print the Gateway API Resources with updated status in the same output.
+  egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file>
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return translate(cmd.OutOrStdout(), inFile, inType, outType, output, resourceType, addMissingResources)
+			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources)
 		},
 	}
 
@@ -88,7 +94,7 @@ func NewTranslateCommand() *cobra.Command {
 		return nil
 	}
 	translateCommand.PersistentFlags().StringVarP(&inType, "from", "", gatewayAPIType, getValidInputTypesStr())
-	translateCommand.PersistentFlags().StringVarP(&outType, "to", "", xdsType, getValidOutputTypesStr())
+	translateCommand.PersistentFlags().StringSliceVarP(&outTypes, "to", "", []string{gatewayAPIType, xdsType}, getValidOutputTypesStr())
 	translateCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
 	translateCommand.PersistentFlags().StringVarP(&resourceType, "type", "t", string(AllEnvoyConfigType), getValidResourceTypesStr())
 	translateCommand.PersistentFlags().BoolVarP(&addMissingResources, "add-missing-resources", "", false, "Provides dummy resources if missed")
@@ -113,16 +119,23 @@ func getValidInputTypesStr() string {
 }
 
 func validOutputTypes() []string {
-	return []string{xdsType}
+	return []string{xdsType, gatewayAPIType}
 }
 
-func isValidOutputType(outType string) bool {
-	for _, vType := range validOutputTypes() {
-		if outType == vType {
-			return true
+func findInvalidOutputType(outTypes []string) string {
+	for _, oType := range outTypes {
+		found := false
+		for _, vType := range validOutputTypes() {
+			if oType == vType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return oType
 		}
 	}
-	return false
+	return ""
 }
 
 func getValidOutputTypesStr() string {
@@ -168,12 +181,13 @@ func getInputBytes(inFile string) ([]byte, error) {
 	return os.ReadFile(inFile)
 }
 
-func validate(inFile, inType, outType, resourceType string) error {
+func validate(inFile, inType string, outTypes []string, resourceType string) error {
 	if !isValidInputType(inType) {
 		return fmt.Errorf("%s is not a valid input type. %s", inType, getValidInputTypesStr())
 	}
-	if !isValidOutputType(outType) {
-		return fmt.Errorf("%s is not a valid output type. %s", outType, getValidOutputTypesStr())
+	invalidType := findInvalidOutputType(outTypes)
+	if invalidType != "" {
+		return fmt.Errorf("%s is not a valid output type. %s", invalidType, getValidOutputTypesStr())
 	}
 	if !isValidResourceType(envoyConfigType(resourceType)) {
 		return fmt.Errorf("%s is not a valid output type. %s", resourceType, getValidResourceTypesStr())
@@ -185,8 +199,8 @@ func validate(inFile, inType, outType, resourceType string) error {
 	return nil
 }
 
-func translate(w io.Writer, inFile, inType, outType, output, resourceType string, addMissingResources bool) error {
-	if err := validate(inFile, inType, outType, resourceType); err != nil {
+func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool) error {
+	if err := validate(inFile, inType, outTypes, resourceType); err != nil {
 		return err
 	}
 
@@ -195,58 +209,139 @@ func translate(w io.Writer, inFile, inType, outType, output, resourceType string
 		return fmt.Errorf("unable to read input file: %w", err)
 	}
 
-	if inType == gatewayAPIType && outType == xdsType {
-		return translateFromGatewayAPIToXds(w, inBytes, output, resourceType, addMissingResources)
+	if inType == gatewayAPIType {
+		var toXds, echoGatewayAPI bool
+		for _, outType := range outTypes {
+			if outType == xdsType {
+				toXds = true
+			} else if outType == gatewayAPIType {
+				echoGatewayAPI = true
+			}
+		}
+
+		// Unmarshal input
+		gcName, resources, err := kubernetesYAMLToResources(string(inBytes), addMissingResources)
+		if err != nil {
+			return fmt.Errorf("unable to unmarshal input: %w", err)
+		}
+
+		// Translate from Gateway API to Xds IR
+		gTranslator := &gatewayapi.Translator{
+			GatewayClassName:       v1beta1.ObjectName(gcName),
+			GlobalRateLimitEnabled: true,
+		}
+		gRes := gTranslator.Translate(resources)
+
+		results := []interface{}{}
+		if echoGatewayAPI {
+			results = append(results, resources)
+		}
+
+		if toXds {
+			keys := []string{}
+			for key := range gRes.XdsIR {
+				keys = append(keys, key)
+			}
+			// Make output stable
+			sort.Strings(keys)
+
+			// Translate from Xds IR to Xds
+			for _, key := range keys {
+				val := gRes.XdsIR[key]
+				xTranslator := &translator.Translator{
+					// Set some default settings for translation
+					GlobalRateLimit: &translator.GlobalRateLimitSettings{
+						ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway"),
+					},
+				}
+				xRes, err := xTranslator.Translate(val)
+				if err != nil {
+					return fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
+				}
+
+				// Collect results
+				if err := collectXds(&results, key, xRes, envoyConfigType(resourceType)); err != nil {
+					return fmt.Errorf("failed to collect result for key %s value %+v, error:%w", key, val, err)
+				}
+			}
+		}
+
+		if err := printOutput(w, results, output); err != nil {
+			return fmt.Errorf("failed to print result, error:%w", err)
+		}
+
+		return nil
 	}
 
-	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outType)
+	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateFromGatewayAPIToXds(w io.Writer, inBytes []byte, output, resourceType string, addMissingResources bool) error {
-	// Unmarshal input
-	gcName, resources, err := kubernetesYAMLToResources(string(inBytes), addMissingResources)
-	if err != nil {
-		return fmt.Errorf("unable to unmarshal input: %w", err)
+// printOutput prints the echo-backed gateway API and xDS output
+func printOutput(w io.Writer, results []interface{}, output string) (err error) {
+	var (
+		out       []byte
+		firstItem = true
+	)
+
+	if output == jsonOutput {
+		fmt.Fprint(w, "[")
 	}
 
-	// Translate from Gateway API to Xds IR
-	gTranslator := &gatewayapi.Translator{
-		GatewayClassName:       v1beta1.ObjectName(gcName),
-		GlobalRateLimitEnabled: true,
-	}
-	gRes := gTranslator.Translate(resources)
-
-	// Translate from Xds IR to Xds
-	for key, val := range gRes.XdsIR {
-		xTranslator := &translator.Translator{
-			// Set some default settings for translation
-			GlobalRateLimit: &translator.GlobalRateLimitSettings{
-				ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway"),
-			},
+	for _, wrapper := range results {
+		switch output {
+		case yamlOutput:
+			out, err = yaml.Marshal(wrapper)
+		case jsonOutput:
+			out, err = json.Marshal(wrapper)
+		default:
+			out, err = yaml.Marshal(wrapper)
 		}
-		xRes, err := xTranslator.Translate(val)
 		if err != nil {
-			return fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
+			return err
 		}
 
-		// Print results
-		if err := printXds(w, key, xRes, output, envoyConfigType(resourceType)); err != nil {
-			return fmt.Errorf("failed to print result for key %s value %+v, error:%w", key, val, err)
+		if firstItem {
+			switch output {
+			case yamlOutput:
+				fmt.Fprintln(w, string(out))
+			case jsonOutput:
+				fmt.Fprint(w, string(out))
+			default:
+				fmt.Fprintln(w, string(out))
+			}
+
+			firstItem = false
+		} else {
+			switch output {
+			case yamlOutput:
+				fmt.Fprintln(w, "---")
+				fmt.Fprintln(w, string(out))
+			case jsonOutput:
+				fmt.Fprintln(w, ",")
+				fmt.Fprint(w, string(out))
+			default:
+				fmt.Fprintln(w, "---")
+				fmt.Fprintln(w, string(out))
+			}
 		}
+	}
+
+	if output == jsonOutput {
+		fmt.Fprintln(w, "]")
 	}
 
 	return nil
 }
 
-// printXds prints the xDS Output
-func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, output string, resourceType envoyConfigType) (err error) {
+// collectXds collects xDS which will be output later
+func collectXds(results *[]interface{}, key string, tCtx *xds_types.ResourceVersionTable, resourceType envoyConfigType) (err error) {
 	globalConfigs, err := constructConfigDump(tCtx)
 	if err != nil {
 		return err
 	}
 
 	var (
-		out, data []byte
+		data []byte
 	)
 
 	if resourceType == AllEnvoyConfigType {
@@ -272,20 +367,7 @@ func printXds(w io.Writer, key string, tCtx *xds_types.ResourceVersionTable, out
 
 	wrapper["configKey"] = key
 	wrapper["resourceType"] = resourceType
-
-	switch output {
-	case yamlOutput:
-		out, err = yaml.Marshal(wrapper)
-	case jsonOutput:
-		out, err = json.Marshal(wrapper)
-	default:
-		out, err = yaml.Marshal(wrapper)
-	}
-	if err != nil {
-		return err
-	}
-
-	fmt.Fprintln(w, string(out))
+	*results = append(*results, wrapper)
 	return nil
 }
 

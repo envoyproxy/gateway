@@ -1,0 +1,59 @@
+[
+  {
+    "HTTPRoutes": [
+      {
+        "metadata": {
+          "name": "backend",
+          "namespace": "envoy-gateway-system"
+        },
+        "spec": {
+          "parentRefs": [
+            {
+              "name": "eg"
+            }
+          ],
+          "hostnames": [
+            "www.example.com"
+          ],
+          "rules": [
+            {
+              "matches": [
+                {
+                  "path": {
+                    "type": "PathPrefix",
+                    "value": "/"
+                  }
+                }
+              ],
+              "backendRefs": [
+                {
+                  "group": "",
+                  "kind": "Service",
+                  "name": "backend",
+                  "port": 3000,
+                  "weight": 1
+                }
+              ]
+            }
+          ]
+        },
+        "status": {
+          "parents": [
+            {
+              "parentRef": {
+                "name": "eg"
+              },
+              "controllerName": "gateway.envoyproxy.io/gatewayclass-controller",
+              "conditions": [
+                {
+                  "status": "True",
+                  "reason": "Accepted"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

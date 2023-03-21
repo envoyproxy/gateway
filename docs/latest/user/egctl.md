@@ -458,3 +458,105 @@ spec:
             value: /
 EOF
 ```
+
+Sometimes you might find that egctl doesn't provide an expected result. For example, the following example provides an empty route resource:
+
+```shell
+cat <<EOF | egctl x translate --from gateway-api --type route --to xds -f -
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: tls
+      protocol: TLS
+      port: 8443
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+EOF
+```
+
+```yaml
+'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+configKey: envoy-gateway-system-eg
+resourceType: route
+```
+
+You can add an additional target `gateway-api` to show the processed Gateway API resources. For example, translating the above resources with the new argument shows that the HTTPRoute is rejected because there is no ready listener for it:
+
+```shell
+cat <<EOF | egctl x translate --from gateway-api --type route --to gateway-api,xds -f -
+...
+```
+
+```yaml
+...
+HTTPRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: envoy-gateway-system
+  spec:
+    parentRefs:
+    - name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-03-21T12:03:11Z"
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
+        status: "False"
+        type: Accepted
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+...
+---
+'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+configKey: envoy-gateway-system-eg
+resourceType: route
+```
+
+You can also specify the `--to gateway-api` to output the processed resources only:
+
+```shell
+cat <<EOF | egctl x translate --from gateway-api --type route --to gateway-api -f -
+...
+```
