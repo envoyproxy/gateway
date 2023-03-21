@@ -29,7 +29,7 @@ const (
 	egContainerName = "envoy-gateway"
 )
 
-func NewVersionCommand() *cobra.Command {
+func newVersionCommand() *cobra.Command {
 	var (
 		output string
 		remote bool
