@@ -11,11 +11,9 @@ import (
 	"net/http"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
-	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"k8s.io/apimachinery/pkg/types"
-	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
@@ -32,80 +30,6 @@ const (
 	adminPort     = 19000   // TODO: make this configurable until EG support
 	containerName = "envoy" // TODO: make this configurable until EG support
 )
-
-func NewConfigCommand() *cobra.Command {
-	cfgCommand := &cobra.Command{
-		Use:     "config",
-		Aliases: []string{"c"},
-		Short:   "Retrieve proxy configuration.",
-		Long:    "Retrieve information about proxy configuration from envoy proxy and gateway.",
-	}
-
-	cfgCommand.AddCommand(proxyCommand())
-
-	flags := cfgCommand.Flags()
-	options.AddKubeConfigFlags(flags)
-
-	cfgCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
-	cfgCommand.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
-
-	return cfgCommand
-}
-
-func proxyCommand() *cobra.Command {
-	c := &cobra.Command{
-		Use:     "envoy-proxy",
-		Aliases: []string{"proxy"},
-		Long:    "Retrieve information from envoy proxy.",
-	}
-
-	c.AddCommand(allConfigCmd())
-	c.AddCommand(bootstrapConfigCmd())
-	c.AddCommand(clusterConfigCmd())
-	c.AddCommand(endpointConfigCmd())
-	c.AddCommand(listenerConfigCmd())
-	c.AddCommand(routeConfigCmd())
-
-	return c
-}
-
-func allConfigCmd() *cobra.Command {
-
-	configCmd := &cobra.Command{
-		Use:   "all <pod-name>",
-		Short: "Retrieves all Envoy xDS resources from the specified pod",
-		Long:  `Retrieves information about all Envoy xDS resources from the Envoy instance in the specified pod.`,
-		Example: `  # Retrieve summary about all configuration for a given pod from Envoy.
-  egctl config envoy-proxy all <pod-name> -n <pod-namespace>
-
-  # Retrieve full configuration dump as YAML
-  egctl config envoy-proxy all <pod-name> -n <pod-namespace> -o yaml
-
-  # Retrieve full configuration dump with short syntax
-  egctl c proxy all <pod-name> -n <pod-namespace>
-`,
-		Run: func(c *cobra.Command, args []string) {
-			cmdutil.CheckErr(runAllConfig(c, args))
-		},
-	}
-
-	return configCmd
-}
-
-func runAllConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, true)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(configDump, output)
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintln(c.OutOrStdout(), string(out))
-	return err
-}
 
 func retrieveConfigDump(args []string, includeEds bool) (*adminv3.ConfigDump, error) {
 	if len(args) == 0 {
