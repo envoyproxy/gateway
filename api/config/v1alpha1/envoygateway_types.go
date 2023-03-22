@@ -167,18 +167,11 @@ type ExtensionHooks struct {
 	XDSTranslation *XDSTranslationHooks `json:"xdsTranslation,omitempty"`
 }
 
-// RunnerHooks is a generic type that contains all the pre and post hook for a runner.
-// We disable DeepCopy generation and instead concretely instantiate types so that controller-gen
-// will generate the DeepCopy methods correctly.
-//
-// +kubebuilder:object:generate=false
-type RunnerHooks[T ExtensionHook] struct {
-	Pre  []T `json:"pre,omitempty"`
-	Post []T `json:"post,omitempty"`
+// XDSTranslationHooks contains all the pre and post hooks for the XDS translation runner
+type XDSTranslationHooks struct {
+	Pre  []XDSTranslationHook `json:"pre,omitempty"`
+	Post []XDSTranslationHook `json:"post,omitempty"`
 }
-
-// XDSHooks contains all the pre and post hooks for the XDS translation runner
-type XDSTranslationHooks RunnerHooks[XDSTranslationHook]
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
 type ExtensionService struct {
