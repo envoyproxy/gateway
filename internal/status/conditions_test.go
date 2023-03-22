@@ -115,7 +115,7 @@ func TestComputeGatewayScheduledCondition(t *testing.T) {
 			},
 		}
 
-		got := computeGatewayScheduledCondition(gw, tc.sched)
+		got := computeGatewayAcceptedCondition(gw, tc.sched)
 
 		assert.Equal(t, tc.expect.Type, got.Type)
 		assert.Equal(t, tc.expect.Status, got.Status)
@@ -333,7 +333,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 			}
 
 			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
-			got := computeGatewayReadyCondition(gtw, deployment)
+			got := computeGatewayProgrammedCondition(gtw, deployment)
 
 			assert.Equal(t, string(gwapiv1b1.GatewayConditionProgrammed), got.Type)
 			assert.Equal(t, tc.expect.Status, got.Status)

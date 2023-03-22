@@ -81,6 +81,10 @@ httpRoutes:
         status: "False"
         reason: NoReadyListeners
         message: There are no ready listeners for this parent ref
+      - type: ResolvedRefs 
+        status: "True"
+        reason: ResolvedRefs 
+        message: Resolved all the Object references for the Route
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
@@ -106,7 +110,10 @@ tlsRoutes:
         status: "False"
         reason: NoReadyListeners
         message: There are no ready listeners for this parent ref
-
+      - type: ResolvedRefs 
+        status: "True"
+        reason: ResolvedRefs 
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1: {}
 infraIR:

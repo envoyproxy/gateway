@@ -56,9 +56,9 @@ func computeGatewayClassAcceptedCondition(gatewayClass *gwapiv1b1.GatewayClass,
 	}
 }
 
-// computeGatewayScheduledCondition computes the Gateway Scheduled status condition.
-func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) metav1.Condition {
-	switch scheduled {
+// computeGatewayAcceptedCondition computes the Gateway Accepted status condition.
+func computeGatewayAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) metav1.Condition {
+	switch accepted {
 	case true:
 		return newCondition(string(gwapiv1b1.GatewayReasonAccepted), metav1.ConditionTrue,
 			string(gwapiv1b1.GatewayReasonAccepted),
@@ -70,9 +70,9 @@ func computeGatewayScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) met
 	}
 }
 
-// computeGatewayReadyCondition computes the Gateway Ready status condition.
-// Ready condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayReadyCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
+// computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
+// Programmed condition surfaces true when the Envoy Deployment status is ready.
+func computeGatewayProgrammedCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
 	if len(gw.Status.Addresses) == 0 {
 		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonAddressNotAssigned),

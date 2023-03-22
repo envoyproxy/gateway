@@ -76,7 +76,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-2
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -88,7 +88,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-3
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -100,7 +100,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-4
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -112,7 +112,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-5
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -124,7 +124,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-6
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -136,7 +136,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-7
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -148,7 +148,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: http-8
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -160,7 +160,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute
@@ -189,6 +189,10 @@ httpRoutes:
               status: "True"
               reason: Accepted
               message: Route is accepted
+            - type: ResolvedRefs
+              status: "True"
+              reason: ResolvedRefs
+              message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:
