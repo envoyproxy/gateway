@@ -195,11 +195,16 @@ func TestValidate(t *testing.T) {
 									Kind:    "Foo",
 								},
 							},
-							Hooks: []v1alpha1.ExtensionHook{
-								v1alpha1.XDSHTTPListener,
-								v1alpha1.XDSPostTranslation,
-								v1alpha1.XDSRoute,
-								v1alpha1.XDSVirtualHost,
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDS: &v1alpha1.XDSHooks{
+									Pre: []v1alpha1.XDSHook{},
+									Post: []v1alpha1.XDSHook{
+										v1alpha1.XDSPostHTTPListener,
+										v1alpha1.XDSPostTranslation,
+										v1alpha1.XDSPostRoute,
+										v1alpha1.XDSPostVirtualHost,
+									},
+								},
 							},
 							Service: &v1alpha1.ExtensionService{
 								Host: "foo.extension",
@@ -227,11 +232,16 @@ func TestValidate(t *testing.T) {
 									Kind:    "Foo",
 								},
 							},
-							Hooks: []v1alpha1.ExtensionHook{
-								v1alpha1.XDSHTTPListener,
-								v1alpha1.XDSPostTranslation,
-								v1alpha1.XDSRoute,
-								v1alpha1.XDSVirtualHost,
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDS: &v1alpha1.XDSHooks{
+									Pre: []v1alpha1.XDSHook{},
+									Post: []v1alpha1.XDSHook{
+										v1alpha1.XDSPostHTTPListener,
+										v1alpha1.XDSPostTranslation,
+										v1alpha1.XDSPostRoute,
+										v1alpha1.XDSPostVirtualHost,
+									},
+								},
 							},
 							Service: &v1alpha1.ExtensionService{
 								Host: "foo.extension",
@@ -258,11 +268,16 @@ func TestValidate(t *testing.T) {
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultProvider(),
 						Extension: &v1alpha1.Extension{
-							Hooks: []v1alpha1.ExtensionHook{
-								v1alpha1.XDSHTTPListener,
-								v1alpha1.XDSPostTranslation,
-								v1alpha1.XDSRoute,
-								v1alpha1.XDSVirtualHost,
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDS: &v1alpha1.XDSHooks{
+									Pre: []v1alpha1.XDSHook{},
+									Post: []v1alpha1.XDSHook{
+										v1alpha1.XDSPostHTTPListener,
+										v1alpha1.XDSPostTranslation,
+										v1alpha1.XDSPostRoute,
+										v1alpha1.XDSPostVirtualHost,
+									},
+								},
 							},
 							Service: &v1alpha1.ExtensionService{
 								Host: "foo.extension",
@@ -296,11 +311,16 @@ func TestValidate(t *testing.T) {
 									Kind:    "Foo",
 								},
 							},
-							Hooks: []v1alpha1.ExtensionHook{
-								v1alpha1.XDSHTTPListener,
-								v1alpha1.XDSPostTranslation,
-								v1alpha1.XDSRoute,
-								v1alpha1.XDSVirtualHost,
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDS: &v1alpha1.XDSHooks{
+									Pre: []v1alpha1.XDSHook{},
+									Post: []v1alpha1.XDSHook{
+										v1alpha1.XDSPostHTTPListener,
+										v1alpha1.XDSPostTranslation,
+										v1alpha1.XDSPostRoute,
+										v1alpha1.XDSPostVirtualHost,
+									},
+								},
 							},
 							Service: &v1alpha1.ExtensionService{
 								Host: "foo.extension",
@@ -334,11 +354,16 @@ func TestValidate(t *testing.T) {
 									Kind:    "Foo",
 								},
 							},
-							Hooks: []v1alpha1.ExtensionHook{
-								v1alpha1.XDSHTTPListener,
-								v1alpha1.XDSPostTranslation,
-								v1alpha1.XDSRoute,
-								v1alpha1.XDSVirtualHost,
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDS: &v1alpha1.XDSHooks{
+									Pre: []v1alpha1.XDSHook{},
+									Post: []v1alpha1.XDSHook{
+										v1alpha1.XDSPostHTTPListener,
+										v1alpha1.XDSPostTranslation,
+										v1alpha1.XDSPostRoute,
+										v1alpha1.XDSPostVirtualHost,
+									},
+								},
 							},
 						},
 					},

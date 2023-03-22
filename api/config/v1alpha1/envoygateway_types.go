@@ -152,8 +152,7 @@ type Extension struct {
 	// Hooks defines the set of hooks the extension supports
 	//
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MinItems=1
-	Hooks []ExtensionHook `json:"hooks,omitempty"`
+	Hooks *ExtensionHooks `json:"hooks,omitempty"`
 
 	// Service defines the configuration of the extension service that the Envoy
 	// Gateway Control Plane will call through extension hooks.
@@ -161,6 +160,25 @@ type Extension struct {
 	// +kubebuilder:validation:Required
 	Service *ExtensionService `json:"service,omitempty"`
 }
+
+// ExtensionHooks defines extension hooks across all supported runners
+type ExtensionHooks struct {
+	// XDS defines all the supported extension hooks for the XDS runner
+	XDS *XDSHooks `json:"xds,omitempty"`
+}
+
+// RunnerHooks is a generic type that contains all the pre and post hook for a runner.
+// We disable DeepCopy generation and instead concretely instantiate types so that controller-gen
+// will generate the DeepCopy methods correctly.
+//
+// +kubebuilder:object:generate=false
+type RunnerHooks[T ExtensionHook] struct {
+	Pre  []T `json:"pre,omitempty"`
+	Post []T `json:"post,omitempty"`
+}
+
+// XDSHooks contains all the pre and post hooks for the XDS translation runner
+type XDSHooks RunnerHooks[XDSHook]
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
 type ExtensionService struct {
