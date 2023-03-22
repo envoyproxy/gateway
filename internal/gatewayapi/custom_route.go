@@ -48,8 +48,21 @@ func (t *Translator) processCustomGRPCRouteParentRefs(grpcRoute *CustomGRPCRoute
 		// not on the Route as a whole.
 		routeRoutes := t.processCustomGRPCRouteRules(grpcRoute, parentRef, resources)
 
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
+			parentRef.SetCondition(grpcRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
 
+		if parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
+		}
+
+		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(grpcRoute,
 				v1beta1.RouteConditionAccepted,
