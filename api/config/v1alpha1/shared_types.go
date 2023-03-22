@@ -5,9 +5,15 @@
 
 package v1alpha1
 
+import corev1 "k8s.io/api/core/v1"
+
 const (
 	// DefaultEnvoyReplicas is the default number of Envoy replicas.
 	DefaultEnvoyReplicas = 1
+	// DefaultDeploymentCPUResourceRequests for deployment cpu resource
+	DefaultDeploymentCPUResourceRequests = "100m"
+	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
+	DefaultDeploymentMemoryResourceRequests = "512Mi"
 )
 
 // ProviderType defines the types of providers supported by Envoy Gateway.
@@ -36,6 +42,12 @@ type KubernetesDeploymentSpec struct {
 	//
 	// +optional
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+
+	// Compute Resources required by this container.
+	// Cannot be updated.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
