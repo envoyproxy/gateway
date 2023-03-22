@@ -196,13 +196,13 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDSTranslation: &v1alpha1.XDSTranslationHooks{
-									Pre: []v1alpha1.XDSTranslationHook{},
-									Post: []v1alpha1.XDSTranslationHook{
-										v1alpha1.XDSPostHTTPListener,
-										v1alpha1.XDSPostTranslation,
-										v1alpha1.XDSPostRoute,
-										v1alpha1.XDSPostVirtualHost,
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
 									},
 								},
 							},
@@ -233,13 +233,13 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDSTranslation: &v1alpha1.XDSTranslationHooks{
-									Pre: []v1alpha1.XDSTranslationHook{},
-									Post: []v1alpha1.XDSTranslationHook{
-										v1alpha1.XDSPostHTTPListener,
-										v1alpha1.XDSPostTranslation,
-										v1alpha1.XDSPostRoute,
-										v1alpha1.XDSPostVirtualHost,
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
 									},
 								},
 							},
@@ -269,13 +269,13 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultProvider(),
 						Extension: &v1alpha1.Extension{
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDSTranslation: &v1alpha1.XDSTranslationHooks{
-									Pre: []v1alpha1.XDSTranslationHook{},
-									Post: []v1alpha1.XDSTranslationHook{
-										v1alpha1.XDSPostHTTPListener,
-										v1alpha1.XDSPostTranslation,
-										v1alpha1.XDSPostRoute,
-										v1alpha1.XDSPostVirtualHost,
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
 									},
 								},
 							},
@@ -312,13 +312,13 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDSTranslation: &v1alpha1.XDSTranslationHooks{
-									Pre: []v1alpha1.XDSTranslationHook{},
-									Post: []v1alpha1.XDSTranslationHook{
-										v1alpha1.XDSPostHTTPListener,
-										v1alpha1.XDSPostTranslation,
-										v1alpha1.XDSPostRoute,
-										v1alpha1.XDSPostVirtualHost,
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
 									},
 								},
 							},
@@ -355,13 +355,13 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDSTranslation: &v1alpha1.XDSTranslationHooks{
-									Pre: []v1alpha1.XDSTranslationHook{},
-									Post: []v1alpha1.XDSTranslationHook{
-										v1alpha1.XDSPostHTTPListener,
-										v1alpha1.XDSPostTranslation,
-										v1alpha1.XDSPostRoute,
-										v1alpha1.XDSPostVirtualHost,
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
 									},
 								},
 							},

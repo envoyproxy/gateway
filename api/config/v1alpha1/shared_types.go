@@ -59,21 +59,15 @@ type KubernetesServiceSpec struct {
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
-// ExtensionHook is a type constraint to represent all supported hook types
-//
-// +kubebuilder:object:generate=false
-type ExtensionHook interface {
-	XDSTranslationHook
-}
-
-// XDSHook defines the types of XDS hooks that an Envoy Gateway extension may support
+// XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
+// for the xds-translator
 //
 // +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation
-type XDSTranslationHook string
+type XDSTranslatorHook string
 
 const (
-	XDSPostVirtualHost  XDSTranslationHook = "VirtualHost"
-	XDSPostRoute        XDSTranslationHook = "Route"
-	XDSPostHTTPListener XDSTranslationHook = "HTTPListener"
-	XDSPostTranslation  XDSTranslationHook = "Translation"
+	XDSVirtualHost  XDSTranslatorHook = "VirtualHost"
+	XDSRoute        XDSTranslatorHook = "Route"
+	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
+	XDSTranslation  XDSTranslatorHook = "Translation"
 )

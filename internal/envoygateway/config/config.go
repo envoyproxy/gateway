@@ -79,11 +79,11 @@ func (s *Server) Validate() error {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
 	case s.EnvoyGateway.Extension != nil:
-		if s.EnvoyGateway.Extension.Hooks == nil || s.EnvoyGateway.Extension.Hooks.XDSTranslation == nil {
+		if s.EnvoyGateway.Extension.Hooks == nil || s.EnvoyGateway.Extension.Hooks.XDSTranslator == nil {
 			return fmt.Errorf("registered extension has no hooks specified")
 		}
 
-		if len(s.EnvoyGateway.Extension.Hooks.XDSTranslation.Pre) == 0 && len(s.EnvoyGateway.Extension.Hooks.XDSTranslation.Post) == 0 {
+		if len(s.EnvoyGateway.Extension.Hooks.XDSTranslator.Pre) == 0 && len(s.EnvoyGateway.Extension.Hooks.XDSTranslator.Post) == 0 {
 			return fmt.Errorf("registered extension has no hooks specified")
 		}
 
