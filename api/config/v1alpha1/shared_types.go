@@ -43,8 +43,7 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 
-	// Compute Resources required by this container.
-	// Cannot be updated.
+	// Resources required by this container.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`

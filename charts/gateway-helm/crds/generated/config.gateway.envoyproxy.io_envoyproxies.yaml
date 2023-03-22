@@ -105,8 +105,8 @@ spec:
                             format: int32
                             type: integer
                           resources:
-                            description: 'Compute Resources required by this container.
-                              Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                            description: 'Resources required by this container. More
+                              info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                             properties:
                               claims:
                                 description: "Claims lists the names of resources,
