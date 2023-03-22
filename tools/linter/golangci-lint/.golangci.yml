@@ -38,6 +38,11 @@ linters-settings:
     simplify: true
   unparam:
     check-exported: false
+  revive:
+    rules:
+      # TODO: enable if-return check
+      - name: if-return
+        disabled: true
   goheader:
     # Note that because the format is different (this needs no comment markers),
     # updating this text means also updating /tools/boilerplate.txt so that
