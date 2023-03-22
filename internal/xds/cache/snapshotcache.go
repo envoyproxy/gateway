@@ -131,7 +131,7 @@ func (s *snapshotCache) getNodeIDs(irKey string) []string {
 
 // OnStreamOpen and the other OnStream* functions implement the callbacks for the
 // state-of-the-world stream types.
-func (s *snapshotCache) OnStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
+func (s *snapshotCache) OnStreamOpen(_ context.Context, streamID int64, _ string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -140,7 +140,7 @@ func (s *snapshotCache) OnStreamOpen(ctx context.Context, streamID int64, typeUR
 	return nil
 }
 
-func (s *snapshotCache) OnStreamClosed(streamID int64, node *corev3.Node) {
+func (s *snapshotCache) OnStreamClosed(streamID int64, _ *corev3.Node) {
 	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -209,7 +209,7 @@ func (s *snapshotCache) OnStreamRequest(streamID int64, req *discoveryv3.Discove
 	return nil
 }
 
-func (s *snapshotCache) OnStreamResponse(ctx context.Context, streamID int64, req *discoveryv3.DiscoveryRequest, resp *discoveryv3.DiscoveryResponse) {
+func (s *snapshotCache) OnStreamResponse(_ context.Context, streamID int64, _ *discoveryv3.DiscoveryRequest, _ *discoveryv3.DiscoveryResponse) {
 	// No mutex lock required here because no writing to the cache.
 	node := s.streamIDNodeInfo[streamID]
 	if node == nil {
@@ -222,7 +222,7 @@ func (s *snapshotCache) OnStreamResponse(ctx context.Context, streamID int64, re
 // OnDeltaStreamOpen and the other OnDeltaStream*/OnStreamDelta* functions implement
 // the callbacks for the incremental xDS versions.
 // Yes, the different ordering in the name is part of the go-control-plane interface.
-func (s *snapshotCache) OnDeltaStreamOpen(ctx context.Context, streamID int64, typeURL string) error {
+func (s *snapshotCache) OnDeltaStreamOpen(_ context.Context, streamID int64, _ string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -232,7 +232,7 @@ func (s *snapshotCache) OnDeltaStreamOpen(ctx context.Context, streamID int64, t
 	return nil
 }
 
-func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, node *corev3.Node) {
+func (s *snapshotCache) OnDeltaStreamClosed(streamID int64, _ *corev3.Node) {
 	// TODO: something with the node?
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -303,7 +303,7 @@ func (s *snapshotCache) OnStreamDeltaRequest(streamID int64, req *discoveryv3.De
 	return nil
 }
 
-func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, req *discoveryv3.DeltaDiscoveryRequest, resp *discoveryv3.DeltaDiscoveryResponse) {
+func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, _ *discoveryv3.DeltaDiscoveryRequest, _ *discoveryv3.DeltaDiscoveryResponse) {
 	// No mutex lock required here because no writing to the cache.
 	node := s.streamIDNodeInfo[streamID]
 	if node == nil {
@@ -313,9 +313,9 @@ func (s *snapshotCache) OnStreamDeltaResponse(streamID int64, req *discoveryv3.D
 	}
 }
 
-func (s *snapshotCache) OnFetchRequest(ctx context.Context, req *discoveryv3.DiscoveryRequest) error {
+func (s *snapshotCache) OnFetchRequest(_ context.Context, _ *discoveryv3.DiscoveryRequest) error {
 	return nil
 }
 
-func (s *snapshotCache) OnFetchResponse(req *discoveryv3.DiscoveryRequest, resp *discoveryv3.DiscoveryResponse) {
+func (s *snapshotCache) OnFetchResponse(_ *discoveryv3.DiscoveryRequest, _ *discoveryv3.DiscoveryResponse) {
 }

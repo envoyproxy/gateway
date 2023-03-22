@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway
 
-go 1.19
+go 1.20
 
 replace sigs.k8s.io/gateway-api => ./gateway-api
 
