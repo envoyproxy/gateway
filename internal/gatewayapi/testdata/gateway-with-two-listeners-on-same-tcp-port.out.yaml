@@ -30,7 +30,7 @@ gateways:
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener is ready
+              message: Listener has been successfully translated
         - name: tcp2
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -70,6 +70,10 @@ tcpRoutes:
               status: "True"
               reason: Accepted
               message: Route is accepted
+            - type: ResolvedRefs
+              status: "True"
+              reason: ResolvedRefs
+              message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     tcp:

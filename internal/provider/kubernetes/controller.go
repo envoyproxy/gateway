@@ -307,10 +307,10 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
-	// update scheduled condition
-	status.UpdateGatewayStatusScheduledCondition(gtw, true)
-	// update address field and ready condition
-	status.UpdateGatewayStatusReadyCondition(gtw, svc, deploy)
+	// update accepted condition
+	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
+	// update address field and programmed condition
+	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy)
 
 	key := utils.NamespacedName(gtw)
 
