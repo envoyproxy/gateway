@@ -63,17 +63,17 @@ type KubernetesServiceSpec struct {
 //
 // +kubebuilder:object:generate=false
 type ExtensionHook interface {
-	XDSHook
+	XDSTranslationHook
 }
 
 // XDSHook defines the types of XDS hooks that an Envoy Gateway extension may support
 //
 // +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation
-type XDSHook string
+type XDSTranslationHook string
 
 const (
-	XDSPostVirtualHost  XDSHook = "VirtualHost"
-	XDSPostRoute        XDSHook = "Route"
-	XDSPostHTTPListener XDSHook = "HTTPListener"
-	XDSPostTranslation  XDSHook = "Translation"
+	XDSPostVirtualHost  XDSTranslationHook = "VirtualHost"
+	XDSPostRoute        XDSTranslationHook = "Route"
+	XDSPostHTTPListener XDSTranslationHook = "HTTPListener"
+	XDSPostTranslation  XDSTranslationHook = "Translation"
 )

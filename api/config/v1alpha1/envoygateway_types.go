@@ -164,7 +164,7 @@ type Extension struct {
 // ExtensionHooks defines extension hooks across all supported runners
 type ExtensionHooks struct {
 	// XDS defines all the supported extension hooks for the XDS runner
-	XDS *XDSHooks `json:"xds,omitempty"`
+	XDSTranslation *XDSTranslationHooks `json:"xdsTranslation,omitempty"`
 }
 
 // RunnerHooks is a generic type that contains all the pre and post hook for a runner.
@@ -178,7 +178,7 @@ type RunnerHooks[T ExtensionHook] struct {
 }
 
 // XDSHooks contains all the pre and post hooks for the XDS translation runner
-type XDSHooks RunnerHooks[XDSHook]
+type XDSTranslationHooks RunnerHooks[XDSTranslationHook]
 
 // ExtensionService defines the configuration for connecting to a registered extension service.
 type ExtensionService struct {

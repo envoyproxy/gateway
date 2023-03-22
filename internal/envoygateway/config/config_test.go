@@ -196,9 +196,9 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDS: &v1alpha1.XDSHooks{
-									Pre: []v1alpha1.XDSHook{},
-									Post: []v1alpha1.XDSHook{
+								XDSTranslation: &v1alpha1.XDSTranslationHooks{
+									Pre: []v1alpha1.XDSTranslationHook{},
+									Post: []v1alpha1.XDSTranslationHook{
 										v1alpha1.XDSPostHTTPListener,
 										v1alpha1.XDSPostTranslation,
 										v1alpha1.XDSPostRoute,
@@ -233,9 +233,9 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDS: &v1alpha1.XDSHooks{
-									Pre: []v1alpha1.XDSHook{},
-									Post: []v1alpha1.XDSHook{
+								XDSTranslation: &v1alpha1.XDSTranslationHooks{
+									Pre: []v1alpha1.XDSTranslationHook{},
+									Post: []v1alpha1.XDSTranslationHook{
 										v1alpha1.XDSPostHTTPListener,
 										v1alpha1.XDSPostTranslation,
 										v1alpha1.XDSPostRoute,
@@ -269,9 +269,9 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultProvider(),
 						Extension: &v1alpha1.Extension{
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDS: &v1alpha1.XDSHooks{
-									Pre: []v1alpha1.XDSHook{},
-									Post: []v1alpha1.XDSHook{
+								XDSTranslation: &v1alpha1.XDSTranslationHooks{
+									Pre: []v1alpha1.XDSTranslationHook{},
+									Post: []v1alpha1.XDSTranslationHook{
 										v1alpha1.XDSPostHTTPListener,
 										v1alpha1.XDSPostTranslation,
 										v1alpha1.XDSPostRoute,
@@ -312,9 +312,9 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDS: &v1alpha1.XDSHooks{
-									Pre: []v1alpha1.XDSHook{},
-									Post: []v1alpha1.XDSHook{
+								XDSTranslation: &v1alpha1.XDSTranslationHooks{
+									Pre: []v1alpha1.XDSTranslationHook{},
+									Post: []v1alpha1.XDSTranslationHook{
 										v1alpha1.XDSPostHTTPListener,
 										v1alpha1.XDSPostTranslation,
 										v1alpha1.XDSPostRoute,
@@ -355,9 +355,9 @@ func TestValidate(t *testing.T) {
 								},
 							},
 							Hooks: &v1alpha1.ExtensionHooks{
-								XDS: &v1alpha1.XDSHooks{
-									Pre: []v1alpha1.XDSHook{},
-									Post: []v1alpha1.XDSHook{
+								XDSTranslation: &v1alpha1.XDSTranslationHooks{
+									Pre: []v1alpha1.XDSTranslationHook{},
+									Post: []v1alpha1.XDSTranslationHook{
 										v1alpha1.XDSPostHTTPListener,
 										v1alpha1.XDSPostTranslation,
 										v1alpha1.XDSPostRoute,
