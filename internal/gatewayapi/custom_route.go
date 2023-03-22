@@ -42,10 +42,6 @@ func (t *Translator) ProcessCustomGRPCRoutes(grpcRoutes []*v1alpha2.CustomGRPCRo
 
 func (t *Translator) processCustomGRPCRouteParentRefs(grpcRoute *CustomGRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range grpcRoute.parentRefs {
-		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(grpcRoute) {
-			continue
-		}
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,

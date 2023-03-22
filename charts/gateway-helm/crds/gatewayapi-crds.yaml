@@ -10695,26 +10695,32 @@ spec:
         name: gateway-api-admission-server
     spec:
       containers:
-      - name: webhook
-        image: gcr.io/k8s-staging-gateway-api/admission-server:v0.6.2
-        imagePullPolicy: Always
-        args:
-        - -logtostderr
-        - --tlsCertFile=/etc/certs/cert
-        - --tlsKeyFile=/etc/certs/key
-        - -v=10
-        - 2>&1
-        ports:
-        - containerPort: 8443
-          name: webhook
-        resources:
-          limits:
-            memory: 50Mi
-            cpu: 100m
-          requests:
-            memory: 50Mi
-            cpu: 100m
-        volumeMounts:
+        - name: webhook
+          image: gcr.io/k8s-staging-gateway-api/admission-server:v0.6.2
+          imagePullPolicy: Always
+          args:
+            - -logtostderr
+            - --tlsCertFile=/etc/certs/cert
+            - --tlsKeyFile=/etc/certs/key
+            - -v=10
+            - 2>&1
+          ports:
+            - containerPort: 8443
+              name: webhook
+          resources:
+            limits:
+              memory: 50Mi
+              cpu: 100m
+            requests:
+              memory: 50Mi
+              cpu: 100m
+          volumeMounts:
+            - name: webhook-certs
+              mountPath: /etc/certs
+              readOnly: true
+          securityContext:
+            readOnlyRootFilesystem: true
+      volumes:
         - name: webhook-certs
           mountPath: /etc/certs
           readOnly: true
@@ -10817,19 +10823,19 @@ spec:
         name: gateway-api-webhook
     spec:
       containers:
-      - name: create
-        image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
-        imagePullPolicy: IfNotPresent
-        args:
-        - create
-        - --host=gateway-api-admission-server,gateway-api-admission-server.gateway-system.svc
-        - --namespace=gateway-system
-        - --secret-name=gateway-api-admission
-        env:
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
+        - name: create
+          image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - create
+            - --host=gateway-api-admission-server,gateway-api-admission-server.gateway-system.svc
+            - --namespace=gateway-system
+            - --secret-name=gateway-api-admission
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
       restartPolicy: OnFailure
       serviceAccountName: gateway-api-admission
       securityContext:
@@ -10851,22 +10857,22 @@ spec:
         name: gateway-api-webhook
     spec:
       containers:
-      - name: patch
-        image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
-        imagePullPolicy: IfNotPresent
-        args:
-        - patch
-        - --webhook-name=gateway-api-admission
-        - --namespace=gateway-system
-        - --patch-mutating=false
-        - --patch-validating=true
-        - --secret-name=gateway-api-admission
-        - --patch-failure-policy=Fail
-        env:
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
+        - name: patch
+          image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - patch
+            - --webhook-name=gateway-api-admission
+            - --namespace=gateway-system
+            - --patch-mutating=false
+            - --patch-validating=true
+            - --secret-name=gateway-api-admission
+            - --patch-failure-policy=Fail
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
       restartPolicy: OnFailure
       serviceAccountName: gateway-api-admission
       securityContext:

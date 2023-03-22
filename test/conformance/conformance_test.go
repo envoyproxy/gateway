@@ -75,6 +75,8 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.HTTPRouteListenerHostnameMatching.ShortName,
 			tests.HTTPRouteHostnameIntersection.ShortName,
 			// tests.HTTPRouteMatchingAcrossRoutes.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/1201 is fixed
+			tests.GatewayWithAttachedRoutes.ShortName,
 		},
 	})
 	cSuite.Setup(t)

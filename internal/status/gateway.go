@@ -13,16 +13,16 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
 
-// UpdateGatewayStatusScheduledCondition updates the status condition for the provided Gateway based on the scheduled state.
-func UpdateGatewayStatusScheduledCondition(gw *gwapiv1b1.Gateway, scheduled bool) *gwapiv1b1.Gateway {
-	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayScheduledCondition(gw, scheduled))
+// UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accepted state.
+func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) *gwapiv1b1.Gateway {
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayAcceptedCondition(gw, accepted))
 	return gw
 }
 
-// UpdateGatewayStatusReadyCondition updates the status addresses for the provided gateway
-// based on the status IP/Hostname of svc and updates the Ready condition based on the
+// UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
+// based on the status IP/Hostname of svc and updates the Programmed condition based on the
 // service and deployment state.
-func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment) {
+func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment) {
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
@@ -61,6 +61,6 @@ func UpdateGatewayStatusReadyCondition(gw *gwapiv1b1.Gateway, svc *corev1.Servic
 	} else {
 		gw.Status.Addresses = nil
 	}
-	// Update the ready condition.
-	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayReadyCondition(gw, deployment))
+	// Update the programmed condition.
+	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
 }

@@ -58,6 +58,10 @@ tlsRoutes:
               status: "False"
               reason: NoReadyListeners
               message: There are no ready listeners for this parent ref
+            - type: ResolvedRefs 
+              status: "True"
+              reason: ResolvedRefs 
+              message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1: {}
 infraIR:

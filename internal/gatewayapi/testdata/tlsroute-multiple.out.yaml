@@ -26,7 +26,7 @@ gateways:
       - type: Programmed
         status: "True"
         reason: Programmed
-        message: Listener is ready
+        message: Listener has been successfully translated
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
@@ -54,6 +54,10 @@ tlsRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute
   metadata:
@@ -80,6 +84,10 @@ tlsRoutes:
         status: "True"
         reason: Accepted
         message: Route is accepted
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     tcp:

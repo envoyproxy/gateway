@@ -1,0 +1,140 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.10.0
+  creationTimestamp: null
+  name: envoyproxies.config.gateway.envoyproxy.io
+spec:
+  group: config.gateway.envoyproxy.io
+  names:
+    kind: EnvoyProxy
+    listKind: EnvoyProxyList
+    plural: envoyproxies
+    singular: envoyproxy
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: EnvoyProxy is the schema for the envoyproxies API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: EnvoyProxySpec defines the desired state of EnvoyProxy.
+            properties:
+              bootstrap:
+                description: Bootstrap defines the Envoy Bootstrap as a YAML string.
+                  Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap
+                  to learn more about the syntax. If set, this is the Bootstrap configuration
+                  used for the managed Envoy Proxy fleet instead of the default Bootstrap
+                  configuration set by Envoy Gateway. Some fields within the Bootstrap
+                  that are required to communicate with the xDS Server (Envoy Gateway)
+                  and receive xDS resources from it are not configurable and will
+                  result in the `EnvoyProxy` resource being rejected. Backward compatibility
+                  across minor versions is not guaranteed. We strongly recommend using
+                  `egctl x translate` to generate a `EnvoyProxy` resource with the
+                  `Bootstrap` field set to the default Bootstrap configuration used.
+                  You can edit this configuration, and rerun `egctl x translate` to
+                  ensure there are no validation errors.
+                type: string
+              logging:
+                default:
+                  level:
+                    system: info
+                description: Logging defines logging parameters for managed proxies.
+                  If unspecified, default settings apply. This type is not implemented
+                  until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+                properties:
+                  level:
+                    additionalProperties:
+                      description: LogLevel defines a log level for system logs. This
+                        type is not implemented until https://github.com/envoyproxy/gateway/issues/280
+                        is fixed.
+                      enum:
+                      - debug
+                      - info
+                      - error
+                      type: string
+                    default:
+                      system: info
+                    description: 'Level is a map of logging level per component, where
+                      the component is the key and the log level is the value. If
+                      unspecified, defaults to "System: Info".'
+                    type: object
+                type: object
+              provider:
+                description: Provider defines the desired resource provider and provider-specific
+                  configuration. If unspecified, the "Kubernetes" resource provider
+                  is used with default configuration parameters.
+                properties:
+                  kubernetes:
+                    description: Kubernetes defines the desired state of the Kubernetes
+                      resource provider. Kubernetes provides infrastructure resources
+                      for running the data plane, e.g. Envoy proxy. If unspecified
+                      and type is "Kubernetes", default settings for managed Kubernetes
+                      resources are applied.
+                    properties:
+                      envoyDeployment:
+                        description: EnvoyDeployment defines the desired state of
+                          the Envoy deployment resource. If unspecified, default settings
+                          for the manged Envoy deployment resource are applied.
+                        properties:
+                          podAnnotations:
+                            additionalProperties:
+                              type: string
+                            description: PodAnnotations are the annotations that should
+                              be appended to the pods. By default, no pod annotations
+                              are appended.
+                            type: object
+                          replicas:
+                            description: Replicas is the number of desired pods. Defaults
+                              to 1.
+                            format: int32
+                            type: integer
+                        type: object
+                      envoyService:
+                        description: EnvoyService defines the desired state of the
+                          Envoy service resource. If unspecified, default settings
+                          for the manged Envoy service resource are applied.
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            description: Annotations that should be appended to the
+                              service. By default, no annotations are appended.
+                            type: object
+                        type: object
+                    type: object
+                  type:
+                    description: Type is the type of resource provider to use. A resource
+                      provider provides infrastructure resources for running the data
+                      plane, e.g. Envoy proxy, and optional auxiliary control planes.
+                      Supported types are "Kubernetes".
+                    enum:
+                    - Kubernetes
+                    type: string
+                required:
+                - type
+                type: object
+            type: object
+          status:
+            description: EnvoyProxyStatus defines the actual state of EnvoyProxy.
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
