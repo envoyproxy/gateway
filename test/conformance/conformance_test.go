@@ -74,7 +74,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 			// tests.HTTPRouteMethodMatching.ShortName,
 			tests.HTTPRouteListenerHostnameMatching.ShortName,
 			tests.HTTPRouteHostnameIntersection.ShortName,
-			test.GatewayModifyListeners.ShortName,
+			tests.GatewayModifyListeners.ShortName,
 			// tests.HTTPRouteMatchingAcrossRoutes.ShortName,
 			// Remove once https://github.com/envoyproxy/gateway/issues/1201 is fixed
 		},
