@@ -305,7 +305,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 			destinations: routeDestinations,
 			tSocket:      nil,
 			protocol:     HTTP2,
-			cluster:      DefaultCluster,
+			endpoint:     DefaultEndpointType,
 		})
 	}
 	return nil

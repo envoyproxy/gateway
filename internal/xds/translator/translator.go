@@ -127,7 +127,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				destinations: httpRoute.Destinations,
 				tSocket:      nil,
 				protocol:     protocol,
-				cluster:      Static,
+				endpoint:     Static,
 			})
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
@@ -139,7 +139,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 						destinations: []*ir.RouteDestination{mirror},
 						tSocket:      nil,
 						protocol:     protocol,
-						cluster:      Static,
+						endpoint:     Static,
 					})
 				}
 
@@ -171,7 +171,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			destinations: tcpListener.Destinations,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
-			cluster:      Static,
+			endpoint:     Static,
 		})
 
 		// Search for an existing listener, if it does not exist, create one.
@@ -196,7 +196,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			destinations: udpListener.Destinations,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
-			cluster:      Static,
+			endpoint:     Static,
 		})
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
@@ -247,10 +247,10 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 }
 
 func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) {
-	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.cluster)
+	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpoint)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.destinations)
 	// Use EDS for static endpoints
-	if args.cluster == Static {
+	if args.endpoint == Static {
 		tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
 	} else {
 		xdsCluster.LoadAssignment = xdsEndpoints
@@ -279,11 +279,11 @@ type addXdsClusterArgs struct {
 	destinations []*ir.RouteDestination
 	tSocket      *corev3.TransportSocket
 	protocol     ProtocolType
-	cluster      ClusterType
+	endpoint     EndpointType
 }
 
 type ProtocolType int
-type ClusterType int
+type EndpointType int
 
 const (
 	DefaultProtocol ProtocolType = iota
@@ -294,7 +294,7 @@ const (
 )
 
 const (
-	DefaultCluster ClusterType = iota
+	DefaultEndpointType EndpointType = iota
 	Static
 	EDS
 )

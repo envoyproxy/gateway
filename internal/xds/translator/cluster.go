@@ -20,7 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, c ClusterType) *clusterv3.Cluster {
+func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, c EndpointType) *clusterv3.Cluster {
 	clusterName := routeName
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
