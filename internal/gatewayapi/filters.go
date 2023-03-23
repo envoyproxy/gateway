@@ -16,7 +16,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type FiltersTranslator interface {
@@ -61,7 +60,7 @@ type HTTPFilterIR struct {
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
 
-	ExtensionRefs []*unstructured.Unstructured
+	ExtensionRefs []*ir.UnstructuredRef
 }
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.

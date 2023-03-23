@@ -11,9 +11,10 @@ import (
 
 	"github.com/tetratelabs/multierror"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 var (
@@ -226,7 +227,16 @@ type HTTPRoute struct {
 	RequestAuthentication *RequestAuthentication
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	// TODO: (aliceproxy) in a follow-up PR, update the translator to store the watched resources in this IR
-	ExtensionRefs []*unstructured.Unstructured
+	ExtensionRefs []*UnstructuredRef
+}
+
+// UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
+// Envoy Gateway does not need to know about the resource types in order to store and pass the data for these objects
+// to an extension.
+//
+// +k8s:deepcopy-gen=true
+type UnstructuredRef struct {
+	Object *unstructured.Unstructured
 }
 
 // RequestAuthentication defines the schema for authenticating HTTP requests.

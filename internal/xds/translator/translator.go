@@ -15,6 +15,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	resourceTypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 
@@ -156,10 +157,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			// If a loaded extension wants to modify routes and the extension's resources are used on the HTTPRoute then call the extension hook
 			if extRouteHookClient != nil && len(httpRoute.ExtensionRefs) > 0 {
 
+				unstructuredResources := make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
+				for refIdx, ref := range httpRoute.ExtensionRefs {
+					unstructuredResources[refIdx] = ref.Object
+				}
 				modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
 					xdsRoute,
 					vHost.Domains,
-					httpRoute.ExtensionRefs,
+					unstructuredResources,
 				)
 				if err != nil {
 					// Maybe logging the error is better here, but this only happens when an extension is in-use
