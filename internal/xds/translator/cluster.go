@@ -20,7 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, isHTTP2 bool, isStatic bool) *clusterv3.Cluster {
+func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, c EndpointType) *clusterv3.Cluster {
 	clusterName := routeName
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
@@ -37,7 +37,7 @@ func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, isHTTP2 
 		cluster.TransportSocket = tSocket
 	}
 
-	if isStatic {
+	if c == Static {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
 			EdsConfig: &corev3.ConfigSource{
@@ -53,7 +53,7 @@ func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, isHTTP2 
 		cluster.RespectDnsTtl = true
 	}
 
-	if isHTTP2 {
+	if protocol == HTTP2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
 	}
 

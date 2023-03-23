@@ -300,7 +300,13 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		// Create cluster if it does not exist
 		host, port := t.getRateLimitServiceGrpcHostPort()
 		routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
-		addXdsCluster(tCtx, clusterName, routeDestinations, nil, true /*isHTTP2 */, false /*isStatic */)
+		addXdsCluster(tCtx, addXdsClusterArgs{
+			name:         clusterName,
+			destinations: routeDestinations,
+			tSocket:      nil,
+			protocol:     HTTP2,
+			endpoint:     DefaultEndpointType,
+		})
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/go-logr/logr"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/log"
@@ -76,6 +77,30 @@ func (s *Server) Validate() error {
 		}
 		if _, err := url.Parse(s.EnvoyGateway.RateLimit.Backend.Redis.URL); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+		}
+	case s.EnvoyGateway.Extension != nil:
+		if s.EnvoyGateway.Extension.Hooks == nil || s.EnvoyGateway.Extension.Hooks.XDSTranslator == nil {
+			return fmt.Errorf("registered extension has no hooks specified")
+		}
+
+		if len(s.EnvoyGateway.Extension.Hooks.XDSTranslator.Pre) == 0 && len(s.EnvoyGateway.Extension.Hooks.XDSTranslator.Post) == 0 {
+			return fmt.Errorf("registered extension has no hooks specified")
+		}
+
+		if s.EnvoyGateway.Extension.Service == nil {
+			return fmt.Errorf("extension service config is empty")
+		}
+
+		if s.EnvoyGateway.Extension.Service.TLS != nil {
+			certifcateRefKind := s.EnvoyGateway.Extension.Service.TLS.CertificateRef.Kind
+
+			if certifcateRefKind == nil {
+				return fmt.Errorf("certificateRef empty in extension service server TLS settings")
+			}
+
+			if *certifcateRefKind != gwapiv1b1.Kind("Secret") {
+				return fmt.Errorf("unsupported extension server TLS certificateRef %v", certifcateRefKind)
+			}
 		}
 	}
 	return nil
