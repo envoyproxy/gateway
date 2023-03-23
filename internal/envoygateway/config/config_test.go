@@ -10,8 +10,14 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+)
+
+var (
+	TLSSecretKind       = v1beta1.Kind("Secret")
+	TLSUnrecognizedKind = v1beta1.Kind("Unrecognized")
 )
 
 func TestValidate(t *testing.T) {
@@ -173,6 +179,224 @@ func TestValidate(t *testing.T) {
 				Namespace: "test-ns",
 			},
 			expect: true,
+		},
+		{
+			name: "happy extension settings",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						Extension: &v1alpha1.Extension{
+							Resources: []v1alpha1.GroupVersionKind{
+								{
+									Group:   "foo.example.io",
+									Version: "v1alpha1",
+									Kind:    "Foo",
+								},
+							},
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
+									},
+								},
+							},
+							Service: &v1alpha1.ExtensionService{
+								Host: "foo.extension",
+								Port: 80,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "happy extension settings tls",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						Extension: &v1alpha1.Extension{
+							Resources: []v1alpha1.GroupVersionKind{
+								{
+									Group:   "foo.example.io",
+									Version: "v1alpha1",
+									Kind:    "Foo",
+								},
+							},
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
+									},
+								},
+							},
+							Service: &v1alpha1.ExtensionService{
+								Host: "foo.extension",
+								Port: 443,
+								TLS: &v1alpha1.ExtensionTLS{
+									CertificateRef: v1beta1.SecretObjectReference{
+										Kind: &TLSSecretKind,
+										Name: v1beta1.ObjectName("certificate"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "happy extension settings no resources",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						Extension: &v1alpha1.Extension{
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
+									},
+								},
+							},
+							Service: &v1alpha1.ExtensionService{
+								Host: "foo.extension",
+								Port: 443,
+								TLS: &v1alpha1.ExtensionTLS{
+									CertificateRef: v1beta1.SecretObjectReference{
+										Kind: &TLSSecretKind,
+										Name: v1beta1.ObjectName("certificate"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "unknown TLS certificateRef in extension settings",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						Extension: &v1alpha1.Extension{
+							Resources: []v1alpha1.GroupVersionKind{
+								{
+									Group:   "foo.example.io",
+									Version: "v1alpha1",
+									Kind:    "Foo",
+								},
+							},
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
+									},
+								},
+							},
+							Service: &v1alpha1.ExtensionService{
+								Host: "foo.extension",
+								Port: 8080,
+								TLS: &v1alpha1.ExtensionTLS{
+									CertificateRef: v1beta1.SecretObjectReference{
+										Kind: &TLSUnrecognizedKind,
+										Name: v1beta1.ObjectName("certificate"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "empty service in extension settings",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						Extension: &v1alpha1.Extension{
+							Resources: []v1alpha1.GroupVersionKind{
+								{
+									Group:   "foo.example.io",
+									Version: "v1alpha1",
+									Kind:    "Foo",
+								},
+							},
+							Hooks: &v1alpha1.ExtensionHooks{
+								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+									Pre: []v1alpha1.XDSTranslatorHook{},
+									Post: []v1alpha1.XDSTranslatorHook{
+										v1alpha1.XDSHTTPListener,
+										v1alpha1.XDSTranslation,
+										v1alpha1.XDSRoute,
+										v1alpha1.XDSVirtualHost,
+									},
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "empty hooks in extension settings",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultProvider(),
+						Extension: &v1alpha1.Extension{
+							Resources: []v1alpha1.GroupVersionKind{
+								{
+									Group:   "foo.example.io",
+									Version: "v1alpha1",
+									Kind:    "Foo",
+								},
+							},
+							Service: &v1alpha1.ExtensionService{
+								Host: "foo.extension",
+								Port: 8080,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
 		},
 	}
 

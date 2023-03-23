@@ -22,12 +22,12 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute        
-      attachedRoutes: 1
+      attachedRoutes: 0 
       conditions:
       - type: Programmed
         status: "True"
         reason: Programmed
-        message: Listener is ready
+        message: Listener has been successfully translated
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
@@ -65,6 +65,10 @@ httpRoutes:
         status: "False"
         reason: UnsupportedValue
         message: "Scheme: unknown is unsupported, only 'https' and 'http' are supported"
+      - type: ResolvedRefs
+        status: "True"
+        reason: ResolvedRefs
+        message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -73,19 +77,6 @@ xdsIR:
       port: 10080
       hostnames:
       - "*.envoyproxy.io"
-      routes:
-      - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
-        pathMatch:
-          prefix: "/"
-        headerMatches:
-        - name: ":authority"
-          exact: gateway.envoyproxy.io
-        # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
-        # normally but leave out the filter config and set the status, but this behaviour can be changed.
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

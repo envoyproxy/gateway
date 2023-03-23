@@ -5,10 +5,24 @@
 
 package v1alpha1
 
+import corev1 "k8s.io/api/core/v1"
+
 const (
 	// DefaultEnvoyReplicas is the default number of Envoy replicas.
 	DefaultEnvoyReplicas = 1
+	// DefaultDeploymentCPUResourceRequests for deployment cpu resource
+	DefaultDeploymentCPUResourceRequests = "100m"
+	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
+	DefaultDeploymentMemoryResourceRequests = "512Mi"
 )
+
+// GroupVersionKind unambiguously identifies a Kind.
+// It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
+type GroupVersionKind struct {
+	Group   string `json:"group"`
+	Version string `json:"version"`
+	Kind    string `json:"kind"`
+}
 
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
@@ -37,6 +51,11 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 
+	// Resources required by this container.
+	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
@@ -50,3 +69,16 @@ type KubernetesServiceSpec struct {
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
+
+// XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
+// for the xds-translator
+//
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation
+type XDSTranslatorHook string
+
+const (
+	XDSVirtualHost  XDSTranslatorHook = "VirtualHost"
+	XDSRoute        XDSTranslatorHook = "Route"
+	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
+	XDSTranslation  XDSTranslatorHook = "Translation"
+)

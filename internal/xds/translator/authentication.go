@@ -319,6 +319,10 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 			for i := range route.RequestAuthentication.JWT.Providers {
 				provider := route.RequestAuthentication.JWT.Providers[i]
 				jwks, err := newJwksCluster(&provider)
+				ep := DefaultEndpointType
+				if jwks.isStatic {
+					ep = Static
+				}
 				if err != nil {
 					return err
 				}
@@ -328,7 +332,13 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 					if err != nil {
 						return err
 					}
-					addXdsCluster(tCtx, jwks.name, routeDestinations, tSocket, false /*isHTTP2 */, jwks.isStatic)
+					addXdsCluster(tCtx, addXdsClusterArgs{
+						name:         jwks.name,
+						destinations: routeDestinations,
+						tSocket:      tSocket,
+						protocol:     DefaultProtocol,
+						endpoint:     ep,
+					})
 				}
 			}
 		}

@@ -78,15 +78,25 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range httpRoute.parentRefs {
-		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(httpRoute) {
-			continue
-		}
-
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes := t.processHTTPRouteRules(httpRoute, parentRef, resources)
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasCondition(httpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
+			parentRef.SetCondition(httpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(httpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
+		}
 
 		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
@@ -108,6 +118,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 				"Route is accepted",
 			)
 		}
+
 	}
 }
 
@@ -274,15 +285,25 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range grpcRoute.parentRefs {
-		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(grpcRoute) {
-			continue
-		}
+
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
 		routeRoutes := t.processGRPCRouteRules(grpcRoute, parentRef, resources)
 
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
+			parentRef.SetCondition(grpcRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
+
+		if parentRef.HasCondition(grpcRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
+		}
 		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(grpcRoute,
@@ -303,6 +324,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 				"Route is accepted",
 			)
 		}
+
 	}
 }
 
@@ -520,10 +542,6 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 
 func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tlsRoute.parentRefs {
-		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(tlsRoute) {
-			continue
-		}
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -559,6 +577,21 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			//	- sum of weights for valid backend refs is 0
 			//	- returning 500's for invalid backend refs
 			//	- etc.
+		}
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasCondition(tlsRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
+			parentRef.SetCondition(tlsRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(tlsRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
 		}
 
 		var hasHostnameIntersection bool
@@ -644,11 +677,6 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 
 func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range udpRoute.parentRefs {
-		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(udpRoute) {
-			continue
-		}
-
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -688,6 +716,21 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			service.Spec.ClusterIP,
 			uint32(*backendRef.Port),
 		))
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasCondition(udpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
+			parentRef.SetCondition(udpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(udpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
+		}
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
@@ -730,6 +773,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				"Route is accepted",
 			)
 		}
+
 		if !accepted {
 			parentRef.SetCondition(udpRoute,
 				v1beta1.RouteConditionAccepted,
@@ -769,10 +813,6 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 
 func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tcpRoute.parentRefs {
-		// Skip parent refs that did not accept the route
-		if !parentRef.IsAccepted(tcpRoute) {
-			continue
-		}
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -813,6 +853,21 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			service.Spec.ClusterIP,
 			uint32(*backendRef.Port),
 		))
+
+		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
+		if !parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
+			parentRef.SetCondition(tcpRoute,
+				v1beta1.RouteConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.RouteReasonResolvedRefs,
+				"Resolved all the Object references for the Route",
+			)
+		}
+
+		// Skip parent refs that did not accept the route
+		if parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionAccepted, metav1.ConditionFalse) {
+			continue
+		}
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
@@ -863,6 +918,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				"Multiple routes on the same TCP listener",
 			)
 		}
+
 	}
 }
 

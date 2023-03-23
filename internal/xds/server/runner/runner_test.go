@@ -186,7 +186,7 @@ func peekError(conn net.Conn) error {
 	return nil
 }
 
-func TestServeXdsServerListenFailed(t *testing.T) {
+func TestServeXdsServerListenFailed(_ *testing.T) {
 	patches := gomonkey.ApplyFuncReturn(net.Listen, nil, errors.New("ouch"))
 	defer patches.Reset()
 

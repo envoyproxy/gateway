@@ -1,40 +1,40 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
-      listeners:
-        - name: http
-          protocol: HTTP
-          port: 80
-          allowedRoutes:
-            namespaces:
-              from: Same
-    status:
-      listeners:
-        - name: http
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute
-          attachedRoutes: 0
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Listener is ready
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+  status:
+    listeners:
+    - name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+      attachedRoutes: 0
+      conditions:
+      - type: Programmed
+        status: "True"
+        reason: Programmed
+        message: Listener has been successfully translated
 xdsIR:
   envoy-gateway-gateway-1:
     http:
-      - name: envoy-gateway-gateway-1-http
-        address: 0.0.0.0
-        port: 10080
-        hostnames:
-          - "*"
+    - name: envoy-gateway-gateway-1-http
+      address: 0.0.0.0
+      port: 10080
+      hostnames:
+      - "*"
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
@@ -55,11 +55,15 @@ infraIR:
             kubernetes:
               envoyDeployment:
                 replicas: 2
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 512Mi
       image: envoyproxy/envoy:translator-tests
       listeners:
-        - address: ""
-          ports:
-            - name: http
-              protocol: "HTTP"
-              servicePort: 80
-              containerPort: 10080
+      - address: ""
+        ports:
+        - name: http
+          protocol: "HTTP"
+          servicePort: 80
+          containerPort: 10080

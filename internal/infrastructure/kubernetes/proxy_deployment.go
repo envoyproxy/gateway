@@ -35,7 +35,15 @@ const (
 
 // expectedProxyDeployment returns the expected Deployment based on the provided infra.
 func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
-	containers, err := expectedProxyContainers(infra)
+	// Get the EnvoyProxy config to configure the deployment.
+	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
+	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+	deploymentConfig := provider.GetKubeResourceProvider().EnvoyDeployment
+
+	// Get expected bootstrap configurations rendered ProxyContainers
+	containers, err := expectedProxyContainers(infra, deploymentConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -47,17 +55,11 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 	}
 
 	selector := getSelector(labels)
-	// Get the EnvoyProxy config to configure the deployment.
-	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
-	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
-		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
-	}
-	deployCfg := provider.GetKubeResourceProvider().EnvoyDeployment
 
 	// Get annotations
 	var annotations map[string]string
-	if deployCfg != nil {
-		annotations = deployCfg.PodAnnotations
+	if deploymentConfig.PodAnnotations != nil {
+		annotations = deploymentConfig.PodAnnotations
 	}
 
 	deployment := &appsv1.Deployment{
@@ -71,7 +73,7 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: deployCfg.Replicas,
+			Replicas: deploymentConfig.Replicas,
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
@@ -126,29 +128,41 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 	return deployment, nil
 }
 
-func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
+func expectedProxyContainers(infra *ir.Infra, deploymentConfig *egcfgv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
+	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
+
+	// Iterate over listeners and ports to get container ports
 	for _, listener := range infra.Proxy.Listeners {
 		for _, p := range listener.Ports {
+			var protocol corev1.Protocol
+			switch p.Protocol {
+			case ir.HTTPProtocolType, ir.HTTPSProtocolType, ir.TLSProtocolType, ir.TCPProtocolType:
+				protocol = corev1.ProtocolTCP
+			case ir.UDPProtocolType:
+				protocol = corev1.ProtocolUDP
+			default:
+				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
+			}
 			port := corev1.ContainerPort{
 				Name:          p.Name,
 				ContainerPort: p.ContainerPort,
-				Protocol:      corev1.Protocol(p.Protocol),
+				Protocol:      protocol,
 			}
 			ports = append(ports, port)
 		}
 	}
 
-	var cfg string
+	var bootstrapConfigurations string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
 	if infra.Proxy.Config != nil &&
 		infra.Proxy.Config.Spec.Bootstrap != nil {
-		cfg = *infra.Proxy.Config.Spec.Bootstrap
+		bootstrapConfigurations = *infra.Proxy.Config.Spec.Bootstrap
 	} else {
 		var err error
 		// Use the default Bootstrap
-		cfg, err = bootstrap.GetRenderedBootstrapConfig()
+		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig()
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +179,7 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 			Args: []string{
 				fmt.Sprintf("--service-cluster %s", infra.Proxy.Name),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
-				fmt.Sprintf("--config-yaml %s", cfg),
+				fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 				"--log-level info",
 			},
 			Env: []corev1.EnvVar{
@@ -188,7 +202,8 @@ func expectedProxyContainers(infra *ir.Infra) ([]corev1.Container, error) {
 					},
 				},
 			},
-			Ports: ports,
+			Resources: *deploymentConfig.Resources,
+			Ports:     ports,
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "certs",
