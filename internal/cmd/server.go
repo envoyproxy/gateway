@@ -137,9 +137,10 @@ func setupRunners(cfg *config.Server) error {
 	// Start the Xds Translator Service
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
 	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server: *cfg,
-		XdsIR:  xdsIR,
-		Xds:    xds,
+		Server:           *cfg,
+		XdsIR:            xdsIR,
+		Xds:              xds,
+		ExtensionManager: extMgr,
 	})
 	if err := xdsTranslatorRunner.Start(ctx); err != nil {
 		return err

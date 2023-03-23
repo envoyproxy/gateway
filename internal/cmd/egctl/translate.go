@@ -29,8 +29,10 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1cfg "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -254,7 +256,8 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 						ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway"),
 					},
 				}
-				xRes, err := xTranslator.Translate(val)
+				em := testutils.NewManager(egv1a1cfg.Extension{})
+				xRes, err := xTranslator.Translate(val, em)
 				if err != nil {
 					return fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
 				}

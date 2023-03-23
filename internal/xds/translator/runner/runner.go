@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -17,8 +18,9 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR *message.XdsIR
-	Xds   *message.Xds
+	XdsIR            *message.XdsIR
+	Xds              *message.Xds
+	ExtensionManager extension.Manager
 }
 
 type Runner struct {
@@ -62,7 +64,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					}
 				}
 
-				result, err := t.Translate(val)
+				result, err := t.Translate(val, r.ExtensionManager)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir")
 				} else {
