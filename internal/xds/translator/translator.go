@@ -108,6 +108,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
 		}
+		protocol := DefaultProtocol
+		if httpListener.IsHTTP2 {
+			protocol = HTTP2
+		}
 
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
@@ -118,13 +122,25 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
-			addXdsCluster(tCtx, httpRoute.Name, httpRoute.Destinations, nil, httpListener.IsHTTP2, true /* isStatic */)
+			addXdsCluster(tCtx, addXdsClusterArgs{
+				name:         httpRoute.Name,
+				destinations: httpRoute.Destinations,
+				tSocket:      nil,
+				protocol:     protocol,
+				endpoint:     Static,
+			})
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
 			for i, mirror := range httpRoute.Mirrors {
 				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
 				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
-					addXdsCluster(tCtx, mirrorClusterName, []*ir.RouteDestination{mirror}, nil, httpListener.IsHTTP2, true /* isStatic */)
+					addXdsCluster(tCtx, addXdsClusterArgs{
+						name:         mirrorClusterName,
+						destinations: []*ir.RouteDestination{mirror},
+						tSocket:      nil,
+						protocol:     protocol,
+						endpoint:     Static,
+					})
 				}
 
 			}
@@ -150,7 +166,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener) error {
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
-		addXdsCluster(tCtx, tcpListener.Name, tcpListener.Destinations, nil, false /*isHTTP2 */, true /* isStatic */)
+		addXdsCluster(tCtx, addXdsClusterArgs{
+			name:         tcpListener.Name,
+			destinations: tcpListener.Destinations,
+			tSocket:      nil,
+			protocol:     DefaultProtocol,
+			endpoint:     Static,
+		})
 
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
@@ -169,7 +191,13 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener) error {
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
-		addXdsCluster(tCtx, udpListener.Name, udpListener.Destinations, nil, false /*isHTTP2 */, true /*isStatic */)
+		addXdsCluster(tCtx, addXdsClusterArgs{
+			name:         udpListener.Name,
+			destinations: udpListener.Destinations,
+			tSocket:      nil,
+			protocol:     DefaultProtocol,
+			endpoint:     Static,
+		})
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
@@ -218,11 +246,11 @@ func findXdsCluster(tCtx *types.ResourceVersionTable, name string) *clusterv3.Cl
 	return nil
 }
 
-func addXdsCluster(tCtx *types.ResourceVersionTable, name string, destinations []*ir.RouteDestination, tSocket *corev3.TransportSocket, isHTTP2 bool, isStatic bool) {
-	xdsCluster := buildXdsCluster(name, tSocket, isHTTP2, isStatic)
-	xdsEndpoints := buildXdsClusterLoadAssignment(name, destinations)
+func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) {
+	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpoint)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.destinations)
 	// Use EDS for static endpoints
-	if isStatic {
+	if args.endpoint == Static {
 		tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints)
 	} else {
 		xdsCluster.LoadAssignment = xdsEndpoints
@@ -245,3 +273,28 @@ func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.
 
 	return nil
 }
+
+type addXdsClusterArgs struct {
+	name         string
+	destinations []*ir.RouteDestination
+	tSocket      *corev3.TransportSocket
+	protocol     ProtocolType
+	endpoint     EndpointType
+}
+
+type ProtocolType int
+type EndpointType int
+
+const (
+	DefaultProtocol ProtocolType = iota
+	TCP
+	UDP
+	HTTP
+	HTTP2
+)
+
+const (
+	DefaultEndpointType EndpointType = iota
+	Static
+	EDS
+)
