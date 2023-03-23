@@ -6,6 +6,8 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -100,7 +102,18 @@ func DefaultKubernetesDeploymentReplicas() *int32 {
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
 func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
-		Replicas: DefaultKubernetesDeploymentReplicas(),
+		Replicas:  DefaultKubernetesDeploymentReplicas(),
+		Resources: DefaultResourceRequirements(),
+	}
+}
+
+// DefaultResourceRequirements returns a new ResourceRequirements with default settings.
+func DefaultResourceRequirements() *corev1.ResourceRequirements {
+	return &corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse(DefaultDeploymentCPUResourceRequests),
+			corev1.ResourceMemory: resource.MustParse(DefaultDeploymentMemoryResourceRequests),
+		},
 	}
 }
 
@@ -128,6 +141,10 @@ func (r *ResourceProvider) GetKubeResourceProvider() *KubernetesResourceProvider
 
 	if r.Kubernetes.EnvoyDeployment.Replicas == nil {
 		r.Kubernetes.EnvoyDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	}
+
+	if r.Kubernetes.EnvoyDeployment.Resources == nil {
+		r.Kubernetes.EnvoyDeployment.Resources = DefaultResourceRequirements()
 	}
 
 	if r.Kubernetes.EnvoyService == nil {

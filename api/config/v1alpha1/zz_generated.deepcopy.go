@@ -11,6 +11,7 @@
 package v1alpha1
 
 import (
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -213,6 +214,11 @@ func (in *KubernetesDeploymentSpec) DeepCopyInto(out *KubernetesDeploymentSpec) 
 		for key, val := range *in {
 			(*out)[key] = val
 		}
+	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

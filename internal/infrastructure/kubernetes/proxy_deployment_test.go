@@ -15,6 +15,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -118,12 +119,20 @@ func checkContainerImage(t *testing.T, container *corev1.Container, image string
 	t.Errorf("container is missing image %q", image)
 }
 
-func TestExpectedProxyDeployment(t *testing.T) {
+func checkContainerResources(t *testing.T, container *corev1.Container, expected *corev1.ResourceRequirements) {
+	t.Helper()
+	if apiequality.Semantic.DeepEqual(&container.Resources, expected) {
+		return
+	}
+
+	t.Errorf("container has unexpected %q resources ", expected)
+}
+
+func testExpectedProxyDeployment(t *testing.T, infra *ir.Infra, expected *corev1.ResourceRequirements) {
 	svrCfg, err := config.New()
 	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli, svrCfg)
-	infra := ir.NewInfra()
 
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
@@ -153,6 +162,7 @@ func TestExpectedProxyDeployment(t *testing.T) {
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
 	checkContainerImage(t, container, ir.DefaultProxyImage)
+	checkContainerResources(t, container, expected)
 	checkEnvVar(t, deploy, envoyContainerName, envoyNsEnvVar)
 	checkEnvVar(t, deploy, envoyContainerName, envoyPodEnvVar)
 	checkLabels(t, deploy, deploy.Labels)
@@ -180,6 +190,36 @@ func TestExpectedProxyDeployment(t *testing.T) {
 
 	// Make sure no pod annotations are set by default
 	checkPodAnnotations(t, deploy, nil)
+}
+
+func TestExpectedProxyDeployment(t *testing.T) {
+	testExpectedProxyDeployment(t, ir.NewInfra(), egcfgv1a1.DefaultResourceRequirements())
+}
+
+func TestExpectedProxyDeploymentForSpecifiedResources(t *testing.T) {
+	infra := ir.NewInfra()
+	requirements := corev1.ResourceRequirements{
+		Limits: nil,
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("128Mi")},
+		Claims: nil,
+	}
+	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: egcfgv1a1.EnvoyProxySpec{Provider: &egcfgv1a1.ResourceProvider{
+			Type: egcfgv1a1.ProviderTypeKubernetes,
+			Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+				EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+					Resources: &requirements,
+				},
+			},
+		}},
+		Status: egcfgv1a1.EnvoyProxyStatus{},
+	}
+
+	testExpectedProxyDeployment(t, infra, &requirements)
 }
 
 func TestExpectedBootstrap(t *testing.T) {
