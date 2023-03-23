@@ -48,6 +48,10 @@
                 {
                   "status": "True",
                   "reason": "Accepted"
+                },
+                {
+                  "status": "True",
+                  "reason": "ResolvedRefs"
                 }
               ]
             }

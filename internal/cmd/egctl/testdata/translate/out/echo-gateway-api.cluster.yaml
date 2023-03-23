@@ -23,6 +23,8 @@ HTTPRoutes:
     - conditions:
       - reason: Accepted
         status: "True"
+      - reason: ResolvedRefs
+        status: "True"
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg

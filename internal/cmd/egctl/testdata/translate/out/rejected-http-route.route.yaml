@@ -21,6 +21,8 @@ HTTPRoutes:
     - conditions:
       - reason: NoReadyListeners
         status: "False"
+      - reason: BackendNotFound
+        status: "False"
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg
