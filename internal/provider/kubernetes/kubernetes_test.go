@@ -34,6 +34,7 @@ import (
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
@@ -53,7 +54,28 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	ext := egcfgv1a1.Extension{
+		Resources: []egcfgv1a1.GroupVersionKind{
+			{
+				Group:   "foo.example.io",
+				Version: "v1alpha1",
+				Kind:    "examplefilter",
+			},
+		},
+		Hooks: &egcfgv1a1.ExtensionHooks{
+			XDSTranslator: &egcfgv1a1.XDSTranslatorHooks{
+				Pre: []egcfgv1a1.XDSTranslatorHook{},
+				Post: []egcfgv1a1.XDSTranslatorHook{
+					egcfgv1a1.XDSHTTPListener,
+					egcfgv1a1.XDSTranslation,
+					egcfgv1a1.XDSRoute,
+					egcfgv1a1.XDSVirtualHost,
+				},
+			},
+		},
+	}
+	extMgr := testutils.NewManager(ext)
+	provider, err := New(cliCfg, svr, resources, extMgr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {

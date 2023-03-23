@@ -1,0 +1,22 @@
+http:
+- name: "extension-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    pathMatch:
+      prefix: "/"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
+    extensionRefs:
+    - object:
+        apiVersion: foo.example.io/v1alpha1
+        kind: examplefilter
+        metadata:
+          name: extension-filter
+          namespace: extensions
+        spec:
+          foo: bar

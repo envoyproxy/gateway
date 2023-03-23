@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
@@ -128,6 +130,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "authn-ratelimit",
 		},
+		{
+			name: "http-route-extension-filter",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -139,7 +144,28 @@ func TestTranslateXds(t *testing.T) {
 					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
 				},
 			}
-			tCtx, err := tr.Translate(ir)
+			ext := v1alpha1.Extension{
+				Resources: []v1alpha1.GroupVersionKind{
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "examplefilter",
+					},
+				},
+				Hooks: &v1alpha1.ExtensionHooks{
+					XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+						Post: []v1alpha1.XDSTranslatorHook{
+							v1alpha1.XDSRoute,
+							v1alpha1.XDSVirtualHost,
+							v1alpha1.XDSHTTPListener,
+							v1alpha1.XDSTranslation,
+						},
+					},
+				},
+			}
+			extMgr := testutils.NewManager(ext)
+
+			tCtx, err := tr.Translate(ir, extMgr)
 			require.NoError(t, err)
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
