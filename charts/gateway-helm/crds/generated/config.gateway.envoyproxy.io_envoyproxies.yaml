@@ -92,6 +92,10 @@ spec:
                           the Envoy deployment resource. If unspecified, default settings
                           for the manged Envoy deployment resource are applied.
                         properties:
+                          automountServiceAccountToken:
+                            description: AutomountServiceAccountToken is the pod settings
+                              of automountServiceAccountToken. Defaults to false
+                            type: boolean
                           podAnnotations:
                             additionalProperties:
                               type: string

@@ -190,6 +190,16 @@ func testExpectedProxyDeployment(t *testing.T, infra *ir.Infra, expected *corev1
 
 	// Make sure no pod annotations are set by default
 	checkPodAnnotations(t, deploy, nil)
+
+	// Set the automountServiceAccountToken.
+	automountServiceAccountToken := true
+	infra.Proxy.GetProxyConfig().GetProvider().GetKubeResourceProvider().EnvoyDeployment.AutomountServiceAccountToken = &automountServiceAccountToken
+
+	deploy, err = kube.expectedProxyDeployment(infra)
+	require.NoError(t, err)
+
+	// Check the automountServiceAccountToken is as expected.
+	assert.Equal(t, automountServiceAccountToken, *deploy.Spec.Template.Spec.AutomountServiceAccountToken)
 }
 
 func TestExpectedProxyDeployment(t *testing.T) {

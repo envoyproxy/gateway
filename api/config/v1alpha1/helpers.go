@@ -99,11 +99,18 @@ func DefaultKubernetesDeploymentReplicas() *int32 {
 	return &repl
 }
 
+// DefaultAutomountServiceAccountToken returns the default automountServiceAccountToken settings.
+func DefaultAutomountServiceAccountToken() *bool {
+	automountServiceAccountToken := DefaultEnvoyAutomountServiceAccountToken
+	return &automountServiceAccountToken
+}
+
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
 func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
-		Replicas:  DefaultKubernetesDeploymentReplicas(),
-		Resources: DefaultResourceRequirements(),
+		Replicas:                     DefaultKubernetesDeploymentReplicas(),
+		Resources:                    DefaultResourceRequirements(),
+		AutomountServiceAccountToken: DefaultAutomountServiceAccountToken(),
 	}
 }
 
@@ -145,6 +152,10 @@ func (r *ResourceProvider) GetKubeResourceProvider() *KubernetesResourceProvider
 
 	if r.Kubernetes.EnvoyDeployment.Resources == nil {
 		r.Kubernetes.EnvoyDeployment.Resources = DefaultResourceRequirements()
+	}
+
+	if r.Kubernetes.EnvoyDeployment.AutomountServiceAccountToken == nil {
+		r.Kubernetes.EnvoyDeployment.AutomountServiceAccountToken = DefaultAutomountServiceAccountToken()
 	}
 
 	if r.Kubernetes.EnvoyService == nil {

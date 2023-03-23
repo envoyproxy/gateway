@@ -83,7 +83,7 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
 					ServiceAccountName:            expectedResourceHashedName(infra.Proxy.Name),
-					AutomountServiceAccountToken:  pointer.Bool(false),
+					AutomountServiceAccountToken:  deploymentConfig.AutomountServiceAccountToken,
 					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,

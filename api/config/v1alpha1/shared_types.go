@@ -14,6 +14,8 @@ const (
 	DefaultDeploymentCPUResourceRequests = "100m"
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
+	// DefaultEnvoyAutomountServiceAccountToken is the default value of Envoy Proxy automountServiceAccountToken settings.
+	DefaultEnvoyAutomountServiceAccountToken = false
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -55,6 +57,11 @@ type KubernetesDeploymentSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// AutomountServiceAccountToken is the pod settings of automountServiceAccountToken. Defaults to false
+	//
+	// +optional
+	AutomountServiceAccountToken *bool `json:"automountServiceAccountToken,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
