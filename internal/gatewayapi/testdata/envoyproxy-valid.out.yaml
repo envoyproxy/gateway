@@ -32,11 +32,11 @@ gateways:
 xdsIR:
   envoy-gateway-gateway-1:
     http:
-    - name: envoy-gateway-gateway-1-http
-      address: 0.0.0.0
-      port: 10080
-      hostnames:
-      - "*"
+      - name: envoy-gateway-gateway-1-http
+        address: 0.0.0.0
+        port: 10080
+        hostnames:
+          - "*"
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
@@ -63,9 +63,9 @@ infraIR:
                     memory: 512Mi
       image: envoyproxy/envoy:translator-tests
       listeners:
-      - address: ""
-        ports:
-        - name: http
-          protocol: "HTTP"
-          servicePort: 80
-          containerPort: 10080
+        - address: ""
+          ports:
+            - name: http
+              protocol: "HTTP"
+              servicePort: 80
+              containerPort: 10080
