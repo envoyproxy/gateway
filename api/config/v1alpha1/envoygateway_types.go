@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -49,6 +50,11 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	RateLimit *RateLimit `json:"rateLimit,omitempty"`
+
+	// Extension defines an extension to register for the Envoy Gateway Control Plane.
+	//
+	// +optional
+	Extension *Extension `json:"extension,omitempty"`
 }
 
 // Gateway defines the desired Gateway API configuration of Envoy Gateway.
@@ -133,6 +139,69 @@ const (
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
 	URL string `json:"url"`
+}
+
+// Extension defines the configuration for registering an extension to
+// the Envoy Gateway control plane.
+type Extension struct {
+	// Resources defines the set of K8s resources the extension will handle.
+	//
+	// +optional
+	Resources []GroupVersionKind `json:"resources,omitempty"`
+
+	// Hooks defines the set of hooks the extension supports
+	//
+	// +kubebuilder:validation:Required
+	Hooks *ExtensionHooks `json:"hooks,omitempty"`
+
+	// Service defines the configuration of the extension service that the Envoy
+	// Gateway Control Plane will call through extension hooks.
+	//
+	// +kubebuilder:validation:Required
+	Service *ExtensionService `json:"service,omitempty"`
+}
+
+// ExtensionHooks defines extension hooks across all supported runners
+type ExtensionHooks struct {
+	// XDSTranslator defines all the supported extension hooks for the xds-translator runner
+	XDSTranslator *XDSTranslatorHooks `json:"xdsTranslator,omitempty"`
+}
+
+// XDSTranslationHooks contains all the pre and post hooks for the xds-translator runner
+type XDSTranslatorHooks struct {
+	Pre  []XDSTranslatorHook `json:"pre,omitempty"`
+	Post []XDSTranslatorHook `json:"post,omitempty"`
+}
+
+// ExtensionService defines the configuration for connecting to a registered extension service.
+type ExtensionService struct {
+	// Host define the extension service hostname.
+	Host string `json:"host"`
+
+	// Port defines the port the extension service is exposed on.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=80
+	Port int32 `json:"port,omitempty"`
+
+	// TLS defines TLS configuration for communication between Envoy Gateway and
+	// the extension service.
+	//
+	// +optional
+	TLS *ExtensionTLS `json:"tls,omitempty"`
+}
+
+// ExtensionTLS defines the TLS configuration when connecting to an extension service
+type ExtensionTLS struct {
+	// CertificateRef contains a references to objects (Kubernetes objects or otherwise) that
+	// contains a TLS certificate and private keys. These certificates are used to
+	// establish a TLS handshake to the extension server.
+	//
+	// CertificateRef can only reference a Kubernetes Secret at this time.
+	//
+	// +kubebuilder:validation:Required
+	CertificateRef gwapiv1b1.SecretObjectReference `json:"certificateRef"`
 }
 
 func init() {

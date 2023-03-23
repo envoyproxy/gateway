@@ -16,6 +16,14 @@ const (
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 )
 
+// GroupVersionKind unambiguously identifies a Kind.
+// It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
+type GroupVersionKind struct {
+	Group   string `json:"group"`
+	Version string `json:"version"`
+	Kind    string `json:"kind"`
+}
+
 // ProviderType defines the types of providers supported by Envoy Gateway.
 //
 // +kubebuilder:validation:Enum=Kubernetes
@@ -61,3 +69,16 @@ type KubernetesServiceSpec struct {
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
+
+// XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
+// for the xds-translator
+//
+// +kubebuilder:validation:Enum=VirtualHost;Route;HTTPListener;Translation
+type XDSTranslatorHook string
+
+const (
+	XDSVirtualHost  XDSTranslatorHook = "VirtualHost"
+	XDSRoute        XDSTranslatorHook = "Route"
+	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
+	XDSTranslation  XDSTranslatorHook = "Translation"
+)
