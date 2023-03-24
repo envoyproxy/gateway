@@ -168,6 +168,19 @@ spec:
                             description: Annotations that should be appended to the
                               service. By default, no annotations are appended.
                             type: object
+                          type:
+                            default: LoadBalancer
+                            description: Type determines how the Service is exposed.
+                              Defaults to LoadBalancer. Valid options are ClusterIP
+                              and LoadBalancer. "LoadBalancer" means a service will
+                              be exposed via an external load balancer (if the cloud
+                              provider supports it). "ClusterIP" means a service will
+                              only be accessible inside the cluster, via the cluster
+                              IP.
+                            enum:
+                            - LoadBalancer
+                            - ClusterIP
+                            type: string
                         type: object
                     type: object
                   type:

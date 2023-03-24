@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -29,20 +30,17 @@ func (i *Infra) expectedRateLimitService(_ *ir.RateLimitInfra) *corev1.Service {
 
 	labels := rateLimitLabels()
 
+	serviceSpec := expectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType())
+	serviceSpec.Ports = ports
+	serviceSpec.Selector = getSelector(labels).MatchLabels
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      rateLimitInfraName,
 			Labels:    labels,
 		},
-		Spec: corev1.ServiceSpec{
-			Type:            corev1.ServiceTypeLoadBalancer,
-			Ports:           ports,
-			Selector:        getSelector(labels).MatchLabels,
-			SessionAffinity: corev1.ServiceAffinityNone,
-			// Preserve the client source IP and avoid a second hop for LoadBalancer.
-			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
-		},
+		Spec: serviceSpec,
 	}
 
 	return svc
