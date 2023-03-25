@@ -242,7 +242,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 			for key := range gRes.XdsIR {
 				keys = append(keys, key)
 			}
-			// Make output stable
+			// Make output stable since XdsIR is a map
 			sort.Strings(keys)
 
 			// Translate from Xds IR to Xds

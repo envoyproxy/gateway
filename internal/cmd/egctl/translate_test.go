@@ -24,10 +24,33 @@ func noopFilter(in string) string {
 	return in
 }
 
-func fieldFilter(in string, output string, exp interface{}) string {
+type ExpectHTTPRoutes struct {
+	HTTPRoutes []struct {
+		Metadata struct {
+			Namespace string
+			Name      string
+		}
+		Spec   interface{}
+		Status struct {
+			Parents []struct {
+				Conditions []struct {
+					Status string
+					Reason string
+				}
+				ControllerName string
+				ParentRef      struct {
+					Name string
+				}
+			}
+		}
+	}
+}
+
+func gatewayAPIFilter(in string, output string) string {
 	var out []byte
+	exp := &ExpectHTTPRoutes{}
 	if output == jsonOutput {
-		err := json.Unmarshal([]byte(in), &[]interface{}{exp})
+		err := json.Unmarshal([]byte(in), &[]*ExpectHTTPRoutes{exp})
 		if err != nil {
 			panic(err)
 		}
@@ -52,7 +75,8 @@ func fieldFilter(in string, output string, exp interface{}) string {
 	return string(out)
 }
 
-func gatewayAPIWithXdsYamlFilter(in string, exp interface{}) string {
+func gatewayAPIWithXdsYamlFilter(in string) string {
+	exp := &ExpectHTTPRoutes{}
 	yamls := strings.SplitN(in, "---\n", 2)
 	err := yaml.Unmarshal([]byte(yamls[0]), exp)
 	if err != nil {
@@ -68,28 +92,6 @@ func gatewayAPIWithXdsYamlFilter(in string, exp interface{}) string {
 }
 
 func TestTranslate(t *testing.T) {
-	type ExpectHTTPRoutes struct {
-		HTTPRoutes []struct {
-			Metadata struct {
-				Namespace string
-				Name      string
-			}
-			Spec   interface{}
-			Status struct {
-				Parents []struct {
-					Conditions []struct {
-						Status string
-						Reason string
-					}
-					ControllerName string
-					ParentRef      struct {
-						Name string
-					}
-				}
-			}
-		}
-	}
-
 	testCases := []struct {
 		name         string
 		from         string
@@ -201,7 +203,7 @@ func TestTranslate(t *testing.T) {
 			filterFunc: func(in string) string {
 				// Need to filter out the fields we care about, otherwise the fields
 				// will changed when we update the gatewayapi library
-				return fieldFilter(in, yamlOutput, &ExpectHTTPRoutes{})
+				return gatewayAPIFilter(in, yamlOutput)
 			},
 		},
 		{
@@ -212,7 +214,7 @@ func TestTranslate(t *testing.T) {
 			resourceType: string(RouteEnvoyConfigType),
 			expect:       true,
 			filterFunc: func(in string) string {
-				return fieldFilter(in, jsonOutput, &ExpectHTTPRoutes{})
+				return gatewayAPIFilter(in, jsonOutput)
 			},
 		},
 		{
@@ -223,7 +225,7 @@ func TestTranslate(t *testing.T) {
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
 			filterFunc: func(in string) string {
-				return gatewayAPIWithXdsYamlFilter(in, &ExpectHTTPRoutes{})
+				return gatewayAPIWithXdsYamlFilter(in)
 			},
 		},
 		{
@@ -235,7 +237,7 @@ func TestTranslate(t *testing.T) {
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
 			filterFunc: func(in string) string {
-				return gatewayAPIWithXdsYamlFilter(in, &ExpectHTTPRoutes{})
+				return gatewayAPIWithXdsYamlFilter(in)
 			},
 		},
 		{

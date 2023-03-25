@@ -1,4 +1,4 @@
-HTTPRoutes:
+httpRoutes:
 - metadata:
     name: backend
     namespace: envoy-gateway-system

@@ -1,6 +1,6 @@
 [
   {
-    "HTTPRoutes": [
+    "httpRoutes": [
       {
         "metadata": {
           "name": "backend",
