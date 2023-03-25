@@ -167,7 +167,7 @@ type ExtensionHooks struct {
 	XDSTranslator *XDSTranslatorHooks `json:"xdsTranslator,omitempty"`
 }
 
-// XDSTranslationHooks contains all the pre and post hooks for the xds-translator runner
+// XDSTranslatorHooks contains all the pre and post hooks for the xds-translator runner.
 type XDSTranslatorHooks struct {
 	Pre  []XDSTranslatorHook `json:"pre,omitempty"`
 	Post []XDSTranslatorHook `json:"post,omitempty"`

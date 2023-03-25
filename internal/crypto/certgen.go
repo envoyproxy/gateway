@@ -157,7 +157,6 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 // newCert generates a new keypair based on the given the request.
 // The return values are cert, key, err.
 func newCert(request *certificateRequest) ([]byte, []byte, error) {
-
 	caKeyPair, err := tls.X509KeyPair(request.caCertPEM, request.caKeyPEM)
 	if err != nil {
 		return nil, nil, err
@@ -211,7 +210,6 @@ func newCert(request *certificateRequest) ([]byte, []byte, error) {
 // newCA generates a new CA, given the CA's CN and an expiry time.
 // The return order is cacert, cakey, error.
 func newCA(cn string, expiry time.Time) ([]byte, []byte, error) {
-
 	key, err := rsa.GenerateKey(rand.Reader, keySize)
 	if err != nil {
 		return nil, nil, err
