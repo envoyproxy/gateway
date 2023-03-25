@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -34,6 +35,8 @@ func TestDesiredRateLimitService(t *testing.T) {
 	// Ensure the Envoy RateLimit service has the expected labels.
 	lbls := rateLimitLabels()
 	checkServiceHasLabels(t, svc, lbls)
+
+	checkServiceSpec(t, svc, expectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType()))
 }
 
 func TestDeleteRateLimitService(t *testing.T) {

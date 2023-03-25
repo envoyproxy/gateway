@@ -59,6 +59,21 @@ type KubernetesDeploymentSpec struct {
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 
+// ServiceType string describes ingress methods for a service
+// +enum
+// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
+type ServiceType string
+
+const (
+	// ServiceTypeLoadBalancer means a service will be exposed via an
+	// external load balancer (if the cloud provider supports it).
+	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
+
+	// ServiceTypeClusterIP means a service will only be accessible inside the
+	// cluster, via the cluster IP.
+	ServiceTypeClusterIP ServiceType = "ClusterIP"
+)
+
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
 type KubernetesServiceSpec struct {
 	// Annotations that should be appended to the service.
@@ -66,6 +81,14 @@ type KubernetesServiceSpec struct {
 	//
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
+
+	// Type determines how the Service is exposed. Defaults to LoadBalancer.
+	// Valid options are ClusterIP and LoadBalancer.
+	// "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).
+	// "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP.
+	// +kubebuilder:default:="LoadBalancer"
+	// +optional
+	Type *ServiceType `json:"type,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }

@@ -46,11 +46,13 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 	// Get annotations
 	var annotations map[string]string
 	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
-	svcCfg := provider.GetKubeResourceProvider().EnvoyService
-	if svcCfg != nil {
-		annotations = svcCfg.Annotations
-
+	envoyServiceConfig := provider.GetKubeResourceProvider().EnvoyService
+	if envoyServiceConfig.Annotations != nil {
+		annotations = envoyServiceConfig.Annotations
 	}
+	serviceSpec := expectedServiceSpec(envoyServiceConfig.Type)
+	serviceSpec.Ports = ports
+	serviceSpec.Selector = getSelector(labels).MatchLabels
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -59,14 +61,7 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 			Labels:      labels,
 			Annotations: annotations,
 		},
-		Spec: corev1.ServiceSpec{
-			Type:            corev1.ServiceTypeLoadBalancer,
-			Ports:           ports,
-			Selector:        getSelector(labels).MatchLabels,
-			SessionAffinity: corev1.ServiceAffinityNone,
-			// Preserve the client source IP and avoid a second hop for LoadBalancer.
-			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
-		},
+		Spec: serviceSpec,
 	}
 
 	return svc, nil

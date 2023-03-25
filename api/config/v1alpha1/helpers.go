@@ -119,7 +119,19 @@ func DefaultResourceRequirements() *corev1.ResourceRequirements {
 
 // DefaultKubernetesService returns a new KubernetesServiceSpec with default settings.
 func DefaultKubernetesService() *KubernetesServiceSpec {
-	return &KubernetesServiceSpec{}
+	return &KubernetesServiceSpec{
+		Type: DefaultKubernetesServiceType(),
+	}
+}
+
+// DefaultKubernetesServiceType returns a new KubernetesServiceType with default settings.
+func DefaultKubernetesServiceType() *ServiceType {
+	return GetKubernetesServiceType(ServiceTypeLoadBalancer)
+}
+
+// GetKubernetesServiceType returns the KubernetesServiceType pointer.
+func GetKubernetesServiceType(serviceType ServiceType) *ServiceType {
+	return &serviceType
 }
 
 // GetKubeResourceProvider returns the KubernetesResourceProvider of ResourceProvider or
@@ -149,6 +161,10 @@ func (r *ResourceProvider) GetKubeResourceProvider() *KubernetesResourceProvider
 
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
+	}
+
+	if r.Kubernetes.EnvoyService.Type == nil {
+		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
 	}
 
 	return r.Kubernetes

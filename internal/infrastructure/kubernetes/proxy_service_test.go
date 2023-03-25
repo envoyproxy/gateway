@@ -78,12 +78,11 @@ func checkServiceHasAnnotations(t *testing.T, svc *corev1.Service, expected map[
 	t.Errorf("service has unexpected %q annotations", svc.Annotations)
 }
 
-func TestDesiredProxyService(t *testing.T) {
+func testDesiredProxyService(t *testing.T, infra *ir.Infra, expected corev1.ServiceSpec) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	kube := NewInfra(cli, cfg)
-	infra := ir.NewInfra()
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 	infra.Proxy.Listeners[0].Ports = []ir.ListenerPort{
@@ -123,6 +122,32 @@ func TestDesiredProxyService(t *testing.T) {
 
 	// Make sure no service annotations are set by default
 	checkServiceHasAnnotations(t, svc, nil)
+
+	// Make sure service type are set by default with ServiceTypeLoadBalancer
+	checkServiceSpec(t, svc, expected)
+}
+
+func TestDesiredProxyService(t *testing.T) {
+	testDesiredProxyService(t, ir.NewInfra(), expectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType()))
+}
+
+func TestDesiredProxySpecifiedServiceSpec(t *testing.T) {
+	infra := ir.NewInfra()
+	clusterIPServiceType := egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP)
+	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
+		TypeMeta:   metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{},
+		Spec: egcfgv1a1.EnvoyProxySpec{Provider: &egcfgv1a1.ResourceProvider{
+			Type: egcfgv1a1.ProviderTypeKubernetes,
+			Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+				EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+					Type: clusterIPServiceType,
+				},
+			},
+		}},
+		Status: egcfgv1a1.EnvoyProxyStatus{},
+	}
+	testDesiredProxyService(t, infra, expectedServiceSpec(clusterIPServiceType))
 }
 
 func TestExpectedAnnotations(t *testing.T) {

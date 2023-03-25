@@ -13,6 +13,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 func (i *Infra) createOrUpdateService(ctx context.Context, svc *corev1.Service) error {
@@ -54,4 +56,15 @@ func (i *Infra) deleteService(ctx context.Context, svc *corev1.Service) error {
 	}
 
 	return nil
+}
+
+func expectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec {
+	serviceSpec := corev1.ServiceSpec{}
+	serviceSpec.Type = corev1.ServiceType(*serviceType)
+	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
+	if *serviceType == egcfgv1a1.ServiceTypeLoadBalancer {
+		// Preserve the client source IP and avoid a second hop for LoadBalancer.
+		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
+	}
+	return serviceSpec
 }
