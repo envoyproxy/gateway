@@ -224,9 +224,7 @@ func TestTranslate(t *testing.T) {
 			output:       yamlOutput,
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
-			filterFunc: func(in string) string {
-				return gatewayAPIWithXdsYamlFilter(in)
-			},
+			filterFunc:   gatewayAPIWithXdsYamlFilter,
 		},
 		{
 			name: "echo-gateway-api",
@@ -236,9 +234,7 @@ func TestTranslate(t *testing.T) {
 			output:       yamlOutput,
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
-			filterFunc: func(in string) string {
-				return gatewayAPIWithXdsYamlFilter(in)
-			},
+			filterFunc:   gatewayAPIWithXdsYamlFilter,
 		},
 		{
 			name:         "multiple-xds",
