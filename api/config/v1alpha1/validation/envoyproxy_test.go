@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -66,6 +67,104 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
+		},
+		{
+			name: "nil envoy service",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.ResourceProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+							EnvoyService: nil,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "unsupported envoy service type \"\" ",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.ResourceProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(""),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "unsupported envoy service type 'NodePort'",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.ResourceProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceType(corev1.ServiceTypeNodePort)),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid envoy service type 'LoadBalancer'",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.ResourceProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid envoy service type 'ClusterIP'",
+			obj: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.ResourceProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
 		},
 		{
 			name: "valid user bootstrap",

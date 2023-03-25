@@ -55,6 +55,8 @@ infraIR:
           provider:
             type: Kubernetes
             kubernetes:
+              envoyService:
+                type: LoadBalancer
               envoyDeployment:
                 replicas: 2
                 resources:

@@ -41,15 +41,45 @@ func validateEnvoyProxySpec(spec *egcfgv1a1.EnvoyProxySpec) error {
 	if spec == nil {
 		errs = append(errs, errors.New("spec is nil"))
 	}
-	if spec != nil && spec.Provider != nil && spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
-		errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
+
+	// validate provider
+	validateProviderErrs := validateProvider(spec)
+	if len(validateProviderErrs) != 0 {
+		errs = append(errs, validateProviderErrs...)
 	}
-	if spec.Bootstrap != nil {
+
+	// validate bootstrap
+	if spec != nil && spec.Bootstrap != nil {
 		if err := validateBootstrap(spec.Bootstrap); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
+}
+
+func validateProvider(spec *egcfgv1a1.EnvoyProxySpec) []error {
+	var errs []error
+	if spec != nil && spec.Provider != nil {
+		if spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
+			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
+		}
+		validateServiceTypeErrs := validateServiceType(spec)
+		if len(validateServiceTypeErrs) != 0 {
+			errs = append(errs, validateServiceTypeErrs...)
+		}
+	}
+	return errs
+}
+
+func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
+	var errs []error
+	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
+		serviceType := spec.Provider.Kubernetes.EnvoyService.Type
+		if *serviceType != egcfgv1a1.ServiceTypeLoadBalancer && *serviceType != egcfgv1a1.ServiceTypeClusterIP {
+			errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
+		}
+	}
+	return errs
 }
 
 func validateBootstrap(bstrap *string) error {
