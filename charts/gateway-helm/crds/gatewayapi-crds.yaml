@@ -10626,249 +10626,249 @@ status:
     plural: ""
   conditions: null
   storedVersions: null
-# ---
-# #
-# # config/webhook/0-namespace.yaml
-# #
-# apiVersion: v1
-# kind: Namespace
-# metadata:
-#   name: gateway-system
-# ---
-# #
-# # config/webhook/admission_webhook.yaml
-# #
-# apiVersion: admissionregistration.k8s.io/v1
-# kind: ValidatingWebhookConfiguration
-# metadata:
-#   name: gateway-api-admission
-# webhooks:
-# - name: validate.gateway.networking.k8s.io
-#   matchPolicy: Equivalent
-#   rules:
-#   - operations: [ "CREATE" , "UPDATE" ]
-#     apiGroups: [ "gateway.networking.k8s.io" ]
-#     apiVersions: [ "v1alpha2", "v1beta1" ]
-#     resources: [ "gateways", "gatewayclasses", "httproutes" ]
-#   failurePolicy: Fail
-#   sideEffects: None
-#   admissionReviewVersions:
-#   - v1
-#   clientConfig:
-#     service:
-#       name: gateway-api-admission-server
-#       namespace: gateway-system
-#       path: "/validate"
-# ---
-# apiVersion: v1
-# kind: Service
-# metadata:
-#   labels:
-#     name: gateway-api-webhook-server
-#   name: gateway-api-admission-server
-#   namespace: gateway-system
-# spec:
-#   type: ClusterIP
-#   ports:
-#   - name: https-webhook
-#     port: 443
-#     targetPort: 8443
-#   selector:
-#     name: gateway-api-admission-server
-# ---
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: gateway-api-admission-server
-#   namespace: gateway-system
-#   labels:
-#     name: gateway-api-admission-server
-# spec:
-#   replicas: 1
-#   selector:
-#     matchLabels:
-#       name: gateway-api-admission-server
-#   template:
-#     metadata:
-#       name: gateway-api-admission-server
-#       labels:
-#         name: gateway-api-admission-server
-#     spec:
-#       containers:
-#       - name: webhook
-#         image: gcr.io/k8s-staging-gateway-api/admission-server:v0.6.2
-#         imagePullPolicy: Always
-#         args:
-#         - -logtostderr
-#         - --tlsCertFile=/etc/certs/cert
-#         - --tlsKeyFile=/etc/certs/key
-#         - -v=10
-#         - 2>&1
-#         ports:
-#         - containerPort: 8443
-#           name: webhook
-#         resources:
-#           limits:
-#             memory: 50Mi
-#             cpu: 100m
-#           requests:
-#             memory: 50Mi
-#             cpu: 100m
-#         volumeMounts:
-#         - name: webhook-certs
-#           mountPath: /etc/certs
-#           readOnly: true
-#         securityContext:
-#           readOnlyRootFilesystem: true
-#       volumes:
-#       - name: webhook-certs
-#         secret:
-#           secretName: gateway-api-admission
-# ---
-# #
-# # config/webhook/certificate_config.yaml
-# #
-# apiVersion: v1
-# kind: ServiceAccount
-# metadata:
-#   name: gateway-api-admission
-#   labels:
-#     name: gateway-api-webhook
-#   namespace: gateway-system
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRole
-# metadata:
-#   name: gateway-api-admission
-#   labels:
-#     name: gateway-api
-# rules:
-# - apiGroups:
-#   - admissionregistration.k8s.io
-#   resources:
-#   - validatingwebhookconfigurations
-#   verbs:
-#   - get
-#   - update
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: ClusterRoleBinding
-# metadata:
-#   name: gateway-api-admission
-#   annotations:
-#   labels:
-#     name: gateway-api-webhook
-# roleRef:
-#   apiGroup: rbac.authorization.k8s.io
-#   kind: ClusterRole
-#   name: gateway-api-admission
-# subjects:
-# - kind: ServiceAccount
-#   name: gateway-api-admission
-#   namespace: gateway-system
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: Role
-# metadata:
-#   name: gateway-api-admission
-#   annotations:
-#   labels:
-#     name: gateway-api-webhook
-#   namespace: gateway-system
-# rules:
-# - apiGroups:
-#   - ''
-#   resources:
-#   - secrets
-#   verbs:
-#   - get
-#   - create
-# ---
-# apiVersion: rbac.authorization.k8s.io/v1
-# kind: RoleBinding
-# metadata:
-#   name: gateway-api-admission
-#   annotations:
-#   labels:
-#     name: gateway-api-webhook
-#   namespace: gateway-system
-# roleRef:
-#   apiGroup: rbac.authorization.k8s.io
-#   kind: Role
-#   name: gateway-api-admission
-# subjects:
-# - kind: ServiceAccount
-#   name: gateway-api-admission
-#   namespace: gateway-system
-# ---
-# apiVersion: batch/v1
-# kind: Job
-# metadata:
-#   name: gateway-api-admission
-#   annotations:
-#   labels:
-#     name: gateway-api-webhook
-#   namespace: gateway-system
-# spec:
-#   template:
-#     metadata:
-#       name: gateway-api-admission-create
-#       labels:
-#         name: gateway-api-webhook
-#     spec:
-#       containers:
-#       - name: create
-#         image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
-#         imagePullPolicy: IfNotPresent
-#         args:
-#         - create
-#         - --host=gateway-api-admission-server,gateway-api-admission-server.gateway-system.svc
-#         - --namespace=gateway-system
-#         - --secret-name=gateway-api-admission
-#         env:
-#         - name: POD_NAMESPACE
-#           valueFrom:
-#             fieldRef:
-#               fieldPath: metadata.namespace
-#       restartPolicy: OnFailure
-#       serviceAccountName: gateway-api-admission
-#       securityContext:
-#         runAsNonRoot: true
-#         runAsUser: 2000
-# ---
-# apiVersion: batch/v1
-# kind: Job
-# metadata:
-#   name: gateway-api-admission-patch
-#   labels:
-#     name: gateway-api-webhook
-#   namespace: gateway-system
-# spec:
-#   template:
-#     metadata:
-#       name: gateway-api-admission-patch
-#       labels:
-#         name: gateway-api-webhook
-#     spec:
-#       containers:
-#       - name: patch
-#         image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
-#         imagePullPolicy: IfNotPresent
-#         args:
-#         - patch
-#         - --webhook-name=gateway-api-admission
-#         - --namespace=gateway-system
-#         - --patch-mutating=false
-#         - --patch-validating=true
-#         - --secret-name=gateway-api-admission
-#         - --patch-failure-policy=Fail
-#         env:
-#         - name: POD_NAMESPACE
-#           valueFrom:
-#             fieldRef:
-#               fieldPath: metadata.namespace
-#       restartPolicy: OnFailure
-#       serviceAccountName: gateway-api-admission
-#       securityContext:
-#         runAsNonRoot: true
-#         runAsUser: 2000
+---
+#
+# config/webhook/0-namespace.yaml
+#
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-system
+---
+#
+# config/webhook/admission_webhook.yaml
+#
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: gateway-api-admission
+webhooks:
+- name: validate.gateway.networking.k8s.io
+  matchPolicy: Equivalent
+  rules:
+  - operations: [ "CREATE" , "UPDATE" ]
+    apiGroups: [ "gateway.networking.k8s.io" ]
+    apiVersions: [ "v1alpha2", "v1beta1" ]
+    resources: [ "gateways", "gatewayclasses", "httproutes" ]
+  failurePolicy: Fail
+  sideEffects: None
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: gateway-api-admission-server
+      namespace: gateway-system
+      path: "/validate"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: gateway-api-webhook-server
+  name: gateway-api-admission-server
+  namespace: gateway-system
+spec:
+  type: ClusterIP
+  ports:
+  - name: https-webhook
+    port: 443
+    targetPort: 8443
+  selector:
+    name: gateway-api-admission-server
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api-admission-server
+  namespace: gateway-system
+  labels:
+    name: gateway-api-admission-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: gateway-api-admission-server
+  template:
+    metadata:
+      name: gateway-api-admission-server
+      labels:
+        name: gateway-api-admission-server
+    spec:
+      containers:
+      - name: webhook
+        image: gcr.io/k8s-staging-gateway-api/admission-server:v0.6.2
+        imagePullPolicy: Always
+        args:
+        - -logtostderr
+        - --tlsCertFile=/etc/certs/cert
+        - --tlsKeyFile=/etc/certs/key
+        - -v=10
+        - 2>&1
+        ports:
+        - containerPort: 8443
+          name: webhook
+        resources:
+          limits:
+            memory: 50Mi
+            cpu: 100m
+          requests:
+            memory: 50Mi
+            cpu: 100m
+        volumeMounts:
+        - name: webhook-certs
+          mountPath: /etc/certs
+          readOnly: true
+        securityContext:
+          readOnlyRootFilesystem: true
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: gateway-api-admission
+---
+#
+# config/webhook/certificate_config.yaml
+#
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gateway-api-admission
+  labels:
+    name: gateway-api-webhook
+  namespace: gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gateway-api-admission
+  labels:
+    name: gateway-api
+rules:
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gateway-api-admission
+  annotations:
+  labels:
+    name: gateway-api-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gateway-api-admission
+subjects:
+- kind: ServiceAccount
+  name: gateway-api-admission
+  namespace: gateway-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gateway-api-admission
+  annotations:
+  labels:
+    name: gateway-api-webhook
+  namespace: gateway-system
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - secrets
+  verbs:
+  - get
+  - create
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gateway-api-admission
+  annotations:
+  labels:
+    name: gateway-api-webhook
+  namespace: gateway-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gateway-api-admission
+subjects:
+- kind: ServiceAccount
+  name: gateway-api-admission
+  namespace: gateway-system
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gateway-api-admission
+  annotations:
+  labels:
+    name: gateway-api-webhook
+  namespace: gateway-system
+spec:
+  template:
+    metadata:
+      name: gateway-api-admission-create
+      labels:
+        name: gateway-api-webhook
+    spec:
+      containers:
+      - name: create
+        image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+        imagePullPolicy: IfNotPresent
+        args:
+        - create
+        - --host=gateway-api-admission-server,gateway-api-admission-server.gateway-system.svc
+        - --namespace=gateway-system
+        - --secret-name=gateway-api-admission
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      restartPolicy: OnFailure
+      serviceAccountName: gateway-api-admission
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2000
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gateway-api-admission-patch
+  labels:
+    name: gateway-api-webhook
+  namespace: gateway-system
+spec:
+  template:
+    metadata:
+      name: gateway-api-admission-patch
+      labels:
+        name: gateway-api-webhook
+    spec:
+      containers:
+      - name: patch
+        image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.1.1
+        imagePullPolicy: IfNotPresent
+        args:
+        - patch
+        - --webhook-name=gateway-api-admission
+        - --namespace=gateway-system
+        - --patch-mutating=false
+        - --patch-validating=true
+        - --secret-name=gateway-api-admission
+        - --patch-failure-policy=Fail
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      restartPolicy: OnFailure
+      serviceAccountName: gateway-api-admission
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 2000
