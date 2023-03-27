@@ -92,14 +92,14 @@ func (s *Server) Validate() error {
 		}
 
 		if s.EnvoyGateway.Extension.Service.TLS != nil {
-			certifcateRefKind := s.EnvoyGateway.Extension.Service.TLS.CertificateRef.Kind
+			certificateRefKind := s.EnvoyGateway.Extension.Service.TLS.CertificateRef.Kind
 
-			if certifcateRefKind == nil {
+			if certificateRefKind == nil {
 				return fmt.Errorf("certificateRef empty in extension service server TLS settings")
 			}
 
-			if *certifcateRefKind != gwapiv1b1.Kind("Secret") {
-				return fmt.Errorf("unsupported extension server TLS certificateRef %v", certifcateRefKind)
+			if *certificateRefKind != gwapiv1b1.Kind("Secret") {
+				return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
 			}
 		}
 	}
