@@ -82,9 +82,9 @@ func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateBootstrap(bstrap *string) error {
+func validateBootstrap(boostrapConfig *string) error {
 	userBootstrap := &bootstrapv3.Bootstrap{}
-	jsonData, err := yaml.YAMLToJSON([]byte(*bstrap))
+	jsonData, err := yaml.YAMLToJSON([]byte(*boostrapConfig))
 	if err != nil {
 		return fmt.Errorf("unable to convert user bootstrap to json: %w", err)
 	}
