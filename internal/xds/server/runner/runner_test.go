@@ -9,14 +9,13 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
-	gomonkey "github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tsaarni/certyaml"
@@ -186,9 +185,12 @@ func peekError(conn net.Conn) error {
 	return nil
 }
 
-func TestServeXdsServerListenFailed(_ *testing.T) {
-	patches := gomonkey.ApplyFuncReturn(net.Listen, nil, errors.New("ouch"))
-	defer patches.Reset()
+func TestServeXdsServerListenFailed(t *testing.T) {
+	// Occupy the address to make listening failed
+	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(XdsServerPort))
+	l, err := net.Listen("tcp", addr)
+	assert.Nil(t, err)
+	defer l.Close()
 
 	cfg, _ := config.New()
 	r := New(&Config{
