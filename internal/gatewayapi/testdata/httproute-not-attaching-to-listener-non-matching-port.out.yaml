@@ -24,10 +24,14 @@ gateways:
               kind: GRPCRoute
           attachedRoutes: 0
           conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been successfully translated
+              message: Sending translated listener configuration to the data plane
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute

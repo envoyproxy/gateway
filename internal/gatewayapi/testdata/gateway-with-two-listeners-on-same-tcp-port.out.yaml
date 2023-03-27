@@ -27,10 +27,14 @@ gateways:
               kind: TCPRoute
           AttachedRoutes: 1
           conditions:
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
-              message: Listener has been successfully translated
+              message: Sending translated listener configuration to the data plane
         - name: tcp2
           supportedKinds:
             - group: gateway.networking.k8s.io

@@ -23,10 +23,14 @@ gateways:
         kind: TLSRoute
       attachedRoutes: 1
       conditions:
+      - type: Accepted
+        status: "True"
+        reason: Accepted
+        message: Listener has been successfully translated
       - type: Programmed
         status: "True"
         reason: Programmed
-        message: Listener has been successfully translated
+        message: Sending translated listener configuration to the data plane
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TLSRoute

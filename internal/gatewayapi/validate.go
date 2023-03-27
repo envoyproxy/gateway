@@ -149,8 +149,10 @@ func (t *Translator) validateBackendService(backendRef *v1alpha2.BackendRef, par
 func (t *Translator) validateListenerConditions(listener *ListenerContext) (isReady bool) {
 	lConditions := listener.GetConditions()
 	if len(lConditions) == 0 {
-		listener.SetCondition(v1beta1.ListenerConditionProgrammed, metav1.ConditionTrue, v1beta1.ListenerReasonProgrammed,
+		listener.SetCondition(v1beta1.ListenerConditionAccepted, metav1.ConditionTrue, v1beta1.ListenerReasonAccepted,
 			"Listener has been successfully translated")
+		listener.SetCondition(v1beta1.ListenerConditionProgrammed, metav1.ConditionTrue, v1beta1.ListenerReasonProgrammed,
+			"Sending translated listener configuration to the data plane")
 		return true
 
 	}
