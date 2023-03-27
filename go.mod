@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/cncf/xds/go v0.0.0-20230105202645-06c439db220b
-	github.com/envoyproxy/go-control-plane v0.11.0
+	github.com/envoyproxy/go-control-plane v0.11.1-0.20230320001644-5efe59dc39e4
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230109191524-5f3f5a4cf573
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
