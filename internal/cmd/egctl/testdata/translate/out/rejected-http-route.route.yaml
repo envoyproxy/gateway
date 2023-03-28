@@ -1,0 +1,28 @@
+httpRoutes:
+- metadata:
+    name: backend
+    namespace: envoy-gateway-system
+  spec:
+    parentRefs:
+    - name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - reason: NoReadyListeners
+        status: "False"
+      - reason: BackendNotFound
+        status: "False"
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
