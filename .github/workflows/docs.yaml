@@ -36,7 +36,7 @@ jobs:
 
       # Upload docs for GitHub Pages    
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v1.0.7
+        uses: actions/upload-pages-artifact@v1.0.8
         with:
           # Path of the directory containing the static assets.
           path: docs/html
