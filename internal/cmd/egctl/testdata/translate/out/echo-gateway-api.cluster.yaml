@@ -1,0 +1,57 @@
+httpRoutes:
+- metadata:
+    name: backend
+    namespace: envoy-gateway-system
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - reason: Accepted
+        status: "True"
+      - reason: ResolvedRefs
+        status: "True"
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+
+---
+'@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+configKey: envoy-gateway-system-eg
+dynamicActiveClusters:
+- cluster:
+    '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+    commonLbConfig:
+      localityWeightedLbConfig: {}
+    connectTimeout: 10s
+    dnsLookupFamily: V4_ONLY
+    loadAssignment:
+      clusterName: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+      endpoints:
+      - lbEndpoints:
+        - endpoint:
+            address:
+              socketAddress:
+                portValue: 3000
+          loadBalancingWeight: 1
+        loadBalancingWeight: 1
+        locality: {}
+    name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+    outlierDetection: {}
+    type: STATIC
+resourceType: cluster
+

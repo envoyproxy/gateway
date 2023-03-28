@@ -1,3 +1,4 @@
+[
 {
   "configKey": "default-eg",
   "configs": [
@@ -477,3 +478,4 @@
   ],
   "resourceType": "all"
 }
+]
