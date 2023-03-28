@@ -25,7 +25,7 @@ spec:
       {{- include "eg.selectorLabels" . | nindent 8 }}
     spec:
       imagePullSecrets:
-        - name: {{ .Values.deployment.envoyGateway.imagePullSecret }}
+        - name: artifactory-reader
       containers:
       - args:
         - server
