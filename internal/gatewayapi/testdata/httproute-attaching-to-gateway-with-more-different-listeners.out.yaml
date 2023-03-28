@@ -73,14 +73,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-2
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -89,14 +89,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-3
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -105,14 +105,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-4
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -121,14 +121,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-5
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -137,14 +137,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-6
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -153,14 +153,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-7
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -169,14 +169,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
         - name: http-8
           supportedKinds:
             - group: gateway.networking.k8s.io
@@ -185,14 +185,14 @@ gateways:
               kind: GRPCRoute              
           attachedRoutes: 1
           conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
             - type: Programmed
               status: "True"
               reason: Programmed
               message: Sending translated listener configuration to the data plane
+            - type: Accepted
+              status: "True"
+              reason: Accepted
+              message: Listener has been successfully translated
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute
