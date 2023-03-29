@@ -103,6 +103,19 @@ func DefaultKubernetesDeploymentReplicas() *int32 {
 func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
 		Replicas:  DefaultKubernetesDeploymentReplicas(),
+		Pod:       DefaultKubernetesPod(),
+		Container: DefaultKubernetesContainer(),
+	}
+}
+
+// DefaultKubernetesPod returns a new KubernetesPodSpec with default settings.
+func DefaultKubernetesPod() *KubernetesPodSpec {
+	return &KubernetesPodSpec{}
+}
+
+// DefaultKubernetesContainer returns a new KubernetesContainerSpec with default settings.
+func DefaultKubernetesContainer() *KubernetesContainerSpec {
+	return &KubernetesContainerSpec{
 		Resources: DefaultResourceRequirements(),
 	}
 }
@@ -155,8 +168,12 @@ func (r *ResourceProvider) GetKubeResourceProvider() *KubernetesResourceProvider
 		r.Kubernetes.EnvoyDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
 	}
 
-	if r.Kubernetes.EnvoyDeployment.Resources == nil {
-		r.Kubernetes.EnvoyDeployment.Resources = DefaultResourceRequirements()
+	if r.Kubernetes.EnvoyDeployment.Pod == nil {
+		r.Kubernetes.EnvoyDeployment.Pod = DefaultKubernetesPod()
+	}
+
+	if r.Kubernetes.EnvoyDeployment.Container == nil {
+		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer()
 	}
 
 	if r.Kubernetes.EnvoyService == nil {

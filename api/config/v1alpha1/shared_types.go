@@ -45,18 +45,48 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// PodAnnotations are the annotations that should be appended to the pods.
+	// Pod defines the desired replicas, annotations and securityContext of container.
+	//
+	// +optional
+	Pod *KubernetesPodSpec `json:"pod,omitempty"`
+
+	// Container defines the resources and securityContext of container.
+	//
+	// +optional
+	Container *KubernetesContainerSpec `json:"container,omitempty"`
+
+	// TODO: Expose config as use cases are better understood, e.g. labels.
+}
+
+// KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
+type KubernetesPodSpec struct {
+	// Annotations are the annotations that should be appended to the pods.
 	// By default, no pod annotations are appended.
 	//
 	// +optional
-	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// Optional: Defaults to empty.  See type description for default values of each field.
+	//
+	// +optional
+	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+}
+
+// KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
+type KubernetesContainerSpec struct {
 	// Resources required by this container.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	//
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// TODO: Expose config as use cases are better understood, e.g. labels.
+	// SecurityContext defines the security options the container should be run with.
+	// If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext.
+	// More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+	//
+	// +optional
+	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
 }
 
 // ServiceType string describes ingress methods for a service

@@ -58,8 +58,8 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 
 	// Get annotations
 	var annotations map[string]string
-	if deploymentConfig.PodAnnotations != nil {
-		annotations = deploymentConfig.PodAnnotations
+	if deploymentConfig.Pod.Annotations != nil {
+		annotations = deploymentConfig.Pod.Annotations
 	}
 
 	deployment := &appsv1.Deployment{
@@ -88,6 +88,7 @@ func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, er
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
+					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",
@@ -202,8 +203,9 @@ func expectedProxyContainers(infra *ir.Infra, deploymentConfig *egcfgv1a1.Kubern
 					},
 				},
 			},
-			Resources: *deploymentConfig.Resources,
-			Ports:     ports,
+			Resources:       *deploymentConfig.Container.Resources,
+			SecurityContext: deploymentConfig.Container.SecurityContext,
+			Ports:           ports,
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "certs",
