@@ -520,7 +520,7 @@ spec:
       extensionRef:
         group: gateway.envoyproxy.io
         kind: RateLimitFilter
-        name: ratelimit-per-ip
+        name: ratelimit-all-ips
     backendRefs:
     - group: ""
       kind: Service
