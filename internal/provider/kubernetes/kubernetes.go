@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -43,6 +44,11 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	mgr, err := ctrl.NewManager(cfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
+	}
+
+	// Setup webhook
+	if err := (&egcfgv1a1.EnvoyProxy{}).SetupWebhookWithManager(mgr); err != nil {
+		return nil, fmt.Errorf("failed to create webhook: %w", err)
 	}
 
 	updateHandler := status.NewUpdateHandler(mgr.GetLogger(), mgr.GetClient())

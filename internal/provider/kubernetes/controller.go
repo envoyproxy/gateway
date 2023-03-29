@@ -29,7 +29,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -1258,18 +1257,11 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	found := false
-	valid := false
-	var validationErr error
 	for i := range epList.Items {
 		ep := epList.Items[i]
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 		if classRefsEnvoyProxy(gc, &ep) {
 			found = true
-			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
-				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
-				continue
-			}
-			valid = true
 			resourceTree.EnvoyProxy = &ep
 			break
 		}
@@ -1277,10 +1269,6 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 
 	if !found {
 		return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
-	}
-
-	if !valid {
-		return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
 	}
 
 	return nil
