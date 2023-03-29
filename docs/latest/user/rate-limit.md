@@ -480,6 +480,92 @@ transfer-encoding: chunked
 
 ```
 
+## Rate limit Client IP Addresses
+
+Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on their
+ IP address (also reflected in the  `X-Forwarded-For` header).
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-all-ips
+spec:
+  type: Global
+  global:
+    rules:
+    - clientSelectors:
+      - sourceIP: 0.0.0.0/0
+      limit:
+        requests: 3
+        unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: http-ratelimit
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example 
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-all-ips
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+EOF
+```
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" http://${GATEWAY_HOST}/get ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Tue, 28 Mar 2023 08:28:45 GMT
+content-length: 512
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Tue, 28 Mar 2023 08:28:46 GMT
+content-length: 512
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Tue, 28 Mar 2023 08:28:48 GMT
+content-length: 512
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Tue, 28 Mar 2023 08:28:48 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
 
 [Global rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [RateLimitFilter]: https://gateway.envoyproxy.io/latest/api/extension_types.html#ratelimitfilter
