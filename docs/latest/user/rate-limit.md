@@ -483,7 +483,7 @@ transfer-encoding: chunked
 ## Rate limit for remote address
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on their
-remote address in the `XFF` header.
+ IP address (also reflected in the  `X-Forwarded-For` header).
 
 ```shell
 cat <<EOF | kubectl apply -f -
