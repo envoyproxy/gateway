@@ -482,7 +482,7 @@ transfer-encoding: chunked
 
 ## Rate limit for remote address
 
-Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
+Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on their
 remote address in the `XFF` header.
 
 ```shell
