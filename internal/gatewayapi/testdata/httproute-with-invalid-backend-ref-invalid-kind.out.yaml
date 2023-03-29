@@ -28,6 +28,10 @@ gateways:
       - type: Programmed
         status: "True"
         reason: Programmed
+        message: Sending translated listener configuration to the data plane
+      - type: Accepted
+        status: "True"
+        reason: Accepted
         message: Listener has been successfully translated
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
