@@ -480,7 +480,7 @@ transfer-encoding: chunked
 
 ```
 
-## Rate limit for remote address
+## Rate limit Client IP Addresses
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on their
  IP address (also reflected in the  `X-Forwarded-For` header).
