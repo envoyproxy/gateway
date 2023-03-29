@@ -490,7 +490,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
 metadata:
-  name: ratelimit-per-ip
+  name: ratelimit-all-ips
 spec:
   type: Global
   global:
