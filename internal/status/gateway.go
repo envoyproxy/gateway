@@ -26,27 +26,37 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
-		for i := range svc.Status.LoadBalancer.Ingress {
-			switch {
-			case len(svc.Status.LoadBalancer.Ingress[i].IP) > 0:
-				addresses = append(addresses, svc.Status.LoadBalancer.Ingress[i].IP)
-			case len(svc.Status.LoadBalancer.Ingress[i].Hostname) > 0:
-				// Remove when the following supports the hostname address type:
-				// https://github.com/kubernetes-sigs/gateway-api/blob/v0.5.0/conformance/utils/kubernetes/helpers.go#L201-L207
-				if svc.Status.LoadBalancer.Ingress[i].Hostname == "localhost" {
-					addresses = append(addresses, "127.0.0.1")
+		if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			for i := range svc.Status.LoadBalancer.Ingress {
+				switch {
+				case len(svc.Status.LoadBalancer.Ingress[i].IP) > 0:
+					addresses = append(addresses, svc.Status.LoadBalancer.Ingress[i].IP)
+				case len(svc.Status.LoadBalancer.Ingress[i].Hostname) > 0:
+					// Remove when the following supports the hostname address type:
+					// https://github.com/kubernetes-sigs/gateway-api/blob/v0.5.0/conformance/utils/kubernetes/helpers.go#L201-L207
+					if svc.Status.LoadBalancer.Ingress[i].Hostname == "localhost" {
+						addresses = append(addresses, "127.0.0.1")
+					}
+					hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 				}
-				hostnames = append(hostnames, svc.Status.LoadBalancer.Ingress[i].Hostname)
 			}
 		}
 
-		var gwAddrs []gwapiv1b1.GatewayAddress
+		if svc.Spec.Type == corev1.ServiceTypeClusterIP {
+			for i := range svc.Spec.ClusterIPs {
+				if svc.Spec.ClusterIPs[i] != "" {
+					addresses = append(addresses, svc.Spec.ClusterIPs[i])
+				}
+			}
+		}
+
+		var gwAddresses []gwapiv1b1.GatewayAddress
 		for i := range addresses {
 			addr := gwapiv1b1.GatewayAddress{
 				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
 				Value: addresses[i],
 			}
-			gwAddrs = append(gwAddrs, addr)
+			gwAddresses = append(gwAddresses, addr)
 		}
 
 		for i := range hostnames {
@@ -54,10 +64,10 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.HostnameAddressType),
 				Value: hostnames[i],
 			}
-			gwAddrs = append(gwAddrs, addr)
+			gwAddresses = append(gwAddresses, addr)
 		}
 
-		gw.Status.Addresses = gwAddrs
+		gw.Status.Addresses = gwAddresses
 	} else {
 		gw.Status.Addresses = nil
 	}
