@@ -6,6 +6,8 @@
 package testutils
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -14,6 +16,7 @@ import (
 	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -22,6 +25,10 @@ type XDSHookClient struct{}
 // PostRouteModifyHook returns a modified version of the route using context info and the passed in extensionResources
 func (c *XDSHookClient) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
 	for _, extensionResource := range extensionResources {
+		// Simulate an error an extension may return
+		if route.Name == "extension-post-xdsroute-hook-error" {
+			return nil, errors.New("route hook resource error")
+		}
 		route.ResponseHeadersToAdd = append(route.ResponseHeadersToAdd,
 			&core.HeaderValueOption{
 				Header: &core.HeaderValue{
@@ -68,7 +75,9 @@ func (c *XDSHookClient) PostRouteModifyHook(route *route.Route, routeHostnames [
 func (c *XDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
 	// Only make the change when the VirtualHost's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
-	if vh.Name == "extension-listener" {
+	if vh.Name == "extension-post-xdsvirtualhost-hook-error" {
+		return nil, fmt.Errorf("extension post xds virtual host hook error")
+	} else if vh.Name == "extension-listener" {
 		vh.Routes = append(vh.Routes, &route.Route{
 			Name: "mock-extension-inserted-route",
 			Action: &route.Route_DirectResponse{
@@ -88,7 +97,9 @@ func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener) (*liste
 
 	// Only make the change when the listener's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
-	if l.Name == "extension-listener" {
+	if l.Name == "extension-post-xdslistener-hook-error" {
+		return nil, fmt.Errorf("extension post xds listener hook error")
+	} else if l.Name == "extension-listener" {
 		l.StatPrefix = "mock-extension-inserted-prefix"
 	}
 	return l, nil
@@ -128,6 +139,23 @@ func (c *XDSHookClient) PostTranslationInsertHook() ([]*cluster.Cluster, []*tls.
 					},
 				},
 			},
+		},
+		// This is one of the default test clusters, but the connect timeout has been changed
+		{
+			Name: "first-route",
+			CommonLbConfig: &cluster.Cluster_CommonLbConfig{
+				LocalityConfigSpecifier: &cluster.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{},
+			},
+			ConnectTimeout:  &durationpb.Duration{Seconds: 30},
+			DnsLookupFamily: cluster.Cluster_V4_ONLY,
+			EdsClusterConfig: &cluster.Cluster_EdsClusterConfig{
+				EdsConfig: &core.ConfigSource{
+					ConfigSourceSpecifier: &core.ConfigSource_Ads{},
+					ResourceApiVersion:    core.ApiVersion_V3,
+				},
+			},
+			OutlierDetection:     &cluster.OutlierDetection{},
+			ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_EDS},
 		},
 	}
 

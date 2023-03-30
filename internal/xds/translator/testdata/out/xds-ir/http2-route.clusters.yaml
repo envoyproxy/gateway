@@ -14,13 +14,3 @@
       '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
       explicitHttpConfig:
         http2ProtocolOptions: {}
-- loadAssignment:
-    clusterName: mock-extension-injected-cluster
-    endpoints:
-    - lbEndpoints:
-      - endpoint:
-          address:
-            socketAddress:
-              address: exampleservice.examplenamespace.svc.cluster.local
-              portValue: 5000
-  name: mock-extension-injected-cluster

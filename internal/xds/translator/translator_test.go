@@ -130,9 +130,6 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "authn-ratelimit",
 		},
-		{
-			name: "http-route-extension-filter",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -144,27 +141,6 @@ func TestTranslateXds(t *testing.T) {
 					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
 				},
 			}
-			ext := v1alpha1.Extension{
-				Resources: []v1alpha1.GroupVersionKind{
-					{
-						Group:   "foo.example.io",
-						Version: "v1alpha1",
-						Kind:    "examplefilter",
-					},
-				},
-				Hooks: &v1alpha1.ExtensionHooks{
-					XDSTranslator: &v1alpha1.XDSTranslatorHooks{
-						Post: []v1alpha1.XDSTranslatorHook{
-							v1alpha1.XDSRoute,
-							v1alpha1.XDSVirtualHost,
-							v1alpha1.XDSHTTPListener,
-							v1alpha1.XDSTranslation,
-						},
-					},
-				},
-			}
-			extMgr := testutils.NewManager(ext)
-			tr.ExtensionManager = &extMgr
 
 			tCtx, err := tr.Translate(ir)
 			require.NoError(t, err)
@@ -217,6 +193,101 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, "ratelimit-config", tc.name+".yaml")
 			out := BuildRateLimitServiceConfig(in)
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", tc.name+".yaml"), requireYamlRootToYAMLString(t, out))
+		})
+	}
+}
+
+func TestTranslateXdsWithExtension(t *testing.T) {
+	testCases := []struct {
+		name           string
+		requireSecrets bool
+		err            string
+	}{
+		// Require secrets for all the tests since the extension for testing always injects one
+		{
+			name:           "empty",
+			requireSecrets: true,
+			err:            "",
+		},
+		{
+			name:           "http-route",
+			requireSecrets: true,
+			err:            "",
+		},
+		{
+			name:           "http-route-extension-filter",
+			requireSecrets: true,
+			err:            "",
+		},
+		{
+			name:           "http-route-extension-route-error",
+			requireSecrets: true,
+			err:            "route hook resource error",
+		},
+		{
+			name:           "http-route-extension-virtualhost-error",
+			requireSecrets: true,
+			err:            "extension post xds virtual host hook error",
+		},
+		{
+			name:           "http-route-extension-listener-error",
+			requireSecrets: true,
+			err:            "extension post xds listener hook error",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			// Testdata for the extension tests is similar to the ir test dat
+			// New directory is just to keep them separate and easy to understand
+			ir := requireXdsIRFromInputTestData(t, "extension-xds-ir", tc.name+".yaml")
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+				},
+			}
+			ext := v1alpha1.Extension{
+				Resources: []v1alpha1.GroupVersionKind{
+					{
+						Group:   "foo.example.io",
+						Version: "v1alpha1",
+						Kind:    "examplefilter",
+					},
+				},
+				Hooks: &v1alpha1.ExtensionHooks{
+					XDSTranslator: &v1alpha1.XDSTranslatorHooks{
+						Post: []v1alpha1.XDSTranslatorHook{
+							v1alpha1.XDSRoute,
+							v1alpha1.XDSVirtualHost,
+							v1alpha1.XDSHTTPListener,
+							v1alpha1.XDSTranslation,
+						},
+					},
+				},
+			}
+			extMgr := testutils.NewManager(ext)
+			tr.ExtensionManager = &extMgr
+
+			tCtx, err := tr.Translate(ir)
+
+			if tc.err != "" {
+				require.EqualError(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+				listeners := tCtx.XdsResources[resourcev3.ListenerType]
+				routes := tCtx.XdsResources[resourcev3.RouteType]
+				clusters := tCtx.XdsResources[resourcev3.ClusterType]
+				endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
+				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
+				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
+				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
+				if tc.requireSecrets {
+					secrets := tCtx.XdsResources[resourcev3.SecretType]
+					require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
+				}
+			}
 		})
 	}
 }
