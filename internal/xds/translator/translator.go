@@ -15,9 +15,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	resourceTypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -29,6 +26,10 @@ type Translator struct {
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
+
+	// ExtensionManager holds the config for interacting with extensions when generating xDS
+	// resources. Only required during xds translation.
+	ExtensionManager *extensionTypes.Manager
 }
 
 type GlobalRateLimitSettings struct {
@@ -38,14 +39,14 @@ type GlobalRateLimitSettings struct {
 }
 
 // Translate translates the XDS IR into xDS resources
-func (t *Translator) Translate(ir *ir.Xds, extManager extensionTypes.Manager) (*types.ResourceVersionTable, error) {
+func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	if ir == nil {
 		return nil, errors.New("ir is nil")
 	}
 
 	tCtx := new(types.ResourceVersionTable)
 
-	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, extManager); err != nil {
+	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP); err != nil {
 		return nil, err
 	}
 
@@ -57,41 +58,28 @@ func (t *Translator) Translate(ir *ir.Xds, extManager extensionTypes.Manager) (*
 		return nil, err
 	}
 
-	// If there is a loaded extension that wants to inject clusters/secrets, then call it
-	// while clusters can by statically added with bootstrap configuration, an extension may need to add clusters with a configuration
-	// that is non-static. If a cluster definition is unlikely to change over the course of an extension's lifetime then the custom bootstrap config
-	// is the preferred way of adding it.
-	extensionInsertHookClient := extManager.GetXDSHookClient(extensionTypes.PostXDSTranslation)
-	if extensionInsertHookClient != nil {
-		newClusters, newSecrets, err := extensionInsertHookClient.PostTranslationInsertHook()
-		if err != nil {
-			return nil, err
-		}
-
-		// We're assuming that Cluster names are unique.
-		for _, addedCluster := range newClusters {
-			tCtx.AddOrReplaceXdsResource(resourcev3.ClusterType, addedCluster, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
-				oldCluster := existing.(*clusterv3.Cluster)
-				newCluster := new.(*clusterv3.Cluster)
-				if newCluster == nil || oldCluster == nil {
-					return false
-				}
-				if oldCluster.Name == newCluster.Name {
-					return true
-				}
-				return false
-			})
-		}
-
-		for _, secret := range newSecrets {
-			tCtx.AddXdsResource(resourcev3.SecretType, secret)
-		}
+	// Check if an extension want to inject any clusters/secrets
+	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
+	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
+		return nil, err
 	}
 
 	return tCtx, nil
 }
 
-func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener, extManager extensionTypes.Manager) error {
+func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
+
+	// See if any extensions are loaded that want to modify xDS VirtualHosts or Routes
+	// If so, then store the clients for them up-front to prevent needing to grab the client multiple times
+	// in the loops below
+	var extensionRouteClient extensionTypes.XDSHookClient
+	var extensionVHostClient extensionTypes.XDSHookClient
+	if t.ExtensionManager != nil {
+		mgr := *t.ExtensionManager
+		extensionRouteClient = mgr.GetXDSHookClient(extensionTypes.PostXDSRoute)
+		extensionVHostClient = mgr.GetXDSHookClient(extensionTypes.PostXDSVirtualHost)
+	}
+
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
@@ -149,32 +137,15 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		}
 
 		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
-		extRouteHookClient := extManager.GetXDSHookClient(extensionTypes.PostXDSRoute)
 		for _, httpRoute := range httpListener.Routes {
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 
-			// If a loaded extension wants to modify routes and the extension's resources are used on the HTTPRoute then call the extension hook
-			if extRouteHookClient != nil && len(httpRoute.ExtensionRefs) > 0 {
-
-				unstructuredResources := make([]*unstructured.Unstructured, len(httpRoute.ExtensionRefs))
-				for refIdx, ref := range httpRoute.ExtensionRefs {
-					unstructuredResources[refIdx] = ref.Object
-				}
-				modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
-					xdsRoute,
-					vHost.Domains,
-					unstructuredResources,
-				)
-				if err != nil {
-					// Maybe logging the error is better here, but this only happens when an extension is in-use
-					// so if modification fails then we should probably treat that as a serious problem.
+			// Check if an extension want to modify the route we just generated
+			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+			if extensionRouteClient != nil && len(httpRoute.ExtensionRefs) > 0 {
+				if err := processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, extensionRouteClient); err != nil {
 					return err
-				}
-
-				// An extension is allowed to return a nil route to prevent it from being added
-				if modifiedRoute != nil {
-					vHost.Routes = append(vHost.Routes, modifiedRoute)
 				}
 			} else {
 				vHost.Routes = append(vHost.Routes, xdsRoute)
@@ -208,22 +179,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 		}
 
-		// Check if an extension is loaded that wants to modify xDS VirtualHosts after they have been generated
-		extVHHookClient := extManager.GetXDSHookClient(extensionTypes.PostXDSVirtualHost)
-		// If no extension exists that wants to modify the VirtualHost then be done with it
-		if extVHHookClient == nil {
-			xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
-		} else {
-			modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
-			if err != nil {
-				// Maybe logging the error is better here, but this only happens when an extension is in-use
-				// so if modification fails then we should probably treat that as a serious problem.
+		// Check if an extension want to modify the Virtual Host we just generated
+		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+		if extensionVHostClient != nil {
+			if err := processExtensionPostVHostHook(vHost, xdsRouteCfg, extensionRouteClient); err != nil {
 				return err
 			}
-
-			if modifiedVH != nil {
-				xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
-			}
+		} else {
+			xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
 		}
 
 		// TODO: Make this into a generic interface for API Gateway features.
@@ -238,28 +201,9 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			return err
 		}
 		// Check if an extension want to modify the listener that was just configured/created
-		extListenerHookClient := extManager.GetXDSHookClient(extensionTypes.PostXDSHTTPListener)
-		if extListenerHookClient != nil {
-			modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener)
-			if err != nil {
-				return err
-			} else if modifiedListener != nil {
-				// Use the resource table to update the listener with the modified version returned by the extension
-				// We're assuming that Listener names are unique.
-				tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
-					oldListener := existing.(*listenerv3.Listener)
-					newListener := new.(*listenerv3.Listener)
-					if newListener == nil || oldListener == nil {
-						return false
-					}
-					if oldListener.Name == newListener.Name {
-						return true
-					}
-					return false
-				})
-
-			}
-
+		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
+		if err := processExtensionPostListenerHook(tCtx, xdsListener, t.ExtensionManager); err != nil {
+			return err
 		}
 	}
 

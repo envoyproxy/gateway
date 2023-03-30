@@ -164,8 +164,9 @@ func TestTranslateXds(t *testing.T) {
 				},
 			}
 			extMgr := testutils.NewManager(ext)
+			tr.ExtensionManager = &extMgr
 
-			tCtx, err := tr.Translate(ir, extMgr)
+			tCtx, err := tr.Translate(ir)
 			require.NoError(t, err)
 			listeners := tCtx.XdsResources[resourcev3.ListenerType]
 			routes := tCtx.XdsResources[resourcev3.RouteType]
