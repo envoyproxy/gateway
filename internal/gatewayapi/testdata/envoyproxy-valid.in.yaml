@@ -12,10 +12,23 @@ envoyproxy:
           type: LoadBalancer
         envoyDeployment:
           replicas: 2
-          resources:
-            requests:
-              cpu: 100m
-              memory: 512Mi
+          container:
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+            securityContext:
+              runAsUser: 2000
+              allowPrivilegeEscalation: false
+          pod:
+            annotations:
+              key1: val1
+              key2: val2
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 3000
+              fsGroup: 2000
+              fsGroupChangePolicy: "OnRootMismatch"
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
