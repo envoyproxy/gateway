@@ -17,6 +17,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -110,6 +111,26 @@ func checkPodAnnotations(t *testing.T, deploy *appsv1.Deployment, expected map[s
 	t.Errorf("deployment has unexpected %q pod annotations ", deploy.Spec.Template.Annotations)
 }
 
+func checkPodSecurityContext(t *testing.T, deploy *appsv1.Deployment, expected *corev1.PodSecurityContext) {
+	t.Helper()
+
+	if apiequality.Semantic.DeepEqual(deploy.Spec.Template.Spec.SecurityContext, expected) {
+		return
+	}
+
+	t.Errorf("deployment has unexpected %q pod annotations ", deploy.Spec.Template.Spec.SecurityContext)
+}
+
+func checkContainerSecurityContext(t *testing.T, container *corev1.Container, expected *corev1.SecurityContext) {
+	t.Helper()
+
+	if apiequality.Semantic.DeepEqual(container.SecurityContext, expected) {
+		return
+	}
+
+	t.Errorf("container has unexpected %q pod annotations ", container.SecurityContext)
+}
+
 func checkContainerImage(t *testing.T, container *corev1.Container, image string) {
 	t.Helper()
 
@@ -128,7 +149,11 @@ func checkContainerResources(t *testing.T, container *corev1.Container, expected
 	t.Errorf("container has unexpected %q resources ", expected)
 }
 
-func testExpectedProxyDeployment(t *testing.T, infra *ir.Infra, expected *corev1.ResourceRequirements) {
+func testExpectedProxyDeployment(t *testing.T,
+	infra *ir.Infra,
+	expectedResources *corev1.ResourceRequirements,
+	expectedPodSecurityContext *corev1.PodSecurityContext,
+	expectedSecurityContext *corev1.SecurityContext) {
 	svrCfg, err := config.New()
 	require.NoError(t, err)
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
@@ -162,7 +187,9 @@ func testExpectedProxyDeployment(t *testing.T, infra *ir.Infra, expected *corev1
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
 	checkContainerImage(t, container, ir.DefaultProxyImage)
-	checkContainerResources(t, container, expected)
+	checkContainerResources(t, container, expectedResources)
+	checkContainerSecurityContext(t, container, expectedSecurityContext)
+	checkPodSecurityContext(t, deploy, expectedPodSecurityContext)
 	checkEnvVar(t, deploy, envoyContainerName, envoyNsEnvVar)
 	checkEnvVar(t, deploy, envoyContainerName, envoyPodEnvVar)
 	checkLabels(t, deploy, deploy.Labels)
@@ -193,7 +220,7 @@ func testExpectedProxyDeployment(t *testing.T, infra *ir.Infra, expected *corev1
 }
 
 func TestExpectedProxyDeployment(t *testing.T) {
-	testExpectedProxyDeployment(t, ir.NewInfra(), egcfgv1a1.DefaultResourceRequirements())
+	testExpectedProxyDeployment(t, ir.NewInfra(), egcfgv1a1.DefaultResourceRequirements(), nil, nil)
 }
 
 func TestExpectedProxyDeploymentForSpecifiedResources(t *testing.T) {
@@ -205,6 +232,17 @@ func TestExpectedProxyDeploymentForSpecifiedResources(t *testing.T) {
 			corev1.ResourceMemory: resource.MustParse("128Mi")},
 		Claims: nil,
 	}
+	containerSecurityContext := corev1.SecurityContext{
+		RunAsUser:                pointer.Int64(2000),
+		AllowPrivilegeEscalation: pointer.Bool(false),
+	}
+	FSGroupChangePolicy := func(s corev1.PodFSGroupChangePolicy) *corev1.PodFSGroupChangePolicy { return &s }
+	podSecurityContext := corev1.PodSecurityContext{
+		RunAsUser:           pointer.Int64(1000),
+		RunAsGroup:          pointer.Int64(3000),
+		FSGroup:             pointer.Int64(2000),
+		FSGroupChangePolicy: FSGroupChangePolicy(corev1.FSGroupChangeOnRootMismatch),
+	}
 	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
@@ -212,14 +250,20 @@ func TestExpectedProxyDeploymentForSpecifiedResources(t *testing.T) {
 			Type: egcfgv1a1.ProviderTypeKubernetes,
 			Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
 				EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
-					Resources: &requirements,
+					Pod: &egcfgv1a1.KubernetesPodSpec{
+						SecurityContext: &podSecurityContext,
+					},
+					Container: &egcfgv1a1.KubernetesContainerSpec{
+						Resources:       &requirements,
+						SecurityContext: &containerSecurityContext,
+					},
 				},
 			},
 		}},
 		Status: egcfgv1a1.EnvoyProxyStatus{},
 	}
 
-	testExpectedProxyDeployment(t, infra, &requirements)
+	testExpectedProxyDeployment(t, infra, &requirements, &podSecurityContext, &containerSecurityContext)
 }
 
 func TestExpectedBootstrap(t *testing.T) {
@@ -277,7 +321,9 @@ func TestExpectedPodAnnotations(t *testing.T) {
 				Type: egcfgv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
 					EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
-						PodAnnotations: annotations,
+						Pod: &egcfgv1a1.KubernetesPodSpec{
+							Annotations: annotations,
+						},
 					},
 				},
 			},
