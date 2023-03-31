@@ -202,11 +202,11 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
-			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
-		case string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
 			return nil
-		case string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -215,10 +215,10 @@ func ValidateHTTPRouteFilter(filter *v1beta1.HTTPRouteFilter, extGKs ...schema.G
 					return nil
 				}
 			}
-			return fmt.Errorf("unknown %s kind", string(filter.ExtensionRef.Kind))
+			return fmt.Errorf("unknown kind %s/%s", string(filter.ExtensionRef.Group), string(filter.ExtensionRef.Kind))
 		}
 	default:
-		return fmt.Errorf("unsupported filter type: %v", filter.Type)
+		return fmt.Errorf("unsupported filter type %v", filter.Type)
 	}
 }
 
@@ -257,9 +257,9 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 				return nil
 			}
 		}
-		return fmt.Errorf("unknown %s kind", string(filter.ExtensionRef.Kind))
+		return fmt.Errorf("unknown kind %s/%s", string(filter.ExtensionRef.Group), string(filter.ExtensionRef.Kind))
 	default:
-		return fmt.Errorf("unsupported filter type: %v", filter.Type)
+		return fmt.Errorf("unsupported filter type %v", filter.Type)
 	}
 }
 
