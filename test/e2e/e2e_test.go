@@ -46,7 +46,7 @@ func TestE2E(t *testing.T) {
 		Debug:                      *flags.ShowDebug,
 		CleanupBaseResources:       *flags.CleanupBaseResources,
 		EnableAllSupportedFeatures: *flags.EnableAllSupportedFeatures,
-		FS:                         Manifests,
+		FS:                         &Manifests,
 	})
 
 	cSuite.Setup(t)
