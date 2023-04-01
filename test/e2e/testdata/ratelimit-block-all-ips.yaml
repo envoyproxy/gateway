@@ -2,7 +2,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
 metadata:
   name: ratelimit-all-ips
-  namespace: gateway-e2e-infra
+  namespace: gateway-conformance-infra
 spec:
   type: Global
   global:
@@ -17,7 +17,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
   name: http-ratelimit
-  namespace: gateway-e2e-infra
+  namespace: gateway-conformance-infra
 spec:
   parentRefs:
     - name: same-namespace
