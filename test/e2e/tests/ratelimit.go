@@ -10,6 +10,7 @@ package tests
 
 import (
 	"testing"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -18,21 +19,26 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, RateLimitBlockAllIPs)
+	ConformanceTests = append(ConformanceTests, RateLimitTest)
 }
 
-var RateLimitBlockAllIPs = suite.ConformanceTest{
-	ShortName:   "RateLimitBlockAllIPs",
+var RateLimitTest = suite.ConformanceTest{
+	ShortName:   "RateLimit",
 	Description: "Limit all requests",
 	Manifests:   []string{"testdata/ratelimit-block-all-ips.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("RateLimitBlockAllIPs", func(t *testing.T) {
+		t.Run("block all ips", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			// TODO: find a better to make sure ratelimit load new configuration
+			// just wait a bit more time for now
+			tc := suite.TimeoutConfig
+			tc.MaxTimeToConsistency = 60 * time.Second
+
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, tc, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
 				},
