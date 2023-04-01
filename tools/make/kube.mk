@@ -96,6 +96,26 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 .PHONY: conformance
 conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+.PHONY: e2e
+e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
+
+.PHONY: install-ratelimit
+install-ratelimit:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/redis/redis.yaml
+	kubectl apply -f examples/redis/envoy-gateway-config.yaml
+	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+
+.PHONY: run-e2e
+run-e2e:
+	@$(LOG_TARGET)
+	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
+	kubectl apply -f test/config/gatewayclass.yaml
+	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
+
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
 	@$(LOG_TARGET)
