@@ -35,10 +35,9 @@ var RateLimitTest = suite.ConformanceTest{
 
 			// TODO: find a better to make sure ratelimit load new configuration
 			// just wait a bit more time for now
-			tc := suite.TimeoutConfig
-			tc.MaxTimeToConsistency = 60 * time.Second
+			time.Sleep(60 * time.Second)
 
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, tc, gwAddr, http.ExpectedResponse{
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
 				},
