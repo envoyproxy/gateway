@@ -118,8 +118,8 @@ jobs:
         chmod +x bin/linux/amd64/envoy-gateway
         chmod +x bin/linux/arm64/envoy-gateway
 
-    # conformance
-    - name: Run Conformance Tests 
+    # E2E
+    - name: Run E2E Tests 
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
         CONFORMANCE_UNIQUE_PORTS: false
