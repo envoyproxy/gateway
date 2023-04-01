@@ -32,5 +32,44 @@ dynamicActiveClusters:
         '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
         explicitHttpConfig:
           http2ProtocolOptions: {}
+- cluster:
+    '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+    commonLbConfig:
+      localityWeightedLbConfig: {}
+    connectTimeout: 10s
+    dnsLookupFamily: V4_ONLY
+    edsClusterConfig:
+      edsConfig:
+        ads: {}
+        resourceApiVersion: V3
+    name: default-eg-tls-passthrough-backend
+    outlierDetection: {}
+    type: EDS
+- cluster:
+    '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+    commonLbConfig:
+      localityWeightedLbConfig: {}
+    connectTimeout: 10s
+    dnsLookupFamily: V4_ONLY
+    edsClusterConfig:
+      edsConfig:
+        ads: {}
+        resourceApiVersion: V3
+    name: default-eg-tcp-backend
+    outlierDetection: {}
+    type: EDS
+- cluster:
+    '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+    commonLbConfig:
+      localityWeightedLbConfig: {}
+    connectTimeout: 10s
+    dnsLookupFamily: V4_ONLY
+    edsClusterConfig:
+      edsConfig:
+        ads: {}
+        resourceApiVersion: V3
+    name: default-eg-udp-backend
+    outlierDetection: {}
+    type: EDS
 resourceType: cluster
 
