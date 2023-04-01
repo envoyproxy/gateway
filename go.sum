@@ -308,8 +308,8 @@ github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9de
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.1.32/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-github.com/zirain-dev/gateway-api v0.0.0-20230401061253-a6ad8690a962 h1:UqnR9sabEyRz4uOPhBb96Lf+zZ6UEnbyWLo4deSk8r0=
-github.com/zirain-dev/gateway-api v0.0.0-20230401061253-a6ad8690a962/go.mod h1:NX9zen73f67hVxc+aNgKt71N3T5z4wySTOxWXQiGxLs=
+github.com/zirain-dev/gateway-api v0.0.0-20230401074556-93436f059be6 h1:0+aeWLNKEngKgjgZ2N9QzW/pIMS3WLuzFvTj1HsTq48=
+github.com/zirain-dev/gateway-api v0.0.0-20230401074556-93436f059be6/go.mod h1:EYJT+jlPWTeNskjV0JTki/03WX1cyAnBhwBJfYHpV/0=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=
