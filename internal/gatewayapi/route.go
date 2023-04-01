@@ -413,22 +413,11 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 
 		if match.Method != nil {
 			// GRPC's path is in the form of "/<service>/<method>"
-			// TODO: support regex match type after https://github.com/kubernetes-sigs/gateway-api/issues/1746 is resolved
-			switch {
-			case match.Method.Service != nil && match.Method.Method != nil:
-				irRoute.PathMatch = &ir.StringMatch{
-					Exact: StringPtr(fmt.Sprintf("/%s/%s", *match.Method.Service, *match.Method.Method)),
-				}
-			case match.Method.Method != nil:
-				// Use a header match since the PathMatch doesn't support Suffix matching
-				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
-					Name:   ":path",
-					Suffix: StringPtr(fmt.Sprintf("/%s", *match.Method.Method)),
-				})
-			case match.Method.Service != nil:
-				irRoute.PathMatch = &ir.StringMatch{
-					Prefix: StringPtr(fmt.Sprintf("/%s", *match.Method.Service)),
-				}
+			switch GRPCMethodMatchTypeDerefOr(match.Method.Type, v1alpha2.GRPCMethodMatchExact) {
+			case v1alpha2.GRPCMethodMatchExact:
+				t.processGRPCRouteMethodExact(match.Method, irRoute)
+			case v1alpha2.GRPCMethodMatchRegularExpression:
+				t.processGRPCRouteMethodRegularExpression(match.Method, irRoute)
 			}
 		}
 
@@ -436,6 +425,46 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 	}
 	return ruleRoutes
+}
+
+func (t *Translator) processGRPCRouteMethodExact(method *v1alpha2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
+	switch {
+	case method.Service != nil && method.Method != nil:
+		irRoute.PathMatch = &ir.StringMatch{
+			Exact: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+		}
+	case method.Method != nil:
+		// Use a header match since the PathMatch doesn't support Suffix matching
+		irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
+			Name:   ":path",
+			Suffix: StringPtr(fmt.Sprintf("/%s", *method.Method)),
+		})
+	case method.Service != nil:
+		irRoute.PathMatch = &ir.StringMatch{
+			Prefix: StringPtr(fmt.Sprintf("/%s", *method.Service)),
+		}
+	}
+}
+
+func (t *Translator) processGRPCRouteMethodRegularExpression(method *v1alpha2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
+	switch {
+	case method.Service != nil && method.Method != nil:
+		irRoute.PathMatch = &ir.StringMatch{
+			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+		}
+	case method.Method != nil:
+		irRoute.PathMatch = &ir.StringMatch{
+			SafeRegex: StringPtr(fmt.Sprintf("/.+/%s", *method.Method)),
+		}
+	case method.Service != nil:
+		irRoute.PathMatch = &ir.StringMatch{
+			SafeRegex: StringPtr(fmt.Sprintf("/%s/.+", *method.Service)),
+		}
+	default:
+		irRoute.PathMatch = &ir.StringMatch{
+			Prefix: StringPtr("/"),
+		}
+	}
 }
 
 func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
