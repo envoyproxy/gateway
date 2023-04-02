@@ -127,7 +127,7 @@ type HTTPListener struct {
 	// for more info.
 	Hostnames []string
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS *TLSListenerConfig
+	TLS []*TLSListenerConfig
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
@@ -150,8 +150,10 @@ func (h HTTPListener) Validate() error {
 		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
-		if err := h.TLS.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+		for t := range h.TLS {
+			if err := h.TLS[t].Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
 		}
 	}
 	for _, route := range h.Routes {
@@ -165,6 +167,8 @@ func (h HTTPListener) Validate() error {
 // TLSListenerConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
+	// SecretName of the Secret object.
+	SecretName string
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.

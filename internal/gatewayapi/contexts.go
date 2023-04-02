@@ -53,7 +53,7 @@ type ListenerContext struct {
 	gateway           *v1beta1.Gateway
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
-	tlsSecret         *v1.Secret
+	tlsSecrets        []*v1.Secret
 }
 
 func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
@@ -148,8 +148,8 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
-func (l *ListenerContext) SetTLSSecret(tlsSecret *v1.Secret) {
-	l.tlsSecret = tlsSecret
+func (l *ListenerContext) SetTLSSecret(tlsSecrets []*v1.Secret) {
+	l.tlsSecrets = tlsSecrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)

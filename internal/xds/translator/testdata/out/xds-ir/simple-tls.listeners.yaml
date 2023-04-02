@@ -40,7 +40,11 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           tlsCertificateSdsSecretConfigs:
-          - name: first-listener
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
