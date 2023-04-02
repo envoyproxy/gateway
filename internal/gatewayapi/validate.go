@@ -241,6 +241,16 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			break
 		}
 
+		if len(listener.TLS.CertificateRefs) == 0 {
+			listener.SetCondition(
+				v1beta1.ListenerConditionProgrammed,
+				metav1.ConditionFalse,
+				v1beta1.ListenerReasonInvalid,
+				"Listener must have atleast 1 TLS certificate ref",
+			)
+			break
+		}
+
 		pkaSecretSet := make(map[string]*v1.Secret)
 		for _, certificateRef := range listener.TLS.CertificateRefs {
 			if certificateRef.Group != nil && string(*certificateRef.Group) != "" {

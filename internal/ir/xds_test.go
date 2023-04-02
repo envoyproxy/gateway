@@ -28,10 +28,11 @@ var (
 		Address:   "0.0.0.0",
 		Port:      80,
 		Hostnames: []string{"example.com"},
-		TLS: &TLSListenerConfig{
+		TLS: []*TLSListenerConfig{{
+			SecretName:        "happy",
 			ServerCertificate: []byte{1, 2, 3},
 			PrivateKey:        []byte{1, 2, 3},
-		},
+		}},
 		Routes: []*HTTPRoute{&happyHTTPRoute},
 	}
 	invalidAddrHTTPListener = HTTPListener{
