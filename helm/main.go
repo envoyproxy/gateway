@@ -46,7 +46,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	renderChartFiles(envoyGatewayChartsDirectory)
+	if err := renderChartFiles(envoyGatewayChartsDirectory); err != nil {
+		fmt.Printf("unable to render template, error: %+v\n", err)
+		os.Exit(1)
+	}
 }
 
 func renderChartFiles(chart string) (err error) {
