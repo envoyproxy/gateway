@@ -28,3 +28,6 @@ vendor/
 
 # GitHub Codespaces
 .devcontainer/
+
+# values.yaml file is generated from its template counterpart.
+*values.yaml

@@ -1,8 +1,8 @@
 deployment:
   envoyGateway:
     image:
-      repository: docker.io/envoyproxy/gateway-dev
-      tag: latest
+      repository: {{ .ImageRepository }}
+      tag: {{ .ImageTag }}
     imagePullPolicy: Always
     resources:
       limits:
