@@ -73,7 +73,7 @@ docs-release-gen:
 	cp -r docs/latest docs/$(TAG)
 	@for DOC in $(shell ls docs/latest/user); do \
 		cp docs/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
-		cat $(OUTPUT_DIR)/$$DOC | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/$(TAG)-$$DOC ; \
+		cat $(OUTPUT_DIR)/$$DOC | sed "s;v0.0.0-latest;$(TAG);g" | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/$(TAG)-$$DOC ; \
 		mv $(OUTPUT_DIR)/$(TAG)-$$DOC docs/$(TAG)/user/$$DOC ; \
 		$(call log, "Updated: docs/$(TAG)/user/$$DOC") ; \
 	done
