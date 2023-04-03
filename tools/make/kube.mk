@@ -56,7 +56,7 @@ endif
 IMAGE_PULL_POLICY ?= Always
 
 .PHONY: kube-deploy
-kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+kube-deploy: manifests generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
 
