@@ -11,19 +11,6 @@ import (
 	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-)
-
-type ExtensionXDSHookType string
-
-const (
-	PostXDSVirtualHost  ExtensionXDSHookType = ExtensionXDSHookType("Post" + v1alpha1.XDSVirtualHost)
-	PostXDSRoute        ExtensionXDSHookType = ExtensionXDSHookType("Post" + v1alpha1.XDSRoute)
-	PostXDSHTTPListener ExtensionXDSHookType = ExtensionXDSHookType("Post" + v1alpha1.XDSHTTPListener)
-	PostXDSTranslation  ExtensionXDSHookType = ExtensionXDSHookType("Post" + v1alpha1.XDSTranslation)
-
-	// Pre hook types can be registered here when they have implementations
 )
 
 type XDSHookClient interface {

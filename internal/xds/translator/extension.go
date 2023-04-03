@@ -19,6 +19,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 )
 
@@ -30,7 +31,7 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		// that is non-static. If a cluster definition is unlikely to change over the course of an extension's lifetime then the custom bootstrap config
 		// is the preferred way of adding it.
 		extManager := *em
-		extensionInsertHookClient := extManager.GetXDSHookClient(extensionTypes.PostXDSTranslation)
+		extensionInsertHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSTranslation)
 		if extensionInsertHookClient != nil {
 			newClusters, newSecrets, err := extensionInsertHookClient.PostTranslationInsertHook()
 			if err != nil {
@@ -103,7 +104,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	if em != nil {
 		extManager := *em
 		// Check if an extension want to modify the listener that was just configured/created
-		extListenerHookClient := extManager.GetXDSHookClient(extensionTypes.PostXDSHTTPListener)
+		extListenerHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSHTTPListener)
 		if extListenerHookClient != nil {
 			modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener)
 			if err != nil {

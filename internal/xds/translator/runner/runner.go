@@ -55,7 +55,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				r.Xds.Delete(key)
 			} else {
 				// Translate to xds resources
-				t := &translator.Translator{ExtensionManager: &r.ExtensionManager}
+				t := &translator.Translator{}
+
+				// Set the extension manager if an extension is loaded
+				if r.ExtensionManager != nil {
+					t.ExtensionManager = &r.ExtensionManager
+				}
 
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {

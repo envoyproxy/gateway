@@ -35,7 +35,24 @@ func (m *Manager) HasExtension(g v1beta1.Group, k v1beta1.Kind) bool {
 	return false
 }
 
-func (m *Manager) GetXDSHookClient(xdsHookType extType.ExtensionXDSHookType) extType.XDSHookClient {
+func (m *Manager) GetPreXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) extType.XDSHookClient {
+	if m.extension.Hooks == nil {
+		return nil
+	}
+
+	if m.extension.Hooks.XDSTranslator == nil {
+		return nil
+	}
+
+	for _, hook := range m.extension.Hooks.XDSTranslator.Pre {
+		if xdsHookType == hook {
+			return &XDSHookClient{}
+		}
+	}
+	return nil
+}
+
+func (m *Manager) GetPostXDSHookClient(xdsHookType v1alpha1.XDSTranslatorHook) extType.XDSHookClient {
 	if m.extension.Hooks == nil {
 		return nil
 	}
@@ -45,12 +62,7 @@ func (m *Manager) GetXDSHookClient(xdsHookType extType.ExtensionXDSHookType) ext
 	}
 
 	for _, hook := range m.extension.Hooks.XDSTranslator.Post {
-		if xdsHookType == extType.ExtensionXDSHookType("Post"+hook) {
-			return &XDSHookClient{}
-		}
-	}
-	for _, hook := range m.extension.Hooks.XDSTranslator.Pre {
-		if xdsHookType == extType.ExtensionXDSHookType("Pre"+hook) {
+		if xdsHookType == hook {
 			return &XDSHookClient{}
 		}
 	}

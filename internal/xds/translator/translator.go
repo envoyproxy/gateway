@@ -16,6 +16,7 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -76,8 +77,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 	var extensionVHostClient extensionTypes.XDSHookClient
 	if t.ExtensionManager != nil {
 		mgr := *t.ExtensionManager
-		extensionRouteClient = mgr.GetXDSHookClient(extensionTypes.PostXDSRoute)
-		extensionVHostClient = mgr.GetXDSHookClient(extensionTypes.PostXDSVirtualHost)
+		extensionRouteClient = mgr.GetPostXDSHookClient(v1alpha1.XDSRoute)
+		extensionVHostClient = mgr.GetPostXDSHookClient(v1alpha1.XDSVirtualHost)
 	}
 
 	for _, httpListener := range httpListeners {
