@@ -48,6 +48,10 @@ grpcRoutes:
           service: com.example
           method: "Example"
           type: Exact
+      - method:
+          service: foo.*
+          method: "Foobar"
+          type: RegularExpression
       backendRefs:
       - name: service-1
         port: 8080
@@ -80,6 +84,13 @@ xdsIR:
       - name: default-grpcroute-1-rule-0-match-0-*
         pathMatch:
           Exact: "/com.example/Example"
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+      - name: default-grpcroute-1-rule-0-match-1-*
+        pathMatch:
+          SafeRegex: "/foo.*/Foobar"
         destinations:
         - host: 7.7.7.7
           port: 8080
