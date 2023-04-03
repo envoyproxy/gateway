@@ -21,7 +21,7 @@ helm-push: ## Push envoy gateway helm chart to OCI registry.
 	helm push ${OUTPUT_DIR}/charts/${CHART_NAME}-${CHART_VERSION}.tgz ${OCI_REGISTRY}
 
 helm-install:
-helm-install: ## Install envoy gateway helm chart from OCI registry.
+helm-install: helm-generate ## Install envoy gateway helm chart from OCI registry.
 	@$(LOG_TARGET)
 	helm install eg ${OCI_REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n envoy-gateway-system --create-namespace
 
