@@ -27,5 +27,42 @@ dynamicEndpointConfigs:
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality: {}
+- endpointConfig:
+    '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+    clusterName: default-eg-tls-passthrough-backend
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.1.1.1
+              portValue: 3000
+        loadBalancingWeight: 1
+      loadBalancingWeight: 1
+      locality: {}
+- endpointConfig:
+    '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+    clusterName: default-eg-tcp-backend
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.1.1.1
+              portValue: 3000
+      loadBalancingWeight: 1
+      locality: {}
+- endpointConfig:
+    '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+    clusterName: default-eg-udp-backend
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: 1.1.1.1
+              portValue: 3000
+      loadBalancingWeight: 1
+      locality: {}
 resourceType: endpoint
 

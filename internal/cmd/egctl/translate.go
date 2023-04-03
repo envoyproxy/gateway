@@ -537,6 +537,36 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *g
 				Spec: typedSpec.(v1beta1.GatewaySpec),
 			}
 			resources.Gateways = append(resources.Gateways, gateway)
+		case gatewayapi.KindTCPRoute:
+			typedSpec := spec.Interface()
+			tcpRoute := &v1alpha2.TCPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1alpha2.TCPRouteSpec),
+			}
+			resources.TCPRoutes = append(resources.TCPRoutes, tcpRoute)
+		case gatewayapi.KindUDPRoute:
+			typedSpec := spec.Interface()
+			udpRoute := &v1alpha2.UDPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1alpha2.UDPRouteSpec),
+			}
+			resources.UDPRoutes = append(resources.UDPRoutes, udpRoute)
+		case gatewayapi.KindTLSRoute:
+			typedSpec := spec.Interface()
+			tlsRoute := &v1alpha2.TLSRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1alpha2.TLSRouteSpec),
+			}
+			resources.TLSRoutes = append(resources.TLSRoutes, tlsRoute)
 		case gatewayapi.KindHTTPRoute:
 			typedSpec := spec.Interface()
 			httpRoute := &v1beta1.HTTPRoute{
