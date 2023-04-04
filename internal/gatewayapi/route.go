@@ -460,10 +460,6 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *v1alpha2.GR
 		irRoute.PathMatch = &ir.StringMatch{
 			SafeRegex: StringPtr(fmt.Sprintf("/%s/.+", *method.Service)),
 		}
-	default:
-		irRoute.PathMatch = &ir.StringMatch{
-			Prefix: StringPtr("/"),
-		}
 	}
 }
 
