@@ -16,7 +16,6 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -69,18 +68,6 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
-
-	// See if any extensions are loaded that want to modify xDS VirtualHosts or Routes
-	// If so, then store the clients for them up-front to prevent needing to grab the client multiple times
-	// in the loops below
-	var extensionRouteClient extensionTypes.XDSHookClient
-	var extensionVHostClient extensionTypes.XDSHookClient
-	if t.ExtensionManager != nil {
-		mgr := *t.ExtensionManager
-		extensionRouteClient = mgr.GetPostXDSHookClient(v1alpha1.XDSRoute)
-		extensionVHostClient = mgr.GetPostXDSHookClient(v1alpha1.XDSVirtualHost)
-	}
-
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
@@ -144,13 +131,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-			if extensionRouteClient != nil && len(httpRoute.ExtensionRefs) > 0 {
-				if err := processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, extensionRouteClient); err != nil {
-					return err
-				}
+			if modifiedRoute, err := processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err == nil {
+				// If there was an extension and it returned an xDS Route, then overwrite the one we generated
+				xdsRoute = modifiedRoute
 			} else {
-				vHost.Routes = append(vHost.Routes, xdsRoute)
+				return err
 			}
+
+			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
 			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
@@ -182,13 +170,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if extensionVHostClient != nil {
-			if err := processExtensionPostVHostHook(vHost, xdsRouteCfg, extensionRouteClient); err != nil {
-				return err
-			}
+		if modifiedVHost, err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err == nil {
+			// If there was an extension and it returned an xDS Virtual Host, then overwrite the one we generated
+			vHost = modifiedVHost
 		} else {
-			xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
+			return err
 		}
+
+		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
 
 		// TODO: Make this into a generic interface for API Gateway features.
 		//       https://github.com/envoyproxy/gateway/issues/882

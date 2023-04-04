@@ -54,17 +54,11 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 			},
 		})
 
-	// If there was an error then return the original route unmodified
 	if err != nil {
-		return route, err
+		return nil, err
 	}
 
-	// If the returned route is nil without any error then that means the extension wants us to remove it
-	// This is not an error
-	if resp != nil {
-		return resp.Route, nil
-	}
-	return nil, nil
+	return resp.Route, nil
 }
 
 func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
@@ -76,17 +70,11 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
 		})
 
-	// If there was an error then return the original virtualhost unmodified
 	if err != nil {
-		return vh, err
+		return nil, err
 	}
 
-	// If the returned virtualhost is nil without any error then that means the extension wants us to remove it
-	// This is not an error
-	if resp != nil {
-		return resp.VirtualHost, nil
-	}
-	return nil, nil
+	return resp.VirtualHost, nil
 }
 
 func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Listener, error) {
@@ -98,17 +86,11 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Li
 			PostListenerContext: &extension.PostHTTPListenerExtensionContext{},
 		})
 
-	// If there was an error then return the original listener unmodified
 	if err != nil {
-		return l, err
+		return nil, err
 	}
 
-	// If the returned listener is nil without any error then that means the extension wants us to remove it
-	// This is not an error
-	if resp != nil {
-		return resp.Listener, nil
-	}
-	return nil, nil
+	return resp.Listener, nil
 }
 
 func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret) ([]*cluster.Cluster, []*tls.Secret, error) {
@@ -125,8 +107,5 @@ func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets [
 		return nil, nil, err
 	}
 
-	if resp != nil {
-		return resp.Clusters, resp.Secrets, nil
-	}
-	return nil, nil, nil
+	return resp.Clusters, resp.Secrets, nil
 }

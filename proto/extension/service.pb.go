@@ -86,7 +86,7 @@ func (x *PostRouteModifyRequest) GetPostRouteContext() *PostRouteExtensionContex
 }
 
 // PostRouteModifyResponse is the expected response from an extension and contains a modified version of the Route that was sent
-// An extension may choose to return a nil Route to cause Envoy Gateway to discard it
+// If an extension returns a nil Route then it will not be modified
 type PostRouteModifyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -191,7 +191,7 @@ func (x *PostVirtualHostModifyRequest) GetPostVirtualHostContext() *PostVirtualH
 }
 
 // PostVirtualHostModifyResponse is the expected response from an extension and contains a modified version of the VirtualHost that was sent
-// An extension may choose to return a nil VirtualHost to cause Envoy Gateway to discard it
+// If an extension returns a nil Virtual Host then it will not be modified
 type PostVirtualHostModifyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -296,7 +296,7 @@ func (x *PostHTTPListenerModifyRequest) GetPostListenerContext() *PostHTTPListen
 }
 
 // PostHTTPListenerModifyResponse is the expected response from an extension and contains a modified version of the Listener that was sent
-// An extension may choose to return a nil Listener to cause Envoy Gateway to discard it
+// If an extension returns a nil Listener then it will not be modified
 type PostHTTPListenerModifyResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache

@@ -14,7 +14,6 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourceTypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -25,57 +24,23 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 )
 
-func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager) error {
-	// Do nothing unless there is an extension manager
-	if em != nil {
-		// If there is a loaded extension that wants to inject clusters/secrets, then call it
-		// while clusters can by statically added with bootstrap configuration, an extension may need to add clusters with a configuration
-		// that is non-static. If a cluster definition is unlikely to change over the course of an extension's lifetime then the custom bootstrap config
-		// is the preferred way of adding it.
-		extManager := *em
-		extensionInsertHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSTranslation)
-		if extensionInsertHookClient != nil {
-
-			clusters := tCtx.XdsResources[resource.ClusterType]
-			oldClusters := make([]*clusterv3.Cluster, len(clusters))
-			for idx, cluster := range clusters {
-				oldClusters[idx] = cluster.(*clusterv3.Cluster)
-			}
-
-			secrets := tCtx.XdsResources[resource.SecretType]
-			oldSecrets := make([]*tlsv3.Secret, len(secrets))
-			for idx, secret := range secrets {
-				oldSecrets[idx] = secret.(*tlsv3.Secret)
-			}
-
-			newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets)
-			if err != nil {
-				return err
-			}
-
-			clusterResources := make([]resourceTypes.Resource, len(newClusters))
-			for idx, cluster := range newClusters {
-				clusterResources[idx] = cluster
-			}
-			tCtx.SetResources(resourcev3.ClusterType, clusterResources)
-
-			secretResources := make([]resourceTypes.Resource, len(newSecrets))
-			for idx, secret := range newSecrets {
-				secretResources[idx] = secret
-			}
-
-			tCtx.SetResources(resourcev3.SecretType, secretResources)
-		}
+func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) (*routev3.Route, error) {
+	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
+	if em == nil || len(irRoute.ExtensionRefs) == 0 {
+		return route, nil
 	}
-	return nil
-}
 
-func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, client extensionTypes.XDSHookClient) error {
+	// Check if an extension want to modify the route that was just configured/created
+	extManager := *em
+	extRouteHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSRoute)
+	if extRouteHookClient == nil {
+		return route, nil
+	}
 	unstructuredResources := make([]*unstructured.Unstructured, len(irRoute.ExtensionRefs))
 	for refIdx, ref := range irRoute.ExtensionRefs {
 		unstructuredResources[refIdx] = ref.Object
 	}
-	modifiedRoute, err := client.PostRouteModifyHook(
+	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
@@ -83,59 +48,118 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
-		return err
+		return nil, err
 	}
 
-	// An extension is allowed to return a nil route to prevent it from being added
 	if modifiedRoute != nil {
-		vHost.Routes = append(vHost.Routes, modifiedRoute)
+		return modifiedRoute, nil
 	}
-
-	return nil
+	return route, nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, routeConfig *routev3.RouteConfiguration, client extensionTypes.XDSHookClient) error {
-	modifiedVH, err := client.PostVirtualHostModifyHook(vHost)
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) (*routev3.VirtualHost, error) {
+	// Do nothing unless there is an extension manager
+	if em == nil {
+		return vHost, nil
+	}
+
+	// Check if an extension want to modify the route that was just configured/created
+	extManager := *em
+	extVHHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSVirtualHost)
+	if extVHHookClient == nil {
+		return vHost, nil
+	}
+	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
-		return err
+		return nil, err
 	}
 
+	// If the extension returned a nil Virtual Host, then we aren't going to modify it at all
 	if modifiedVH != nil {
-		routeConfig.VirtualHosts = append(routeConfig.VirtualHosts, vHost)
+		return modifiedVH, nil
 	}
 
-	return nil
+	return vHost, nil
 }
 
 func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, em *extensionTypes.Manager) error {
-	if em != nil {
-		extManager := *em
-		// Check if an extension want to modify the listener that was just configured/created
-		extListenerHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSHTTPListener)
-		if extListenerHookClient != nil {
-			modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener)
-			if err != nil {
-				return err
-			} else if modifiedListener != nil {
-				// Use the resource table to update the listener with the modified version returned by the extension
-				// We're assuming that Listener names are unique.
-				tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
-					oldListener := existing.(*listenerv3.Listener)
-					newListener := new.(*listenerv3.Listener)
-					if newListener == nil || oldListener == nil {
-						return false
-					}
-					if oldListener.Name == newListener.Name {
-						return true
-					}
+	// Do nothing unless there is an extension manager
+	if em == nil {
+		return nil
+	}
+
+	// Check if an extension want to modify the listener that was just configured/created
+	extManager := *em
+	extListenerHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSHTTPListener)
+	if extListenerHookClient != nil {
+		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener)
+		if err != nil {
+			return err
+		} else if modifiedListener != nil {
+			// Use the resource table to update the listener with the modified version returned by the extension
+			// We're assuming that Listener names are unique.
+			tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
 					return false
-				})
-
-			}
-
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			})
 		}
 	}
+	return nil
+}
+
+func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *extensionTypes.Manager) error {
+	// Do nothing unless there is an extension manager
+	if em == nil {
+		return nil
+	}
+	// If there is a loaded extension that wants to inject clusters/secrets, then call it
+	// while clusters can by statically added with bootstrap configuration, an extension may need to add clusters with a configuration
+	// that is non-static. If a cluster definition is unlikely to change over the course of an extension's lifetime then the custom bootstrap config
+	// is the preferred way of adding it.
+	extManager := *em
+	extensionInsertHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSTranslation)
+	if extensionInsertHookClient == nil {
+		return nil
+	}
+
+	clusters := tCtx.XdsResources[resourcev3.ClusterType]
+	oldClusters := make([]*clusterv3.Cluster, len(clusters))
+	for idx, cluster := range clusters {
+		oldClusters[idx] = cluster.(*clusterv3.Cluster)
+	}
+
+	secrets := tCtx.XdsResources[resourcev3.SecretType]
+	oldSecrets := make([]*tlsv3.Secret, len(secrets))
+	for idx, secret := range secrets {
+		oldSecrets[idx] = secret.(*tlsv3.Secret)
+	}
+
+	newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets)
+	if err != nil {
+		return err
+	}
+
+	clusterResources := make([]resourceTypes.Resource, len(newClusters))
+	for idx, cluster := range newClusters {
+		clusterResources[idx] = cluster
+	}
+	tCtx.SetResources(resourcev3.ClusterType, clusterResources)
+
+	secretResources := make([]resourceTypes.Resource, len(newSecrets))
+	for idx, secret := range newSecrets {
+		secretResources[idx] = secret
+	}
+
+	tCtx.SetResources(resourcev3.SecretType, secretResources)
+
 	return nil
 }
