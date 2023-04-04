@@ -45,6 +45,7 @@ _Appears in:_
 | `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
 | `provider` _[Provider](#provider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
+| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
 
 ## EnvoyProxy
@@ -76,8 +77,70 @@ _Appears in:_
 | --- | --- |
 | `provider` _[ResourceProvider](#resourceprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
+| `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 
 
+
+
+## Extension
+
+
+
+Extension defines the configuration for registering an extension to the Envoy Gateway control plane.
+
+_Appears in:_
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `resources` _[GroupVersionKind](#groupversionkind) array_ | Resources defines the set of K8s resources the extension will handle. |
+| `hooks` _[ExtensionHooks](#extensionhooks)_ | Hooks defines the set of hooks the extension supports |
+| `service` _[ExtensionService](#extensionservice)_ | Service defines the configuration of the extension service that the Envoy Gateway Control Plane will call through extension hooks. |
+
+
+## ExtensionHooks
+
+
+
+ExtensionHooks defines extension hooks across all supported runners
+
+_Appears in:_
+- [Extension](#extension)
+
+| Field | Description |
+| --- | --- |
+| `xdsTranslator` _[XDSTranslatorHooks](#xdstranslatorhooks)_ | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
+
+
+## ExtensionService
+
+
+
+ExtensionService defines the configuration for connecting to a registered extension service.
+
+_Appears in:_
+- [Extension](#extension)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the extension service hostname. |
+| `port` _integer_ | Port defines the port the extension service is exposed on. |
+| `tls` _[ExtensionTLS](#extensiontls)_ | TLS defines TLS configuration for communication between Envoy Gateway and the extension service. |
+
+
+## ExtensionTLS
+
+
+
+ExtensionTLS defines the TLS configuration when connecting to an extension service
+
+_Appears in:_
+- [ExtensionService](#extensionservice)
+
+| Field | Description |
+| --- | --- |
+| `certificateRef` _[SecretObjectReference](#secretobjectreference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
+ CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
 ## FileProvider
@@ -105,6 +168,37 @@ _Appears in:_
 | `controllerName` _string_ | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass |
 
 
+## GroupVersionKind
+
+
+
+GroupVersionKind unambiguously identifies a Kind. It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
+
+_Appears in:_
+- [Extension](#extension)
+
+| Field | Description |
+| --- | --- |
+| `group` _string_ |  |
+| `version` _string_ |  |
+| `kind` _string_ |  |
+
+
+## KubernetesContainerSpec
+
+
+
+KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
+
+_Appears in:_
+- [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
+
+| Field | Description |
+| --- | --- |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#resourcerequirements-v1-core)_ | Resources required by this container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
+| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
+
+
 ## KubernetesDeploymentSpec
 
 
@@ -117,6 +211,23 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
+| `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired replicas, annotations and securityContext of container. |
+| `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the resources and securityContext of container. |
+
+
+## KubernetesPodSpec
+
+
+
+KubernetesPodSpec defines the desired state of the Kubernetes pod resource.
+
+_Appears in:_
+- [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
+
+| Field | Description |
+| --- | --- |
+| `annotations` _object (keys:string, values:string)_ | Annotations are the annotations that should be appended to the pods. By default, no pod annotations are appended. |
+| `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
 
 
 ## KubernetesProvider
@@ -142,6 +253,22 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the manged Envoy deployment resource are applied. |
+| `envoyService` _[KubernetesServiceSpec](#kubernetesservicespec)_ | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the manged Envoy service resource are applied. |
+
+
+## KubernetesServiceSpec
+
+
+
+KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
+
+_Appears in:_
+- [KubernetesResourceProvider](#kubernetesresourceprovider)
+
+| Field | Description |
+| --- | --- |
+| `annotations` _object (keys:string, values:string)_ | Annotations that should be appended to the service. By default, no annotations are appended. |
+| `type` _[ServiceType](#servicetype)_ | Type determines how the Service is exposed. Defaults to LoadBalancer. Valid options are ClusterIP and LoadBalancer. "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it). "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP. |
 
 
 ## LogComponent
@@ -275,5 +402,42 @@ _Appears in:_
 | --- | --- |
 | `type` _[ProviderType](#providertype)_ | Type is the type of resource provider to use. A resource provider provides infrastructure resources for running the data plane, e.g. Envoy proxy, and optional auxiliary control planes. Supported types are "Kubernetes". |
 | `kubernetes` _[KubernetesResourceProvider](#kubernetesresourceprovider)_ | Kubernetes defines the desired state of the Kubernetes resource provider. Kubernetes provides infrastructure resources for running the data plane, e.g. Envoy proxy. If unspecified and type is "Kubernetes", default settings for managed Kubernetes resources are applied. |
+
+
+## ServiceType
+
+_Underlying type:_ `string`
+
+ServiceType string describes ingress methods for a service
+
+_Appears in:_
+- [KubernetesServiceSpec](#kubernetesservicespec)
+
+
+
+## XDSTranslatorHook
+
+_Underlying type:_ `string`
+
+XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support for the xds-translator
+
+_Appears in:_
+- [XDSTranslatorHooks](#xdstranslatorhooks)
+
+
+
+## XDSTranslatorHooks
+
+
+
+XDSTranslatorHooks contains all the pre and post hooks for the xds-translator runner.
+
+_Appears in:_
+- [ExtensionHooks](#extensionhooks)
+
+| Field | Description |
+| --- | --- |
+| `pre` _[XDSTranslatorHook](#xdstranslatorhook) array_ |  |
+| `post` _[XDSTranslatorHook](#xdstranslatorhook) array_ |  |
 
 

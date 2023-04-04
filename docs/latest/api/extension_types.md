@@ -253,6 +253,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. |
+| `sourceIP` _string_ | SourceIP is the IP CIDR that represents the range of Source IP Addresses of the client. These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. All IP Addresses within the specified SourceIP CIDR are treated as a single client selector and share the same rate limit bucket. |
 
 
 ## RateLimitType
