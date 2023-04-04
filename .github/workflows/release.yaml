@@ -40,3 +40,7 @@ jobs:
             release-artifacts/install.yaml
             release-artifacts/quickstart.yaml
             release-artifacts/release-notes.yaml
+            release-artifacts/egctl_${{ env.release_tag }}_linux_amd64.tar.gz
+            release-artifacts/egctl_${{ env.release_tag }}_linux_arm64.tar.gz
+            release-artifacts/egctl_${{ env.release_tag }}_darwin_amd64.tar.gz
+            release-artifacts/egctl_${{ env.release_tag }}_darwin_arm64.tar.gz
