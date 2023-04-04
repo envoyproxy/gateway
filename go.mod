@@ -6,7 +6,7 @@ require (
 	github.com/cncf/xds/go v0.0.0-20230105202645-06c439db220b
 	github.com/envoyproxy/go-control-plane v0.11.1-0.20230320001644-5efe59dc39e4
 	github.com/envoyproxy/ratelimit v1.4.1-0.20230109191524-5f3f5a4cf573
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.3
 	github.com/golang/protobuf v1.5.3
 	github.com/google/go-cmp v0.5.9
@@ -28,7 +28,7 @@ require (
 	k8s.io/client-go v0.26.3
 	k8s.io/kubectl v0.26.3
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448
-	sigs.k8s.io/controller-runtime v0.14.5
+	sigs.k8s.io/controller-runtime v0.14.6
 	sigs.k8s.io/gateway-api v0.6.2
 	sigs.k8s.io/yaml v1.3.0
 )
