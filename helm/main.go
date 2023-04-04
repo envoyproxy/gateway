@@ -22,8 +22,8 @@ const (
 
 var (
 	overlays = struct {
-		ImageTag        string
-		ImageRepository string
+		EGImageTag        string
+		EGImageRepository string
 	}{
 		os.Getenv("RELEASE_TAG"),
 		os.Getenv("IMAGE"),
@@ -41,7 +41,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(overlays.ImageTag) == 0 || len(overlays.ImageRepository) == 0 {
+	if len(overlays.EGImageTag) == 0 || len(overlays.EGImageRepository) == 0 {
 		fmt.Printf("missing required env vars, got: %+v\n", overlays)
 		os.Exit(1)
 	}
