@@ -8,7 +8,7 @@ deps:
   - remote: buf.build
     owner: envoyproxy
     repository: envoy
-    commit: c01e5553f035462fa61c0bdda262f584
+    commit: f2506a477f30468a8e60291ed0cba40a
   - remote: buf.build
     owner: envoyproxy
     repository: protoc-gen-validate
@@ -16,7 +16,7 @@ deps:
   - remote: buf.build
     owner: googleapis
     repository: googleapis
-    commit: 463926e7ee924d46ad0a726e1cf4eacd
+    commit: 5ae7f88519b04fe1965da0f8a375a088
   - remote: buf.build
     owner: opencensus
     repository: opencensus
@@ -28,4 +28,4 @@ deps:
   - remote: buf.build
     owner: prometheus
     repository: client-model
-    commit: 1d56a02d481a412a83b3c4984eb90c2e
+    commit: 55bcfe88c9e54edc9048a91656832525

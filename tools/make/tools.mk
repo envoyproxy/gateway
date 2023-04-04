@@ -24,12 +24,6 @@ tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 
-# Let these use the main Envoy Gateway go.mod instead of having their own go.mod to ensure runtime
-# consistency
-tools.main-gomod += $(tools/protoc-gen-go)
-tools.main-gomod += $(tools/protoc-gen-go-grpc)
-$(tools.main-gomod): $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(ROOT_DIR)/go.mod
-	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 
 # `pip install`-able things
 # =========================
