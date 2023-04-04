@@ -48,7 +48,7 @@ func (h *XDSHook) PostRouteModifyHook(route *route.Route, routeHostnames []strin
 	resp, err := h.grpcClient.PostRouteModify(ctx,
 		&extension.PostRouteModifyRequest{
 			Route: route,
-			RouteContext: &extension.PostRouteExtensionContext{
+			PostRouteContext: &extension.PostRouteExtensionContext{
 				Hostnames:          routeHostnames,
 				ExtensionResources: extensionResourceBytes,
 			},
@@ -72,8 +72,8 @@ func (h *XDSHook) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.Virtu
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostVirtualHostModify(ctx,
 		&extension.PostVirtualHostModifyRequest{
-			VirtualHost:        vh,
-			VirtualHostContext: &extension.PostVirtualHostExtensionContext{},
+			VirtualHost:            vh,
+			PostVirtualHostContext: &extension.PostVirtualHostExtensionContext{},
 		})
 
 	// If there was an error then return the original virtualhost unmodified
@@ -94,8 +94,8 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Li
 	ctx := context.Background()
 	resp, err := h.grpcClient.PostHTTPListenerModify(ctx,
 		&extension.PostHTTPListenerModifyRequest{
-			Listener:        l,
-			ListenerContext: &extension.PostHTTPListenerExtensionContext{},
+			Listener:            l,
+			PostListenerContext: &extension.PostHTTPListenerExtensionContext{},
 		})
 
 	// If there was an error then return the original listener unmodified
@@ -111,19 +111,20 @@ func (h *XDSHook) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Li
 	return nil, nil
 }
 
-func (h *XDSHook) PostTranslationInsertHook() ([]*cluster.Cluster, []*tls.Secret, error) {
+func (h *XDSHook) PostTranslateModifyHook(clusters []*cluster.Cluster, secrets []*tls.Secret) ([]*cluster.Cluster, []*tls.Secret, error) {
 	// Make the request to the extension server
 	ctx := context.Background()
-	resp, err := h.grpcClient.PostTranslateInsert(ctx,
-		&extension.PostTranslationInsertRequest{
-			InsertContext: &extension.PostXDSInsertExtensionContext{},
+	resp, err := h.grpcClient.PostTranslateModify(ctx,
+		&extension.PostTranslateModifyRequest{
+			PostTranslateContext: &extension.PostTranslateExtensionContext{},
+			Clusters:             clusters,
+			Secrets:              secrets,
 		})
 
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// An extension may not return anything at all to be injected. This is a no-op and not an error
 	if resp != nil {
 		return resp.Clusters, resp.Secrets, nil
 	}

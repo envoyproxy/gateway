@@ -10,12 +10,12 @@ import (
 	"fmt"
 	"strings"
 
-	cluster "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	clusterV3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	coreV3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	endpointV3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	listenerV3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routeV3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tlsV3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -23,45 +23,45 @@ import (
 type XDSHookClient struct{}
 
 // PostRouteModifyHook returns a modified version of the route using context info and the passed in extensionResources
-func (c *XDSHookClient) PostRouteModifyHook(route *route.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*route.Route, error) {
+func (c *XDSHookClient) PostRouteModifyHook(route *routeV3.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*routeV3.Route, error) {
 	for _, extensionResource := range extensionResources {
 		// Simulate an error an extension may return
 		if route.Name == "extension-post-xdsroute-hook-error" {
 			return nil, errors.New("route hook resource error")
 		}
 		route.ResponseHeadersToAdd = append(route.ResponseHeadersToAdd,
-			&core.HeaderValueOption{
-				Header: &core.HeaderValue{
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-route-name",
 					Value: route.Name,
 				},
 			},
-			&core.HeaderValueOption{
-				Header: &core.HeaderValue{
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-route-hostnames",
 					Value: strings.Join(routeHostnames, ", "),
 				},
 			},
-			&core.HeaderValueOption{
-				Header: &core.HeaderValue{
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-extensionRef-name",
 					Value: extensionResource.GetName(),
 				},
 			},
-			&core.HeaderValueOption{
-				Header: &core.HeaderValue{
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-extensionRef-namespace",
 					Value: extensionResource.GetNamespace(),
 				},
 			},
-			&core.HeaderValueOption{
-				Header: &core.HeaderValue{
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-extensionRef-kind",
 					Value: extensionResource.GetKind(),
 				},
 			},
-			&core.HeaderValueOption{
-				Header: &core.HeaderValue{
+			&coreV3.HeaderValueOption{
+				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-extensionRef-apiversion",
 					Value: extensionResource.GetAPIVersion(),
 				},
@@ -72,16 +72,16 @@ func (c *XDSHookClient) PostRouteModifyHook(route *route.Route, routeHostnames [
 }
 
 // PostVirtualHostModifyHook returns a modified version of the virtualhost with a new route injected
-func (c *XDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route.VirtualHost, error) {
+func (c *XDSHookClient) PostVirtualHostModifyHook(vh *routeV3.VirtualHost) (*routeV3.VirtualHost, error) {
 	// Only make the change when the VirtualHost's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
 	if vh.Name == "extension-post-xdsvirtualhost-hook-error" {
 		return nil, fmt.Errorf("extension post xds virtual host hook error")
 	} else if vh.Name == "extension-listener" {
-		vh.Routes = append(vh.Routes, &route.Route{
+		vh.Routes = append(vh.Routes, &routeV3.Route{
 			Name: "mock-extension-inserted-route",
-			Action: &route.Route_DirectResponse{
-				DirectResponse: &route.DirectResponseAction{
+			Action: &routeV3.Route_DirectResponse{
+				DirectResponse: &routeV3.DirectResponseAction{
 					Status: uint32(200),
 				},
 			},
@@ -93,7 +93,7 @@ func (c *XDSHookClient) PostVirtualHostModifyHook(vh *route.VirtualHost) (*route
 // PostHTTPListenerModifyHook returns a modified version of the listener with a changed statprefix of the listener
 // A more useful use-case for an extension would be looping through the FilterChains to find the
 // HTTPConnectionManager(s) and inject a custom HTTPFilter, but that for testing purposes we don't need to make a complex change
-func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener) (*listener.Listener, error) {
+func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listenerV3.Listener) (*listenerV3.Listener, error) {
 
 	// Only make the change when the listener's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
@@ -105,74 +105,59 @@ func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listener.Listener) (*liste
 	return l, nil
 }
 
-// PostTranslationInsertHook returns a static cluster and tls secret to be inserted
-func (c *XDSHookClient) PostTranslationInsertHook() ([]*cluster.Cluster, []*tls.Secret, error) {
+// PostTranslateModifyHook inserts and overrides some clusters/secrets
+func (c *XDSHookClient) PostTranslateModifyHook(clusters []*clusterV3.Cluster, secrets []*tlsV3.Secret) ([]*clusterV3.Cluster, []*tlsV3.Secret, error) {
 
-	extensionSvcEndpoint := &endpoint.LbEndpoint_Endpoint{
-		Endpoint: &endpoint.Endpoint{
-			Address: &core.Address{
-				Address: &core.Address_SocketAddress{
-					SocketAddress: &core.SocketAddress{
+	extensionSvcEndpoint := &endpointV3.LbEndpoint_Endpoint{
+		Endpoint: &endpointV3.Endpoint{
+			Address: &coreV3.Address{
+				Address: &coreV3.Address_SocketAddress{
+					SocketAddress: &coreV3.SocketAddress{
 						Address: "exampleservice.examplenamespace.svc.cluster.local",
-						PortSpecifier: &core.SocketAddress_PortValue{
+						PortSpecifier: &coreV3.SocketAddress_PortValue{
 							PortValue: 5000,
 						},
-						Protocol: core.SocketAddress_TCP,
+						Protocol: coreV3.SocketAddress_TCP,
 					},
 				},
 			},
 		},
 	}
 
-	clusters := []*cluster.Cluster{
-		{
-			Name: "mock-extension-injected-cluster",
-			LoadAssignment: &endpoint.ClusterLoadAssignment{
-				ClusterName: "mock-extension-injected-cluster",
-				Endpoints: []*endpoint.LocalityLbEndpoints{
-					{
-						LbEndpoints: []*endpoint.LbEndpoint{
-							{
-								HostIdentifier: extensionSvcEndpoint,
-							},
-						},
-					},
-				},
-			},
-		},
-		// This is one of the default test clusters, but the connect timeout has been changed
-		{
-			Name: "first-route",
-			CommonLbConfig: &cluster.Cluster_CommonLbConfig{
-				LocalityConfigSpecifier: &cluster.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{},
-			},
-			ConnectTimeout:  &durationpb.Duration{Seconds: 30},
-			DnsLookupFamily: cluster.Cluster_V4_ONLY,
-			EdsClusterConfig: &cluster.Cluster_EdsClusterConfig{
-				EdsConfig: &core.ConfigSource{
-					ConfigSourceSpecifier: &core.ConfigSource_Ads{},
-					ResourceApiVersion:    core.ApiVersion_V3,
-				},
-			},
-			OutlierDetection:     &cluster.OutlierDetection{},
-			ClusterDiscoveryType: &cluster.Cluster_Type{Type: cluster.Cluster_EDS},
-		},
+	for idx, cluster := range clusters {
+		if cluster.Name == "first-route" {
+			clusters[idx].ConnectTimeout = &durationpb.Duration{Seconds: 30}
+		}
 	}
 
-	secrets := []*tls.Secret{
-		{
-			Name: "mock-extension-injected-secret",
-			Type: &tls.Secret_GenericSecret{
-				GenericSecret: &tls.GenericSecret{
-					Secret: &core.DataSource{
-						Specifier: &core.DataSource_InlineString{
-							InlineString: "super-secret-extension-secret",
+	clusters = append(clusters, &clusterV3.Cluster{
+		Name: "mock-extension-injected-cluster",
+		LoadAssignment: &endpointV3.ClusterLoadAssignment{
+			ClusterName: "mock-extension-injected-cluster",
+			Endpoints: []*endpointV3.LocalityLbEndpoints{
+				{
+					LbEndpoints: []*endpointV3.LbEndpoint{
+						{
+							HostIdentifier: extensionSvcEndpoint,
 						},
 					},
 				},
 			},
 		},
-	}
+	})
+
+	secrets = append(secrets, &tlsV3.Secret{
+		Name: "mock-extension-injected-secret",
+		Type: &tlsV3.Secret_GenericSecret{
+			GenericSecret: &tlsV3.GenericSecret{
+				Secret: &coreV3.DataSource{
+					Specifier: &coreV3.DataSource_InlineString{
+						InlineString: "super-secret-extension-secret",
+					},
+				},
+			},
+		},
+	})
 
 	return clusters, secrets, nil
 }

@@ -169,14 +169,14 @@ func (*PostHTTPListenerExtensionContext) Descriptor() ([]byte, []int) {
 // Empty for now but we can add fields to the context as use-cases are discovered without
 // breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
-type PostXDSInsertExtensionContext struct {
+type PostTranslateExtensionContext struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 }
 
-func (x *PostXDSInsertExtensionContext) Reset() {
-	*x = PostXDSInsertExtensionContext{}
+func (x *PostTranslateExtensionContext) Reset() {
+	*x = PostTranslateExtensionContext{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_proto_extension_context_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -184,13 +184,13 @@ func (x *PostXDSInsertExtensionContext) Reset() {
 	}
 }
 
-func (x *PostXDSInsertExtensionContext) String() string {
+func (x *PostTranslateExtensionContext) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*PostXDSInsertExtensionContext) ProtoMessage() {}
+func (*PostTranslateExtensionContext) ProtoMessage() {}
 
-func (x *PostXDSInsertExtensionContext) ProtoReflect() protoreflect.Message {
+func (x *PostTranslateExtensionContext) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_extension_context_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -202,8 +202,8 @@ func (x *PostXDSInsertExtensionContext) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use PostXDSInsertExtensionContext.ProtoReflect.Descriptor instead.
-func (*PostXDSInsertExtensionContext) Descriptor() ([]byte, []int) {
+// Deprecated: Use PostTranslateExtensionContext.ProtoReflect.Descriptor instead.
+func (*PostTranslateExtensionContext) Descriptor() ([]byte, []int) {
 	return file_proto_extension_context_proto_rawDescGZIP(), []int{3}
 }
 
@@ -278,8 +278,8 @@ var file_proto_extension_context_proto_rawDesc = []byte{
 	0x73, 0x74, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x43, 0x6f, 0x6e, 0x74, 0x65,
 	0x78, 0x74, 0x22, 0x22, 0x0a, 0x20, 0x50, 0x6f, 0x73, 0x74, 0x48, 0x54, 0x54, 0x50, 0x4c, 0x69,
 	0x73, 0x74, 0x65, 0x6e, 0x65, 0x72, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e, 0x43,
-	0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x22, 0x1f, 0x0a, 0x1d, 0x50, 0x6f, 0x73, 0x74, 0x58, 0x44,
-	0x53, 0x49, 0x6e, 0x73, 0x65, 0x72, 0x74, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e,
+	0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x22, 0x1f, 0x0a, 0x1d, 0x50, 0x6f, 0x73, 0x74, 0x54, 0x72,
+	0x61, 0x6e, 0x73, 0x6c, 0x61, 0x74, 0x65, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x73, 0x69, 0x6f, 0x6e,
 	0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x22, 0x42, 0x0a, 0x11, 0x45, 0x78, 0x74, 0x65, 0x6e,
 	0x73, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x12, 0x2d, 0x0a, 0x12,
 	0x75, 0x6e, 0x73, 0x74, 0x72, 0x75, 0x63, 0x74, 0x75, 0x72, 0x65, 0x64, 0x5f, 0x62, 0x79, 0x74,
@@ -306,7 +306,7 @@ var file_proto_extension_context_proto_goTypes = []interface{}{
 	(*PostRouteExtensionContext)(nil),        // 0: envoygateway.extension.PostRouteExtensionContext
 	(*PostVirtualHostExtensionContext)(nil),  // 1: envoygateway.extension.PostVirtualHostExtensionContext
 	(*PostHTTPListenerExtensionContext)(nil), // 2: envoygateway.extension.PostHTTPListenerExtensionContext
-	(*PostXDSInsertExtensionContext)(nil),    // 3: envoygateway.extension.PostXDSInsertExtensionContext
+	(*PostTranslateExtensionContext)(nil),    // 3: envoygateway.extension.PostTranslateExtensionContext
 	(*ExtensionResource)(nil),                // 4: envoygateway.extension.ExtensionResource
 }
 var file_proto_extension_context_proto_depIdxs = []int32{
@@ -361,7 +361,7 @@ func file_proto_extension_context_proto_init() {
 			}
 		}
 		file_proto_extension_context_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PostXDSInsertExtensionContext); i {
+			switch v := v.(*PostTranslateExtensionContext); i {
 			case 0:
 				return &v.state
 			case 1:

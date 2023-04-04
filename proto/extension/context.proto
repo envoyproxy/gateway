@@ -41,7 +41,7 @@ message PostHTTPListenerExtensionContext {
 // Empty for now but we can add fields to the context as use-cases are discovered without
 // breaking any clients that use the API
 // additional context information can be added to this message as more use-cases are discovered
-message PostXDSInsertExtensionContext {
+message PostTranslateExtensionContext {
 
 }
 

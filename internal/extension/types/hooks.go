@@ -35,10 +35,11 @@ type XDSHookClient interface {
 	// received in order to not make any changes to it, or return nil to cause the Listener to be discarded.
 	PostHTTPListenerModifyHook(*listener.Listener) (*listener.Listener, error)
 
-	// PostTranslationInsertHook allows an extension to return a list of clusters and secrets that should be injected into the xDS config.
-	// This allows for clusters that may change along with extension specific configuration to be dynamically created rather than
+	// PostTranslateModifyHook allows an extension to modify the clusters and secrets in the xDS config.
+	// This allows for inserting clusters that may change along with extension specific configuration to be dynamically created rather than
 	// using custom bootstrap config which would be sufficient for clusters that are static and not prone to have their configurations changed.
 	// An example of how this may be used is to inject a cluster that will be used by an ext_authz http filter created by the extension.
-	// PostTranslationInsertHook is always executed when an extension is loaded although the extension may choose not to return any clusters/secrets
-	PostTranslationInsertHook() ([]*cluster.Cluster, []*tls.Secret, error)
+	// The list of clusters and secrets returned by the extension are used as the final list of all clusters and secrets
+	// PostTranslateModifyHook is always executed when an extension is loaded
+	PostTranslateModifyHook([]*cluster.Cluster, []*tls.Secret) ([]*cluster.Cluster, []*tls.Secret, error)
 }

@@ -96,3 +96,12 @@ func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resource.Type, reso
 		t.AddXdsResource(rType, resource)
 	}
 }
+
+// SetResources will update an entire entry of the XdsResources for a certain type to the provided resources
+func (t *ResourceVersionTable) SetResources(rType resourcev3.Type, xdsResources []types.Resource) {
+	if t.XdsResources == nil {
+		t.XdsResources = make(XdsResources)
+	}
+
+	t.XdsResources[rType] = xdsResources
+}

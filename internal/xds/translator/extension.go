@@ -12,7 +12,9 @@ import (
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	resourceTypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -33,29 +35,36 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 		extManager := *em
 		extensionInsertHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSTranslation)
 		if extensionInsertHookClient != nil {
-			newClusters, newSecrets, err := extensionInsertHookClient.PostTranslationInsertHook()
+
+			clusters := tCtx.XdsResources[resource.ClusterType]
+			oldClusters := make([]*clusterv3.Cluster, len(clusters))
+			for idx, cluster := range clusters {
+				oldClusters[idx] = cluster.(*clusterv3.Cluster)
+			}
+
+			secrets := tCtx.XdsResources[resource.SecretType]
+			oldSecrets := make([]*tlsv3.Secret, len(secrets))
+			for idx, secret := range secrets {
+				oldSecrets[idx] = secret.(*tlsv3.Secret)
+			}
+
+			newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets)
 			if err != nil {
 				return err
 			}
 
-			// We're assuming that Cluster names are unique.
-			for _, addedCluster := range newClusters {
-				tCtx.AddOrReplaceXdsResource(resourcev3.ClusterType, addedCluster, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
-					oldCluster := existing.(*clusterv3.Cluster)
-					newCluster := new.(*clusterv3.Cluster)
-					if newCluster == nil || oldCluster == nil {
-						return false
-					}
-					if oldCluster.Name == newCluster.Name {
-						return true
-					}
-					return false
-				})
+			clusterResources := make([]resourceTypes.Resource, len(newClusters))
+			for idx, cluster := range newClusters {
+				clusterResources[idx] = cluster
+			}
+			tCtx.SetResources(resourcev3.ClusterType, clusterResources)
+
+			secretResources := make([]resourceTypes.Resource, len(newSecrets))
+			for idx, secret := range newSecrets {
+				secretResources[idx] = secret
 			}
 
-			for _, secret := range newSecrets {
-				tCtx.AddXdsResource(resourcev3.SecretType, secret)
-			}
+			tCtx.SetResources(resourcev3.SecretType, secretResources)
 		}
 	}
 	return nil
