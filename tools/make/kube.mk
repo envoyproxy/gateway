@@ -103,7 +103,6 @@ e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e del
 install-ratelimit:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/redis/redis.yaml
-	kubectl apply -f examples/redis/envoy-gateway-config.yaml
 	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 

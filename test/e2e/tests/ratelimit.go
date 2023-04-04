@@ -37,6 +37,7 @@ var RateLimitTest = suite.ConformanceTest{
 			// just wait a bit more time for now
 			time.Sleep(60 * time.Second)
 
+			// TODO: should just send exactly 4 requests, and expect 429
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",

@@ -37,7 +37,7 @@ func TestE2E(t *testing.T) {
 	require.NoError(t, v1beta1.AddToScheme(client.Scheme()))
 	require.NoError(t, egv1a1.AddToScheme(client.Scheme()))
 
-	t.Logf("Running conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]",
+	t.Logf("Running E2E tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures)
 
 	cSuite := suite.New(suite.Options{
@@ -50,6 +50,6 @@ func TestE2E(t *testing.T) {
 	})
 
 	cSuite.Setup(t)
-	t.Logf("Running %d conformance tests", len(tests.ConformanceTests))
+	t.Logf("Running %d E2E tests", len(tests.ConformanceTests))
 	cSuite.Run(t, tests.ConformanceTests)
 }
