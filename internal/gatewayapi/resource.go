@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -35,6 +36,7 @@ type Resources struct {
 	AuthenticationFilters []*egv1a1.AuthenticationFilter
 	RateLimitFilters      []*egv1a1.RateLimitFilter
 	EnvoyProxy            *egcfgv1a1.EnvoyProxy
+	ExtensionRefFilters   []unstructured.Unstructured
 }
 
 func NewResources() *Resources {
@@ -50,6 +52,7 @@ func NewResources() *Resources {
 		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
 		EnvoyProxy:            new(egcfgv1a1.EnvoyProxy),
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
+		ExtensionRefFilters:   []unstructured.Unstructured{},
 	}
 }
 
