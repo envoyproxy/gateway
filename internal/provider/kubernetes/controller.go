@@ -1257,11 +1257,18 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	found := false
+	valid := false
+	var validationErr error
 	for i := range epList.Items {
 		ep := epList.Items[i]
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 		if classRefsEnvoyProxy(gc, &ep) {
 			found = true
+			if err := (&ep).Validate(); err != nil {
+				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
+				continue
+			}
+			valid = true
 			resourceTree.EnvoyProxy = &ep
 			break
 		}
@@ -1269,6 +1276,10 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 
 	if !found {
 		return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
+	}
+
+	if !valid {
+		return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
 	}
 
 	return nil
