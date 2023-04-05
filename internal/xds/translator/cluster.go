@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	extensionOptionKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+	extensionOptionsKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
 )
 
 func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
@@ -116,7 +116,7 @@ func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
 	anyProtocolOptions, _ := anypb.New(&protocolOptions)
 
 	extensionOptions := map[string]*anypb.Any{
-		extensionOptionKey: anyProtocolOptions,
+		extensionOptionsKey: anyProtocolOptions,
 	}
 
 	return extensionOptions
