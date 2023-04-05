@@ -118,7 +118,7 @@ export USAGE_OPTIONS
 
 .PHONY: generate
 generate: ## Generate go code from templates and tags
-generate: kube-generate go.generate docs-api
+generate: kube-generate helm-generate go.generate docs-api
 
 ## help: Show this help info.
 .PHONY: help

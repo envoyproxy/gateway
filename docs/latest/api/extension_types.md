@@ -13,6 +13,8 @@ Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io A
 - [AuthenticationFilter](#authenticationfilter)
 - [CorsFilter](#corsfilter)
 - [CorsFilterList](#corsfilterlist)
+- [GrpcJSONTranscoderFilter](#grpcjsontranscoderfilter)
+- [GrpcJSONTranscoderFilterList](#grpcjsontranscoderfilterlist)
 - [RateLimitFilter](#ratelimitfilter)
 
 
@@ -151,6 +153,56 @@ _Appears in:_
 | `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way i.e. if multiple rules get selected, each of their associated limits get applied, so a single traffic request might increase the rate limit counters for multiple rules if selected. |
 
 
+## GrpcJSONTranscoderFilter
+
+
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilterList](#grpcjsontranscoderfilterlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `GrpcJSONTranscoderFilter`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[GrpcJSONTranscoderFilterSpec](#grpcjsontranscoderfilterspec)_ | Spec defines the desired state of the GrpcJSONTranscoderFilter type. |
+
+
+## GrpcJSONTranscoderFilterList
+
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `GrpcJSONTranscoderFilterList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[GrpcJSONTranscoderFilter](#grpcjsontranscoderfilter) array_ |  |
+
+
+## GrpcJSONTranscoderFilterSpec
+
+
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilter](#grpcjsontranscoderfilter)
+
+| Field | Description |
+| --- | --- |
+| `proto_descriptor_bin` _string_ | ProtoDescriptorBin is the base64 encoded binary representation of the proto descriptor. |
+| `services` _string array_ |  |
+| `auto_mapping` _boolean_ | AutoMapping is a flag that indicates whether the filter should automatically map the incoming request to the appropriate method in the proto descriptor. |
+| `print_options` _[PrintOptions](#printoptions)_ | PrintOptions is a set of options that controls how the filter generates the JSON response. |
+
+
 ## HeaderMatch
 
 
@@ -193,6 +245,23 @@ _Appears in:_
 | `issuer` _string_ | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
 | `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
+
+
+## PrintOptions
+
+
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilterSpec](#grpcjsontranscoderfilterspec)
+
+| Field | Description |
+| --- | --- |
+| `add_whitespace` _boolean_ | AddWhitespace is a flag that indicates whether the filter should add whitespace to the JSON response. |
+| `always_print_primitive_fields` _boolean_ | AlwaysPrintPrimitiveFields is a flag that indicates whether the filter should always print primitive fields in the JSON response. |
+| `always_print_enums_as_ints` _boolean_ | AlwaysPrintEnumsAsInts is a flag that indicates whether the filter should always print enums as ints in the JSON response. |
+| `preserve_proto_field_names` _boolean_ | PreserveProtoFieldNames is a flag that indicates whether the filter should preserve proto field names in the JSON response. |
 
 
 ## RateLimitFilter

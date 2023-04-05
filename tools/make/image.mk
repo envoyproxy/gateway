@@ -2,17 +2,7 @@
 #
 # All make targets related to docker image are defined in this file.
 
-# Docker variables
-# REGISTRY is the image registry to use for build and push image targets.
-REGISTRY ?= docker.io/envoyproxy
-# IMAGE_NAME is the name of EG image
-# Use gateway-dev in default when developing
-# Use gateway when releasing an image.
-IMAGE_NAME ?= gateway-dev
-# IMAGE is the image URL for build and push image targets.
-IMAGE ?= ${REGISTRY}/${IMAGE_NAME}
-# Tag is the tag to use for build and push image targets.
-TAG ?= $(REV)
+include tools/make/env.mk
 
 DOCKER := DOCKER_BUILDKIT=1 docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
