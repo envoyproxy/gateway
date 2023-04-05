@@ -20,6 +20,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+const (
+	extensionOptionKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+)
+
 func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
 	clusterName := routeName
 	cluster := &clusterv3.Cluster{
@@ -112,7 +116,7 @@ func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
 	anyProtocolOptions, _ := anypb.New(&protocolOptions)
 
 	extensionOptions := map[string]*anypb.Any{
-		"envoy.extensions.upstreams.http.v3.HttpProtocolOptions": anyProtocolOptions,
+		extensionOptionKey: anyProtocolOptions,
 	}
 
 	return extensionOptions
