@@ -131,10 +131,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-			if modifiedRoute, err := processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err == nil {
-				// If there was an extension and it returned an xDS Route, then overwrite the one we generated
-				xdsRoute = modifiedRoute
-			} else {
+			if err := processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
 				return err
 			}
 
@@ -170,10 +167,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// Check if an extension want to modify the Virtual Host we just generated
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if modifiedVHost, err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err == nil {
-			// If there was an extension and it returned an xDS Virtual Host, then overwrite the one we generated
-			vHost = modifiedVHost
-		} else {
+		if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
 			return err
 		}
 

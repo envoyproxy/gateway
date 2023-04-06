@@ -24,17 +24,17 @@ import (
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 )
 
-func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) (*routev3.Route, error) {
+func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager and the ir.HTTPRoute has extension filters
 	if em == nil || len(irRoute.ExtensionRefs) == 0 {
-		return route, nil
+		return nil
 	}
 
 	// Check if an extension want to modify the route that was just configured/created
 	extManager := *em
 	extRouteHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSRoute)
 	if extRouteHookClient == nil {
-		return route, nil
+		return nil
 	}
 	unstructuredResources := make([]*unstructured.Unstructured, len(irRoute.ExtensionRefs))
 	for refIdx, ref := range irRoute.ExtensionRefs {
@@ -48,40 +48,45 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
-		return nil, err
+		return err
 	}
 
+	// If the extension returned a modified Route, then copy its to the one that was passed in as a reference
 	if modifiedRoute != nil {
-		return modifiedRoute, nil
+		// Overwrite the pointer for the original route.
+		// Uses nolint because of the ineffectual assignment check
+		route = modifiedRoute //nolint
 	}
-	return route, nil
+	return nil
 }
 
-func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) (*routev3.VirtualHost, error) {
+func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionTypes.Manager) error {
 	// Do nothing unless there is an extension manager
 	if em == nil {
-		return vHost, nil
+		return nil
 	}
 
 	// Check if an extension want to modify the route that was just configured/created
 	extManager := *em
 	extVHHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSVirtualHost)
 	if extVHHookClient == nil {
-		return vHost, nil
+		return nil
 	}
 	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
 	if err != nil {
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
-		return nil, err
+		return err
 	}
 
-	// If the extension returned a nil Virtual Host, then we aren't going to modify it at all
+	// If the extension returned a modified Virtual Host, then copy its to the one that was passed in as a reference
 	if modifiedVH != nil {
-		return modifiedVH, nil
+		// Overwrite the pointer for the original virtual host.
+		// Uses nolint because of the ineffectual assignment check
+		vHost = modifiedVH //nolint
 	}
 
-	return vHost, nil
+	return nil
 }
 
 func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListener *listenerv3.Listener, em *extensionTypes.Manager) error {
