@@ -11,8 +11,6 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
-
-	runner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
 const (
@@ -27,6 +25,9 @@ const (
 	envoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
 	envoyAdminAccessLogPath = "/dev/null"
+
+	// DefaultXdsServerPort is the default listening port of the xds-server.
+	DefaultXdsServerPort = 18000
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -84,7 +85,7 @@ func GetRenderedBootstrapConfig() (string, error) {
 		parameters: bootstrapParameters{
 			XdsServer: xdsServerParameters{
 				Address: envoyGatewayXdsServerHost,
-				Port:    runner.XdsServerPort,
+				Port:    DefaultXdsServerPort,
 			},
 			AdminServer: adminServerParameters{
 				Address:       envoyAdminAddress,

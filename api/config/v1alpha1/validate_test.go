@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package validation_test
+package v1alpha1
 
 import (
 	// Register embed
@@ -13,9 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 )
 
 var (
@@ -32,7 +29,7 @@ var (
 func TestValidateEnvoyProxy(t *testing.T) {
 	testCases := []struct {
 		name     string
-		obj      *egcfgv1a1.EnvoyProxy
+		obj      *EnvoyProxy
 		expected bool
 	}{
 		{
@@ -42,12 +39,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "nil provider",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
+				Spec: EnvoyProxySpec{
 					Provider: nil,
 				},
 			},
@@ -55,14 +52,14 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported provider",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.ResourceProvider{
-						Type: egcfgv1a1.ProviderTypeFile,
+				Spec: EnvoyProxySpec{
+					Provider: &ResourceProvider{
+						Type: ProviderTypeFile,
 					},
 				},
 			},
@@ -70,15 +67,15 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "nil envoy service",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.ResourceProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+				Spec: EnvoyProxySpec{
+					Provider: &ResourceProvider{
+						Type: ProviderTypeKubernetes,
+						Kubernetes: &KubernetesResourceProvider{
 							EnvoyService: nil,
 						},
 					},
@@ -88,17 +85,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported envoy service type \"\" ",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.ResourceProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(""),
+				Spec: EnvoyProxySpec{
+					Provider: &ResourceProvider{
+						Type: ProviderTypeKubernetes,
+						Kubernetes: &KubernetesResourceProvider{
+							EnvoyService: &KubernetesServiceSpec{
+								Type: GetKubernetesServiceType(""),
 							},
 						},
 					},
@@ -108,17 +105,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported envoy service type 'NodePort'",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.ResourceProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceType(corev1.ServiceTypeNodePort)),
+				Spec: EnvoyProxySpec{
+					Provider: &ResourceProvider{
+						Type: ProviderTypeKubernetes,
+						Kubernetes: &KubernetesResourceProvider{
+							EnvoyService: &KubernetesServiceSpec{
+								Type: GetKubernetesServiceType(ServiceType(corev1.ServiceTypeNodePort)),
 							},
 						},
 					},
@@ -128,17 +125,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'LoadBalancer'",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.ResourceProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+				Spec: EnvoyProxySpec{
+					Provider: &ResourceProvider{
+						Type: ProviderTypeKubernetes,
+						Kubernetes: &KubernetesResourceProvider{
+							EnvoyService: &KubernetesServiceSpec{
+								Type: GetKubernetesServiceType(ServiceTypeLoadBalancer),
 							},
 						},
 					},
@@ -148,17 +145,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'ClusterIP'",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.ResourceProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+				Spec: EnvoyProxySpec{
+					Provider: &ResourceProvider{
+						Type: ProviderTypeKubernetes,
+						Kubernetes: &KubernetesResourceProvider{
+							EnvoyService: &KubernetesServiceSpec{
+								Type: GetKubernetesServiceType(ServiceTypeClusterIP),
 							},
 						},
 					},
@@ -168,12 +165,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid user bootstrap",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
+				Spec: EnvoyProxySpec{
 					Bootstrap: &validUserBootstrap,
 				},
 			},
@@ -181,12 +178,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with missing admin address",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
+				Spec: EnvoyProxySpec{
 					Bootstrap: &missingAdminAddressUserBootstrap,
 				},
 			},
@@ -194,12 +191,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with different dynamic resources",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
+				Spec: EnvoyProxySpec{
 					Bootstrap: &differentDynamicResourcesUserBootstrap,
 				},
 			},
@@ -207,12 +204,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with different xds_cluster endpoint",
-			obj: &egcfgv1a1.EnvoyProxy{
+			obj: &EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
+				Spec: EnvoyProxySpec{
 					Bootstrap: &differentXdsClusterAddressBootstrap,
 				},
 			},
@@ -223,7 +220,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			err := validation.ValidateEnvoyProxy(tc.obj)
+			err := tc.obj.Validate()
 			if tc.expected {
 				require.NoError(t, err)
 			} else {
