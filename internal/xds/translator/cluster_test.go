@@ -48,7 +48,6 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 }
 
 func getXdsClusterObjFromBootstrap(t *testing.T) *clusterv3.Cluster {
-	var bootstrapXdsCluster *clusterv3.Cluster
 	bootstrapObj := &bootstrapv3.Bootstrap{}
 	bootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()
 	require.NoError(t, err)
@@ -59,10 +58,9 @@ func getXdsClusterObjFromBootstrap(t *testing.T) *clusterv3.Cluster {
 
 	for _, cluster := range bootstrapObj.StaticResources.Clusters {
 		if cluster.Name == xdsClusterName {
-			bootstrapXdsCluster = cluster
-			break
+			return cluster
 		}
 	}
 
-	return bootstrapXdsCluster
+	return nil
 }
