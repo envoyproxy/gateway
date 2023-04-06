@@ -8,9 +8,6 @@ package translator
 import (
 	"testing"
 
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	"github.com/envoyproxy/gateway/internal/xds/server/runner"
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +15,10 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
+	"github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
 const (
