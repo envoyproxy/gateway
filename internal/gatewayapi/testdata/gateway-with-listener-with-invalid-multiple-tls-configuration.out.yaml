@@ -16,24 +16,24 @@ gateways:
           tls:
             mode: Terminate
             certificateRefs:
-            - name: tls-secret-ecdsa-1
-            - name: tls-secret-ecdsa-2
+              - name: tls-secret-ecdsa-1
+              - name: tls-secret-ecdsa-2
     status:
       listeners:
         - name: tls
           attachedRoutes: 0
           conditions:
-          - lastTransitionTime: "2023-04-02T11:08:00Z"
-            message: "Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
-              be unique. Algorithm [ECDSA] conflicts with secret envoy-gateway/tls-secret-ecdsa-1"
-            reason: Invalid
-            status: "False"
-            type: Programmed
+            - lastTransitionTime: "2023-04-02T11:08:00Z"
+              message: "Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
+                be unique. Algorithm [ECDSA] conflicts with secret envoy-gateway/tls-secret-ecdsa-1"
+              reason: Invalid
+              status: "False"
+              type: Programmed
           supportedKinds:
-          - group: gateway.networking.k8s.io
-            kind: HTTPRoute
-          - group: gateway.networking.k8s.io
-            kind: GRPCRoute
+            - group: gateway.networking.k8s.io
+              kind: HTTPRoute
+            - group: gateway.networking.k8s.io
+              kind: GRPCRoute
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute
@@ -53,16 +53,20 @@ httpRoutes:
               port: 8080
     status:
       parents:
-        - conditions:
-          - lastTransitionTime: "2023-04-02T11:15:58Z"
-            message: There are no ready listeners for this parent ref
-            reason: NoReadyListeners
-            status: "False"
-            type: Accepted
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+        - controllerName: gateway.envoyproxy.io/gatewayclass-controller
           parentRef:
             name: gateway-1
             namespace: envoy-gateway
+          conditions:
+            - lastTransitionTime: "2023-04-02T11:15:58Z"
+              message: There are no ready listeners for this parent ref
+              reason: NoReadyListeners
+              status: "False"
+              type: Accepted
+            - type: ResolvedRefs
+              status: "True"
+              reason: ResolvedRefs 
+              message: Resolved all the Object references for the Route
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

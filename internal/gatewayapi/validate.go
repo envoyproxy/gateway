@@ -359,7 +359,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			pkaSecretSet[pka] = secret
 		}
 
-		listener.SetTLSSecret(maps.Values(pkaSecretSet))
+		listener.SetTLSSecrets(maps.Values(pkaSecretSet))
 
 	case v1beta1.TLSProtocolType:
 		if listener.TLS == nil {

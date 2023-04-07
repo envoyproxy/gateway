@@ -148,7 +148,7 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
-func (l *ListenerContext) SetTLSSecret(tlsSecrets []*v1.Secret) {
+func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*v1.Secret) {
 	l.tlsSecrets = tlsSecrets
 }
 
