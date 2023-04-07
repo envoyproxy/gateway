@@ -47,13 +47,19 @@ func TestGatewayAPIConformance(t *testing.T) {
 		validUniqueListenerPorts = []v1alpha2.PortNumber{}
 	}
 
+	supportedFeatures := suite.AllFeatures
+	// ignore mesh conformance tests
+	for feature := range suite.MeshCoreFeatures {
+		supportedFeatures.Delete(feature)
+	}
+
 	cSuite := suite.New(suite.Options{
-		Client:                     client,
-		GatewayClassName:           *flags.GatewayClassName,
-		Debug:                      *flags.ShowDebug,
-		CleanupBaseResources:       *flags.CleanupBaseResources,
-		ValidUniqueListenerPorts:   validUniqueListenerPorts,
-		EnableAllSupportedFeatures: true,
+		Client:                   client,
+		GatewayClassName:         *flags.GatewayClassName,
+		Debug:                    *flags.ShowDebug,
+		CleanupBaseResources:     *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts: validUniqueListenerPorts,
+		SupportedFeatures:        supportedFeatures,
 		SkipTests: []string{
 			// Remove once https://github.com/envoyproxy/gateway/issues/993 is fixed
 			tests.HTTPRouteRedirectPath.ShortName,
