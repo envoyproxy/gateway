@@ -18,7 +18,6 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-	"github.com/envoyproxy/gateway/internal/xds/server/runner"
 )
 
 const (
@@ -41,7 +40,7 @@ func TestBuildXdsCluster(t *testing.T) {
 
 func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
-	destinations := []*ir.RouteDestination{{Host: envoyGatewayXdsServerHost, Port: runner.XdsServerPort}}
+	destinations := []*ir.RouteDestination{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}}
 
 	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, destinations)
 
