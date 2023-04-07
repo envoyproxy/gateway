@@ -35,7 +35,7 @@ type EnvoyProxySpec struct {
 	// parameters.
 	//
 	// +optional
-	Provider *ResourceProvider `json:"provider,omitempty"`
+	Provider *EnvoyProxyProvider `json:"provider,omitempty"`
 
 	// Logging defines logging parameters for managed proxies. If unspecified,
 	// default settings apply. This type is not implemented until
@@ -59,9 +59,9 @@ type EnvoyProxySpec struct {
 	Bootstrap *string `json:"bootstrap,omitempty"`
 }
 
-// ResourceProvider defines the desired state of a resource provider.
+// EnvoyProxyProvider defines the desired state of a resource provider.
 // +union
-type ResourceProvider struct {
+type EnvoyProxyProvider struct {
 	// Type is the type of resource provider to use. A resource provider provides
 	// infrastructure resources for running the data plane, e.g. Envoy proxy, and
 	// optional auxiliary control planes. Supported types are "Kubernetes".
@@ -74,12 +74,12 @@ type ResourceProvider struct {
 	// for managed Kubernetes resources are applied.
 	//
 	// +optional
-	Kubernetes *KubernetesResourceProvider `json:"kubernetes,omitempty"`
+	Kubernetes *EnvoyProxyKubernetesProvider `json:"kubernetes,omitempty"`
 }
 
-// KubernetesResourceProvider defines configuration for the Kubernetes resource
+// EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
-type KubernetesResourceProvider struct {
+type EnvoyProxyKubernetesProvider struct {
 	// EnvoyDeployment defines the desired state of the Envoy deployment resource.
 	// If unspecified, default settings for the manged Envoy deployment resource
 	// are applied.

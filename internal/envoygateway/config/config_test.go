@@ -40,7 +40,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 					},
 				},
 				Namespace: "",
@@ -60,7 +60,7 @@ func TestValidate(t *testing.T) {
 			cfg: &Server{
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 					},
 				},
 				Namespace: "test-ns",
@@ -85,7 +85,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  &v1alpha1.Gateway{ControllerName: ""},
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 					},
 				},
 				Namespace: "test-ns",
@@ -98,7 +98,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: &v1alpha1.Provider{Type: v1alpha1.ProviderTypeFile},
+						Provider: &v1alpha1.EnvoyGatewayProvider{Type: v1alpha1.ProviderTypeFile},
 					},
 				},
 				Namespace: "test-ns",
@@ -111,7 +111,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:   v1alpha1.DefaultGateway(),
-						Provider:  v1alpha1.DefaultProvider(),
+						Provider:  v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{},
 					},
 				},
@@ -125,7 +125,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
 							Backend: v1alpha1.RateLimitDatabaseBackend{
 								Type:  v1alpha1.RedisBackendType,
@@ -144,7 +144,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
 							Backend: v1alpha1.RateLimitDatabaseBackend{
 								Type: v1alpha1.RedisBackendType,
@@ -165,7 +165,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
 							Backend: v1alpha1.RateLimitDatabaseBackend{
 								Type: v1alpha1.RedisBackendType,
@@ -186,7 +186,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Extension: &v1alpha1.Extension{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
@@ -223,7 +223,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Extension: &v1alpha1.Extension{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
@@ -266,7 +266,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Extension: &v1alpha1.Extension{
 							Hooks: &v1alpha1.ExtensionHooks{
 								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
@@ -302,7 +302,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Extension: &v1alpha1.Extension{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
@@ -345,7 +345,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Extension: &v1alpha1.Extension{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
@@ -378,7 +378,7 @@ func TestValidate(t *testing.T) {
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
-						Provider: v1alpha1.DefaultProvider(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Extension: &v1alpha1.Extension{
 							Resources: []v1alpha1.GroupVersionKind{
 								{

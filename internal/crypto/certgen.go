@@ -105,7 +105,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		}
 
 		var egDNSNames, envoyDNSNames []string
-		egProvider := cfg.EnvoyGateway.GetProvider().Type
+		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 		switch egProvider {
 		case v1alpha1.ProviderTypeKubernetes:
 			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.Namespace, DefaultDNSSuffix)
