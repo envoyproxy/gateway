@@ -11,19 +11,19 @@ This guide gives a walkthrough to generate RSA and ECDSA derived certificates an
 Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-This guide builds over the [Secure Gateways](secure-gateways.md) guide which uses a self-signed RSA derived Server certificate and private key.
+Follow the steps in the [Secure Gateways](secure-gateways.md) guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 
 ## Pre-checks
 
-While testing in Cluster without External LoadBalancer Support, we can query the example app through Envoy proxy while enforcing an RSA cipher.
+While testing in [Cluster without External LoadBalancer Support](secure-gateways.md#clusters-without-external-loadbalancer-support), we can query the example app through Envoy proxy while enforcing an RSA cipher, as shown below:
 
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
 ```
 
-At the same time, since the Secret configured at this point is an RSA based Secret, if we enforce the usage of an ECDSA cipher, the call should fail as follows
+Since the Secret configured at this point is an RSA based Secret, if we enforce the usage of an ECDSA cipher, the call should fail as follows
 
 ```shell
 $ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
@@ -47,7 +47,7 @@ Moving forward in the doc, we will be configuring the existing Gateway listener 
 
 ## TLS Certificates
 
-We will reuse the the CA certificate and key pair generated in the [Secure Gateways](secure-gateways.md) guide and use this CA itself to sign both RSA and ECDSA certificates of the Server. 
+Reuse the the CA certificate and key pair generated in the [Secure Gateways](secure-gateways.md) guide and use this CA to sign both RSA and ECDSA Server certificates. 
 Note the CA certificate and key names are `example.com.crt` and `example.com.key` respectively.
 
 
@@ -62,8 +62,6 @@ openssl x509 -req -SHA384  -days 365 -in www.example.com.ecdsa.csr -CA example.c
 Store the cert/key in a Secret:
 
 ```shell
-kubectl create secret tls example-cert --key=www.example.com.key --cert=www.example.com.crt
-
 kubectl create secret tls example-cert-ecdsa --key=www.example.com.ecdsa.key --cert=www.example.com.ecdsa.crt
 ```
 
@@ -87,14 +85,18 @@ kubectl get gateway/eg -o yaml
 
 ## Testing
 
-Again, while testing in Cluster without External LoadBalancer Support, we can query the example app through Envoy proxy while enforcing an RSA cipher.
-
-
-Query the example app through Envoy proxy while enforcing an RSA cipher, which should work as it did before:
+Again, while testing in Cluster without External LoadBalancer Support, we can query the example app through Envoy proxy while enforcing an RSA cipher, which should work as it did before:
 
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
+```shell
+...
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-CHACHA20-POLY1305
+...
 ```
 
 Additionally, querying the example app while enforcing an ECDSA cipher should also work now:
@@ -102,4 +104,11 @@ Additionally, querying the example app while enforcing an ECDSA cipher should al
 ```shell
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
+```
+```shell
+...
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-ECDSA-CHACHA20-POLY1305
+...
 ```
