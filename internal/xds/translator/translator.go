@@ -16,6 +16,7 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
+	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -25,6 +26,10 @@ type Translator struct {
 	// GlobalRateLimit holds the global rate limit settings
 	// required during xds translation.
 	GlobalRateLimit *GlobalRateLimitSettings
+
+	// ExtensionManager holds the config for interacting with extensions when generating xDS
+	// resources. Only required during xds translation.
+	ExtensionManager *extensionTypes.Manager
 }
 
 type GlobalRateLimitSettings struct {
@@ -46,6 +51,12 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	}
 
 	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP); err != nil {
+		return nil, err
+	}
+
+	// Check if an extension want to inject any clusters/secrets
+	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
+	if err := processExtensionPostTranslationHook(tCtx, t.ExtensionManager); err != nil {
 		return nil, err
 	}
 
@@ -110,10 +121,18 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			protocol = HTTP2
 		}
 
+		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 		for _, httpRoute := range httpListener.Routes {
 
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
+
+			// Check if an extension want to modify the route we just generated
+			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+			if err := processExtensionPostRouteHook(xdsRoute, vHost, httpRoute, t.ExtensionManager); err != nil {
+				return err
+			}
+
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
@@ -144,6 +163,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 		}
 
+		// Check if an extension want to modify the Virtual Host we just generated
+		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+		if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
+			return err
+		}
+
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
 
 		// TODO: Make this into a generic interface for API Gateway features.
@@ -157,7 +182,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		if err := createJwksClusters(tCtx, httpListener.Routes); err != nil {
 			return err
 		}
+		// Check if an extension want to modify the listener that was just configured/created
+		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
+		if err := processExtensionPostListenerHook(tCtx, xdsListener, t.ExtensionManager); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 

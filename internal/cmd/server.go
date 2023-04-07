@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
 	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
@@ -98,6 +99,12 @@ func setupRunners(cfg *config.Server) error {
 	// https://github.com/envoyproxy/gateway/issues/43
 	ctx := ctrl.SetupSignalHandler()
 
+	// Setup the Extension Manager
+	extMgr, err := extensionregistry.NewManager(cfg)
+	if err != nil {
+		return err
+	}
+
 	pResources := new(message.ProviderResources)
 	// Start the Provider Service
 	// It fetches the resources from the configured provider type
@@ -120,6 +127,7 @@ func setupRunners(cfg *config.Server) error {
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
+		ExtensionManager:  extMgr,
 	})
 	if err := gwRunner.Start(ctx); err != nil {
 		return err
@@ -129,9 +137,10 @@ func setupRunners(cfg *config.Server) error {
 	// Start the Xds Translator Service
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
 	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server: *cfg,
-		XdsIR:  xdsIR,
-		Xds:    xds,
+		Server:           *cfg,
+		XdsIR:            xdsIR,
+		Xds:              xds,
+		ExtensionManager: extMgr,
 	})
 	if err := xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
@@ -186,6 +195,11 @@ func setupRunners(cfg *config.Server) error {
 	xds.Close()
 
 	cfg.Logger.Info("shutting down")
+
+	// Close connections to extension services
+	if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
+		mgr.CleanupHookConns()
+	}
 
 	return nil
 }

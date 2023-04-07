@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
@@ -22,6 +23,7 @@ type Config struct {
 	ProviderResources *message.ProviderResources
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
+	ExtensionManager  extension.Manager
 }
 
 type Runner struct {

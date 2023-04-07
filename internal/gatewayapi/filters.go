@@ -60,7 +60,8 @@ type HTTPFilterIR struct {
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
 
-	CorsPolicy *ir.CorsPolicy
+	CorsPolicy    *ir.CorsPolicy
+	ExtensionRefs []*ir.UnstructuredRef
 }
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.
