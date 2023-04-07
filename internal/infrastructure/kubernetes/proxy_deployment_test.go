@@ -207,7 +207,7 @@ func testExpectedProxyDeployment(t *testing.T,
 
 	// Set the deployment replicas.
 	repl := int32(2)
-	infra.Proxy.GetProxyConfig().GetProvider().GetKubeResourceProvider().EnvoyDeployment.Replicas = &repl
+	infra.Proxy.GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider().EnvoyDeployment.Replicas = &repl
 
 	deploy, err = kube.expectedProxyDeployment(infra)
 	require.NoError(t, err)
@@ -246,9 +246,9 @@ func TestExpectedProxyDeploymentForSpecifiedResources(t *testing.T) {
 	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
-		Spec: egcfgv1a1.EnvoyProxySpec{Provider: &egcfgv1a1.ResourceProvider{
+		Spec: egcfgv1a1.EnvoyProxySpec{Provider: &egcfgv1a1.EnvoyProxyProvider{
 			Type: egcfgv1a1.ProviderTypeKubernetes,
-			Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+			Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 				EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
 					Pod: &egcfgv1a1.KubernetesPodSpec{
 						SecurityContext: &podSecurityContext,
@@ -317,9 +317,9 @@ func TestExpectedPodAnnotations(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: egcfgv1a1.EnvoyProxySpec{
-			Provider: &egcfgv1a1.ResourceProvider{
+			Provider: &egcfgv1a1.EnvoyProxyProvider{
 				Type: egcfgv1a1.ProviderTypeKubernetes,
-				Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+				Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 					EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
 						Pod: &egcfgv1a1.KubernetesPodSpec{
 							Annotations: annotations,

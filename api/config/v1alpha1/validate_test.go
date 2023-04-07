@@ -58,7 +58,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: EnvoyProxySpec{
-					Provider: &ResourceProvider{
+					Provider: &EnvoyProxyProvider{
 						Type: ProviderTypeFile,
 					},
 				},
@@ -73,9 +73,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: EnvoyProxySpec{
-					Provider: &ResourceProvider{
+					Provider: &EnvoyProxyProvider{
 						Type: ProviderTypeKubernetes,
-						Kubernetes: &KubernetesResourceProvider{
+						Kubernetes: &EnvoyProxyKubernetesProvider{
 							EnvoyService: nil,
 						},
 					},
@@ -91,9 +91,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: EnvoyProxySpec{
-					Provider: &ResourceProvider{
+					Provider: &EnvoyProxyProvider{
 						Type: ProviderTypeKubernetes,
-						Kubernetes: &KubernetesResourceProvider{
+						Kubernetes: &EnvoyProxyKubernetesProvider{
 							EnvoyService: &KubernetesServiceSpec{
 								Type: GetKubernetesServiceType(""),
 							},
@@ -111,9 +111,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: EnvoyProxySpec{
-					Provider: &ResourceProvider{
+					Provider: &EnvoyProxyProvider{
 						Type: ProviderTypeKubernetes,
-						Kubernetes: &KubernetesResourceProvider{
+						Kubernetes: &EnvoyProxyKubernetesProvider{
 							EnvoyService: &KubernetesServiceSpec{
 								Type: GetKubernetesServiceType(ServiceType(corev1.ServiceTypeNodePort)),
 							},
@@ -131,9 +131,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: EnvoyProxySpec{
-					Provider: &ResourceProvider{
+					Provider: &EnvoyProxyProvider{
 						Type: ProviderTypeKubernetes,
-						Kubernetes: &KubernetesResourceProvider{
+						Kubernetes: &EnvoyProxyKubernetesProvider{
 							EnvoyService: &KubernetesServiceSpec{
 								Type: GetKubernetesServiceType(ServiceTypeLoadBalancer),
 							},
@@ -151,9 +151,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: EnvoyProxySpec{
-					Provider: &ResourceProvider{
+					Provider: &EnvoyProxyProvider{
 						Type: ProviderTypeKubernetes,
-						Kubernetes: &KubernetesResourceProvider{
+						Kubernetes: &EnvoyProxyKubernetesProvider{
 							EnvoyService: &KubernetesServiceSpec{
 								Type: GetKubernetesServiceType(ServiceTypeClusterIP),
 							},

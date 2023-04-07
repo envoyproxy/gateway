@@ -40,7 +40,7 @@ type EnvoyGatewaySpec struct {
 	// parameters.
 	//
 	// +optional
-	Provider *Provider `json:"provider,omitempty"`
+	Provider *EnvoyGatewayProvider `json:"provider,omitempty"`
 
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
@@ -68,9 +68,9 @@ type Gateway struct {
 	ControllerName string `json:"controllerName,omitempty"`
 }
 
-// Provider defines the desired configuration of a provider.
+// EnvoyGatewayProvider defines the desired configuration of a provider.
 // +union
-type Provider struct {
+type EnvoyGatewayProvider struct {
 	// Type is the type of provider to use. Supported types are "Kubernetes".
 	//
 	// +unionDiscriminator
@@ -80,23 +80,23 @@ type Provider struct {
 	// provides runtime configuration via the Kubernetes API.
 	//
 	// +optional
-	Kubernetes *KubernetesProvider `json:"kubernetes,omitempty"`
+	Kubernetes *EnvoyGatewayKubernetesProvider `json:"kubernetes,omitempty"`
 
 	// File defines the configuration of the File provider. File provides runtime
 	// configuration defined by one or more files. This type is not implemented
 	// until https://github.com/envoyproxy/gateway/issues/1001 is fixed.
 	//
 	// +optional
-	File *FileProvider `json:"file,omitempty"`
+	File *EnvoyGatewayFileProvider `json:"file,omitempty"`
 }
 
-// KubernetesProvider defines configuration for the Kubernetes provider.
-type KubernetesProvider struct {
+// EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.
+type EnvoyGatewayKubernetesProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 
-// FileProvider defines configuration for the File provider.
-type FileProvider struct {
+// EnvoyGatewayFileProvider defines configuration for the File provider.
+type EnvoyGatewayFileProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 

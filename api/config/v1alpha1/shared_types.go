@@ -45,7 +45,7 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 
-	// Pod defines the desired replicas, annotations and securityContext of container.
+	// Pod defines the desired annotations and securityContext of container.
 	//
 	// +optional
 	Pod *KubernetesPodSpec `json:"pod,omitempty"`

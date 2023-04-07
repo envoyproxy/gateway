@@ -45,8 +45,8 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 
 	// Get annotations
 	var annotations map[string]string
-	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
-	envoyServiceConfig := provider.GetKubeResourceProvider().EnvoyService
+	provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 	if envoyServiceConfig.Annotations != nil {
 		annotations = envoyServiceConfig.Annotations
 	}
