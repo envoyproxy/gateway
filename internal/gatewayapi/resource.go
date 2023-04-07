@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -39,6 +40,7 @@ type Resources struct {
 	CustomGRPCRoutes          []*v1alpha2.CustomGRPCRoute
 	CorsFilters               []*egv1a1.CorsFilter
 	GrpcJSONTranscoderFilters []*egv1a1.GrpcJSONTranscoderFilter
+	ExtensionRefFilters       []unstructured.Unstructured
 }
 
 func NewResources() *Resources {
@@ -58,6 +60,7 @@ func NewResources() *Resources {
 		CustomGRPCRoutes:          []*v1alpha2.CustomGRPCRoute{},
 		CorsFilters:               []*egv1a1.CorsFilter{},
 		GrpcJSONTranscoderFilters: []*egv1a1.GrpcJSONTranscoderFilter{},
+		ExtensionRefFilters:       []unstructured.Unstructured{},
 	}
 }
 

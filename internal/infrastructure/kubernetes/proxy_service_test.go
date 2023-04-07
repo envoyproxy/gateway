@@ -137,9 +137,9 @@ func TestDesiredProxySpecifiedServiceSpec(t *testing.T) {
 	infra.Proxy.Config = &egcfgv1a1.EnvoyProxy{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
-		Spec: egcfgv1a1.EnvoyProxySpec{Provider: &egcfgv1a1.ResourceProvider{
+		Spec: egcfgv1a1.EnvoyProxySpec{Provider: &egcfgv1a1.EnvoyProxyProvider{
 			Type: egcfgv1a1.ProviderTypeKubernetes,
-			Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+			Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 				EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
 					Type: clusterIPServiceType,
 				},
@@ -172,9 +172,9 @@ func TestExpectedAnnotations(t *testing.T) {
 			Name:      "test",
 		},
 		Spec: egcfgv1a1.EnvoyProxySpec{
-			Provider: &egcfgv1a1.ResourceProvider{
+			Provider: &egcfgv1a1.EnvoyProxyProvider{
 				Type: egcfgv1a1.ProviderTypeKubernetes,
-				Kubernetes: &egcfgv1a1.KubernetesResourceProvider{
+				Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 					EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
 						Annotations: annotations,
 					},

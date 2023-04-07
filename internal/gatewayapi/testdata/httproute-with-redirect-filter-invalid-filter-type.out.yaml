@@ -71,7 +71,7 @@ httpRoutes:
       - type: Accepted
         status: "False"
         reason: UnsupportedValue
-        message: "Invalid filter ExtensionRef: invalid group; must be gateway.envoyproxy.io"
+        message: "Invalid filter ExtensionRef: unknown kind unsupported.group.io/UnsupportedKind"
       - type: ResolvedRefs
         status: "True"
         reason: ResolvedRefs

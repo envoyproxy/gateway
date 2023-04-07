@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -58,11 +60,13 @@ func TestProcessHTTPRoutes(t *testing.T) {
 	gwNsName := utils.NamespacedName(gw).String()
 
 	testCases := []struct {
-		name             string
-		routes           []*gwapiv1b1.HTTPRoute
-		authenFilters    []*egv1a1.AuthenticationFilter
-		rateLimitFilters []*egv1a1.RateLimitFilter
-		expected         bool
+		name               string
+		routes             []*gwapiv1b1.HTTPRoute
+		authenFilters      []*egv1a1.AuthenticationFilter
+		rateLimitFilters   []*egv1a1.RateLimitFilter
+		extensionFilters   []*unstructured.Unstructured
+		extensionAPIGroups []schema.GroupVersionKind
+		expected           bool
 	}{
 		{
 			name: "valid httproute",
@@ -390,6 +394,79 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "httproute with one filter_from_extension",
+			routes: []*gwapiv1b1.HTTPRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1b1.HTTPRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1b1.HTTPRouteRule{
+							{
+								Matches: []gwapiv1b1.HTTPRouteMatch{
+									{
+										Path: &gwapiv1b1.HTTPPathMatch{
+											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
+											Value: gatewayapi.StringPtr("/"),
+										},
+									},
+								},
+								Filters: []gwapiv1b1.HTTPRouteFilter{
+									{
+										Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1b1.LocalObjectReference{
+											Group: gwapiv1b1.Group("gateway.example.io"),
+											Kind:  gwapiv1b1.Kind("Foo"),
+											Name:  gwapiv1b1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1b1.HTTPBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			extensionFilters: []*unstructured.Unstructured{
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "gateway.example.io/v1alpha1",
+						"kind":       "Foo",
+						"metadata": map[string]interface{}{
+							"name":      "test",
+							"namespace": "test",
+						},
+					},
+				},
+			},
+			extensionAPIGroups: []schema.GroupVersionKind{
+				{
+					Group:   "gateway.example.io",
+					Version: "v1alpha1",
+					Kind:    "Foo",
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for i := range testCases {
@@ -401,14 +478,15 @@ func TestProcessHTTPRoutes(t *testing.T) {
 		// Create the reconciler.
 		logger, err := log.NewLogger()
 		require.NoError(t, err)
-		r := &gatewayAPIReconciler{
-			log:             logger,
-			classController: gcCtrlName,
-		}
 		ctx := context.Background()
 
 		// Run the test cases.
 		t.Run(tc.name, func(t *testing.T) {
+			r := &gatewayAPIReconciler{
+				log:             logger,
+				classController: gcCtrlName,
+			}
+
 			// Add the test case objects to the reconciler client.
 			for _, route := range tc.routes {
 				objs = append(objs, route)
@@ -418,6 +496,12 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			}
 			for _, filter := range tc.rateLimitFilters {
 				objs = append(objs, filter)
+			}
+			for _, filter := range tc.extensionFilters {
+				objs = append(objs, filter)
+			}
+			if len(tc.extensionAPIGroups) > 0 {
+				r.extGVKs = append(r.extGVKs, tc.extensionAPIGroups...)
 			}
 			r.client = fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
@@ -433,10 +517,10 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.
 				require.Equal(t, tc.routes, resourceTree.HTTPRoutes)
+				// NOTE: filters must be in the same namespace as the HTTPRoute
 				if tc.authenFilters != nil {
 					for i, filter := range tc.authenFilters {
 						key := types.NamespacedName{
-							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
 							Namespace: tc.routes[i].Namespace,
 							Name:      filter.Name,
 						}
@@ -446,11 +530,19 @@ func TestProcessHTTPRoutes(t *testing.T) {
 				if tc.rateLimitFilters != nil {
 					for i, filter := range tc.rateLimitFilters {
 						key := types.NamespacedName{
-							// The RateLimitFilter must be in the same namespace as the HTTPRoute.
 							Namespace: tc.routes[i].Namespace,
 							Name:      filter.Name,
 						}
 						require.Equal(t, filter, resourceMap.rateLimitFilters[key])
+					}
+				}
+				if tc.extensionFilters != nil {
+					for i, filter := range tc.extensionFilters {
+						key := types.NamespacedName{
+							Namespace: tc.routes[i].Namespace,
+							Name:      filter.GetName(),
+						}
+						require.Equal(t, *filter, resourceMap.extensionRefFilters[key])
 					}
 				}
 			} else {

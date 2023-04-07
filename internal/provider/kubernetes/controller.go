@@ -13,7 +13,9 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,7 +29,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -68,11 +69,21 @@ type gatewayAPIReconciler struct {
 	namespace       string
 
 	resources *message.ProviderResources
+	extGVKs   []schema.GroupVersionKind
 }
 
 // newGatewayAPIController
 func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
 	ctx := context.Background()
+
+	// Gather additional resources to watch from registered extensions
+	var extGVKs []schema.GroupVersionKind
+	if cfg.EnvoyGateway.Extension != nil {
+		for _, rsrc := range cfg.EnvoyGateway.Extension.Resources {
+			gvk := schema.GroupVersionKind(rsrc)
+			extGVKs = append(extGVKs, gvk)
+		}
+	}
 
 	r := &gatewayAPIReconciler{
 		client:          mgr.GetClient(),
@@ -81,6 +92,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		namespace:       cfg.Namespace,
 		statusUpdater:   su,
 		resources:       resources,
+		extGVKs:         extGVKs,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -92,7 +104,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	// Subscribe to status updates
 	r.subscribeAndUpdateStatus(ctx)
 
-	// watch gateway api resources
+	// Watch resources
 	if err := r.watchResources(ctx, mgr, c); err != nil {
 		return err
 	}
@@ -119,6 +131,10 @@ type resourceMappings struct {
 	// GrpcJSONTranscoderFilters is a map of GrpcJSONTranscoderFilter, where the key is the
 	// namespaced name of the GrpcJSONTranscoderFilter.
 	grpcJSONTranscoderFilters map[types.NamespacedName]*egv1a1.GrpcJSONTranscoderFilter
+	// extensionRefFilters is a map of filters managed by an extension.
+	// The key is the namespaced name of the filter and the value is the
+	// unstructured form of the resource.
+	extensionRefFilters map[types.NamespacedName]unstructured.Unstructured
 }
 
 func newResourceMapping() *resourceMappings {
@@ -130,11 +146,12 @@ func newResourceMapping() *resourceMappings {
 		rateLimitFilters:          map[types.NamespacedName]*egv1a1.RateLimitFilter{},
 		corsFilters:               map[types.NamespacedName]*egv1a1.CorsFilter{},
 		grpcJSONTranscoderFilters: map[types.NamespacedName]*egv1a1.GrpcJSONTranscoderFilter{},
+		extensionRefFilters:       map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
 
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	r.log.WithName(request.Name).Info("reconciling gatewayAPI object", "namespace", request.Namespace, "name", request.Name)
+	r.log.WithName(request.Name).Info("reconciling object", "namespace", request.Namespace, "name", request.Name)
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
@@ -1369,7 +1386,18 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	r.log.Info("watching gatewayAPI related objects")
+	r.log.Info("Watching gatewayAPI related objects")
+
+	// Watch any additional GVKs from the registered extension.
+	for _, gvk := range r.extGVKs {
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(gvk)
+		if err := c.Watch(&source.Kind{Type: u},
+			&handler.EnqueueRequestForObject{}); err != nil {
+			return err
+		}
+		r.log.Info("Watching additional resource", "resource", gvk.String())
+	}
 	return nil
 }
 
@@ -1433,7 +1461,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 		if classRefsEnvoyProxy(gc, &ep) {
 			found = true
-			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
+			if err := (&ep).Validate(); err != nil {
 				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
 				continue
 			}

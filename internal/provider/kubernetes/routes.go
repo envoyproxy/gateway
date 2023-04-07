@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -135,7 +136,11 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 
 			for i := range rule.Filters {
 				filter := rule.Filters[i]
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err != nil {
+				var extGKs []schema.GroupKind
+				for _, gvk := range r.extGVKs {
+					extGKs = append(extGKs, gvk.GroupKind())
+				}
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter, extGKs...); err != nil {
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
 				}
@@ -276,8 +281,8 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
 
-	// An HTTPRoute may reference an AuthenticationFilter or RateLimitFilter,
-	// so add them to the resource map first (if they exist).
+	// An HTTPRoute may reference an AuthenticationFilter, RateLimitFilter, or a filter managed
+	// by an extension so add them to the resource map first (if they exist).
 	authenFilters, err := r.getAuthenticationFilters(ctx)
 	if err != nil {
 		return err
@@ -294,6 +299,15 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	for i := range rateLimitFilters {
 		filter := rateLimitFilters[i]
 		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range extensionRefFilters {
+		filter := extensionRefFilters[i]
+		resourceMap.extensionRefFilters[utils.NamespacedName(&filter)] = filter
 	}
 
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
@@ -348,7 +362,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 			for i := range rule.Filters {
 				filter := rule.Filters[i]
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err != nil {
+				var extGKs []schema.GroupKind
+				for _, gvk := range r.extGVKs {
+					extGKs = append(extGKs, gvk.GroupKind())
+				}
+				if err := gatewayapi.ValidateHTTPRouteFilter(&filter, extGKs...); err != nil {
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
 				}
@@ -406,35 +424,48 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						}
 					}
 				} else if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
-					if string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+					// NOTE: filters must be in the same namespace as the HTTPRoute
+					switch string(filter.ExtensionRef.Kind) {
+					case egv1a1.KindAuthenticationFilter:
 						key := types.NamespacedName{
-							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
 							Namespace: httpRoute.Namespace,
 							Name:      string(filter.ExtensionRef.Name),
 						}
-						filter, ok := resourceMap.authenFilters[key]
+						authFilter, ok := resourceMap.authenFilters[key]
 						if !ok {
 							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
 							continue
 						}
 
-						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
-					} else if string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter {
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
+					case egv1a1.KindRateLimitFilter:
 						key := types.NamespacedName{
-							// The RateLimitFilter must be in the same namespace as the HTTPRoute.
 							Namespace: httpRoute.Namespace,
 							Name:      string(filter.ExtensionRef.Name),
 						}
-						filter, ok := resourceMap.rateLimitFilters[key]
+						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
 						if !ok {
 							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
 							continue
 						}
 
-						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, filter)
+						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
+					default:
+						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
+						// managed by an extension and add to resourceTree
+						key := types.NamespacedName{
+							Namespace: httpRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						extRefFilter, ok := resourceMap.extensionRefFilters[key]
+						if !ok {
+							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
+							continue
+						}
+
+						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
 					}
 				}
-
 			}
 		}
 
@@ -557,15 +588,6 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	}
 
 	return nil
-}
-
-func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]egv1a1.AuthenticationFilter, error) {
-	authenList := new(egv1a1.AuthenticationFilterList)
-	if err := r.client.List(ctx, authenList); err != nil {
-		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
-	}
-
-	return authenList.Items, nil
 }
 
 func (r *gatewayAPIReconciler) getCorsFilter(ctx context.Context) ([]egv1a1.CorsFilter, error) {
