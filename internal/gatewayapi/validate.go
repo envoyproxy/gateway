@@ -246,7 +246,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				v1beta1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				v1beta1.ListenerReasonInvalid,
-				"Listener must have atleast 1 TLS certificate ref",
+				"Listener must have at least 1 TLS certificate ref",
 			)
 			break
 		}
