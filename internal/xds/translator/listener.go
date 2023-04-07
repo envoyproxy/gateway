@@ -147,32 +147,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 		}
 	}
 
-	if irListener.IsHTTP2 {
-		// Set codec to HTTP2
-		mgr.CodecType = hcm.HttpConnectionManager_AUTO
-
-		// Enable grpc-web filter for HTTP2
-		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})
-		if err != nil {
-			return err
-		}
-
-		grpcWebFilter := &hcm.HttpFilter{
-			Name:       wellknown.GRPCWeb,
-			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcWebAny},
-		}
-		// Ensure router is the last filter
-		mgr.HttpFilters = append([]*hcm.HttpFilter{grpcWebFilter}, mgr.HttpFilters...)
-	} else {
-		// Allow websocket upgrades for HTTP 1.1
-		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-		mgr.UpgradeConfigs = []*hcm.HttpConnectionManager_UpgradeConfig{
-			{
-				UpgradeType: "websocket",
-			},
-		}
-	}
-
 	// TODO: Make this a generic interface for all API Gateway features.
 	//       https://github.com/envoyproxy/gateway/issues/882
 	t.patchHCMWithRateLimit(mgr, irListener)
@@ -215,6 +189,32 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
 			}
 			mgr.HttpFilters = append([]*hcm.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
+		}
+	}
+
+	if irListener.IsHTTP2 {
+		// Set codec to HTTP2
+		mgr.CodecType = hcm.HttpConnectionManager_AUTO
+
+		// Enable grpc-web filter for HTTP2
+		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})
+		if err != nil {
+			return err
+		}
+
+		grpcWebFilter := &hcm.HttpFilter{
+			Name:       wellknown.GRPCWeb,
+			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcWebAny},
+		}
+		// Ensure router is the last filter
+		mgr.HttpFilters = append([]*hcm.HttpFilter{grpcWebFilter}, mgr.HttpFilters...)
+	} else {
+		// Allow websocket upgrades for HTTP 1.1
+		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+		mgr.UpgradeConfigs = []*hcm.HttpConnectionManager_UpgradeConfig{
+			{
+				UpgradeType: "websocket",
+			},
 		}
 	}
 
