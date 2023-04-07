@@ -36,7 +36,7 @@ func TestStart(t *testing.T) {
 						Kind:       v1alpha1.KindEnvoyGateway,
 					},
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-						Provider: &v1alpha1.Provider{
+						Provider: &v1alpha1.EnvoyGatewayProvider{
 							Type: v1alpha1.ProviderTypeFile,
 						},
 					},

@@ -347,8 +347,8 @@ spec:
                                 type: object
                             type: object
                           pod:
-                            description: Pod defines the desired replicas, annotations
-                              and securityContext of container.
+                            description: Pod defines the desired annotations and securityContext
+                              of container.
                             properties:
                               annotations:
                                 additionalProperties:
