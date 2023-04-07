@@ -33,7 +33,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: v1alpha1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultProvider(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
@@ -60,7 +60,7 @@ func TestDecode(t *testing.T) {
 				},
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 					Gateway:  v1alpha1.DefaultGateway(),
-					Provider: v1alpha1.DefaultProvider(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
@@ -73,7 +73,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: v1alpha1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultProvider(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 				},
 			},
 			expect: true,
@@ -99,7 +99,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: v1alpha1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultProvider(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 					Gateway:  v1alpha1.DefaultGateway(),
 				},
 			},
@@ -113,7 +113,7 @@ func TestDecode(t *testing.T) {
 					APIVersion: v1alpha1.GroupVersion.String(),
 				},
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-					Provider: v1alpha1.DefaultProvider(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 					Gateway:  v1alpha1.DefaultGateway(),
 				},
 			},

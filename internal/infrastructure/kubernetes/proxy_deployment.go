@@ -36,11 +36,11 @@ const (
 // expectedProxyDeployment returns the expected Deployment based on the provided infra.
 func (i *Infra) expectedProxyDeployment(infra *ir.Infra) (*appsv1.Deployment, error) {
 	// Get the EnvoyProxy config to configure the deployment.
-	provider := infra.GetProxyInfra().GetProxyConfig().GetProvider()
+	provider := infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
 	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
-	deploymentConfig := provider.GetKubeResourceProvider().EnvoyDeployment
+	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
 	// Get expected bootstrap configurations rendered ProxyContainers
 	containers, err := expectedProxyContainers(infra, deploymentConfig)

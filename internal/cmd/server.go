@@ -81,7 +81,7 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 			return nil, err
 		}
 		// Set defaults for unset fields
-		eg.SetDefaults()
+		eg.SetEnvoyGatewayDefaults()
 		cfg.EnvoyGateway = eg
 	}
 
