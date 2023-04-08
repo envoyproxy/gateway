@@ -33,7 +33,10 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 		if h == nil {
 			panic("received nil httproute")
 		}
-		httpRoute := &HTTPRouteContext{HTTPRoute: h}
+		httpRoute := &HTTPRouteContext{
+			GatewayControllerName: t.GatewayControllerName,
+			HTTPRoute:             h,
+		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -58,7 +61,10 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 		if g == nil {
 			panic("received nil grpcroute")
 		}
-		grpcRoute := &GRPCRouteContext{GRPCRoute: g}
+		grpcRoute := &GRPCRouteContext{
+			GatewayControllerName: t.GatewayControllerName,
+			GRPCRoute:             g,
+		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -547,7 +553,10 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 		if tls == nil {
 			panic("received nil tlsroute")
 		}
-		tlsRoute := &TLSRouteContext{TLSRoute: tls}
+		tlsRoute := &TLSRouteContext{
+			GatewayControllerName: t.GatewayControllerName,
+			TLSRoute:              tls,
+		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -682,7 +691,10 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 		if u == nil {
 			panic("received nil udproute")
 		}
-		udpRoute := &UDPRouteContext{UDPRoute: u}
+		udpRoute := &UDPRouteContext{
+			GatewayControllerName: t.GatewayControllerName,
+			UDPRoute:              u,
+		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
@@ -818,7 +830,10 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 		if tcp == nil {
 			panic("received nil tcproute")
 		}
-		tcpRoute := &TCPRouteContext{TCPRoute: tcp}
+		tcpRoute := &TCPRouteContext{
+			GatewayControllerName: t.GatewayControllerName,
+			TCPRoute:              tcp,
+		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each

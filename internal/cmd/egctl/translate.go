@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -227,6 +228,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 
 		// Translate from Gateway API to Xds IR
 		gTranslator := &gatewayapi.Translator{
+			GatewayControllerName:  egv1alpha1.GatewayControllerName,
 			GatewayClassName:       v1beta1.ObjectName(gcName),
 			GlobalRateLimitEnabled: true,
 		}

@@ -15,12 +15,98 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-func TestValidateAuthenFilterRef(t *testing.T) {
+func TestValidateGRPCFilterRef(t *testing.T) {
+	testCases := []struct {
+		name     string
+		filter   *gwapiv1a2.GRPCRouteFilter
+		expected bool
+	}{
+		{
+			name: "request mirror filter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterRequestMirror,
+			},
+			expected: true,
+		},
+		{
+			name: "request header modifier filter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterRequestHeaderModifier,
+			},
+			expected: true,
+		},
+		{
+			name: "response header modifier filter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterResponseHeaderModifier,
+			},
+			expected: true,
+		},
+		{
+			name: "valid extension resource",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "example.io",
+					Kind:  "Foo",
+					Name:  "test",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "unsupported extended filter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "UnsupportedGroup",
+					Kind:  "UnsupportedKind",
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "empty extended filter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+			},
+			expected: false,
+		},
+		{
+			name: "invalid filter type",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: "Invalid",
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "example.io",
+					Kind:  "Foo",
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateGRPCRouteFilter(tc.filter, schema.GroupKind{Group: "example.io", Kind: "Foo"})
+			if tc.expected {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestValidateHTTPFilterRef(t *testing.T) {
 	testCases := []struct {
 		name     string
 		filter   *gwapiv1b1.HTTPRouteFilter
@@ -121,12 +207,36 @@ func TestValidateAuthenFilterRef(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "valid extension resource",
+			filter: &gwapiv1b1.HTTPRouteFilter{
+				Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "example.io",
+					Kind:  "Foo",
+					Name:  "test",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid filter type",
+			filter: &gwapiv1b1.HTTPRouteFilter{
+				Type: "Invalid",
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "example.io",
+					Kind:  "Foo",
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateHTTPRouteFilter(tc.filter)
+			err := ValidateHTTPRouteFilter(tc.filter, schema.GroupKind{Group: "example.io", Kind: "Foo"})
 			if tc.expected {
 				require.NoError(t, err)
 			} else {

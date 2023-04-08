@@ -1,0 +1,55 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
+syntax = "proto3";
+
+package envoygateway.extension;
+
+option go_package = "proto/extension";
+
+
+// RouteExtensionContext provides resources introduced by an extension and watched by Envoy Gateway
+// additional context information can be added to this message as more use-cases are discovered
+message PostRouteExtensionContext {
+    // Resources introduced by the extension that were used as extensionRefs in an HTTPRoute/GRPCRoute
+    repeated ExtensionResource extension_resources = 1;
+
+    // hostnames are the fully qualified domain names attached to the HTTPRoute
+    repeated string hostnames = 2;
+}
+
+
+// Empty for now but we can add fields to the context as use-cases are discovered without
+// breaking any clients that use the API
+// additional context information can be added to this message as more use-cases are discovered
+message PostVirtualHostExtensionContext {
+
+}
+
+
+// Empty for now but we can add fields to the context as use-cases are discovered without
+// breaking any clients that use the API
+// additional context information can be added to this message as more use-cases are discovered
+message PostHTTPListenerExtensionContext {
+
+
+}
+
+
+// Empty for now but we can add fields to the context as use-cases are discovered without
+// breaking any clients that use the API
+// additional context information can be added to this message as more use-cases are discovered
+message PostTranslateExtensionContext {
+
+}
+
+
+// ExtensionResource stores the data for a K8s API object referenced in an HTTPRouteFilter
+// extensionRef. It is constructed from an unstructured.Unstructured marshalled to JSON. An extension
+// can marshal the bytes from this resource back into an unstructured.Unstructured and then 
+// perform type checking to obtain the resource.
+message ExtensionResource {
+    bytes unstructured_bytes = 1;
+}

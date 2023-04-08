@@ -21,6 +21,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
+
+	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
@@ -47,6 +49,7 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, output, want)
 
 			translator := &Translator{
+				GatewayControllerName:  egv1alpha1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				ProxyImage:             "envoyproxy/envoy:translator-tests",
 				GlobalRateLimitEnabled: true,

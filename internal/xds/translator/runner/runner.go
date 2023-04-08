@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -17,8 +18,9 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR *message.XdsIR
-	Xds   *message.Xds
+	XdsIR            *message.XdsIR
+	Xds              *message.Xds
+	ExtensionManager extension.Manager
 }
 
 type Runner struct {
@@ -54,6 +56,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			} else {
 				// Translate to xds resources
 				t := &translator.Translator{}
+
+				// Set the extension manager if an extension is loaded
+				if r.ExtensionManager != nil {
+					t.ExtensionManager = &r.ExtensionManager
+				}
 
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {

@@ -59,6 +59,8 @@ type HTTPFilterIR struct {
 
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
+
+	ExtensionRefs []*ir.UnstructuredRef
 }
 
 // ProcessHTTPFilters translates gateway api http filters to IRs.

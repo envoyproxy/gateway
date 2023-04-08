@@ -1,0 +1,21 @@
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    headerMatches:
+    - name: user
+      stringMatch:
+      exact: "jason"
+    - name: test 
+      stringMatch:
+      suffix: "end"     
+    queryParamMatches:
+    - name: "debug"
+      exact: "yes"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000

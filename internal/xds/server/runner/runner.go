@@ -28,6 +28,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -35,8 +36,6 @@ import (
 const (
 	// XdsServerAddress is the listening address of the xds-server.
 	XdsServerAddress = "0.0.0.0"
-	// XdsServerPort is the listening port of the xds-server.
-	XdsServerPort = 18000
 	// xdsTLSCertFilename is the fully qualified path of the file containing the
 	// xDS server TLS certificate.
 	xdsTLSCertFilename = "/certs/tls.crt"
@@ -90,7 +89,7 @@ func (r *Runner) Start(ctx context.Context) error {
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
-	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(XdsServerPort))
+	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		r.Logger.Error(err, "failed to listen on address", "address", addr)

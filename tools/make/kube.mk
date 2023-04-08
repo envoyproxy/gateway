@@ -27,7 +27,8 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:rbac:artifacts:config=charts/gateway-helm/templates/generated/rbac output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
-
+	cat charts/gateway-helm/templates/generated/rbac/role.yaml | sed "s;envoy-gateway-role;{{ include \"eg.fullname\" . }}-envoy-gateway-role;g" > charts/gateway-helm/templates/generated/rbac/roles.yaml
+	rm charts/gateway-helm/templates/generated/rbac/role.yaml
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
@@ -118,11 +119,11 @@ delete-cluster: $(tools/kind) ## Delete kind cluster.
 	$(tools/kind) delete cluster --name envoy-gateway
 
 .PHONY: generate-manifests
-generate-manifests: ## Generate Kubernetes release manifests.
+generate-manifests: helm-generate ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template eg charts/gateway-helm --include-crds --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) > $(OUTPUT_DIR)/install.yaml
+	helm template eg charts/gateway-helm --include-crds --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")

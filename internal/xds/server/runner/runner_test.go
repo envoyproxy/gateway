@@ -24,6 +24,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 func TestTLSConfig(t *testing.T) {
@@ -187,7 +188,7 @@ func peekError(conn net.Conn) error {
 
 func TestServeXdsServerListenFailed(t *testing.T) {
 	// Occupy the address to make listening failed
-	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(XdsServerPort))
+	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	assert.Nil(t, err)
 	defer l.Close()

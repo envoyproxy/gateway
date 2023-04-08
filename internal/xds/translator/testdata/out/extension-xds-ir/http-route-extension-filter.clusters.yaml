@@ -1,0 +1,21 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 30s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+  name: first-route
+  outlierDetection: {}
+  type: EDS
+- loadAssignment:
+    clusterName: mock-extension-injected-cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: exampleservice.examplenamespace.svc.cluster.local
+              portValue: 5000
+  name: mock-extension-injected-cluster
