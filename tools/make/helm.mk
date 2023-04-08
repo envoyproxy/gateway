@@ -32,4 +32,4 @@ helm-release: helm-generate
 	helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
 
 helm-generate:
-	IMAGE=${IMAGE} RELEASE_TAG=${TAG} go run helm/*
+	IMAGE=${IMAGE} RELEASE_TAG=${TAG} go run tools/helm/*
