@@ -16,7 +16,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-var _ RoutesTranslator = (*Translator)(nil)
+var (
+	_                RoutesTranslator = (*Translator)(nil)
+	validServiceName                  = `^(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*$`
+	validMethodName                   = `^[A-Za-z_][A-Za-z_0-9]*$`
+)
 
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
@@ -460,11 +464,11 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *v1alpha2.GR
 		}
 	case method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: StringPtr(fmt.Sprintf("/.+/%s", *method.Method)),
+			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
 		}
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: StringPtr(fmt.Sprintf("/%s/.+", *method.Service)),
+			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
 		}
 	}
 }
