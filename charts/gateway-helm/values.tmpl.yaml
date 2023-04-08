@@ -1,8 +1,8 @@
 deployment:
   envoyGateway:
     image:
-      repository: {{ .EGImageRepository }}
-      tag: {{ .EGImageTag }}
+      repository: ${ImageRepository}
+      tag: ${ImageTag}
     imagePullPolicy: Always
     resources:
       limits:
