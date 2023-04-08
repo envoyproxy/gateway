@@ -22,7 +22,7 @@ Roadmap features and timelines may change based on feedback, community contribut
 roadmap item, you're encouraged to attend a community meeting to discuss the details, or help us deliver the feature by
 contributing to the project.
 
-`Last Updated: April 2022`
+`Last Updated: April 2023`
 
 ### [v0.2.0][v0.2.0]: Establish a Solid Foundation
 
