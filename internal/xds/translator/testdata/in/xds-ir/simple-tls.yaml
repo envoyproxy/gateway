@@ -5,12 +5,12 @@ http:
   hostnames:
   - "*"
   tls:
-  - secretName: secret-1
+  - name: secret-1
     # byte slice representation of "key-data"
     serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
     # byte slice representation of "key-data"
     privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
-  - secretName: secret-2
+  - name: secret-2
     serverCertificate: [99, 101, 114, 116, 45, 100, 97, 116, 97]
     privateKey: [107, 101, 121, 45, 100, 97, 116, 97] 
   routes:

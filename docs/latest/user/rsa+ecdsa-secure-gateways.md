@@ -91,6 +91,7 @@ Again, while testing in Cluster without External LoadBalancer Support, we can qu
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-RSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
 ```
+
 ```shell
 ...
 * TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
@@ -105,6 +106,7 @@ Additionally, querying the example app while enforcing an ECDSA cipher should al
 curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 --cacert example.com.crt https://www.example.com:8443/get  -Isv --ciphers ECDHE-ECDSA-CHACHA20-POLY1305 --tlsv1.2 --tls-max 1.2
 ```
+
 ```shell
 ...
 * TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):

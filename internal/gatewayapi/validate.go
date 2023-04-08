@@ -89,7 +89,7 @@ func (t *Translator) validateBackendNamespace(backendRef *v1alpha2.BackendRef, p
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonRefNotPermitted,
-				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant", *backendRef.Namespace, backendRef.Name),
+				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant.", *backendRef.Namespace, backendRef.Name),
 			)
 			return false
 		}
@@ -294,7 +294,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 						v1beta1.ListenerConditionResolvedRefs,
 						metav1.ConditionFalse,
 						v1beta1.ListenerReasonRefNotPermitted,
-						fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant", *certificateRef.Namespace, certificateRef.Name),
+						fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", *certificateRef.Namespace, certificateRef.Name),
 					)
 					break
 				}
@@ -377,7 +377,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				v1beta1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				"UnsupportedTLSMode",
-				fmt.Sprintf("TLS %s mode is not supported, TLS mode must be Passthrough.", *listener.TLS.Mode),
+				fmt.Sprintf("TLS mode %q is not supported, TLS mode must be Passthrough.", *listener.TLS.Mode),
 			)
 			break
 		}
@@ -387,7 +387,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				v1beta1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				v1beta1.ListenerReasonInvalid,
-				"Listener must not have TLS certificate refs set for TLS mode Passthrough",
+				"Listener must not have TLS certificate refs set for TLS mode Passthrough.",
 			)
 			break
 		}

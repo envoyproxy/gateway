@@ -29,7 +29,7 @@ gateways:
             - type: Programmed
               status: "False"
               reason: Invalid
-              message: Listener must not have TLS certificate refs set for TLS mode Passthrough
+              message: Listener must not have TLS certificate refs set for TLS mode Passthrough.
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute

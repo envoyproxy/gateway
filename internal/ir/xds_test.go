@@ -29,7 +29,7 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		TLS: []*TLSListenerConfig{{
-			SecretName:        "happy",
+			Name:              "happy",
 			ServerCertificate: []byte{1, 2, 3},
 			PrivateKey:        []byte{1, 2, 3},
 		}},

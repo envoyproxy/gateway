@@ -44,14 +44,6 @@ func (x XdsIRRoutes) Less(i, j int) bool {
 	return qCountI < qCountJ
 }
 
-type XdsIRSecrets []*ir.TLSListenerConfig
-
-func (x XdsIRSecrets) Len() int      { return len(x) }
-func (x XdsIRSecrets) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
-func (x XdsIRSecrets) Less(i, j int) bool {
-	return x[i].SecretName < x[j].SecretName
-}
-
 // sortXdsIR sorts the xdsIR based on the match precedence
 // defined in the Gateway API spec.
 // https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
@@ -60,7 +52,6 @@ func sortXdsIRMap(xdsIR XdsIRMap) {
 		for _, http := range irItem.HTTP {
 			// descending order
 			sort.Sort(sort.Reverse(XdsIRRoutes(http.Routes)))
-			sort.Sort(sort.Reverse(XdsIRSecrets(http.TLS)))
 		}
 	}
 }

@@ -167,8 +167,8 @@ func (h HTTPListener) Validate() error {
 // TLSListenerConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
-	// SecretName of the Secret object.
-	SecretName string
+	// Name of the Secret object.
+	Name string
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.

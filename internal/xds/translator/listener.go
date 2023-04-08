@@ -297,7 +297,7 @@ func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.Tr
 		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
 			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
 			&tlsv3.SdsSecretConfig{
-				Name:      tlsConfig.SecretName,
+				Name:      tlsConfig.Name,
 				SdsConfig: makeConfigSource(),
 			})
 	}
@@ -318,7 +318,7 @@ func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.Tr
 func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret {
 	// Build the tls secret
 	return &tlsv3.Secret{
-		Name: tlsConfig.SecretName,
+		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
 			TlsCertificate: &tlsv3.TlsCertificate{
 				CertificateChain: &corev3.DataSource{

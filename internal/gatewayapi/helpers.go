@@ -417,10 +417,14 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {
 	tlsListenerConfigs := make([]*ir.TLSListenerConfig, len(tlsSecrets))
 	for i, tlsSecret := range tlsSecrets {
 		tlsListenerConfigs[i] = &ir.TLSListenerConfig{
-			SecretName:        tlsSecret.Namespace + "-" + tlsSecret.Name,
+			Name:              irTLSListenerConfigName(tlsSecret),
 			ServerCertificate: tlsSecret.Data[v1.TLSCertKey],
 			PrivateKey:        tlsSecret.Data[v1.TLSPrivateKeyKey],
 		}
 	}
 	return tlsListenerConfigs
+}
+
+func irTLSListenerConfigName(secret *v1.Secret) string {
+	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
 }
