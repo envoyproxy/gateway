@@ -36,6 +36,7 @@ func TestDesiredRateLimitService(t *testing.T) {
 	lbls := rateLimitLabels()
 	checkServiceHasLabels(t, svc, lbls)
 
+	// Make sure service type are set by default with ServiceTypeLoadBalancer
 	checkServiceSpec(t, svc, expectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType()))
 }
 

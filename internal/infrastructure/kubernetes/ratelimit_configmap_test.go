@@ -54,7 +54,7 @@ func TestExpectedRateLimitConfigMap(t *testing.T) {
 		Name:   rateLimitListener,
 		Config: rateLimitConfig,
 	}
-	rateLimitInfra.Configs = append(rateLimitInfra.Configs, c)
+	rateLimitInfra.ServiceConfigs = append(rateLimitInfra.ServiceConfigs, c)
 
 	// An infra without Gateway owner labels should trigger
 	// an error.
@@ -82,7 +82,7 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 		Name:   rateLimitListener,
 		Config: rateLimitConfig,
 	}
-	rateLimitInfra.Configs = append(rateLimitInfra.Configs, c)
+	rateLimitInfra.ServiceConfigs = append(rateLimitInfra.ServiceConfigs, c)
 
 	testCases := []struct {
 		name    string

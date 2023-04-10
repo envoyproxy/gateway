@@ -51,9 +51,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 		{
 			name: "create-ratelimit-sa",
 			ns:   "envoy-gateway-system",
-			in: &ir.RateLimitInfra{
-				Backend: &ir.RateLimitDBBackend{Redis: &ir.RateLimitRedis{URL: ""}},
-			},
+			in:   new(ir.RateLimitInfra),
 			want: &corev1.ServiceAccount{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ServiceAccount",
@@ -68,9 +66,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 		{
 			name: "ratelimit-sa-exists",
 			ns:   "envoy-gateway-system",
-			in: &ir.RateLimitInfra{
-				Backend: &ir.RateLimitDBBackend{Redis: &ir.RateLimitRedis{URL: ""}},
-			},
+			in:   new(ir.RateLimitInfra),
 			want: &corev1.ServiceAccount{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ServiceAccount",

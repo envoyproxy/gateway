@@ -51,6 +51,9 @@ EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider
 _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 
+| Field | Description |
+| --- | --- |
+| `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the manged Envoy ratelimit deployment resource are applied. |
 
 
 ## EnvoyGatewayProvider
@@ -263,6 +266,7 @@ _Appears in:_
 KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Description |
