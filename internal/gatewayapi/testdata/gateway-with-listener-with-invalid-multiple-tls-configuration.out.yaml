@@ -34,6 +34,8 @@ gateways:
               kind: HTTPRoute
             - group: gateway.networking.k8s.io
               kind: GRPCRoute
+            - group: gateway.networking.k8s.io
+              kind: CustomGRPCRoute
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute
