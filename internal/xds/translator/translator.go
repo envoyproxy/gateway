@@ -105,8 +105,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// 1:1 between IR TLSListenerConfig and xDS Secret
 		if httpListener.TLS != nil {
-			secret := buildXdsDownstreamTLSSecret(httpListener.Name, httpListener.TLS)
-			tCtx.AddXdsResource(resourcev3.SecretType, secret)
+			for t := range httpListener.TLS {
+				secret := buildXdsDownstreamTLSSecret(httpListener.TLS[t])
+				tCtx.AddXdsResource(resourcev3.SecretType, secret)
+			}
 		}
 
 		// Allocate virtual host for this httpListener.

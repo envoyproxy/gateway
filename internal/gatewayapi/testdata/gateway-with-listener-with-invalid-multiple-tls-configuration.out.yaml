@@ -15,22 +15,25 @@ gateways:
               from: All
           tls:
             mode: Terminate
+            certificateRefs:
+              - name: tls-secret-ecdsa-1
+              - name: tls-secret-ecdsa-2
     status:
       listeners:
         - name: tls
+          attachedRoutes: 0
+          conditions:
+            - lastTransitionTime: "2023-04-02T11:08:00Z"
+              message: "Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
+                be unique. Algorithm [ECDSA] conflicts with secret envoy-gateway/tls-secret-ecdsa-1"
+              reason: Invalid
+              status: "False"
+              type: Programmed
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
             - group: gateway.networking.k8s.io
               kind: GRPCRoute
-            - group: gateway.networking.k8s.io
-              kind: CustomGRPCRoute              
-          attachedRoutes: 0
-          conditions:
-            - type: Programmed
-              status: "False"
-              reason: Invalid
-              message: Listener must have at least 1 TLS certificate ref
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: HTTPRoute
@@ -50,29 +53,29 @@ httpRoutes:
               port: 8080
     status:
       parents:
-        - parentRef:
-            namespace: envoy-gateway
+        - controllerName: gateway.envoyproxy.io/gatewayclass-controller
+          parentRef:
             name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
+            namespace: envoy-gateway
           conditions:
-            - type: Accepted
-              status: "False"
-              reason: NoReadyListeners
+            - lastTransitionTime: "2023-04-02T11:15:58Z"
               message: There are no ready listeners for this parent ref
-            - type: ResolvedRefs 
+              reason: NoReadyListeners
+              status: "False"
+              type: Accepted
+            - type: ResolvedRefs
               status: "True"
               reason: ResolvedRefs 
               message: Resolved all the Object references for the Route
-xdsIR:
-  envoy-gateway-gateway-1: {}
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
+      image: envoyproxy/envoy:translator-tests
+      listeners: [{}]
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:translator-tests
-      listeners:
-        - address: ""
+xdsIR:
+  envoy-gateway-gateway-1: {}

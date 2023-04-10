@@ -106,7 +106,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Name:    irHTTPListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
-					TLS:     irTLSConfig(listener.tlsSecret),
+					TLS:     irTLSConfigs(listener.tlsSecrets),
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))

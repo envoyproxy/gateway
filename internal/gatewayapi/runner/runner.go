@@ -65,6 +65,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
+				GatewayControllerName:  r.Server.EnvoyGateway.Gateway.ControllerName,
 				GatewayClassName:       v1beta1.ObjectName(update.Key),
 				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
 				GlobalCorsEnabled:      corsIsGlobal,

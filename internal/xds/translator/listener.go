@@ -233,7 +233,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	}
 
 	if irListener.TLS != nil {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.Name)
+		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS)
 		if err != nil {
 			return err
 		}
@@ -373,16 +373,20 @@ func addXdsTLSInspectorFilter(xdsListener *listener.Listener) error {
 	return nil
 }
 
-func buildXdsDownstreamTLSSocket(listenerName string) (*corev3.TransportSocket, error) {
-	tlsCtx := &tls.DownstreamTlsContext{
-		CommonTlsContext: &tls.CommonTlsContext{
-			TlsCertificateSdsSecretConfigs: []*tls.SdsSecretConfig{{
-				// Generate key name for this listener. The actual key will be
-				// delivered to Envoy via SDS.
-				Name:      listenerName,
-				SdsConfig: makeConfigSource(),
-			}},
+func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+	tlsCtx := &tlsv3.DownstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
+	}
+
+	for _, tlsConfig := range tlsConfigs {
+		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
+			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+			&tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.Name,
+				SdsConfig: makeConfigSource(),
+			})
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -398,13 +402,12 @@ func buildXdsDownstreamTLSSocket(listenerName string) (*corev3.TransportSocket, 
 	}, nil
 }
 
-func buildXdsDownstreamTLSSecret(listenerName string,
-	tlsConfig *ir.TLSListenerConfig) *tls.Secret {
+func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret {
 	// Build the tls secret
-	return &tls.Secret{
-		Name: listenerName,
-		Type: &tls.Secret_TlsCertificate{
-			TlsCertificate: &tls.TlsCertificate{
+	return &tlsv3.Secret{
+		Name: tlsConfig.Name,
+		Type: &tlsv3.Secret_TlsCertificate{
+			TlsCertificate: &tlsv3.TlsCertificate{
 				CertificateChain: &corev3.DataSource{
 					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.ServerCertificate},
 				},

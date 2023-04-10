@@ -15,8 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 // GatewayContext wraps a Gateway and provides helper methods for
@@ -53,7 +51,7 @@ type ListenerContext struct {
 	gateway           *v1beta1.Gateway
 	listenerStatusIdx int
 	namespaceSelector labels.Selector
-	tlsSecret         *v1.Secret
+	tlsSecrets        []*v1.Secret
 }
 
 func (l *ListenerContext) SetCondition(conditionType v1beta1.ListenerConditionType, status metav1.ConditionStatus, reason v1beta1.ListenerConditionReason, message string) {
@@ -150,8 +148,8 @@ func (l *ListenerContext) GetConditions() []metav1.Condition {
 	return l.gateway.Status.Listeners[l.listenerStatusIdx].Conditions
 }
 
-func (l *ListenerContext) SetTLSSecret(tlsSecret *v1.Secret) {
-	l.tlsSecret = tlsSecret
+func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*v1.Secret) {
+	l.tlsSecrets = tlsSecrets
 }
 
 // RouteContext represents a generic Route object (HTTPRoute, TLSRoute, etc.)
@@ -184,6 +182,9 @@ type RouteContext interface {
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
 // accessing the route's parents.
 type HTTPRouteContext struct {
+	// GatewayControllerName is the name of the Gateway API controller.
+	GatewayControllerName string
+
 	*v1beta1.HTTPRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
@@ -238,8 +239,7 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 	}
 	if routeParentStatusIdx == -1 {
 		rParentStatus := v1beta1.RouteParentStatus{
-			// TODO: get this value from the config
-			ControllerName: v1beta1.GatewayController(egv1alpha1.GatewayControllerName),
+			ControllerName: v1beta1.GatewayController(h.GatewayControllerName),
 			ParentRef:      forParentRef,
 		}
 		h.Status.Parents = append(h.Status.Parents, rParentStatus)
@@ -259,6 +259,9 @@ func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 // GRPCRouteContext wraps a GRPCRoute and provides helper methods for
 // accessing the route's parents.
 type GRPCRouteContext struct {
+	// GatewayControllerName is the name of the Gateway API controller.
+	GatewayControllerName string
+
 	*v1alpha2.GRPCRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
@@ -323,8 +326,7 @@ func (g *GRPCRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 	}
 	if routeParentStatusIdx == -1 {
 		rParentStatus := v1alpha2.RouteParentStatus{
-			// TODO: get this value from the config
-			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ControllerName: v1alpha2.GatewayController(g.GatewayControllerName),
 			ParentRef:      DowngradeParentReference(forParentRef),
 		}
 		g.Status.Parents = append(g.Status.Parents, rParentStatus)
@@ -344,6 +346,9 @@ func (g *GRPCRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefe
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
 // accessing the route's parents.
 type TLSRouteContext struct {
+	// GatewayControllerName is the name of the Gateway API controller.
+	GatewayControllerName string
+
 	*v1alpha2.TLSRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
@@ -412,8 +417,7 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	}
 	if routeParentStatusIdx == -1 {
 		rParentStatus := v1alpha2.RouteParentStatus{
-			// TODO: get this value from the config
-			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ControllerName: v1alpha2.GatewayController(t.GatewayControllerName),
 			ParentRef:      DowngradeParentReference(forParentRef),
 		}
 		t.Status.Parents = append(t.Status.Parents, rParentStatus)
@@ -433,6 +437,9 @@ func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
 // accessing the route's parents.
 type UDPRouteContext struct {
+	// GatewayControllerName is the name of the Gateway API controller.
+	GatewayControllerName string
+
 	*v1alpha2.UDPRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
@@ -493,8 +500,7 @@ func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	}
 	if routeParentStatusIdx == -1 {
 		rParentStatus := v1alpha2.RouteParentStatus{
-			// TODO: get this value from the config
-			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ControllerName: v1alpha2.GatewayController(u.GatewayControllerName),
 			ParentRef:      DowngradeParentReference(forParentRef),
 		}
 		u.Status.Parents = append(u.Status.Parents, rParentStatus)
@@ -518,6 +524,9 @@ func (u *UDPRouteContext) GetHostnames() []string {
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
 // accessing the route's parents.
 type TCPRouteContext struct {
+	// GatewayControllerName is the name of the Gateway API controller.
+	GatewayControllerName string
+
 	*v1alpha2.TCPRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
@@ -578,8 +587,7 @@ func (t *TCPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	}
 	if routeParentStatusIdx == -1 {
 		rParentStatus := v1alpha2.RouteParentStatus{
-			// TODO: get this value from the config
-			ControllerName: v1alpha2.GatewayController(egv1alpha1.GatewayControllerName),
+			ControllerName: v1alpha2.GatewayController(t.GatewayControllerName),
 			ParentRef:      DowngradeParentReference(forParentRef),
 		}
 		t.Status.Parents = append(t.Status.Parents, rParentStatus)

@@ -152,8 +152,14 @@ func (in *HTTPListener) DeepCopyInto(out *HTTPListener) {
 	}
 	if in.TLS != nil {
 		in, out := &in.TLS, &out.TLS
-		*out = new(TLSListenerConfig)
-		(*in).DeepCopyInto(*out)
+		*out = make([]*TLSListenerConfig, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(TLSListenerConfig)
+				(*in).DeepCopyInto(*out)
+			}
+		}
 	}
 	if in.Routes != nil {
 		in, out := &in.Routes, &out.Routes

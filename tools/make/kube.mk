@@ -35,6 +35,9 @@ generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent wit
 	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
 	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
 
+	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:rbac:artifacts:config=charts/gateway-helm/templates/generated/rbac output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
+	cat charts/gateway-helm/templates/generated/rbac/role.yaml | sed "s;envoy-gateway-role;{{ include \"eg.fullname\" . }}-envoy-gateway-role;g" > charts/gateway-helm/templates/generated/rbac/roles.yaml
+	rm charts/gateway-helm/templates/generated/rbac/role.yaml
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.

@@ -3,7 +3,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: envoy-gateway-role
+  name: {{ include "eg.fullname" . }}-envoy-gateway-role
 rules:
 - apiGroups:
   - ""

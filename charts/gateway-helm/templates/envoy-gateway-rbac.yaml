@@ -1,11 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: envoy-gateway-rolebinding
+  name: {{ include "eg.fullname" . }}-envoy-gateway-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: envoy-gateway-role
+  name: {{ include "eg.fullname" . }}-envoy-gateway-role
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'

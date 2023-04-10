@@ -53,6 +53,9 @@ type TranslatorManager interface {
 // Translator translates Gateway API resources to IRs and computes status
 // for Gateway API resources.
 type Translator struct {
+	// GatewayControllerName is the name of the Gateway API controller
+	GatewayControllerName string
+
 	// GatewayClassName is the name of the GatewayClass
 	// to process Gateways for.
 	GatewayClassName v1beta1.ObjectName
