@@ -45,3 +45,6 @@ envoyGatewayMetricsService:
     targetPort: https
 
 kubernetesClusterDomain: cluster.local
+
+certManager:
+  enabled: false

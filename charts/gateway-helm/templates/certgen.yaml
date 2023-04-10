@@ -1,3 +1,4 @@
+{{ if not .Values.certManager.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -35,3 +36,4 @@ spec:
         runAsUser: 65534
       serviceAccountName: {{ include "eg.fullname" . }}-certgen
   ttlSecondsAfterFinished: 0
+{{ end }}

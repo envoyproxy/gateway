@@ -16,6 +16,12 @@ Install the Gateway API CRDs and Envoy Gateway:
 helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
 ```
 
+**Note**: If you had [cert-manager](https://cert-manager.io) installed, please using following command:
+
+```
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest --set certManager.enabled=true -n envoy-gateway-system --create-namespace
+```
+
 Wait for Envoy Gateway to become available:
 
 ```shell

@@ -1,0 +1,23 @@
+{{ if .Values.certManager.enabled }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: eg-serving-cert
+  namespace: {{ .Release.Namespace }}
+spec:
+  dnsNames:
+  - envoy-gateway.{{ .Release.Namespace }}.svc
+  - envoy-gateway.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: eg-selfsigned-issuer
+  secretName: envoy-gateway
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: eg-selfsigned-issuer
+  namespace: {{ .Release.Namespace }}
+spec:
+  selfSigned: {}
+{{ end }}

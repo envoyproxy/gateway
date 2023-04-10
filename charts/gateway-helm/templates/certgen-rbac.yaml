@@ -1,3 +1,4 @@
+{{ if not .Values.certManager.enabled }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -41,3 +42,4 @@ subjects:
 - kind: ServiceAccount
   name: '{{ include "eg.fullname" . }}-certgen'
   namespace: '{{ .Release.Namespace }}'
+{{ end }}
