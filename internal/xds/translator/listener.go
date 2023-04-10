@@ -13,19 +13,19 @@ import (
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	listener "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
-	grpc_web "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
+	grpc_webv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
 	"github.com/golang/protobuf/ptypes/wrappers"
 
 	health_check "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
 	router "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
-	hcm "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
-	tcp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
-	udp "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
-	tls "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
+	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 
 	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -35,9 +35,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsTCPListener(name, address string, port uint32) *listener.Listener {
+func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener {
 	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
-	return &listener.Listener{
+	return &listenerv3.Listener{
 		Name: name,
 		AccessLog: []*accesslog.AccessLog{
 			{
@@ -60,7 +60,7 @@ func buildXdsTCPListener(name, address string, port uint32) *listener.Listener {
 	}
 }
 
-func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irListener *ir.HTTPListener) error {
+func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener) error {
 	routerAny, err := anypb.New(&router.Router{})
 	if err != nil {
 		return err
@@ -79,17 +79,17 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 		statPrefix = "http"
 	}
 
-	mgr := &hcm.HttpConnectionManager{
+	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog: []*accesslog.AccessLog{
 			{
 				Name:       wellknown.FileAccessLog,
 				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
 			},
 		},
-		CodecType:  hcm.HttpConnectionManager_AUTO,
+		CodecType:  hcmv3.HttpConnectionManager_AUTO,
 		StatPrefix: statPrefix,
-		RouteSpecifier: &hcm.HttpConnectionManager_Rds{
-			Rds: &hcm.Rds{
+		RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
+			Rds: &hcmv3.Rds{
 				ConfigSource: makeConfigSource(),
 				// Configure route name to be found via RDS.
 				RouteConfigName: irListener.Name,
@@ -98,10 +98,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		// Use only router.
-		HttpFilters: []*hcm.HttpFilter{
+		HttpFilters: []*hcmv3.HttpFilter{
 			{
 				Name:       wellknown.Router,
-				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: routerAny},
+				ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: routerAny},
 			},
 		},
 	}
@@ -123,12 +123,12 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 		return err
 	}
 
-	healthChecFilter := &hcm.HttpFilter{
+	healthChecFilter := &hcmv3.HttpFilter{
 		Name:       wellknown.HealthCheck,
-		ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: healthCheckAny},
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: healthCheckAny},
 	}
 
-	mgr.HttpFilters = append([]*hcm.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
+	mgr.HttpFilters = append([]*hcmv3.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
 
 	for _, route := range irListener.Routes {
 		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
@@ -138,11 +138,11 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 				return err
 			}
 
-			corsFilter := &hcm.HttpFilter{
+			corsFilter := &hcmv3.HttpFilter{
 				Name:       wellknown.CORS,
-				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: corsAny},
+				ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: corsAny},
 			}
-			mgr.HttpFilters = append([]*hcm.HttpFilter{corsFilter}, mgr.HttpFilters...)
+			mgr.HttpFilters = append([]*hcmv3.HttpFilter{corsFilter}, mgr.HttpFilters...)
 			break
 		}
 	}
@@ -184,34 +184,34 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 				return err
 			}
 
-			grpcJSONTranscoderFilter := &hcm.HttpFilter{
+			grpcJSONTranscoderFilter := &hcmv3.HttpFilter{
 				Name:       wellknown.GRPCJSONTranscoder,
-				ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
+				ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
 			}
-			mgr.HttpFilters = append([]*hcm.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
+			mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
 		}
 	}
 
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
-		mgr.CodecType = hcm.HttpConnectionManager_AUTO
+		mgr.CodecType = hcmv3.HttpConnectionManager_AUTO
 
 		// Enable grpc-web filter for HTTP2
-		grpcWebAny, err := anypb.New(&grpc_web.GrpcWeb{})
+		grpcWebAny, err := anypb.New(&grpc_webv3.GrpcWeb{})
 		if err != nil {
 			return err
 		}
 
-		grpcWebFilter := &hcm.HttpFilter{
+		grpcWebFilter := &hcmv3.HttpFilter{
 			Name:       wellknown.GRPCWeb,
-			ConfigType: &hcm.HttpFilter_TypedConfig{TypedConfig: grpcWebAny},
+			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: grpcWebAny},
 		}
 		// Ensure router is the last filter
-		mgr.HttpFilters = append([]*hcm.HttpFilter{grpcWebFilter}, mgr.HttpFilters...)
+		mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcWebFilter}, mgr.HttpFilters...)
 	} else {
 		// Allow websocket upgrades for HTTP 1.1
 		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-		mgr.UpgradeConfigs = []*hcm.HttpConnectionManager_UpgradeConfig{
+		mgr.UpgradeConfigs = []*hcmv3.HttpConnectionManager_UpgradeConfig{
 			{
 				UpgradeType: "websocket",
 			},
@@ -223,10 +223,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 		return err
 	}
 
-	filterChain := &listener.FilterChain{
-		Filters: []*listener.Filter{{
+	filterChain := &listenerv3.FilterChain{
+		Filters: []*listenerv3.Filter{{
 			Name: wellknown.HTTPConnectionManager,
-			ConfigType: &listener.Filter_TypedConfig{
+			ConfigType: &listenerv3.Filter_TypedConfig{
 				TypedConfig: mgrAny,
 			},
 		}},
@@ -255,10 +255,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listener.Listener, irLis
 	return nil
 }
 
-func addServerNamesMatch(xdsListener *listener.Listener, filterChain *listener.FilterChain, hostnames []string) error {
+func addServerNamesMatch(xdsListener *listenerv3.Listener, filterChain *listenerv3.FilterChain, hostnames []string) error {
 	// Dont add a filter chain match if the hostname is a wildcard character.
 	if len(hostnames) > 0 && hostnames[0] != "*" {
-		filterChain.FilterChainMatch = &listener.FilterChainMatch{
+		filterChain.FilterChainMatch = &listenerv3.FilterChainMatch{
 			ServerNames: hostnames,
 		}
 
@@ -273,14 +273,14 @@ func addServerNamesMatch(xdsListener *listener.Listener, filterChain *listener.F
 // findXdsHTTPRouteConfigName finds the name of the route config associated with the
 // http connection manager within the default filter chain and returns an empty string if
 // not found.
-func findXdsHTTPRouteConfigName(xdsListener *listener.Listener) string {
+func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	if xdsListener == nil || xdsListener.DefaultFilterChain == nil || xdsListener.DefaultFilterChain.Filters == nil {
 		return ""
 	}
 
 	for _, filter := range xdsListener.DefaultFilterChain.Filters {
 		if filter.Name == wellknown.HTTPConnectionManager {
-			m := new(hcm.HttpConnectionManager)
+			m := new(hcmv3.HttpConnectionManager)
 			if err := filter.GetTypedConfig().UnmarshalTo(m); err != nil {
 				return ""
 			}
@@ -294,7 +294,7 @@ func findXdsHTTPRouteConfigName(xdsListener *listener.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPListener, clusterName string) error {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string) error {
 	if irListener == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -309,7 +309,7 @@ func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPList
 		return err
 	}
 
-	mgr := &tcp.TcpProxy{
+	mgr := &tcpv3.TcpProxy{
 		AccessLog: []*accesslog.AccessLog{
 			{
 				Name:       wellknown.FileAccessLog,
@@ -317,7 +317,7 @@ func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPList
 			},
 		},
 		StatPrefix: statPrefix,
-		ClusterSpecifier: &tcp.TcpProxy_Cluster{
+		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
 		},
 	}
@@ -326,10 +326,10 @@ func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPList
 		return err
 	}
 
-	filterChain := &listener.FilterChain{
-		Filters: []*listener.Filter{{
+	filterChain := &listenerv3.FilterChain{
+		Filters: []*listenerv3.Filter{{
 			Name: wellknown.TCPProxy,
-			ConfigType: &listener.Filter_TypedConfig{
+			ConfigType: &listenerv3.Filter_TypedConfig{
 				TypedConfig: mgrAny,
 			},
 		}},
@@ -347,7 +347,7 @@ func addXdsTCPFilterChain(xdsListener *listener.Listener, irListener *ir.TCPList
 }
 
 // addXdsTLSInspectorFilter adds a Tls Inspector filter if it does not yet exist.
-func addXdsTLSInspectorFilter(xdsListener *listener.Listener) error {
+func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	// Return early if it exists
 	for _, filter := range xdsListener.ListenerFilters {
 		if filter.Name == wellknown.TlsInspector {
@@ -361,9 +361,9 @@ func addXdsTLSInspectorFilter(xdsListener *listener.Listener) error {
 		return err
 	}
 
-	filter := &listener.ListenerFilter{
+	filter := &listenerv3.ListenerFilter{
 		Name: wellknown.TlsInspector,
-		ConfigType: &listener.ListenerFilter_TypedConfig{
+		ConfigType: &listenerv3.ListenerFilter_TypedConfig{
 			TypedConfig: tlsInspectorAny,
 		},
 	}
@@ -419,14 +419,14 @@ func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret 
 	}
 }
 
-func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*listener.Listener, error) {
+func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*listenerv3.Listener, error) {
 	if udpListener == nil {
 		return nil, errors.New("udp listener is nil")
 	}
 
 	statPrefix := "service"
 
-	route := &udp.Route{
+	route := &udpv3.Route{
 		Cluster: clusterName,
 	}
 	routeAny, err := anypb.New(route)
@@ -434,7 +434,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 		return nil, err
 	}
 	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
-	udpProxy := &udp.UdpProxyConfig{
+	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
 		AccessLog: []*accesslog.AccessLog{
 			{
@@ -442,7 +442,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
 			},
 		},
-		RouteSpecifier: &udp.UdpProxyConfig_Matcher{
+		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
 					OnMatch: &matcher.Matcher_OnMatch_Action{
@@ -460,7 +460,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 		return nil, err
 	}
 
-	xdsListener := &listener.Listener{
+	xdsListener := &listenerv3.Listener{
 		Name: udpListener.Name,
 		AccessLog: []*accesslog.AccessLog{
 			{
@@ -479,9 +479,9 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 				},
 			},
 		},
-		ListenerFilters: []*listener.ListenerFilter{{
+		ListenerFilters: []*listenerv3.ListenerFilter{{
 			Name: "envoy.filters.udp_listener.udp_proxy",
-			ConfigType: &listener.ListenerFilter_TypedConfig{
+			ConfigType: &listenerv3.ListenerFilter_TypedConfig{
 				TypedConfig: udpProxyAny,
 			},
 		}},
