@@ -17,6 +17,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 	"sigs.k8s.io/yaml"
 
@@ -43,6 +44,11 @@ const (
 	gatewayAPIType = "gateway-api"
 	xdsType        = "xds"
 )
+
+type TranslationResult struct {
+	gatewayapi.Resources
+	Xds map[string]interface{} `json:"xds,omitempty"`
+}
 
 func NewTranslateCommand() *cobra.Command {
 	var (
@@ -211,165 +217,127 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	}
 
 	if inType == gatewayAPIType {
-		var toXds, echoGatewayAPI bool
-		for _, outType := range outTypes {
-			if outType == xdsType {
-				toXds = true
-			} else if outType == gatewayAPIType {
-				echoGatewayAPI = true
-			}
-		}
-
 		// Unmarshal input
 		gcName, resources, err := kubernetesYAMLToResources(string(inBytes), addMissingResources)
 		if err != nil {
 			return fmt.Errorf("unable to unmarshal input: %w", err)
 		}
 
-		// Translate from Gateway API to Xds IR
-		gTranslator := &gatewayapi.Translator{
-			GatewayControllerName:  egv1alpha1.GatewayControllerName,
-			GatewayClassName:       v1beta1.ObjectName(gcName),
-			GlobalRateLimitEnabled: true,
-		}
-		gRes := gTranslator.Translate(resources)
-
-		results := []interface{}{}
-		if echoGatewayAPI {
-			results = append(results, resources)
-		}
-
-		if toXds {
-			keys := []string{}
-			for key := range gRes.XdsIR {
-				keys = append(keys, key)
-			}
-			// Make output stable since XdsIR is a map
-			sort.Strings(keys)
-
-			// Translate from Xds IR to Xds
-			for _, key := range keys {
-				val := gRes.XdsIR[key]
-				xTranslator := &translator.Translator{
-					// Set some default settings for translation
-					GlobalRateLimit: &translator.GlobalRateLimitSettings{
-						ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway"),
-					},
-				}
-				xRes, err := xTranslator.Translate(val)
+		var result TranslationResult
+		for _, outType := range outTypes {
+			// Translate
+			if outType == gatewayAPIType {
+				res, err := translateGatewayAPIToGatewayAPI(gcName, resources)
 				if err != nil {
-					return fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
+					return err
 				}
-
-				// Collect results
-				if err := collectXds(&results, key, xRes, envoyConfigType(resourceType)); err != nil {
-					return fmt.Errorf("failed to collect result for key %s value %+v, error:%w", key, val, err)
+				result.Resources = res
+			}
+			if outType == xdsType {
+				res, err := translateGatewayAPIToXds(gcName, resourceType, resources)
+				if err != nil {
+					return err
 				}
+				result.Xds = res
 			}
 		}
-
-		if err := printOutput(w, results, output); err != nil {
+		// Print
+		if err = printOutput(w, result, output); err != nil {
 			return fmt.Errorf("failed to print result, error:%w", err)
 		}
 
 		return nil
 	}
-
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-// printOutput prints the echo-backed gateway API and xDS output
-func printOutput(w io.Writer, results []interface{}, output string) (err error) {
-	var (
-		out       []byte
-		firstItem = true
-	)
-
-	if output == jsonOutput {
-		fmt.Fprint(w, "[")
+func translateGatewayAPIToGatewayAPI(gcName string, resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
+	// Translate from Gateway API to Xds IR
+	gTranslator := &gatewayapi.Translator{
+		GatewayControllerName:  egv1alpha1.GatewayControllerName,
+		GatewayClassName:       v1beta1.ObjectName(gcName),
+		GlobalRateLimitEnabled: true,
 	}
-
-	for _, wrapper := range results {
-		switch output {
-		case yamlOutput:
-			out, err = yaml.Marshal(wrapper)
-		case jsonOutput:
-			out, err = json.Marshal(wrapper)
-		default:
-			out, err = yaml.Marshal(wrapper)
-		}
-		if err != nil {
-			return err
-		}
-
-		if firstItem {
-			switch output {
-			case yamlOutput:
-				fmt.Fprintln(w, string(out))
-			case jsonOutput:
-				fmt.Fprint(w, string(out))
-			default:
-				fmt.Fprintln(w, string(out))
-			}
-
-			firstItem = false
-		} else {
-			switch output {
-			case yamlOutput:
-				fmt.Fprintln(w, "---")
-				fmt.Fprintln(w, string(out))
-			case jsonOutput:
-				fmt.Fprintln(w, ",")
-				fmt.Fprint(w, string(out))
-			default:
-				fmt.Fprintln(w, "---")
-				fmt.Fprintln(w, string(out))
-			}
-		}
-	}
-
-	if output == jsonOutput {
-		fmt.Fprintln(w, "]")
-	}
-
-	return nil
+	gRes := gTranslator.Translate(resources)
+	return gRes.Resources, nil
 }
 
-// collectXds collects xDS which will be output later
-func collectXds(results *[]interface{}, key string, tCtx *xds_types.ResourceVersionTable, resourceType envoyConfigType) (err error) {
-	globalConfigs, err := constructConfigDump(tCtx)
+func translateGatewayAPIToXds(gcName, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+	// Translate from Gateway API to Xds IR
+	gTranslator := &gatewayapi.Translator{
+		GatewayClassName:       v1beta1.ObjectName(gcName),
+		GlobalRateLimitEnabled: true,
+	}
+	gRes := gTranslator.Translate(resources)
+
+	keys := []string{}
+	for key := range gRes.XdsIR {
+		keys = append(keys, key)
+	}
+	// Make output stable since XdsIR is a map
+	sort.Strings(keys)
+
+	// Translate from Xds IR to Xds
+	result := make(map[string]any)
+	for _, key := range keys {
+		val := gRes.XdsIR[key]
+		xTranslator := &translator.Translator{
+			// Set some default settings for translation
+			GlobalRateLimit: &translator.GlobalRateLimitSettings{
+				ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway"),
+			},
+		}
+		xRes, err := xTranslator.Translate(val)
+		if err != nil {
+			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
+		}
+
+		globalConfigs, err := constructConfigDump(xRes)
+		if err != nil {
+			return nil, err
+		}
+
+		var data protoreflect.ProtoMessage
+		rType := envoyConfigType(resourceType)
+		if rType == AllEnvoyConfigType {
+			data = globalConfigs
+		} else {
+			// Find resource
+			xdsResources, err := findXDSResourceFromConfigDump(rType, globalConfigs)
+			if err != nil {
+				return nil, err
+			}
+			data = xdsResources
+		}
+
+		out, err := protojson.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+		result[key] = out
+	}
+
+	return result, nil
+}
+
+// printOutput prints the echo-backed gateway API and xDS output
+func printOutput(w io.Writer, result TranslationResult, output string) error {
+	var (
+		out []byte
+		err error
+	)
+	switch output {
+	case yamlOutput:
+		out, err = yaml.Marshal(result)
+	case jsonOutput:
+		out, err = json.Marshal(result)
+	default:
+		out, err = yaml.Marshal(result)
+	}
 	if err != nil {
 		return err
 	}
-
-	var (
-		data []byte
-	)
-
-	if resourceType == AllEnvoyConfigType {
-		data, err = protojson.Marshal(globalConfigs)
-		if err != nil {
-			return err
-		}
-	} else {
-		xdsResources, err := findXDSResourceFromConfigDump(resourceType, globalConfigs)
-		if err != nil {
-			return err
-		}
-		data, err = protojson.Marshal(xdsResources)
-		if err != nil {
-			return err
-		}
-	}
-
-	wrapper := map[string]any{}
-	if err := json.Unmarshal(data, &wrapper); err != nil {
-		return err
-	}
-
-	wrapper["configKey"] = key
-	wrapper["resourceType"] = resourceType
-	*results = append(*results, wrapper)
+	fmt.Fprintln(w, string(out))
 	return nil
 }
 

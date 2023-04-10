@@ -6,7 +6,6 @@
 package gatewayapi
 
 import (
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -69,14 +68,9 @@ type Translator struct {
 }
 
 type TranslateResult struct {
-	Gateways   []*v1beta1.Gateway
-	HTTPRoutes []*v1beta1.HTTPRoute
-	GRPCRoutes []*v1alpha2.GRPCRoute
-	TLSRoutes  []*v1alpha2.TLSRoute
-	TCPRoutes  []*v1alpha2.TCPRoute
-	UDPRoutes  []*v1alpha2.UDPRoute
-	XdsIR      XdsIRMap
-	InfraIR    InfraIRMap
+	Resources
+	XdsIR   XdsIRMap
+	InfraIR InfraIRMap
 }
 
 func newTranslateResult(gateways []*GatewayContext,
