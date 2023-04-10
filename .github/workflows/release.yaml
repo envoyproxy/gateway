@@ -31,7 +31,7 @@ jobs:
         run: make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
       - name: Build and Push EG Release Helm Chart
-        run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} TAG=${{ env.release_tag }} make helm-package helm-push
+        run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@v1
