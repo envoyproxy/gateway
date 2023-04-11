@@ -35,6 +35,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
+	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	xds_types "github.com/envoyproxy/gateway/internal/xds/types"
@@ -218,7 +219,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 
 	if inType == gatewayAPIType {
 		// Unmarshal input
-		gcName, resources, err := kubernetesYAMLToResources(string(inBytes), addMissingResources)
+		resources, err := kubernetesYAMLToResources(string(inBytes), addMissingResources)
 		if err != nil {
 			return fmt.Errorf("unable to unmarshal input: %w", err)
 		}
@@ -227,10 +228,10 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				result.Resources = translateGatewayAPIToGatewayAPI(gcName, resources)
+				result.Resources = translateGatewayAPIToGatewayAPI(resources)
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(gcName, resourceType, resources)
+				res, err := translateGatewayAPIToXds(resourceType, resources)
 				if err != nil {
 					return err
 				}
@@ -247,22 +248,34 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToGatewayAPI(gcName string, resources *gatewayapi.Resources) gatewayapi.Resources {
+func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi.Resources {
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
-		GatewayClassName:       v1beta1.ObjectName(gcName),
+		GatewayClassName:       v1beta1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
+	// Update the status of the GatewayClass based on EnvoyProxy validation
+	if resources.EnvoyProxy != nil {
+		if err := resources.EnvoyProxy.Validate(); err != nil {
+			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(v1beta1.GatewayClassReasonInvalidParameters), msg)
+		} else {
+			status.SetGatewayClassAccepted(resources.GatewayClass, true, string(v1beta1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
+		}
+		gRes.EnvoyProxy = resources.EnvoyProxy
+		gRes.GatewayClass = resources.GatewayClass
+
+	}
 	return gRes.Resources
 }
 
-func translateGatewayAPIToXds(gcName, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+func translateGatewayAPIToXds(resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
-		GatewayClassName:       v1beta1.ObjectName(gcName),
+		GatewayClassName:       v1beta1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
@@ -452,9 +465,8 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 }
 
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
-func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *gatewayapi.Resources, error) {
+func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayapi.Resources, error) {
 	resources := gatewayapi.NewResources()
-	var gcName string
 	var useDefaultNamespace bool
 	providedNamespaceMap := map[string]struct{}{}
 	requiredNamespaceMap := map[string]struct{}{}
@@ -467,7 +479,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *g
 		var obj map[string]interface{}
 		err := yaml.Unmarshal([]byte(y), &obj)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
 		un := unstructured.Unstructured{Object: obj}
 		gvk := un.GroupVersionKind()
@@ -482,23 +494,41 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *g
 		requiredNamespaceMap[namespace] = struct{}{}
 		kobj, err := combinedScheme.New(gvk)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
 		err = combinedScheme.Convert(&un, kobj, nil)
 		if err != nil {
-			return "", nil, err
+			return nil, err
 		}
 
 		objType := reflect.TypeOf(kobj)
 		if objType.Kind() != reflect.Ptr {
-			return "", nil, fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
+			return nil, fmt.Errorf("expected pointer type, but got %s", objType.Kind().String())
 		}
 		kobjVal := reflect.ValueOf(kobj).Elem()
 		spec := kobjVal.FieldByName("Spec")
 
 		switch gvk.Kind {
+		case gatewayapi.KindEnvoyProxy:
+			typedSpec := spec.Interface()
+			envoyProxy := &egv1alpha1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(egv1alpha1.EnvoyProxySpec),
+			}
+			resources.EnvoyProxy = envoyProxy
 		case gatewayapi.KindGatewayClass:
-			gcName = name
+			typedSpec := spec.Interface()
+			gatewayClass := &v1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: namespace,
+				},
+				Spec: typedSpec.(v1beta1.GatewayClassSpec),
+			}
+			resources.GatewayClass = gatewayClass
 		case gatewayapi.KindGateway:
 			typedSpec := spec.Interface()
 			gateway := &v1beta1.Gateway{
@@ -605,5 +635,5 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (string, *g
 		}
 	}
 
-	return gcName, resources, nil
+	return resources, nil
 }

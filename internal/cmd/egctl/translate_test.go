@@ -8,6 +8,7 @@ package egctl
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -164,6 +165,20 @@ func TestTranslate(t *testing.T) {
 			resourceType: string(RouteEnvoyConfigType),
 			expect:       true,
 		},
+		{
+			name:   "valid-envoyproxy",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
+			name:   "invalid-envoyproxy",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			output: yamlOutput,
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -214,7 +229,7 @@ func TestTranslate(t *testing.T) {
 			assert.NoError(t, err)
 			got := &TranslationResult{}
 			mustUnmarshal(t, out, got)
-
+			fmt.Println(string(out))
 			var fn string
 			if tc.output == jsonOutput {
 				fn = tc.name + "." + resourceType + ".json"
