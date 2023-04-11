@@ -17,8 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -40,49 +42,24 @@ descriptors:
 `
 )
 
-func TestExpectedRateLimitConfigMap(t *testing.T) {
-	// Setup the ratelimit infra.
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	cfg, err := config.New()
-	require.NoError(t, err)
-
-	kube := NewInfra(cli, cfg)
-
-	rateLimitInfra := new(ir.RateLimitInfra)
-
-	c := &ir.RateLimitServiceConfig{
-		Name:   rateLimitListener,
-		Config: rateLimitConfig,
-	}
-	rateLimitInfra.ServiceConfigs = append(rateLimitInfra.ServiceConfigs, c)
-
-	// An infra without Gateway owner labels should trigger
-	// an error.
-	cm := kube.expectedRateLimitConfigMap(rateLimitInfra)
-	require.NotNil(t, cm)
-
-	require.Equal(t, "envoy-ratelimit", cm.Name)
-	require.Equal(t, "envoy-gateway-system", cm.Namespace)
-	require.Contains(t, cm.Data, rateLimitListener)
-	assert.Equal(t, rateLimitConfig, cm.Data[rateLimitListener])
-
-	wantLabels := rateLimitLabels()
-	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, cm.Labels))
-}
-
 func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
-	kube := NewInfra(nil, cfg)
-
-	cfg.Namespace = "envoy-gateway-system"
 
 	rateLimitInfra := new(ir.RateLimitInfra)
-	c := &ir.RateLimitServiceConfig{
+	rateLimitInfra.ServiceConfigs = append(rateLimitInfra.ServiceConfigs, &ir.RateLimitServiceConfig{
 		Name:   rateLimitListener,
 		Config: rateLimitConfig,
+	})
+	rl := &egcfgv1a1.RateLimit{
+		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+			Type: egcfgv1a1.RedisBackendType,
+			Redis: &egcfgv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
 	}
-	rateLimitInfra.ServiceConfigs = append(rateLimitInfra.ServiceConfigs, c)
+	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
 
 	testCases := []struct {
 		name    string
@@ -94,9 +71,9 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      rateLimitInfraName,
+					Name:      ratelimit.InfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name": rateLimitInfraName,
+						"app.gateway.envoyproxy.io/name": ratelimit.InfraName,
 					},
 				},
 				Data: map[string]string{rateLimitListener: rateLimitConfig},
@@ -107,9 +84,9 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 			current: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      rateLimitInfraName,
+					Name:      ratelimit.InfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name": rateLimitInfraName,
+						"app.gateway.envoyproxy.io/name": ratelimit.InfraName,
 					},
 				},
 				Data: map[string]string{"foo": "bar"},
@@ -117,9 +94,9 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      rateLimitInfraName,
+					Name:      ratelimit.InfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name": rateLimitInfraName,
+						"app.gateway.envoyproxy.io/name": ratelimit.InfraName,
 					},
 				},
 				Data: map[string]string{rateLimitListener: rateLimitConfig},
@@ -130,12 +107,16 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			var cli client.Client
 			if tc.current != nil {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			} else {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateRateLimitConfigMap(context.Background(), rateLimitInfra)
+
+			kube := NewInfra(cli, cfg)
+
+			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -154,7 +135,14 @@ func TestDeleteRateLimitConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	rateLimitInfra := new(ir.RateLimitInfra)
+	rl := &egcfgv1a1.RateLimit{
+		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+			Type: egcfgv1a1.RedisBackendType,
+			Redis: &egcfgv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
 
 	testCases := []struct {
 		name    string
@@ -189,10 +177,13 @@ func TestDeleteRateLimitConfigMap(t *testing.T) {
 			cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			kube := NewInfra(cli, cfg)
 
-			err := kube.createOrUpdateRateLimitConfigMap(context.Background(), rateLimitInfra)
+			rateLimitInfra := new(ir.RateLimitInfra)
+			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+
+			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 
-			err = kube.deleteRateLimitConfigMap(context.Background(), rateLimitInfra)
+			err = kube.deleteConfigMap(context.Background(), r)
 			require.NoError(t, err)
 		})
 	}
