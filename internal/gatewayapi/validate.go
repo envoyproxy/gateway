@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/netip"
 
-	"golang.org/x/exp/maps"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -251,7 +250,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			break
 		}
 
-		pkaSecretSet := make(map[string]*v1.Secret)
+		secrets := make([]*v1.Secret, 0)
 		for _, certificateRef := range listener.TLS.CertificateRefs {
 			if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
 				listener.SetCondition(
@@ -334,7 +333,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				break
 			}
 
-			pka, err := validateTLSSecretData(secret)
+			err := validateTLSSecretData(secret)
 			if err != nil {
 				listener.SetCondition(
 					v1beta1.ListenerConditionResolvedRefs,
@@ -344,22 +343,10 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
-
-			// Check whether the public key algorithm in the referenced secrets are unique.
-			if duplicatePKAVal, ok := pkaSecretSet[pka]; ok {
-				listener.SetCondition(
-					v1beta1.ListenerConditionProgrammed,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalid,
-					fmt.Sprintf("Secret %s/%s public key algorithm must be unique. Algorithm [%s] conflicts with secret %s/%s",
-						secret.Namespace, secret.Name, pka, duplicatePKAVal.Namespace, duplicatePKAVal.Name),
-				)
-				break
-			}
-			pkaSecretSet[pka] = secret
+			secrets = append(secrets, secret)
 		}
 
-		listener.SetTLSSecrets(maps.Values(pkaSecretSet))
+		listener.SetTLSSecrets(secrets)
 
 	case v1beta1.TLSProtocolType:
 		if listener.TLS == nil {
