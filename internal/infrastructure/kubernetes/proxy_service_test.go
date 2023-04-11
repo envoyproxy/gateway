@@ -12,9 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -23,60 +21,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
-
-func checkServiceHasPort(t *testing.T, svc *corev1.Service, port int32) {
-	t.Helper()
-
-	for _, p := range svc.Spec.Ports {
-		if p.Port == port {
-			return
-		}
-	}
-	t.Errorf("service is missing port %q", port)
-}
-
-func checkServiceHasTargetPort(t *testing.T, svc *corev1.Service, port int32) {
-	t.Helper()
-
-	intStrPort := intstr.IntOrString{IntVal: port}
-	for _, p := range svc.Spec.Ports {
-		if p.TargetPort == intStrPort {
-			return
-		}
-	}
-	t.Errorf("service is missing targetPort %d", port)
-}
-
-func checkServiceHasPortName(t *testing.T, svc *corev1.Service, name string) {
-	t.Helper()
-
-	for _, p := range svc.Spec.Ports {
-		if p.Name == name {
-			return
-		}
-	}
-	t.Errorf("service is missing port name %q", name)
-}
-
-func checkServiceHasLabels(t *testing.T, svc *corev1.Service, expected map[string]string) {
-	t.Helper()
-
-	if apiequality.Semantic.DeepEqual(svc.Labels, expected) {
-		return
-	}
-
-	t.Errorf("service has unexpected %q labels", svc.Labels)
-}
-
-func checkServiceHasAnnotations(t *testing.T, svc *corev1.Service, expected map[string]string) {
-	t.Helper()
-
-	if apiequality.Semantic.DeepEqual(svc.Annotations, expected) {
-		return
-	}
-
-	t.Errorf("service has unexpected %q annotations", svc.Annotations)
-}
 
 func testDesiredProxyService(t *testing.T, infra *ir.Infra, expected corev1.ServiceSpec) {
 	cfg, err := config.New()

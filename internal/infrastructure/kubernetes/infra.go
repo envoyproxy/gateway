@@ -10,6 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -21,13 +22,17 @@ type Infra struct {
 
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
+
+	// EnvoyGateway is the configuration used to startup Envoy Gateway.
+	EnvoyGateway *v1alpha1.EnvoyGateway
 }
 
 // NewInfra returns a new Infra.
 func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	return &Infra{
-		Client:    cli,
-		Namespace: cfg.Namespace,
+		Client:       cli,
+		Namespace:    cfg.Namespace,
+		EnvoyGateway: cfg.EnvoyGateway,
 	}
 }
 

@@ -67,6 +67,13 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return e.Provider
 }
 
+// DefaultEnvoyGatewayKubeProvider returns a new EnvoyGatewayKubernetesProvider with default settings.
+func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
+	return &EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: DefaultKubernetesDeployment(),
+	}
+}
+
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
 func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {
 	return &EnvoyProxyProvider{
@@ -176,12 +183,52 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer()
 	}
 
+	if r.Kubernetes.EnvoyDeployment.Container.Resources == nil {
+		r.Kubernetes.EnvoyDeployment.Container.Resources = DefaultResourceRequirements()
+	}
+
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
 	}
 
 	if r.Kubernetes.EnvoyService.Type == nil {
 		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
+	}
+
+	return r.Kubernetes
+}
+
+// GetEnvoyGatewayKubeProvider returns the EnvoyGatewayKubernetesProvider of Provider or
+// a default EnvoyGatewayKubernetesProvider if unspecified. If EnvoyGatewayProvider is not of
+// type "Kubernetes", a nil EnvoyGatewayKubernetesProvider is returned.
+func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
+	if r.Type != ProviderTypeKubernetes {
+		return nil
+	}
+
+	if r.Kubernetes == nil {
+		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
+		return r.Kubernetes
+	}
+
+	if r.Kubernetes.RateLimitDeployment == nil {
+		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Replicas == nil {
+		r.Kubernetes.RateLimitDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Pod == nil {
+		r.Kubernetes.RateLimitDeployment.Pod = DefaultKubernetesPod()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Container == nil {
+		r.Kubernetes.RateLimitDeployment.Container = DefaultKubernetesContainer()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Container.Resources == nil {
+		r.Kubernetes.RateLimitDeployment.Container.Resources = DefaultResourceRequirements()
 	}
 
 	return r.Kubernetes
