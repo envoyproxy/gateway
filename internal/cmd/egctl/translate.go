@@ -257,17 +257,20 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi
 	}
 	gRes := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
+	epInvalid := false
 	if resources.EnvoyProxy != nil {
 		if err := resources.EnvoyProxy.Validate(); err != nil {
+			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(v1beta1.GatewayClassReasonInvalidParameters), msg)
-		} else {
-			status.SetGatewayClassAccepted(resources.GatewayClass, true, string(v1beta1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
 		}
 		gRes.EnvoyProxy = resources.EnvoyProxy
-		gRes.GatewayClass = resources.GatewayClass
-
 	}
+	if !epInvalid {
+		status.SetGatewayClassAccepted(resources.GatewayClass, true, string(v1beta1.GatewayClassReasonAccepted), status.MsgValidGatewayClass)
+	}
+
+	gRes.GatewayClass = resources.GatewayClass
 	return gRes.Resources
 }
 

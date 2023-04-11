@@ -53,7 +53,6 @@ func NewResources() *Resources {
 		ReferenceGrants:       []*v1alpha2.ReferenceGrant{},
 		Namespaces:            []*v1.Namespace{},
 		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
-		EnvoyProxy:            new(egcfgv1a1.EnvoyProxy),
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
 		ExtensionRefFilters:   []unstructured.Unstructured{},
 	}

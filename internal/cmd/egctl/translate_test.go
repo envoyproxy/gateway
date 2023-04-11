@@ -8,7 +8,6 @@ package egctl
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -229,7 +228,6 @@ func TestTranslate(t *testing.T) {
 			assert.NoError(t, err)
 			got := &TranslationResult{}
 			mustUnmarshal(t, out, got)
-			fmt.Println(string(out))
 			var fn string
 			if tc.output == jsonOutput {
 				fn = tc.name + "." + resourceType + ".json"
