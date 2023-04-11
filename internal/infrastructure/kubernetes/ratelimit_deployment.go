@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -45,9 +46,16 @@ const (
 
 // expectedRateLimitDeployment returns the expected rate limit Deployment based on the provided infra.
 func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) *appsv1.Deployment {
-	containers := expectedRateLimitContainers(infra)
+	rateLimitDeployment := i.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment
+	containers := expectedRateLimitContainers(infra, i.EnvoyGateway.RateLimit, rateLimitDeployment)
 	labels := rateLimitLabels()
 	selector := getSelector(labels)
+
+	// Get annotations
+	var annotations map[string]string
+	if rateLimitDeployment.Pod.Annotations != nil {
+		annotations = rateLimitDeployment.Pod.Annotations
+	}
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -60,11 +68,12 @@ func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) *appsv1.De
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(int32(1)),
+			Replicas: rateLimitDeployment.Replicas,
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: selector.MatchLabels,
+					Labels:      selector.MatchLabels,
+					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
@@ -74,6 +83,7 @@ func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) *appsv1.De
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
+					SecurityContext:               rateLimitDeployment.Pod.SecurityContext,
 					Volumes: []corev1.Volume{
 						{
 							Name: rateLimitInfraName,
@@ -96,7 +106,7 @@ func (i *Infra) expectedRateLimitDeployment(infra *ir.RateLimitInfra) *appsv1.De
 	return deployment
 }
 
-func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
+func expectedRateLimitContainers(_ *ir.RateLimitInfra, rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "http",
@@ -120,7 +130,7 @@ func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
 				},
 				{
 					Name:  rateLimitRedisURLEnvVar,
-					Value: infra.Backend.Redis.URL,
+					Value: rateLimit.Backend.Redis.URL,
 				},
 				{
 					Name:  rateLimitRuntimeRootEnvVar,
@@ -147,7 +157,9 @@ func expectedRateLimitContainers(infra *ir.RateLimitInfra) []corev1.Container {
 					Value: "false",
 				},
 			},
-			Ports: ports,
+			Ports:           ports,
+			Resources:       *rateLimitDeployment.Container.Resources,
+			SecurityContext: rateLimitDeployment.Container.SecurityContext,
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      rateLimitInfraName,

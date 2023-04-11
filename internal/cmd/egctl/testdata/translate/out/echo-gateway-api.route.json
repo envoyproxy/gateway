@@ -1,63 +1,125 @@
-[
-  {
-    "httpRoutes": [
-      {
-        "metadata": {
-          "name": "backend",
-          "namespace": "envoy-gateway-system"
-        },
-        "spec": {
-          "parentRefs": [
-            {
-              "name": "eg"
-            }
-          ],
-          "hostnames": [
-            "www.example.com"
-          ],
-          "rules": [
-            {
-              "matches": [
-                {
-                  "path": {
-                    "type": "PathPrefix",
-                    "value": "/"
-                  }
-                }
-              ],
-              "backendRefs": [
-                {
-                  "group": "",
-                  "kind": "Service",
-                  "name": "backend",
-                  "port": 3000,
-                  "weight": 1
-                }
-              ]
-            }
-          ]
-        },
-        "status": {
-          "parents": [
-            {
-              "parentRef": {
-                "name": "eg"
-              },
-              "controllerName": "gateway.envoyproxy.io/gatewayclass-controller",
-              "conditions": [
-                {
-                  "status": "True",
-                  "reason": "Accepted"
-                },
-                {
-                  "status": "True",
-                  "reason": "ResolvedRefs"
-                }
-              ]
-            }
-          ]
-        }
-      }
-    ]
-  }
-]
+{
+	"gateways": [
+		{
+			"metadata": {
+				"name": "eg",
+				"namespace": "envoy-gateway-system",
+				"creationTimestamp": null
+			},
+			"spec": {
+				"gatewayClassName": "eg",
+				"listeners": [
+					{
+						"name": "http",
+						"port": 80,
+						"protocol": "HTTP"
+					}
+				]
+			},
+			"status": {
+				"listeners": [
+					{
+						"name": "http",
+						"supportedKinds": [
+							{
+								"group": "gateway.networking.k8s.io",
+								"kind": "HTTPRoute"
+							},
+							{
+								"group": "gateway.networking.k8s.io",
+								"kind": "GRPCRoute"
+							},
+							{
+								"group": "gateway.networking.k8s.io",
+								"kind": "CustomGRPCRoute"
+							}
+						],
+						"attachedRoutes": 1,
+						"conditions": [
+							{
+								"type": "Programmed",
+								"status": "True",
+								"lastTransitionTime": "2023-04-11T00:13:42Z",
+								"reason": "Programmed",
+								"message": "Sending translated listener configuration to the data plane"
+							},
+							{
+								"type": "Accepted",
+								"status": "True",
+								"lastTransitionTime": "2023-04-11T00:13:42Z",
+								"reason": "Accepted",
+								"message": "Listener has been successfully translated"
+							}
+						]
+					}
+				]
+			}
+		}
+	],
+	"httpRoutes": [
+		{
+			"metadata": {
+				"name": "backend",
+				"namespace": "envoy-gateway-system",
+				"creationTimestamp": null
+			},
+			"spec": {
+				"parentRefs": [
+					{
+						"name": "eg"
+					}
+				],
+				"hostnames": [
+					"www.example.com"
+				],
+				"rules": [
+					{
+						"matches": [
+							{
+								"path": {
+									"type": "PathPrefix",
+									"value": "/"
+								}
+							}
+						],
+						"backendRefs": [
+							{
+								"group": "",
+								"kind": "Service",
+								"name": "backend",
+								"port": 3000,
+								"weight": 1
+							}
+						]
+					}
+				]
+			},
+			"status": {
+				"parents": [
+					{
+						"parentRef": {
+							"name": "eg"
+						},
+						"controllerName": "gateway.envoyproxy.io/gatewayclass-controller",
+						"conditions": [
+							{
+								"type": "Accepted",
+								"status": "True",
+								"lastTransitionTime": "2023-04-11T00:13:42Z",
+								"reason": "Accepted",
+								"message": "Route is accepted"
+							},
+							{
+								"type": "ResolvedRefs",
+								"status": "True",
+								"lastTransitionTime": "2023-04-11T00:13:42Z",
+								"reason": "ResolvedRefs",
+								"message": "Resolved all the Object references for the Route"
+							}
+						]
+					}
+				]
+			}
+		}
+	]
+}

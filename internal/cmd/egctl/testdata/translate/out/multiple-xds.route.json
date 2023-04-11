@@ -1,82 +1,60 @@
-[
-  {
-    "@type": "type.googleapis.com/envoy.admin.v3.RoutesConfigDump",
-    "configKey": "default-eg",
-    "dynamicRouteConfigs": [
-      {
-        "routeConfig": {
-          "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
-          "name": "default-eg-http",
-          "virtualHosts": [
-            {
-              "domains": [
-                "*"
-              ],
-              "name": "default-eg-http",
-              "routes": [
-                {
-                  "match": {
-                    "headers": [
-                      {
-                        "name": ":authority",
-                        "stringMatch": {
-                          "exact": "www.example.com"
-                        }
-                      }
-                    ],
-                    "prefix": "/"
-                  },
-                  "name": "default-backend-rule-0-match-0-www.example.com",
-                  "route": {
-                    "cluster": "default-backend-rule-0-match-0-www.example.com"
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      }
-    ],
-    "resourceType": "route"
-  },
-  {
-    "@type": "type.googleapis.com/envoy.admin.v3.RoutesConfigDump",
-    "configKey": "default-eg2",
-    "dynamicRouteConfigs": [
-      {
-        "routeConfig": {
-          "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
-          "name": "default-eg2-http",
-          "virtualHosts": [
-            {
-              "domains": [
-                "*"
-              ],
-              "name": "default-eg2-http",
-              "routes": [
-                {
-                  "match": {
-                    "headers": [
-                      {
-                        "name": ":authority",
-                        "stringMatch": {
-                          "exact": "www.example2.com"
-                        }
-                      }
-                    ],
-                    "prefix": "/v2/"
-                  },
-                  "name": "default-backend-rule-0-match-0-www.example2.com",
-                  "route": {
-                    "cluster": "default-backend-rule-0-match-0-www.example2.com"
-                  }
-                }
-              ]
-            }
-          ]
-        }
-      }
-    ],
-    "resourceType": "route"
-  }
-]
+{
+	"xds": {
+		"default-eg": {
+			"@type": "type.googleapis.com/envoy.admin.v3.RoutesConfigDump",
+			"dynamicRouteConfigs": [{
+				"routeConfig": {
+					"@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+					"name": "default-eg-http",
+					"virtualHosts": [{
+						"domains": ["*"],
+						"name": "default-eg-http",
+						"routes": [{
+							"match": {
+								"headers": [{
+									"name": ":authority",
+									"stringMatch": {
+										"exact": "www.example.com"
+									}
+								}],
+								"prefix": "/"
+							},
+							"name": "default-backend-rule-0-match-0-www.example.com",
+							"route": {
+								"cluster": "default-backend-rule-0-match-0-www.example.com"
+							}
+						}]
+					}]
+				}
+			}]
+		},
+		"default-eg2": {
+			"@type": "type.googleapis.com/envoy.admin.v3.RoutesConfigDump",
+			"dynamicRouteConfigs": [{
+				"routeConfig": {
+					"@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+					"name": "default-eg2-http",
+					"virtualHosts": [{
+						"domains": ["*"],
+						"name": "default-eg2-http",
+						"routes": [{
+							"match": {
+								"headers": [{
+									"name": ":authority",
+									"stringMatch": {
+										"exact": "www.example2.com"
+									}
+								}],
+								"prefix": "/v2/"
+							},
+							"name": "default-backend-rule-0-match-0-www.example2.com",
+							"route": {
+								"cluster": "default-backend-rule-0-match-0-www.example2.com"
+							}
+						}]
+					}]
+				}
+			}]
+		}
+	}
+}

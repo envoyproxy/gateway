@@ -1,5 +1,39 @@
+gateways:
+- metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-10T23:55:27Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-10T23:55:27Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
 httpRoutes:
 - metadata:
+    creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:
@@ -21,37 +55,33 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - reason: Accepted
+      - lastTransitionTime: "2023-04-10T23:55:27Z"
+        message: Route is accepted
+        reason: Accepted
         status: "True"
-      - reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: "2023-04-10T23:55:27Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
         status: "True"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg
-
----
-'@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
-configKey: envoy-gateway-system-eg
-dynamicActiveClusters:
-- cluster:
-    '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-    commonLbConfig:
-      localityWeightedLbConfig: {}
-    connectTimeout: 10s
-    dnsLookupFamily: V4_ONLY
-    loadAssignment:
-      clusterName: envoy-gateway-system-backend-rule-0-match-0-www.example.com
-      endpoints:
-      - lbEndpoints:
-        - endpoint:
-            address:
-              socketAddress:
-                portValue: 3000
-          loadBalancingWeight: 1
-        loadBalancingWeight: 1
-        locality: {}
-    name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
-    outlierDetection: {}
-    type: STATIC
-resourceType: cluster
-
+xds:
+  envoy-gateway-system-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+    dynamicActiveClusters:
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+        name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+        outlierDetection: {}
+        type: EDS

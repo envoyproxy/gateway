@@ -80,7 +80,6 @@ func (r *Runner) subscribeToRateLimitInfraIR(ctx context.Context) {
 	message.HandleSubscription(r.RateLimitInfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.RateLimitInfra]) {
 			val := update.Value
-
 			if update.Delete {
 				if err := r.mgr.DeleteRateLimitInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to delete rate limit infra")
