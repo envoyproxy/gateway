@@ -30,7 +30,13 @@ The Envoy Gateway team meets every Tuesday and Thursday. Refer to the meeting de
 
 * [Meeting details][meeting]
 
+To better accommodate our Chinese community members who face scheduling difficulties for our weekly meeting, 
+we have arranged [a separate meeting](Chinese meeting) to be held in the Chinese timezone.
+
+
+
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
+[Chinese meeting]: https://docs.qq.com/doc/DVmVPTGtUWm5xeE5J
 [group]: https://groups.google.com/forum/#!forum/envoy-gateway-developers
 [blog]: https://blog.envoyproxy.io/introducing-envoy-gateway-ad385cc59532
 [Envoy Slack workspace]: https://communityinviter.com/apps/envoyproxy/envoy
