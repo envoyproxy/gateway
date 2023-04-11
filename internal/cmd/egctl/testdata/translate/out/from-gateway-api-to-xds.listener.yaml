@@ -1,183 +1,182 @@
-'@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
-configKey: default-eg
-dynamicListeners:
-- activeState:
-    listener:
-      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-      accessLog:
-      - filter:
-          responseFlagFilter:
-            flags:
-            - NR
-        name: envoy.access_loggers.file
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-          path: /dev/stdout
-      address:
-        socketAddress:
-          address: 0.0.0.0
-          portValue: 10080
-      defaultFilterChain:
-        filters:
-        - name: envoy.filters.network.http_connection_manager
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-            accessLog:
-            - name: envoy.access_loggers.file
+xds:
+  default-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
+    dynamicListeners:
+    - activeState:
+        listener:
+          '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+          accessLog:
+          - filter:
+              responseFlagFilter:
+                flags:
+                - NR
+            name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/stdout
+          address:
+            socketAddress:
+              address: 0.0.0.0
+              portValue: 10080
+          defaultFilterChain:
+            filters:
+            - name: envoy.filters.network.http_connection_manager
               typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                path: /dev/stdout
-            httpFilters:
-            - name: envoy.filters.http.router
+                '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    path: /dev/stdout
+                httpFilters:
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                rds:
+                  configSource:
+                    ads: {}
+                    resourceApiVersion: V3
+                  routeConfigName: default-eg-http
+                statPrefix: http
+                upgradeConfigs:
+                - upgradeType: websocket
+                useRemoteAddress: true
+          name: default-eg-http
+    - activeState:
+        listener:
+          '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+          accessLog:
+          - filter:
+              responseFlagFilter:
+                flags:
+                - NR
+            name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/stdout
+          address:
+            socketAddress:
+              address: 0.0.0.0
+              portValue: 8080
+          defaultFilterChain:
+            filters:
+            - name: envoy.filters.network.http_connection_manager
               typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            rds:
-              configSource:
-                ads: {}
-                resourceApiVersion: V3
-              routeConfigName: default-eg-http
-            statPrefix: http
-            upgradeConfigs:
-            - upgradeType: websocket
-            useRemoteAddress: true
-      name: default-eg-http
-- activeState:
-    listener:
-      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-      accessLog:
-      - filter:
-          responseFlagFilter:
-            flags:
-            - NR
-        name: envoy.access_loggers.file
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-          path: /dev/stdout
-      address:
-        socketAddress:
-          address: 0.0.0.0
-          portValue: 8080
-      defaultFilterChain:
-        filters:
-        - name: envoy.filters.network.http_connection_manager
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-            accessLog:
-            - name: envoy.access_loggers.file
+                '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    path: /dev/stdout
+                codecType: HTTP2
+                httpFilters:
+                - name: envoy.filters.http.grpc_web
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                rds:
+                  configSource:
+                    ads: {}
+                    resourceApiVersion: V3
+                  routeConfigName: default-eg-grpc
+                statPrefix: http
+                useRemoteAddress: true
+          name: default-eg-grpc
+    - activeState:
+        listener:
+          '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+          accessLog:
+          - filter:
+              responseFlagFilter:
+                flags:
+                - NR
+            name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/stdout
+          address:
+            socketAddress:
+              address: 0.0.0.0
+              portValue: 8443
+          filterChains:
+          - filterChainMatch:
+              serverNames:
+              - foo.com
+            filters:
+            - name: envoy.filters.network.tcp_proxy
               typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                path: /dev/stdout
-            codecType: HTTP2
-            httpFilters:
-            - name: envoy.filters.http.grpc_web
+                '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    path: /dev/stdout
+                cluster: default-eg-tls-passthrough-backend
+                statPrefix: passthrough
+          listenerFilters:
+          - name: envoy.filters.listener.tls_inspector
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+          name: default-eg-tls-passthrough-backend
+    - activeState:
+        listener:
+          '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+          accessLog:
+          - filter:
+              responseFlagFilter:
+                flags:
+                - NR
+            name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/stdout
+          address:
+            socketAddress:
+              address: 0.0.0.0
+              portValue: 1234
+          filterChains:
+          - filters:
+            - name: envoy.filters.network.tcp_proxy
               typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
-            - name: envoy.filters.http.router
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-            rds:
-              configSource:
-                ads: {}
-                resourceApiVersion: V3
-              routeConfigName: default-eg-grpc
-            statPrefix: http
-            useRemoteAddress: true
-      name: default-eg-grpc
-- activeState:
-    listener:
-      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-      accessLog:
-      - filter:
-          responseFlagFilter:
-            flags:
-            - NR
-        name: envoy.access_loggers.file
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-          path: /dev/stdout
-      address:
-        socketAddress:
-          address: 0.0.0.0
-          portValue: 8443
-      filterChains:
-      - filterChainMatch:
-          serverNames:
-          - foo.com
-        filters:
-        - name: envoy.filters.network.tcp_proxy
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-            accessLog:
-            - name: envoy.access_loggers.file
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                path: /dev/stdout
-            cluster: default-eg-tls-passthrough-backend
-            statPrefix: passthrough
-      listenerFilters:
-      - name: envoy.filters.listener.tls_inspector
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-      name: default-eg-tls-passthrough-backend
-- activeState:
-    listener:
-      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-      accessLog:
-      - filter:
-          responseFlagFilter:
-            flags:
-            - NR
-        name: envoy.access_loggers.file
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-          path: /dev/stdout
-      address:
-        socketAddress:
-          address: 0.0.0.0
-          portValue: 1234
-      filterChains:
-      - filters:
-        - name: envoy.filters.network.tcp_proxy
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-            accessLog:
-            - name: envoy.access_loggers.file
-              typedConfig:
-                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-                path: /dev/stdout
-            cluster: default-eg-tcp-backend
-            statPrefix: tcp
-      name: default-eg-tcp-backend
-- activeState:
-    listener:
-      '@type': type.googleapis.com/envoy.config.listener.v3.Listener
-      accessLog:
-      - name: envoy.access_loggers.file
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-          path: /dev/stdout
-      address:
-        socketAddress:
-          address: 0.0.0.0
-          portValue: 1234
-          protocol: UDP
-      listenerFilters:
-      - name: envoy.filters.udp_listener.udp_proxy
-        typedConfig:
-          '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+                '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    path: /dev/stdout
+                cluster: default-eg-tcp-backend
+                statPrefix: tcp
+          name: default-eg-tcp-backend
+    - activeState:
+        listener:
+          '@type': type.googleapis.com/envoy.config.listener.v3.Listener
           accessLog:
           - name: envoy.access_loggers.file
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
               path: /dev/stdout
-          matcher:
-            onNoMatch:
-              action:
-                name: route
+          address:
+            socketAddress:
+              address: 0.0.0.0
+              portValue: 1234
+              protocol: UDP
+          listenerFilters:
+          - name: envoy.filters.udp_listener.udp_proxy
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+              accessLog:
+              - name: envoy.access_loggers.file
                 typedConfig:
-                  '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
-                  cluster: default-eg-udp-backend
-          statPrefix: service
-      name: default-eg-udp-backend
-resourceType: listener
-
+                  '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                  path: /dev/stdout
+              matcher:
+                onNoMatch:
+                  action:
+                    name: route
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+                      cluster: default-eg-udp-backend
+              statPrefix: service
+          name: default-eg-udp-backend

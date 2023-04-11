@@ -227,11 +227,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				res, err := translateGatewayAPIToGatewayAPI(gcName, resources)
-				if err != nil {
-					return err
-				}
-				result.Resources = res
+				result.Resources = translateGatewayAPIToGatewayAPI(gcName, resources)
 			}
 			if outType == xdsType {
 				res, err := translateGatewayAPIToXds(gcName, resourceType, resources)
@@ -251,7 +247,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToGatewayAPI(gcName string, resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
+func translateGatewayAPIToGatewayAPI(gcName string, resources *gatewayapi.Resources) gatewayapi.Resources {
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -259,12 +255,13 @@ func translateGatewayAPIToGatewayAPI(gcName string, resources *gatewayapi.Resour
 		GlobalRateLimitEnabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
-	return gRes.Resources, nil
+	return gRes.Resources
 }
 
 func translateGatewayAPIToXds(gcName, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
+		GatewayControllerName:  egv1alpha1.GatewayControllerName,
 		GatewayClassName:       v1beta1.ObjectName(gcName),
 		GlobalRateLimitEnabled: true,
 	}
@@ -278,7 +275,7 @@ func translateGatewayAPIToXds(gcName, resourceType string, resources *gatewayapi
 	sort.Strings(keys)
 
 	// Translate from Xds IR to Xds
-	result := make(map[string]any)
+	result := make(map[string]interface{})
 	for _, key := range keys {
 		val := gRes.XdsIR[key]
 		xTranslator := &translator.Translator{
@@ -297,6 +294,7 @@ func translateGatewayAPIToXds(gcName, resourceType string, resources *gatewayapi
 			return nil, err
 		}
 
+		wrapper := map[string]any{}
 		var data protoreflect.ProtoMessage
 		rType := envoyConfigType(resourceType)
 		if rType == AllEnvoyConfigType {
@@ -314,7 +312,11 @@ func translateGatewayAPIToXds(gcName, resourceType string, resources *gatewayapi
 		if err != nil {
 			return nil, err
 		}
-		result[key] = out
+		if err := json.Unmarshal(out, &wrapper); err != nil {
+			return nil, err
+		}
+
+		result[key] = wrapper
 	}
 
 	return result, nil
