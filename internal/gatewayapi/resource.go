@@ -23,20 +23,20 @@ type InfraIRMap map[string]*ir.Infra
 // resources that the translators needs as inputs.
 // +k8s:deepcopy-gen=true
 type Resources struct {
-	Gateways              []*v1beta1.Gateway
-	HTTPRoutes            []*v1beta1.HTTPRoute
-	GRPCRoutes            []*v1alpha2.GRPCRoute
-	TLSRoutes             []*v1alpha2.TLSRoute
-	TCPRoutes             []*v1alpha2.TCPRoute
-	UDPRoutes             []*v1alpha2.UDPRoute
-	ReferenceGrants       []*v1alpha2.ReferenceGrant
-	Namespaces            []*v1.Namespace
-	Services              []*v1.Service
-	Secrets               []*v1.Secret
-	AuthenticationFilters []*egv1a1.AuthenticationFilter
-	RateLimitFilters      []*egv1a1.RateLimitFilter
-	EnvoyProxy            *egcfgv1a1.EnvoyProxy
-	ExtensionRefFilters   []unstructured.Unstructured
+	Gateways              []*v1beta1.Gateway             `json:"gateways,omitempty"`
+	HTTPRoutes            []*v1beta1.HTTPRoute           `json:"httpRoutes,omitempty"`
+	GRPCRoutes            []*v1alpha2.GRPCRoute          `json:"grpcRoutes,omitempty"`
+	TLSRoutes             []*v1alpha2.TLSRoute           `json:"tlsRoutes,omitempty"`
+	TCPRoutes             []*v1alpha2.TCPRoute           `json:"tcpRoutes,omitempty"`
+	UDPRoutes             []*v1alpha2.UDPRoute           `json:"udpRoutes,omitempty"`
+	ReferenceGrants       []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty"`
+	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty"`
+	Services              []*v1.Service                  `json:"services,omitempty"`
+	Secrets               []*v1.Secret                   `json:"secrets,omitempty"`
+	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty"`
+	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty"`
+	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty"`
+	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty"`
 }
 
 func NewResources() *Resources {

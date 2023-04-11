@@ -1,5 +1,30 @@
+gateways:
+- metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - name: tls
+      port: 8443
+      protocol: TLS
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: "2023-04-10T23:59:29Z"
+        message: Listener must have TLS set when protocol is TLS.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
 httpRoutes:
 - metadata:
+    creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
   spec:
@@ -19,10 +44,16 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - reason: NoReadyListeners
+      - lastTransitionTime: "2023-04-10T23:59:29Z"
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
         status: "False"
-      - reason: BackendNotFound
+        type: Accepted
+      - lastTransitionTime: "2023-04-10T23:59:29Z"
+        message: Service envoy-gateway-system/backend not found
+        reason: BackendNotFound
         status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg

@@ -14,26 +14,29 @@ import (
 )
 
 // validateTLSSecretData ensures the cert and key provided in a secret
-// is not malformed and can be properly parsed.
-func validateTLSSecretData(secret *corev1.Secret) error {
-
+// is not malformed and can be properly parsed. It also returns the public key
+// encryption algorithm used to encrypt secret information.
+func validateTLSSecretData(secret *corev1.Secret) (string, error) {
+	var publicKeyAlgorithm string
 	certData := secret.Data[corev1.TLSCertKey]
 
 	certBlock, _ := pem.Decode(certData)
 	if certBlock == nil {
-		return fmt.Errorf("unable to decode pem data in %s", corev1.TLSCertKey)
+		return publicKeyAlgorithm, fmt.Errorf("unable to decode pem data in %s", corev1.TLSCertKey)
 	}
 
-	_, err := x509.ParseCertificate(certBlock.Bytes)
+	certificate, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
-		return fmt.Errorf("unable to parse certificate in %s: %w", corev1.TLSCertKey, err)
+		return publicKeyAlgorithm, fmt.Errorf("unable to parse certificate in %s: %w", corev1.TLSCertKey, err)
 	}
+
+	publicKeyAlgorithm = certificate.PublicKeyAlgorithm.String()
 
 	keyData := secret.Data[corev1.TLSPrivateKeyKey]
 
 	keyBlock, _ := pem.Decode(keyData)
 	if keyBlock == nil {
-		return fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
+		return publicKeyAlgorithm, fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
 	}
 
 	var parseErr error
@@ -55,8 +58,8 @@ func validateTLSSecretData(secret *corev1.Secret) error {
 			parseErr = fmt.Errorf("unable to parse EC formatted private key in %s", corev1.TLSPrivateKeyKey)
 		}
 	default:
-		return fmt.Errorf("%s key format found in %s, supported formats are PKCS1, PKCS8 or EC", keyBlock.Type, corev1.TLSPrivateKeyKey)
+		return publicKeyAlgorithm, fmt.Errorf("%s key format found in %s, supported formats are PKCS1, PKCS8 or EC", keyBlock.Type, corev1.TLSPrivateKeyKey)
 	}
 
-	return parseErr
+	return publicKeyAlgorithm, parseErr
 }

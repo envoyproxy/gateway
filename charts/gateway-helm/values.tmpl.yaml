@@ -28,8 +28,6 @@ deployment:
     targetPort: 18000
   replicas: 1
 
-rootNamespace: envoy-gateway-system
-
 config:
   envoyGateway:
     gateway:
@@ -44,4 +42,3 @@ envoyGatewayMetricsService:
     protocol: TCP
     targetPort: https
 
-kubernetesClusterDomain: cluster.local

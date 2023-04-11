@@ -69,7 +69,7 @@ spec:
         - --v=0
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
-          value: {{ .Values.kubernetesClusterDomain }}
+          value: cluster.local
         image: {{ .Values.deployment.kubeRbacProxy.image.repository }}:{{ .Values.deployment.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
         name: kube-rbac-proxy
         ports:
