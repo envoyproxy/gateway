@@ -63,6 +63,12 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
+
+	// MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
+	// Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
+	//
+	// +optional
+	MergeGateways *bool `json:"mergeGateways,omitempty"`
 }
 
 type ProxyTelemetry struct {
@@ -76,7 +82,8 @@ type ProxyTelemetry struct {
 	Tracing *ProxyTracing `json:"tracing,omitempty"`
 
 	// Metrics defines metrics configuration for managed proxies.
-	Metrics *ProxyMetrics `json:"metrics,omitempty"`
+	Metrics   *ProxyMetrics `json:"metrics,omitempty"`
+	Bootstrap *string       `json:"bootstrap,omitempty"`
 }
 
 // EnvoyProxyProvider defines the desired state of a resource provider.
