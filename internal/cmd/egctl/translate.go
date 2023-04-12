@@ -644,7 +644,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				resources.Namespaces = append(resources.Namespaces, namespace)
 			}
 		}
-		// Add EnvoyProxy if it doesnt exist
+		// Add EnvoyProxy if it does not exist
 		if resources.EnvoyProxy == nil {
 			if err := addDefaultEnvoyProxy(resources); err != nil {
 				return nil, err
