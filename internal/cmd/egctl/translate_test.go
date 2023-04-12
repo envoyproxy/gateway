@@ -103,7 +103,7 @@ func TestTranslate(t *testing.T) {
 		{
 			name:      "default-resources",
 			from:      "gateway-api",
-			to:        "xds",
+			to:        "gateway-api,xds",
 			expect:    true,
 			extraArgs: []string{"--add-missing-resources"},
 		},

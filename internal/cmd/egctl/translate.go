@@ -305,7 +305,7 @@ func translateGatewayAPIToXds(resourceType string, resources *gatewayapi.Resourc
 			return nil, fmt.Errorf("failed to translate xds ir for key %s value %+v, error:%w", key, val, err)
 		}
 
-		globalConfigs, err := constructConfigDump(xRes)
+		globalConfigs, err := constructConfigDump(resources, xRes)
 		if err != nil {
 			return nil, err
 		}
@@ -360,7 +360,7 @@ func printOutput(w io.Writer, result TranslationResult, output string) error {
 }
 
 // constructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
-func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
+func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigDump, error) {
 	globalConfigs := &adminv3.ConfigDump{}
 	bootstrapConfigs := &adminv3.BootstrapConfigDump{}
 	proxyBootstrap := &bootstrapv3.Bootstrap{}
@@ -370,10 +370,18 @@ func constructConfigDump(tCtx *xds_types.ResourceVersionTable) (*adminv3.ConfigD
 	endpointConfigs := &adminv3.EndpointsConfigDump{}
 
 	// construct bootstrap config
-	bootstrapYAML, err := bootstrap.GetRenderedBootstrapConfig()
-	if err != nil {
-		return nil, err
+
+	var bootstrapYAML string
+	if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.Bootstrap != nil {
+		bootstrapYAML = *resources.EnvoyProxy.Spec.Bootstrap
+	} else {
+		var err error
+		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(); err != nil {
+			return nil, err
+		}
+
 	}
+
 	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapYAML))
 	if err != nil {
 		return nil, err
@@ -636,7 +644,40 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				resources.Namespaces = append(resources.Namespaces, namespace)
 			}
 		}
+		// Add EnvoyProxy if it doesnt exist
+		if resources.EnvoyProxy == nil {
+			if err := addDefaultEnvoyProxy(resources); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return resources, nil
+}
+
+func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
+	defaultEnvoyProxyName := "default-envoy-proxy"
+	namespace := resources.GatewayClass.Namespace
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()
+	if err != nil {
+		return err
+	}
+	ep := &egv1alpha1.EnvoyProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      defaultEnvoyProxyName,
+		},
+		Spec: egv1alpha1.EnvoyProxySpec{
+			Bootstrap: &defaultBootstrapStr,
+		},
+	}
+	resources.EnvoyProxy = ep
+	ns := v1beta1.Namespace(namespace)
+	resources.GatewayClass.Spec.ParametersRef = &v1beta1.ParametersReference{
+		Group:     v1beta1.Group(egv1alpha1.GroupVersion.Group),
+		Kind:      gatewayapi.KindEnvoyProxy,
+		Name:      defaultEnvoyProxyName,
+		Namespace: &ns,
+	}
+	return nil
 }
