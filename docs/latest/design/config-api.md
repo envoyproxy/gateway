@@ -77,7 +77,7 @@ type EnvoyGatewaySpec struct {
 	// the Kubernetes provider is used with default parameters.
 	//
 	// +optional
-	Provider *Provider `json:"provider,omitempty"`
+	Provider *EnvoyGatewayProvider `json:"provider,omitempty"`
 }
 
 // Gateway defines desired Gateway API configuration of Envoy Gateway.
@@ -92,9 +92,9 @@ type Gateway struct {
 	ControllerName string `json:"controllerName,omitempty"`
 }
 
-// Provider defines the desired configuration of a provider.
+// EnvoyGatewayProvider defines the desired configuration of a provider.
 // +union
-type Provider struct {
+type EnvoyGatewayProvider struct {
 	// Type is the type of provider to use. If unset, the Kubernetes provider is used.
 	//
 	// +unionDiscriminator
@@ -103,13 +103,13 @@ type Provider struct {
 	// provides runtime configuration via the Kubernetes API.
 	//
 	// +optional
-	Kubernetes *KubernetesProvider `json:"kubernetes,omitempty"`
+	Kubernetes *EnvoyGatewayKubernetesProvider `json:"kubernetes,omitempty"`
 
 	// File defines the configuration of the File provider. File provides runtime
 	// configuration defined by one or more files.
 	//
 	// +optional
-	File *FileProvider `json:"file,omitempty"`
+	File *EnvoyGatewayFileProvider `json:"file,omitempty"`
 }
 
 // ProviderType defines the types of providers supported by Envoy Gateway.
@@ -123,13 +123,13 @@ const (
 	FileProviderType ProviderType = "File"
 )
 
-// KubernetesProvider defines configuration for the Kubernetes provider.
-type KubernetesProvider struct {
+// EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.
+type EnvoyGatewayKubernetesProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 
-// FileProvider defines configuration for the File provider.
-type FileProvider struct {
+// EnvoyGatewayFileProvider defines configuration for the File provider.
+type EnvoyGatewayFileProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 ```
