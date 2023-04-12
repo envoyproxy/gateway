@@ -26,9 +26,9 @@ Kubernetes-based application gateway.
 
 ## Community Meeting
 
-The Envoy Gateway team meets every Tuesday and Thursday. To better accommodate our Chinese community members who
-face scheduling difficulties for our weekly meeting, we have arranged a separate meeting to be held in the Chinese 
-timezone every two weeks. Please refer to the meeting details for additional information.
+The Envoy Gateway team meets every Tuesday and Thursday. We also have a separate meeting to be held in the 
+Chinese timezone every two weeks to better accommodate our Chinese community members who
+face scheduling difficulties for the weekly meetings. Please refer to the meeting details for additional information.
 
 * [Meeting details][meeting]
 
