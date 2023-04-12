@@ -172,7 +172,7 @@ func expectedProxyContainers(infra *ir.Infra, deploymentConfig *egcfgv1a1.Kubern
 	containers := []corev1.Container{
 		{
 			Name:            envoyContainerName,
-			Image:           infra.Proxy.Image,
+			Image:           *deploymentConfig.Container.Image,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
 				"envoy",

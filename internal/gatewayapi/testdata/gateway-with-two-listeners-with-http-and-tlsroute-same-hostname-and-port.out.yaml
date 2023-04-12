@@ -124,6 +124,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:translator-tests
+
       listeners:
       - address: ""

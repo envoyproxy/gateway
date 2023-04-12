@@ -96,6 +96,10 @@ spec:
                             description: Container defines the resources and securityContext
                               of container.
                             properties:
+                              image:
+                                description: Image specifies the EnvoyProxy container
+                                  image to be used, instead of the default image.
+                                type: string
                               resources:
                                 description: 'Resources required by this container.
                                   More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
