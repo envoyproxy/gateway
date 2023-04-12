@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -53,6 +54,87 @@ func TestTranslate(t *testing.T) {
 				GatewayClassName:       "envoy-gateway-class",
 				ProxyImage:             "envoyproxy/envoy:translator-tests",
 				GlobalRateLimitEnabled: true,
+			}
+
+			// Add common test fixtures
+			for i := 1; i <= 3; i++ {
+				resources.Services = append(resources.Services,
+					&v1.Service{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "default",
+							Name:      "service-" + strconv.Itoa(i),
+						},
+						Spec: v1.ServiceSpec{
+							ClusterIP: "7.7.7.7",
+							Ports: []v1.ServicePort{
+								{Port: 8080, Protocol: v1.ProtocolTCP},
+								{Port: 8443, Protocol: v1.ProtocolTCP},
+								{Port: 8163, Protocol: v1.ProtocolTCP},
+								{Port: 8162, Protocol: v1.ProtocolUDP},
+							},
+						},
+					},
+				)
+			}
+
+			resources.Services = append(resources.Services,
+				&v1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "mirror-service",
+					},
+					Spec: v1.ServiceSpec{
+						ClusterIP: "7.6.5.4",
+						Ports: []v1.ServicePort{
+							{Port: 8080, Protocol: v1.ProtocolTCP},
+						},
+					},
+				},
+			)
+
+			resources.Namespaces = append(resources.Namespaces, &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "envoy-gateway",
+				},
+			}, &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "default",
+				},
+			})
+
+			got := translator.Translate(resources)
+
+			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+			require.Empty(t, cmp.Diff(want, got, opts))
+		})
+	}
+}
+
+func TestTranslateWithExtensionKinds(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata/extensions", "*.in.yaml"))
+	require.NoError(t, err)
+
+	for _, inputFile := range inputFiles {
+		inputFile := inputFile
+		t.Run(testName(inputFile), func(t *testing.T) {
+			input, err := os.ReadFile(inputFile)
+			require.NoError(t, err)
+
+			resources := &Resources{}
+			mustUnmarshal(t, input, resources)
+
+			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
+			require.NoError(t, err)
+
+			want := &TranslateResult{}
+			mustUnmarshal(t, output, want)
+
+			translator := &Translator{
+				GatewayControllerName:  egv1alpha1.GatewayControllerName,
+				GatewayClassName:       "envoy-gateway-class",
+				ProxyImage:             "envoyproxy/envoy:translator-tests",
+				GlobalRateLimitEnabled: true,
+				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
 			}
 
 			// Add common test fixtures

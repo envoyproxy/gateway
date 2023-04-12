@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -65,6 +66,11 @@ type Translator struct {
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
+
+	// ExtensionGroupKinds stores the group/kind for all resources
+	// introduced by an Extension so that the translator can
+	// store referenced resources in the IR for later use.
+	ExtensionGroupKinds []schema.GroupKind
 }
 
 type TranslateResult struct {
