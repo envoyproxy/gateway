@@ -140,7 +140,7 @@ func TestValidateTLSSecretData(t *testing.T) {
 			secret := createTestSecret(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secret)
 
-			_, err := validateTLSSecretData(secret)
+			err := validateTLSSecretData(secret)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {
