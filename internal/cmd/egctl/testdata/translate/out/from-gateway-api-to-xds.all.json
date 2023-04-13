@@ -488,6 +488,7 @@
 															}
 														}
 													],
+													"codecType": "HTTP2",
 													"httpFilters": [
 														{
 															"name": "envoy.filters.http.grpc_web",
