@@ -131,7 +131,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			translator := &Translator{
 				GatewayControllerName:  egv1alpha1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
-				ProxyImage:             "envoyproxy/envoy:translator-tests",
 				GlobalRateLimitEnabled: true,
 				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},
 			}
