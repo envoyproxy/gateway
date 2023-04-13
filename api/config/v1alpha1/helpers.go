@@ -71,7 +71,7 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 // DefaultEnvoyGatewayKubeProvider returns a new EnvoyGatewayKubernetesProvider with default settings.
 func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 	return &EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: DefaultKubernetesDeployment(),
+		RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
 	}
 }
 
@@ -96,28 +96,28 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{
-		EnvoyDeployment: DefaultKubernetesDeployment(),
+		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
 		EnvoyService:    DefaultKubernetesService(),
 	}
 }
 
 // DefaultKubernetesDeploymentReplicas returns the default replica settings.
 func DefaultKubernetesDeploymentReplicas() *int32 {
-	repl := int32(DefaultEnvoyReplicas)
+	repl := int32(DefaultDeploymentReplicas)
 	return &repl
 }
 
 // DefaultKubernetesContainerImage returns the default envoyproxy image.
-func DefaultKubernetesContainerImage() *string {
-	return pointer.String(DefaultEnvoyProxyImage)
+func DefaultKubernetesContainerImage(image string) *string {
+	return pointer.String(image)
 }
 
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
-func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
+func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
 		Replicas:  DefaultKubernetesDeploymentReplicas(),
 		Pod:       DefaultKubernetesPod(),
-		Container: DefaultKubernetesContainer(),
+		Container: DefaultKubernetesContainer(image),
 	}
 }
 
@@ -127,10 +127,10 @@ func DefaultKubernetesPod() *KubernetesPodSpec {
 }
 
 // DefaultKubernetesContainer returns a new KubernetesContainerSpec with default settings.
-func DefaultKubernetesContainer() *KubernetesContainerSpec {
+func DefaultKubernetesContainer(image string) *KubernetesContainerSpec {
 	return &KubernetesContainerSpec{
 		Resources: DefaultResourceRequirements(),
-		Image:     DefaultKubernetesContainerImage(),
+		Image:     DefaultKubernetesContainerImage(image),
 	}
 }
 
@@ -175,7 +175,7 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyDeployment == nil {
-		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment()
+		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyDeployment.Replicas == nil {
@@ -187,7 +187,7 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyDeployment.Container == nil {
-		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer()
+		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer(DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyDeployment.Container.Resources == nil {
@@ -195,7 +195,7 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyDeployment.Container.Image == nil {
-		r.Kubernetes.EnvoyDeployment.Container.Image = DefaultKubernetesContainerImage()
+		r.Kubernetes.EnvoyDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyService == nil {
@@ -223,7 +223,7 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.RateLimitDeployment == nil {
-		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment()
+		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
 	}
 
 	if r.Kubernetes.RateLimitDeployment.Replicas == nil {
@@ -235,7 +235,7 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.RateLimitDeployment.Container == nil {
-		r.Kubernetes.RateLimitDeployment.Container = DefaultKubernetesContainer()
+		r.Kubernetes.RateLimitDeployment.Container = DefaultKubernetesContainer(DefaultRateLimitImage)
 	}
 
 	if r.Kubernetes.RateLimitDeployment.Container.Resources == nil {
@@ -243,7 +243,7 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	if r.Kubernetes.RateLimitDeployment.Container.Image == nil {
-		r.Kubernetes.RateLimitDeployment.Container.Image = DefaultKubernetesContainerImage()
+		r.Kubernetes.RateLimitDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultRateLimitImage)
 	}
 
 	return r.Kubernetes

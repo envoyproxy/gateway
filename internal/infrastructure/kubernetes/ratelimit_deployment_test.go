@@ -38,7 +38,7 @@ func testExpectedRateLimitDeployment(t *testing.T, envoyGateway *egcfgv1a1.Envoy
 
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deployment, rateLimitInfraName, true)
-	checkContainerImage(t, container, rateLimitInfraImage)
+	checkContainerImage(t, container, egcfgv1a1.DefaultRateLimitImage)
 	checkContainerResources(t, container, expected)
 	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRedisSocketTypeEnvVar)
 	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRedisURLEnvVar)
@@ -190,7 +190,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 			name:    "update ratelimit deployment image",
 			in:      &ir.RateLimitInfra{},
 			current: deployment,
-			want:    deploymentWithImage(deployment, rateLimitInfraImage),
+			want:    deploymentWithImage(deployment, egcfgv1a1.DefaultRateLimitImage),
 		},
 	}
 
