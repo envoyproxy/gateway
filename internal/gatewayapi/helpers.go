@@ -272,7 +272,7 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 }
 
 // ValidateCustomGRPCRouteFilter validates the provided filter within CustomGRPCRoute.
-func ValidateCustomGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
+func ValidateCustomGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
 	case filter == nil:
 		return errors.New("filter is nil")
@@ -281,15 +281,25 @@ func ValidateCustomGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter) error {
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
-		switch {
-		case filter.ExtensionRef == nil:
+		if filter.ExtensionRef == nil {
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
-			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
-		case string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter:
-			return nil
 		}
-		return nil
+		for _, gk := range extGKs {
+			if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
+				filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {
+				return nil
+			}
+		}
+		return fmt.Errorf("unknown kind %s/%s", string(filter.ExtensionRef.Group), string(filter.ExtensionRef.Kind))
+		// switch {
+		// case filter.ExtensionRef == nil:
+		// 	return errors.New("extensionRef field must be specified for an extended filter")
+		// case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
+		// 	return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
+		// case string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter:
+		// 	return nil
+		// }
+		// return nil
 	default:
 		return fmt.Errorf("unsupported filter type: %v", filter.Type)
 	}

@@ -18,6 +18,8 @@ import (
 // CustomGRPCRouteContext wraps a CustomGRPCRoute and provides helper methods for
 // accessing the route's parents.
 type CustomGRPCRouteContext struct {
+	// GatewayControllerName is the name of the Gateway API controller.
+	GatewayControllerName string
 	*v1alpha2.CustomGRPCRoute
 
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext

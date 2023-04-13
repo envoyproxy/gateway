@@ -22,7 +22,10 @@ func (t *Translator) ProcessCustomGRPCRoutes(grpcRoutes []*v1alpha2.CustomGRPCRo
 		if g == nil {
 			panic("received nil grpcroute")
 		}
-		grpcRoute := &CustomGRPCRouteContext{CustomGRPCRoute: g}
+		grpcRoute := &CustomGRPCRouteContext{
+			GatewayControllerName: t.GatewayControllerName,
+			CustomGRPCRoute:       g,
+		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
 		// and if so, get the list of listeners that allow it to attach for each
