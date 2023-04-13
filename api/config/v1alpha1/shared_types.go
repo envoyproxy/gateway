@@ -17,7 +17,7 @@ const (
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
-	DefaultRateLimitImage = "envoyproxy/ratelimit:f28024e3"
+	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
