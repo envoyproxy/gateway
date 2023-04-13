@@ -4,7 +4,17 @@ envoyProxy:
     name: example
     namespace: default
   spec:
-    bootstrap: blah
+    bootstrap: |-
+      admin:
+        access_log:
+        - name: envoy.access_loggers.file
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/null
+        address:
+          socket_address:
+            address: 127.0.0.1
+            port_value: 19000
     logging: {}
   status: {}
 gatewayClass:
@@ -21,9 +31,8 @@ gatewayClass:
       namespace: default
   status:
     conditions:
-    - lastTransitionTime: "2023-04-13T00:15:34Z"
-      message: 'Invalid parametersRef: unable to unmarshal user bootstrap: proto: syntax
-        error (line 1:1): unexpected token "blah"'
+    - lastTransitionTime: "2023-04-13T00:35:17Z"
+      message: 'Invalid parametersRef: dynamic_resources cannot be modified'
       reason: InvalidParameters
       status: "False"
       type: Accepted
@@ -65,12 +74,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -81,12 +90,12 @@ gateways:
         kind: TCPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -97,12 +106,12 @@ gateways:
         kind: UDPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -113,12 +122,12 @@ gateways:
         kind: TLSRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -129,12 +138,12 @@ gateways:
         kind: HTTPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -168,12 +177,12 @@ grpcRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -206,12 +215,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -238,12 +247,12 @@ tcpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -271,12 +280,12 @@ tlsRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -304,12 +313,12 @@ udpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-13T00:15:34Z"
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
