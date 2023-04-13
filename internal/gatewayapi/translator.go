@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	KindEnvoyProxy   = "EnvoyProxy"
 	KindGateway      = "Gateway"
 	KindGatewayClass = "GatewayClass"
 	KindGRPCRoute    = "GRPCRoute"
