@@ -47,9 +47,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		gwInfraIR := ir.NewInfra()
 		gwInfraIR.Proxy.Name = irKey
 		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
-		if len(t.ProxyImage) > 0 {
-			gwInfraIR.Proxy.Image = t.ProxyImage
-		}
 		if resources.EnvoyProxy != nil {
 			gwInfraIR.Proxy.Config = resources.EnvoyProxy
 		}

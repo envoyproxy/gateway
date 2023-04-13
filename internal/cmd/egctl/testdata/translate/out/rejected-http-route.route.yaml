@@ -1,3 +1,17 @@
+gatewayClass:
+  metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status:
+    conditions:
+    - lastTransitionTime: "2023-04-11T20:16:24Z"
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - metadata:
     creationTimestamp: null
@@ -13,7 +27,7 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2023-04-10T23:59:29Z"
+      - lastTransitionTime: "2023-04-11T20:16:24Z"
         message: Listener must have TLS set when protocol is TLS.
         reason: Invalid
         status: "False"
@@ -44,12 +58,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-10T23:59:29Z"
+      - lastTransitionTime: "2023-04-11T20:16:24Z"
         message: There are no ready listeners for this parent ref
         reason: NoReadyListeners
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2023-04-10T23:59:29Z"
+      - lastTransitionTime: "2023-04-11T20:16:24Z"
         message: Service envoy-gateway-system/backend not found
         reason: BackendNotFound
         status: "False"

@@ -26,20 +26,23 @@ type Resources struct {
 	CustomGRPCRoutes          []*v1alpha2.CustomGRPCRoute
 	CorsFilters               []*egv1a1.CorsFilter
 	GrpcJSONTranscoderFilters []*egv1a1.GrpcJSONTranscoderFilter
-	Gateways                  []*v1beta1.Gateway             `json:"gateways,omitempty"`
-	HTTPRoutes                []*v1beta1.HTTPRoute           `json:"httpRoutes,omitempty"`
-	GRPCRoutes                []*v1alpha2.GRPCRoute          `json:"grpcRoutes,omitempty"`
-	TLSRoutes                 []*v1alpha2.TLSRoute           `json:"tlsRoutes,omitempty"`
-	TCPRoutes                 []*v1alpha2.TCPRoute           `json:"tcpRoutes,omitempty"`
-	UDPRoutes                 []*v1alpha2.UDPRoute           `json:"udpRoutes,omitempty"`
-	ReferenceGrants           []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty"`
-	Namespaces                []*v1.Namespace                `json:"namespaces,omitempty"`
-	Services                  []*v1.Service                  `json:"services,omitempty"`
-	Secrets                   []*v1.Secret                   `json:"secrets,omitempty"`
-	AuthenticationFilters     []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty"`
-	RateLimitFilters          []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty"`
-	EnvoyProxy                *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty"`
-	ExtensionRefFilters       []unstructured.Unstructured    `json:"extensionRefFilters,omitempty"`
+	// This field is only used for marshalling/unmarshalling purposes and is not used by
+	// the translator
+	GatewayClass          *v1beta1.GatewayClass          `json:"gatewayClass,omitempty"`
+	Gateways              []*v1beta1.Gateway             `json:"gateways,omitempty"`
+	HTTPRoutes            []*v1beta1.HTTPRoute           `json:"httpRoutes,omitempty"`
+	GRPCRoutes            []*v1alpha2.GRPCRoute          `json:"grpcRoutes,omitempty"`
+	TLSRoutes             []*v1alpha2.TLSRoute           `json:"tlsRoutes,omitempty"`
+	TCPRoutes             []*v1alpha2.TCPRoute           `json:"tcpRoutes,omitempty"`
+	UDPRoutes             []*v1alpha2.UDPRoute           `json:"udpRoutes,omitempty"`
+	ReferenceGrants       []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty"`
+	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty"`
+	Services              []*v1.Service                  `json:"services,omitempty"`
+	Secrets               []*v1.Secret                   `json:"secrets,omitempty"`
+	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty"`
+	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty"`
+	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty"`
+	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -53,7 +56,6 @@ func NewResources() *Resources {
 		ReferenceGrants:       []*v1alpha2.ReferenceGrant{},
 		Namespaces:            []*v1.Namespace{},
 		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
-		EnvoyProxy:            new(egcfgv1a1.EnvoyProxy),
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
 
 		CustomGRPCRoutes:          []*v1alpha2.CustomGRPCRoute{},

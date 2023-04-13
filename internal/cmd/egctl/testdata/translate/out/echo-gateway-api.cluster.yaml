@@ -1,3 +1,17 @@
+gatewayClass:
+  metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status:
+    conditions:
+    - lastTransitionTime: "2023-04-11T20:06:41Z"
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
 gateways:
 - metadata:
     creationTimestamp: null
@@ -13,12 +27,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-10T23:55:27Z"
+      - lastTransitionTime: "2023-04-11T20:06:41Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-10T23:55:27Z"
+      - lastTransitionTime: "2023-04-11T20:06:41Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -55,12 +69,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-10T23:55:27Z"
+      - lastTransitionTime: "2023-04-11T20:06:41Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-10T23:55:27Z"
+      - lastTransitionTime: "2023-04-11T20:06:41Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

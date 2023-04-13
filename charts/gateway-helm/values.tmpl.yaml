@@ -2,10 +2,8 @@ deployment:
   envoyGateway:
     imagePullSecret: artifactory-reader
     image:
-      # repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
-      # tag: latest
-      repository: {{ .EGImageRepository }}
-      tag: {{ .EGImageTag }}
+      repository: ${ImageRepository}
+      tag: ${ImageTag}
     imagePullPolicy: Always
     resources:
       limits:
@@ -43,6 +41,4 @@ envoyGatewayMetricsService:
     port: 8443
     protocol: TCP
     targetPort: https
-kubernetesClusterDomain: cluster.local
-
 

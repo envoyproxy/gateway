@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	DefaultProxyName  = "default"
-	DefaultProxyImage = "envoyproxy/envoy-dev:latest"
+	DefaultProxyName = "default"
 )
 
 // Infra defines managed infrastructure.
@@ -35,9 +34,6 @@ type ProxyInfra struct {
 	Name string
 	// Config defines user-facing configuration of the managed proxy infrastructure.
 	Config *v1alpha1.EnvoyProxy
-	// Image is the container image used for the managed proxy infrastructure.
-	// If unset, defaults to "envoyproxy/envoy-dev:latest".
-	Image string
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []ProxyListener
 }
@@ -107,7 +103,6 @@ func NewProxyInfra() *ProxyInfra {
 	return &ProxyInfra{
 		Metadata:  NewInfraMetadata(),
 		Name:      DefaultProxyName,
-		Image:     DefaultProxyImage,
 		Listeners: NewProxyListeners(),
 	}
 }
@@ -136,9 +131,6 @@ func (i *Infra) GetProxyInfra() *ProxyInfra {
 	}
 	if len(i.Proxy.Name) == 0 {
 		i.Proxy.Name = DefaultProxyName
-	}
-	if len(i.Proxy.Image) == 0 {
-		i.Proxy.Image = DefaultProxyImage
 	}
 	if len(i.Proxy.Listeners) == 0 {
 		i.Proxy.Listeners = NewProxyListeners()
@@ -191,10 +183,6 @@ func (p *ProxyInfra) Validate() error {
 
 	if len(p.Name) == 0 {
 		errs = append(errs, errors.New("name field required"))
-	}
-
-	if len(p.Image) == 0 {
-		errs = append(errs, errors.New("image field required"))
 	}
 
 	if len(p.Listeners) > 1 {

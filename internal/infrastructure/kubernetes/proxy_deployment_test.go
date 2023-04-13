@@ -65,7 +65,6 @@ func testExpectedProxyDeployment(t *testing.T,
 
 	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
 	container := checkContainer(t, deploy, envoyContainerName, true)
-	checkContainerImage(t, container, ir.DefaultProxyImage)
 	checkContainerResources(t, container, expectedResources)
 	checkContainerSecurityContext(t, container, expectedSecurityContext)
 	checkPodSecurityContext(t, deploy, expectedPodSecurityContext)
@@ -304,13 +303,26 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
 						},
 					},
+					Config: &egcfgv1a1.EnvoyProxy{
+						Spec: egcfgv1a1.EnvoyProxySpec{
+							Provider: &egcfgv1a1.EnvoyProxyProvider{
+								Type: egcfgv1a1.ProviderTypeKubernetes,
+								Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+									EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+										Container: &egcfgv1a1.KubernetesContainerSpec{
+											Image: pointer.String("envoyproxy/envoy-dev:v1.2.3"),
+										},
+									},
+								},
+							},
+						},
+					},
 					Name:      ir.DefaultProxyName,
-					Image:     "envoyproxy/gateway-dev:v1.2.3",
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
 			current: deploy,
-			want:    deploymentWithImage(deploy, "envoyproxy/gateway-dev:v1.2.3"),
+			want:    deploymentWithImage(deploy, "envoyproxy/envoy-dev:v1.2.3"),
 		},
 	}
 

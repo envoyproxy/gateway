@@ -64,6 +64,7 @@ infraIR:
               envoyDeployment:
                 replicas: 2
                 container:
+                  image: "envoyproxy/gateway:v0.4.0"
                   resources:
                     requests:
                       cpu: 100m
@@ -80,7 +81,6 @@ infraIR:
                     runAsGroup: 3000
                     fsGroup: 2000
                     fsGroupChangePolicy: "OnRootMismatch"
-      image: envoyproxy/envoy:translator-tests
       listeners:
       - address: ""
         ports:

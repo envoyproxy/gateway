@@ -6,10 +6,12 @@
 package gatewayapi
 
 import (
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
+	KindEnvoyProxy   = "EnvoyProxy"
 	KindGateway      = "Gateway"
 	KindGatewayClass = "GatewayClass"
 	KindGRPCRoute    = "GRPCRoute"
@@ -59,11 +61,6 @@ type Translator struct {
 	// to process Gateways for.
 	GatewayClassName v1beta1.ObjectName
 
-	// ProxyImage is the optional proxy image to use in
-	// the Infra IR. If unspecified, the default proxy
-	// image will be used.
-	ProxyImage string
-
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
@@ -71,6 +68,10 @@ type Translator struct {
 	// GlobalCorsEnabled is true when global
 	// cors global has been configured by the admin.
 	GlobalCorsEnabled bool
+	// ExtensionGroupKinds stores the group/kind for all resources
+	// introduced by an Extension so that the translator can
+	// store referenced resources in the IR for later use.
+	ExtensionGroupKinds []schema.GroupKind
 }
 
 type TranslateResult struct {

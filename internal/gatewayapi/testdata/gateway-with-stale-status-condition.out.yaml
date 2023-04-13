@@ -97,7 +97,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: default
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: default-gateway-1
-      image: envoyproxy/envoy:translator-tests
+
       listeners:
         - address: ""
           ports:

@@ -238,7 +238,6 @@ type HTTPRoute struct {
 	// CorsPolicy defines the schema for CORS policy.
 	CorsPolicy *CorsPolicy
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	// TODO: (aliceproxy) in a follow-up PR, update the translator to store the watched resources in this IR
 	ExtensionRefs []*UnstructuredRef
 }
 

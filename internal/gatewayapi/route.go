@@ -291,6 +291,10 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.CorsPolicy != nil {
 		irRoute.CorsPolicy = httpFiltersContext.CorsPolicy
 	}
+	if len(httpFiltersContext.ExtensionRefs) > 0 {
+		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
+	}
+
 }
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
@@ -498,6 +502,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
 					CorsPolicy:            routeRoute.CorsPolicy,
+					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {

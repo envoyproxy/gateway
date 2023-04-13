@@ -14,6 +14,8 @@ const (
 	DefaultDeploymentCPUResourceRequests = "100m"
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
+	// DefaultEnvoyProxyImage is the default image used by envoyproxy
+	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -87,6 +89,11 @@ type KubernetesContainerSpec struct {
 	//
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// Image specifies the EnvoyProxy container image to be used, instead of the default image.
+	//
+	// +optional
+	Image *string `json:"image,omitempty"`
 }
 
 // ServiceType string describes ingress methods for a service

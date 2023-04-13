@@ -55,6 +55,11 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
+	if in.GatewayClass != nil {
+		in, out := &in.GatewayClass, &out.GatewayClass
+		*out = new(v1beta1.GatewayClass)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Gateways != nil {
 		in, out := &in.Gateways, &out.Gateways
 		*out = make([]*v1beta1.Gateway, len(*in))

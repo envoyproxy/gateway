@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -71,6 +72,14 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				GlobalCorsEnabled:      corsIsGlobal,
 			}
 
+			// If an extension is loaded, pass its supported groups/kinds to the translator
+			if r.EnvoyGateway.Extension != nil {
+				var extGKs []schema.GroupKind
+				for _, gvk := range r.EnvoyGateway.Extension.Resources {
+					extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+				}
+				t.ExtensionGroupKinds = extGKs
+			}
 			// Translate to IR
 			result := t.Translate(val)
 
