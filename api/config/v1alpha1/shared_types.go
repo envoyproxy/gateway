@@ -8,12 +8,16 @@ package v1alpha1
 import corev1 "k8s.io/api/core/v1"
 
 const (
-	// DefaultEnvoyReplicas is the default number of Envoy replicas.
-	DefaultEnvoyReplicas = 1
+	// DefaultDeploymentReplicas is the default number of deployment replicas.
+	DefaultDeploymentReplicas = 1
 	// DefaultDeploymentCPUResourceRequests for deployment cpu resource
 	DefaultDeploymentCPUResourceRequests = "100m"
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
+	// DefaultEnvoyProxyImage is the default image used by envoyproxy
+	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
+	// DefaultRateLimitImage is the default image used by ratelimit.
+	DefaultRateLimitImage = "envoyproxy/ratelimit:f28024e3"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -87,6 +91,11 @@ type KubernetesContainerSpec struct {
 	//
 	// +optional
 	SecurityContext *corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// Image specifies the EnvoyProxy container image to be used, instead of the default image.
+	//
+	// +optional
+	Image *string `json:"image,omitempty"`
 }
 
 // ServiceType string describes ingress methods for a service

@@ -39,7 +39,7 @@ defined as Kubernetes resources that provide the following services:
 * Infrastructure Management- Manage the data plane infrastructure, i.e. deploy, upgrade, etc. This configuration is
   expressed through [GatewayClass][gc] and [Gateway][gw] resources. The `EnvoyProxy` [Custom Resource][cr] can be
   referenced by `gatewayclass.spec.parametersRef` to modify data plane infrastructure default parameters,
-  e.g. expose Envoy network endpoints using a NodePort service instead of a LoadBalancer service.
+  e.g. expose Envoy network endpoints using a `ClusterIP` service instead of a `LoadBalancer` service.
 * Traffic Routing- Define how to handle application-level requests to backend services. For example, route all HTTP
   requests for "www.example.com" to a backend service running a web server. This configuration is expressed through
   [HTTPRoute][hroute] and [TLSRoute][troute] resources that match, filter, and route traffic to a [backend][be].

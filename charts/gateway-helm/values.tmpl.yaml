@@ -1,8 +1,8 @@
 deployment:
   envoyGateway:
     image:
-      repository: {{ .EGImageRepository }}
-      tag: {{ .EGImageTag }}
+      repository: ${ImageRepository}
+      tag: ${ImageTag}
     imagePullPolicy: Always
     resources:
       limits:
@@ -28,8 +28,6 @@ deployment:
     targetPort: 18000
   replicas: 1
 
-rootNamespace: envoy-gateway-system
-
 config:
   envoyGateway:
     gateway:
@@ -44,4 +42,3 @@ envoyGatewayMetricsService:
     protocol: TCP
     targetPort: https
 
-kubernetesClusterDomain: cluster.local

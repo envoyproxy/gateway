@@ -19,8 +19,8 @@ func (i *Infra) expectedRateLimitConfigMap(infra *ir.RateLimitInfra) *corev1.Con
 	labels := rateLimitLabels()
 	data := make(map[string]string)
 
-	for _, config := range infra.Configs {
-		data[config.Name] = config.Config
+	for _, serviceConfig := range infra.ServiceConfigs {
+		data[serviceConfig.Name] = serviceConfig.Config
 	}
 
 	return &corev1.ConfigMap{

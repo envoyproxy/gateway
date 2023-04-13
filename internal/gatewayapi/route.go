@@ -286,6 +286,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.RateLimit != nil {
 		irRoute.RateLimit = httpFiltersContext.RateLimit
 	}
+	if len(httpFiltersContext.ExtensionRefs) > 0 {
+		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
+	}
 
 }
 
@@ -493,6 +496,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
+					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {

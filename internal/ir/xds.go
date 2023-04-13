@@ -127,7 +127,7 @@ type HTTPListener struct {
 	// for more info.
 	Hostnames []string
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS *TLSListenerConfig
+	TLS []*TLSListenerConfig
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
@@ -150,8 +150,10 @@ func (h HTTPListener) Validate() error {
 		errs = multierror.Append(errs, ErrHTTPListenerHostnamesEmpty)
 	}
 	if h.TLS != nil {
-		if err := h.TLS.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+		for t := range h.TLS {
+			if err := h.TLS[t].Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
 		}
 	}
 	for _, route := range h.Routes {
@@ -165,6 +167,8 @@ func (h HTTPListener) Validate() error {
 // TLSListenerConfig holds the configuration for downstream TLS context.
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
+	// Name of the Secret object.
+	Name string
 	// ServerCertificate of the server.
 	ServerCertificate []byte
 	// PrivateKey for the server.
@@ -226,7 +230,6 @@ type HTTPRoute struct {
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
 	RequestAuthentication *RequestAuthentication
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	// TODO: (aliceproxy) in a follow-up PR, update the translator to store the watched resources in this IR
 	ExtensionRefs []*UnstructuredRef
 }
 

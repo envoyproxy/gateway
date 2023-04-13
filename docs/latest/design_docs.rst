@@ -13,6 +13,7 @@ Learn about the internal details of Envoy Gateway.
   design/config-api
   design/tcp-udp-design
   design/egctl
-  design/ratelimit
+  design/rate-limit
   design/request-authentication
   design/bootstrap
+  design/extending-envoy-gateway
