@@ -8,12 +8,12 @@ package config
 import (
 	"reflect"
 	"testing"
-	
+
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	
+
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
