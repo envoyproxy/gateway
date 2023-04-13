@@ -27,7 +27,6 @@ func TestValidateInfra(t *testing.T) {
 			infra: &Infra{
 				Proxy: &ProxyInfra{
 					Name:      "",
-					Image:     "image",
 					Listeners: NewProxyListeners(),
 				},
 			},
@@ -37,8 +36,7 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listeners",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:  "test",
-					Image: "image",
+					Name: "test",
 				},
 			},
 			expect: true,
@@ -47,8 +45,7 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-ports",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:  "test",
-					Image: "image",
+					Name: "test",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{},
@@ -62,8 +59,7 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-port-name",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:  "test",
-					Image: "image",
+					Name: "test",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{
@@ -82,8 +78,7 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-service-port-number",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:  "test",
-					Image: "image",
+					Name: "test",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{
@@ -102,8 +97,7 @@ func TestValidateInfra(t *testing.T) {
 			name: "no-listener-container-port-number",
 			infra: &Infra{
 				Proxy: &ProxyInfra{
-					Name:  "test",
-					Image: "image",
+					Name: "test",
 					Listeners: []ProxyListener{
 						{
 							Ports: []ListenerPort{
@@ -114,17 +108,6 @@ func TestValidateInfra(t *testing.T) {
 							},
 						},
 					},
-				},
-			},
-			expect: false,
-		},
-
-		{
-			name: "no-image",
-			infra: &Infra{
-				Proxy: &ProxyInfra{
-					Name:  "test",
-					Image: "",
 				},
 			},
 			expect: false,
@@ -176,7 +159,6 @@ func TestNewProxyInfra(t *testing.T) {
 			expected: &ProxyInfra{
 				Metadata:  NewInfraMetadata(),
 				Name:      DefaultProxyName,
-				Image:     DefaultProxyImage,
 				Listeners: NewProxyListeners(),
 			},
 		},

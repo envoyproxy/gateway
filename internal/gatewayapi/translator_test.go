@@ -52,7 +52,6 @@ func TestTranslate(t *testing.T) {
 			translator := &Translator{
 				GatewayControllerName:  egv1alpha1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
-				ProxyImage:             "envoyproxy/envoy:translator-tests",
 				GlobalRateLimitEnabled: true,
 			}
 

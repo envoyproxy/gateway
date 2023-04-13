@@ -59,11 +59,6 @@ type Translator struct {
 	// to process Gateways for.
 	GatewayClassName v1beta1.ObjectName
 
-	// ProxyImage is the optional proxy image to use in
-	// the Infra IR. If unspecified, the default proxy
-	// image will be used.
-	ProxyImage string
-
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
