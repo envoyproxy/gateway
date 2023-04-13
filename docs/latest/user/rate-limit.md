@@ -124,7 +124,7 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate
 limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
-like container `securityContext` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
+like container `image`, `securityContext` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -143,6 +143,7 @@ data:
         rateLimitDeployment:
           replicas: 1
           container:
+            image: envoyproxy/ratelimit:latest
             resources:
               requests:
                 cpu: 100m

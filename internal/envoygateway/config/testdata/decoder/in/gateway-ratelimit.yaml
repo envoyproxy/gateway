@@ -3,10 +3,12 @@ kind: EnvoyGateway
 gateway:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 provider:
+  type: Kubernetes
   kubernetes:
     rateLimitDeployment:
       replicas: 1
       container:
+        image: envoyproxy/ratelimit:latest
         resources:
           requests:
             cpu: 100m

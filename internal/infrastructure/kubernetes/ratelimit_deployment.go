@@ -40,8 +40,6 @@ const (
 	rateLimitInfraName = "envoy-ratelimit"
 	// rateLimitInfraGRPCPort is the grpc port that the rate limit service listens on.
 	rateLimitInfraGRPCPort = 8081
-	// rateLimitInfraImage is the container image for the rate limit service.
-	rateLimitInfraImage = "envoyproxy/ratelimit:f28024e3"
 )
 
 // expectedRateLimitDeployment returns the expected rate limit Deployment based on the provided infra.
@@ -118,7 +116,7 @@ func expectedRateLimitContainers(_ *ir.RateLimitInfra, rateLimit *egcfgv1a1.Rate
 	containers := []corev1.Container{
 		{
 			Name:            rateLimitInfraName,
-			Image:           rateLimitInfraImage,
+			Image:           *rateLimitDeployment.Container.Image,
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			Command: []string{
 				"/bin/ratelimit",

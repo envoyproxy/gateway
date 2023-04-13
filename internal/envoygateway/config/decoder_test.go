@@ -8,12 +8,12 @@ package config
 import (
 	"reflect"
 	"testing"
-
+	
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-
+	
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
@@ -131,10 +131,12 @@ func TestDecode(t *testing.T) {
 				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 					Gateway: v1alpha1.DefaultGateway(),
 					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
 								Replicas: v1alpha1.DefaultKubernetesDeploymentReplicas(),
 								Container: &v1alpha1.KubernetesContainerSpec{
+									Image:     pointer.String("envoyproxy/ratelimit:latest"),
 									Resources: v1alpha1.DefaultResourceRequirements(),
 									SecurityContext: &corev1.SecurityContext{
 										RunAsUser:                pointer.Int64(2000),
