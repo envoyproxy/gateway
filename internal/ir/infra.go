@@ -36,6 +36,10 @@ type ProxyInfra struct {
 	Config *v1alpha1.EnvoyProxy
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []ProxyListener
+
+	// Addresses contain the external addresses this gateway has been
+	// requested to be available at.
+	Addresses []ProxyAddress
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.
@@ -54,6 +58,22 @@ type ProxyListener struct {
 	// Ports define network ports of the listener.
 	Ports []ListenerPort
 }
+
+type ProxyAddress interface {
+	isProxyAddress()
+}
+
+type ProxyHostname string
+
+func (ProxyHostname) isProxyAddress() {}
+
+type ProxyIPAddress string
+
+func (ProxyIPAddress) isProxyAddress() {}
+
+type ProxyNamedAddress string
+
+func (ProxyNamedAddress) isProxyAddress() {}
 
 // ListenerPort defines a network port of a listener.
 // +k8s:deepcopy-gen=true

@@ -133,3 +133,25 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		}
 	}
 }
+
+func newProxyAddresses(as []v1beta1.GatewayAddress) []ir.ProxyAddress {
+	if len(as) == 0 {
+		return nil
+	}
+
+	out := make([]ir.ProxyAddress, len(as))
+	for i, a := range as {
+		if a.Type == nil {
+			continue
+		}
+		switch *a.Type {
+		case v1beta1.HostnameAddressType:
+			out[i] = ir.ProxyHostname(a.Value)
+		case v1beta1.IPAddressType:
+			out[i] = ir.ProxyIPAddress(a.Value)
+		case v1beta1.NamedAddressType:
+			out[i] = ir.ProxyNamedAddress(a.Value)
+		}
+	}
+	return out
+}
