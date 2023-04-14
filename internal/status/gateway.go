@@ -68,6 +68,9 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 		}
 
 		gw.Status.Addresses = gwAddresses
+		if len(gw.Status.Addresses) == 0 {
+			gw.Status.Addresses = gw.Spec.Addresses
+		}
 	} else {
 		gw.Status.Addresses = gw.Spec.Addresses
 	}
