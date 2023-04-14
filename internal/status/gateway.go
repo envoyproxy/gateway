@@ -69,7 +69,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 
 		gw.Status.Addresses = gwAddresses
 	} else {
-		gw.Status.Addresses = nil
+		gw.Status.Addresses = gw.Spec.Addresses
 	}
 	// Update the programmed condition.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
