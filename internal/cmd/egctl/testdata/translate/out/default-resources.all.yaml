@@ -319,7 +319,8 @@ xds:
                 headers:
                 - name: :authority
                   stringMatch:
-                    exact: www.example.com
+                    safeRegex:
+                      regex: "www\\.example\\.com(?::\\d+)?"
                 prefix: /
               name: default-backend-rule-0-match-0-www.example.com
               route:

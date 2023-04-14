@@ -91,7 +91,7 @@ xdsIR:
           prefix: "/"
         headerMatches:
         - name: ":authority"
-          exact: gateway.envoyproxy.io
+          safeRegex: "gateway\\.envoyproxy\\.io(?::\\d+)?"
         redirect:
           scheme: http
           statusCode: 302

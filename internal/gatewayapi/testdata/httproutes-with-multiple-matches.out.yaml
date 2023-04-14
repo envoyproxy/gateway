@@ -218,7 +218,7 @@ xdsIR:
           exact: "yes"
         headerMatches:
         - name: :authority
-          exact: example.com
+          safeRegex: "example\\.com(?::\\d+)?"
         destinations:
         - host: 7.7.7.7
           port: 8080
@@ -228,7 +228,7 @@ xdsIR:
           prefix: "/v1/example"
         headerMatches:
         - name: :authority
-          exact: example.com
+          safeRegex: "example\\.com(?::\\d+)?"
         destinations:
         - host: 8.8.8.8
           port: 8080
@@ -238,7 +238,7 @@ xdsIR:
           prefix: "/v1/status"
         headerMatches:
         - name: :authority
-          exact: example.net
+          safeRegex: "example\\.net(?::\\d+)?"
         - name: "version"
           exact: "one"
         destinations:
@@ -250,7 +250,7 @@ xdsIR:
           prefix: "/v1/status"
         headerMatches:
         - name: :authority
-          exact: example.net
+          safeRegex: "example\\.net(?::\\d+)?"
         destinations:
         - host: 8.8.8.8
           port: 8080

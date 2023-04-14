@@ -585,7 +585,9 @@
 									"headers": [{
 										"name": ":authority",
 										"stringMatch": {
-											"exact": "www.example.com"
+											"safeRegex": {
+												"regex": "www\\.example\\.com(?::\\d+)?"
+											}
 										}
 									}],
 									"prefix": "/"
@@ -609,7 +611,9 @@
 									"headers": [{
 										"name": ":authority",
 										"stringMatch": {
-											"exact": "www.grpc-example.com"
+											"safeRegex": {
+												"regex": "www\\.grpc-example\\.com(?::\\d+)?"
+											}
 										}
 									}],
 									"path": "/com.example.Things/DoThing"

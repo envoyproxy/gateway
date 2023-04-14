@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -464,19 +465,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			// If the intersecting host is more specific than the Listener's hostname,
 			// add an additional header match to all of the routes for it
 			if host != "*" && (listener.Hostname == nil || string(*listener.Hostname) != host) {
-				// Hostnames that are prefixed with a wildcard label (*.)
-				// are interpreted as a suffix match.
-				if strings.HasPrefix(host, "*.") {
-					headerMatches = append(headerMatches, &ir.StringMatch{
-						Name:   ":authority",
-						Suffix: StringPtr(host[2:]),
-					})
-				} else {
-					headerMatches = append(headerMatches, &ir.StringMatch{
-						Name:  ":authority",
-						Exact: StringPtr(host),
-					})
-				}
+				headerMatches = append(headerMatches, authorityMatcherForHost(host))
 			}
 
 			for _, routeRoute := range routeRoutes {
@@ -523,6 +512,24 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	}
 
 	return hasHostnameIntersection
+}
+
+// authorityMatcherForHost creates an `:authority` header matcher for
+// the hostname. It handles wildcard subdomains and ignores trailing
+// port numbers.
+func authorityMatcherForHost(hostname string) *ir.StringMatch {
+	var pattern string
+	if strings.HasPrefix(hostname, "*.") {
+		// Hostnames that are prefixed with a wildcard label (*.) are
+		// interpreted as a suffix match.
+		pattern = `(?:.+\.)?` + regexp.QuoteMeta(hostname[2:])
+	} else {
+		pattern = regexp.QuoteMeta(hostname)
+	}
+	return &ir.StringMatch{
+		Name:      ":authority",
+		SafeRegex: StringPtr(pattern + `(?::\d+)?`),
+	}
 }
 
 func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext {

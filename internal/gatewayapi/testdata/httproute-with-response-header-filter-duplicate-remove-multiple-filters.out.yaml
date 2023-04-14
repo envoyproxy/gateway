@@ -93,7 +93,7 @@ xdsIR:
           prefix: "/"
         headerMatches:
         - name: ":authority"
-          exact: gateway.envoyproxy.io
+          safeRegex: "gateway\\.envoyproxy\\.io(?::\\d+)?"
         destinations:
         - host: 7.7.7.7
           port: 8080

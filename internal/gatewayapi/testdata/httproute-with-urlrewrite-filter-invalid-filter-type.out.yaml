@@ -86,7 +86,7 @@ xdsIR:
           prefix: "/"
         headerMatches:
         - name: ":authority"
-          exact: gateway.envoyproxy.io
+          safeRegex: "gateway\\.envoyproxy\\.io(?::\\d+)?"
         # I believe the correct way to handle an invalid filter should be to allow the HTTPRoute to function
         # normally but leave out the filter config and set the status, but this behaviour can be changed.
         destinations:

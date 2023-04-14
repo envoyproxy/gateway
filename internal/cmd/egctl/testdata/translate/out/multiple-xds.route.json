@@ -14,7 +14,9 @@
 								"headers": [{
 									"name": ":authority",
 									"stringMatch": {
-										"exact": "www.example.com"
+										"safeRegex": {
+											"regex": "www\\.example\\.com(?::\\d+)?"
+										}
 									}
 								}],
 								"prefix": "/"
@@ -42,7 +44,9 @@
 								"headers": [{
 									"name": ":authority",
 									"stringMatch": {
-										"exact": "www.example2.com"
+										"safeRegex": {
+											"regex": "www\\.example2\\.com(?::\\d+)?"
+										}
 									}
 								}],
 								"prefix": "/v2/"

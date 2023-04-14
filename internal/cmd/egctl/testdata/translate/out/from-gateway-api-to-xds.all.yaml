@@ -401,7 +401,8 @@ xds:
                 headers:
                 - name: :authority
                   stringMatch:
-                    exact: www.example.com
+                    safeRegex:
+                      regex: "www\\.example\\.com(?::\\d+)?"
                 prefix: /
               name: default-backend-rule-0-match-0-www.example.com
               route:
@@ -418,7 +419,8 @@ xds:
                 headers:
                 - name: :authority
                   stringMatch:
-                    exact: www.grpc-example.com
+                    safeRegex:
+                      regex: "www\\.grpc-example\\.com(?::\\d+)?"
                 path: /com.example.Things/DoThing
               name: default-backend-rule-0-match-0-www.grpc-example.com
               route:
