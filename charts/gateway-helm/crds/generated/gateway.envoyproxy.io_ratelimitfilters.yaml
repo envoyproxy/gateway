@@ -103,12 +103,15 @@ spec:
                                 x-kubernetes-list-map-keys:
                                 - name
                                 x-kubernetes-list-type: map
-                              remoteAddress:
-                                description: RemoteAddress is the remote IP Address
+                              sourceIP:
+                                description: 'Deprecated: Use SourceIPCIDR instead.'
+                                type: string
+                              sourceIPCIDR:
+                                description: SourceIPCIDR is the client IP Address
                                   to match.
                                 properties:
                                   address:
-                                    description: Address is the IP CIDR that represents
+                                    description: Value is the IP CIDR that represents
                                       the range of Source IP Addresses of the client.
                                       These could also be the intermediate addresses
                                       through which the request has flown through
@@ -121,9 +124,6 @@ spec:
                                 required:
                                 - address
                                 type: object
-                              sourceIP:
-                                description: 'Deprecated: Use RemoteAddress instead.'
-                                type: string
                             type: object
                           maxItems: 8
                           type: array
