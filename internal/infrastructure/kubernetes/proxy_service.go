@@ -50,9 +50,14 @@ func (i *Infra) expectedProxyService(infra *ir.Infra) (*corev1.Service, error) {
 	if envoyServiceConfig.Annotations != nil {
 		annotations = envoyServiceConfig.Annotations
 	}
+
+	// Set the spec of envoy gateway service
 	serviceSpec := expectedServiceSpec(envoyServiceConfig.Type)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = getSelector(labels).MatchLabels
+	if len(infra.Proxy.Addresses) > 0 {
+		serviceSpec.ExternalIPs = infra.Proxy.Addresses
+	}
 
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

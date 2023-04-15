@@ -50,6 +50,10 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 			}
 		}
 
+		for _, eip := range svc.Spec.ExternalIPs {
+			addresses = append(addresses, eip)
+		}
+
 		var gwAddresses []gwapiv1b1.GatewayAddress
 		for i := range addresses {
 			addr := gwapiv1b1.GatewayAddress{
@@ -68,11 +72,8 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 		}
 
 		gw.Status.Addresses = gwAddresses
-		if len(gw.Status.Addresses) == 0 {
-			gw.Status.Addresses = gw.Spec.Addresses
-		}
 	} else {
-		gw.Status.Addresses = gw.Spec.Addresses
+		gw.Status.Addresses = nil
 	}
 	// Update the programmed condition.
 	gw.Status.Conditions = MergeConditions(gw.Status.Conditions, computeGatewayProgrammedCondition(gw, deployment))
