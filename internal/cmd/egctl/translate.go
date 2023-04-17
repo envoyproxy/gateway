@@ -475,6 +475,97 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 	return globalConfigs, nil
 }
 
+func addMissingServices(requiredServiceMap map[string]map[string]*v1.Service, obj interface{}) {
+	var objNamespace string
+	protocol := v1.Protocol(gatewayapi.TCPProtocol)
+
+	refs := []v1beta1.BackendRef{}
+	switch route := obj.(type) {
+	case *v1beta1.HTTPRoute:
+		objNamespace = route.Namespace
+		for _, rule := range route.Spec.Rules {
+			for _, httpBakcendRef := range rule.BackendRefs {
+				refs = append(refs, httpBakcendRef.BackendRef)
+			}
+		}
+	case *v1alpha2.GRPCRoute:
+		objNamespace = route.Namespace
+		for _, rule := range route.Spec.Rules {
+			for _, gRPCBakcendRef := range rule.BackendRefs {
+				refs = append(refs, gRPCBakcendRef.BackendRef)
+			}
+		}
+	case *v1alpha2.TLSRoute:
+		objNamespace = route.Namespace
+		for _, rule := range route.Spec.Rules {
+			refs = append(refs, rule.BackendRefs...)
+		}
+	case *v1alpha2.TCPRoute:
+		objNamespace = route.Namespace
+		for _, rule := range route.Spec.Rules {
+			refs = append(refs, rule.BackendRefs...)
+		}
+	case *v1alpha2.UDPRoute:
+		protocol = v1.Protocol(gatewayapi.UDPProtocol)
+		objNamespace = route.Namespace
+		for _, rule := range route.Spec.Rules {
+			refs = append(refs, rule.BackendRefs...)
+		}
+	}
+
+	for _, ref := range refs {
+		if ref.Kind == nil || *ref.Kind != gatewayapi.KindService {
+			continue
+		}
+
+		ns := objNamespace
+		if ref.Namespace != nil {
+			ns = string(*ref.Namespace)
+		}
+		name := string(ref.Name)
+		var found bool
+		var requiredServices map[string]*v1.Service
+		if requiredServices, found = requiredServiceMap[ns]; !found {
+			requiredServices = map[string]*v1.Service{}
+			requiredServiceMap[ns] = requiredServices
+		}
+
+		port := int32(*ref.Port)
+		servicePort := v1.ServicePort{
+			Name:     fmt.Sprintf("%s-%d", protocol, port),
+			Protocol: protocol,
+			Port:     port,
+		}
+		if service, found := requiredServices[name]; !found {
+			service := &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: ns,
+				},
+				Spec: v1.ServiceSpec{
+					// Just a dummy IP
+					ClusterIP: "127.0.0.1",
+					Ports:     []v1.ServicePort{servicePort},
+				},
+			}
+			requiredServices[name] = service
+
+		} else {
+			inserted := false
+			for _, port := range service.Spec.Ports {
+				if port.Protocol == servicePort.Protocol && port.Port == servicePort.Port {
+					inserted = true
+					break
+				}
+			}
+
+			if !inserted {
+				service.Spec.Ports = append(service.Spec.Ports, servicePort)
+			}
+		}
+	}
+}
+
 // kubernetesYAMLToResources converts a Kubernetes YAML string into GatewayAPI Resources
 func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayapi.Resources, error) {
 	resources := gatewayapi.NewResources()
@@ -644,6 +735,46 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				resources.Namespaces = append(resources.Namespaces, namespace)
 			}
 		}
+
+		requiredServiceMap := map[string]map[string]*v1.Service{}
+		for _, route := range resources.TCPRoutes {
+			addMissingServices(requiredServiceMap, route)
+		}
+		for _, route := range resources.UDPRoutes {
+			addMissingServices(requiredServiceMap, route)
+		}
+		for _, route := range resources.TLSRoutes {
+			addMissingServices(requiredServiceMap, route)
+		}
+		for _, route := range resources.HTTPRoutes {
+			addMissingServices(requiredServiceMap, route)
+		}
+		for _, route := range resources.GRPCRoutes {
+			addMissingServices(requiredServiceMap, route)
+		}
+
+		providedServiceMap := map[string]map[string]struct{}{}
+		for _, service := range resources.Services {
+			if _, found := providedServiceMap[service.Namespace]; !found {
+				providedServiceMap[service.Namespace] = map[string]struct{}{}
+			}
+			providedServiceMap[service.Namespace][service.Name] = struct{}{}
+		}
+
+		for ns, requiredServices := range requiredServiceMap {
+			if provideServices, found := providedServiceMap[ns]; !found {
+				for _, service := range requiredServices {
+					resources.Services = append(resources.Services, service)
+				}
+			} else {
+				for _, service := range requiredServices {
+					if _, found := provideServices[service.Name]; !found {
+						resources.Services = append(resources.Services, service)
+					}
+				}
+			}
+		}
+
 		// Add EnvoyProxy if it does not exist
 		if resources.EnvoyProxy == nil {
 			if err := addDefaultEnvoyProxy(resources); err != nil {
