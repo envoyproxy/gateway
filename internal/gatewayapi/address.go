@@ -35,6 +35,8 @@ func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 		}
 
-		gwInfraIR.Proxy.Addresses = sets.List(ipAddr)
+		if ip := sets.List(ipAddr); len(ip) > 0 {
+			gwInfraIR.Proxy.Addresses = ip
+		}
 	}
 }
