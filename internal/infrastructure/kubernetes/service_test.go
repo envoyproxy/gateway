@@ -13,7 +13,6 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
@@ -85,7 +84,7 @@ func checkServiceSpec(t *testing.T, svc *corev1.Service, expected corev1.Service
 
 func TestExpectedServiceSpec(t *testing.T) {
 	type args struct {
-		serviceType *v1alpha1.ServiceType
+		serviceType *egcfgv1a1.ServiceType
 	}
 	tests := []struct {
 		name string

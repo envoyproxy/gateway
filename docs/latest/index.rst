@@ -23,6 +23,7 @@ you are interested in using or contributing to Envoy Gateway, the following reso
   roadmap
   about_docs
   get_involved
+  presentations
 
 .. note::
 

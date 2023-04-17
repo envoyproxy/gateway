@@ -80,7 +80,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		if httpFiltersContext.DirectResponse != nil {
 			break
 		}
-		if err := ValidateHTTPRouteFilter(&filter); err != nil {
+		if err := ValidateHTTPRouteFilter(&filter, t.ExtensionGroupKinds...); err != nil {
 			t.processInvalidHTTPFilter(string(filter.Type), httpFiltersContext, err)
 			break
 		}
@@ -759,6 +759,30 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 
 				}
 				filterContext.HTTPFilterIR.RateLimit = rateLimit
+				return
+			}
+		}
+	}
+
+	// This list of resources will be empty unless an extension is loaded (and introduces resources)
+	for _, res := range resources.ExtensionRefFilters {
+		if res.GetKind() == string(extFilter.Kind) && res.GetName() == string(extFilter.Name) && res.GetNamespace() == filterNs {
+			apiVers := res.GetAPIVersion()
+
+			// To get only the group we cut off the version.
+			// This could be a one liner but just to be safe we check that the APIVersion is properly formatted
+			idx := strings.IndexByte(apiVers, '/')
+			if idx == -1 {
+				errMsg := fmt.Sprintf("Unable to translate APIVersion for Extension Filter: kind: %s, %s/%s", res.GetKind(), filterNs, extFilter.Name)
+				t.processUnresolvedHTTPFilter(errMsg, filterContext)
+				return
+			}
+			group := apiVers[:idx]
+			if group == string(extFilter.Group) {
+				resource := res // Capture loop variable
+				filterContext.ExtensionRefs = append(filterContext.ExtensionRefs, &ir.UnstructuredRef{
+					Object: &resource,
+				})
 				return
 			}
 		}

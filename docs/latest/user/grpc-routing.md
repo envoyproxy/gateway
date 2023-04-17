@@ -138,7 +138,6 @@ Test GRPC routing to the `yages` backend using the [grpcurl][] command.
 grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
 ```
 
-
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/

@@ -230,7 +230,6 @@ type HTTPRoute struct {
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
 	RequestAuthentication *RequestAuthentication
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	// TODO: (aliceproxy) in a follow-up PR, update the translator to store the watched resources in this IR
 	ExtensionRefs []*UnstructuredRef
 }
 

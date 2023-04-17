@@ -1,8 +1,8 @@
 deployment:
   envoyGateway:
     image:
-      repository: {{ .EGImageRepository }}
-      tag: {{ .EGImageTag }}
+      repository: ${ImageRepository}
+      tag: ${ImageTag}
     imagePullPolicy: Always
     resources:
       limits:
@@ -41,3 +41,4 @@ envoyGatewayMetricsService:
     port: 8443
     protocol: TCP
     targetPort: https
+
