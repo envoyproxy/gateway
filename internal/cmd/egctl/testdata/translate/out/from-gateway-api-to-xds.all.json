@@ -367,7 +367,8 @@
 									}
 								}]
 							},
-							"name": "default-eg-http"
+							"name": "default-eg-http",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
@@ -428,7 +429,8 @@
 									}
 								}]
 							},
-							"name": "default-eg-grpc"
+							"name": "default-eg-grpc",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
@@ -479,7 +481,8 @@
 									"@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
 								}
 							}],
-							"name": "default-eg-tls-passthrough-backend"
+							"name": "default-eg-tls-passthrough-backend",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
@@ -521,7 +524,8 @@
 									}
 								}]
 							}],
-							"name": "default-eg-tcp-backend"
+							"name": "default-eg-tcp-backend",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
