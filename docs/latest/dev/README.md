@@ -6,7 +6,7 @@ Envoy Gateway is built using a [make][]-based build system. Our CI is based on [
 
 ### go
 
-* Version: 1.19
+* Version: 1.20
 * Installation Guide: https://go.dev/doc/install
 
 ### make

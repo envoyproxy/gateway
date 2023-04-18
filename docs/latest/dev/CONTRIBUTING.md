@@ -49,10 +49,13 @@ to the following guidelines for all code, APIs, and documentation:
 * All code comments and documentation are expected to have proper English grammar and punctuation.
   If you are not a fluent English speaker (or a bad writer ;-)) please let us know and we will try
   to find some help but there are no guarantees.
-* Your PR title should be descriptive, and generally start with a subsystem name followed by a
-  colon. Examples:
+* Your PR title should be descriptive, and generally start with type that contains a subsystem name with `()` if necessary 
+  and summary followed by a colon. format `chore/docs/feat/fix/refactor/style/test: summary`.
+  Examples:
   * "docs: fix grammar error"
-  * "translator: add new feature"
+  * "feat(translator): add new feature"
+  * "fix: fix xx bug"
+  * "chore: change ci & build tools etc"
 * Your PR commit message will be used as the commit message when your PR is merged. You should
   update this field if your PR diverges during review.
 * Your PR description should have details on what the PR does. If it fixes an existing issue it
