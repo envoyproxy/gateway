@@ -24,8 +24,14 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-per-connection-buffer-limit-bytes
+	tcpListenerPerConnectionBufferLimitBytes = 32768
 )
 
 func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener {
@@ -39,6 +45,7 @@ func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener
 				Filter:     listenerAccessLogFilter,
 			},
 		},
+		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
