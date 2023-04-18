@@ -3,7 +3,11 @@ deployment:
     imagePullSecret: artifactory-reader
     image:
       repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
+<<<<<<< HEAD
       tag: 8ff77a8
+=======
+      tag: latest
+>>>>>>> 375e06b (add latest)
     imagePullPolicy: Always
     resources:
       limits:
@@ -42,3 +46,10 @@ envoyGatewayMetricsService:
     protocol: TCP
     targetPort: https
 
+
+argocd:
+  appNamespace: qat-idp
+  repoURL: https://github.com/GeoComply/gateway.git
+  targetRevision: main
+  path: charts/gateway-helm
+  slackNotifi: slack-channel
