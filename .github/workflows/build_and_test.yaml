@@ -152,7 +152,7 @@ jobs:
     - name: Build and Push EG Latest Image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev
+      run: make image.push.multiarch  TAG=lates PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Helm Chart
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
