@@ -1,0 +1,21 @@
+{{- if .Values.argocd }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ include "main-chart.name" . }}
+  namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-sync-succeeded.slack: {{ .Values.argocd.slackNotifi }}
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+  project: default
+  source:
+    repoURL: {{ .Values.argocd.repoURL }}
+    targetRevision: {{ .Values.argocd.targetRevision }}
+    path: {{ .Values.argocd.path }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.argocd.appNamespace }}
+{{- end }}

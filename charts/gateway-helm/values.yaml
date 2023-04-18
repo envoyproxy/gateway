@@ -1,0 +1,51 @@
+deployment:
+  envoyGateway:
+    imagePullSecret: artifactory-reader
+    image:
+      repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
+      tag: latest
+    imagePullPolicy: Always
+    resources:
+      limits:
+        cpu: 500m
+        memory: 128Mi
+      requests:
+        cpu: 10m
+        memory: 64Mi
+  kubeRbacProxy:
+    image:
+      repository: gcr.io/kubebuilder/kube-rbac-proxy
+      tag: v0.11.0
+    resources:
+      limits:
+        cpu: 500m
+        memory: 128Mi
+      requests:
+        cpu: 5m
+        memory: 64Mi
+  ports:
+  - name: grpc
+    port: 18000
+    targetPort: 18000
+  replicas: 1
+rootNamespace: envoy-gateway-system
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+envoyGatewayMetricsService:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+
+argocd:
+  appNamespace: qat-idp
+  repoURL: https://github.com/GeoComply/gateway.git
+  targetRevision: main
+  path: charts/gateway-helm
+  slackNotifi: slack-channel
+

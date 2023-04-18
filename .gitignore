@@ -30,4 +30,4 @@ vendor/
 .devcontainer/
 
 # values.yaml file is generated from its template counterpart.
-*values.yaml
+# *values.yaml
