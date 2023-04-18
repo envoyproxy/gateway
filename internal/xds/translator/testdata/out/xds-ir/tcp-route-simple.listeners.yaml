@@ -24,3 +24,4 @@
         cluster: tcp-route-simple
         statPrefix: tcp
   name: tcp-route-simple
+  perConnectionBufferLimitBytes: 32768
