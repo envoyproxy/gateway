@@ -42,4 +42,5 @@
         - upgradeType: websocket
         useRemoteAddress: true
   name: extension-listener
+  perConnectionBufferLimitBytes: 32768
   statPrefix: mock-extension-inserted-prefix

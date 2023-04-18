@@ -257,6 +257,7 @@ xds:
                   - upgradeType: websocket
                   useRemoteAddress: true
             name: default-eg-http
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
@@ -307,6 +308,7 @@ xds:
                   statPrefix: http
                   useRemoteAddress: true
             name: default-eg-grpc
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
@@ -343,6 +345,7 @@ xds:
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
             name: default-eg-tls-passthrough-backend
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
@@ -372,6 +375,7 @@ xds:
                   cluster: default-eg-tcp-backend
                   statPrefix: tcp
             name: default-eg-tcp-backend
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener

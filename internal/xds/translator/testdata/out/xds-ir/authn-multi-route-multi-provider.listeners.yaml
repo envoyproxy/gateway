@@ -103,3 +103,4 @@
         - upgradeType: websocket
         useRemoteAddress: true
   name: first-listener
+  perConnectionBufferLimitBytes: 32768

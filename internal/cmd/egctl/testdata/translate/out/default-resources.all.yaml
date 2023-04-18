@@ -315,6 +315,7 @@ xds:
                   - upgradeType: websocket
                   useRemoteAddress: true
             name: default-eg-http
+            perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:
