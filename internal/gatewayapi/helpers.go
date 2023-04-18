@@ -278,12 +278,14 @@ func ValidateCustomGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...s
 		return errors.New("filter is nil")
 	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
 		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
+		IsCorsCustomGRPCFilter(filter) ||
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
 		if filter.ExtensionRef == nil {
 			return errors.New("extensionRef field must be specified for an extended filter")
 		}
+
 		for _, gk := range extGKs {
 			if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
 				filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {

@@ -233,7 +233,8 @@ func (r *gatewayAPIReconciler) processCustomGRPCRoutes(ctx context.Context, gate
 
 			for i := range rule.Filters {
 				filter := rule.Filters[i]
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err != nil {
+
+				if err := gatewayapi.ValidateCustomGRPCRouteFilter(&filter); err != nil {
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
 				}
