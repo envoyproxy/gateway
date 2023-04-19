@@ -227,6 +227,7 @@
 						},
 						"name": "default-backend-rule-0-match-0-www.example.com",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}, {
@@ -245,6 +246,7 @@
 						},
 						"name": "default-backend-rule-0-match-0-www.grpc-example.com",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS",
 						"typedExtensionProtocolOptions": {
 							"envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
@@ -271,6 +273,7 @@
 						},
 						"name": "default-eg-tls-passthrough-backend",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}, {
@@ -289,6 +292,7 @@
 						},
 						"name": "default-eg-tcp-backend",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}, {
@@ -307,6 +311,7 @@
 						},
 						"name": "default-eg-udp-backend",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}]
