@@ -475,7 +475,7 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 	return globalConfigs, nil
 }
 
-func addMissingServices(requiredServiceMap map[string]map[string]*v1.Service, obj interface{}) {
+func addMissingServices(requiredServices map[string]*v1.Service, obj interface{}) {
 	var objNamespace string
 	protocol := v1.Protocol(gatewayapi.TCPProtocol)
 
@@ -523,12 +523,7 @@ func addMissingServices(requiredServiceMap map[string]map[string]*v1.Service, ob
 			ns = string(*ref.Namespace)
 		}
 		name := string(ref.Name)
-		var found bool
-		var requiredServices map[string]*v1.Service
-		if requiredServices, found = requiredServiceMap[ns]; !found {
-			requiredServices = map[string]*v1.Service{}
-			requiredServiceMap[ns] = requiredServices
-		}
+		key := ns + "/" + name
 
 		port := int32(*ref.Port)
 		servicePort := v1.ServicePort{
@@ -536,7 +531,7 @@ func addMissingServices(requiredServiceMap map[string]map[string]*v1.Service, ob
 			Protocol: protocol,
 			Port:     port,
 		}
-		if service, found := requiredServices[name]; !found {
+		if service, found := requiredServices[key]; !found {
 			service := &v1.Service{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
@@ -548,7 +543,7 @@ func addMissingServices(requiredServiceMap map[string]map[string]*v1.Service, ob
 					Ports:     []v1.ServicePort{servicePort},
 				},
 			}
-			requiredServices[name] = service
+			requiredServices[key] = service
 
 		} else {
 			inserted := false
@@ -736,7 +731,7 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 		}
 
-		requiredServiceMap := map[string]map[string]*v1.Service{}
+		requiredServiceMap := map[string]*v1.Service{}
 		for _, route := range resources.TCPRoutes {
 			addMissingServices(requiredServiceMap, route)
 		}
@@ -753,25 +748,14 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			addMissingServices(requiredServiceMap, route)
 		}
 
-		providedServiceMap := map[string]map[string]struct{}{}
+		providedServiceMap := map[string]bool{}
 		for _, service := range resources.Services {
-			if _, found := providedServiceMap[service.Namespace]; !found {
-				providedServiceMap[service.Namespace] = map[string]struct{}{}
-			}
-			providedServiceMap[service.Namespace][service.Name] = struct{}{}
+			providedServiceMap[service.Namespace+"/"+service.Name] = true
 		}
 
-		for ns, requiredServices := range requiredServiceMap {
-			if provideServices, found := providedServiceMap[ns]; !found {
-				for _, service := range requiredServices {
-					resources.Services = append(resources.Services, service)
-				}
-			} else {
-				for _, service := range requiredServices {
-					if _, found := provideServices[service.Name]; !found {
-						resources.Services = append(resources.Services, service)
-					}
-				}
+		for key, service := range requiredServiceMap {
+			if _, found := providedServiceMap[key]; !found {
+				resources.Services = append(resources.Services, service)
 			}
 		}
 
