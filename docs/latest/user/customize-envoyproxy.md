@@ -248,4 +248,4 @@ Any errors in the configuration will be surfaced as status within the `GatewayCl
 You can also validate this configuration using [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration).
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: https://www.envoyproxy.io/
+[EnvoyProxy]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy 
