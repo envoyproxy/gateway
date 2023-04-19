@@ -8,4 +8,5 @@
       resourceApiVersion: V3
   name: tcp-route-complex
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS

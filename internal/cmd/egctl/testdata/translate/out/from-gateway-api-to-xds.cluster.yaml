@@ -14,6 +14,7 @@ xds:
             resourceApiVersion: V3
         name: default-backend-rule-0-match-0-www.example.com
         outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
@@ -27,6 +28,7 @@ xds:
             resourceApiVersion: V3
         name: default-backend-rule-0-match-0-www.grpc-example.com
         outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
         type: EDS
         typedExtensionProtocolOptions:
           envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -45,6 +47,7 @@ xds:
             resourceApiVersion: V3
         name: default-eg-tls-passthrough-backend
         outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
@@ -58,6 +61,7 @@ xds:
             resourceApiVersion: V3
         name: default-eg-tcp-backend
         outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
         type: EDS
     - cluster:
         '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
@@ -71,4 +75,5 @@ xds:
             resourceApiVersion: V3
         name: default-eg-udp-backend
         outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
         type: EDS
