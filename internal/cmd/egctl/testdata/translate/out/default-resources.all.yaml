@@ -88,7 +88,7 @@ gatewayClass:
       namespace: envoy-gateway-system
   status:
     conditions:
-    - lastTransitionTime: "2023-04-14T14:09:54Z"
+    - lastTransitionTime: "2023-04-19T13:19:32Z"
       message: Valid GatewayClass
       reason: Accepted
       status: "True"
@@ -131,12 +131,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -147,12 +147,12 @@ gateways:
         kind: TCPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -163,12 +163,12 @@ gateways:
         kind: UDPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -179,12 +179,12 @@ gateways:
         kind: TLSRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -195,12 +195,12 @@ gateways:
         kind: HTTPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -234,12 +234,12 @@ grpcRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -272,12 +272,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -304,12 +304,12 @@ tcpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -337,12 +337,12 @@ tlsRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -370,12 +370,12 @@ udpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-14T14:09:54Z"
+      - lastTransitionTime: "2023-04-19T13:19:32Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -535,6 +535,7 @@ xds:
               resourceApiVersion: V3
           name: default-backend-rule-0-match-0-www.example.com
           outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
@@ -548,6 +549,7 @@ xds:
               resourceApiVersion: V3
           name: default-backend-rule-0-match-0-www.grpc-example.com
           outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
           type: EDS
           typedExtensionProtocolOptions:
             envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
@@ -566,6 +568,7 @@ xds:
               resourceApiVersion: V3
           name: default-eg-tls-passthrough-backend
           outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
@@ -579,6 +582,7 @@ xds:
               resourceApiVersion: V3
           name: default-eg-tcp-backend
           outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
           type: EDS
       - cluster:
           '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
@@ -592,6 +596,7 @@ xds:
               resourceApiVersion: V3
           name: default-eg-udp-backend
           outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
@@ -635,6 +640,7 @@ xds:
                   - upgradeType: websocket
                   useRemoteAddress: true
             name: default-eg-http
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
@@ -677,6 +683,7 @@ xds:
                   statPrefix: http
                   useRemoteAddress: true
             name: default-eg-grpc
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
@@ -713,6 +720,7 @@ xds:
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
             name: default-eg-tls-passthrough-backend
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
@@ -742,6 +750,7 @@ xds:
                   cluster: default-eg-tcp-backend
                   statPrefix: tcp
             name: default-eg-tcp-backend
+            perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener

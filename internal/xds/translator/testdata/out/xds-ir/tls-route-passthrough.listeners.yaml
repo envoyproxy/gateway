@@ -31,3 +31,4 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: tls-passthrough
+  perConnectionBufferLimitBytes: 32768
