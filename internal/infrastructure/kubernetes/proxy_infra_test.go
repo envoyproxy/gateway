@@ -20,7 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -51,7 +51,7 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 func TestCreateProxyInfra(t *testing.T) {
 	// Infra with Gateway owner labels.
 	infraWithLabels := ir.NewInfra()
-	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = utils.EnvoyAppLabel()
+	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels = proxy.EnvoyAppLabel()
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 	infraWithLabels.GetProxyInfra().GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = "test-gw"
 
@@ -100,7 +100,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				sa := &corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      utils.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
@@ -108,7 +108,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				cm := &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      utils.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
@@ -116,7 +116,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      utils.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(deploy), deploy))
@@ -124,7 +124,7 @@ func TestCreateProxyInfra(t *testing.T) {
 				svc := &corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
-						Name:      utils.ExpectedResourceHashedName(tc.in.Proxy.Name),
+						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 					},
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(svc), svc))

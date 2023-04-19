@@ -21,7 +21,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -120,7 +119,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      utils.ExpectedResourceHashedName(tc.in.Proxy.Name),
+					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))

@@ -49,7 +49,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 	}
 }
 
-func TestEnvoyPodSelector(t *testing.T) {
+func TestGetSelector(t *testing.T) {
 	cases := []struct {
 		name     string
 		in       map[string]string
@@ -57,7 +57,10 @@ func TestEnvoyPodSelector(t *testing.T) {
 	}{
 		{
 			name: "default",
-			in:   map[string]string{"foo": "bar"},
+			in: map[string]string{
+				"foo":                            "bar",
+				"app.gateway.envoyproxy.io/name": "envoy",
+			},
 			expected: map[string]string{
 				"foo":                            "bar",
 				"app.gateway.envoyproxy.io/name": "envoy",
@@ -68,7 +71,7 @@ func TestEnvoyPodSelector(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run("", func(t *testing.T) {
-			got := GetSelector(EnvoyLabels(tc.in))
+			got := GetSelector(tc.in)
 			require.Equal(t, tc.expected, got.MatchLabels)
 		})
 	}

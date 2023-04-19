@@ -21,7 +21,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -52,8 +51,8 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					},
 				},
 				Data: map[string]string{
-					utils.SdsCAFilename:   utils.SdsCAConfigMapData,
-					utils.SdsCertFilename: utils.SdsCertConfigMapData,
+					proxy.SdsCAFilename:   proxy.SdsCAConfigMapData,
+					proxy.SdsCertFilename: proxy.SdsCertConfigMapData,
 				},
 			},
 		},
@@ -82,8 +81,8 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					},
 				},
 				Data: map[string]string{
-					utils.SdsCAFilename:   utils.SdsCAConfigMapData,
-					utils.SdsCertFilename: utils.SdsCertConfigMapData,
+					proxy.SdsCAFilename:   proxy.SdsCAConfigMapData,
+					proxy.SdsCertFilename: proxy.SdsCertConfigMapData,
 				},
 			},
 		},

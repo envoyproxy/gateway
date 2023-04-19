@@ -45,13 +45,13 @@ func NewResourceRender(ns string, infra *ir.Infra) *ResourceRender {
 }
 
 func (r *ResourceRender) Name() string {
-	return utils.ExpectedResourceHashedName(r.infra.Proxy.Name)
+	return ExpectedResourceHashedName(r.infra.Proxy.Name)
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	labels := utils.EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -63,7 +63,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      utils.ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:      ExpectedResourceHashedName(r.infra.Proxy.Name),
 			Labels:    labels,
 		},
 	}, nil
@@ -90,7 +90,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the labels based on the owning gatewayclass name.
-	labels := utils.EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -113,7 +113,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        utils.ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:        ExpectedResourceHashedName(r.infra.Proxy.Name),
 			Labels:      labels,
 			Annotations: annotations,
 		},
@@ -126,7 +126,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	labels := utils.EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -138,12 +138,12 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      utils.ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:      ExpectedResourceHashedName(r.infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Data: map[string]string{
-			utils.SdsCAFilename:   utils.SdsCAConfigMapData,
-			utils.SdsCertFilename: utils.SdsCertConfigMapData,
+			SdsCAFilename:   SdsCAConfigMapData,
+			SdsCertFilename: SdsCertConfigMapData,
 		},
 	}, nil
 }
@@ -164,7 +164,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Set the labels based on the owning gateway name.
-	labels := utils.EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -184,7 +184,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      utils.ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:      ExpectedResourceHashedName(r.infra.Proxy.Name),
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -197,7 +197,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            utils.ExpectedResourceHashedName(r.infra.Proxy.Name),
+					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Proxy.Name),
 					AutomountServiceAccountToken:  pointer.Bool(false),
 					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -218,16 +218,16 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: utils.ExpectedResourceHashedName(r.infra.Proxy.Name),
+										Name: ExpectedResourceHashedName(r.infra.Proxy.Name),
 									},
 									Items: []corev1.KeyToPath{
 										{
-											Key:  utils.SdsCAFilename,
-											Path: utils.SdsCAFilename,
+											Key:  SdsCAFilename,
+											Path: SdsCAFilename,
 										},
 										{
-											Key:  utils.SdsCertFilename,
-											Path: utils.SdsCertFilename,
+											Key:  SdsCertFilename,
+											Path: SdsCertFilename,
 										},
 									},
 									DefaultMode: pointer.Int32(int32(420)),
