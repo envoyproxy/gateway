@@ -8,6 +8,7 @@
       resourceApiVersion: V3
   name: mirror-route
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -19,4 +20,5 @@
       resourceApiVersion: V3
   name: mirror-route-mirror-0
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
