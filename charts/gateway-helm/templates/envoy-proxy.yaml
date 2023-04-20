@@ -5,7 +5,18 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   provider:
-    type: Kubernetes
     kubernetes:
       envoyDeployment:
+        container:
+          image: envoyproxy/envoy:v1.25-latest
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 150m
+              memory: 640Mi
         replicas: 2
+      envoyService:
+        type: ClusterIP
+    type: Kubernetes
