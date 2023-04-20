@@ -16,7 +16,7 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -51,7 +51,7 @@ func (r *ResourceRender) Name() string {
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -90,7 +90,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the labels based on the owning gatewayclass name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -102,9 +102,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	if envoyServiceConfig.Annotations != nil {
 		annotations = envoyServiceConfig.Annotations
 	}
-	serviceSpec := utils.ExpectedServiceSpec(envoyServiceConfig.Type)
+	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig.Type)
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = utils.GetSelector(labels).MatchLabels
+	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -126,7 +126,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -148,7 +148,7 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-// ExpectedDeployment returns the expected Deployment based on the provided infra.
+// Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// Get the EnvoyProxy config to configure the deployment.
 	provider := r.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
@@ -164,12 +164,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Set the labels based on the owning gateway name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
-	selector := utils.GetSelector(labels)
+	selector := resource.GetSelector(labels)
 
 	// Get annotations
 	var annotations map[string]string

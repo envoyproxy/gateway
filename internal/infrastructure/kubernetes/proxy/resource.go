@@ -48,12 +48,12 @@ func EnvoyAppLabel() map[string]string {
 	}
 }
 
-// EnvoyLabels returns the labels, including extraLbls, used for Envoy resources.
-func EnvoyLabels(extraLbls map[string]string) map[string]string {
-	lbls := EnvoyAppLabel()
-	for k, v := range extraLbls {
-		lbls[k] = v
+// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
+func envoyLabels(extraLabels map[string]string) map[string]string {
+	labels := EnvoyAppLabel()
+	for k, v := range extraLabels {
+		labels[k] = v
 	}
 
-	return lbls
+	return labels
 }

@@ -12,7 +12,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
 const (
@@ -42,7 +42,7 @@ const (
 func (i *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	containers := expectedRateLimitContainers(i.ratelimit, i.rateLimitDeployment)
 	labels := rateLimitLabels()
-	selector := utils.GetSelector(labels)
+	selector := resource.GetSelector(labels)
 
 	var annos map[string]string
 	if i.rateLimitDeployment.Pod.Annotations != nil {

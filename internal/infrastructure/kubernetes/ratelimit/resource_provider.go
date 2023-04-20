@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -74,9 +74,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	labels := rateLimitLabels()
 
-	serviceSpec := utils.ExpectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType())
+	serviceSpec := resource.ExpectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType())
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = utils.GetSelector(labels).MatchLabels
+	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{

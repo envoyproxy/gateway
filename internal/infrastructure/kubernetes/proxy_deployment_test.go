@@ -155,8 +155,13 @@ func TestDeleteProxyDeployment(t *testing.T) {
 
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
-
-			err = kube.deleteDeployment(context.Background(), r)
+			deployment := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      r.Name(),
+				},
+			}
+			err = kube.Client.Delete(context.Background(), deployment)
 			require.NoError(t, err)
 		})
 	}

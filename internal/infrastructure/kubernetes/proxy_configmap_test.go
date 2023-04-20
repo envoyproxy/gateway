@@ -158,7 +158,13 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
 			r := proxy.NewResourceRender(kube.Namespace, infra)
-			err = kube.deleteConfigMap(context.Background(), r)
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      r.Name(),
+				},
+			}
+			err = kube.Client.Delete(context.Background(), cm)
 			require.NoError(t, err)
 		})
 	}

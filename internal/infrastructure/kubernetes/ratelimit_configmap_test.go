@@ -183,7 +183,13 @@ func TestDeleteRateLimitConfigMap(t *testing.T) {
 			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 
-			err = kube.deleteConfigMap(context.Background(), r)
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      r.Name(),
+				},
+			}
+			err = kube.Client.Delete(context.Background(), cm)
 			require.NoError(t, err)
 		})
 	}
