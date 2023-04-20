@@ -18,7 +18,7 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
-	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
@@ -138,7 +138,7 @@ func TestTranslateXds(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system"),
 				},
 			}
 
@@ -244,7 +244,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "extension-xds-ir", tc.name+".yaml")
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system"),
 				},
 			}
 			ext := v1alpha1.Extension{

@@ -227,6 +227,7 @@
 						},
 						"name": "default-backend-rule-0-match-0-www.example.com",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}, {
@@ -245,6 +246,7 @@
 						},
 						"name": "default-backend-rule-0-match-0-www.grpc-example.com",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS",
 						"typedExtensionProtocolOptions": {
 							"envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
@@ -271,6 +273,7 @@
 						},
 						"name": "default-eg-tls-passthrough-backend",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}, {
@@ -289,6 +292,7 @@
 						},
 						"name": "default-eg-tcp-backend",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}, {
@@ -307,6 +311,7 @@
 						},
 						"name": "default-eg-udp-backend",
 						"outlierDetection": {},
+						"perConnectionBufferLimitBytes": 32768,
 						"type": "EDS"
 					}
 				}]
@@ -367,7 +372,8 @@
 									}
 								}]
 							},
-							"name": "default-eg-http"
+							"name": "default-eg-http",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
@@ -428,7 +434,8 @@
 									}
 								}]
 							},
-							"name": "default-eg-grpc"
+							"name": "default-eg-grpc",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
@@ -479,7 +486,8 @@
 									"@type": "type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector"
 								}
 							}],
-							"name": "default-eg-tls-passthrough-backend"
+							"name": "default-eg-tls-passthrough-backend",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {
@@ -521,7 +529,8 @@
 									}
 								}]
 							}],
-							"name": "default-eg-tcp-backend"
+							"name": "default-eg-tcp-backend",
+							"perConnectionBufferLimitBytes": 32768
 						}
 					}
 				}, {

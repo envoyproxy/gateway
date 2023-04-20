@@ -340,7 +340,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 				Build()
 
 			// Process the test case gatewayclasses.
-			results := r.enqueueManagedClass(tc.ep)
+			results := r.enqueueManagedClass(context.TODO(), tc.ep)
 			require.Equal(t, tc.expected, results)
 		})
 	}

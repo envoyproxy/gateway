@@ -138,3 +138,4 @@
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   name: first-listener
+  perConnectionBufferLimitBytes: 32768

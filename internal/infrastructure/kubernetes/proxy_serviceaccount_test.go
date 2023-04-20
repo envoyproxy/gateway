@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -22,35 +21,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
-
-func TestExpectedProxyServiceAccount(t *testing.T) {
-	cfg, err := config.New()
-	require.NoError(t, err)
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	kube := NewInfra(cli, cfg)
-	infra := ir.NewInfra()
-
-	// An infra without Gateway owner labels should trigger
-	// an error.
-	_, err = kube.expectedProxyServiceAccount(infra)
-	require.NotNil(t, err)
-
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-
-	sa, err := kube.expectedProxyServiceAccount(infra)
-	require.NoError(t, err)
-
-	// Check the serviceaccount name is as expected.
-	assert.Equal(t, sa.Name, expectedResourceHashedName(infra.Proxy.Name))
-
-	wantLabels := envoyAppLabel()
-	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	wantLabels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, sa.Labels))
-}
 
 func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 	testCases := []struct {
@@ -185,21 +158,27 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			kube := &Infra{
-				Namespace: tc.ns,
-			}
+			cfg, err := config.New()
+			require.NoError(t, err)
+			cfg.Namespace = tc.ns
+
+			var cli client.Client
 			if tc.current != nil {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			} else {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateProxyServiceAccount(context.Background(), tc.in)
+
+			kube := NewInfra(cli, cfg)
+
+			r := proxy.NewResourceRender(kube.Namespace, tc.in)
+			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      expectedResourceHashedName(tc.in.Proxy.Name),
+					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
@@ -220,19 +199,17 @@ func TestDeleteProxyServiceAccount(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			kube := &Infra{
-				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
-				Namespace: "test",
-			}
-			infra := ir.NewInfra()
+			kube := newTestInfra(t)
 
+			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+			r := proxy.NewResourceRender(kube.Namespace, infra)
 
-			err := kube.createOrUpdateProxyServiceAccount(context.Background(), infra)
+			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
-			err = kube.deleteProxyServiceAccount(context.Background(), infra)
+			err = kube.deleteServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 		})
 	}

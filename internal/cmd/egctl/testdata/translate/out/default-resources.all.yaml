@@ -262,6 +262,7 @@ xds:
               resourceApiVersion: V3
           name: default-backend-rule-0-match-0-www.example.com
           outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
           type: EDS
     - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
       dynamicListeners:
@@ -305,6 +306,7 @@ xds:
                   - upgradeType: websocket
                   useRemoteAddress: true
             name: default-eg-http
+            perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:

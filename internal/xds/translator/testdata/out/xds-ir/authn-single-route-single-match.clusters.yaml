@@ -8,6 +8,7 @@
       resourceApiVersion: V3
   name: first-route
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -27,6 +28,7 @@
       locality: {}
   name: localhost_443
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   transportSocket:
     name: envoy.transport_sockets.tls
