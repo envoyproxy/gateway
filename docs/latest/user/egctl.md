@@ -453,7 +453,12 @@ spec:
           kind: Service
           name: backend
           port: 3000
-EOF         value: /thPrefix
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+EOF
 ```
 
 You can see the output contains a [EnvoyProxy](https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy) resource that
