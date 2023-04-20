@@ -104,11 +104,11 @@ spec:
                                 - name
                                 x-kubernetes-list-type: map
                               sourceIP:
-                                description: 'Deprecated: Use SourceIPCIDR instead.'
+                                description: 'Deprecated: Use SourceCIDR instead.'
                                 type: string
                               sourceIPCIDR:
-                                description: SourceIPCIDR is the client IP Address
-                                  to match.
+                                description: SourceCIDR is the client IP Address to
+                                  match.
                                 properties:
                                   address:
                                     description: Value is the IP CIDR that represents
