@@ -464,7 +464,7 @@ EOF
 You can see the output contains a [EnvoyProxy](https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy) resource that
 can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
 
-```
+```yaml
 envoyProxy:
   metadata:
     creationTimestamp: null
