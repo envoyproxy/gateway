@@ -22,6 +22,7 @@ each `tenant` deploy their own Envoy Gateway controller in their respective `nam
 by the `marketing` and `product` teams in seperate namespaces.
 
 * Lets deploy Envoy Gateway in the `marketing` namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
+
 ```
 helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n marketing --create-namespace
 ```
@@ -194,6 +195,7 @@ Handling connection for 8888
 ```
 
 * Lets deploy Envoy Gateway in the `product` namespace
+
 ```
 helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n product --create-namespace
 ```
