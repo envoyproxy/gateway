@@ -7,7 +7,7 @@ metadata:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install
-    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: HookSucceeded
 spec:
   backoffLimit: 1
