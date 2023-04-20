@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package kubernetes
+package proxy
 
 import (
 	"testing"
@@ -30,8 +30,8 @@ func TestEnvoyPodSelector(t *testing.T) {
 	for _, tc := range cases {
 		tc := tc
 		t.Run("", func(t *testing.T) {
-			got := getSelector(envoyLabels(tc.in))
-			require.Equal(t, tc.expected, got.MatchLabels)
+			got := EnvoyLabels(tc.in)
+			require.Equal(t, tc.expected, got)
 		})
 	}
 }

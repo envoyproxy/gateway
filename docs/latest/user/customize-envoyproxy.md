@@ -171,13 +171,82 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   bootstrap: |
-    xxxxxxxxxx
-
+    admin:
+      access_log:
+      - name: envoy.access_loggers.file
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+          path: /dev/null
+      address:
+        socket_address:
+          address: 127.0.0.1
+          port_value: 20000
+    dynamic_resources:
+      ads_config:
+        api_type: DELTA_GRPC
+        transport_api_version: V3
+        grpc_services:
+        - envoy_grpc:
+            cluster_name: xds_cluster
+        set_node_on_first_message_only: true
+      lds_config:
+        ads: {}
+      cds_config:
+        ads: {}
+    static_resources:
+      clusters:
+      - connect_timeout: 10s
+        load_assignment:
+          cluster_name: xds_cluster
+          endpoints:
+          - lb_endpoints:
+            - endpoint:
+                address:
+                  socket_address:
+                    address: envoy-gateway
+                    port_value: 18000
+        typed_extension_protocol_options:
+          "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
+             "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+             "explicit_http_config":
+               "http2_protocol_options": {}
+        name: xds_cluster
+        type: STRICT_DNS
+        transport_socket:
+          name: envoy.transport_sockets.tls
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            common_tls_context:
+              tls_params:
+                tls_maximum_protocol_version: TLSv1_3
+              tls_certificate_sds_secret_configs:
+              - name: xds_certificate
+                sds_config:
+                  path_config_source:
+                    path: "/sds/xds-certificate.json"
+                  resource_api_version: V3
+              validation_context_sds_secret_config:
+                name: xds_trusted_ca
+                sds_config:
+                  path_config_source:
+                    path: "/sds/xds-trusted-ca.json"
+                  resource_api_version: V3
+    layered_runtime:
+      layers:
+      - name: runtime-0
+        rtds_layer:
+          rtds_config:
+            ads: {}
+          name: runtime-0
 EOF
 ```
 
+You can use [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration)
+to get the default xDS Bootstrap configuration used by Envoy Gateway.
+
 After applying the config, the bootstrap config will be overridden by the new config you provided.
-Envoy Gateway will use Webhook to validate the bootstrap config you provided.
+Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
+You can also validate this configuration using [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration).
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: https://www.envoyproxy.io/
+[EnvoyProxy]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy 
