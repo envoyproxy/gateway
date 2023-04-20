@@ -20,6 +20,7 @@ cover.out
 
 # `go mod vendor`
 vendor/
+vendor
 
 # TLS assets that may have been created for secure gateways.
 *.crt

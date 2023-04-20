@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: envoy-gateway
+  namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
 ---
@@ -9,6 +10,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: envoy-gateway
+  namespace: '{{ .Release.Namespace }}'
   labels:
     control-plane: envoy-gateway
   {{- include "eg.labels" . | nindent 4 }}

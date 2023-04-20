@@ -8,4 +8,5 @@
       resourceApiVersion: V3
   name: udp-route
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS

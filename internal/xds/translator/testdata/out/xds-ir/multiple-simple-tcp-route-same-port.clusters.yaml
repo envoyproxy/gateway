@@ -8,6 +8,7 @@
       resourceApiVersion: V3
   name: tcp-route-simple
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -19,6 +20,7 @@
       resourceApiVersion: V3
   name: tcp-route-simple-1
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -30,6 +32,7 @@
       resourceApiVersion: V3
   name: tcp-route-simple-2
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -41,6 +44,7 @@
       resourceApiVersion: V3
   name: tcp-route-simple-3
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -52,4 +56,5 @@
       resourceApiVersion: V3
   name: tcp-route-simple-4
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS

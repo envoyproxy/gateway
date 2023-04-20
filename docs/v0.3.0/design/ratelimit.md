@@ -172,7 +172,7 @@ spec:
 
 Here's an example highlighting this -
 
-```
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
 metadata:

@@ -42,3 +42,4 @@ envoyGatewayMetricsService:
     protocol: TCP
     targetPort: https
 
+createNamespace: false

@@ -98,4 +98,5 @@ xds:
             resourceApiVersion: V3
         name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
         outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
         type: EDS
