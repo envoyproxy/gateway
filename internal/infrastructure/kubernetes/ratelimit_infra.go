@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -17,24 +18,10 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.Rate
 	if infra == nil {
 		return errors.New("ratelimit infra ir is nil")
 	}
-	if err := i.createOrUpdateRateLimitServiceAccount(ctx, infra); err != nil {
-		return err
-	}
 
-	if err := i.createOrUpdateRateLimitConfigMap(ctx, infra); err != nil {
-		return err
-	}
+	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway.RateLimit, i.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
 
-	if err := i.createOrUpdateRateLimitDeployment(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.createOrUpdateRateLimitService(ctx, infra); err != nil {
-		return err
-	}
-
-	return nil
-
+	return i.createOrUpdate(ctx, r)
 }
 
 // DeleteRateLimitInfra removes the managed kube infra, if it doesn't exist.
@@ -43,21 +30,6 @@ func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInf
 		return errors.New("ratelimit infra ir is nil")
 	}
 
-	if err := i.deleteRateLimitService(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.deleteRateLimitDeployment(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.deleteRateLimitConfigMap(ctx, infra); err != nil {
-		return err
-	}
-
-	if err := i.deleteRateLimitServiceAccount(ctx, infra); err != nil {
-		return err
-	}
-
-	return nil
+	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway.RateLimit, i.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	return i.delete(ctx, r)
 }
