@@ -240,6 +240,7 @@ spec:
           name: runtime-0
 EOF
 ```
+
 You can use [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration)
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
 
