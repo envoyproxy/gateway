@@ -41,11 +41,3 @@ envoyGatewayMetricsService:
     port: 8443
     protocol: TCP
     targetPort: https
-
-
-argocd:
-  appNamespace: qat-idp
-  repoURL: https://github.com/GeoComply/gateway.git
-  targetRevision: main
-  path: charts/gateway-helm
-  slackNotifi: slack-channel

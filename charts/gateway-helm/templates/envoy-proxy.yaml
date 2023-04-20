@@ -18,5 +18,5 @@ spec:
               memory: 640Mi
         replicas: 2
       envoyService:
-        type: ClusterIP
+        type: LoadBalancer
     type: Kubernetes
