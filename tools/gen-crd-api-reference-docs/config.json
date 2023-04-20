@@ -1,0 +1,33 @@
+{
+  "hideMemberFields": [
+    "TypeMeta"
+  ],
+  "hideTypePatterns": [
+    "ParseError$",
+    "List$"
+  ],
+  "externalPackages": [
+    {
+      "typeMatchPrefix": "^k8s\\.io/apimachinery/pkg/apis/meta/v1\\.Duration$",
+      "docsURLTemplate": "https://godoc.org/k8s.io/apimachinery/pkg/apis/meta/v1#Duration"
+    },
+    {
+      "typeMatchPrefix": "^k8s\\.io/(api|apimachinery/pkg/apis)/",
+      "docsURLTemplate": "https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#{{lower .TypeIdentifier}}-{{arrIndex .PackageSegments -1}}-{{arrIndex .PackageSegments -2}}"
+    },
+    {
+      "typeMatchPrefix": "^k8s\\.io/api/core/v1\\.ObjectReference$",
+      "docsURLTemplate": "https://godoc.org/k8s.io/api/core/v1#ObjectReference"
+    },
+    {
+      "typeMatchPrefix": "^sigs\\.k8s\\.io/gateway-api/apis/",
+      "docsURLTemplate": "https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/{{arrIndex .PackageSegments -1}}.{{.TypeIdentifier}}"
+    }
+  ],
+  "typeDisplayNamePrefixOverrides": {
+    "k8s.io/api/": "Kubernetes ",
+    "k8s.io/apimachinery/pkg/apis/": "Kubernetes ",
+    "sigs.k8s.io/gateway-api/apis/": "Gateway API "
+  },
+  "markdownDisabled": false
+}

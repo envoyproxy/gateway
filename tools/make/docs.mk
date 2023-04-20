@@ -37,19 +37,17 @@ docs.clean:
 docs-api: docs-api-gen docs-api-headings
 
 .PHONY: docs-api-gen
-docs-api-gen: $(tools/crd-ref-docs)
-	$(tools/crd-ref-docs) \
-	--source-path=api/config \
-	--config=tools/crd-ref-docs/config.yaml \
-	--output-path=docs/latest/api/config_types.md \
-	--max-depth 10 \
-	--renderer=markdown
-	$(tools/crd-ref-docs) \
-	--source-path=api/v1alpha1 \
-	--config=tools/crd-ref-docs/config.yaml \
-	--output-path=docs/latest/api/extension_types.md \
-	--max-depth 10 \
-	--renderer=markdown
+docs-api-gen: $(tools/gen-crd-api-reference-docs)
+	$(tools/gen-crd-api-reference-docs) \
+	--api-dir=./api/config \
+	--config=tools/gen-crd-api-reference-docs/config.json \
+	--out-file=docs/latest/api/config_types.md \
+	--template-dir=tools/gen-crd-api-reference-docs/template 
+	$(tools/gen-crd-api-reference-docs) \
+	--api-dir=./api/v1alpha1 \
+	--config=tools/gen-crd-api-reference-docs/config.json \
+	--out-file=docs/latest/api/extension_types.md \
+	--template-dir=tools/gen-crd-api-reference-docs/template 
 
 .PHONY: docs-api-headings # Required since sphinx mst does not link to h4 headings.
 docs-api-headings:
