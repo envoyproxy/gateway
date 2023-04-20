@@ -121,7 +121,7 @@ func TestDeployment(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.Bootstrap = tc.bootstrap
 			}
 
-			r := NewResourceRender(cfg.Namespace, tc.infra)
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
@@ -176,7 +176,7 @@ func TestService(t *testing.T) {
 				provider.EnvoyService = tc.service
 			}
 
-			r := NewResourceRender(cfg.Namespace, tc.infra)
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
 			svc, err := r.Service()
 			require.NoError(t, err)
 
@@ -204,7 +204,7 @@ func TestConfigMap(t *testing.T) {
 
 	infra := newTestInfra()
 
-	r := NewResourceRender(cfg.Namespace, infra)
+	r := NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
 	cm, err := r.ConfigMap()
 	require.NoError(t, err)
 
@@ -230,7 +230,7 @@ func TestServiceAccount(t *testing.T) {
 
 	infra := newTestInfra()
 
-	r := NewResourceRender(cfg.Namespace, infra)
+	r := NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
 
