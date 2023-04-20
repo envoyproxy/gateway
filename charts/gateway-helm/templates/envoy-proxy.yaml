@@ -1,0 +1,11 @@
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
