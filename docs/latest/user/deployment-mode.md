@@ -19,7 +19,7 @@ and **creates** managed data plane resources such as EnvoyProxy `Deployment` in 
 
 * A `tenant` is a group within an organization (e.g. a team or department) who shares organizational resources. We recommend
 each `tenant` deploy their own Envoy Gateway controller in their respective `namespace`. Below is an example of deploying Envoy Gateway
-by the `marketing` and `product` teams in seperate namespaces.
+by the `marketing` and `product` teams in separate namespaces.
 
 * Lets deploy Envoy Gateway in the `marketing` namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
 
