@@ -21,11 +21,13 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 	if err != nil {
 		return err
 	}
+
 	current := &corev1.ServiceAccount{}
 	key := types.NamespacedName{
 		Namespace: sa.Namespace,
 		Name:      sa.Name,
 	}
+
 	return i.Client.Create(ctx, key, current, sa)
 }
 
@@ -36,11 +38,13 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 	if err != nil {
 		return err
 	}
+
 	current := &corev1.ConfigMap{}
 	key := types.NamespacedName{
 		Namespace: cm.Namespace,
 		Name:      cm.Name,
 	}
+
 	return i.Client.Create(ctx, key, current, cm)
 }
 
@@ -51,11 +55,13 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	if err != nil {
 		return err
 	}
+
 	current := &appsv1.Deployment{}
 	key := types.NamespacedName{
 		Namespace: deployment.Namespace,
 		Name:      deployment.Name,
 	}
+
 	return i.Client.Create(ctx, key, current, deployment)
 }
 
@@ -66,11 +72,13 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 	if err != nil {
 		return err
 	}
+
 	current := &corev1.Service{}
 	key := types.NamespacedName{
 		Namespace: svc.Namespace,
 		Name:      svc.Name,
 	}
+
 	return i.Client.Create(ctx, key, current, svc)
 }
 

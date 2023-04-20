@@ -76,12 +76,15 @@ func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 	if err := i.deleteServiceAccount(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete serviceaccount %s/%s", i.Namespace, r.Name())
 	}
+
 	if err := i.deleteConfigMap(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete configmap %s/%s", i.Namespace, r.Name())
 	}
+
 	if err := i.deleteDeployment(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete deployment %s/%s", i.Namespace, r.Name())
 	}
+
 	if err := i.deleteService(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete service %s/%s", i.Namespace, r.Name())
 	}

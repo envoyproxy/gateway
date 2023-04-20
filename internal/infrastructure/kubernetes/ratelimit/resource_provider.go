@@ -25,12 +25,12 @@ type ResourceRender struct {
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, infra *ir.RateLimitInfra, rl *egcfgv1a1.RateLimit, deploy *egcfgv1a1.KubernetesDeploymentSpec) *ResourceRender {
+func NewResourceRender(ns string, infra *ir.RateLimitInfra, gateway *egcfgv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
 		Namespace:           ns,
 		infra:               infra,
-		ratelimit:           rl,
-		rateLimitDeployment: deploy,
+		ratelimit:           gateway.RateLimit,
+		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 	}
 }
 

@@ -36,6 +36,7 @@ var (
 		`"private_key":{"filename":"%s"}}}]}`, XdsTLSCertFilename, XdsTLSKeyFilename)
 )
 
+// ExpectedResourceHashedName returns expected resource hashed name.
 func ExpectedResourceHashedName(name string) string {
 	hashedName := providerutils.GetHashedName(name)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)

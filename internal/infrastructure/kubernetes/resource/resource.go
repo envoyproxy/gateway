@@ -20,6 +20,7 @@ func GetSelector(labels map[string]string) *metav1.LabelSelector {
 	}
 }
 
+// ExpectedServiceSpec returns service spec.
 func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec {
 	serviceSpec := corev1.ServiceSpec{}
 	serviceSpec.Type = corev1.ServiceType(*serviceType)
