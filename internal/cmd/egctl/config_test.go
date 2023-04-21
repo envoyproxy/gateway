@@ -94,7 +94,7 @@ func TestExtractAllConfigDump(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.output, func(t *testing.T) {
+		t.Run(tc.expected, func(t *testing.T) {
 			configDump, err := extractConfigDump(fw, true)
 			assert.NoError(t, err)
 			got, err := marshalEnvoyProxyConfig(configDump, tc.output)
@@ -175,7 +175,7 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.output, func(t *testing.T) {
+		t.Run(tc.expected, func(t *testing.T) {
 			configDump, err := extractConfigDump(fw, false)
 			assert.NoError(t, err)
 			resource, err := findXDSResourceFromConfigDump(tc.resourceType, configDump)
