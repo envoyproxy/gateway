@@ -73,6 +73,7 @@ export GITHUB_REMOTE=origin
 After release branch cut, RM (Release Manager) should add job [cherrypick action](../../../.github/workflows/cherrypick.yaml) for target release.
 
 Configuration looks like following:
+
 ```yaml
   cherry_pick_release_v0_4:
     runs-on: ubuntu-latest
