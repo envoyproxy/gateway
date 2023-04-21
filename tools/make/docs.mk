@@ -39,7 +39,7 @@ docs-api: docs-api-gen
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/gen-crd-api-reference-docs)
 	$(tools/gen-crd-api-reference-docs) \
-	--api-dir=./api/config \
+	--api-dir=./api/config/v1alpha1 \
 	--config=tools/gen-crd-api-reference-docs/config.json \
 	--out-file=docs/latest/api/config_types.md \
 	--template-dir=tools/gen-crd-api-reference-docs/template 
