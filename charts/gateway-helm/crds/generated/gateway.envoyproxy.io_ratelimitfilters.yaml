@@ -103,12 +103,9 @@ spec:
                                 x-kubernetes-list-map-keys:
                                 - name
                                 x-kubernetes-list-type: map
-                              sourceIP:
-                                description: 'Deprecated: Use SourceCIDR instead.'
-                                type: string
-                              sourceIPCIDR:
-                                description: SourceCIDR is the client IP Address to
-                                  match.
+                              sourceCIDR:
+                                description: SourceCIDR is the client IP Address range
+                                  to match on.
                                 properties:
                                   address:
                                     description: Value is the IP CIDR that represents
@@ -124,6 +121,9 @@ spec:
                                 required:
                                 - address
                                 type: object
+                              sourceIP:
+                                description: 'Deprecated: Use SourceCIDR instead.'
+                                type: string
                             type: object
                           maxItems: 8
                           type: array

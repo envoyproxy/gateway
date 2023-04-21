@@ -102,10 +102,10 @@ type RateLimitSelectCondition struct {
 	// +optional
 	SourceIP *string `json:"sourceIP,omitempty"`
 
-	// SourceCIDR is the client IP Address to match.
+	// SourceCIDR is the client IP Address range to match on.
 	//
 	// +optional
-	SourceCIDR *SourceMatch `json:"sourceIPCIDR,omitempty"`
+	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
 }
 
 type SourceMatchType string
@@ -115,7 +115,7 @@ const (
 	// and share the same rate limit bucket.
 	SourceMatchExact SourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
-	// and use a separate rate limit bucket.
+	// and uses a separate rate limit bucket/counter.
 	SourceMatchDistinct SourceMatchType = "Distinct"
 )
 
