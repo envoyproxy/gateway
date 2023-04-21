@@ -16,6 +16,7 @@ import (
 	listenerV3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routeV3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsV3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -24,16 +25,20 @@ type XDSHookClient struct{}
 
 // PostRouteModifyHook returns a modified version of the route using context info and the passed in extensionResources
 func (c *XDSHookClient) PostRouteModifyHook(route *routeV3.Route, routeHostnames []string, extensionResources []*unstructured.Unstructured) (*routeV3.Route, error) {
+	// Simulate an error an extension may return
+	if route.Name == "extension-post-xdsroute-hook-error" {
+		return nil, errors.New("route hook resource error")
+	}
+
+	// Setup a new route to avoid operating directly on the passed in pointer for better test coverage that the
+	// route we are returning gets used properly
+	modifiedRoute := proto.Clone(route).(*routeV3.Route)
 	for _, extensionResource := range extensionResources {
-		// Simulate an error an extension may return
-		if route.Name == "extension-post-xdsroute-hook-error" {
-			return nil, errors.New("route hook resource error")
-		}
-		route.ResponseHeadersToAdd = append(route.ResponseHeadersToAdd,
+		modifiedRoute.ResponseHeadersToAdd = append(modifiedRoute.ResponseHeadersToAdd,
 			&coreV3.HeaderValueOption{
 				Header: &coreV3.HeaderValue{
 					Key:   "mock-extension-was-here-route-name",
-					Value: route.Name,
+					Value: modifiedRoute.Name,
 				},
 			},
 			&coreV3.HeaderValueOption{
@@ -68,7 +73,7 @@ func (c *XDSHookClient) PostRouteModifyHook(route *routeV3.Route, routeHostnames
 			},
 		)
 	}
-	return route, nil
+	return modifiedRoute, nil
 }
 
 // PostVirtualHostModifyHook returns a modified version of the virtualhost with a new route injected
@@ -78,7 +83,10 @@ func (c *XDSHookClient) PostVirtualHostModifyHook(vh *routeV3.VirtualHost) (*rou
 	if vh.Name == "extension-post-xdsvirtualhost-hook-error" {
 		return nil, fmt.Errorf("extension post xds virtual host hook error")
 	} else if vh.Name == "extension-listener" {
-		vh.Routes = append(vh.Routes, &routeV3.Route{
+		// Setup a new VirtualHost to avoid operating directly on the passed in pointer for better test coverage that the
+		// VirtualHost we are returning gets used properly
+		modifiedVH := proto.Clone(vh).(*routeV3.VirtualHost)
+		modifiedVH.Routes = append(modifiedVH.Routes, &routeV3.Route{
 			Name: "mock-extension-inserted-route",
 			Action: &routeV3.Route_DirectResponse{
 				DirectResponse: &routeV3.DirectResponseAction{
@@ -86,6 +94,7 @@ func (c *XDSHookClient) PostVirtualHostModifyHook(vh *routeV3.VirtualHost) (*rou
 				},
 			},
 		})
+		return modifiedVH, nil
 	}
 	return vh, nil
 }
@@ -100,7 +109,11 @@ func (c *XDSHookClient) PostHTTPListenerModifyHook(l *listenerV3.Listener) (*lis
 	if l.Name == "extension-post-xdslistener-hook-error" {
 		return nil, fmt.Errorf("extension post xds listener hook error")
 	} else if l.Name == "extension-listener" {
-		l.StatPrefix = "mock-extension-inserted-prefix"
+		// Setup a new Listener to avoid operating directly on the passed in pointer for better test coverage that the
+		// Listener we are returning gets used properly
+		modifiedListener := proto.Clone(l).(*listenerV3.Listener)
+		modifiedListener.StatPrefix = "mock-extension-inserted-prefix"
+		return modifiedListener, nil
 	}
 	return l, nil
 }
