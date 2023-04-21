@@ -1,3 +1,5 @@
+## Deployment Mode
+
 ### One GatewayClass per Envoy Gateway
 
 * Envoy Gateway can accept a single [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/)
@@ -5,17 +7,17 @@ resource. If you've instantiated multiple GatewayClasses, we recommend running m
 in different namespaces, linking a GatewayClass to each of them. 
 * Support for accepting multiple GatewayClass is being tracked [here](https://github.com/envoyproxy/gateway/issues/1231).
 
-### Deployment Mode
+### Supported Modes
 
-### Kubernetes
+#### Kubernetes
 
 * The current deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
 * Support for alternate deployment modes is being tracked [here](https://github.com/envoyproxy/gateway/issues/1117).
 
-## Multi-tenancy
+### Multi-tenancy
 
-### Kubernetes
+#### Kubernetes
 
 * A `tenant` is a group within an organization (e.g. a team or department) who shares organizational resources. We recommend
 each `tenant` deploy their own Envoy Gateway controller in their respective `namespace`. Below is an example of deploying Envoy Gateway
