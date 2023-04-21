@@ -24,7 +24,7 @@
     {{ if .Members }}
         <div class="md-typeset__scrollwrap">
             <div class="md-typeset__table td-content">
-                <table>
+                <table class="docutils align-default">
                     <thead>
                     <tr>
                         <th>Field</th>

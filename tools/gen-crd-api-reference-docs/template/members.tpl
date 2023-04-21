@@ -6,9 +6,17 @@
                     <code>{{ fieldName . }}</code><br>
                     <em>
                         {{ if linkForType .Type }}
+                          {{ if eq .Type.Kind "Map" }}
+                            map[<a href="{{ linkForType .Type.Key }}">
+                                {{ typeDisplayName .Type.Key }}
+                            </a>][<a href="{{ linkForType .Type.Elem }}">
+                                {{ typeDisplayName .Type.Elem }}
+                            </a>]
+                          {{ else }}
                             <a href="{{ linkForType .Type }}">
                                 {{ typeDisplayName .Type }}
                             </a>
+                           {{ end }}
                         {{ else }}
                             {{ typeDisplayName .Type }}
                         {{ end }}

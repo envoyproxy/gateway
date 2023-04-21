@@ -15,7 +15,7 @@ Resource Types:
 <p>EnvoyGateway is the schema for the envoygateways API.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -59,7 +59,7 @@ EnvoyGatewaySpec
 <p>EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -96,7 +96,7 @@ are applied.</p>
 <p>EnvoyGatewayProvider defines the desired configuration of a provider.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -161,7 +161,7 @@ until <a href="https://github.com/envoyproxy/gateway/issues/1001">https://github
 <p>EnvoyGatewaySpec defines the desired state of Envoy Gateway.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -241,7 +241,7 @@ Extension
 <p>EnvoyProxy is the schema for the envoyproxies API.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -357,7 +357,7 @@ EnvoyProxyStatus
 provider.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -410,7 +410,7 @@ are applied.</p>
 <p>EnvoyProxyProvider defines the desired state of a resource provider.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -463,7 +463,7 @@ for managed Kubernetes resources are applied.</p>
 <p>EnvoyProxySpec defines the desired state of EnvoyProxy.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -545,7 +545,7 @@ until <a href="https://github.com/envoyproxy/gateway/issues/1007">https://github
 the Envoy Gateway control plane.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -607,7 +607,7 @@ Gateway Control Plane will call through extension hooks.</p>
 <p>ExtensionHooks defines extension hooks across all supported runners</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -641,7 +641,7 @@ XDSTranslatorHooks
 <p>ExtensionService defines the configuration for connecting to a registered extension service.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -700,7 +700,7 @@ the extension service.</p>
 <p>ExtensionTLS defines the TLS configuration when connecting to an extension service</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -737,7 +737,7 @@ establish a TLS handshake to the extension server.</p>
 <p>Gateway defines the desired Gateway API configuration of Envoy Gateway.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -774,7 +774,7 @@ for additional details:
 It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -825,7 +825,7 @@ string
 <p>KubernetesContainerSpec defines the desired state of the Kubernetes container resource.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -890,7 +890,7 @@ string
 <p>KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -951,7 +951,7 @@ KubernetesContainerSpec
 <p>KubernetesPodSpec defines the desired state of the Kubernetes pod resource.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -1000,7 +1000,7 @@ Optional: Defaults to empty.  See type description for default values of each fi
 <p>KubernetesServiceSpec defines the desired state of the Kubernetes service resource.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -1073,7 +1073,7 @@ is fixed.</p>
 implemented until <a href="https://github.com/envoyproxy/gateway/issues/280">https://github.com/envoyproxy/gateway/issues/280</a> is fixed.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -1085,9 +1085,11 @@ implemented until <a href="https://github.com/envoyproxy/gateway/issues/280">htt
 <td>
 <code>level</code><br>
 <em>
-<a href="#config.gateway.envoyproxy.io/v1alpha1.LogLevel">
-map[github.com/envoyproxy/gateway/api/config/v1alpha1.LogComponent]github.com/envoyproxy/gateway/api/config/v1alpha1.LogLevel
-</a>
+map[<a href="#config.gateway.envoyproxy.io/v1alpha1.LogComponent">
+LogComponent
+</a>][<a href="#config.gateway.envoyproxy.io/v1alpha1.LogLevel">
+LogLevel
+</a>]
 </em>
 </td>
 <td>
@@ -1109,7 +1111,7 @@ and the log level is the value. If unspecified, defaults to &ldquo;System: Info&
 used for Global Rate Limiting.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -1146,7 +1148,7 @@ state associated with global ratelimiting.</p>
 the database backend used by the rate limit service.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -1204,7 +1206,7 @@ to be used by the rate limit service.</p>
 a Redis database.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -1251,7 +1253,7 @@ for the xds-translator</p>
 <p>XDSTranslatorHooks contains all the pre and post hooks for the xds-translator runner.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>

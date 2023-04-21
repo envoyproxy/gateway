@@ -13,7 +13,7 @@ Resource Types:
 </h3>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -94,7 +94,7 @@ successfully validate the JWT. For additional details, see
 <p>AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -153,7 +153,7 @@ successfully validate the JWT. For additional details, see
 <p>GlobalRateLimit defines global rate limit configuration.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -193,7 +193,7 @@ rules if selected.</p>
 <p>HeaderMatch defines the match attributes within the HTTP Headers of the request.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -263,7 +263,7 @@ Valid HeaderMatchType values are &ldquo;Exact&rdquo;, &ldquo;RegularExpression&r
 and how JWTs should be verified:</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -336,7 +336,7 @@ HTTP/HTTPS endpoint.</p>
 to a predefined value based on attributes within the traffic flow.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -414,7 +414,7 @@ GlobalRateLimit
 <p>RateLimitFilterSpec defines the desired state of RateLimitFilter.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -464,7 +464,7 @@ GlobalRateLimit
 from the incoming requests, and setting limits for them.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -524,7 +524,7 @@ be used to select a subset of clients to be ratelimited.
 All the individual conditions must hold True for the overall condition to hold True.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -590,7 +590,7 @@ Valid RateLimitUnit values are &ldquo;Second&rdquo;, &ldquo;Minute&rdquo;, &ldqu
 <p>RateLimitValue defines the limits for rate limiting.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
@@ -634,7 +634,7 @@ RateLimitUnit
 HTTP/HTTPS endpoint.</p>
 <div class="md-typeset__scrollwrap">
 <div class="md-typeset__table td-content">
-<table>
+<table class="docutils align-default">
 <thead>
 <tr>
 <th>Field</th>
