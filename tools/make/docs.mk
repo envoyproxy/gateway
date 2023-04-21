@@ -34,7 +34,7 @@ docs.clean:
 	rm -rf $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs-api
-docs-api: docs-api-gen docs-api-headings
+docs-api: docs-api-gen
 
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/gen-crd-api-reference-docs)
@@ -48,11 +48,6 @@ docs-api-gen: $(tools/gen-crd-api-reference-docs)
 	--config=tools/gen-crd-api-reference-docs/config.json \
 	--out-file=docs/latest/api/extension_types.md \
 	--template-dir=tools/gen-crd-api-reference-docs/template 
-
-.PHONY: docs-api-headings # Required since sphinx mst does not link to h4 headings.
-docs-api-headings:
-	@$(LOG_TARGET)
-	tools/hack/docs-headings.sh
 
 .PHONY: docs-release-prepare
 docs-release-prepare:

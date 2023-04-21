@@ -12,16 +12,15 @@ $(tools.bindir)/%: $(tools.srcdir)/%.sh
 # `go get`-able things
 # ====================
 #
-tools/controller-gen     = $(tools.bindir)/controller-gen
-tools/golangci-lint      = $(tools.bindir)/golangci-lint
-tools/kustomize          = $(tools.bindir)/kustomize
-tools/kind               = $(tools.bindir)/kind
-tools/setup-envtest      = $(tools.bindir)/setup-envtest
-tools/crd-ref-docs = $(tools.bindir)/crd-ref-docs
+tools/controller-gen             = $(tools.bindir)/controller-gen
+tools/golangci-lint              = $(tools.bindir)/golangci-lint
+tools/kustomize                  = $(tools.bindir)/kustomize
+tools/kind                       = $(tools.bindir)/kind
+tools/setup-envtest              = $(tools.bindir)/setup-envtest
 tools/gen-crd-api-reference-docs = $(tools.bindir)/gen-crd-api-reference-docs
-tools/buf                = $(tools.bindir)/buf
-tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
-tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
+tools/buf                        = $(tools.bindir)/buf
+tools/protoc-gen-go              = $(tools.bindir)/protoc-gen-go
+tools/protoc-gen-go-grpc         = $(tools.bindir)/protoc-gen-go-grpc
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 
