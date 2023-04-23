@@ -33,23 +33,6 @@ spec:
                   typed_config:
                     "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                     path: /dev/null
-                    typed_json_format:
-                      authority: "%REQ(:AUTHORITY)%"
-                      bytes_received: "%BYTES_RECEIVED%"
-                      bytes_sent: "%BYTES_SENT%"
-                      duration: "%DURATION%"
-                      method: "%REQ(:METHOD)%"
-                      path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
-                      protocol: "%PROTOCOL%"
-                      response_code: "%RESPONSE_CODE%"
-                      response_code_details: "%RESPONSE_CODE_DETAILS%"
-                      response_flags: "%RESPONSE_FLAGS%"
-                      start_time: "%START_TIME%"
-                      upstream_host: "%UPSTREAM_HOST%"
-                      user_agent: "%REQ(USER-AGENT)%"
-                      x_envoy_upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
-                      x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
-                      x_request_id: "%REQ(X-REQUEST-ID)%"
                 address:
                   socket_address:
                     address: 127.0.0.1
