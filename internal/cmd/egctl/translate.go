@@ -748,14 +748,34 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			addMissingServices(requiredServiceMap, route)
 		}
 
-		providedServiceMap := map[string]bool{}
+		providedServiceMap := map[string]*v1.Service{}
 		for _, service := range resources.Services {
-			providedServiceMap[service.Namespace+"/"+service.Name] = true
+			providedServiceMap[service.Namespace+"/"+service.Name] = service
 		}
 
 		for key, service := range requiredServiceMap {
-			if _, found := providedServiceMap[key]; !found {
+			if provided, found := providedServiceMap[key]; !found {
 				resources.Services = append(resources.Services, service)
+			} else {
+				providedPorts := map[string]bool{}
+				for _, port := range provided.Spec.Ports {
+					providedPorts[fmt.Sprintf("%s-%d", port.Protocol, port.Port)] = true
+				}
+
+				for _, port := range service.Spec.Ports {
+					protocol := port.Protocol
+					port := port.Port
+					name := fmt.Sprintf("%s-%d", protocol, port)
+
+					if _, found := providedPorts[name]; !found {
+						servicePort := v1.ServicePort{
+							Name:     name,
+							Protocol: protocol,
+							Port:     port,
+						}
+						provided.Spec.Ports = append(provided.Spec.Ports, servicePort)
+					}
+				}
 			}
 		}
 
