@@ -305,6 +305,9 @@ xds:
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
+                  normalizePath: true
+                  mergeSlashes: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
             name: default-eg-http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
