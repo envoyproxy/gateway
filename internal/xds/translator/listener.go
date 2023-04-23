@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/base64"
 	"errors"
+	"log"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
@@ -188,16 +189,15 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			})
 
 			if err != nil {
-				// if there is an error, we should ignore this filter and continue
-				// to the next one
-				continue
+				// if there is an error, we should ignore this filter and log
+				log.Printf("error while adding GrpcJSONTranscoderFilter: %v", err)
+			} else {
+				grpcJSONTranscoderFilter := &hcmv3.HttpFilter{
+					Name:       wellknown.GRPCJSONTranscoder,
+					ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
+				}
+				mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
 			}
-
-			grpcJSONTranscoderFilter := &hcmv3.HttpFilter{
-				Name:       wellknown.GRPCJSONTranscoder,
-				ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
-			}
-			mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
 		}
 	}
 
