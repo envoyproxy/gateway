@@ -188,7 +188,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			})
 
 			if err != nil {
-				return err
+				// if there is an error, we should ignore this filter and continue
+				// to the next one
+				continue
 			}
 
 			grpcJSONTranscoderFilter := &hcmv3.HttpFilter{
