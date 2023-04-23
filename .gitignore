@@ -31,4 +31,6 @@ vendor
 .devcontainer/
 
 # values.yaml file is generated from its template counterpart.
-# *values.yaml
+charts/gateway-helm/values.yaml
+./charts/gateway-helm/values.yaml
+/charts/gateway-helm/values.yaml

@@ -61,22 +61,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.HTTPRouteRedirectHostAndStatus.ShortName,
 			// Remove once https://github.com/envoyproxy/gateway/issues/994 is fixed
 			tests.HTTPRouteRedirectScheme.ShortName,
-			// Remove once https://github.com/envoyproxy/gateway/issues/1016 is fixed
-			tests.GatewayObservedGenerationBump.ShortName,
-			// Remove once https://github.com/envoyproxy/gateway/issues/1016 is fixed
-			tests.HTTPRouteObservedGenerationBump.ShortName,
-
-			// Remove when know how to fix
-			tests.GatewayInvalidRouteKind.ShortName,
-			tests.HTTPRouteInvalidCrossNamespaceParentRef.ShortName,
-			tests.GatewayWithAttachedRoutes.ShortName,
-			// tests.HTTPRoutePartiallyInvalidViaInvalidReferenceGrant.ShortName,
-			// tests.HTTPRouteMethodMatching.ShortName,
-			tests.HTTPRouteListenerHostnameMatching.ShortName,
-			tests.HTTPRouteHostnameIntersection.ShortName,
-			tests.GatewayModifyListeners.ShortName,
-			// tests.HTTPRouteMatchingAcrossRoutes.ShortName,
-			// Remove once https://github.com/envoyproxy/gateway/issues/1201 is fixed
 		},
 	})
 	cSuite.Setup(t)
