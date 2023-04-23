@@ -25,14 +25,14 @@ jobs:
     - run: make lint-deps
     - run: make -k lint
   
-  # gen-check:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #     with:
-  #       submodules: recursive
-  #   - uses: ./tools/github-actions/setup-deps
-  #   - run: make -k gen-check
+  gen-check:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
+    - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
