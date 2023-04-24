@@ -26,7 +26,7 @@ by the `marketing` and `product` teams in separate namespaces.
 * Lets deploy Envoy Gateway in the `marketing` namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
 
 ```
-helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.4 -n marketing --create-namespace
+helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.4.0 -n marketing --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
@@ -199,7 +199,7 @@ Handling connection for 8888
 * Lets deploy Envoy Gateway in the `product` namespace
 
 ```
-helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.4 -n product --create-namespace
+helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.4.0 -n product --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.

@@ -143,7 +143,7 @@ data:
         rateLimitDeployment:
           replicas: 1
           container:
-            image: envoyproxy/ratelimit:v0.4
+            image: envoyproxy/ratelimit:v0.4.0
             resources:
               requests:
                 cpu: 100m
@@ -623,9 +623,9 @@ transfer-encoding: chunked
 ```
 
 
-[Global rate limiting]: https://www.envoyproxy.io/docs/envoy/v0.4/intro/arch_overview/other_features/global_rate_limiting
-[RateLimitFilter]: https://gateway.envoyproxy.io/v0.4/api/extension_types.html#ratelimitfilter
+[Global rate limiting]: https://www.envoyproxy.io/docs/envoy/v0.4.0/intro/arch_overview/other_features/global_rate_limiting
+[RateLimitFilter]: https://gateway.envoyproxy.io/v0.4.0/api/extension_types.html#ratelimitfilter
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: https://gateway.envoyproxy.io/v0.4/api/config_types.html#envoygateway
+[EnvoyGateway]: https://gateway.envoyproxy.io/v0.4.0/api/config_types.html#envoygateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter

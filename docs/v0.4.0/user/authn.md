@@ -14,7 +14,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 Allow requests with a valid JWT by creating an [AuthenticationFilter][] and referencing it from the example HTTPRoute.
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.4/examples/kubernetes/authn/jwt.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.4.0/examples/kubernetes/authn/jwt.yaml
 ```
 
 The HTTPRoute is now updated to authenticate requests for `/foo` and allow unauthenticated requests to `/bar`. The
@@ -90,5 +90,5 @@ kubectl delete authenticationfilter/jwt-example
 Checkout the [Developer Guide](../dev/README.md) to get involved in the project.
 
 [jwt]: https://tools.ietf.org/html/rfc7519
-[AuthenticationFilter]: https://gateway.envoyproxy.io/v0.4/api/extension_types.html#authenticationfilter
+[AuthenticationFilter]: https://gateway.envoyproxy.io/v0.4.0/api/extension_types.html#authenticationfilter
 [jwks]: https://tools.ietf.org/html/rfc7517

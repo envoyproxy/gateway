@@ -44,7 +44,7 @@ kubectl create secret tls server-certs --key=passthrough.example.com.key --cert=
 Deploy TLS Passthrough application Deployment, Service and TLSRoute:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.4/examples/kubernetes/tls-passthrough.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.4.0/examples/kubernetes/tls-passthrough.yaml
 ```
 
 Patch the Gateway from the Quickstart guide to include a TLS listener that listens on port `6443` and is configured for
