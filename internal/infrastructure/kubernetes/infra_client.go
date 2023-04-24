@@ -7,7 +7,7 @@ package kubernetes
 
 import (
 	"context"
-
+	
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -22,7 +22,7 @@ func New(cli client.Client) *InfraClient {
 	}
 }
 
-func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, current client.Object, specific client.Object) error {
+func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, current client.Object, specific client.Object, updateChecker func() bool) error {
 	if err := cli.Client.Get(ctx, key, current); err != nil {
 		if kerrors.IsNotFound(err) {
 			// Create if it does not exist.
@@ -33,13 +33,15 @@ func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, curren
 	} else {
 		// Since the ServiceAccount does not have a specific Spec field to compare
 		// just perform an update for now.
-		specific.SetResourceVersion(current.GetResourceVersion())
-		specific.SetUID(current.GetUID())
-		if err := cli.Client.Update(ctx, specific); err != nil {
-			return err
+		if updateChecker() {
+			specific.SetResourceVersion(current.GetResourceVersion())
+			specific.SetUID(current.GetUID())
+			if err := cli.Client.Update(ctx, specific); err != nil {
+				return err
+			}
 		}
 	}
-
+	
 	return nil
 }
 
@@ -50,6 +52,6 @@ func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error 
 		}
 		return err
 	}
-
+	
 	return nil
 }

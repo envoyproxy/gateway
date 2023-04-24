@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +29,9 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		Name:      sa.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, sa)
+	return i.Client.Create(ctx, key, current, sa, func() bool {
+		return true
+	})
 }
 
 // createOrUpdateConfigMap creates a ConfigMap in the Kube api server based on the provided
@@ -45,7 +48,9 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 		Name:      cm.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, cm)
+	return i.Client.Create(ctx, key, current, cm, func() bool {
+		return !reflect.DeepEqual(cm.Data, current.Data)
+	})
 }
 
 // createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
@@ -62,7 +67,9 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		Name:      deployment.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, deployment)
+	return i.Client.Create(ctx, key, current, deployment, func() bool {
+		return !reflect.DeepEqual(deployment.Spec, current.Spec)
+	})
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided ResourceRender,
@@ -79,7 +86,9 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 		Name:      svc.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, svc)
+	return i.Client.Create(ctx, key, current, svc, func() bool {
+		return !reflect.DeepEqual(svc.Spec, current.Spec)
+	})
 }
 
 // deleteServiceAccount deletes the ServiceAccount in the kube api server, if it exists.
