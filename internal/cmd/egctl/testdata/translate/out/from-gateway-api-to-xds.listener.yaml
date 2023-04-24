@@ -41,6 +41,9 @@ xds:
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
+                normalizePath: true
+                mergeSlashes: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
           name: default-eg-http
           perConnectionBufferLimitBytes: 32768
     - activeState:
@@ -84,6 +87,9 @@ xds:
                   routeConfigName: default-eg-grpc
                 statPrefix: http
                 useRemoteAddress: true
+                normalizePath: true
+                mergeSlashes: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
           name: default-eg-grpc
           perConnectionBufferLimitBytes: 32768
     - activeState:
