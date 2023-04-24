@@ -403,3 +403,19 @@ _Appears in:_
 
 
 
+## StringMatch
+
+
+
+
+
+_Appears in:_
+- [CorsPolicy](#corspolicy)
+
+| Field | Description |
+| --- | --- |
+| `exact` _string_ |  |
+| `prefix` _string_ |  |
+| `regex` _string_ |  |
+
+
