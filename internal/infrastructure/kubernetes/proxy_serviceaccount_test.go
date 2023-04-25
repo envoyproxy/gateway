@@ -171,7 +171,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 
 			kube := NewInfra(cli, cfg)
 
-			r := proxy.NewResourceRender(kube.Namespace, tc.in)
+			r := proxy.NewResourceRender(kube.Namespace, tc.in.GetProxyInfra())
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 
@@ -204,7 +204,7 @@ func TestDeleteProxyServiceAccount(t *testing.T) {
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.Namespace, infra)
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
 
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)

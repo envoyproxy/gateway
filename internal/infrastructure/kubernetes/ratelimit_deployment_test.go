@@ -27,7 +27,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	rateLimitInfra := new(ir.RateLimitInfra)
-	rl := &egcfgv1a1.RateLimit{
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -36,7 +36,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 		},
 	}
 
-	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 	deployment, err := r.Deployment()
 	require.NoError(t, err)
 
@@ -76,7 +76,8 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 			}
 
 			kube := NewInfra(cli, cfg)
-			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, rl, kube.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
+			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, kube.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
@@ -117,7 +118,8 @@ func TestDeleteRateLimitDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			kube := newTestInfra(t)
 			rateLimitInfra := new(ir.RateLimitInfra)
-			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, rl, kube.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+			kube.EnvoyGateway.RateLimit = rl
+			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 

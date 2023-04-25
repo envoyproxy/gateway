@@ -89,8 +89,9 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 			cfg.Namespace = tc.ns
 
 			kube := NewInfra(cli, cfg)
+			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, rl, kube.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, kube.EnvoyGateway)
 
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
@@ -133,7 +134,9 @@ func TestDeleteRateLimitServiceAccount(t *testing.T) {
 			kube := newTestInfra(t)
 
 			rateLimitInfra := new(ir.RateLimitInfra)
-			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, rl, kube.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+			kube.EnvoyGateway.RateLimit = rl
+
+			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 

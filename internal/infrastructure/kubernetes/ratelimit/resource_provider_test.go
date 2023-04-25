@@ -68,7 +68,7 @@ func TestServiceAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	rateLimitInfra := new(ir.RateLimitInfra)
-	rl := &egcfgv1a1.RateLimit{
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -76,7 +76,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestConfigMap(t *testing.T) {
 			},
 		},
 	}
-	rl := &egcfgv1a1.RateLimit{
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -118,7 +118,7 @@ func TestConfigMap(t *testing.T) {
 		},
 	}
 
-	r := NewResourceRender(cfg.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 	cm, err := r.ConfigMap()
 	require.NoError(t, err)
 
@@ -150,7 +150,7 @@ func TestService(t *testing.T) {
 			},
 		},
 	}
-	rl := &egcfgv1a1.RateLimit{
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -158,7 +158,7 @@ func TestService(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 	svc, err := r.Service()
 	require.NoError(t, err)
 
@@ -232,7 +232,7 @@ func TestDeployment(t *testing.T) {
 				},
 			}
 
-			rl := &egcfgv1a1.RateLimit{
+			cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 				Backend: egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -240,8 +240,12 @@ func TestDeployment(t *testing.T) {
 					},
 				},
 			}
-
-			r := NewResourceRender(cfg.Namespace, rateLimitInfra, rl, tc.deploy)
+			cfg.EnvoyGateway.Provider = &egcfgv1a1.EnvoyGatewayProvider{
+				Type: egcfgv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egcfgv1a1.EnvoyGatewayKubernetesProvider{
+					RateLimitDeployment: tc.deploy,
+				}}
+			r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 

@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package utils
+package resource
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +20,7 @@ func GetSelector(labels map[string]string) *metav1.LabelSelector {
 	}
 }
 
+// ExpectedServiceSpec returns service spec.
 func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec {
 	serviceSpec := corev1.ServiceSpec{}
 	serviceSpec.Type = corev1.ServiceType(*serviceType)

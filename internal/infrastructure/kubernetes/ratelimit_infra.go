@@ -19,8 +19,7 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.Rate
 		return errors.New("ratelimit infra ir is nil")
 	}
 
-	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway.RateLimit, i.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
-
+	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway)
 	return i.createOrUpdate(ctx, r)
 }
 
@@ -30,6 +29,6 @@ func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInf
 		return errors.New("ratelimit infra ir is nil")
 	}
 
-	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway.RateLimit, i.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway)
 	return i.delete(ctx, r)
 }
