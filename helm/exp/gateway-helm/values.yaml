@@ -7,8 +7,8 @@ deployment:
     imagePullPolicy: Always
     resources:
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 1000m
+        memory: 1024Mi
       requests:
         cpu: 500m
         memory: 512Mi
@@ -27,7 +27,7 @@ deployment:
   - name: grpc
     port: 18000
     targetPort: 18000
-  replicas: 2
+  replicas: 1
 rootNamespace: envoy-gateway-system
 config:
   envoyGateway:
