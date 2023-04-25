@@ -178,7 +178,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 							}
 						}
 
-						if !servicesValid {
+						if servicesValid {
 							grpcJSONTranscoderFilterAdd := &ir.GrpcJSONTranscoderFilter{
 								ProtoDescriptorBin: grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin,
 								Services:           grpcJSONTranscoderFilter.Spec.Services,
