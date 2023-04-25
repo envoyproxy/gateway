@@ -101,6 +101,11 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			Name:       wellknown.Router,
 			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: routerAny},
 		}},
+		// normalize paths according to RFC 3986
+		NormalizePath: &wrapperspb.BoolValue{Value: true},
+		// merge adjacent slashes in the path
+		MergeSlashes:                 true,
+		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
 	}
 
 	if irListener.IsHTTP2 {
