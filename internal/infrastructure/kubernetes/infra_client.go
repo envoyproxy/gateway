@@ -7,7 +7,7 @@ package kubernetes
 
 import (
 	"context"
-	
+
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,7 +41,7 @@ func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, curren
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -52,6 +52,6 @@ func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error 
 		}
 		return err
 	}
-	
+
 	return nil
 }
