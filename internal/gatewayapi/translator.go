@@ -67,7 +67,7 @@ type Translator struct {
 
 	// GlobalCorsEnabled is true when global
 	// cors global has been configured by the admin.
-	// GlobalCorsEnabled bool
+	GlobalCorsEnabled bool
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.

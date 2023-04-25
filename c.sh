@@ -1,10 +1,10 @@
 # loop apply 100 times with name by aa + i
-for i in {1..150}; do kubectl delete -f - <<EOF
+for i in {150..299}; do kubectl delete -f - <<EOF
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: CustomGRPCRoute
 metadata:
   name: sonny-route-$i
-  namespace: qat-idp
+  namespace: local-idp
 spec:
   hostnames:
     - pigw.local.experimental.geocomply.com
