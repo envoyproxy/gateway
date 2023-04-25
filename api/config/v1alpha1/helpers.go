@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
@@ -67,6 +68,13 @@ func (e *EnvoyGateway) GetEnvoyGatewayProvider() *EnvoyGatewayProvider {
 	return e.Provider
 }
 
+// DefaultEnvoyGatewayKubeProvider returns a new EnvoyGatewayKubernetesProvider with default settings.
+func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
+	return &EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: DefaultKubernetesDeployment(DefaultRateLimitImage),
+	}
+}
+
 // DefaultEnvoyProxyProvider returns a new EnvoyProxyProvider with default settings.
 func DefaultEnvoyProxyProvider() *EnvoyProxyProvider {
 	return &EnvoyProxyProvider{
@@ -88,23 +96,28 @@ func (e *EnvoyProxy) GetEnvoyProxyProvider() *EnvoyProxyProvider {
 // DefaultEnvoyProxyKubeProvider returns a new EnvoyProxyKubernetesProvider with default settings.
 func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 	return &EnvoyProxyKubernetesProvider{
-		EnvoyDeployment: DefaultKubernetesDeployment(),
+		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
 		EnvoyService:    DefaultKubernetesService(),
 	}
 }
 
 // DefaultKubernetesDeploymentReplicas returns the default replica settings.
 func DefaultKubernetesDeploymentReplicas() *int32 {
-	repl := int32(DefaultEnvoyReplicas)
+	repl := int32(DefaultDeploymentReplicas)
 	return &repl
 }
 
+// DefaultKubernetesContainerImage returns the default envoyproxy image.
+func DefaultKubernetesContainerImage(image string) *string {
+	return pointer.String(image)
+}
+
 // DefaultKubernetesDeployment returns a new KubernetesDeploymentSpec with default settings.
-func DefaultKubernetesDeployment() *KubernetesDeploymentSpec {
+func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
 		Replicas:  DefaultKubernetesDeploymentReplicas(),
 		Pod:       DefaultKubernetesPod(),
-		Container: DefaultKubernetesContainer(),
+		Container: DefaultKubernetesContainer(image),
 	}
 }
 
@@ -114,9 +127,10 @@ func DefaultKubernetesPod() *KubernetesPodSpec {
 }
 
 // DefaultKubernetesContainer returns a new KubernetesContainerSpec with default settings.
-func DefaultKubernetesContainer() *KubernetesContainerSpec {
+func DefaultKubernetesContainer(image string) *KubernetesContainerSpec {
 	return &KubernetesContainerSpec{
 		Resources: DefaultResourceRequirements(),
+		Image:     DefaultKubernetesContainerImage(image),
 	}
 }
 
@@ -161,7 +175,7 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyDeployment == nil {
-		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment()
+		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyDeployment.Replicas == nil {
@@ -173,7 +187,15 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 	}
 
 	if r.Kubernetes.EnvoyDeployment.Container == nil {
-		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer()
+		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer(DefaultEnvoyProxyImage)
+	}
+
+	if r.Kubernetes.EnvoyDeployment.Container.Resources == nil {
+		r.Kubernetes.EnvoyDeployment.Container.Resources = DefaultResourceRequirements()
+	}
+
+	if r.Kubernetes.EnvoyDeployment.Container.Image == nil {
+		r.Kubernetes.EnvoyDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyService == nil {
@@ -182,6 +204,46 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 
 	if r.Kubernetes.EnvoyService.Type == nil {
 		r.Kubernetes.EnvoyService.Type = GetKubernetesServiceType(ServiceTypeLoadBalancer)
+	}
+
+	return r.Kubernetes
+}
+
+// GetEnvoyGatewayKubeProvider returns the EnvoyGatewayKubernetesProvider of Provider or
+// a default EnvoyGatewayKubernetesProvider if unspecified. If EnvoyGatewayProvider is not of
+// type "Kubernetes", a nil EnvoyGatewayKubernetesProvider is returned.
+func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
+	if r.Type != ProviderTypeKubernetes {
+		return nil
+	}
+
+	if r.Kubernetes == nil {
+		r.Kubernetes = DefaultEnvoyGatewayKubeProvider()
+		return r.Kubernetes
+	}
+
+	if r.Kubernetes.RateLimitDeployment == nil {
+		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Replicas == nil {
+		r.Kubernetes.RateLimitDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Pod == nil {
+		r.Kubernetes.RateLimitDeployment.Pod = DefaultKubernetesPod()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Container == nil {
+		r.Kubernetes.RateLimitDeployment.Container = DefaultKubernetesContainer(DefaultRateLimitImage)
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Container.Resources == nil {
+		r.Kubernetes.RateLimitDeployment.Container.Resources = DefaultResourceRequirements()
+	}
+
+	if r.Kubernetes.RateLimitDeployment.Container.Image == nil {
+		r.Kubernetes.RateLimitDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultRateLimitImage)
 	}
 
 	return r.Kubernetes

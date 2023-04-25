@@ -29,7 +29,7 @@ gateways:
             - type: Programmed
               status: "False"
               reason: Invalid
-              message: Listener must not have TLS certificate refs set for TLS mode Passthrough
+              message: Listener must not have TLS certificate refs set for TLS mode Passthrough.
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute
@@ -69,6 +69,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:translator-tests
+
       listeners:
         - address: ""

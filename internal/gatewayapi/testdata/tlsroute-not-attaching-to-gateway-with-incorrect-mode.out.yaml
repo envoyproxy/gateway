@@ -26,7 +26,7 @@ gateways:
             - type: Programmed
               status: "False"
               reason: UnsupportedTLSMode
-              message: TLS Terminate mode is not supported, TLS mode must be Passthrough.
+              message: TLS mode "Terminate" is not supported, TLS mode must be Passthrough.
 tlsRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TLSRoute
@@ -66,6 +66,6 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:translator-tests
+
       listeners:
         - address: ""

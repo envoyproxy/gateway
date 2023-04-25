@@ -20,48 +20,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
-
-func TestExpectedProxyConfigMap(t *testing.T) {
-	// Setup the infra.
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	cfg, err := config.New()
-	require.NoError(t, err)
-
-	kube := NewInfra(cli, cfg)
-	infra := ir.NewInfra()
-
-	infra.Proxy.Name = "test"
-
-	// An infra without Gateway owner labels should trigger
-	// an error.
-	_, err = kube.expectedProxyConfigMap(infra)
-	require.NotNil(t, err)
-
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-
-	cm, err := kube.expectedProxyConfigMap(infra)
-	require.NoError(t, err)
-
-	require.Equal(t, "envoy-test-74657374", cm.Name)
-	require.Equal(t, "envoy-gateway-system", cm.Namespace)
-	require.Contains(t, cm.Data, sdsCAFilename)
-	assert.Equal(t, sdsCAConfigMapData, cm.Data[sdsCAFilename])
-	require.Contains(t, cm.Data, sdsCertFilename)
-	assert.Equal(t, sdsCertConfigMapData, cm.Data[sdsCertFilename])
-
-	wantLabels := envoyAppLabel()
-	wantLabels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
-	wantLabels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-	assert.True(t, apiequality.Semantic.DeepEqual(wantLabels, cm.Labels))
-}
 
 func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
-	kube := NewInfra(nil, cfg)
+
 	infra := ir.NewInfra()
 	infra.Proxy.Name = "test"
 	infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
@@ -84,7 +50,10 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
 				},
-				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
+				Data: map[string]string{
+					proxy.SdsCAFilename:   proxy.SdsCAConfigMapData,
+					proxy.SdsCertFilename: proxy.SdsCertConfigMapData,
+				},
 			},
 		},
 		{
@@ -111,7 +80,10 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
 				},
-				Data: map[string]string{sdsCAFilename: sdsCAConfigMapData, sdsCertFilename: sdsCertConfigMapData},
+				Data: map[string]string{
+					proxy.SdsCAFilename:   proxy.SdsCAConfigMapData,
+					proxy.SdsCertFilename: proxy.SdsCertConfigMapData,
+				},
 			},
 		},
 	}
@@ -119,12 +91,15 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			var cli client.Client
 			if tc.current != nil {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			} else {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateProxyConfigMap(context.Background(), infra)
+			kube := NewInfra(cli, cfg)
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
+			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 			actual := &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -182,7 +157,14 @@ func TestDeleteConfigProxyMap(t *testing.T) {
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
 
-			err = kube.deleteProxyConfigMap(context.Background(), infra)
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      r.Name(),
+				},
+			}
+			err = kube.Client.Delete(context.Background(), cm)
 			require.NoError(t, err)
 		})
 	}

@@ -2,7 +2,7 @@ module local
 
 go 1.20
 
-require github.com/elastic/crd-ref-docs v0.0.8
+require github.com/elastic/crd-ref-docs v0.0.9-0.20230424093950-7444d6aeffc4
 
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect

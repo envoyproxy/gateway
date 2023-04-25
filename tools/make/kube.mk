@@ -8,6 +8,8 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 CONFORMANCE_UNIQUE_PORTS ?= true
 
+WAIT_TIMEOUT ?= 15m
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -59,7 +61,7 @@ IMAGE_PULL_POLICY ?= Always
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
-	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
+	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
 
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
@@ -107,9 +109,9 @@ kube-install-image: image.build $(tools/kind) ## Install the EG image to a kind 
 .PHONY: run-conformance
 run-conformance: ## Run Gateway API conformance.
 	@$(LOG_TARGET)
-	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
-	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
-	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n gateway-system job/gateway-api-admission --for=condition=Complete
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true --use-unique-ports=$(CONFORMANCE_UNIQUE_PORTS)
 
@@ -123,7 +125,7 @@ generate-manifests: helm-generate ## Generate Kubernetes release manifests.
 	@$(LOG_TARGET)
 	@$(call log, "Generating kubernetes manifests")
 	mkdir -p $(OUTPUT_DIR)/
-	helm template eg charts/gateway-helm --include-crds --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) > $(OUTPUT_DIR)/install.yaml
+	helm template --set createNamespace=true eg charts/gateway-helm --include-crds --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) --namespace envoy-gateway-system > $(OUTPUT_DIR)/install.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/install.yaml")
 	cp examples/kubernetes/quickstart.yaml $(OUTPUT_DIR)/quickstart.yaml
 	@$(call log, "Added: $(OUTPUT_DIR)/quickstart.yaml")

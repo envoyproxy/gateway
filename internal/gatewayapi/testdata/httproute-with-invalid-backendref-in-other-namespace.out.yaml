@@ -64,7 +64,7 @@ httpRoutes:
             - type: ResolvedRefs
               status: "False"
               reason: RefNotPermitted
-              message: "Backend ref to service backends/service-1 not permitted by any ReferenceGrant"
+              message: "Backend ref to service backends/service-1 not permitted by any ReferenceGrant."
 xdsIR:
   envoy-gateway-gateway-1:
     http:
@@ -89,7 +89,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:translator-tests
+
       listeners:
         - address: ""
           ports:

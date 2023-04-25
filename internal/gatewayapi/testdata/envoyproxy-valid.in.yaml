@@ -13,6 +13,7 @@ envoyproxy:
         envoyDeployment:
           replicas: 2
           container:
+            image: "envoyproxy/gateway:v0.4.0"
             resources:
               requests:
                 cpu: 100m

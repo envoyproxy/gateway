@@ -74,7 +74,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 }
 
 func (r *Runner) translate(xdsIRs []*ir.Xds) (*ir.RateLimitInfra, error) {
-	rlInfra := new(ir.RateLimitInfra)
+	ratelimitInfra := new(ir.RateLimitInfra)
 
 	for _, xdsIR := range xdsIRs {
 		for _, listener := range xdsIR.HTTP {
@@ -88,16 +88,10 @@ func (r *Runner) translate(xdsIRs []*ir.Xds) (*ir.RateLimitInfra, error) {
 					Name:   listener.Name,
 					Config: str,
 				}
-				rlInfra.Configs = append(rlInfra.Configs, c)
+				ratelimitInfra.ServiceConfigs = append(ratelimitInfra.ServiceConfigs, c)
 			}
 		}
 	}
 
-	rlInfra.Backend = &ir.RateLimitDBBackend{
-		Redis: &ir.RateLimitRedis{
-			URL: r.EnvoyGateway.RateLimit.Backend.Redis.URL,
-		},
-	}
-
-	return rlInfra, nil
+	return ratelimitInfra, nil
 }

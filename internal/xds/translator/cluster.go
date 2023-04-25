@@ -22,6 +22,8 @@ import (
 
 const (
 	extensionOptionsKey = "envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#envoy-v3-api-field-config-cluster-v3-cluster-per-connection-buffer-limit-bytes
+	tcpClusterPerConnectionBufferLimitBytes = 32768
 )
 
 func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
@@ -34,7 +36,8 @@ func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
 				LocalityWeightedLbConfig: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig{}}},
-		OutlierDetection: &clusterv3.OutlierDetection{},
+		OutlierDetection:              &clusterv3.OutlierDetection{},
+		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
 
 	if tSocket != nil {

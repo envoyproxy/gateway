@@ -8,88 +8,18 @@ package egctl
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 )
-
-func noopFilter(in string) string {
-	return in
-}
-
-type ExpectHTTPRoutes struct {
-	HTTPRoutes []struct {
-		Metadata struct {
-			Namespace string
-			Name      string
-		}
-		Spec   interface{}
-		Status struct {
-			Parents []struct {
-				Conditions []struct {
-					Status string
-					Reason string
-				}
-				ControllerName string
-				ParentRef      struct {
-					Name string
-				}
-			}
-		}
-	}
-}
-
-func gatewayAPIFilter(in string, output string) string {
-	var out []byte
-	exp := &ExpectHTTPRoutes{}
-	if output == jsonOutput {
-		err := json.Unmarshal([]byte(in), &[]*ExpectHTTPRoutes{exp})
-		if err != nil {
-			panic(err)
-		}
-
-		out, err = json.Marshal(exp)
-		if err != nil {
-			panic(err)
-		}
-
-	} else {
-		err := yaml.Unmarshal([]byte(in), exp)
-		if err != nil {
-			panic(err)
-		}
-
-		out, err = yaml.Marshal(exp)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	return string(out)
-}
-
-func gatewayAPIWithXdsYamlFilter(in string) string {
-	exp := &ExpectHTTPRoutes{}
-	yamls := strings.SplitN(in, "---\n", 2)
-	err := yaml.Unmarshal([]byte(yamls[0]), exp)
-	if err != nil {
-		panic(err)
-	}
-
-	out, err := yaml.Marshal(exp)
-	if err != nil {
-		panic(err)
-	}
-
-	return string(out) + "---\n" + yamls[1]
-}
 
 func TestTranslate(t *testing.T) {
 	testCases := []struct {
@@ -173,7 +103,7 @@ func TestTranslate(t *testing.T) {
 		{
 			name:      "default-resources",
 			from:      "gateway-api",
-			to:        "xds",
+			to:        "gateway-api,xds",
 			expect:    true,
 			extraArgs: []string{"--add-missing-resources"},
 		},
@@ -200,11 +130,6 @@ func TestTranslate(t *testing.T) {
 			output:       yamlOutput,
 			resourceType: string(RouteEnvoyConfigType),
 			expect:       true,
-			filterFunc: func(in string) string {
-				// Need to filter out the fields we care about, otherwise the fields
-				// will changed when we update the gatewayapi library
-				return gatewayAPIFilter(in, yamlOutput)
-			},
 		},
 		{
 			name:         "echo-gateway-api",
@@ -213,9 +138,6 @@ func TestTranslate(t *testing.T) {
 			output:       jsonOutput,
 			resourceType: string(RouteEnvoyConfigType),
 			expect:       true,
-			filterFunc: func(in string) string {
-				return gatewayAPIFilter(in, jsonOutput)
-			},
 		},
 		{
 			name:         "echo-gateway-api",
@@ -224,7 +146,6 @@ func TestTranslate(t *testing.T) {
 			output:       yamlOutput,
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
-			filterFunc:   gatewayAPIWithXdsYamlFilter,
 		},
 		{
 			name: "echo-gateway-api",
@@ -234,7 +155,6 @@ func TestTranslate(t *testing.T) {
 			output:       yamlOutput,
 			resourceType: string(ClusterEnvoyConfigType),
 			expect:       true,
-			filterFunc:   gatewayAPIWithXdsYamlFilter,
 		},
 		{
 			name:         "multiple-xds",
@@ -244,13 +164,24 @@ func TestTranslate(t *testing.T) {
 			resourceType: string(RouteEnvoyConfigType),
 			expect:       true,
 		},
+		{
+			name:   "valid-envoyproxy",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			output: yamlOutput,
+			expect: true,
+		},
+		{
+			name:   "invalid-envoyproxy",
+			from:   "gateway-api",
+			to:     "gateway-api",
+			output: yamlOutput,
+			expect: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
-		if tc.filterFunc == nil {
-			tc.filterFunc = noopFilter
-		}
 
 		t.Run(tc.name, func(t *testing.T) {
 			b := bytes.NewBufferString("")
@@ -295,24 +226,32 @@ func TestTranslate(t *testing.T) {
 
 			out, err := io.ReadAll(b)
 			assert.NoError(t, err)
-
+			got := &TranslationResult{}
+			mustUnmarshal(t, out, got)
+			var fn string
 			if tc.output == jsonOutput {
-				fn := tc.name + "." + resourceType + ".json"
-				require.JSONEq(t, tc.filterFunc(requireTestDataOutFile(t, fn)),
-					tc.filterFunc(string(out)), "failure in "+fn)
+				fn = tc.name + "." + resourceType + ".json"
 			} else {
-				fn := tc.name + "." + resourceType + ".yaml"
-				require.YAMLEq(t, tc.filterFunc(requireTestDataOutFile(t, fn)),
-					tc.filterFunc(string(out)), "failure in "+fn)
+				fn = tc.name + "." + resourceType + ".yaml"
 			}
+
+			want := &TranslationResult{}
+			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
+			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+			require.Empty(t, cmp.Diff(want, got, opts))
+
 		})
 	}
 }
 
-func requireTestDataOutFile(t *testing.T, name ...string) string {
+func requireTestDataOutFile(t *testing.T, name ...string) []byte {
 	t.Helper()
 	elems := append([]string{"testdata", "translate", "out"}, name...)
 	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
-	return string(content)
+	return content
+}
+
+func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
+	require.NoError(t, yaml.UnmarshalStrict(val, out, yaml.DisallowUnknownFields))
 }

@@ -8,6 +8,7 @@
       resourceApiVersion: V3
   name: first-route
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -19,6 +20,7 @@
       resourceApiVersion: V3
   name: second-route
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -30,6 +32,7 @@
       resourceApiVersion: V3
   name: third-route
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   type: EDS
 - commonLbConfig:
     localityWeightedLbConfig: {}
@@ -49,6 +52,7 @@
       locality: {}
   name: ratelimit_cluster
   outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
   type: STRICT_DNS
   typedExtensionProtocolOptions:

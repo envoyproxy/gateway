@@ -391,12 +391,14 @@ dynamicRouteConfigs:
 resourceType: route
 ```
 
+### Add Missing Resources
+
 You can pass the `--add-missing-resources` flag to use dummy non Gateway API resources instead of specifying them explicitly.
 
-For example, this will provide the same result as the above:
+For example, this will provide the similar result as the above:
 
 ```shell
-cat <<EOF | egctl x translate --add-missing-resources --from gateway-api --to xds -t route -f -
+cat <<EOF | egctl x translate --add-missing-resources --from gateway-api --to gateway-api -t route -f -
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
 metadata:
@@ -415,25 +417,6 @@ spec:
     - name: http
       protocol: HTTP
       port: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend
-  namespace: default
-  labels:
-    app: backend
-    service: backend
-spec:
-  clusterIP: "1.1.1.1"
-  type: ClusterIP
-  ports:
-    - name: http
-      port: 3000
-      targetPort: 3000
-      protocol: TCP
-  selector:
-    app: backend
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -457,6 +440,175 @@ spec:
             type: PathPrefix
             value: /
 EOF
+```
+
+You can see the output contains a [EnvoyProxy](https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy) resource that
+can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
+
+```yaml
+envoyProxy:
+  metadata:
+    creationTimestamp: null
+    name: default-envoy-proxy
+    namespace: envoy-gateway-system
+  spec:
+    bootstrap: |
+      admin:
+        access_log:
+        - name: envoy.access_loggers.file
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/null
+        address:
+          socket_address:
+            address: 127.0.0.1
+            port_value: 19000
+      dynamic_resources:
+        ads_config:
+          api_type: DELTA_GRPC
+          transport_api_version: V3
+          grpc_services:
+          - envoy_grpc:
+              cluster_name: xds_cluster
+          set_node_on_first_message_only: true
+        lds_config:
+          ads: {}
+        cds_config:
+          ads: {}
+      static_resources:
+        clusters:
+        - connect_timeout: 10s
+          load_assignment:
+            cluster_name: xds_cluster
+            endpoints:
+            - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: envoy-gateway
+                      port_value: 18000
+          typed_extension_protocol_options:
+            "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
+               "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+               "explicit_http_config":
+                 "http2_protocol_options": {}
+          name: xds_cluster
+          type: STRICT_DNS
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+              common_tls_context:
+                tls_params:
+                  tls_maximum_protocol_version: TLSv1_3
+                tls_certificate_sds_secret_configs:
+                - name: xds_certificate
+                  sds_config:
+                    path_config_source:
+                      path: "/sds/xds-certificate.json"
+                    resource_api_version: V3
+                validation_context_sds_secret_config:
+                  name: xds_trusted_ca
+                  sds_config:
+                    path_config_source:
+                      path: "/sds/xds-trusted-ca.json"
+                    resource_api_version: V3
+      layered_runtime:
+        layers:
+        - name: runtime-0
+          rtds_layer:
+            rtds_config:
+              ads: {}
+            name: runtime-0
+    logging: {}
+  status: {}
+gatewayClass:
+  metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: config.gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: default-envoy-proxy
+      namespace: envoy-gateway-system
+  status:
+    conditions:
+    - lastTransitionTime: "2023-04-19T20:30:46Z"
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
+gateways:
+- metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: default
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-19T20:30:46Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-19T20:30:46Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+httpRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-04-19T20:30:46Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2023-04-19T20:30:46Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
 ```
 
 Sometimes you might find that egctl doesn't provide an expected result. For example, the following example provides an empty route resource:
@@ -503,21 +655,96 @@ EOF
 ```
 
 ```yaml
-'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
-configKey: envoy-gateway-system-eg
-resourceType: route
+xds:
+  envoy-gateway-system-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
 ```
+
+### Validating Gateway API Configuration
 
 You can add an additional target `gateway-api` to show the processed Gateway API resources. For example, translating the above resources with the new argument shows that the HTTPRoute is rejected because there is no ready listener for it:
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --type route --to gateway-api,xds -f -
-...
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: eg
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: tls
+      protocol: TLS
+      port: 8443
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: backend
+spec:
+  parentRefs:
+    - name: eg
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+EOF
 ```
 
 ```yaml
-...
-HTTPRoutes:
+gatewayClass:
+  metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  status:
+    conditions:
+    - lastTransitionTime: "2023-04-19T20:54:52Z"
+      message: Valid GatewayClass
+      reason: Accepted
+      status: "True"
+      type: Accepted
+gateways:
+- metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - name: tls
+      port: 8443
+      protocol: TLS
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: "2023-04-19T20:54:52Z"
+        message: Listener must have TLS set when protocol is TLS.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+httpRoutes:
 - metadata:
     creationTimestamp: null
     name: backend
@@ -539,24 +766,20 @@ HTTPRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-03-21T12:03:11Z"
+      - lastTransitionTime: "2023-04-19T20:54:52Z"
         message: There are no ready listeners for this parent ref
         reason: NoReadyListeners
         status: "False"
         type: Accepted
+      - lastTransitionTime: "2023-04-19T20:54:52Z"
+        message: Service envoy-gateway-system/backend not found
+        reason: BackendNotFound
+        status: "False"
+        type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg
-...
----
-'@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
-configKey: envoy-gateway-system-eg
-resourceType: route
-```
-
-You can also specify the `--to gateway-api` to output the processed resources only:
-
-```shell
-cat <<EOF | egctl x translate --from gateway-api --type route --to gateway-api -f -
-...
+xds:
+  envoy-gateway-system-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
 ```

@@ -8,8 +8,10 @@ package v1alpha1
 import (
 	// Register embed
 	_ "embed"
+	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -228,4 +230,92 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnvoyGatewayProvider(t *testing.T) {
+	envoyGateway := &EnvoyGateway{
+		TypeMeta:         metav1.TypeMeta{},
+		EnvoyGatewaySpec: EnvoyGatewaySpec{Provider: DefaultEnvoyGatewayProvider()},
+	}
+	assert.True(t, envoyGateway.Provider != nil)
+
+	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
+	assert.True(t, envoyGatewayProvider.Kubernetes == nil)
+	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
+
+	envoyGatewayProvider.Kubernetes = DefaultEnvoyGatewayKubeProvider()
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, DefaultKubernetesDeployment(DefaultRateLimitImage))
+
+	envoyGatewayProvider.Kubernetes = &EnvoyGatewayKubernetesProvider{}
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment == nil)
+
+	envoyGatewayProvider.Kubernetes = &EnvoyGatewayKubernetesProvider{RateLimitDeployment: &KubernetesDeploymentSpec{
+		Replicas:  nil,
+		Pod:       nil,
+		Container: nil,
+	}}
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas == nil)
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod == nil)
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container == nil)
+	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
+
+	envoyGatewayProvider.Kubernetes = &EnvoyGatewayKubernetesProvider{RateLimitDeployment: &KubernetesDeploymentSpec{
+		Replicas: nil,
+		Pod:      nil,
+		Container: &KubernetesContainerSpec{
+			Resources:       nil,
+			SecurityContext: nil,
+			Image:           nil,
+		},
+	}}
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources == nil)
+	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
+
+	assert.True(t, envoyGatewayProvider.Kubernetes != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes, envoyGatewayKubeProvider)
+
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, DefaultKubernetesDeployment(DefaultRateLimitImage))
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, DefaultKubernetesDeploymentReplicas())
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, DefaultKubernetesPod())
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, DefaultKubernetesContainer(DefaultRateLimitImage))
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, DefaultResourceRequirements())
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, DefaultKubernetesContainerImage(DefaultRateLimitImage))
+}
+
+func TestEnvoyProxyProvider(t *testing.T) {
+	envoyProxy := &EnvoyProxy{Spec: EnvoyProxySpec{Provider: DefaultEnvoyProxyProvider()}}
+	assert.True(t, envoyProxy.Spec.Provider != nil)
+
+	envoyProxyProvider := envoyProxy.GetEnvoyProxyProvider()
+	assert.True(t, envoyProxyProvider.Kubernetes == nil)
+	assert.True(t, reflect.DeepEqual(envoyProxy.Spec.Provider, envoyProxyProvider))
+
+	envoyProxyKubeProvider := envoyProxyProvider.GetEnvoyProxyKubeProvider()
+
+	assert.True(t, envoyProxyProvider.Kubernetes != nil)
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes, envoyProxyKubeProvider))
+
+	envoyProxyProvider.GetEnvoyProxyKubeProvider()
+
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment != nil)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, DefaultKubernetesDeployment(DefaultEnvoyProxyImage))
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas != nil)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, DefaultKubernetesDeploymentReplicas())
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod != nil)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, DefaultKubernetesPod())
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container != nil)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, DefaultKubernetesContainer(DefaultEnvoyProxyImage))
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources != nil)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, DefaultResourceRequirements())
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image != nil)
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, DefaultKubernetesContainerImage(DefaultEnvoyProxyImage))
+
+	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyService != nil)
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, GetKubernetesServiceType(ServiceTypeLoadBalancer)))
 }
