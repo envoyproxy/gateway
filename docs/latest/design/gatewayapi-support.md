@@ -18,7 +18,7 @@ When a [Gateway][] resource is created that references the managed GatewayClass,
 new Envoy Proxy deployment. Gateway API resources that reference this Gateway will configure this managed Envoy Proxy
 deployment.
 
-__Note:__ Envoy Gateway does not support multiple certificate references or specifying an [address][] for the Gateway.
+__Note:__ Envoy Gateway does not support multiple certificate references.
 
 ## HTTPRoute
 
@@ -99,7 +99,6 @@ these types of cross-namespace references. Envoy Gateway supports the following 
 [GatewayClass]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.GatewayClass
 [parameters reference]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParametersReference
 [Gateway]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway
-[address]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.GatewayAddress
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
 [Service]: https://kubernetes.io/docs/concepts/services-networking/service/
 [BackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.BackendRef
