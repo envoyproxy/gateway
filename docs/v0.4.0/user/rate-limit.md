@@ -120,61 +120,6 @@ EOF
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
-### (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
-
-* The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate
-limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
-like container `image`, `securityContext` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: envoy-gateway-config
-  namespace: envoy-gateway-system
-data:
-  envoy-gateway.yaml: |
-    apiVersion: config.gateway.envoyproxy.io/v1alpha1
-    kind: EnvoyGateway
-    provider:
-      type: Kubernetes
-      kubernetes:
-        rateLimitDeployment:
-          replicas: 1
-          container:
-            image: envoyproxy/ratelimit:v0.4
-            resources:
-              requests:
-                cpu: 100m
-                memory: 512Mi
-            securityContext:
-              runAsUser: 2000
-              allowPrivilegeEscalation: false
-          pod:
-            annotations:
-              key1: val1
-              key2: val2
-            securityContext:
-              runAsUser: 1000
-              runAsGroup: 3000
-              fsGroup: 2000
-              fsGroupChangePolicy: "OnRootMismatch"
-    gateway:
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    rateLimit:
-      backend:
-        type: Redis
-        redis:
-          url: redis.redis-system.svc.cluster.local:6379
-EOF
-```
-
-* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
-
-```shell
-kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
-```
 
 ## Rate limit specific user 
 
@@ -622,10 +567,65 @@ transfer-encoding: chunked
 
 ```
 
+### (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
 
-[Global rate limiting]: https://www.envoyproxy.io/docs/envoy/v0.4/intro/arch_overview/other_features/global_rate_limiting
-[RateLimitFilter]: https://gateway.envoyproxy.io/v0.4/api/extension_types.html#ratelimitfilter
+* The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate
+limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
+like container `image`, `securityContext` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: config.gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    provider:
+      type: Kubernetes
+      kubernetes:
+        rateLimitDeployment:
+          replicas: 1
+          container:
+            image: envoyproxy/ratelimit:master
+            resources:
+              requests:
+                cpu: 100m
+                memory: 512Mi
+            securityContext:
+              runAsUser: 2000
+              allowPrivilegeEscalation: false
+          pod:
+            annotations:
+              key1: val1
+              key2: val2
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 3000
+              fsGroup: 2000
+              fsGroupChangePolicy: "OnRootMismatch"
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: redis.redis-system.svc.cluster.local:6379
+EOF
+```
+
+* After updating the `ConfigMap`, you will need to restart the `envoy-gateway` deployment so the configuration kicks in
+
+```shell
+kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
+```
+
+[Global rate limiting]: https://www.envoyproxy.io/docs/envoy/v0.4.0/intro/arch_overview/other_features/global_rate_limiting
+[RateLimitFilter]: https://gateway.envoyproxy.io/v0.4.0/api/extension_types.html#ratelimitfilter
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: https://gateway.envoyproxy.io/v0.4/api/config_types.html#envoygateway
+[EnvoyGateway]: https://gateway.envoyproxy.io/v0.4.0/api/config_types.html#envoygateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter

@@ -13,28 +13,83 @@ metadata:
 spec:
   gatewayClassName: eg
   listeners:
+    - name: tcp
+      protocol: TCP
+      port: 1234
+    - name: udp
+      protocol: UDP
+      port: 1234
+    - name: tls-passthrough
+      protocol: TLS
+      port: 8443
+      hostname: foo.com
+      tls:
+        mode: Passthrough
     - name: http
       protocol: HTTP
       port: 80
+      allowedRoutes:
+        kinds:
+          - kind: HTTPRoute
+            group: gateway.networking.k8s.io
+    - name: grpc
+      protocol: HTTP
+      port: 8080
+      allowedRoutes:
+        kinds:
+          - kind: GRPCRoute
+            group: gateway.networking.k8s.io
 ---
-apiVersion: v1
-kind: Service
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
 metadata:
   name: backend
   namespace: default
-  labels:
-    app: backend
-    service: backend
 spec:
-  clusterIP: "127.0.0.1"
-  type: ClusterIP
-  ports:
-    - name: http
-      port: 8000
-      targetPort: 8000
-      protocol: TCP
-  selector:
-    app: backend
+  parentRefs:
+    - name: eg
+      sectionName: tcp
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: udp
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: tls-passthrough
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -50,10 +105,52 @@ spec:
     - backendRefs:
         - group: ""
           kind: Service
-          name: backend
+          name: providedBackend
           port: 8000
           weight: 1
       matches:
         - path:
             type: PathPrefix
             value: /
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+      sectionName: grpc
+  hostnames:
+    - "www.grpc-example.com"
+  rules:
+    - matches:
+        - method:
+            service: com.example.Things
+            method: DoThing
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: providedBackend
+          port: 9000
+          weight: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: providedBackend
+  namespace: default
+  labels:
+    app: backend
+    service: backend
+spec:
+  clusterIP: "127.0.0.1"
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+  selector:
+    app: backend

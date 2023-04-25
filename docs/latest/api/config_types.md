@@ -28,7 +28,10 @@ EnvoyGateway is the schema for the envoygateways API.
 | --- | --- |
 | `apiVersion` _string_ | `config.gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyGateway`
-| `EnvoyGatewaySpec` _[EnvoyGatewaySpec](#envoygatewayspec)_ | EnvoyGatewaySpec defines the desired state of EnvoyGateway. |
+| `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
+| `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
+| `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
+| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
 
 ## EnvoyGatewayFileProvider
@@ -63,6 +66,7 @@ _Appears in:_
 EnvoyGatewayProvider defines the desired configuration of a provider.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |
@@ -160,6 +164,7 @@ _Appears in:_
 Extension defines the configuration for registering an extension to the Envoy Gateway control plane.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |
@@ -210,7 +215,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](#secretobjectreference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
@@ -221,6 +226,7 @@ _Appears in:_
 Gateway defines the desired Gateway API configuration of Envoy Gateway.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |
@@ -362,6 +368,7 @@ _Appears in:_
 RateLimit defines the configuration associated with the Rate Limit Service used for Global Rate Limiting.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |

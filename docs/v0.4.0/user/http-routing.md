@@ -10,7 +10,7 @@ Services. To learn more about HTTP routing, refer to the [Gateway API documentat
 Install Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.4 -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.4.0 -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:
@@ -24,7 +24,7 @@ kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for
 Install the HTTP routing example resources:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.4/examples/kubernetes/http-routing.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/v0.4.0/examples/kubernetes/http-routing.yaml
 ```
 
 The manifest installs a [GatewayClass][], [Gateway][], four Deployments, four Services, and three HTTPRoute resources.

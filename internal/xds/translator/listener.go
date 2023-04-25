@@ -112,6 +112,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 				ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: routerAny},
 			},
 		},
+		NormalizePath:                &wrapperspb.BoolValue{Value: true},
+		MergeSlashes:                 true,
+		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
 	}
 
 	healthCheck := &health_check.HealthCheck{

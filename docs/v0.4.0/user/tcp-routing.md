@@ -9,7 +9,7 @@ HTTP routing, refer to the [Gateway API documentation][].
 Install Envoy Gateway:
 
 ```shell
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.4 -n envoy-gateway-system --create-namespace
+helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.4.0 -n envoy-gateway-system --create-namespace
 ```
 
 Wait for Envoy Gateway to become available:

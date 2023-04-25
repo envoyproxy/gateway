@@ -443,7 +443,10 @@
 															"upgradeType": "websocket"
 														}
 													],
-													"useRemoteAddress": true
+													"useRemoteAddress": true,
+													"normalizePath": true,
+													"mergeSlashes": true,
+													"pathWithEscapedSlashesAction": "UNESCAPE_AND_REDIRECT"
 												}
 											}
 										]
@@ -529,7 +532,10 @@
 														"routeConfigName": "default-eg-grpc"
 													},
 													"statPrefix": "http",
-													"useRemoteAddress": true
+													"useRemoteAddress": true,
+													"normalizePath": true,
+													"mergeSlashes": true,
+													"pathWithEscapedSlashesAction": "UNESCAPE_AND_REDIRECT"
 												}
 											}
 										]
