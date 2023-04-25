@@ -57,19 +57,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 
 			// check is cors enabled and type is Global
-			corsIsGlobal := false
-			for _, cors := range val.CorsFilters {
-				if cors.Spec.Type == "Global" {
-					corsIsGlobal = true
-				}
-			}
+			// corsIsGlobal := false
+			// for _, cors := range val.CorsFilters {
+			// 	if cors.Spec.Type == "Global" {
+			// 		corsIsGlobal = true
+			// 	}
+			// }
 
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
 				GatewayControllerName:  r.Server.EnvoyGateway.Gateway.ControllerName,
 				GatewayClassName:       v1beta1.ObjectName(update.Key),
 				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
-				GlobalCorsEnabled:      corsIsGlobal,
+				// GlobalCorsEnabled:      corsIsGlobal,
 			}
 
 			// If an extension is loaded, pass its supported groups/kinds to the translator

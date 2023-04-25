@@ -13,7 +13,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 
 	descpb "google.golang.org/protobuf/types/descriptorpb"
@@ -34,15 +33,15 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 
-	var corsGlobal *egv1a1.CorsPolicy
-	if t.GlobalCorsEnabled {
-		for _, corsFilter := range resources.CorsFilters {
-			if corsFilter.Spec.Type == egv1a1.GlobalCorsType {
-				corsGlobal = &corsFilter.Spec.CorsPolicy
-				break
-			}
-		}
-	}
+	// var corsGlobal *egv1a1.CorsPolicy
+	// if t.GlobalCorsEnabled {
+	// 	for _, corsFilter := range resources.CorsFilters {
+	// 		if corsFilter.Spec.Type == egv1a1.GlobalCorsType {
+	// 			corsGlobal = &corsFilter.Spec.CorsPolicy
+	// 			break
+	// 		}
+	// 	}
+	// }
 
 	for _, gateway := range gateways {
 		// init IR per gateway
@@ -117,31 +116,31 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
-				if t.GlobalCorsEnabled {
-					allowOrigins := make([]*ir.StringMatch, 0)
-					for _, allowOrigin := range corsGlobal.AllowOrigins {
-						switch {
-						case allowOrigin.Exact != nil:
-							m := &ir.StringMatch{Exact: allowOrigin.Exact}
-							allowOrigins = append(allowOrigins, m)
-						case allowOrigin.Prefix != nil:
-							m := &ir.StringMatch{Prefix: allowOrigin.Prefix}
-							allowOrigins = append(allowOrigins, m)
-						default:
-							return
-						}
+				// if t.GlobalCorsEnabled {
+				// 	allowOrigins := make([]*ir.StringMatch, 0)
+				// 	for _, allowOrigin := range corsGlobal.AllowOrigins {
+				// 		switch {
+				// 		case allowOrigin.Exact != nil:
+				// 			m := &ir.StringMatch{Exact: allowOrigin.Exact}
+				// 			allowOrigins = append(allowOrigins, m)
+				// 		case allowOrigin.Prefix != nil:
+				// 			m := &ir.StringMatch{Prefix: allowOrigin.Prefix}
+				// 			allowOrigins = append(allowOrigins, m)
+				// 		default:
+				// 			return
+				// 		}
 
-					}
+				// 	}
 
-					irListener.CorsPolicy = &ir.CorsPolicy{
-						AllowOrigins:     allowOrigins,
-						AllowCredentials: corsGlobal.AllowCredentials,
-						AllowHeaders:     corsGlobal.AllowHeaders,
-						AllowMethods:     corsGlobal.AllowMethods,
-						ExposeHeaders:    corsGlobal.ExposeHeaders,
-						MaxAge:           corsGlobal.MaxAge,
-					}
-				}
+				// 	irListener.CorsPolicy = &ir.CorsPolicy{
+				// 		AllowOrigins:     allowOrigins,
+				// 		AllowCredentials: corsGlobal.AllowCredentials,
+				// 		AllowHeaders:     corsGlobal.AllowHeaders,
+				// 		AllowMethods:     corsGlobal.AllowMethods,
+				// 		ExposeHeaders:    corsGlobal.ExposeHeaders,
+				// 		MaxAge:           corsGlobal.MaxAge,
+				// 	}
+				// }
 
 				if resources.GrpcJSONTranscoderFilters != nil {
 					for _, grpcJSONTranscoderFilter := range resources.GrpcJSONTranscoderFilters {
