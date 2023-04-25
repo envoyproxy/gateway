@@ -8,21 +8,21 @@ deployment:
     resources:
       limits:
         cpu: 500m
-        memory: 128Mi
+        memory: 512Mi
       requests:
-        cpu: 10m
-        memory: 64Mi
+        cpu: 500m
+        memory: 512Mi
   kubeRbacProxy:
     image:
       repository: gcr.io/kubebuilder/kube-rbac-proxy
       tag: v0.11.0
     resources:
       limits:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 50m
+        memory: 56Mi
       requests:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 50m
+        memory: 56Mi
   ports:
   - name: grpc
     port: 18000
