@@ -93,7 +93,8 @@ export GITHUB_REMOTE=origin
       notes should be an accumulation of the release candidate release notes and any changes since the release
       candidate.
    2. Create a release announcement. Refer to [PR #635] as an example release announcement.
-   3. Generate the versioned release docs:
+   3. Include the release in the compatibility matrix. Refer to [PR #1002] as an example.
+   4. Generate the versioned release docs:
 
    ``` shell
       make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}
@@ -192,4 +193,5 @@ It's important that the world knows about the release. Use the following steps t
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
 [PR #958]: https://github.com/envoyproxy/gateway/pull/958
+[PR #1002]: https://github.com/envoyproxy/gateway/pull/1002
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION
