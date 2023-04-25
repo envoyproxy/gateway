@@ -10,7 +10,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-	"sigs.k8s.io/yaml"
+
+	// "sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
@@ -83,10 +84,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate to IR
 			result := t.Translate(val)
 
-			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
-			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
-			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
+			// yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
+			// r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
+			// yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
+			// r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
 			var curKeys, newKeys []string
 			// Get current IR keys
