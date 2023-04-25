@@ -98,13 +98,34 @@ type RateLimitSelectCondition struct {
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
-	// SourceIP is the IP CIDR that represents the range of Source IP Addresses of the client.
-	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
-	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
-	// All IP Addresses within the specified SourceIP CIDR are treated as a single client selector and share the same rate limit bucket.
-	//
+	// Deprecated: Use SourceCIDR instead.
 	// +optional
 	SourceIP *string `json:"sourceIP,omitempty"`
+
+	// SourceCIDR is the client IP Address range to match on.
+	//
+	// +optional
+	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
+}
+
+type SourceMatchType string
+
+const (
+	// SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector
+	// and share the same rate limit bucket.
+	SourceMatchExact SourceMatchType = "Exact"
+	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
+	// and uses a separate rate limit bucket/counter.
+	SourceMatchDistinct SourceMatchType = "Distinct"
+)
+
+type SourceMatch struct {
+	Type *SourceMatchType `json:"type,omitempty"`
+
+	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
+	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
+	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
+	Value string `json:"address"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
