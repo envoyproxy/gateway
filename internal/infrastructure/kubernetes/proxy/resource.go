@@ -36,6 +36,7 @@ var (
 		`"private_key":{"filename":"%s"}}}]}`, XdsTLSCertFilename, XdsTLSKeyFilename)
 )
 
+// ExpectedResourceHashedName returns expected resource hashed name.
 func ExpectedResourceHashedName(name string) string {
 	hashedName := providerutils.GetHashedName(name)
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
@@ -48,12 +49,12 @@ func EnvoyAppLabel() map[string]string {
 	}
 }
 
-// EnvoyLabels returns the labels, including extraLbls, used for Envoy resources.
-func EnvoyLabels(extraLbls map[string]string) map[string]string {
-	lbls := EnvoyAppLabel()
-	for k, v := range extraLbls {
-		lbls[k] = v
+// envoyLabels returns the labels, including extraLabels, used for Envoy resources.
+func envoyLabels(extraLabels map[string]string) map[string]string {
+	labels := EnvoyAppLabel()
+	for k, v := range extraLabels {
+		labels[k] = v
 	}
 
-	return lbls
+	return labels
 }

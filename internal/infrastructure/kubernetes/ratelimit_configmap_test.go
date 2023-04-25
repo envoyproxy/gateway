@@ -51,7 +51,7 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 		Name:   rateLimitListener,
 		Config: rateLimitConfig,
 	})
-	rl := &egcfgv1a1.RateLimit{
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -59,7 +59,7 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 			},
 		},
 	}
-	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 
 	testCases := []struct {
 		name    string
@@ -135,7 +135,7 @@ func TestDeleteRateLimitConfigMap(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	rl := &egcfgv1a1.RateLimit{
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
@@ -178,12 +178,18 @@ func TestDeleteRateLimitConfigMap(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 
 			rateLimitInfra := new(ir.RateLimitInfra)
-			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, rl, cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment)
+			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, cfg.EnvoyGateway)
 
 			err := kube.createOrUpdateConfigMap(context.Background(), r)
 			require.NoError(t, err)
 
-			err = kube.deleteConfigMap(context.Background(), r)
+			cm := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      r.Name(),
+				},
+			}
+			err = kube.Client.Delete(context.Background(), cm)
 			require.NoError(t, err)
 		})
 	}

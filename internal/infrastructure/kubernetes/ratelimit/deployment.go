@@ -12,7 +12,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
 const (
@@ -39,14 +39,14 @@ const (
 )
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
-func (i *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(i.ratelimit, i.rateLimitDeployment)
+func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
+	containers := expectedRateLimitContainers(r.ratelimit, r.rateLimitDeployment)
 	labels := rateLimitLabels()
-	selector := utils.GetSelector(labels)
+	selector := resource.GetSelector(labels)
 
-	var annos map[string]string
-	if i.rateLimitDeployment.Pod.Annotations != nil {
-		annos = i.rateLimitDeployment.Pod.Annotations
+	var annotations map[string]string
+	if r.rateLimitDeployment.Pod.Annotations != nil {
+		annotations = r.rateLimitDeployment.Pod.Annotations
 	}
 
 	deployment := &appsv1.Deployment{
@@ -55,17 +55,17 @@ func (i *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: i.Namespace,
+			Namespace: r.Namespace,
 			Name:      InfraName,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: i.rateLimitDeployment.Replicas,
+			Replicas: r.rateLimitDeployment.Replicas,
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      selector.MatchLabels,
-					Annotations: annos,
+					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
@@ -75,7 +75,7 @@ func (i *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
-					SecurityContext:               i.rateLimitDeployment.Pod.SecurityContext,
+					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
 					Volumes: []corev1.Volume{
 						{
 							Name: InfraName,

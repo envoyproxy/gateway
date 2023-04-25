@@ -16,7 +16,7 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/utils"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -31,13 +31,13 @@ const (
 )
 
 type ResourceRender struct {
-	infra *ir.Infra
+	infra *ir.ProxyInfra
 
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 }
 
-func NewResourceRender(ns string, infra *ir.Infra) *ResourceRender {
+func NewResourceRender(ns string, infra *ir.ProxyInfra) *ResourceRender {
 	return &ResourceRender{
 		Namespace: ns,
 		infra:     infra,
@@ -45,13 +45,13 @@ func NewResourceRender(ns string, infra *ir.Infra) *ResourceRender {
 }
 
 func (r *ResourceRender) Name() string {
-	return ExpectedResourceHashedName(r.infra.Proxy.Name)
+	return ExpectedResourceHashedName(r.infra.Name)
 }
 
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -63,7 +63,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:      ExpectedResourceHashedName(r.infra.Name),
 			Labels:    labels,
 		},
 	}, nil
@@ -72,7 +72,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 // Service returns the expected Service based on the provided infra.
 func (r *ResourceRender) Service() (*corev1.Service, error) {
 	var ports []corev1.ServicePort
-	for _, listener := range r.infra.Proxy.Listeners {
+	for _, listener := range r.infra.Listeners {
 		for _, port := range listener.Ports {
 			target := intstr.IntOrString{IntVal: port.ContainerPort}
 			protocol := corev1.ProtocolTCP
@@ -90,24 +90,21 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the labels based on the owning gatewayclass name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
 	// Get annotations
 	var annotations map[string]string
-	provider := r.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	envoyServiceConfig := provider.GetEnvoyProxyKubeProvider().EnvoyService
 	if envoyServiceConfig.Annotations != nil {
 		annotations = envoyServiceConfig.Annotations
 	}
-
-	// Set the spec of gateway service
-	serviceSpec := utils.ExpectedServiceSpec(envoyServiceConfig.Type)
+	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig.Type)
 	serviceSpec.Ports = ports
-	serviceSpec.Selector = utils.GetSelector(labels).MatchLabels
-	serviceSpec.ExternalIPs = r.infra.Proxy.Addresses
+	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
@@ -116,7 +113,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:        ExpectedResourceHashedName(r.infra.Name),
 			Labels:      labels,
 			Annotations: annotations,
 		},
@@ -129,7 +126,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -141,7 +138,7 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:      ExpectedResourceHashedName(r.infra.Name),
 			Labels:    labels,
 		},
 		Data: map[string]string{
@@ -151,10 +148,10 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	}, nil
 }
 
-// ExpectedDeployment returns the expected Deployment based on the provided infra.
+// Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// Get the EnvoyProxy config to configure the deployment.
-	provider := r.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider()
+	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
@@ -167,12 +164,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Set the labels based on the owning gateway name.
-	labels := EnvoyLabels(r.infra.GetProxyInfra().GetProxyMetadata().Labels)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
-	selector := utils.GetSelector(labels)
+	selector := resource.GetSelector(labels)
 
 	// Get annotations
 	var annotations map[string]string
@@ -187,7 +184,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Proxy.Name),
+			Name:      ExpectedResourceHashedName(r.infra.Name),
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -200,7 +197,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
-					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Proxy.Name),
+					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
 					AutomountServiceAccountToken:  pointer.Bool(false),
 					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
@@ -221,7 +218,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: ExpectedResourceHashedName(r.infra.Proxy.Name),
+										Name: ExpectedResourceHashedName(r.infra.Name),
 									},
 									Items: []corev1.KeyToPath{
 										{
@@ -247,12 +244,12 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	return deployment, nil
 }
 
-func expectedProxyContainers(infra *ir.Infra, deploymentConfig *egcfgv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
+func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
 	// Iterate over listeners and ports to get container ports
-	for _, listener := range infra.Proxy.Listeners {
+	for _, listener := range infra.Listeners {
 		for _, p := range listener.Ports {
 			var protocol corev1.Protocol
 			switch p.Protocol {
@@ -275,9 +272,9 @@ func expectedProxyContainers(infra *ir.Infra, deploymentConfig *egcfgv1a1.Kubern
 	var bootstrapConfigurations string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
-	if infra.Proxy.Config != nil &&
-		infra.Proxy.Config.Spec.Bootstrap != nil {
-		bootstrapConfigurations = *infra.Proxy.Config.Spec.Bootstrap
+	if infra.Config != nil &&
+		infra.Config.Spec.Bootstrap != nil {
+		bootstrapConfigurations = *infra.Config.Spec.Bootstrap
 	} else {
 		var err error
 		// Use the default Bootstrap
@@ -296,7 +293,7 @@ func expectedProxyContainers(infra *ir.Infra, deploymentConfig *egcfgv1a1.Kubern
 				"envoy",
 			},
 			Args: []string{
-				fmt.Sprintf("--service-cluster %s", infra.Proxy.Name),
+				fmt.Sprintf("--service-cluster %s", infra.Name),
 				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 				fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 				"--log-level info",
