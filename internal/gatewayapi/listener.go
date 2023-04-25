@@ -146,7 +146,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				if resources.GrpcJSONTranscoderFilters != nil {
 					for _, grpcJSONTranscoderFilter := range resources.GrpcJSONTranscoderFilters {
 						// loop grpcJSONTranscoderFilter.Spec.Services for check
-
 						servicesValid := true
 						for _, service := range grpcJSONTranscoderFilter.Spec.Services {
 							protoDescBytes, err := base64.StdEncoding.DecodeString(grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin)
@@ -175,6 +174,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 							if !found {
 								servicesValid = false
+								break
 							}
 						}
 
