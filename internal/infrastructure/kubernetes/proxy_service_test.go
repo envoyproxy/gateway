@@ -33,7 +33,7 @@ func TestDeleteProxyService(t *testing.T) {
 
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
-			r := proxy.NewResourceRender(kube.Namespace, infra)
+			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
 			err := kube.createOrUpdateService(context.Background(), r)
 			require.NoError(t, err)
 
