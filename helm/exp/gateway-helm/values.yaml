@@ -19,15 +19,15 @@ deployment:
     resources:
       limits:
         cpu: 500m
-        memory: 128Mi
+        memory: 512Mi
       requests:
-        cpu: 5m
-        memory: 64Mi
+        cpu: 500m
+        memory: 512Mi
   ports:
   - name: grpc
     port: 18000
     targetPort: 18000
-  replicas: 1
+  replicas: 2
 rootNamespace: envoy-gateway-system
 config:
   envoyGateway:
