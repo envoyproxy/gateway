@@ -7,7 +7,7 @@ package kubernetes
 
 import (
 	"context"
-
+	
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -31,7 +31,7 @@ func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, curren
 			}
 		}
 	} else {
-		// Since the ServiceAccount does not have a specific Spec field to compare
+		// Since the client.Object does not have a specific Spec field to compare
 		// just perform an update for now.
 		if updateChecker() {
 			specific.SetResourceVersion(current.GetResourceVersion())
@@ -41,7 +41,7 @@ func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, curren
 			}
 		}
 	}
-
+	
 	return nil
 }
 
@@ -52,6 +52,6 @@ func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error 
 		}
 		return err
 	}
-
+	
 	return nil
 }
