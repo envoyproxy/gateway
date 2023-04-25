@@ -102,9 +102,12 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	if envoyServiceConfig.Annotations != nil {
 		annotations = envoyServiceConfig.Annotations
 	}
+
+	// Set the spec of gateway service
 	serviceSpec := utils.ExpectedServiceSpec(envoyServiceConfig.Type)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = utils.GetSelector(labels).MatchLabels
+	serviceSpec.ExternalIPs = r.infra.Proxy.Addresses
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{

@@ -6,9 +6,6 @@
 package gatewayapi
 
 import (
-	"net/netip"
-
-	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -24,19 +21,12 @@ func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap
 		irKey := irStringKey(gateway.Gateway)
 		gwInfraIR := infraIR[irKey]
 
-		ipAddr := sets.Set[string]{}
-
+		var ipAddr []string
 		for _, addr := range gateway.Spec.Addresses {
-			switch *addr.Type {
-			case v1beta1.IPAddressType:
-				if _, err := netip.ParseAddr(addr.Value); err == nil {
-					ipAddr.Insert(addr.Value)
-				}
+			if *addr.Type == v1beta1.IPAddressType {
+				ipAddr = append(ipAddr, addr.Value)
 			}
 		}
-
-		if ip := sets.List(ipAddr); len(ip) > 0 {
-			gwInfraIR.Proxy.Addresses = ip
-		}
+		gwInfraIR.Proxy.Addresses = ipAddr
 	}
 }
