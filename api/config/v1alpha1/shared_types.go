@@ -79,6 +79,11 @@ type KubernetesPodSpec struct {
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
 type KubernetesContainerSpec struct {
+	// List of environment variables to set in the container.
+	//
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+
 	// Resources required by this container.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	//

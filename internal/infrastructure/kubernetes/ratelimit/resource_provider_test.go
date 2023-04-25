@@ -8,6 +8,7 @@ package ratelimit
 import (
 	"fmt"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -220,6 +221,77 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "extension-env",
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "env_a",
+							Value: "env_a_value",
+						},
+						{
+							Name:  "env_b",
+							Value: "env_b_value",
+						},
+					},
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			caseName: "default-env",
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env:   nil,
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -251,6 +323,15 @@ func TestDeployment(t *testing.T) {
 
 			expected, err := loadDeployment(tc.caseName)
 			require.NoError(t, err)
+
+			sortEnv := func(env []corev1.EnvVar) {
+				sort.Slice(env, func(i, j int) bool {
+					return env[i].Name > env[j].Name
+				})
+			}
+
+			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
+			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
 
 			assert.Equal(t, expected, dp)
 		})
