@@ -68,6 +68,37 @@ export GITHUB_REMOTE=origin
 18. Ensure you check the "This is a pre-release" checkbox when editing the GitHub release.
 19. If you find any bugs in this process, please create an issue.
 
+### Setup cherry picker action
+
+After release branch cut, RM (Release Manager) should add job [cherrypick action](../../../.github/workflows/cherrypick.yaml) for target release.
+
+Configuration looks like following:
+
+```yaml
+  cherry_pick_release_v0_4:
+    runs-on: ubuntu-latest
+    name: Cherry pick into release-v0.4
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.4') && github.event.pull_request.merged == true }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Cherry pick into release/v0.4
+        uses: carloscastrojumo/github-cherry-pick-action@v1.0.9
+        with:
+          branch: release/v0.4
+          title: "[release/v0.4] {old_title}"
+          body: "Cherry picking #{old_pull_request_id} onto release/v0.4"
+          labels: |
+            cherrypick/release-v0.4
+          # put release manager here
+          reviewers: |
+            AliceProxy
+```
+
+Replace `v0.4` with real branch name, and `AliceProxy` with the real name of RM.
+
 ## Minor Release
 
 The following steps should be used for creating a minor release.
