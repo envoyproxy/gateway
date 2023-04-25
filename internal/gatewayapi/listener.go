@@ -6,13 +6,17 @@
 package gatewayapi
 
 import (
+	"encoding/base64"
 	"fmt"
 
+	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+
+	descpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -141,20 +145,54 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				if resources.GrpcJSONTranscoderFilters != nil {
 					for _, grpcJSONTranscoderFilter := range resources.GrpcJSONTranscoderFilters {
-						grpcJSONTranscoderFilterAdd := &ir.GrpcJSONTranscoderFilter{
-							ProtoDescriptorBin: grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin,
-							Services:           grpcJSONTranscoderFilter.Spec.Services,
-							AutoMapping:        grpcJSONTranscoderFilter.Spec.AutoMapping,
-							PrintOptions: &ir.PrintOptions{
-								AddWhitespace:              grpcJSONTranscoderFilter.Spec.PrintOptions.AddWhitespace,
-								AlwaysPrintPrimitiveFields: grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintPrimitiveFields,
-								AlwaysPrintEnumsAsInts:     grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintEnumsAsInts,
-								PreserveProtoFieldNames:    grpcJSONTranscoderFilter.Spec.PrintOptions.PreserveProtoFieldNames,
-							},
-						}
-						irListener.GrpcJSONTranscoderFilters = append(irListener.GrpcJSONTranscoderFilters, grpcJSONTranscoderFilterAdd)
-					}
+						// loop grpcJSONTranscoderFilter.Spec.Services for check
 
+						servicesValid := true
+						for _, service := range grpcJSONTranscoderFilter.Spec.Services {
+							protoDescBytes, err := base64.StdEncoding.DecodeString(grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin)
+							if err != nil {
+								continue
+							}
+
+							serviceName := service
+
+							// Parse the ProtoDescriptorBin bytes
+							fdSet := &descpb.FileDescriptorSet{}
+							if err := proto.Unmarshal(protoDescBytes, fdSet); err != nil {
+								continue
+							}
+
+							// Loop through the parsed services and compare their names to the expected service name
+							found := false
+							for _, fd := range fdSet.GetFile() {
+								for _, svc := range fd.GetService() {
+									if serviceName == fmt.Sprintf("%s.%s", fd.GetPackage(), svc.GetName()) {
+										found = true
+										break
+									}
+								}
+							}
+
+							if !found {
+								servicesValid = false
+							}
+						}
+
+						if !servicesValid {
+							grpcJSONTranscoderFilterAdd := &ir.GrpcJSONTranscoderFilter{
+								ProtoDescriptorBin: grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin,
+								Services:           grpcJSONTranscoderFilter.Spec.Services,
+								AutoMapping:        grpcJSONTranscoderFilter.Spec.AutoMapping,
+								PrintOptions: &ir.PrintOptions{
+									AddWhitespace:              grpcJSONTranscoderFilter.Spec.PrintOptions.AddWhitespace,
+									AlwaysPrintPrimitiveFields: grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintPrimitiveFields,
+									AlwaysPrintEnumsAsInts:     grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintEnumsAsInts,
+									PreserveProtoFieldNames:    grpcJSONTranscoderFilter.Spec.PrintOptions.PreserveProtoFieldNames,
+								},
+							}
+							irListener.GrpcJSONTranscoderFilters = append(irListener.GrpcJSONTranscoderFilters, grpcJSONTranscoderFilterAdd)
+						}
+					}
 				}
 
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
