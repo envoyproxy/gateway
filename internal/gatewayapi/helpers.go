@@ -253,6 +253,7 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 		return errors.New("filter is nil")
 	case filter.Type == v1alpha2.GRPCRouteFilterRequestMirror ||
 		filter.Type == v1alpha2.GRPCRouteFilterRequestHeaderModifier ||
+		IsCorsCustomGRPCFilter(filter) ||
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
@@ -264,6 +265,14 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 				filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {
 				return nil
 			}
+		}
+		switch {
+		case filter.ExtensionRef == nil:
+			return errors.New("extensionRef field must be specified for an extended filter")
+		case string(filter.ExtensionRef.Group) != egv1a1.GroupVersion.Group:
+			return fmt.Errorf("invalid group; must be %s", egv1a1.GroupVersion.Group)
+		case string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter:
+			return nil
 		}
 		return fmt.Errorf("unknown kind %s/%s", string(filter.ExtensionRef.Group), string(filter.ExtensionRef.Kind))
 	default:

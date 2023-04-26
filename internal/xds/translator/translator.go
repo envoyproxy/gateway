@@ -14,6 +14,7 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/tetratelabs/multierror"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
@@ -99,6 +100,22 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
 				Name: httpListener.Name,
+				// response_headers_to_add:
+				// 	- append: false
+				// 		header:
+				// 		key: x-request-id
+				// 		value: "%REQ(X-REQUEST-ID)%"
+				ResponseHeadersToAdd: []*corev3.HeaderValueOption{
+					{
+						Header: &corev3.HeaderValue{
+							Key:   "x-request-id",
+							Value: "%REQ(X-REQUEST-ID)%",
+						},
+						Append: &wrappers.BoolValue{
+							Value: false,
+						},
+					},
+				},
 			}
 			tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg)
 		}
