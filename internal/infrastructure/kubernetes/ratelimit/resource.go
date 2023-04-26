@@ -104,7 +104,10 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		// extension env provides current env, remove from default env mapping
 		if defaultEnvMapping[envVar.Name] != "" {
 			delete(defaultEnvMapping, envVar.Name)
-		} else {
+		}
+
+		// override env except REDIS_URL
+		if envVar.Name != RedisURLEnvVar {
 			env = append(env, envVar)
 		}
 	}
