@@ -48,6 +48,7 @@ type TranslatorManager interface {
 
 	RoutesTranslator
 	ListenersTranslator
+	AddressesTranslator
 	FiltersTranslator
 }
 
@@ -128,6 +129,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
+
+	// Process all Addresses for all relevant Gateways.
+	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)
