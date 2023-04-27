@@ -22,10 +22,6 @@ spec:
         - command:
             - /bin/ratelimit
           env:
-            - name: env_a
-              value: env_a_value
-            - name: env_b
-              value: env_b_value
             - name: REDIS_SOCKET_TYPE
               value: tcp
             - name: REDIS_URL
@@ -42,6 +38,10 @@ spec:
               value: info
             - name: USE_STATSD
               value: "false"
+            - name: env_a
+              value: env_a_value
+            - name: env_b
+              value: env_b_value
           image: custom-image
           imagePullPolicy: IfNotPresent
           name: envoy-ratelimit

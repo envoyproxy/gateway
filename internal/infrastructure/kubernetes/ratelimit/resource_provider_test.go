@@ -8,7 +8,6 @@ package ratelimit
 import (
 	"fmt"
 	"os"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -359,15 +358,6 @@ func TestDeployment(t *testing.T) {
 
 			expected, err := loadDeployment(tc.caseName)
 			require.NoError(t, err)
-
-			sortEnv := func(env []corev1.EnvVar) {
-				sort.Slice(env, func(i, j int) bool {
-					return env[i].Name > env[j].Name
-				})
-			}
-
-			sortEnv(dp.Spec.Template.Spec.Containers[0].Env)
-			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
 
 			assert.Equal(t, expected, dp)
 		})

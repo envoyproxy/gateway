@@ -88,37 +88,56 @@ func expectedRateLimitContainers(ratelimit *egcfgv1a1.RateLimit, rateLimitDeploy
 
 // expectedRateLimitContainerEnv returns expected ratelimit container envs.
 func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
-	env := []corev1.EnvVar{}
+	env := []corev1.EnvVar{
+		{
+			Name:  RedisSocketTypeEnvVar,
+			Value: "tcp",
+		},
+		{
+			Name:  RedisURLEnvVar,
+			Value: ratelimit.Backend.Redis.URL,
+		},
+		{
+			Name:  RuntimeRootEnvVar,
+			Value: "/data",
+		},
+		{
+			Name:  RuntimeSubdirectoryEnvVar,
+			Value: "ratelimit",
+		},
+		{
+			Name:  RuntimeIgnoreDotfilesEnvVar,
+			Value: "true",
+		},
+		{
+			Name:  RuntimeWatchRootEnvVar,
+			Value: "false",
+		},
+		{
+			Name:  LogLevelEnvVar,
+			Value: "info",
+		},
+		{
+			Name:  UseStatsdEnvVar,
+			Value: "false",
+		},
+	}
 
-	defaultEnvMapping := map[string]string{
-		RedisSocketTypeEnvVar:       "tcp",
-		RuntimeRootEnvVar:           "/data",
-		RuntimeSubdirectoryEnvVar:   "ratelimit",
-		RuntimeIgnoreDotfilesEnvVar: "true",
-		RuntimeWatchRootEnvVar:      "false",
-		LogLevelEnvVar:              "info",
-		UseStatsdEnvVar:             "false",
+	findReplaceFunc := func(envVar corev1.EnvVar) bool {
+		for index, e := range env {
+			if e.Name == envVar.Name {
+				env[index] = envVar
+				return true
+			}
+		}
+		return false
 	}
 
 	for _, envVar := range rateLimitDeployment.Container.Env {
-		// extension env provides current env, remove from default env mapping
-		if defaultEnvMapping[envVar.Name] != "" {
-			delete(defaultEnvMapping, envVar.Name)
-		}
-
-		// override env except REDIS_URL
-		if envVar.Name != RedisURLEnvVar {
+		if !findReplaceFunc(envVar) {
 			env = append(env, envVar)
 		}
 	}
 
-	// append default env that extension env does not provide.
-	for key, value := range defaultEnvMapping {
-		env = append(env, corev1.EnvVar{Name: key, Value: value})
-	}
-
-	return append(env, corev1.EnvVar{
-		Name:  RedisURLEnvVar,
-		Value: ratelimit.Backend.Redis.URL,
-	})
+	return env
 }

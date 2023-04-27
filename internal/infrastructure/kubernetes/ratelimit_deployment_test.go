@@ -7,12 +7,10 @@ package kubernetes
 
 import (
 	"context"
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -91,13 +89,6 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 
-			sortEnv := func(env []corev1.EnvVar) {
-				sort.Slice(env, func(i, j int) bool {
-					return env[i].Name > env[j].Name
-				})
-			}
-			sortEnv(tc.want.Spec.Template.Spec.Containers[0].Env)
-			sortEnv(actual.Spec.Template.Spec.Containers[0].Env)
 			require.Equal(t, tc.want.Spec, actual.Spec)
 		})
 	}
