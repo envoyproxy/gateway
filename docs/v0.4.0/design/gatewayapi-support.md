@@ -18,7 +18,7 @@ When a [Gateway][] resource is created that references the managed GatewayClass,
 new Envoy Proxy deployment. Gateway API resources that reference this Gateway will configure this managed Envoy Proxy
 deployment.
 
-__Note:__ Envoy Gateway does not support multiple certificate references or specifying an [address][] for the Gateway.
+__Note:__ Envoy Gateway does not support specifying an [address][] for the Gateway.
 
 ## HTTPRoute
 
