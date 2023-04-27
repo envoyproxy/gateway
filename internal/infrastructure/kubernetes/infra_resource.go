@@ -9,6 +9,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 		Name:      sa.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, sa, func() bool {
+	return i.Client.CreateOrUpdate(ctx, key, current, sa, func() bool {
 		return true
 	})
 }
@@ -48,7 +49,7 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 		Name:      cm.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, cm, func() bool {
+	return i.Client.CreateOrUpdate(ctx, key, current, cm, func() bool {
 		return !reflect.DeepEqual(cm.Data, current.Data)
 	})
 }
@@ -67,7 +68,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		Name:      deployment.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, deployment, func() bool {
+	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
 		return !reflect.DeepEqual(deployment.Spec, current.Spec)
 	})
 }
@@ -86,8 +87,8 @@ func (i *Infra) createOrUpdateService(ctx context.Context, r ResourceRender) err
 		Name:      svc.Name,
 	}
 
-	return i.Client.Create(ctx, key, current, svc, func() bool {
-		return !reflect.DeepEqual(svc.Spec, current.Spec)
+	return i.Client.CreateOrUpdate(ctx, key, current, svc, func() bool {
+		return !resource.CompareSvc(svc, current)
 	})
 }
 

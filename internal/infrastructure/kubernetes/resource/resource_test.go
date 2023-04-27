@@ -8,6 +8,9 @@ package resource
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -73,6 +76,150 @@ func TestGetSelector(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			got := GetSelector(tc.in)
 			require.Equal(t, tc.expected, got.MatchLabels)
+		})
+	}
+}
+
+func TestCompareSvc(t *testing.T) {
+	cases := []struct {
+		ExpectRet   bool
+		NewSvc      *corev1.Service
+		OriginalSvc *corev1.Service
+	}{
+		{
+			// Only Spec.Ports[*].NodePort and ClusterType is different
+			ExpectRet: true,
+			NewSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							NodePort:   30000,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "NodePort",
+				},
+			},
+			OriginalSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							NodePort:   30001,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+		}, {
+			// Only Spec.Ports[*].Port is different
+			ExpectRet: false,
+			NewSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+			OriginalSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       90,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+		},
+		{
+			// only Spec.ClusterIP is different, NewSvc's ClusterIP is nil build by ResourceRender
+			ExpectRet: true,
+			NewSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+			OriginalSvc: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "my-service",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					ClusterIP: "192.168.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "http",
+							Port:       80,
+							TargetPort: intstr.FromInt(8080),
+						},
+					},
+					Selector: map[string]string{
+						"app": "my-app",
+					},
+					Type: "ClusterIP",
+				},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			assert.Equal(t, tc.ExpectRet, CompareSvc(tc.NewSvc, tc.OriginalSvc), "expectedCompareSvcReturn(%v)", tc.ExpectRet)
 		})
 	}
 }

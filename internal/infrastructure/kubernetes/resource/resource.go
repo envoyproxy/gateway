@@ -6,10 +6,11 @@
 package resource
 
 import (
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 // GetSelector returns a label selector used to select resources
@@ -30,4 +31,10 @@ func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec 
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 	}
 	return serviceSpec
+}
+
+// CompareSvc Only compare the selector and ports(not include nodePort) in case user have modified for some scene.
+func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
+	return cmp.Equal(currentSvc.Spec.Selector, originalSvc.Spec.Selector) &&
+		cmp.Equal(currentSvc.Spec.Ports, originalSvc.Spec.Ports, cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"))
 }
