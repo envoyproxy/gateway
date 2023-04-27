@@ -45,6 +45,7 @@ contributing to the project.
 - Extending Envoy Gateway control plane [Issue #20][20]
 - Helm based installation for Envoy Gateway [Issue #650][650]
 - Customizing managed Envoy Proxy Kubernetes resource fields [Issue #648][648] 
+- Configuring xDS Bootstrap [Issue #31][31]
 
 ### [v0.5.0][v0.5.0]: Observability and Scale
 
@@ -68,6 +69,7 @@ contributing to the project.
 [17]: https://github.com/envoyproxy/gateway/issues/17
 [20]: https://github.com/envoyproxy/gateway/issues/20
 [24]: https://github.com/envoyproxy/gateway/issues/24
+[31]: https://github.com/envoyproxy/gateway/issues/31
 [60]: https://github.com/envoyproxy/gateway/issues/60
 [63]: https://github.com/envoyproxy/gateway/issues/63
 [64]: https://github.com/envoyproxy/gateway/issues/64
