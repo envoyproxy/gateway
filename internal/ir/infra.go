@@ -36,6 +36,9 @@ type ProxyInfra struct {
 	Config *v1alpha1.EnvoyProxy
 	// Listeners define the listeners exposed by the proxy infrastructure.
 	Listeners []ProxyListener
+	// Addresses contain the external addresses this gateway has been
+	// requested to be available at.
+	Addresses []string
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.

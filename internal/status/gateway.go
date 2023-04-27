@@ -50,6 +50,8 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 			}
 		}
 
+		addresses = append(addresses, svc.Spec.ExternalIPs...)
+
 		var gwAddresses []gwapiv1b1.GatewayAddress
 		for i := range addresses {
 			addr := gwapiv1b1.GatewayAddress{
