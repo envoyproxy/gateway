@@ -68,7 +68,6 @@ contributing to the project.
 [17]: https://github.com/envoyproxy/gateway/issues/17
 [20]: https://github.com/envoyproxy/gateway/issues/20
 [24]: https://github.com/envoyproxy/gateway/issues/24
-[31]: https://github.com/envoyproxy/gateway/issues/31
 [60]: https://github.com/envoyproxy/gateway/issues/60
 [63]: https://github.com/envoyproxy/gateway/issues/63
 [64]: https://github.com/envoyproxy/gateway/issues/64
