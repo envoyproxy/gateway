@@ -88,6 +88,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+
 			require.Equal(t, tc.want.Spec, actual.Spec)
 		})
 	}
