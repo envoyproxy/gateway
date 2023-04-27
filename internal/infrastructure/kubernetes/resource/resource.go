@@ -6,11 +6,12 @@
 package resource
 
 import (
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 // GetSelector returns a label selector used to select resources
