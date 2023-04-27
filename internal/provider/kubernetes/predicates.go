@@ -282,7 +282,7 @@ func (r gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[
 	gatewayKey := types.NamespacedName{Namespace: gwNamespace, Name: gwName}
 	gtw := new(gwapiv1b1.Gateway)
 	if err := r.client.Get(ctx, gatewayKey, gtw); err != nil {
-		r.log.Error(err, "gateway not found")
+		r.log.Info("gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
 		return nil
 	}
 
