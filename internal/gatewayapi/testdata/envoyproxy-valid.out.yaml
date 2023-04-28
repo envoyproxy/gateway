@@ -64,6 +64,11 @@ infraIR:
               envoyDeployment:
                 replicas: 2
                 container:
+                  env:
+                  - name: env_a
+                    value: env_a_value
+                  - name: env_b
+                    value: env_b_name
                   image: "envoyproxy/gateway:v0.4.0"
                   resources:
                     requests:

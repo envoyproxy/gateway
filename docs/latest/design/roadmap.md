@@ -22,7 +22,7 @@ Roadmap features and timelines may change based on feedback, community contribut
 roadmap item, you're encouraged to attend a community meeting to discuss the details, or help us deliver the feature by
 contributing to the project.
 
-`Last Updated: November 2022`
+`Last Updated: April 2023`
 
 ### [v0.2.0][v0.2.0]: Establish a Solid Foundation
 
@@ -44,12 +44,13 @@ contributing to the project.
 
 - Allow users to configure xDS Resources [Issue #24][24].
 
-### [v0.5.0][v0.5.0]: Manageability and Scale
+### [v0.5.0][v0.5.0]: Observability and Scale
 
-- Tooling for devs/infra admins to aid in managing/maintaining EG
-- Support advanced provisioning use cases (e.g. multi-cluster, serverless, etc.)
-- Perf testing (EG specifically)
-- Support for Chaos engineering?
+- Observability for control plane and data plane [Issue #701][701]. 
+- Allow users to configure xDS Resources [Issue #24][24].
+- Support OIDC based authentication [Issue #881][881].
+- Add Support for WAF [Issue #671][671].
+- Endpoint Slice support [Issue #1256][1256].
 
 [issue]: https://github.com/envoyproxy/gateway/issues
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
@@ -70,5 +71,8 @@ contributing to the project.
 [642]: https://github.com/envoyproxy/gateway/issues/642
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
+[671]: https://github.com/envoyproxy/gateway/issues/671
 [675]: https://github.com/envoyproxy/gateway/issues/675
 [707]: https://github.com/envoyproxy/gateway/issues/707
+[881]: https://github.com/envoyproxy/gateway/issues/881
+[1256]: https://github.com/envoyproxy/gateway/issues/1256

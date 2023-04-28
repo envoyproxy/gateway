@@ -220,6 +220,113 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "extension-env",
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "env_a",
+							Value: "env_a_value",
+						},
+						{
+							Name:  "env_b",
+							Value: "env_b_value",
+						},
+					},
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			caseName: "default-env",
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env:   nil,
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			caseName: "override-env",
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  UseStatsdEnvVar,
+							Value: "true",
+						},
+					},
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
