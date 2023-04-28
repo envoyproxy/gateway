@@ -34,8 +34,9 @@ func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec 
 	return serviceSpec
 }
 
-// CompareSvc Only compare the selector and ports(not include nodePort) in case user have modified for some scene.
+// CompareSvc Only compare the type, selector and ports(not include nodePort) in case user have modified for some scene.
 func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
-	return cmp.Equal(currentSvc.Spec.Selector, originalSvc.Spec.Selector) &&
+	return cmp.Equal(currentSvc.Spec.Type, originalSvc.Spec.Type) &&
+		cmp.Equal(currentSvc.Spec.Selector, originalSvc.Spec.Selector) &&
 		cmp.Equal(currentSvc.Spec.Ports, originalSvc.Spec.Ports, cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"))
 }

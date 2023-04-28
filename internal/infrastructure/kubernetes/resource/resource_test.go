@@ -126,7 +126,7 @@ func TestCompareSvc(t *testing.T) {
 					Selector: map[string]string{
 						"app": "my-app",
 					},
-					Type: "ClusterIP",
+					Type: "NodePort",
 				},
 			},
 		}, {
