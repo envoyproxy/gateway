@@ -45,7 +45,9 @@ func GetServiceURL(namespace string) string {
 // rateLimitLabels returns the labels used for all envoy rate limit resources.
 func rateLimitLabels() map[string]string {
 	return map[string]string{
-		"app.gateway.envoyproxy.io/name": InfraName,
+		"app.kubernetes.io/name":       InfraName,
+		"app.kubernetes.io/component":  "ratelimit",
+		"app.kubernetes.io/managed-by": "envoy-gateway",
 	}
 }
 

@@ -2,7 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.gateway.envoyproxy.io/name: envoy
+    app.kubernetes.io/name: envoy
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: envoy-default-64656661
@@ -11,13 +13,17 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app.gateway.envoyproxy.io/name: envoy
+      app.kubernetes.io/name: envoy
+      app.kubernetes.io/component: proxy
+      app.kubernetes.io/managed-by: envoy-gateway
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
   template:
     metadata:
       labels:
-        app.gateway.envoyproxy.io/name: envoy
+        app.kubernetes.io/name: envoy
+        app.kubernetes.io/component: proxy
+        app.kubernetes.io/managed-by: envoy-gateway
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
       annotations:

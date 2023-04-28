@@ -45,7 +45,9 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					Namespace: cfg.Namespace,
 					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name":       "envoy",
+						"app.kubernetes.io/name":               "envoy",
+						"app.kubernetes.io/component":          "proxy",
+						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
@@ -63,7 +65,9 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					Namespace: cfg.Namespace,
 					Name:      "envoy-test",
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name":       "envoy",
+						"app.kubernetes.io/name":               "envoy",
+						"app.kubernetes.io/component":          "proxy",
+						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "test",
 					},
@@ -75,7 +79,9 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 					Namespace: cfg.Namespace,
 					Name:      "envoy-test-74657374",
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name":       "envoy",
+						"app.kubernetes.io/name":               "envoy",
+						"app.kubernetes.io/component":          "proxy",
+						"app.kubernetes.io/managed-by":         "envoy-gateway",
 						gatewayapi.OwningGatewayNamespaceLabel: "default",
 						gatewayapi.OwningGatewayNameLabel:      "test",
 					},

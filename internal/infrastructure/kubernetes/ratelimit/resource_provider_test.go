@@ -49,7 +49,9 @@ func TestRateLimitLabels(t *testing.T) {
 		{
 			name: "ratelimit-labels",
 			expected: map[string]string{
-				"app.gateway.envoyproxy.io/name": InfraName,
+				"app.kubernetes.io/name":       InfraName,
+				"app.kubernetes.io/component":  "ratelimit",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
 			},
 		},
 	}

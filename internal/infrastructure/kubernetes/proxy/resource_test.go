@@ -21,8 +21,10 @@ func TestEnvoyPodSelector(t *testing.T) {
 			name: "default",
 			in:   map[string]string{"foo": "bar"},
 			expected: map[string]string{
-				"foo":                            "bar",
-				"app.gateway.envoyproxy.io/name": "envoy",
+				"foo":                          "bar",
+				"app.kubernetes.io/name":       "envoy",
+				"app.kubernetes.io/component":  "proxy",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
 			},
 		},
 	}
