@@ -8,9 +8,9 @@ package runner
 import (
 	"context"
 
-	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/yaml"
 
 	// "sigs.k8s.io/yaml"
 
