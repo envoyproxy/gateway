@@ -56,14 +56,29 @@ func TestGetSelector(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			name: "default",
+			name: "proxy",
 			in: map[string]string{
-				"foo":                            "bar",
-				"app.gateway.envoyproxy.io/name": "envoy",
+				"app.kubernetes.io/name":       "envoy",
+				"app.kubernetes.io/component":  "proxy",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
 			},
 			expected: map[string]string{
-				"foo":                            "bar",
-				"app.gateway.envoyproxy.io/name": "envoy",
+				"app.kubernetes.io/name":       "envoy",
+				"app.kubernetes.io/component":  "proxy",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
+			},
+		},
+		{
+			name: "ratelimit",
+			in: map[string]string{
+				"app.kubernetes.io/name":       "envoy-ratelimit",
+				"app.kubernetes.io/component":  "ratelimit",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
+			},
+			expected: map[string]string{
+				"app.kubernetes.io/name":       "envoy-ratelimit",
+				"app.kubernetes.io/component":  "ratelimit",
+				"app.kubernetes.io/managed-by": "envoy-gateway",
 			},
 		},
 	}
