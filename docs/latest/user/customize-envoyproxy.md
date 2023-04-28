@@ -131,6 +131,33 @@ spec:
 EOF
 ```
 
+## Customize EnvoyProxy Deployment Env
+
+You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like: 
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          env:
+          - name: env_a
+            value: env_a_value
+          - name: env_b
+            value: env_b_value
+EOF
+```
+
+> Envoy Gateway has provided two initial `env` `ENVOY_GATEWAY_NAMESPACE` and `ENVOY_POD_NAME` for envoyproxy container.
+
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
 
 ## Customize EnvoyProxy Service Annotations
