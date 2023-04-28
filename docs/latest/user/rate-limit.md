@@ -573,16 +573,6 @@ transfer-encoding: chunked
 limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
 like container `image`, `securityContext`, `env` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
 
-* The default [EnvoyGateway][] configuration and provides some initial `env` settings. 
-rate limit `env` setting reference https://github.com/envoyproxy/ratelimit/blob/main/src/settings/settings.go
-  * `REDIS_SOCKET_TYPE` set to `tcp`
-  * `RUNTIME_ROOT` set to `/data`
-  * `RUNTIME_SUBDIRECTORY` set to `ratelimit`
-  * `RUNTIME_IGNOREDOTFILES` set to `true`
-  * `RUNTIME_WATCH_ROOT` set to `false`
-  * `LOG_LEVEL` set to `false`
-  * `USE_STATSD` set to `false`
-
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -602,22 +592,8 @@ data:
           container:
             image: envoyproxy/ratelimit:master
             env:
-            - name: REDIS_SOCKET_TYPE
-              value: tcp
-            - name: REDIS_URL
-              value: redis.redis.svc:6379
-            - name: RUNTIME_ROOT
-              value: /data
-            - name: RUNTIME_SUBDIRECTORY
-              value: ratelimit
-            - name: RUNTIME_IGNOREDOTFILES
-              value: "true"
-            - name: RUNTIME_WATCH_ROOT
-              value: "false"
-            - name: LOG_LEVEL
-              value: info
-            - name: USE_STATSD
-              value: "false"
+            - name: CACHE_KEY_PREFIX
+              value: "eg:rl:"
             resources:
               requests:
                 cpu: 100m
