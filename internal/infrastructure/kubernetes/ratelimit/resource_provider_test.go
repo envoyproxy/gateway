@@ -375,6 +375,6 @@ func loadDeployment(caseName string) (*appsv1.Deployment, error) {
 }
 
 func TestGetServiceURL(t *testing.T) {
-	got := GetServiceURL("envoy-gateway-system")
-	assert.Equal(t, "grpc://envoy-ratelimit.envoy-gateway-system.svc.cluster.local:8081", got)
+	got := GetServiceURL("envoy-gateway-system", "example-cluster.local")
+	assert.Equal(t, "grpc://envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local:8081", got)
 }

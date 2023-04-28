@@ -138,7 +138,7 @@ func TestTranslateXds(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system"),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
 
@@ -244,7 +244,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "extension-xds-ir", tc.name+".yaml")
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system"),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
 			ext := v1alpha1.Extension{
