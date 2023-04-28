@@ -15,7 +15,7 @@ import (
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretData(secret *corev1.Secret) error {
+func validateTLSSecretData(secret *corev1.Secret, domain string) error {
 	certData := secret.Data[corev1.TLSCertKey]
 
 	certBlock, _ := pem.Decode(certData)
@@ -23,7 +23,7 @@ func validateTLSSecretData(secret *corev1.Secret) error {
 		return fmt.Errorf("unable to decode pem data in %s", corev1.TLSCertKey)
 	}
 
-	_, err := x509.ParseCertificate(certBlock.Bytes)
+	cert, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
 		return fmt.Errorf("unable to parse certificate in %s: %w", corev1.TLSCertKey, err)
 	}
@@ -33,6 +33,13 @@ func validateTLSSecretData(secret *corev1.Secret) error {
 	keyBlock, _ := pem.Decode(keyData)
 	if keyBlock == nil {
 		return fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
+	}
+
+	if domain != "" && len(cert.DNSNames) > 0 {
+		err = cert.VerifyHostname(domain)
+		if err != nil {
+			return fmt.Errorf("hostname %s does not match DNS Names in certificate %s", domain, corev1.TLSCertKey)
+		}
 	}
 
 	var parseErr error

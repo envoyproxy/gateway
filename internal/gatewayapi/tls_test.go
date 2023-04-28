@@ -15,6 +15,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+var (
+	testDomain = "foo.bar.com"
+)
+
 // createTestSecret creates a K8s tls secret using testdata
 // see for more info <https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets>
 func createTestSecret(t *testing.T, certFile, keyFile string) *corev1.Secret {
@@ -139,8 +143,7 @@ func TestValidateTLSSecretData(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			secret := createTestSecret(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secret)
-
-			err := validateTLSSecretData(secret)
+			err := validateTLSSecretData(secret, testDomain)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {
