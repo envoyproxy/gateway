@@ -728,6 +728,15 @@
 							"routeConfig": {
 								"@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
 								"name": "default-eg-http",
+								"responseHeadersToAdd": [
+									{
+									 "header": {
+									  "key": "x-request-id",
+									  "value": "%REQ(X-REQUEST-ID)%"
+									 },
+									 "append": false
+									}
+								],
 								"virtualHosts": [
 									{
 										"domains": [
@@ -761,6 +770,15 @@
 							"routeConfig": {
 								"@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
 								"name": "default-eg-grpc",
+								"responseHeadersToAdd": [
+									{
+									 "header": {
+									  "key": "x-request-id",
+									  "value": "%REQ(X-REQUEST-ID)%"
+									 },
+									 "append": false
+									}
+								],
 								"virtualHosts": [
 									{
 										"domains": [

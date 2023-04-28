@@ -43,29 +43,29 @@ jobs:
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
-  # coverage-test:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #     with:
-  #       submodules: recursive
-  #   - uses: ./tools/github-actions/setup-deps
+  coverage-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: recursive
+    - uses: ./tools/github-actions/setup-deps
 
-  #   # test
-  #   - name: Run Coverage Tests
-  #     run: make go.test.coverage.custom
-  #   - name: Upload coverage to Codecov
-  #     uses: codecov/codecov-action@v3
-  #     with:
-  #       token: ${{ secrets.CODECOV_TOKEN }}
-  #       fail_ci_if_error: true
-  #       files: ./coverage.xml
-  #       name: codecov-envoy-gateway
-  #       verbose: true
+    # test
+    - name: Run Coverage Tests
+      run: make go.test.coverage.custom
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        fail_ci_if_error: true
+        files: ./coverage.xml
+        name: codecov-envoy-gateway
+        verbose: true
 
   build:
     runs-on: ubuntu-latest
-    needs: [gen-check, lint, license-check]
+    needs: [gen-check, lint, license-check, coverage-test]
     steps:
     - uses: actions/checkout@v3
       with:

@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 
+	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -84,10 +85,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate to IR
 			result := t.Translate(val)
 
-			// yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			// r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
-			// yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
-			// r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
+			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
+			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
 			var curKeys, newKeys []string
 			// Get current IR keys
