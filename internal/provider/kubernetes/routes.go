@@ -168,23 +168,20 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 
 				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
-					if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
-						switch string(filter.ExtensionRef.Kind) {
-						case egv1a1.KindAuthenticationFilter:
-
-							key := types.NamespacedName{
-								Namespace: grpcRoute.Namespace,
-								Name:      string(filter.ExtensionRef.Name),
-							}
-
-							filter, ok := resourceMap.authenFilters[key]
-
-							if !ok {
-								r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
-								continue
-							}
-							resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
+					if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef && string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
 						}
+
+						filter, ok := resourceMap.authenFilters[key]
+
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+							continue
+						}
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
+
 					}
 				}
 			}
