@@ -4,7 +4,9 @@ metadata:
   annotations:
     key1: value1
   labels:
-    app.gateway.envoyproxy.io/name: envoy
+    app.kubernetes.io/name: envoy
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
   name: envoy-default-64656661
@@ -20,7 +22,9 @@ spec:
       protocol: TCP
       targetPort: 8443
   selector:
-    app.gateway.envoyproxy.io/name: envoy
+    app.kubernetes.io/name: envoy
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/managed-by: envoy-gateway
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
   sessionAffinity: None
