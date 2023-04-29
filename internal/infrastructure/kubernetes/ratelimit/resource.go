@@ -37,15 +37,16 @@ const (
 )
 
 // GetServiceURL returns the URL for the rate limit service.
-// TODO: support custom trust domain
-func GetServiceURL(namespace string) string {
-	return fmt.Sprintf("grpc://%s.%s.svc.cluster.local:%d", InfraName, namespace, InfraGRPCPort)
+func GetServiceURL(namespace string, dnsDomain string) string {
+	return fmt.Sprintf("grpc://%s.%s.svc.%s:%d", InfraName, namespace, dnsDomain, InfraGRPCPort)
 }
 
 // rateLimitLabels returns the labels used for all envoy rate limit resources.
 func rateLimitLabels() map[string]string {
 	return map[string]string{
-		"app.gateway.envoyproxy.io/name": InfraName,
+		"app.kubernetes.io/name":       InfraName,
+		"app.kubernetes.io/component":  "ratelimit",
+		"app.kubernetes.io/managed-by": "envoy-gateway",
 	}
 }
 

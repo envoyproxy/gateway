@@ -1,0 +1,62 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+  name: first-route
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+  name: second-route
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+  name: third-route
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  dnsRefreshRate: 30s
+  loadAssignment:
+    clusterName: ratelimit_cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local
+              portValue: 8081
+      loadBalancingWeight: 1
+      locality: {}
+  name: ratelimit_cluster
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  respectDnsTtl: true
+  type: STRICT_DNS
+  typedExtensionProtocolOptions:
+    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+      '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+      explicitHttpConfig:
+        http2ProtocolOptions: {}

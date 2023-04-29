@@ -31,9 +31,6 @@ const (
 	// DefaultCertificateLifetime holds the default certificate lifetime (in days).
 	DefaultCertificateLifetime = 365
 
-	// DefaultDNSSuffix is the default DNS suffix name.
-	DefaultDNSSuffix = "cluster.local"
-
 	// keySize sets the RSA key size to 2048 bits. This is minimum recommended size
 	// for RSA keys.
 	keySize = 2048
@@ -108,7 +105,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 		egProvider := cfg.EnvoyGateway.GetEnvoyGatewayProvider().Type
 		switch egProvider {
 		case v1alpha1.ProviderTypeKubernetes:
-			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.Namespace, DefaultDNSSuffix)
+			egDNSNames = kubeServiceNames(DefaultEnvoyGatewayDNSPrefix, cfg.Namespace, cfg.DNSDomain)
 			envoyDNSNames = append(envoyDNSNames, fmt.Sprintf("*.%s", cfg.Namespace))
 		default:
 			// Kubernetes is the only supported Envoy Gateway provider.
