@@ -56,6 +56,7 @@ func NewTranslateCommand() *cobra.Command {
 		inFile, inType, output, resourceType string
 		addMissingResources                  bool
 		outTypes                             []string
+		dnsDomain                            string
 	)
 
 	translateCommand := &cobra.Command{
@@ -93,7 +94,7 @@ func NewTranslateCommand() *cobra.Command {
   egctl experimental translate --from gateway-api --to gateway-api,xds --type all --output yaml --file <input file>
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources)
+			return translate(cmd.OutOrStdout(), inFile, inType, outTypes, output, resourceType, addMissingResources, dnsDomain)
 		},
 	}
 
@@ -106,6 +107,7 @@ func NewTranslateCommand() *cobra.Command {
 	translateCommand.PersistentFlags().StringVarP(&output, "output", "o", yamlOutput, "One of 'yaml' or 'json'")
 	translateCommand.PersistentFlags().StringVarP(&resourceType, "type", "t", string(AllEnvoyConfigType), getValidResourceTypesStr())
 	translateCommand.PersistentFlags().BoolVarP(&addMissingResources, "add-missing-resources", "", false, "Provides dummy resources if missed")
+	translateCommand.PersistentFlags().StringVarP(&dnsDomain, "dns-domain", "", "cluster.local", "DNS domain used by k8s services, default is cluster.local")
 	return translateCommand
 }
 
@@ -207,7 +209,7 @@ func validate(inFile, inType string, outTypes []string, resourceType string) err
 	return nil
 }
 
-func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool) error {
+func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool, dnsDomain string) error {
 	if err := validate(inFile, inType, outTypes, resourceType); err != nil {
 		return err
 	}
@@ -231,7 +233,7 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 				result.Resources = translateGatewayAPIToGatewayAPI(resources)
 			}
 			if outType == xdsType {
-				res, err := translateGatewayAPIToXds(resourceType, resources)
+				res, err := translateGatewayAPIToXds(dnsDomain, resourceType, resources)
 				if err != nil {
 					return err
 				}
@@ -274,7 +276,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi
 	return gRes.Resources
 }
 
-func translateGatewayAPIToXds(resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -297,7 +299,7 @@ func translateGatewayAPIToXds(resourceType string, resources *gatewayapi.Resourc
 		xTranslator := &translator.Translator{
 			// Set some default settings for translation
 			GlobalRateLimit: &translator.GlobalRateLimitSettings{
-				ServiceURL: ratelimit.GetServiceURL("envoy-gateway"),
+				ServiceURL: ratelimit.GetServiceURL("envoy-gateway", dnsDomain),
 			},
 		}
 		xRes, err := xTranslator.Translate(val)
