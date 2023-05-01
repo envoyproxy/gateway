@@ -385,10 +385,10 @@ openssl x509 -req -days 365 -CA sample.com.crt -CAkey sample.com.key -set_serial
 kubectl create secret tls sample-cert --key=www.sample.com.key --cert=www.sample.com.crt
 ```
 
-Note that all occurences of `example.com` were just replaces with `sample.com`
+Note that all occurrences of `example.com` were just replaces with `sample.com`
 
 
-Next we update the `Gateway` configuration to accomodate the new Certificate which will be used to Terminate TLS traffic:
+Next we update the `Gateway` configuration to accommodate the new Certificate which will be used to Terminate TLS traffic:
 
 ```shell
 kubectl patch gateway eg --type=json --patch '[{
