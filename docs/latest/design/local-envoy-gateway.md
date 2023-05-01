@@ -16,7 +16,7 @@ machine.
 ## Non Goals
 
 * Support multiple ways to retrieve configuration while running locally.
-* Support multple ways to deploy the Envoy Proxy fleet locally on the host.
+* Support multiple ways to deploy the Envoy Proxy fleet locally on the host.
 
 ## API
 
