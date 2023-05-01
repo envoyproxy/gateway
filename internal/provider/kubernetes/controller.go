@@ -897,12 +897,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Gateway object status updater
 	go func() {
 		message.HandleSubscription(r.resources.GatewayStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.Gateway]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1b1.GatewayStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
-				r.statusUpdateForGateway(ctx, update.Value)
+				// Get gateway object
+				gtw := new(gwapiv1b1.Gateway)
+				if err := r.client.Get(ctx, update.Key, gtw); err != nil {
+					r.log.Error(err, "gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
+					return
+				}
+				// Set the updated Status and call the status update
+				gtw.Status = *update.Value
+				r.statusUpdateForGateway(ctx, gtw)
 			},
 		)
 		r.log.Info("gateway status subscriber shutting down")
@@ -911,7 +919,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// HTTPRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -927,7 +935,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Status.Parents
+						hCopy.Status.Parents = val.Parents
 						return hCopy
 					}),
 				})
@@ -939,7 +947,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// GRPCRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -955,7 +963,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Status.Parents
+						hCopy.Status.Parents = val.Parents
 						return hCopy
 					}),
 				})
@@ -967,7 +975,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// TLSRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -983,7 +991,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Status.Parents
+						tCopy.Status.Parents = val.Parents
 						return tCopy
 					}),
 				})
@@ -995,7 +1003,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// TCPRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.TCPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1011,7 +1019,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Status.Parents
+						tCopy.Status.Parents = val.Parents
 						return tCopy
 					}),
 				})
@@ -1023,7 +1031,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// UDPRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.UDPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1039,7 +1047,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Status.Parents
+						tCopy.Status.Parents = val.Parents
 						return tCopy
 					}),
 				})
