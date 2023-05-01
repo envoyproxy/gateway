@@ -34,6 +34,7 @@ by reading from the configuration from a file.
 Envoy Proxy child process on the host.
 
 Here is an example configuration
+
 ```
 provider:
   type: Custom
