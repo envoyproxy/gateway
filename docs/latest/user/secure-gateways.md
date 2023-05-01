@@ -251,14 +251,14 @@ kubectl delete secret/foo-cert
 
 # RSA + ECDSA Dual stack certificates
 
-This guide gives a walkthrough to generate RSA and ECDSA derived certificates and keys for the Server, which can then be configured in the Gateway listener, to terminate TLS traffic.
+This section gives a walkthrough to generate RSA and ECDSA derived certificates and keys for the Server, which can then be configured in the Gateway listener, to terminate TLS traffic.
 
 ## Prerequisites
 
 Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Follow the steps in the [Secure Gateways](secure-gateways.md) guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
+Follow the steps in the [TLS Certificates](secure-gateways.md#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
 
 ## Pre-checks
 
@@ -293,7 +293,7 @@ Moving forward in the doc, we will be configuring the existing Gateway listener 
 
 ## TLS Certificates
 
-Reuse the the CA certificate and key pair generated in the [Secure Gateways](secure-gateways.md) guide and use this CA to sign both RSA and ECDSA Server certificates.
+Reuse the the CA certificate and key pair generated in the [Secure Gateways](secure-gateways.md#tls-certificates) guide and use this CA to sign both RSA and ECDSA Server certificates.
 Note the CA certificate and key names are `example.com.crt` and `example.com.key` respectively.
 
 
@@ -360,6 +360,91 @@ curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
 * SSL connection using TLSv1.2 / ECDHE-ECDSA-CHACHA20-POLY1305
 ...
 ```
+
+# SNI based Certificate selection
+
+This sections gives a walkthrough to generate multiple certificates corresponding to different FQDNs. The same Gateway listener can then be configured to terminate TLS traffic for multiple FQDNs based on the SNI matching.
+
+## Prerequisites
+
+Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
+
+Follow the steps in the [TLS Certificates](secure-gateways.md#tls-certificates) section in the guide to generate self-signed RSA derived Server certificate and private key, and configure those in the Gateway listener configuration to terminate HTTPS traffic.
+
+## Additional Configurations
+
+Using the [TLS Certificates](secure-gateways.md#tls-certificates) section in the guide we first generate additional Secret for another Host `www.sample.com`.
+
+```shell
+openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -subj '/O=sample Inc./CN=sample.com' -keyout sample.com.key -out sample.com.crt
+
+openssl req -out www.sample.com.csr -newkey rsa:2048 -nodes -keyout www.sample.com.key -subj "/CN=www.sample.com/O=sample organization"
+openssl x509 -req -days 365 -CA sample.com.crt -CAkey sample.com.key -set_serial 0 -in www.sample.com.csr -out www.sample.com.crt
+
+kubectl create secret tls sample-cert --key=www.sample.com.key --cert=www.sample.com.crt
+```
+
+Note that all occurences of `example.com` were just replaces with `sample.com`
+
+
+Next we update the `Gateway` configuration to accomodate the new Certificate which will be used to Terminate TLS traffic:
+
+```shell
+kubectl patch gateway eg --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/listeners/1/tls/certificateRefs/-",
+   "value": {
+      "name": "sample-cert",
+    },
+}]'
+```
+
+Finally, we update the HTTPRoute to route traffic for hostname `www.sample.com` to the example backend service:
+
+```shell
+kubectl patch httproute backend --type=json --patch '[{
+  "op": "add",
+  "path": "/spec/hostnames/-",
+  "value": "www.sample.com",
+}]'
+```
+
+## Testing
+
+### Clusters without External LoadBalancer Support
+
+Get the name of the Envoy service created the by the example Gateway:
+
+```shell
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
+```
+
+Port forward to the Envoy service:
+
+```shell
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8443:443 &
+```
+
+Query the example app through Envoy proxy:
+
+```shell
+curl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
+--cacert example.com.crt https://www.example.com:8443/get -I
+```
+
+Similarly, query the sample app through the same Envoy proxy:
+
+```shell
+curl -v -HHost:www.sample.com --resolve "www.sample.com:8443:127.0.0.1" \
+--cacert sample.com.crt https://www.sample.com:8443/get -I
+```
+
+Since the multiple certificates are configured on the same Gateway listener, Envoy was able to provide the client with appropriate certificate based on the SNI in the client request.
+
+### Clusters with External LoadBalancer Support
+
+Refer to the steps mentioned earlier in the guide under [Testing in clusters with External LoadBalancer Support](secure-gateways.md#clusters-with-external-loadbalancer-support)
 
 ## Next Steps
 
