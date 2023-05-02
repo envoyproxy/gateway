@@ -115,28 +115,28 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Update Status
 			for _, gateway := range result.Gateways {
 				key := utils.NamespacedName(gateway)
-				r.ProviderResources.GatewayStatuses.Store(key, gateway)
+				r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
 			}
 			for _, httpRoute := range result.HTTPRoutes {
 				key := utils.NamespacedName(httpRoute)
-				r.ProviderResources.HTTPRouteStatuses.Store(key, httpRoute)
+				r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
 			}
 			for _, grpcRoute := range result.GRPCRoutes {
 				key := utils.NamespacedName(grpcRoute)
-				r.ProviderResources.GRPCRouteStatuses.Store(key, grpcRoute)
+				r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
 			}
 
 			for _, tlsRoute := range result.TLSRoutes {
 				key := utils.NamespacedName(tlsRoute)
-				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
+				r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
 			}
 			for _, tcpRoute := range result.TCPRoutes {
 				key := utils.NamespacedName(tcpRoute)
-				r.ProviderResources.TCPRouteStatuses.Store(key, tcpRoute)
+				r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
 			}
 			for _, udpRoute := range result.UDPRoutes {
 				key := utils.NamespacedName(udpRoute)
-				r.ProviderResources.UDPRouteStatuses.Store(key, udpRoute)
+				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 			}
 		},
 	)
