@@ -21,6 +21,9 @@ func endpointConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about endpoint configuration for a given pod from Envoy.
   egctl config envoy-proxy endpoint <pod-name> -n <pod-namespace>
 
+  # Retrieve summary about endpoint configuration for a pod matching label selectors
+  egctl config envoy-proxy endpoint --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve configuration dump as YAML
   egctl config envoy-proxy endpoint <pod-name> -n <pod-namespace> -o yaml
 

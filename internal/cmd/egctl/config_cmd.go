@@ -59,6 +59,9 @@ func allConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about all configuration for a given pod from Envoy.
   egctl config envoy-proxy all <pod-name> -n <pod-namespace>
 
+  # Retrieve summary about all configuration for a pod matching label selectors
+  egctl config envoy-proxy all --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve full configuration dump as YAML
   egctl config envoy-proxy all <pod-name> -n <pod-namespace> -o yaml
 

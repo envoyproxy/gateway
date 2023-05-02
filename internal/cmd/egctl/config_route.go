@@ -21,6 +21,9 @@ func routeConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about route configuration for a given pod from Envoy.
   egctl config envoy-proxy route <pod-name> -n <pod-namespace>
 
+	# Retrieve summary about route configuration for a pod matching label selectors
+	egctl config envoy-proxy route --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve full configuration dump as YAML
   egctl config envoy-proxy route <pod-name> -n <pod-namespace> -o yaml
 
