@@ -9,6 +9,9 @@ on:
     - "main"
     - "release/v*"        
 
+permissions:
+  pull-requests: write
+
 jobs:
   request:
     name: Request reviews from envoyproxy/gateway-reviewers 
