@@ -230,12 +230,12 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			switch QueryParamMatchTypeDerefOr(queryParamMatch.Type, v1beta1.QueryParamMatchExact) {
 			case v1beta1.QueryParamMatchExact:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
-					Name:  queryParamMatch.Name,
+					Name:  string(queryParamMatch.Name),
 					Exact: StringPtr(queryParamMatch.Value),
 				})
 			case v1beta1.QueryParamMatchRegularExpression:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
-					Name:      queryParamMatch.Name,
+					Name:      string(queryParamMatch.Name),
 					SafeRegex: StringPtr(queryParamMatch.Value),
 				})
 			}

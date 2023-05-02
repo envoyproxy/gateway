@@ -2,8 +2,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1538
-    gateway.networking.k8s.io/bundle-version: v0.6.2
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
+    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gateways.gateway.networking.k8s.io
@@ -115,20 +115,20 @@ spec:
                   belonging to different Gateways. \n For example, an implementation
                   might consider Listeners to be compatible with each other if all
                   of the following conditions are met: \n 1. Either each Listener
-                  within the group specifies the \"HTTP\"    Protocol or each Listener
-                  within the group specifies either    the \"HTTPS\" or \"TLS\" Protocol.
+                  within the group specifies the \"HTTP\" Protocol or each Listener
+                  within the group specifies either the \"HTTPS\" or \"TLS\" Protocol.
                   \n 2. Each Listener within the group specifies a Hostname that is
-                  unique    within the group. \n 3. As a special case, one Listener
-                  within a group may omit Hostname,    in which case this Listener
-                  matches when no other Listener    matches. \n If the implementation
-                  does collapse compatible Listeners, the hostname provided in the
-                  incoming client request MUST be matched to a Listener to find the
-                  correct set of Routes. The incoming hostname MUST be matched using
-                  the Hostname field for each Listener in order of most to least specific.
-                  That is, exact matches must be processed before wildcard matches.
-                  \n If this field specifies multiple Listeners that have the same
-                  Port value but are not compatible, the implementation must raise
-                  a \"Conflicted\" condition in the Listener status. \n Support: Core"
+                  unique within the group. \n 3. As a special case, one Listener within
+                  a group may omit Hostname, in which case this Listener matches when
+                  no other Listener matches. \n If the implementation does collapse
+                  compatible Listeners, the hostname provided in the incoming client
+                  request MUST be matched to a Listener to find the correct set of
+                  Routes. The incoming hostname MUST be matched using the Hostname
+                  field for each Listener in order of most to least specific. That
+                  is, exact matches must be processed before wildcard matches. \n
+                  If this field specifies multiple Listeners that have the same Port
+                  value but are not compatible, the implementation must raise a \"Conflicted\"
+                  condition in the Listener status. \n Support: Core"
                 items:
                   description: Listener embodies the concept of a logical endpoint
                     where a Gateway accepts network connections.
@@ -145,19 +145,18 @@ spec:
                         determined in order of the following criteria: \n * The most
                         specific match as defined by the Route type. * The oldest
                         Route based on creation timestamp. For example, a Route with
-                        \  a creation timestamp of \"2020-09-08 01:02:03\" is given
-                        precedence over   a Route with a creation timestamp of \"2020-09-08
-                        01:02:04\". * If everything else is equivalent, the Route
-                        appearing first in   alphabetical order (namespace/name) should
-                        be given precedence. For   example, foo/bar is given precedence
-                        over foo/baz. \n All valid rules within a Route attached to
-                        this Listener should be implemented. Invalid Route rules can
-                        be ignored (sometimes that will mean the full Route). If a
-                        Route rule transitions from valid to invalid, support for
-                        that Route rule should be dropped to ensure consistency. For
-                        example, even if a filter specified by a Route rule is invalid,
-                        the rest of the rules within that Route should still be supported.
-                        \n Support: Core"
+                        a creation timestamp of \"2020-09-08 01:02:03\" is given precedence
+                        over a Route with a creation timestamp of \"2020-09-08 01:02:04\".
+                        * If everything else is equivalent, the Route appearing first
+                        in alphabetical order (namespace/name) should be given precedence.
+                        For example, foo/bar is given precedence over foo/baz. \n
+                        All valid rules within a Route attached to this Listener should
+                        be implemented. Invalid Route rules can be ignored (sometimes
+                        that will mean the full Route). If a Route rule transitions
+                        from valid to invalid, support for that Route rule should
+                        be dropped to ensure consistency. For example, even if a filter
+                        specified by a Route rule is invalid, the rest of the rules
+                        within that Route should still be supported. \n Support: Core"
                       properties:
                         kinds:
                           description: "Kinds specifies the groups and kinds of Routes
@@ -205,9 +204,9 @@ spec:
                                 for this Gateway. Possible values are: * All: Routes
                                 in all namespaces may be used by this Gateway. * Selector:
                                 Routes in namespaces selected by the selector may
-                                be used by   this Gateway. * Same: Only Routes in
-                                the same namespace may be used by this Gateway. \n
-                                Support: Core"
+                                be used by this Gateway. * Same: Only Routes in the
+                                same namespace may be used by this Gateway. \n Support:
+                                Core"
                               enum:
                               - All
                               - Selector
@@ -263,6 +262,7 @@ spec:
                                     requirements are ANDed.
                                   type: object
                               type: object
+                              x-kubernetes-map-type: atomic
                           type: object
                       type: object
                     hostname:
@@ -274,19 +274,18 @@ spec:
                         following protocols: \n * TLS: The Listener Hostname MUST
                         match the SNI. * HTTP: The Listener Hostname MUST match the
                         Host header of the request. * HTTPS: The Listener Hostname
-                        SHOULD match at both the TLS and HTTP   protocol layers as
-                        described above. If an implementation does not   ensure that
-                        both the SNI and Host header match the Listener hostname,
-                        \  it MUST clearly document that. \n For HTTPRoute and TLSRoute
-                        resources, there is an interaction with the `spec.hostnames`
-                        array. When both listener and route specify hostnames, there
-                        MUST be an intersection between the values for a Route to
-                        be accepted. For more information, refer to the Route specific
-                        Hostnames documentation. \n Hostnames that are prefixed with
-                        a wildcard label (`*.`) are interpreted as a suffix match.
-                        That means that a match for `*.example.com` would match both
-                        `test.example.com`, and `foo.test.example.com`, but not `example.com`.
-                        \n Support: Core"
+                        SHOULD match at both the TLS and HTTP protocol layers as described
+                        above. If an implementation does not ensure that both the
+                        SNI and Host header match the Listener hostname, it MUST clearly
+                        document that. \n For HTTPRoute and TLSRoute resources, there
+                        is an interaction with the `spec.hostnames` array. When both
+                        listener and route specify hostnames, there MUST be an intersection
+                        between the values for a Route to be accepted. For more information,
+                        refer to the Route specific Hostnames documentation. \n Hostnames
+                        that are prefixed with a wildcard label (`*.`) are interpreted
+                        as a suffix match. That means that a match for `*.example.com`
+                        would match both `test.example.com`, and `foo.test.example.com`,
+                        but not `example.com`. \n Support: Core"
                       maxLength: 253
                       minLength: 1
                       pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -367,7 +366,7 @@ spec:
                               kind:
                                 default: Secret
                                 description: Kind is kind of the referent. For example
-                                  "HTTPRoute" or "Service".
+                                  "Secret".
                                 maxLength: 63
                                 minLength: 1
                                 pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -399,13 +398,13 @@ spec:
                           description: "Mode defines the TLS behavior for the TLS
                             session initiated by the client. There are two possible
                             modes: \n - Terminate: The TLS session between the downstream
-                            client   and the Gateway is terminated at the Gateway.
-                            This mode requires   certificateRefs to be set and contain
-                            at least one element. - Passthrough: The TLS session is
-                            NOT terminated by the Gateway. This   implies that the
-                            Gateway can't decipher the TLS stream except for   the
-                            ClientHello message of the TLS protocol.   CertificateRefs
-                            field is ignored in this mode. \n Support: Core"
+                            client and the Gateway is terminated at the Gateway. This
+                            mode requires certificateRefs to be set and contain at
+                            least one element. - Passthrough: The TLS session is NOT
+                            terminated by the Gateway. This implies that the Gateway
+                            can't decipher the TLS stream except for the ClientHello
+                            message of the TLS protocol. CertificateRefs field is
+                            ignored in this mode. \n Support: Core"
                           enum:
                           - Terminate
                           - Passthrough
@@ -452,9 +451,14 @@ spec:
               conditions:
               - lastTransitionTime: "1970-01-01T00:00:00Z"
                 message: Waiting for controller
-                reason: NotReconciled
+                reason: Pending
                 status: Unknown
                 type: Accepted
+              - lastTransitionTime: "1970-01-01T00:00:00Z"
+                message: Waiting for controller
+                reason: Pending
+                status: Unknown
+                type: Programmed
             description: Status defines the current state of Gateway.
             properties:
               addresses:
@@ -502,19 +506,17 @@ spec:
                   the `GatewayConditionType` and `GatewayConditionReason` constants
                   so that operators and tools can converge on a common vocabulary
                   to describe Gateway state. \n Known condition types are: \n * \"Accepted\"
-                  * \"Ready\""
+                  * \"Programmed\" * \"Ready\""
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    \n \ttype FooStatus struct{ \t    // Represents the observations
-                    of a foo's current state. \t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
-                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
-                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
-                    \t}"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                   properties:
                     lastTransitionTime:
                       description: lastTransitionTime is the last time the condition
@@ -594,15 +596,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -816,20 +817,20 @@ spec:
                   belonging to different Gateways. \n For example, an implementation
                   might consider Listeners to be compatible with each other if all
                   of the following conditions are met: \n 1. Either each Listener
-                  within the group specifies the \"HTTP\"    Protocol or each Listener
-                  within the group specifies either    the \"HTTPS\" or \"TLS\" Protocol.
+                  within the group specifies the \"HTTP\" Protocol or each Listener
+                  within the group specifies either the \"HTTPS\" or \"TLS\" Protocol.
                   \n 2. Each Listener within the group specifies a Hostname that is
-                  unique    within the group. \n 3. As a special case, one Listener
-                  within a group may omit Hostname,    in which case this Listener
-                  matches when no other Listener    matches. \n If the implementation
-                  does collapse compatible Listeners, the hostname provided in the
-                  incoming client request MUST be matched to a Listener to find the
-                  correct set of Routes. The incoming hostname MUST be matched using
-                  the Hostname field for each Listener in order of most to least specific.
-                  That is, exact matches must be processed before wildcard matches.
-                  \n If this field specifies multiple Listeners that have the same
-                  Port value but are not compatible, the implementation must raise
-                  a \"Conflicted\" condition in the Listener status. \n Support: Core"
+                  unique within the group. \n 3. As a special case, one Listener within
+                  a group may omit Hostname, in which case this Listener matches when
+                  no other Listener matches. \n If the implementation does collapse
+                  compatible Listeners, the hostname provided in the incoming client
+                  request MUST be matched to a Listener to find the correct set of
+                  Routes. The incoming hostname MUST be matched using the Hostname
+                  field for each Listener in order of most to least specific. That
+                  is, exact matches must be processed before wildcard matches. \n
+                  If this field specifies multiple Listeners that have the same Port
+                  value but are not compatible, the implementation must raise a \"Conflicted\"
+                  condition in the Listener status. \n Support: Core"
                 items:
                   description: Listener embodies the concept of a logical endpoint
                     where a Gateway accepts network connections.
@@ -846,19 +847,18 @@ spec:
                         determined in order of the following criteria: \n * The most
                         specific match as defined by the Route type. * The oldest
                         Route based on creation timestamp. For example, a Route with
-                        \  a creation timestamp of \"2020-09-08 01:02:03\" is given
-                        precedence over   a Route with a creation timestamp of \"2020-09-08
-                        01:02:04\". * If everything else is equivalent, the Route
-                        appearing first in   alphabetical order (namespace/name) should
-                        be given precedence. For   example, foo/bar is given precedence
-                        over foo/baz. \n All valid rules within a Route attached to
-                        this Listener should be implemented. Invalid Route rules can
-                        be ignored (sometimes that will mean the full Route). If a
-                        Route rule transitions from valid to invalid, support for
-                        that Route rule should be dropped to ensure consistency. For
-                        example, even if a filter specified by a Route rule is invalid,
-                        the rest of the rules within that Route should still be supported.
-                        \n Support: Core"
+                        a creation timestamp of \"2020-09-08 01:02:03\" is given precedence
+                        over a Route with a creation timestamp of \"2020-09-08 01:02:04\".
+                        * If everything else is equivalent, the Route appearing first
+                        in alphabetical order (namespace/name) should be given precedence.
+                        For example, foo/bar is given precedence over foo/baz. \n
+                        All valid rules within a Route attached to this Listener should
+                        be implemented. Invalid Route rules can be ignored (sometimes
+                        that will mean the full Route). If a Route rule transitions
+                        from valid to invalid, support for that Route rule should
+                        be dropped to ensure consistency. For example, even if a filter
+                        specified by a Route rule is invalid, the rest of the rules
+                        within that Route should still be supported. \n Support: Core"
                       properties:
                         kinds:
                           description: "Kinds specifies the groups and kinds of Routes
@@ -906,9 +906,9 @@ spec:
                                 for this Gateway. Possible values are: * All: Routes
                                 in all namespaces may be used by this Gateway. * Selector:
                                 Routes in namespaces selected by the selector may
-                                be used by   this Gateway. * Same: Only Routes in
-                                the same namespace may be used by this Gateway. \n
-                                Support: Core"
+                                be used by this Gateway. * Same: Only Routes in the
+                                same namespace may be used by this Gateway. \n Support:
+                                Core"
                               enum:
                               - All
                               - Selector
@@ -964,6 +964,7 @@ spec:
                                     requirements are ANDed.
                                   type: object
                               type: object
+                              x-kubernetes-map-type: atomic
                           type: object
                       type: object
                     hostname:
@@ -975,19 +976,18 @@ spec:
                         following protocols: \n * TLS: The Listener Hostname MUST
                         match the SNI. * HTTP: The Listener Hostname MUST match the
                         Host header of the request. * HTTPS: The Listener Hostname
-                        SHOULD match at both the TLS and HTTP   protocol layers as
-                        described above. If an implementation does not   ensure that
-                        both the SNI and Host header match the Listener hostname,
-                        \  it MUST clearly document that. \n For HTTPRoute and TLSRoute
-                        resources, there is an interaction with the `spec.hostnames`
-                        array. When both listener and route specify hostnames, there
-                        MUST be an intersection between the values for a Route to
-                        be accepted. For more information, refer to the Route specific
-                        Hostnames documentation. \n Hostnames that are prefixed with
-                        a wildcard label (`*.`) are interpreted as a suffix match.
-                        That means that a match for `*.example.com` would match both
-                        `test.example.com`, and `foo.test.example.com`, but not `example.com`.
-                        \n Support: Core"
+                        SHOULD match at both the TLS and HTTP protocol layers as described
+                        above. If an implementation does not ensure that both the
+                        SNI and Host header match the Listener hostname, it MUST clearly
+                        document that. \n For HTTPRoute and TLSRoute resources, there
+                        is an interaction with the `spec.hostnames` array. When both
+                        listener and route specify hostnames, there MUST be an intersection
+                        between the values for a Route to be accepted. For more information,
+                        refer to the Route specific Hostnames documentation. \n Hostnames
+                        that are prefixed with a wildcard label (`*.`) are interpreted
+                        as a suffix match. That means that a match for `*.example.com`
+                        would match both `test.example.com`, and `foo.test.example.com`,
+                        but not `example.com`. \n Support: Core"
                       maxLength: 253
                       minLength: 1
                       pattern: ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -1068,7 +1068,7 @@ spec:
                               kind:
                                 default: Secret
                                 description: Kind is kind of the referent. For example
-                                  "HTTPRoute" or "Service".
+                                  "Secret".
                                 maxLength: 63
                                 minLength: 1
                                 pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -1100,13 +1100,13 @@ spec:
                           description: "Mode defines the TLS behavior for the TLS
                             session initiated by the client. There are two possible
                             modes: \n - Terminate: The TLS session between the downstream
-                            client   and the Gateway is terminated at the Gateway.
-                            This mode requires   certificateRefs to be set and contain
-                            at least one element. - Passthrough: The TLS session is
-                            NOT terminated by the Gateway. This   implies that the
-                            Gateway can't decipher the TLS stream except for   the
-                            ClientHello message of the TLS protocol.   CertificateRefs
-                            field is ignored in this mode. \n Support: Core"
+                            client and the Gateway is terminated at the Gateway. This
+                            mode requires certificateRefs to be set and contain at
+                            least one element. - Passthrough: The TLS session is NOT
+                            terminated by the Gateway. This implies that the Gateway
+                            can't decipher the TLS stream except for the ClientHello
+                            message of the TLS protocol. CertificateRefs field is
+                            ignored in this mode. \n Support: Core"
                           enum:
                           - Terminate
                           - Passthrough
@@ -1153,9 +1153,14 @@ spec:
               conditions:
               - lastTransitionTime: "1970-01-01T00:00:00Z"
                 message: Waiting for controller
-                reason: NotReconciled
+                reason: Pending
                 status: Unknown
                 type: Accepted
+              - lastTransitionTime: "1970-01-01T00:00:00Z"
+                message: Waiting for controller
+                reason: Pending
+                status: Unknown
+                type: Programmed
             description: Status defines the current state of Gateway.
             properties:
               addresses:
@@ -1203,19 +1208,17 @@ spec:
                   the `GatewayConditionType` and `GatewayConditionReason` constants
                   so that operators and tools can converge on a common vocabulary
                   to describe Gateway state. \n Known condition types are: \n * \"Accepted\"
-                  * \"Ready\""
+                  * \"Programmed\" * \"Ready\""
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    \n \ttype FooStatus struct{ \t    // Represents the observations
-                    of a foo's current state. \t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\" \t    //
-                    +patchMergeKey=type \t    // +patchStrategy=merge \t    // +listType=map
-                    \t    // +listMapKey=type \t    Conditions []metav1.Condition
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
+                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other fields
-                    \t}"
+                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                   properties:
                     lastTransitionTime:
                       description: lastTransitionTime is the last time the condition
@@ -1295,15 +1298,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -1429,5 +1431,5 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: null
+  storedVersions: null
