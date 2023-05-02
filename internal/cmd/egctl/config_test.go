@@ -195,6 +195,40 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 	fw.Stop()
 }
 
+func TestLabelSelectorBadInput(t *testing.T) {
+	podNamespace = "default"
+
+	cases := []struct {
+		name   string
+		args   []string
+		labels []string
+	}{
+		{
+			name:   "no label, no pod name",
+			args:   []string{},
+			labels: []string{},
+		},
+		{
+			name:   "wrong label, no pod name",
+			args:   []string{},
+			labels: []string{"foo=bar"},
+		},
+		{
+			name:   "no label, wrong pod name",
+			args:   []string{"eg"},
+			labels: []string{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			labelSelectors = tc.labels
+			_, err := retrieveConfigDump(tc.args, false)
+			assert.True(t, err != nil, "error not found")
+		})
+	}
+}
+
 func readInputConfig(filename string) ([]byte, error) {
 	b, err := os.ReadFile(path.Join("testdata", "config", "in", filename))
 	if err != nil {
