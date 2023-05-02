@@ -13,6 +13,7 @@ import (
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
@@ -21,9 +22,10 @@ import (
 )
 
 var (
-	output       string
-	podName      string
-	podNamespace string
+	output         string
+	podName        string
+	podNamespace   string
+	labelSelectors []string
 )
 
 const (
@@ -32,14 +34,16 @@ const (
 )
 
 func retrieveConfigDump(args []string, includeEds bool) (*adminv3.ConfigDump, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("pod name is required")
-	}
+	if len(labelSelectors) == 0 {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("pod name is required")
+		}
 
-	podName = args[0]
+		podName = args[0]
 
-	if podName == "" {
-		return nil, fmt.Errorf("pod name is required")
+		if podName == "" {
+			return nil, fmt.Errorf("pod name is required")
+		}
 	}
 
 	if podNamespace == "" {
@@ -49,7 +53,7 @@ func retrieveConfigDump(args []string, includeEds bool) (*adminv3.ConfigDump, er
 	fw, err := portForwarder(types.NamespacedName{
 		Namespace: podNamespace,
 		Name:      podName,
-	})
+	}, labelSelectors)
 	if err != nil {
 		return nil, err
 	}
@@ -66,21 +70,43 @@ func retrieveConfigDump(args []string, includeEds bool) (*adminv3.ConfigDump, er
 	return configDump, nil
 }
 
-func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
+func portForwarder(nn types.NamespacedName, labelSelectors []string) (kube.PortForwarder, error) {
+	var err error
 	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
 		return nil, fmt.Errorf("build CLI client fail: %w", err)
 	}
 
-	pod, err := c.Pod(nn)
-	if err != nil {
-		return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+	var pod *corev1.Pod
+	if len(labelSelectors) > 0 {
+		podList, err := c.PodsForSelector(nn.Namespace, labelSelectors...)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		if len(podList.Items) == 0 {
+			return nil, fmt.Errorf("no Pods found for label selectors %+v", labelSelectors)
+		}
+		if len(podList.Items) > 1 {
+			return nil, fmt.Errorf("more than 1 Pods returned for label selectors %+v", labelSelectors)
+		}
+
+		pod = &podList.Items[0]
+	} else {
+		pod, err = c.Pod(nn)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
 	}
+
 	if pod.Status.Phase != "Running" {
 		return nil, fmt.Errorf("pod %s is not running", nn)
 	}
 
-	fw, err := kube.NewLocalPortForwarder(c, nn, 0, adminPort)
+	fw, err := kube.NewLocalPortForwarder(c, types.NamespacedName{
+		Namespace: pod.Namespace,
+		Name:      pod.Name,
+	}, 0, adminPort)
 	if err != nil {
 		return nil, err
 	}
