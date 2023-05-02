@@ -53,6 +53,8 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Debug:                      *flags.ShowDebug,
 		CleanupBaseResources:       *flags.CleanupBaseResources,
 		ValidUniqueListenerPorts:   validUniqueListenerPorts,
+		SupportedFeatures:          suite.AllFeatures,
+		ExemptFeatures:             suite.MeshCoreFeatures,
 		EnableAllSupportedFeatures: true,
 		SkipTests: []string{
 			// Remove once https://github.com/envoyproxy/gateway/issues/993 is fixed
