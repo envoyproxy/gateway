@@ -123,7 +123,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					},
 				},
 			},
-			expected: false,
+			expected: true,
 		},
 		{
 			name: "valid envoy service type 'LoadBalancer'",
