@@ -716,8 +716,9 @@ spec:
                               only be accessible inside the cluster, via the cluster
                               IP.
                             enum:
-                            - LoadBalancer
                             - ClusterIP
+                            - LoadBalancer
+                            - NodePort
                             type: string
                         type: object
                     type: object
