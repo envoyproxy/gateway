@@ -464,7 +464,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		if irListener != nil {
 			// Only match on the Hostname and not on the port section within the Host header
 			// if the user specifies a Hostname to match on.
-			if len(routeHostnames) > 0 && listener.Hostname != nil {
+			if len(routeHostnames) > 0 || listener.Hostname != nil {
 				irListener.StripAnyHostPort = true
 			}
 

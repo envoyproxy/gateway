@@ -233,6 +233,7 @@ xdsIR:
         port: 10081
         hostnames:
           - foo.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-foo.com
             pathMatch:
@@ -246,6 +247,7 @@ xdsIR:
         port: 10082
         hostnames:
           - bar.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-bar.com
             pathMatch:
@@ -259,6 +261,7 @@ xdsIR:
         port: 10083
         hostnames:
           - foo1.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-foo1.com
             pathMatch:
@@ -272,6 +275,7 @@ xdsIR:
         port: 10084
         hostnames:
           - bar1.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-bar1.com
             pathMatch:
@@ -285,6 +289,7 @@ xdsIR:
         port: 10085
         hostnames:
           - foo2.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-foo2.com
             pathMatch:
@@ -298,6 +303,7 @@ xdsIR:
         port: 10086
         hostnames:
           - bar2.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-bar2.com
             pathMatch:
@@ -311,6 +317,7 @@ xdsIR:
         port: 10087
         hostnames:
           - foo3.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-foo3.com
             pathMatch:
@@ -324,6 +331,7 @@ xdsIR:
         port: 10088
         hostnames:
           - bar3.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-bar3.com
             pathMatch:
