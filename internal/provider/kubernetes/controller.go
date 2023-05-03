@@ -61,6 +61,7 @@ type gatewayAPIReconciler struct {
 	log             logr.Logger
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
+	store           *kubernetesProviderStore
 	namespace       string
 
 	resources *message.ProviderResources
@@ -88,6 +89,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		statusUpdater:   su,
 		resources:       resources,
 		extGVKs:         extGVKs,
+		store:           newProviderStore(),
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -327,7 +329,7 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	// update accepted condition
 	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
 	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy, utils.ProviderStore().ListNodeAddresses()...)
+	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy, r.store.listNodeAddresses()...)
 
 	key := utils.NamespacedName(gtw)
 

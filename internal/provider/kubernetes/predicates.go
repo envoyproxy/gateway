@@ -300,13 +300,13 @@ func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
 	key := types.NamespacedName{Name: node.Name}
 	if err := r.client.Get(ctx, key, node); err != nil {
 		if kerrors.IsNotFound(err) {
-			utils.ProviderStore().RemoveNode(node)
+			r.store.removeNode(node)
 			return true
 		}
 		r.log.Error(err, "unable to find node", "name", node.Name)
 		return false
 	}
 
-	utils.ProviderStore().AddNode(node)
+	r.store.addNode(node)
 	return true
 }
