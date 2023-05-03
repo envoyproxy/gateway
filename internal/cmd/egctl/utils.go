@@ -59,8 +59,8 @@ func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *
 	case AllEnvoyConfigType:
 		return globalConfigs, nil
 	default:
-		return nil, fmt.Errorf("unknown configType %s", resourceType)
+		return nil, fmt.Errorf("unknown resourceType %s", resourceType)
 	}
 
-	return nil, fmt.Errorf("unknown configType %s", resourceType)
+	return nil, fmt.Errorf("unknown resourceType %s", resourceType)
 }
