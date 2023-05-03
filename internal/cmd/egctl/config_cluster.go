@@ -39,17 +39,12 @@ func clusterConfigCmd() *cobra.Command {
 }
 
 func runClusterConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, ClusterEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	cluster, err := findXDSResourceFromConfigDump(ClusterEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(cluster, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}

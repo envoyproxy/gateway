@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
-	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type envoyConfigType string
@@ -23,7 +23,7 @@ var (
 	AllEnvoyConfigType       envoyConfigType = "all"
 )
 
-func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *adminv3.ConfigDump) (*anypb.Any, error) {
+func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *adminv3.ConfigDump) (protoreflect.ProtoMessage, error) {
 	switch resourceType {
 	case BootstrapEnvoyConfigType:
 		for _, config := range globalConfigs.Configs {
@@ -56,9 +56,11 @@ func findXDSResourceFromConfigDump(resourceType envoyConfigType, globalConfigs *
 				return config, nil
 			}
 		}
+	case AllEnvoyConfigType:
+		return globalConfigs, nil
 	default:
-		return nil, fmt.Errorf("unknown resourceType %s", resourceType)
+		return nil, fmt.Errorf("unknown configType %s", resourceType)
 	}
 
-	return nil, fmt.Errorf("unknown resourceType %s", resourceType)
+	return nil, fmt.Errorf("unknown configType %s", resourceType)
 }

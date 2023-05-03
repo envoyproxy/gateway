@@ -39,17 +39,12 @@ func endpointConfigCmd() *cobra.Command {
 }
 
 func runEndpointConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, true)
+	configDump, err := retrieveConfigDump(args, true, EndpointEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	endpoint, err := findXDSResourceFromConfigDump(EndpointEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(endpoint, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}

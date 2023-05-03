@@ -39,17 +39,12 @@ func listenerConfigCmd() *cobra.Command {
 }
 
 func runListenerConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, ListenerEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	listener, err := findXDSResourceFromConfigDump(ListenerEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(listener, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}

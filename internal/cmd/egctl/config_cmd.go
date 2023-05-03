@@ -77,7 +77,7 @@ func allConfigCmd() *cobra.Command {
 }
 
 func runAllConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, true)
+	configDump, err := retrieveConfigDump(args, true, AllEnvoyConfigType)
 	if err != nil {
 		return err
 	}

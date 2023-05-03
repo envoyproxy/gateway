@@ -39,17 +39,12 @@ func bootstrapConfigCmd() *cobra.Command {
 }
 
 func runBootstrapConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, BootstrapEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	bootstrap, err := findXDSResourceFromConfigDump(BootstrapEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(bootstrap, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}

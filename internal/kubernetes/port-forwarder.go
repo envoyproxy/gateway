@@ -53,7 +53,7 @@ func NewLocalPortForwarder(client CLIClient, namespacedName types.NamespacedName
 		// get a random port
 		p, err := netutil.LocalAvailablePort()
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get a local available port")
+			return nil, errors.Wrapf(err, "failed to get a local available port for Pod %q", namespacedName)
 		}
 		f.localPort = p
 	}

@@ -39,17 +39,12 @@ func routeConfigCmd() *cobra.Command {
 }
 
 func runRouteConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, RouteEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	route, err := findXDSResourceFromConfigDump(RouteEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(route, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}
