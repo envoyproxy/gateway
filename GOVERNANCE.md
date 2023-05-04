@@ -33,7 +33,7 @@ individuals and will be valid for 1 year from the start date.
 - Envoy core proxy maintainers [Member: Matt Klein]
 - Tetrate [Member: Varun Talwar; End Date: 5/16/2023]
 - VMware [Member: Winnie Kwon; End Date: 5/16/2023]
-- Ambassador Labs [Member: Richard Li; End Date: 5/16/2023]
+- Ambassador Labs [Member: Alex Gervais; End Date: 5/16/2023]
 - Fidelity Investments [Member: Venkat Kasisomayajula / Rajarajan Pudupatti Sundari Jeyakodi; End Date: 5/16/2023]
 - Tencent Holdings Limited [Member: Xunzhuo Liu; End Date: 5/16/2023]
 
