@@ -1,4 +1,4 @@
-# Rate limit
+# Rate Limit
 
 Rate limit is a feature that allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
 
@@ -121,7 +121,7 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
 
-## Rate limit specific user 
+## Rate Limit Specific User 
 
 Here is an example of a rate limit implemented by the application developer to limit a specific user by matching on a custom `x-user-id` header
 with a value set to `one`.
@@ -266,7 +266,7 @@ server: envoy
 
 ```
 
-## Rate limit distinct users 
+## Rate Limit Distinct Users 
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
 value in the `x-user-id` header. Here, user `one` (recognised from the traffic flow using the header `x-user-id` and value `one`) will be rate limited at 3 requests/hour
@@ -398,7 +398,7 @@ transfer-encoding: chunked
 
 ```
 
-## Rate limit all requests 
+## Rate Limit All Requests 
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
 
@@ -481,7 +481,7 @@ transfer-encoding: chunked
 
 ```
 
-## Rate limit Client IP Addresses
+## Rate Limit Client IP Addresses
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on their
  IP address (also reflected in the  `X-Forwarded-For` header).
@@ -571,7 +571,7 @@ transfer-encoding: chunked
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate
 limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
-like container `image`, `securityContext` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
+like container `image`, `securityContext`, `env` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -591,6 +591,9 @@ data:
           replicas: 1
           container:
             image: envoyproxy/ratelimit:master
+            env:
+            - name: CACHE_KEY_PREFIX
+              value: "eg:rl:"
             resources:
               requests:
                 cpu: 100m
@@ -623,7 +626,7 @@ EOF
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
-[Global rate limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
+[Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [RateLimitFilter]: https://gateway.envoyproxy.io/latest/api/extension_types.html#ratelimitfilter
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway

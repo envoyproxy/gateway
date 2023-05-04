@@ -22,12 +22,12 @@ type ProviderResources struct {
 	// a group of gateway API resources.
 	GatewayAPIResources watchable.Map[string, *gatewayapi.Resources]
 
-	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
-	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
-	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRoute]
-	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRoute]
-	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRoute]
-	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRoute]
+	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.GatewayStatus]
+	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]
+	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
+	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
 }
 
 func (p *ProviderResources) GetResources() *gatewayapi.Resources {
