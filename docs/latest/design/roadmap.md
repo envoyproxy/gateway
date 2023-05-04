@@ -45,15 +45,17 @@ contributing to the project.
 - Extending Envoy Gateway control plane [Issue #20][20]
 - Helm based installation for Envoy Gateway [Issue #650][650]
 - Customizing managed Envoy Proxy Kubernetes resource fields [Issue #648][648] 
-- Configuring xDS Resources [Issue #24][24] and [Issue #31][31].
+- Configuring xDS Bootstrap [Issue #31][31]
 
 ### [v0.5.0][v0.5.0]: Observability and Scale
 
 - Observability for control plane and data plane [Issue #701][701]. 
+- Compute and document Envoy Gateway performance [Issue #1365][1365].
 - Allow users to configure xDS Resources [Issue #24][24].
-- Support OIDC based authentication [Issue #881][881].
-- Add Support for WAF [Issue #671][671].
-- Endpoint Slice support [Issue #1256][1256].
+
+### [v0.6.0][v0.6.0]: Preparation for GA
+
+- Envoy Gateway meets readiness criteria [Issue #1160][1160]. 
 
 [issue]: https://github.com/envoyproxy/gateway/issues
 [meeting]: https://docs.google.com/document/d/1leqwsHX8N-XxNEyTflYjRur462ukFxd19Rnk3Uzy55I/edit?usp=sharing
@@ -63,6 +65,7 @@ contributing to the project.
 [v0.3.0]: https://github.com/envoyproxy/gateway/milestone/7
 [v0.4.0]: https://github.com/envoyproxy/gateway/milestone/12
 [v0.5.0]: https://github.com/envoyproxy/gateway/milestone/13
+[v0.6.0]: https://github.com/envoyproxy/gateway/milestone/15
 [17]: https://github.com/envoyproxy/gateway/issues/17
 [20]: https://github.com/envoyproxy/gateway/issues/20
 [24]: https://github.com/envoyproxy/gateway/issues/24
@@ -78,9 +81,8 @@ contributing to the project.
 [650]: https://github.com/envoyproxy/gateway/issues/650
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
-[671]: https://github.com/envoyproxy/gateway/issues/671
 [675]: https://github.com/envoyproxy/gateway/issues/675
 [701]: https://github.com/envoyproxy/gateway/issues/701
 [707]: https://github.com/envoyproxy/gateway/issues/707
-[881]: https://github.com/envoyproxy/gateway/issues/881
-[1256]: https://github.com/envoyproxy/gateway/issues/1256
+[1160]: https://github.com/envoyproxy/gateway/issues/1160
+[1365]: https://github.com/envoyproxy/gateway/issues/1365
