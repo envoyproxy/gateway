@@ -9,4 +9,3 @@
 package ignore
 
 import "github.com/elastic/crd-ref-docs"
-

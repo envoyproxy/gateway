@@ -21,6 +21,8 @@ import (
 const (
 	// DefaultNamespace is the default namespace of Envoy Gateway.
 	DefaultNamespace = "envoy-gateway-system"
+	// DefaultDNSDomain is the default DNS domain used by k8s services.
+	DefaultDNSDomain = "cluster.local"
 	// EnvoyGatewayServiceName is the name of the Envoy Gateway service.
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
@@ -34,6 +36,8 @@ type Server struct {
 	EnvoyGateway *v1alpha1.EnvoyGateway
 	// Namespace is the namespace that Envoy Gateway runs in.
 	Namespace string
+	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
+	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logr.Logger
 }
@@ -47,6 +51,7 @@ func New() (*Server, error) {
 	return &Server{
 		EnvoyGateway: v1alpha1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
+		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		Logger:       logger,
 	}, nil
 }

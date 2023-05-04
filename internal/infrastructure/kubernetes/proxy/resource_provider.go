@@ -18,16 +18,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-)
-
-const (
-	// envoyContainerName is the name of the Envoy container.
-	envoyContainerName = "envoy"
-	// envoyNsEnvVar is the name of the Envoy Gateway namespace environment variable.
-	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
-	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
-	envoyPodEnvVar = "ENVOY_POD_NAME"
 )
 
 type ResourceRender struct {
@@ -245,100 +235,4 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	return deployment, nil
-}
-
-func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
-	// Define slice to hold container ports
-	var ports []corev1.ContainerPort
-
-	// Iterate over listeners and ports to get container ports
-	for _, listener := range infra.Listeners {
-		for _, p := range listener.Ports {
-			var protocol corev1.Protocol
-			switch p.Protocol {
-			case ir.HTTPProtocolType, ir.HTTPSProtocolType, ir.TLSProtocolType, ir.TCPProtocolType:
-				protocol = corev1.ProtocolTCP
-			case ir.UDPProtocolType:
-				protocol = corev1.ProtocolUDP
-			default:
-				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
-			}
-			port := corev1.ContainerPort{
-				Name:          p.Name,
-				ContainerPort: p.ContainerPort,
-				Protocol:      protocol,
-			}
-			ports = append(ports, port)
-		}
-	}
-
-	var bootstrapConfigurations string
-	// Get Bootstrap from EnvoyProxy API if set by the user
-	// The config should have been validated already
-	if infra.Config != nil &&
-		infra.Config.Spec.Bootstrap != nil {
-		bootstrapConfigurations = *infra.Config.Spec.Bootstrap
-	} else {
-		var err error
-		// Use the default Bootstrap
-		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	containers := []corev1.Container{
-		{
-			Name:            envoyContainerName,
-			Image:           *deploymentConfig.Container.Image,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command: []string{
-				"envoy",
-			},
-			Args: []string{
-				fmt.Sprintf("--service-cluster %s", infra.Name),
-				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
-				fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-				"--log-level info",
-			},
-			Env: []corev1.EnvVar{
-				{
-					Name: envoyNsEnvVar,
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: "v1",
-							FieldPath:  "metadata.namespace",
-						},
-					},
-				},
-				{
-					Name: envoyPodEnvVar,
-					ValueFrom: &corev1.EnvVarSource{
-						FieldRef: &corev1.ObjectFieldSelector{
-							APIVersion: "v1",
-							FieldPath:  "metadata.name",
-						},
-					},
-				},
-			},
-			Resources:       *deploymentConfig.Container.Resources,
-			SecurityContext: deploymentConfig.Container.SecurityContext,
-			Ports:           ports,
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "certs",
-					MountPath: "/certs",
-					ReadOnly:  true,
-				},
-				{
-					Name:      "sds",
-					MountPath: "/sds",
-				},
-			},
-			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-			TerminationMessagePath:   "/dev/termination-log",
-		},
-	}
-
-	return containers, nil
 }

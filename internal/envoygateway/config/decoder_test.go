@@ -136,6 +136,16 @@ func TestDecode(t *testing.T) {
 							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
 								Replicas: v1alpha1.DefaultKubernetesDeploymentReplicas(),
 								Container: &v1alpha1.KubernetesContainerSpec{
+									Env: []corev1.EnvVar{
+										{
+											Name:  "env_a",
+											Value: "env_a_value",
+										},
+										{
+											Name:  "env_b",
+											Value: "env_b_value",
+										},
+									},
 									Image:     pointer.String("envoyproxy/ratelimit:latest"),
 									Resources: v1alpha1.DefaultResourceRequirements(),
 									SecurityContext: &corev1.SecurityContext{

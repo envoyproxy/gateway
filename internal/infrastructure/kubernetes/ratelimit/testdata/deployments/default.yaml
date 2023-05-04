@@ -2,18 +2,24 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.gateway.envoyproxy.io/name: envoy-ratelimit
+    app.kubernetes.io/name: envoy-ratelimit
+    app.kubernetes.io/component: ratelimit
+    app.kubernetes.io/managed-by: envoy-gateway
   name: envoy-ratelimit
   namespace: envoy-gateway-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.gateway.envoyproxy.io/name: envoy-ratelimit
+      app.kubernetes.io/name: envoy-ratelimit
+      app.kubernetes.io/component: ratelimit
+      app.kubernetes.io/managed-by: envoy-gateway
   template:
     metadata:
       labels:
-        app.gateway.envoyproxy.io/name: envoy-ratelimit
+        app.kubernetes.io/name: envoy-ratelimit
+        app.kubernetes.io/component: ratelimit
+        app.kubernetes.io/managed-by: envoy-gateway
     spec:
       automountServiceAccountToken: false
       containers:

@@ -1,0 +1,11 @@
+- name: first-listener
+  virtualHosts:
+  - domains:
+    - example.com
+    name: first-listener
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route
