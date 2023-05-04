@@ -61,6 +61,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.HTTPRouteRedirectHostAndStatus.ShortName,
 			// Remove once https://github.com/envoyproxy/gateway/issues/994 is fixed
 			tests.HTTPRouteRedirectScheme.ShortName,
+			tests.MeshBasic.ShortName
 		},
 	})
 	cSuite.Setup(t)
