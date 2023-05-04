@@ -148,20 +148,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					Volumes: []corev1.Volume{
-						{
-							Name: InfraName,
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: InfraName,
-									},
-									DefaultMode: pointer.Int32(int32(420)),
-									Optional:    pointer.Bool(false),
-								},
-							},
-						},
-					},
+					Volumes:                       exceptedDeploymentVolumes(r.ratelimit),
 				},
 			},
 		},

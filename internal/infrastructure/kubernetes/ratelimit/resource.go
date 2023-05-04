@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
@@ -18,6 +19,24 @@ const (
 	RedisSocketTypeEnvVar = "REDIS_SOCKET_TYPE"
 	// RedisURLEnvVar is the redis url.
 	RedisURLEnvVar = "REDIS_URL"
+	// RedisAuthEnvVar is the redis auth.
+	RedisAuthEnvVar = "REDIS_AUTH"
+	// RedisTLS is the redis tls.
+	RedisTLS = "REDIS_TLS"
+	// RedisTLSClientCertEnvVar is the redis tls client cert.
+	RedisTLSClientCertEnvVar = "REDIS_TLS_CLIENT_CERT"
+	// RedisTLSClientCertFilename is the reds tls client cert file.
+	RedisTLSClientCertFilename = "/certs/tls.crt"
+	// RedisTLSClientKeyEnvVar is the redis tls client key.
+	RedisTLSClientKeyEnvVar = "REDIS_TLS_CLIENT_KEY"
+	// RedisTLSClientKeyFilename is the redis client key file.
+	RedisTLSClientKeyFilename = "/certs/tls.key"
+	// RedisTLSCaCertEnvVar is the redis tls ca cert.
+	RedisTLSCaCertEnvVar = "REDIS_TLS_CACERT"
+	// RedisTLSCaCertFilename is the redis tls ca cert file.
+	RedisTLSCaCertFilename = "/certs/ca.crt"
+	// RedisTLSSkipHostNameVerificationEnvVar is the redis skip hostname verification.
+	RedisTLSSkipHostNameVerificationEnvVar = "REDIS_TLS_SKIP_HOSTNAME_VERIFICATION"
 	// RuntimeRootEnvVar is the runtime root.
 	RuntimeRootEnvVar = "RUNTIME_ROOT"
 	// RuntimeSubdirectoryEnvVar is the runtime subdirectory.
@@ -68,23 +87,69 @@ func expectedRateLimitContainers(ratelimit *egcfgv1a1.RateLimit, rateLimitDeploy
 			Command: []string{
 				"/bin/ratelimit",
 			},
-			Env:             expectedRateLimitContainerEnv(ratelimit, rateLimitDeployment),
-			Ports:           ports,
-			Resources:       *rateLimitDeployment.Container.Resources,
-			SecurityContext: rateLimitDeployment.Container.SecurityContext,
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      InfraName,
-					MountPath: "/data/ratelimit/config",
-					ReadOnly:  true,
-				},
-			},
+			Env:                      expectedRateLimitContainerEnv(ratelimit, rateLimitDeployment),
+			Ports:                    ports,
+			Resources:                *rateLimitDeployment.Container.Resources,
+			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
+			VolumeMounts:             exceptedContainerVolumeMounts(ratelimit),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
 	}
 
 	return containers
+}
+
+// exceptedContainerVolumeMounts returns expected ratelimit container volume mounts.
+func exceptedContainerVolumeMounts(ratelimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      InfraName,
+			MountPath: "/data/ratelimit/config",
+			ReadOnly:  true,
+		},
+	}
+
+	// mount the cert
+	if ratelimit.Backend.Redis.TLS != nil && ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
+			Name:      "certs",
+			MountPath: "/certs",
+			ReadOnly:  true,
+		})
+	}
+
+	return volumeMounts
+}
+
+// exceptedDeploymentVolumes returns expected ratelimit deployment volumes.
+func exceptedDeploymentVolumes(ratelimit *egcfgv1a1.RateLimit) []corev1.Volume {
+	volumes := []corev1.Volume{
+		{
+			Name: InfraName,
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: InfraName,
+					},
+					DefaultMode: pointer.Int32(int32(420)),
+					Optional:    pointer.Bool(false),
+				},
+			},
+		},
+	}
+
+	if ratelimit.Backend.Redis.TLS != nil && ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+		volumes = append(volumes, corev1.Volume{
+			Name: "certs",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: ratelimit.Backend.Redis.TLS.CertificateRef,
+				},
+			},
+		})
+	}
+	return volumes
 }
 
 // expectedRateLimitContainerEnv returns expected ratelimit container envs.
@@ -124,20 +189,53 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 	}
 
-	findReplaceFunc := func(envVar corev1.EnvVar) bool {
+	redisTLSSettings := ratelimit.Backend.Redis.TLS
+	if redisTLSSettings != nil {
+		if redisTLSSettings.Auth != "" {
+			env = append(env, corev1.EnvVar{
+				Name:  RedisAuthEnvVar,
+				Value: redisTLSSettings.Auth,
+			})
+		}
+
+		if redisTLSSettings.CertificateRef != "" {
+			env = append(env, []corev1.EnvVar{
+				{
+					Name:  RedisTLS,
+					Value: "true",
+				},
+				{
+					Name:  RedisTLSSkipHostNameVerificationEnvVar,
+					Value: "true",
+				},
+				{
+					Name:  RedisTLSClientCertEnvVar,
+					Value: RedisTLSClientCertFilename,
+				},
+				{
+					Name:  RedisTLSClientKeyEnvVar,
+					Value: RedisTLSClientKeyFilename,
+				},
+				{
+					Name:  RedisTLSCaCertEnvVar,
+					Value: RedisTLSCaCertFilename,
+				},
+			}...)
+		}
+	}
+
+	envAmendFunc := func(envVar corev1.EnvVar) {
 		for index, e := range env {
 			if e.Name == envVar.Name {
 				env[index] = envVar
-				return true
+				return
 			}
 		}
-		return false
+		env = append(env, envVar)
 	}
 
 	for _, envVar := range rateLimitDeployment.Container.Env {
-		if !findReplaceFunc(envVar) {
-			env = append(env, envVar)
-		}
+		envAmendFunc(envVar)
 	}
 
 	return env
