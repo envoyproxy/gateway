@@ -197,6 +197,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
+					Affinity:                      deploymentConfig.Pod.Affinity,
+					NodeSelector:                  deploymentConfig.Pod.NodeSelector,
+					Tolerations:                   deploymentConfig.Pod.Tolerations,
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",

@@ -30,6 +30,22 @@ envoyproxy:
             annotations:
               key1: val1
               key2: val2
+            nodeSelector:
+              node-role.kubernetes.io/master: ""
+            affinity:
+              nodeAffinity:
+                requiredDuringSchedulingIgnoredDuringExecution:
+                  nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: cloud.google.com/gke-nodepool
+                      operator: In
+                      values:
+                      - router-node
+            tolerations:
+            - effect: NoSchedule
+              key: node-type
+              operator: Exists
+              value: "router"
             securityContext:
               runAsUser: 1000
               runAsGroup: 3000

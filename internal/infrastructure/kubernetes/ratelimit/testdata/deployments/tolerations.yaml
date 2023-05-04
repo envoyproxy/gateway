@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: envoy-ratelimit
+    app.kubernetes.io/component: ratelimit
+    app.kubernetes.io/managed-by: envoy-gateway
+  name: envoy-ratelimit
+  namespace: envoy-gateway-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: envoy-ratelimit
+      app.kubernetes.io/component: ratelimit
+      app.kubernetes.io/managed-by: envoy-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: envoy-ratelimit
+        app.kubernetes.io/component: ratelimit
+        app.kubernetes.io/managed-by: envoy-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - command:
+            - /bin/ratelimit
+          env:
+            - name: REDIS_SOCKET_TYPE
+              value: tcp
+            - name: REDIS_URL
+              value: redis.redis.svc:6379
+            - name: RUNTIME_ROOT
+              value: /data
+            - name: RUNTIME_SUBDIRECTORY
+              value: ratelimit
+            - name: RUNTIME_IGNOREDOTFILES
+              value: "true"
+            - name: RUNTIME_WATCH_ROOT
+              value: "false"
+            - name: LOG_LEVEL
+              value: info
+            - name: USE_STATSD
+              value: "true"
+          image: custom-image
+          imagePullPolicy: IfNotPresent
+          name: envoy-ratelimit
+          ports:
+            - containerPort: 8081
+              name: http
+              protocol: TCP
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              cpu: 400m
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 1Gi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /data/ratelimit/config
+              name: envoy-ratelimit
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      serviceAccountName: envoy-ratelimit
+      securityContext:
+        runAsUser: 1000
+      tolerations:
+      - effect: NoSchedule
+        key: node-type
+        operator: Exists
+        value: "router"
+      terminationGracePeriodSeconds: 300
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: envoy-ratelimit
+            optional: false
+          name: envoy-ratelimit
