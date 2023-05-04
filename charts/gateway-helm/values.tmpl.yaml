@@ -23,9 +23,9 @@ deployment:
         cpu: 5m
         memory: 64Mi
   ports:
-  - name: grpc
-    port: 18000
-    targetPort: 18000
+    - name: grpc
+      port: 18000
+      targetPort: 18000
   replicas: 1
 
 config:
@@ -37,9 +37,11 @@ config:
 
 envoyGatewayMetricsService:
   ports:
-  - name: https
-    port: 8443
-    protocol: TCP
-    targetPort: https
+    - name: https
+      port: 8443
+      protocol: TCP
+      targetPort: https
 
 createNamespace: false
+
+kubernetesClusterDomain: cluster.local

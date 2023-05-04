@@ -108,6 +108,12 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
 	}
 
+	if irListener.StripAnyHostPort {
+		mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{
+			StripAnyHostPort: true,
+		}
+	}
+
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
 		mgr.CodecType = hcmv3.HttpConnectionManager_HTTP2

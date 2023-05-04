@@ -73,7 +73,9 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 					Namespace: cfg.Namespace,
 					Name:      ratelimit.InfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name": ratelimit.InfraName,
+						"app.kubernetes.io/name":       ratelimit.InfraName,
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
 					},
 				},
 				Data: map[string]string{rateLimitListener: rateLimitConfig},
@@ -86,7 +88,9 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 					Namespace: cfg.Namespace,
 					Name:      ratelimit.InfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name": ratelimit.InfraName,
+						"app.kubernetes.io/name":       ratelimit.InfraName,
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
 					},
 				},
 				Data: map[string]string{"foo": "bar"},
@@ -96,7 +100,9 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 					Namespace: cfg.Namespace,
 					Name:      ratelimit.InfraName,
 					Labels: map[string]string{
-						"app.gateway.envoyproxy.io/name": ratelimit.InfraName,
+						"app.kubernetes.io/name":       ratelimit.InfraName,
+						"app.kubernetes.io/component":  "ratelimit",
+						"app.kubernetes.io/managed-by": "envoy-gateway",
 					},
 				},
 				Data: map[string]string{rateLimitListener: rateLimitConfig},
