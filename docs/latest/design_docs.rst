@@ -17,3 +17,4 @@ Learn about the internal details of Envoy Gateway.
   design/request-authentication
   design/bootstrap
   design/extending-envoy-gateway
+  design/local-envoy-gateway
