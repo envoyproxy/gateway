@@ -67,7 +67,7 @@ infraIR:
                     value: env_a_value
                   - name: env_b
                     value: env_b_name
-                  image: "envoyproxy/gateway:v0.4.0"
+                  image: "envoyproxy/envoy-dev:latest"
                   resources:
                     requests:
                       cpu: 100m
