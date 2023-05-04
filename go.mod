@@ -2,6 +2,7 @@ module github.com/envoyproxy/gateway
 
 go 1.20
 
+// TODO: remove this after there's a release of controller-runtime that includes
 replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.13.1-0.20230417175046-71885c9b8a6b
 
 require (
