@@ -137,6 +137,8 @@ type HTTPListener struct {
 	// GrpcJSONTranscoderFilters is a list of filters that will be applied to the listener.
 	// This is used to enable gRPC-JSON transcoding.
 	GrpcJSONTranscoderFilters []*GrpcJSONTranscoderFilter
+	// StripAnyHostPort strips off the port section from the Host/Authority header which have this string format - host:port.
+	StripAnyHostPort bool
 }
 
 // Validate the fields within the HTTPListener structure

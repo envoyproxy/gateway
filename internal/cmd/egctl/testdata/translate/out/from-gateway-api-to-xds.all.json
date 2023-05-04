@@ -438,6 +438,7 @@
 														"routeConfigName": "default-eg-http"
 													},
 													"statPrefix": "http",
+													"stripAnyHostPort": true,
 													"upgradeConfigs": [
 														{
 															"upgradeType": "websocket"
@@ -532,6 +533,7 @@
 														"routeConfigName": "default-eg-grpc"
 													},
 													"statPrefix": "http",
+													"stripAnyHostPort": true,
 													"useRemoteAddress": true,
 													"normalizePath": true,
 													"mergeSlashes": true,

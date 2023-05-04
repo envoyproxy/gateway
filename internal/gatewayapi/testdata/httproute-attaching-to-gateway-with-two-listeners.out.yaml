@@ -99,6 +99,7 @@ xdsIR:
         port: 10080
         hostnames:
           - foo.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-foo.com
             pathMatch:
@@ -112,6 +113,7 @@ xdsIR:
         port: 10080
         hostnames:
           - bar.com
+        stripAnyHostPort: true
         routes:
           - name: default-httproute-1-rule-0-match-0-bar.com
             pathMatch:

@@ -204,6 +204,11 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			}
 		}
 	}
+	if irListener.StripAnyHostPort {
+		mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{
+			StripAnyHostPort: true,
+		}
+	}
 
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
