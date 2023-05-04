@@ -46,9 +46,9 @@ func (p *kubernetesProviderStore) addNode(n *corev1.Node) {
 	// to the internalIP of the Node.
 	if externalIP != "" {
 		details.address = externalIP
-		return
+	} else if internalIP != "" {
+		details.address = internalIP
 	}
-	details.address = internalIP
 	p.nodes[n.Name] = details
 }
 
@@ -59,7 +59,9 @@ func (p *kubernetesProviderStore) removeNode(n *corev1.Node) {
 func (p *kubernetesProviderStore) listNodeAddresses() []string {
 	addrs := []string{}
 	for _, n := range p.nodes {
-		addrs = append(addrs, n.address)
+		if n.address != "" {
+			addrs = append(addrs, n.address)
+		}
 	}
 	return addrs
 }

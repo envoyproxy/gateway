@@ -8,8 +8,8 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - nodes
   - namespaces
+  - nodes
   - secrets
   - services
   verbs:
