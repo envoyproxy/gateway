@@ -105,17 +105,21 @@ type KubernetesContainerSpec struct {
 
 // ServiceType string describes ingress methods for a service
 // +enum
-// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
+// +kubebuilder:validation:Enum=ClusterIP;LoadBalancer;NodePort
 type ServiceType string
 
 const (
+	// ServiceTypeClusterIP means a service will only be accessible inside the
+	// cluster, via the cluster IP.
+	ServiceTypeClusterIP ServiceType = "ClusterIP"
+
 	// ServiceTypeLoadBalancer means a service will be exposed via an
 	// external load balancer (if the cloud provider supports it).
 	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
 
-	// ServiceTypeClusterIP means a service will only be accessible inside the
-	// cluster, via the cluster IP.
-	ServiceTypeClusterIP ServiceType = "ClusterIP"
+	// ServiceTypeNodePort means a service will be exposed on each Kubernetes Node
+	// at a static Port, common across all Nodes.
+	ServiceTypeNodePort ServiceType = "NodePort"
 )
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.

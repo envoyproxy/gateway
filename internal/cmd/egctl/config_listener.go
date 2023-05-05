@@ -21,6 +21,9 @@ func listenerConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about listener configuration for a given pod from Envoy.
   egctl config envoy-proxy listener <pod-name> -n <pod-namespace>
 
+  # Retrieve summary about listener configuration for a pod matching label selectors
+  egctl config envoy-proxy listener --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve full configuration dump as YAML
   egctl config envoy-proxy listener <pod-name> -n <pod-namespace> -o yaml
 
@@ -36,17 +39,12 @@ func listenerConfigCmd() *cobra.Command {
 }
 
 func runListenerConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, ListenerEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	listener, err := findXDSResourceFromConfigDump(ListenerEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(listener, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}
