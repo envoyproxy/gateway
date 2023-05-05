@@ -441,18 +441,17 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 }
 
 func (t *Translator) processGRPCRouteMethodExact(method *v1alpha2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
-	switch {
-	case method.Service != nil && method.Method != nil:
+	if method.Service != nil && method.Method != nil {
 		irRoute.PathMatch = &ir.StringMatch{
 			Exact: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
-	case method.Method != nil:
+	} else if method.Method != nil {
 		// Use a header match since the PathMatch doesn't support Suffix matching
 		irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 			Name:   ":path",
 			Suffix: StringPtr(fmt.Sprintf("/%s", *method.Method)),
 		})
-	case method.Service != nil:
+	} else if method.Service != nil {
 		irRoute.PathMatch = &ir.StringMatch{
 			Prefix: StringPtr(fmt.Sprintf("/%s", *method.Service)),
 		}
@@ -460,18 +459,21 @@ func (t *Translator) processGRPCRouteMethodExact(method *v1alpha2.GRPCMethodMatc
 }
 
 func (t *Translator) processGRPCRouteMethodRegularExpression(method *v1alpha2.GRPCMethodMatch, irRoute *ir.HTTPRoute) {
-	switch {
-	case method.Service != nil && method.Method != nil:
+	if method.Service != nil && method.Method != nil {
 		irRoute.PathMatch = &ir.StringMatch{
 			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
-	case method.Method != nil:
+	} else if method.Method != nil {
 		irRoute.PathMatch = &ir.StringMatch{
 			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
 		}
-	case method.Service != nil:
+	} else if method.Service != nil {
 		irRoute.PathMatch = &ir.StringMatch{
 			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
+		}
+	} else {
+		irRoute.PathMatch = &ir.StringMatch{
+			Prefix: StringPtr("/"),
 		}
 	}
 }
