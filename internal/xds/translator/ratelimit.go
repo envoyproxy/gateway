@@ -248,7 +248,6 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 				// HeaderValueMatch case
 				yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
 				yamlDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
-
 			}
 
 			// Add the ratelimit values to the last descriptor

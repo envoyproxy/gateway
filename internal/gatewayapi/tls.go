@@ -14,9 +14,8 @@ import (
 )
 
 // validateTLSSecretData ensures the cert and key provided in a secret
-// is not malformed and can be properly parsed.
+// is not malformed and can be properly parsed
 func validateTLSSecretData(secret *corev1.Secret) error {
-
 	certData := secret.Data[corev1.TLSCertKey]
 
 	certBlock, _ := pem.Decode(certData)

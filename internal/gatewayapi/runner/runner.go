@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -61,6 +62,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				GatewayClassName:       v1beta1.ObjectName(update.Key),
 				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
 			}
+
+			// If an extension is loaded, pass its supported groups/kinds to the translator
+			if r.EnvoyGateway.Extension != nil {
+				var extGKs []schema.GroupKind
+				for _, gvk := range r.EnvoyGateway.Extension.Resources {
+					extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
+				}
+				t.ExtensionGroupKinds = extGKs
+			}
 			// Translate to IR
 			result := t.Translate(val)
 
@@ -105,28 +115,28 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Update Status
 			for _, gateway := range result.Gateways {
 				key := utils.NamespacedName(gateway)
-				r.ProviderResources.GatewayStatuses.Store(key, gateway)
+				r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
 			}
 			for _, httpRoute := range result.HTTPRoutes {
 				key := utils.NamespacedName(httpRoute)
-				r.ProviderResources.HTTPRouteStatuses.Store(key, httpRoute)
+				r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
 			}
 			for _, grpcRoute := range result.GRPCRoutes {
 				key := utils.NamespacedName(grpcRoute)
-				r.ProviderResources.GRPCRouteStatuses.Store(key, grpcRoute)
+				r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
 			}
 
 			for _, tlsRoute := range result.TLSRoutes {
 				key := utils.NamespacedName(tlsRoute)
-				r.ProviderResources.TLSRouteStatuses.Store(key, tlsRoute)
+				r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
 			}
 			for _, tcpRoute := range result.TCPRoutes {
 				key := utils.NamespacedName(tcpRoute)
-				r.ProviderResources.TCPRouteStatuses.Store(key, tcpRoute)
+				r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
 			}
 			for _, udpRoute := range result.UDPRoutes {
 				key := utils.NamespacedName(udpRoute)
-				r.ProviderResources.UDPRouteStatuses.Store(key, udpRoute)
+				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 			}
 		},
 	)

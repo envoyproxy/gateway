@@ -61,6 +61,7 @@ type gatewayAPIReconciler struct {
 	log             logr.Logger
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
+	store           *kubernetesProviderStore
 	namespace       string
 
 	resources *message.ProviderResources
@@ -88,6 +89,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		statusUpdater:   su,
 		resources:       resources,
 		extGVKs:         extGVKs,
+		store:           newProviderStore(),
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -327,7 +329,7 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	// update accepted condition
 	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
 	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy)
+	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy, r.store.listNodeAddresses()...)
 
 	key := utils.NamespacedName(gtw)
 
@@ -897,12 +899,20 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Gateway object status updater
 	go func() {
 		message.HandleSubscription(r.resources.GatewayStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.Gateway]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1b1.GatewayStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
 				}
-				r.statusUpdateForGateway(ctx, update.Value)
+				// Get gateway object
+				gtw := new(gwapiv1b1.Gateway)
+				if err := r.client.Get(ctx, update.Key, gtw); err != nil {
+					r.log.Error(err, "gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
+					return
+				}
+				// Set the updated Status and call the status update
+				gtw.Status = *update.Value
+				r.statusUpdateForGateway(ctx, gtw)
 			},
 		)
 		r.log.Info("gateway status subscriber shutting down")
@@ -911,7 +921,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// HTTPRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -927,7 +937,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Status.Parents
+						hCopy.Status.Parents = val.Parents
 						return hCopy
 					}),
 				})
@@ -939,7 +949,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// GRPCRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -955,7 +965,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						hCopy := h.DeepCopy()
-						hCopy.Status.Parents = val.Status.Parents
+						hCopy.Status.Parents = val.Parents
 						return hCopy
 					}),
 				})
@@ -967,7 +977,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// TLSRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -983,7 +993,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Status.Parents
+						tCopy.Status.Parents = val.Parents
 						return tCopy
 					}),
 				})
@@ -995,7 +1005,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// TCPRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.TCPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1011,7 +1021,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Status.Parents
+						tCopy.Status.Parents = val.Parents
 						return tCopy
 					}),
 				})
@@ -1023,7 +1033,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// UDPRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.UDPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRoute]) {
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1039,7 +1049,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 							panic(fmt.Sprintf("unsupported object type %T", obj))
 						}
 						tCopy := t.DeepCopy()
-						tCopy.Status.Parents = val.Status.Parents
+						tCopy.Status.Parents = val.Parents
 						return tCopy
 					}),
 				})
@@ -1053,7 +1063,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
 	// Only enqueue GatewayClass objects that match this Envoy Gateway's controller name.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1b1.GatewayClass{}},
+		source.Kind(mgr.GetCache(), &gwapiv1b1.GatewayClass{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.hasMatchingController),
 	); err != nil {
@@ -1062,7 +1072,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
 	if err := c.Watch(
-		&source.Kind{Type: &egcfgv1a1.EnvoyProxy{}},
+		source.Kind(mgr.GetCache(), &egcfgv1a1.EnvoyProxy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueManagedClass),
 		predicate.ResourceVersionChangedPredicate{},
 	); err != nil {
@@ -1071,7 +1081,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1b1.Gateway{}},
+		source.Kind(mgr.GetCache(), &gwapiv1b1.Gateway{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
 	); err != nil {
@@ -1083,7 +1093,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1b1.HTTPRoute{}},
+		source.Kind(mgr.GetCache(), &gwapiv1b1.HTTPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
@@ -1094,7 +1104,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.GRPCRoute{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.GRPCRoute{}),
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
@@ -1105,7 +1115,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.TLSRoute{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{}),
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
@@ -1116,7 +1126,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch UDPRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.UDPRoute{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
@@ -1127,7 +1137,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TCPRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.TCPRoute{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{}),
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
@@ -1138,15 +1148,26 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Service CRUDs and process affected *Route objects.
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Service{}},
+		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateServiceForReconcile)); err != nil {
 		return err
 	}
 
+	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
+	// Node creation/deletion and ExternalIP updates would require update in the Gateway
+	// resource address.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &corev1.Node{}),
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.handleNode),
+	); err != nil {
+		return err
+	}
+
 	// Watch Secret CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &corev1.Secret{}},
+		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
 	); err != nil {
@@ -1155,7 +1176,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ReferenceGrant CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &gwapiv1a2.ReferenceGrant{}},
+		source.Kind(mgr.GetCache(), &gwapiv1a2.ReferenceGrant{}),
 		&handler.EnqueueRequestForObject{},
 	); err != nil {
 		return err
@@ -1166,7 +1187,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Deployment CRUDs and process affected Gateways.
 	if err := c.Watch(
-		&source.Kind{Type: &appsv1.Deployment{}},
+		source.Kind(mgr.GetCache(), &appsv1.Deployment{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
 	); err != nil {
@@ -1175,7 +1196,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
 	if err := c.Watch(
-		&source.Kind{Type: &egv1a1.AuthenticationFilter{}},
+		source.Kind(mgr.GetCache(), &egv1a1.AuthenticationFilter{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)); err != nil {
 		return err
@@ -1183,7 +1204,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
 	if err := c.Watch(
-		&source.Kind{Type: &egv1a1.RateLimitFilter{}},
+		source.Kind(mgr.GetCache(), &egv1a1.RateLimitFilter{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)); err != nil {
 		return err
@@ -1195,7 +1216,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	for _, gvk := range r.extGVKs {
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
-		if err := c.Watch(&source.Kind{Type: u},
+		if err := c.Watch(source.Kind(mgr.GetCache(), u),
 			&handler.EnqueueRequestForObject{}); err != nil {
 			return err
 		}
@@ -1204,7 +1225,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	return nil
 }
 
-func (r *gatewayAPIReconciler) enqueueManagedClass(obj client.Object) []reconcile.Request {
+func (r *gatewayAPIReconciler) enqueueManagedClass(_ context.Context, obj client.Object) []reconcile.Request {
 	ep, ok := obj.(*egcfgv1a1.EnvoyProxy)
 	if !ok {
 		panic(fmt.Sprintf("unsupported object type %T", obj))

@@ -9,66 +9,36 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
-
-func TestExpectedRateLimitDeployment(t *testing.T) {
-	svrCfg, err := config.New()
-	require.NoError(t, err)
-	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
-	kube := NewInfra(cli, svrCfg)
-
-	rateLimitInfra := new(ir.RateLimitInfra)
-	rateLimitInfra.Backend = &ir.RateLimitDBBackend{Redis: &ir.RateLimitRedis{URL: ""}}
-
-	deployment := kube.expectedRateLimitDeployment(rateLimitInfra)
-
-	// Check the deployment name is as expected.
-	assert.Equal(t, deployment.Name, rateLimitInfraName)
-
-	// Check container details, i.e. env vars, labels, etc. for the deployment are as expected.
-	container := checkContainer(t, deployment, rateLimitInfraName, true)
-	checkContainerImage(t, container, rateLimitInfraImage)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRedisSocketTypeEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRedisURLEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRuntimeRootEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRuntimeSubdirectoryEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRuntimeIgnoreDotfilesEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitRuntimeWatchRootEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitLogLevelEnvVar)
-	checkEnvVar(t, deployment, rateLimitInfraName, rateLimitUseStatsdEnvVar)
-	checkLabels(t, deployment, deployment.Labels)
-
-	// Check container ports for the deployment are as expected.
-	ports := []int32{rateLimitInfraGRPCPort}
-	for _, port := range ports {
-		checkContainerHasPort(t, deployment, port)
-	}
-
-	// Set the deployment replicas.
-	repl := int32(1)
-	// Check the number of replicas is as expected.
-	assert.Equal(t, repl, *deployment.Spec.Replicas)
-}
 
 func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	kube := NewInfra(nil, cfg)
 	rateLimitInfra := new(ir.RateLimitInfra)
-	rateLimitInfra.Backend = &ir.RateLimitDBBackend{Redis: &ir.RateLimitRedis{URL: ""}}
+	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
+		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+			Type: egcfgv1a1.RedisBackendType,
+			Redis: &egcfgv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
 
-	deployment := kube.expectedRateLimitDeployment(rateLimitInfra)
+	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
+	deployment, err := r.Deployment()
+	require.NoError(t, err)
 
 	testCases := []struct {
 		name    string
@@ -89,36 +59,51 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 		},
 		{
 			name:    "update ratelimit deployment image",
-			in:      &ir.RateLimitInfra{Backend: &ir.RateLimitDBBackend{Redis: &ir.RateLimitRedis{URL: ""}}},
+			in:      &ir.RateLimitInfra{},
 			current: deployment,
-			want:    deploymentWithImage(deployment, rateLimitInfraImage),
+			want:    deploymentWithImage(deployment, egcfgv1a1.DefaultRateLimitImage),
 		},
 	}
 
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			var cli client.Client
 			if tc.current != nil {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.current).Build()
 			} else {
-				kube.Client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
+				cli = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 			}
-			err := kube.createOrUpdateRateLimitDeployment(context.Background(), tc.in)
+
+			kube := NewInfra(cli, cfg)
+			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
+			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, kube.EnvoyGateway)
+			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
-					Name:      rateLimitInfraName,
+					Name:      ratelimit.InfraName,
 				},
 			}
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
+
 			require.Equal(t, tc.want.Spec, actual.Spec)
 		})
 	}
 }
 
 func TestDeleteRateLimitDeployment(t *testing.T) {
+	rl := &egcfgv1a1.RateLimit{
+		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+			Type: egcfgv1a1.RedisBackendType,
+			Redis: &egcfgv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
+
 	testCases := []struct {
 		name   string
 		expect bool
@@ -132,17 +117,14 @@ func TestDeleteRateLimitDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			kube := &Infra{
-				Client:    fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build(),
-				Namespace: "test",
-			}
+			kube := newTestInfra(t)
 			rateLimitInfra := new(ir.RateLimitInfra)
-			rateLimitInfra.Backend = &ir.RateLimitDBBackend{Redis: &ir.RateLimitRedis{URL: ""}}
-
-			err := kube.createOrUpdateRateLimitDeployment(context.Background(), rateLimitInfra)
+			kube.EnvoyGateway.RateLimit = rl
+			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
+			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
-			err = kube.deleteRateLimitDeployment(context.Background(), rateLimitInfra)
+			err = kube.deleteDeployment(context.Background(), r)
 			require.NoError(t, err)
 		})
 	}

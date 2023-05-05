@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
@@ -118,6 +120,63 @@ func TestDecode(t *testing.T) {
 				},
 			},
 			expect: false,
+		},
+		{
+			in: inPath + "gateway-ratelimit.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway: v1alpha1.DefaultGateway(),
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
+							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
+								Replicas: v1alpha1.DefaultKubernetesDeploymentReplicas(),
+								Container: &v1alpha1.KubernetesContainerSpec{
+									Env: []corev1.EnvVar{
+										{
+											Name:  "env_a",
+											Value: "env_a_value",
+										},
+										{
+											Name:  "env_b",
+											Value: "env_b_value",
+										},
+									},
+									Image:     pointer.String("envoyproxy/ratelimit:latest"),
+									Resources: v1alpha1.DefaultResourceRequirements(),
+									SecurityContext: &corev1.SecurityContext{
+										RunAsUser:                pointer.Int64(2000),
+										AllowPrivilegeEscalation: pointer.Bool(false),
+									},
+								},
+								Pod: &v1alpha1.KubernetesPodSpec{
+									Annotations: map[string]string{
+										"key1": "val1",
+										"key2": "val2",
+									},
+									SecurityContext: &corev1.PodSecurityContext{
+										RunAsUser:           pointer.Int64(1000),
+										RunAsGroup:          pointer.Int64(3000),
+										FSGroup:             pointer.Int64(2000),
+										FSGroupChangePolicy: func(s corev1.PodFSGroupChangePolicy) *corev1.PodFSGroupChangePolicy { return &s }(corev1.FSGroupChangeOnRootMismatch),
+									},
+								},
+							},
+						},
+					},
+					RateLimit: &v1alpha1.RateLimit{
+						Backend: v1alpha1.RateLimitDatabaseBackend{
+							Type:  v1alpha1.RedisBackendType,
+							Redis: &v1alpha1.RateLimitRedisSettings{URL: "localhost:6379"},
+						},
+					},
+				},
+			},
+			expect: true,
 		},
 		{
 			in:     inPath + "no-api-version.yaml",

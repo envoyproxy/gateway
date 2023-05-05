@@ -73,9 +73,12 @@ func validateProvider(spec *EnvoyProxySpec) []error {
 func validateServiceType(spec *EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
-		serviceType := spec.Provider.Kubernetes.EnvoyService.Type
-		if *serviceType != ServiceTypeLoadBalancer && *serviceType != ServiceTypeClusterIP {
-			errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
+		if serviceType := spec.Provider.Kubernetes.EnvoyService.Type; serviceType != nil {
+			if *serviceType != ServiceTypeLoadBalancer &&
+				*serviceType != ServiceTypeClusterIP &&
+				*serviceType != ServiceTypeNodePort {
+				errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
+			}
 		}
 	}
 	return errs

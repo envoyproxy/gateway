@@ -15,9 +15,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	netutil "github.com/envoyproxy/gateway/internal/utils/net"
+)
+
+const (
+	defaultNamespace           = "default"
+	defaultEnvoyGatewayPodName = "eg"
 )
 
 var _ kube.PortForwarder = &fakePortForwarder{}
@@ -94,10 +100,11 @@ func TestExtractAllConfigDump(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.output, func(t *testing.T) {
-			configDump, err := extractConfigDump(fw, true)
+		t.Run(tc.expected, func(t *testing.T) {
+			configDump, err := extractConfigDump(fw, true, AllEnvoyConfigType)
 			assert.NoError(t, err)
-			got, err := marshalEnvoyProxyConfig(configDump, tc.output)
+			aggregated := sampleAggregatedConfigDump(configDump)
+			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			assert.NoError(t, err)
 			out, err := readOutputConfig(tc.expected)
 			assert.NoError(t, err)
@@ -175,12 +182,11 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		t.Run(tc.output, func(t *testing.T) {
-			configDump, err := extractConfigDump(fw, false)
+		t.Run(tc.expected, func(t *testing.T) {
+			configDump, err := extractConfigDump(fw, false, tc.resourceType)
 			assert.NoError(t, err)
-			resource, err := findXDSResourceFromConfigDump(tc.resourceType, configDump)
-			assert.NoError(t, err)
-			got, err := marshalEnvoyProxyConfig(resource, tc.output)
+			aggregated := sampleAggregatedConfigDump(configDump)
+			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			assert.NoError(t, err)
 			out, err := readOutputConfig(tc.expected)
 			assert.NoError(t, err)
@@ -193,6 +199,40 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 	}
 
 	fw.Stop()
+}
+
+func TestLabelSelectorBadInput(t *testing.T) {
+	podNamespace = "default"
+
+	cases := []struct {
+		name   string
+		args   []string
+		labels []string
+	}{
+		{
+			name:   "no label, no pod name",
+			args:   []string{},
+			labels: []string{},
+		},
+		{
+			name:   "wrong label, no pod name",
+			args:   []string{},
+			labels: []string{"foo=bar"},
+		},
+		{
+			name:   "no label, wrong pod name",
+			args:   []string{"eg"},
+			labels: []string{},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			labelSelectors = tc.labels
+			_, err := retrieveConfigDump(tc.args, false, AllEnvoyConfigType)
+			assert.True(t, err != nil, "error not found")
+		})
+	}
 }
 
 func readInputConfig(filename string) ([]byte, error) {
@@ -209,4 +249,12 @@ func readOutputConfig(filename string) ([]byte, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+func sampleAggregatedConfigDump(configDump protoreflect.ProtoMessage) aggregatedConfigDump {
+	return aggregatedConfigDump{
+		defaultNamespace: {
+			defaultEnvoyGatewayPodName: configDump,
+		},
+	}
 }

@@ -25,6 +25,9 @@
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
         rds:
           configSource:
             ads: {}
@@ -40,8 +43,13 @@
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
           tlsCertificateSdsSecretConfigs:
-          - name: first-listener
+          - name: secret-1
+            sdsConfig:
+              ads: {}
+              resourceApiVersion: V3
+          - name: secret-2
             sdsConfig:
               ads: {}
               resourceApiVersion: V3
   name: first-listener
+  perConnectionBufferLimitBytes: 32768

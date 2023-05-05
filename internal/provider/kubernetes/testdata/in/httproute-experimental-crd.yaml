@@ -2,8 +2,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1538
-    gateway.networking.k8s.io/bundle-version: v0.6.2
+    api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
+    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
@@ -56,19 +56,19 @@ spec:
                   against the HTTP Host header to select a HTTPRoute to process the
                   request. This matches the RFC 1123 definition of a hostname with
                   2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname may
-                  be prefixed with a wildcard label (`*.`). The wildcard    label
-                  must appear by itself as the first label. \n If a hostname is specified
+                  be prefixed with a wildcard label (`*.`). The wildcard label must
+                  appear by itself as the first label. \n If a hostname is specified
                   by both the Listener and HTTPRoute, there must be at least one intersecting
                   hostname for the HTTPRoute to be attached to the Listener. For example:
                   \n * A Listener with `test.example.com` as the hostname matches
-                  HTTPRoutes   that have either not specified any hostnames, or have
-                  specified at   least one of `test.example.com` or `*.example.com`.
+                  HTTPRoutes that have either not specified any hostnames, or have
+                  specified at least one of `test.example.com` or `*.example.com`.
                   * A Listener with `*.example.com` as the hostname matches HTTPRoutes
-                  \  that have either not specified any hostnames or have specified
-                  at least   one hostname that matches the Listener hostname. For
-                  example,   `*.example.com`, `test.example.com`, and `foo.test.example.com`
-                  would   all match. On the other hand, `example.com` and `test.example.net`
-                  would   not match. \n Hostnames that are prefixed with a wildcard
+                  that have either not specified any hostnames or have specified at
+                  least one hostname that matches the Listener hostname. For example,
+                  `*.example.com`, `test.example.com`, and `foo.test.example.com`
+                  would all match. On the other hand, `example.com` and `test.example.net`
+                  would not match. \n Hostnames that are prefixed with a wildcard
                   label (`*.`) are interpreted as a suffix match. That means that
                   a match for `*.example.com` would match both `test.example.com`,
                   and `foo.test.example.com`, but not `example.com`. \n If both the
@@ -90,8 +90,8 @@ spec:
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n  1. IPs are not allowed.  2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard     label
+                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
+                    may be prefixed with a wildcard label (`*.`). The wildcard label
                     must appear by itself as the first label. \n Hostname can be \"precise\"
                     which is a domain name without the terminating dot of a network
                     host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
@@ -256,7 +256,8 @@ spec:
                         \n For example, if two backends are specified with equal weights,
                         and one is invalid, 50 percent of traffic must receive a 500.
                         Implementations may choose how that 50 percent is determined.
-                        \n Support: Core for Kubernetes Service \n Support: Implementation-specific
+                        \n Support: Core for Kubernetes Service \n Support: Extended
+                        for Kubernetes ServiceImport \n Support: Implementation-specific
                         for any other resource \n Support for weight: Core"
                       items:
                         description: HTTPBackendRef defines how a HTTPRoute should
@@ -320,11 +321,10 @@ spec:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -367,11 +367,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -379,10 +378,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -459,9 +458,20 @@ spec:
                                           type: string
                                         kind:
                                           default: Service
-                                          description: Kind is kind of the referent.
-                                            For example "HTTPRoute" or "Service".
-                                            Defaults to "Service" when not specified.
+                                          description: "Kind is the Kubernetes resource
+                                            kind of the referent. For example \"Service\".
+                                            \n Defaults to \"Service\" when not specified.
+                                            \n ExternalName services can refer to
+                                            CNAME DNS records that may live outside
+                                            of the cluster and as such are difficult
+                                            to reason about in terms of conformance.
+                                            They also may not be safe to forward to
+                                            (see CVE-2021-25740 for more information).
+                                            Implementations SHOULD NOT support ExternalName
+                                            Services. \n Support: Core (Services with
+                                            a type other than ExternalName) \n Support:
+                                            Implementation-specific (Services with
+                                            type ExternalName)"
                                           maxLength: 63
                                           minLength: 1
                                           pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -513,7 +523,8 @@ spec:
                                       description: "Hostname is the hostname to be
                                         used in the value of the `Location` header
                                         in the response. When empty, the hostname
-                                        of the request is used. \n Support: Core"
+                                        in the `Host` header of the request is used.
+                                        \n Support: Core"
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -523,14 +534,12 @@ spec:
                                         modify the path of the incoming request. The
                                         modified path is then used to construct the
                                         `Location` header. When empty, the request
-                                        path is used as-is. \n Support: Extended \n
-                                        <gateway:experimental>"
+                                        path is used as-is. \n Support: Extended"
                                       properties:
                                         replaceFullPath:
-                                          description: "ReplaceFullPath specifies
-                                            the value with which to replace the full
-                                            path of a request during a rewrite or
-                                            redirect. \n <gateway:experimental>"
+                                          description: ReplaceFullPath specifies the
+                                            value with which to replace the full path
+                                            of a request during a rewrite or redirect.
                                           maxLength: 1024
                                           type: string
                                         replacePrefixMatch:
@@ -547,8 +556,7 @@ spec:
                                             When specified, a trailing `/` is ignored.
                                             For example, the paths `/abc`, `/abc/`,
                                             and `/abc/def` would all match the prefix
-                                            `/abc`, but the path `/abcd` would not.
-                                            \n <gateway:experimental>"
+                                            `/abc`, but the path `/abcd` would not."
                                           maxLength: 1024
                                           type: string
                                         type:
@@ -561,7 +569,7 @@ spec:
                                             values here must result in the implementation
                                             setting the Accepted Condition for the
                                             Route to `status: False`, with a Reason
-                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                            of `UnsupportedValue`."
                                           enum:
                                           - ReplaceFullPath
                                           - ReplacePrefixMatch
@@ -572,8 +580,16 @@ spec:
                                     port:
                                       description: "Port is the port to be used in
                                         the value of the `Location` header in the
-                                        response. When empty, port (if specified)
-                                        of the request is used. \n Support: Extended"
+                                        response. \n When empty, the Gateway Listener
+                                        port is used. \n Implementations SHOULD NOT
+                                        add the port number in the 'Location' header
+                                        in the following cases: \n * A Location header
+                                        that will use HTTP (whether that is determined
+                                        via the Listener protocol or the Scheme field)
+                                        _and_ use port 80. * A Location header that
+                                        will use HTTPS (whether that is determined
+                                        via the Listener protocol or the Scheme field)
+                                        _and_ use port 443. \n Support: Extended"
                                       format: int32
                                       maximum: 65535
                                       minimum: 1
@@ -612,17 +628,16 @@ spec:
                                 responseHeaderModifier:
                                   description: "ResponseHeaderModifier defines a schema
                                     for a filter that modifies response headers. \n
-                                    Support: Extended \n <gateway:experimental>"
+                                    Support: Extended"
                                   properties:
                                     add:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -665,11 +680,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -677,10 +691,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -723,20 +737,20 @@ spec:
                                     to apply. As with other API fields, types are
                                     classified into three conformance levels: \n -
                                     Core: Filter types and their corresponding configuration
-                                    defined by   \"Support: Core\" in this package,
-                                    e.g. \"RequestHeaderModifier\". All   implementations
+                                    defined by \"Support: Core\" in this package,
+                                    e.g. \"RequestHeaderModifier\". All implementations
                                     must support core filters. \n - Extended: Filter
                                     types and their corresponding configuration defined
-                                    by   \"Support: Extended\" in this package, e.g.
-                                    \"RequestMirror\". Implementers   are encouraged
+                                    by \"Support: Extended\" in this package, e.g.
+                                    \"RequestMirror\". Implementers are encouraged
                                     to support extended filters. \n - Implementation-specific:
-                                    Filters that are defined and supported by   specific
-                                    vendors.   In the future, filters showing convergence
-                                    in behavior across multiple   implementations
-                                    will be considered for inclusion in extended or
-                                    core   conformance levels. Filter-specific configuration
-                                    for such filters   is specified using the ExtensionRef
-                                    field. `Type` should be set to   \"ExtensionRef\"
+                                    Filters that are defined and supported by specific
+                                    vendors. In the future, filters showing convergence
+                                    in behavior across multiple implementations will
+                                    be considered for inclusion in extended or core
+                                    conformance levels. Filter-specific configuration
+                                    for such filters is specified using the ExtensionRef
+                                    field. `Type` should be set to \"ExtensionRef\"
                                     for custom filters. \n Implementers are encouraged
                                     to define custom implementation types to extend
                                     the core API with implementation-specific behavior.
@@ -749,7 +763,7 @@ spec:
                                     a crash. \n Unknown values here must result in
                                     the implementation setting the Accepted Condition
                                     for the Route to `status: False`, with a Reason
-                                    of `UnsupportedValue`. \n "
+                                    of `UnsupportedValue`."
                                   enum:
                                   - RequestHeaderModifier
                                   - ResponseHeaderModifier
@@ -761,25 +775,24 @@ spec:
                                 urlRewrite:
                                   description: "URLRewrite defines a schema for a
                                     filter that modifies a request during forwarding.
-                                    \n Support: Extended \n <gateway:experimental>"
+                                    \n Support: Extended"
                                   properties:
                                     hostname:
                                       description: "Hostname is the value to be used
                                         to replace the Host header value during forwarding.
-                                        \n Support: Extended \n <gateway:experimental>"
+                                        \n Support: Extended"
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                       type: string
                                     path:
                                       description: "Path defines a path rewrite. \n
-                                        Support: Extended \n <gateway:experimental>"
+                                        Support: Extended"
                                       properties:
                                         replaceFullPath:
-                                          description: "ReplaceFullPath specifies
-                                            the value with which to replace the full
-                                            path of a request during a rewrite or
-                                            redirect. \n <gateway:experimental>"
+                                          description: ReplaceFullPath specifies the
+                                            value with which to replace the full path
+                                            of a request during a rewrite or redirect.
                                           maxLength: 1024
                                           type: string
                                         replacePrefixMatch:
@@ -796,8 +809,7 @@ spec:
                                             When specified, a trailing `/` is ignored.
                                             For example, the paths `/abc`, `/abc/`,
                                             and `/abc/def` would all match the prefix
-                                            `/abc`, but the path `/abcd` would not.
-                                            \n <gateway:experimental>"
+                                            `/abc`, but the path `/abcd` would not."
                                           maxLength: 1024
                                           type: string
                                         type:
@@ -810,7 +822,7 @@ spec:
                                             values here must result in the implementation
                                             setting the Accepted Condition for the
                                             Route to `status: False`, with a Reason
-                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                            of `UnsupportedValue`."
                                           enum:
                                           - ReplaceFullPath
                                           - ReplacePrefixMatch
@@ -834,9 +846,17 @@ spec:
                             type: string
                           kind:
                             default: Service
-                            description: Kind is kind of the referent. For example
-                              "HTTPRoute" or "Service". Defaults to "Service" when
-                              not specified.
+                            description: "Kind is the Kubernetes resource kind of
+                              the referent. For example \"Service\". \n Defaults to
+                              \"Service\" when not specified. \n ExternalName services
+                              can refer to CNAME DNS records that may live outside
+                              of the cluster and as such are difficult to reason about
+                              in terms of conformance. They also may not be safe to
+                              forward to (see CVE-2021-25740 for more information).
+                              Implementations SHOULD NOT support ExternalName Services.
+                              \n Support: Core (Services with a type other than ExternalName)
+                              \n Support: Implementation-specific (Services with type
+                              ExternalName)"
                             maxLength: 63
                             minLength: 1
                             pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -902,7 +922,7 @@ spec:
                         type of filter: \n - ALL core filters MUST be supported by
                         all implementations. - Implementers are encouraged to support
                         extended filters. - Implementation-specific custom filters
-                        have no API guarantees across   implementations. \n Specifying
+                        have no API guarantees across implementations. \n Specifying
                         a core filter multiple times has unspecified or implementation-specific
                         conformance. \n All filters are expected to be compatible
                         with each other except for the URLRewrite and RequestRedirect
@@ -961,10 +981,9 @@ spec:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1004,10 +1023,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -1015,9 +1034,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1090,9 +1109,18 @@ spec:
                                     type: string
                                   kind:
                                     default: Service
-                                    description: Kind is kind of the referent. For
-                                      example "HTTPRoute" or "Service". Defaults to
-                                      "Service" when not specified.
+                                    description: "Kind is the Kubernetes resource
+                                      kind of the referent. For example \"Service\".
+                                      \n Defaults to \"Service\" when not specified.
+                                      \n ExternalName services can refer to CNAME
+                                      DNS records that may live outside of the cluster
+                                      and as such are difficult to reason about in
+                                      terms of conformance. They also may not be safe
+                                      to forward to (see CVE-2021-25740 for more information).
+                                      Implementations SHOULD NOT support ExternalName
+                                      Services. \n Support: Core (Services with a
+                                      type other than ExternalName) \n Support: Implementation-specific
+                                      (Services with type ExternalName)"
                                     maxLength: 63
                                     minLength: 1
                                     pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -1140,8 +1168,8 @@ spec:
                               hostname:
                                 description: "Hostname is the hostname to be used
                                   in the value of the `Location` header in the response.
-                                  When empty, the hostname of the request is used.
-                                  \n Support: Core"
+                                  When empty, the hostname in the `Host` header of
+                                  the request is used. \n Support: Core"
                                 maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -1151,12 +1179,12 @@ spec:
                                   the path of the incoming request. The modified path
                                   is then used to construct the `Location` header.
                                   When empty, the request path is used as-is. \n Support:
-                                  Extended \n <gateway:experimental>"
+                                  Extended"
                                 properties:
                                   replaceFullPath:
-                                    description: "ReplaceFullPath specifies the value
+                                    description: ReplaceFullPath specifies the value
                                       with which to replace the full path of a request
-                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                      during a rewrite or redirect.
                                     maxLength: 1024
                                     type: string
                                   replacePrefixMatch:
@@ -1172,7 +1200,7 @@ spec:
                                       When specified, a trailing `/` is ignored. For
                                       example, the paths `/abc`, `/abc/`, and `/abc/def`
                                       would all match the prefix `/abc`, but the path
-                                      `/abcd` would not. \n <gateway:experimental>"
+                                      `/abcd` would not."
                                     maxLength: 1024
                                     type: string
                                   type:
@@ -1183,8 +1211,7 @@ spec:
                                       unknown values will not cause a crash. \n Unknown
                                       values here must result in the implementation
                                       setting the Accepted Condition for the Route
-                                      to `status: False`, with a Reason of `UnsupportedValue`.
-                                      \n <gateway:experimental>"
+                                      to `status: False`, with a Reason of `UnsupportedValue`."
                                     enum:
                                     - ReplaceFullPath
                                     - ReplacePrefixMatch
@@ -1194,8 +1221,15 @@ spec:
                                 type: object
                               port:
                                 description: "Port is the port to be used in the value
-                                  of the `Location` header in the response. When empty,
-                                  port (if specified) of the request is used. \n Support:
+                                  of the `Location` header in the response. \n When
+                                  empty, the Gateway Listener port is used. \n Implementations
+                                  SHOULD NOT add the port number in the 'Location'
+                                  header in the following cases: \n * A Location header
+                                  that will use HTTP (whether that is determined via
+                                  the Listener protocol or the Scheme field) _and_
+                                  use port 80. * A Location header that will use HTTPS
+                                  (whether that is determined via the Listener protocol
+                                  or the Scheme field) _and_ use port 443. \n Support:
                                   Extended"
                                 format: int32
                                 maximum: 65535
@@ -1233,16 +1267,15 @@ spec:
                           responseHeaderModifier:
                             description: "ResponseHeaderModifier defines a schema
                               for a filter that modifies response headers. \n Support:
-                              Extended \n <gateway:experimental>"
+                              Extended"
                             properties:
                               add:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1282,10 +1315,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -1293,9 +1326,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -1335,31 +1368,30 @@ spec:
                             description: "Type identifies the type of filter to apply.
                               As with other API fields, types are classified into
                               three conformance levels: \n - Core: Filter types and
-                              their corresponding configuration defined by   \"Support:
+                              their corresponding configuration defined by \"Support:
                               Core\" in this package, e.g. \"RequestHeaderModifier\".
-                              All   implementations must support core filters. \n
-                              - Extended: Filter types and their corresponding configuration
-                              defined by   \"Support: Extended\" in this package,
-                              e.g. \"RequestMirror\". Implementers   are encouraged
-                              to support extended filters. \n - Implementation-specific:
-                              Filters that are defined and supported by   specific
-                              vendors.   In the future, filters showing convergence
-                              in behavior across multiple   implementations will be
-                              considered for inclusion in extended or core   conformance
-                              levels. Filter-specific configuration for such filters
-                              \  is specified using the ExtensionRef field. `Type`
-                              should be set to   \"ExtensionRef\" for custom filters.
-                              \n Implementers are encouraged to define custom implementation
-                              types to extend the core API with implementation-specific
-                              behavior. \n If a reference to a custom filter type
-                              cannot be resolved, the filter MUST NOT be skipped.
-                              Instead, requests that would have been processed by
-                              that filter MUST receive a HTTP error response. \n Note
-                              that values may be added to this enum, implementations
-                              must ensure that unknown values will not cause a crash.
-                              \n Unknown values here must result in the implementation
-                              setting the Accepted Condition for the Route to `status:
-                              False`, with a Reason of `UnsupportedValue`. \n "
+                              All implementations must support core filters. \n -
+                              Extended: Filter types and their corresponding configuration
+                              defined by \"Support: Extended\" in this package, e.g.
+                              \"RequestMirror\". Implementers are encouraged to support
+                              extended filters. \n - Implementation-specific: Filters
+                              that are defined and supported by specific vendors.
+                              In the future, filters showing convergence in behavior
+                              across multiple implementations will be considered for
+                              inclusion in extended or core conformance levels. Filter-specific
+                              configuration for such filters is specified using the
+                              ExtensionRef field. `Type` should be set to \"ExtensionRef\"
+                              for custom filters. \n Implementers are encouraged to
+                              define custom implementation types to extend the core
+                              API with implementation-specific behavior. \n If a reference
+                              to a custom filter type cannot be resolved, the filter
+                              MUST NOT be skipped. Instead, requests that would have
+                              been processed by that filter MUST receive a HTTP error
+                              response. \n Note that values may be added to this enum,
+                              implementations must ensure that unknown values will
+                              not cause a crash. \n Unknown values here must result
+                              in the implementation setting the Accepted Condition
+                              for the Route to `status: False`, with a Reason of `UnsupportedValue`."
                             enum:
                             - RequestHeaderModifier
                             - ResponseHeaderModifier
@@ -1371,24 +1403,24 @@ spec:
                           urlRewrite:
                             description: "URLRewrite defines a schema for a filter
                               that modifies a request during forwarding. \n Support:
-                              Extended \n <gateway:experimental>"
+                              Extended"
                             properties:
                               hostname:
                                 description: "Hostname is the value to be used to
                                   replace the Host header value during forwarding.
-                                  \n Support: Extended \n <gateway:experimental>"
+                                  \n Support: Extended"
                                 maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                 type: string
                               path:
                                 description: "Path defines a path rewrite. \n Support:
-                                  Extended \n <gateway:experimental>"
+                                  Extended"
                                 properties:
                                   replaceFullPath:
-                                    description: "ReplaceFullPath specifies the value
+                                    description: ReplaceFullPath specifies the value
                                       with which to replace the full path of a request
-                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                      during a rewrite or redirect.
                                     maxLength: 1024
                                     type: string
                                   replacePrefixMatch:
@@ -1404,7 +1436,7 @@ spec:
                                       When specified, a trailing `/` is ignored. For
                                       example, the paths `/abc`, `/abc/`, and `/abc/def`
                                       would all match the prefix `/abc`, but the path
-                                      `/abcd` would not. \n <gateway:experimental>"
+                                      `/abcd` would not."
                                     maxLength: 1024
                                     type: string
                                   type:
@@ -1415,8 +1447,7 @@ spec:
                                       unknown values will not cause a crash. \n Unknown
                                       values here must result in the implementation
                                       setting the Accepted Condition for the Route
-                                      to `status: False`, with a Reason of `UnsupportedValue`.
-                                      \n <gateway:experimental>"
+                                      to `status: False`, with a Reason of `UnsupportedValue`."
                                     enum:
                                     - ReplaceFullPath
                                     - ReplacePrefixMatch
@@ -1439,25 +1470,27 @@ spec:
                         rule against incoming HTTP requests. Each match is independent,
                         i.e. this rule will be matched if **any** one of the matches
                         is satisfied. \n For example, take the following matches configuration:
-                        \n ``` matches: - path:     value: \"/foo\"   headers:   -
-                        name: \"version\"     value: \"v2\" - path:     value: \"/v2/foo\"
-                        ``` \n For a request to match against this rule, a request
-                        must satisfy EITHER of the two conditions: \n - path prefixed
-                        with `/foo` AND contains the header `version: v2` - path prefix
-                        of `/v2/foo` \n See the documentation for HTTPRouteMatch on
-                        how to specify multiple match conditions that should be ANDed
-                        together. \n If no matches are specified, the default is a
-                        prefix path match on \"/\", which has the effect of matching
-                        every HTTP request. \n Proxy or Load Balancer routing configuration
-                        generated from HTTPRoutes MUST prioritize matches based on
-                        the following criteria, continuing on ties. Across all rules
-                        specified on applicable Routes, precedence must be given to
-                        the match with the largest number of: \n * Characters in a
-                        matching path. * Header matches. * Query param matches. \n
-                        If ties still exist across multiple Routes, matching precedence
+                        \n ``` matches: - path: value: \"/foo\" headers: - name: \"version\"
+                        value: \"v2\" - path: value: \"/v2/foo\" ``` \n For a request
+                        to match against this rule, a request must satisfy EITHER
+                        of the two conditions: \n - path prefixed with `/foo` AND
+                        contains the header `version: v2` - path prefix of `/v2/foo`
+                        \n See the documentation for HTTPRouteMatch on how to specify
+                        multiple match conditions that should be ANDed together. \n
+                        If no matches are specified, the default is a prefix path
+                        match on \"/\", which has the effect of matching every HTTP
+                        request. \n Proxy or Load Balancer routing configuration generated
+                        from HTTPRoutes MUST prioritize matches based on the following
+                        criteria, continuing on ties. Across all rules specified on
+                        applicable Routes, precedence must be given to the match with
+                        the largest number of: \n * Characters in a matching \"Exact\"
+                        path match * Characters in a matching \"Prefix\" path match
+                        * Header matches. * Query param matches. \n Note: The precedence
+                        of RegularExpression path matches are implementation-specific.
+                        \n If ties still exist across multiple Routes, matching precedence
                         MUST be determined in order of the following criteria, continuing
                         on ties: \n * The oldest Route based on creation timestamp.
-                        * The Route appearing first in alphabetical order by   \"{namespace}/{name}\".
+                        * The Route appearing first in alphabetical order by \"{namespace}/{name}\".
                         \n If ties still exist within an HTTPRoute, matching precedence
                         MUST be granted to the FIRST matching rule (in list order)
                         with a match meeting the above criteria. \n When no rules
@@ -1471,8 +1504,8 @@ spec:
                           if all conditions are satisfied. \n For example, the match
                           below will match a HTTP request only if its path starts
                           with `/foo` AND it contains the `version: v1` header: \n
-                          ``` match: \n \tpath: \t  value: \"/foo\" \theaders: \t-
-                          name: \"version\" \t  value \"v1\" \n ```"
+                          ``` match: \n path: value: \"/foo\" headers: - name: \"version\"
+                          value \"v1\" \n ```"
                         properties:
                           headers:
                             description: Headers specifies HTTP request header matchers.
@@ -1601,6 +1634,7 @@ spec:
                                     differences in the implementations."
                                   maxLength: 256
                                   minLength: 1
+                                  pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                   type: string
                                 type:
                                   default: Exact
@@ -1680,15 +1714,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -1918,19 +1951,19 @@ spec:
                   against the HTTP Host header to select a HTTPRoute to process the
                   request. This matches the RFC 1123 definition of a hostname with
                   2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname may
-                  be prefixed with a wildcard label (`*.`). The wildcard    label
-                  must appear by itself as the first label. \n If a hostname is specified
+                  be prefixed with a wildcard label (`*.`). The wildcard label must
+                  appear by itself as the first label. \n If a hostname is specified
                   by both the Listener and HTTPRoute, there must be at least one intersecting
                   hostname for the HTTPRoute to be attached to the Listener. For example:
                   \n * A Listener with `test.example.com` as the hostname matches
-                  HTTPRoutes   that have either not specified any hostnames, or have
-                  specified at   least one of `test.example.com` or `*.example.com`.
+                  HTTPRoutes that have either not specified any hostnames, or have
+                  specified at least one of `test.example.com` or `*.example.com`.
                   * A Listener with `*.example.com` as the hostname matches HTTPRoutes
-                  \  that have either not specified any hostnames or have specified
-                  at least   one hostname that matches the Listener hostname. For
-                  example,   `*.example.com`, `test.example.com`, and `foo.test.example.com`
-                  would   all match. On the other hand, `example.com` and `test.example.net`
-                  would   not match. \n Hostnames that are prefixed with a wildcard
+                  that have either not specified any hostnames or have specified at
+                  least one hostname that matches the Listener hostname. For example,
+                  `*.example.com`, `test.example.com`, and `foo.test.example.com`
+                  would all match. On the other hand, `example.com` and `test.example.net`
+                  would not match. \n Hostnames that are prefixed with a wildcard
                   label (`*.`) are interpreted as a suffix match. That means that
                   a match for `*.example.com` would match both `test.example.com`,
                   and `foo.test.example.com`, but not `example.com`. \n If both the
@@ -1952,8 +1985,8 @@ spec:
                 items:
                   description: "Hostname is the fully qualified domain name of a network
                     host. This matches the RFC 1123 definition of a hostname with
-                    2 notable exceptions: \n  1. IPs are not allowed.  2. A hostname
-                    may be prefixed with a wildcard label (`*.`). The wildcard     label
+                    2 notable exceptions: \n 1. IPs are not allowed. 2. A hostname
+                    may be prefixed with a wildcard label (`*.`). The wildcard label
                     must appear by itself as the first label. \n Hostname can be \"precise\"
                     which is a domain name without the terminating dot of a network
                     host (e.g. \"foo.example.com\") or \"wildcard\", which is a domain
@@ -2118,7 +2151,8 @@ spec:
                         \n For example, if two backends are specified with equal weights,
                         and one is invalid, 50 percent of traffic must receive a 500.
                         Implementations may choose how that 50 percent is determined.
-                        \n Support: Core for Kubernetes Service \n Support: Implementation-specific
+                        \n Support: Core for Kubernetes Service \n Support: Extended
+                        for Kubernetes ServiceImport \n Support: Implementation-specific
                         for any other resource \n Support for weight: Core"
                       items:
                         description: HTTPBackendRef defines how a HTTPRoute should
@@ -2182,11 +2216,10 @@ spec:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2229,11 +2262,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -2241,10 +2273,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2321,9 +2353,20 @@ spec:
                                           type: string
                                         kind:
                                           default: Service
-                                          description: Kind is kind of the referent.
-                                            For example "HTTPRoute" or "Service".
-                                            Defaults to "Service" when not specified.
+                                          description: "Kind is the Kubernetes resource
+                                            kind of the referent. For example \"Service\".
+                                            \n Defaults to \"Service\" when not specified.
+                                            \n ExternalName services can refer to
+                                            CNAME DNS records that may live outside
+                                            of the cluster and as such are difficult
+                                            to reason about in terms of conformance.
+                                            They also may not be safe to forward to
+                                            (see CVE-2021-25740 for more information).
+                                            Implementations SHOULD NOT support ExternalName
+                                            Services. \n Support: Core (Services with
+                                            a type other than ExternalName) \n Support:
+                                            Implementation-specific (Services with
+                                            type ExternalName)"
                                           maxLength: 63
                                           minLength: 1
                                           pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -2375,7 +2418,8 @@ spec:
                                       description: "Hostname is the hostname to be
                                         used in the value of the `Location` header
                                         in the response. When empty, the hostname
-                                        of the request is used. \n Support: Core"
+                                        in the `Host` header of the request is used.
+                                        \n Support: Core"
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -2385,14 +2429,12 @@ spec:
                                         modify the path of the incoming request. The
                                         modified path is then used to construct the
                                         `Location` header. When empty, the request
-                                        path is used as-is. \n Support: Extended \n
-                                        <gateway:experimental>"
+                                        path is used as-is. \n Support: Extended"
                                       properties:
                                         replaceFullPath:
-                                          description: "ReplaceFullPath specifies
-                                            the value with which to replace the full
-                                            path of a request during a rewrite or
-                                            redirect. \n <gateway:experimental>"
+                                          description: ReplaceFullPath specifies the
+                                            value with which to replace the full path
+                                            of a request during a rewrite or redirect.
                                           maxLength: 1024
                                           type: string
                                         replacePrefixMatch:
@@ -2409,8 +2451,7 @@ spec:
                                             When specified, a trailing `/` is ignored.
                                             For example, the paths `/abc`, `/abc/`,
                                             and `/abc/def` would all match the prefix
-                                            `/abc`, but the path `/abcd` would not.
-                                            \n <gateway:experimental>"
+                                            `/abc`, but the path `/abcd` would not."
                                           maxLength: 1024
                                           type: string
                                         type:
@@ -2423,7 +2464,7 @@ spec:
                                             values here must result in the implementation
                                             setting the Accepted Condition for the
                                             Route to `status: False`, with a Reason
-                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                            of `UnsupportedValue`."
                                           enum:
                                           - ReplaceFullPath
                                           - ReplacePrefixMatch
@@ -2434,8 +2475,16 @@ spec:
                                     port:
                                       description: "Port is the port to be used in
                                         the value of the `Location` header in the
-                                        response. When empty, port (if specified)
-                                        of the request is used. \n Support: Extended"
+                                        response. \n When empty, the Gateway Listener
+                                        port is used. \n Implementations SHOULD NOT
+                                        add the port number in the 'Location' header
+                                        in the following cases: \n * A Location header
+                                        that will use HTTP (whether that is determined
+                                        via the Listener protocol or the Scheme field)
+                                        _and_ use port 80. * A Location header that
+                                        will use HTTPS (whether that is determined
+                                        via the Listener protocol or the Scheme field)
+                                        _and_ use port 443. \n Support: Extended"
                                       format: int32
                                       maximum: 65535
                                       minimum: 1
@@ -2474,17 +2523,16 @@ spec:
                                 responseHeaderModifier:
                                   description: "ResponseHeaderModifier defines a schema
                                     for a filter that modifies response headers. \n
-                                    Support: Extended \n <gateway:experimental>"
+                                    Support: Extended"
                                   properties:
                                     add:
                                       description: "Add adds the given header(s) (name,
                                         value) to the request before the action. It
                                         appends to any existing values associated
-                                        with the header name. \n Input:   GET /foo
-                                        HTTP/1.1   my-header: foo \n Config:   add:
-                                        \  - name: \"my-header\"     value: \"bar,baz\"
-                                        \n Output:   GET /foo HTTP/1.1   my-header:
-                                        foo,bar,baz"
+                                        with the header name. \n Input: GET /foo HTTP/1.1
+                                        my-header: foo \n Config: add: - name: \"my-header\"
+                                        value: \"bar,baz\" \n Output: GET /foo HTTP/1.1
+                                        my-header: foo,bar,baz"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2527,11 +2575,10 @@ spec:
                                         of Remove is a list of HTTP header names.
                                         Note that the header names are case-insensitive
                                         (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                        \n Input:   GET /foo HTTP/1.1   my-header1:
-                                        foo   my-header2: bar   my-header3: baz \n
-                                        Config:   remove: [\"my-header1\", \"my-header3\"]
-                                        \n Output:   GET /foo HTTP/1.1   my-header2:
-                                        bar"
+                                        \n Input: GET /foo HTTP/1.1 my-header1: foo
+                                        my-header2: bar my-header3: baz \n Config:
+                                        remove: [\"my-header1\", \"my-header3\"] \n
+                                        Output: GET /foo HTTP/1.1 my-header2: bar"
                                       items:
                                         type: string
                                       maxItems: 16
@@ -2539,10 +2586,10 @@ spec:
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
-                                        action. \n Input:   GET /foo HTTP/1.1   my-header:
-                                        foo \n Config:   set:   - name: \"my-header\"
-                                        \    value: \"bar\" \n Output:   GET /foo
-                                        HTTP/1.1   my-header: bar"
+                                        action. \n Input: GET /foo HTTP/1.1 my-header:
+                                        foo \n Config: set: - name: \"my-header\"
+                                        value: \"bar\" \n Output: GET /foo HTTP/1.1
+                                        my-header: bar"
                                       items:
                                         description: HTTPHeader represents an HTTP
                                           Header name and value as defined by RFC
@@ -2585,20 +2632,20 @@ spec:
                                     to apply. As with other API fields, types are
                                     classified into three conformance levels: \n -
                                     Core: Filter types and their corresponding configuration
-                                    defined by   \"Support: Core\" in this package,
-                                    e.g. \"RequestHeaderModifier\". All   implementations
+                                    defined by \"Support: Core\" in this package,
+                                    e.g. \"RequestHeaderModifier\". All implementations
                                     must support core filters. \n - Extended: Filter
                                     types and their corresponding configuration defined
-                                    by   \"Support: Extended\" in this package, e.g.
-                                    \"RequestMirror\". Implementers   are encouraged
+                                    by \"Support: Extended\" in this package, e.g.
+                                    \"RequestMirror\". Implementers are encouraged
                                     to support extended filters. \n - Implementation-specific:
-                                    Filters that are defined and supported by   specific
-                                    vendors.   In the future, filters showing convergence
-                                    in behavior across multiple   implementations
-                                    will be considered for inclusion in extended or
-                                    core   conformance levels. Filter-specific configuration
-                                    for such filters   is specified using the ExtensionRef
-                                    field. `Type` should be set to   \"ExtensionRef\"
+                                    Filters that are defined and supported by specific
+                                    vendors. In the future, filters showing convergence
+                                    in behavior across multiple implementations will
+                                    be considered for inclusion in extended or core
+                                    conformance levels. Filter-specific configuration
+                                    for such filters is specified using the ExtensionRef
+                                    field. `Type` should be set to \"ExtensionRef\"
                                     for custom filters. \n Implementers are encouraged
                                     to define custom implementation types to extend
                                     the core API with implementation-specific behavior.
@@ -2611,7 +2658,7 @@ spec:
                                     a crash. \n Unknown values here must result in
                                     the implementation setting the Accepted Condition
                                     for the Route to `status: False`, with a Reason
-                                    of `UnsupportedValue`. \n "
+                                    of `UnsupportedValue`."
                                   enum:
                                   - RequestHeaderModifier
                                   - ResponseHeaderModifier
@@ -2623,25 +2670,24 @@ spec:
                                 urlRewrite:
                                   description: "URLRewrite defines a schema for a
                                     filter that modifies a request during forwarding.
-                                    \n Support: Extended \n <gateway:experimental>"
+                                    \n Support: Extended"
                                   properties:
                                     hostname:
                                       description: "Hostname is the value to be used
                                         to replace the Host header value during forwarding.
-                                        \n Support: Extended \n <gateway:experimental>"
+                                        \n Support: Extended"
                                       maxLength: 253
                                       minLength: 1
                                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                       type: string
                                     path:
                                       description: "Path defines a path rewrite. \n
-                                        Support: Extended \n <gateway:experimental>"
+                                        Support: Extended"
                                       properties:
                                         replaceFullPath:
-                                          description: "ReplaceFullPath specifies
-                                            the value with which to replace the full
-                                            path of a request during a rewrite or
-                                            redirect. \n <gateway:experimental>"
+                                          description: ReplaceFullPath specifies the
+                                            value with which to replace the full path
+                                            of a request during a rewrite or redirect.
                                           maxLength: 1024
                                           type: string
                                         replacePrefixMatch:
@@ -2658,8 +2704,7 @@ spec:
                                             When specified, a trailing `/` is ignored.
                                             For example, the paths `/abc`, `/abc/`,
                                             and `/abc/def` would all match the prefix
-                                            `/abc`, but the path `/abcd` would not.
-                                            \n <gateway:experimental>"
+                                            `/abc`, but the path `/abcd` would not."
                                           maxLength: 1024
                                           type: string
                                         type:
@@ -2672,7 +2717,7 @@ spec:
                                             values here must result in the implementation
                                             setting the Accepted Condition for the
                                             Route to `status: False`, with a Reason
-                                            of `UnsupportedValue`. \n <gateway:experimental>"
+                                            of `UnsupportedValue`."
                                           enum:
                                           - ReplaceFullPath
                                           - ReplacePrefixMatch
@@ -2696,9 +2741,17 @@ spec:
                             type: string
                           kind:
                             default: Service
-                            description: Kind is kind of the referent. For example
-                              "HTTPRoute" or "Service". Defaults to "Service" when
-                              not specified.
+                            description: "Kind is the Kubernetes resource kind of
+                              the referent. For example \"Service\". \n Defaults to
+                              \"Service\" when not specified. \n ExternalName services
+                              can refer to CNAME DNS records that may live outside
+                              of the cluster and as such are difficult to reason about
+                              in terms of conformance. They also may not be safe to
+                              forward to (see CVE-2021-25740 for more information).
+                              Implementations SHOULD NOT support ExternalName Services.
+                              \n Support: Core (Services with a type other than ExternalName)
+                              \n Support: Implementation-specific (Services with type
+                              ExternalName)"
                             maxLength: 63
                             minLength: 1
                             pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -2764,7 +2817,7 @@ spec:
                         type of filter: \n - ALL core filters MUST be supported by
                         all implementations. - Implementers are encouraged to support
                         extended filters. - Implementation-specific custom filters
-                        have no API guarantees across   implementations. \n Specifying
+                        have no API guarantees across implementations. \n Specifying
                         a core filter multiple times has unspecified or implementation-specific
                         conformance. \n All filters are expected to be compatible
                         with each other except for the URLRewrite and RequestRedirect
@@ -2823,10 +2876,9 @@ spec:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -2866,10 +2918,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -2877,9 +2929,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -2952,9 +3004,18 @@ spec:
                                     type: string
                                   kind:
                                     default: Service
-                                    description: Kind is kind of the referent. For
-                                      example "HTTPRoute" or "Service". Defaults to
-                                      "Service" when not specified.
+                                    description: "Kind is the Kubernetes resource
+                                      kind of the referent. For example \"Service\".
+                                      \n Defaults to \"Service\" when not specified.
+                                      \n ExternalName services can refer to CNAME
+                                      DNS records that may live outside of the cluster
+                                      and as such are difficult to reason about in
+                                      terms of conformance. They also may not be safe
+                                      to forward to (see CVE-2021-25740 for more information).
+                                      Implementations SHOULD NOT support ExternalName
+                                      Services. \n Support: Core (Services with a
+                                      type other than ExternalName) \n Support: Implementation-specific
+                                      (Services with type ExternalName)"
                                     maxLength: 63
                                     minLength: 1
                                     pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -3002,8 +3063,8 @@ spec:
                               hostname:
                                 description: "Hostname is the hostname to be used
                                   in the value of the `Location` header in the response.
-                                  When empty, the hostname of the request is used.
-                                  \n Support: Core"
+                                  When empty, the hostname in the `Host` header of
+                                  the request is used. \n Support: Core"
                                 maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -3013,12 +3074,12 @@ spec:
                                   the path of the incoming request. The modified path
                                   is then used to construct the `Location` header.
                                   When empty, the request path is used as-is. \n Support:
-                                  Extended \n <gateway:experimental>"
+                                  Extended"
                                 properties:
                                   replaceFullPath:
-                                    description: "ReplaceFullPath specifies the value
+                                    description: ReplaceFullPath specifies the value
                                       with which to replace the full path of a request
-                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                      during a rewrite or redirect.
                                     maxLength: 1024
                                     type: string
                                   replacePrefixMatch:
@@ -3034,7 +3095,7 @@ spec:
                                       When specified, a trailing `/` is ignored. For
                                       example, the paths `/abc`, `/abc/`, and `/abc/def`
                                       would all match the prefix `/abc`, but the path
-                                      `/abcd` would not. \n <gateway:experimental>"
+                                      `/abcd` would not."
                                     maxLength: 1024
                                     type: string
                                   type:
@@ -3045,8 +3106,7 @@ spec:
                                       unknown values will not cause a crash. \n Unknown
                                       values here must result in the implementation
                                       setting the Accepted Condition for the Route
-                                      to `status: False`, with a Reason of `UnsupportedValue`.
-                                      \n <gateway:experimental>"
+                                      to `status: False`, with a Reason of `UnsupportedValue`."
                                     enum:
                                     - ReplaceFullPath
                                     - ReplacePrefixMatch
@@ -3056,8 +3116,15 @@ spec:
                                 type: object
                               port:
                                 description: "Port is the port to be used in the value
-                                  of the `Location` header in the response. When empty,
-                                  port (if specified) of the request is used. \n Support:
+                                  of the `Location` header in the response. \n When
+                                  empty, the Gateway Listener port is used. \n Implementations
+                                  SHOULD NOT add the port number in the 'Location'
+                                  header in the following cases: \n * A Location header
+                                  that will use HTTP (whether that is determined via
+                                  the Listener protocol or the Scheme field) _and_
+                                  use port 80. * A Location header that will use HTTPS
+                                  (whether that is determined via the Listener protocol
+                                  or the Scheme field) _and_ use port 443. \n Support:
                                   Extended"
                                 format: int32
                                 maximum: 65535
@@ -3095,16 +3162,15 @@ spec:
                           responseHeaderModifier:
                             description: "ResponseHeaderModifier defines a schema
                               for a filter that modifies response headers. \n Support:
-                              Extended \n <gateway:experimental>"
+                              Extended"
                             properties:
                               add:
                                 description: "Add adds the given header(s) (name,
                                   value) to the request before the action. It appends
                                   to any existing values associated with the header
-                                  name. \n Input:   GET /foo HTTP/1.1   my-header:
-                                  foo \n Config:   add:   - name: \"my-header\"     value:
-                                  \"bar,baz\" \n Output:   GET /foo HTTP/1.1   my-header:
-                                  foo,bar,baz"
+                                  name. \n Input: GET /foo HTTP/1.1 my-header: foo
+                                  \n Config: add: - name: \"my-header\" value: \"bar,baz\"
+                                  \n Output: GET /foo HTTP/1.1 my-header: foo,bar,baz"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -3144,10 +3210,10 @@ spec:
                                   HTTP request before the action. The value of Remove
                                   is a list of HTTP header names. Note that the header
                                   names are case-insensitive (see https://datatracker.ietf.org/doc/html/rfc2616#section-4.2).
-                                  \n Input:   GET /foo HTTP/1.1   my-header1: foo
-                                  \  my-header2: bar   my-header3: baz \n Config:
-                                  \  remove: [\"my-header1\", \"my-header3\"] \n Output:
-                                  \  GET /foo HTTP/1.1   my-header2: bar"
+                                  \n Input: GET /foo HTTP/1.1 my-header1: foo my-header2:
+                                  bar my-header3: baz \n Config: remove: [\"my-header1\",
+                                  \"my-header3\"] \n Output: GET /foo HTTP/1.1 my-header2:
+                                  bar"
                                 items:
                                   type: string
                                 maxItems: 16
@@ -3155,9 +3221,9 @@ spec:
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
-                                  Input:   GET /foo HTTP/1.1   my-header: foo \n Config:
-                                  \  set:   - name: \"my-header\"     value: \"bar\"
-                                  \n Output:   GET /foo HTTP/1.1   my-header: bar"
+                                  Input: GET /foo HTTP/1.1 my-header: foo \n Config:
+                                  set: - name: \"my-header\" value: \"bar\" \n Output:
+                                  GET /foo HTTP/1.1 my-header: bar"
                                 items:
                                   description: HTTPHeader represents an HTTP Header
                                     name and value as defined by RFC 7230.
@@ -3197,31 +3263,30 @@ spec:
                             description: "Type identifies the type of filter to apply.
                               As with other API fields, types are classified into
                               three conformance levels: \n - Core: Filter types and
-                              their corresponding configuration defined by   \"Support:
+                              their corresponding configuration defined by \"Support:
                               Core\" in this package, e.g. \"RequestHeaderModifier\".
-                              All   implementations must support core filters. \n
-                              - Extended: Filter types and their corresponding configuration
-                              defined by   \"Support: Extended\" in this package,
-                              e.g. \"RequestMirror\". Implementers   are encouraged
-                              to support extended filters. \n - Implementation-specific:
-                              Filters that are defined and supported by   specific
-                              vendors.   In the future, filters showing convergence
-                              in behavior across multiple   implementations will be
-                              considered for inclusion in extended or core   conformance
-                              levels. Filter-specific configuration for such filters
-                              \  is specified using the ExtensionRef field. `Type`
-                              should be set to   \"ExtensionRef\" for custom filters.
-                              \n Implementers are encouraged to define custom implementation
-                              types to extend the core API with implementation-specific
-                              behavior. \n If a reference to a custom filter type
-                              cannot be resolved, the filter MUST NOT be skipped.
-                              Instead, requests that would have been processed by
-                              that filter MUST receive a HTTP error response. \n Note
-                              that values may be added to this enum, implementations
-                              must ensure that unknown values will not cause a crash.
-                              \n Unknown values here must result in the implementation
-                              setting the Accepted Condition for the Route to `status:
-                              False`, with a Reason of `UnsupportedValue`. \n "
+                              All implementations must support core filters. \n -
+                              Extended: Filter types and their corresponding configuration
+                              defined by \"Support: Extended\" in this package, e.g.
+                              \"RequestMirror\". Implementers are encouraged to support
+                              extended filters. \n - Implementation-specific: Filters
+                              that are defined and supported by specific vendors.
+                              In the future, filters showing convergence in behavior
+                              across multiple implementations will be considered for
+                              inclusion in extended or core conformance levels. Filter-specific
+                              configuration for such filters is specified using the
+                              ExtensionRef field. `Type` should be set to \"ExtensionRef\"
+                              for custom filters. \n Implementers are encouraged to
+                              define custom implementation types to extend the core
+                              API with implementation-specific behavior. \n If a reference
+                              to a custom filter type cannot be resolved, the filter
+                              MUST NOT be skipped. Instead, requests that would have
+                              been processed by that filter MUST receive a HTTP error
+                              response. \n Note that values may be added to this enum,
+                              implementations must ensure that unknown values will
+                              not cause a crash. \n Unknown values here must result
+                              in the implementation setting the Accepted Condition
+                              for the Route to `status: False`, with a Reason of `UnsupportedValue`."
                             enum:
                             - RequestHeaderModifier
                             - ResponseHeaderModifier
@@ -3233,24 +3298,24 @@ spec:
                           urlRewrite:
                             description: "URLRewrite defines a schema for a filter
                               that modifies a request during forwarding. \n Support:
-                              Extended \n <gateway:experimental>"
+                              Extended"
                             properties:
                               hostname:
                                 description: "Hostname is the value to be used to
                                   replace the Host header value during forwarding.
-                                  \n Support: Extended \n <gateway:experimental>"
+                                  \n Support: Extended"
                                 maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                                 type: string
                               path:
                                 description: "Path defines a path rewrite. \n Support:
-                                  Extended \n <gateway:experimental>"
+                                  Extended"
                                 properties:
                                   replaceFullPath:
-                                    description: "ReplaceFullPath specifies the value
+                                    description: ReplaceFullPath specifies the value
                                       with which to replace the full path of a request
-                                      during a rewrite or redirect. \n <gateway:experimental>"
+                                      during a rewrite or redirect.
                                     maxLength: 1024
                                     type: string
                                   replacePrefixMatch:
@@ -3266,7 +3331,7 @@ spec:
                                       When specified, a trailing `/` is ignored. For
                                       example, the paths `/abc`, `/abc/`, and `/abc/def`
                                       would all match the prefix `/abc`, but the path
-                                      `/abcd` would not. \n <gateway:experimental>"
+                                      `/abcd` would not."
                                     maxLength: 1024
                                     type: string
                                   type:
@@ -3277,8 +3342,7 @@ spec:
                                       unknown values will not cause a crash. \n Unknown
                                       values here must result in the implementation
                                       setting the Accepted Condition for the Route
-                                      to `status: False`, with a Reason of `UnsupportedValue`.
-                                      \n <gateway:experimental>"
+                                      to `status: False`, with a Reason of `UnsupportedValue`."
                                     enum:
                                     - ReplaceFullPath
                                     - ReplacePrefixMatch
@@ -3301,25 +3365,27 @@ spec:
                         rule against incoming HTTP requests. Each match is independent,
                         i.e. this rule will be matched if **any** one of the matches
                         is satisfied. \n For example, take the following matches configuration:
-                        \n ``` matches: - path:     value: \"/foo\"   headers:   -
-                        name: \"version\"     value: \"v2\" - path:     value: \"/v2/foo\"
-                        ``` \n For a request to match against this rule, a request
-                        must satisfy EITHER of the two conditions: \n - path prefixed
-                        with `/foo` AND contains the header `version: v2` - path prefix
-                        of `/v2/foo` \n See the documentation for HTTPRouteMatch on
-                        how to specify multiple match conditions that should be ANDed
-                        together. \n If no matches are specified, the default is a
-                        prefix path match on \"/\", which has the effect of matching
-                        every HTTP request. \n Proxy or Load Balancer routing configuration
-                        generated from HTTPRoutes MUST prioritize matches based on
-                        the following criteria, continuing on ties. Across all rules
-                        specified on applicable Routes, precedence must be given to
-                        the match with the largest number of: \n * Characters in a
-                        matching path. * Header matches. * Query param matches. \n
-                        If ties still exist across multiple Routes, matching precedence
+                        \n ``` matches: - path: value: \"/foo\" headers: - name: \"version\"
+                        value: \"v2\" - path: value: \"/v2/foo\" ``` \n For a request
+                        to match against this rule, a request must satisfy EITHER
+                        of the two conditions: \n - path prefixed with `/foo` AND
+                        contains the header `version: v2` - path prefix of `/v2/foo`
+                        \n See the documentation for HTTPRouteMatch on how to specify
+                        multiple match conditions that should be ANDed together. \n
+                        If no matches are specified, the default is a prefix path
+                        match on \"/\", which has the effect of matching every HTTP
+                        request. \n Proxy or Load Balancer routing configuration generated
+                        from HTTPRoutes MUST prioritize matches based on the following
+                        criteria, continuing on ties. Across all rules specified on
+                        applicable Routes, precedence must be given to the match with
+                        the largest number of: \n * Characters in a matching \"Exact\"
+                        path match * Characters in a matching \"Prefix\" path match
+                        * Header matches. * Query param matches. \n Note: The precedence
+                        of RegularExpression path matches are implementation-specific.
+                        \n If ties still exist across multiple Routes, matching precedence
                         MUST be determined in order of the following criteria, continuing
                         on ties: \n * The oldest Route based on creation timestamp.
-                        * The Route appearing first in alphabetical order by   \"{namespace}/{name}\".
+                        * The Route appearing first in alphabetical order by \"{namespace}/{name}\".
                         \n If ties still exist within an HTTPRoute, matching precedence
                         MUST be granted to the FIRST matching rule (in list order)
                         with a match meeting the above criteria. \n When no rules
@@ -3333,8 +3399,8 @@ spec:
                           if all conditions are satisfied. \n For example, the match
                           below will match a HTTP request only if its path starts
                           with `/foo` AND it contains the `version: v1` header: \n
-                          ``` match: \n \tpath: \t  value: \"/foo\" \theaders: \t-
-                          name: \"version\" \t  value \"v1\" \n ```"
+                          ``` match: \n path: value: \"/foo\" headers: - name: \"version\"
+                          value \"v1\" \n ```"
                         properties:
                           headers:
                             description: Headers specifies HTTP request header matchers.
@@ -3463,6 +3529,7 @@ spec:
                                     differences in the implementations."
                                   maxLength: 256
                                   minLength: 1
+                                  pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                   type: string
                                 type:
                                   default: Exact
@@ -3542,15 +3609,14 @@ spec:
                         description: "Condition contains details for one aspect of
                           the current state of this API Resource. --- This struct
                           is intended for direct use as an array at the field path
-                          .status.conditions.  For example, \n \ttype FooStatus struct{
-                          \t    // Represents the observations of a foo's current
-                          state. \t    // Known .status.conditions.type are: \"Available\",
-                          \"Progressing\", and \"Degraded\" \t    // +patchMergeKey=type
-                          \t    // +patchStrategy=merge \t    // +listType=map \t
-                          \   // +listMapKey=type \t    Conditions []metav1.Condition
+                          .status.conditions.  For example, \n type FooStatus struct{
+                          // Represents the observations of a foo's current state.
+                          // Known .status.conditions.type are: \"Available\", \"Progressing\",
+                          and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                          // +listType=map // +listMapKey=type Conditions []metav1.Condition
                           `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                          protobuf:\"bytes,1,rep,name=conditions\"` \n \t    // other
-                          fields \t}"
+                          protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields
+                          }"
                         properties:
                           lastTransitionTime:
                             description: lastTransitionTime is the last time the condition
@@ -3749,5 +3815,5 @@ status:
   acceptedNames:
     kind: ""
     plural: ""
-  conditions: []
-  storedVersions: []
+  conditions: null
+  storedVersions: null

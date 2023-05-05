@@ -6,11 +6,12 @@
 package gatewayapi
 
 import (
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
+	KindEnvoyProxy   = "EnvoyProxy"
 	KindGateway      = "Gateway"
 	KindGatewayClass = "GatewayClass"
 	KindGRPCRoute    = "GRPCRoute"
@@ -45,6 +46,7 @@ type TranslatorManager interface {
 
 	RoutesTranslator
 	ListenersTranslator
+	AddressesTranslator
 	FiltersTranslator
 }
 
@@ -58,25 +60,20 @@ type Translator struct {
 	// to process Gateways for.
 	GatewayClassName v1beta1.ObjectName
 
-	// ProxyImage is the optional proxy image to use in
-	// the Infra IR. If unspecified, the default proxy
-	// image will be used.
-	ProxyImage string
-
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
+
+	// ExtensionGroupKinds stores the group/kind for all resources
+	// introduced by an Extension so that the translator can
+	// store referenced resources in the IR for later use.
+	ExtensionGroupKinds []schema.GroupKind
 }
 
 type TranslateResult struct {
-	Gateways   []*v1beta1.Gateway
-	HTTPRoutes []*v1beta1.HTTPRoute
-	GRPCRoutes []*v1alpha2.GRPCRoute
-	TLSRoutes  []*v1alpha2.TLSRoute
-	TCPRoutes  []*v1alpha2.TCPRoute
-	UDPRoutes  []*v1alpha2.UDPRoute
-	XdsIR      XdsIRMap
-	InfraIR    InfraIRMap
+	Resources
+	XdsIR   XdsIRMap
+	InfraIR InfraIRMap
 }
 
 func newTranslateResult(gateways []*GatewayContext,
@@ -122,6 +119,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
+
+	// Process all Addresses for all relevant Gateways.
+	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
 
 	// Process all relevant HTTPRoutes.
 	httpRoutes := t.ProcessHTTPRoutes(resources.HTTPRoutes, gateways, resources, xdsIR)

@@ -1,0 +1,329 @@
+envoyProxy:
+  metadata:
+    creationTimestamp: null
+    name: example
+    namespace: default
+  spec:
+    bootstrap: |-
+      admin:
+        access_log:
+        - name: envoy.access_loggers.file
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /dev/null
+        address:
+          socket_address:
+            address: 127.0.0.1
+            port_value: 19000
+    logging: {}
+  status: {}
+gatewayClass:
+  metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: envoy-gateway-system
+  spec:
+    controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    parametersRef:
+      group: config.gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: example
+      namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: "2023-04-13T00:35:17Z"
+      message: 'Invalid parametersRef: dynamic_resources cannot be modified'
+      reason: InvalidParameters
+      status: "False"
+      type: Accepted
+gateways:
+- metadata:
+    creationTimestamp: null
+    name: eg
+    namespace: default
+  spec:
+    gatewayClassName: eg
+    listeners:
+    - name: tcp
+      port: 1234
+      protocol: TCP
+    - name: udp
+      port: 1234
+      protocol: UDP
+    - hostname: foo.com
+      name: tls-passthrough
+      port: 8443
+      protocol: TLS
+      tls:
+        mode: Passthrough
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: HTTPRoute
+      name: http
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: GRPCRoute
+      name: grpc
+      port: 8080
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: tcp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TCPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: udp
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: tls-passthrough
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: grpc
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+grpcRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.grpc-example.com
+    parentRefs:
+    - name: eg
+      sectionName: grpc
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 9000
+        weight: 1
+      matches:
+      - method:
+          method: DoThing
+          service: com.example.Things
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+        sectionName: grpc
+httpRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    hostnames:
+    - www.example.com
+    parentRefs:
+    - name: eg
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+      matches:
+      - path:
+          type: PathPrefix
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+tcpRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    parentRefs:
+    - name: eg
+      sectionName: tcp
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+        sectionName: tcp
+tlsRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    parentRefs:
+    - name: eg
+      sectionName: tls-passthrough
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+        sectionName: tls-passthrough
+udpRoutes:
+- metadata:
+    creationTimestamp: null
+    name: backend
+    namespace: default
+  spec:
+    parentRefs:
+    - name: eg
+      sectionName: udp
+    rules:
+    - backendRefs:
+      - group: ""
+        kind: Service
+        name: backend
+        port: 3000
+        weight: 1
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2023-04-13T00:35:17Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: eg
+        sectionName: udp

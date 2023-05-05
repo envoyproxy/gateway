@@ -21,3 +21,6 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/authn
   user/rate-limit
   user/egctl
+  user/customize-envoyproxy
+  user/deployment-mode
+  user/gateway-address

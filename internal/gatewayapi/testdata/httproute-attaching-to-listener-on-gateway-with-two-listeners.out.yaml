@@ -102,6 +102,7 @@ xdsIR:
         port: 10080
         hostnames:
           - bar.com
+        stripAnyHostPort: true    
         routes:
           - name: default-httproute-1-rule-0-match-0-bar.com
             pathMatch:
@@ -118,7 +119,7 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-      image: envoyproxy/envoy:translator-tests
+
       listeners:
         - address: ""
           ports:

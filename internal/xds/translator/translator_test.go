@@ -18,7 +18,7 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
-	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
@@ -33,6 +33,7 @@ var (
 func TestTranslateXds(t *testing.T) {
 	testCases := []struct {
 		name           string
+		dnsDomain      string
 		requireSecrets bool
 	}{
 		{
@@ -40,6 +41,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "http-route",
+		},
+		{
+			name: "http-route-with-stripped-host-port",
 		},
 		{
 			name: "http-route-regex",
@@ -116,6 +120,10 @@ func TestTranslateXds(t *testing.T) {
 			name: "ratelimit",
 		},
 		{
+			name:      "ratelimit-custom-domain",
+			dnsDomain: "example-cluster.local",
+		},
+		{
 			name: "ratelimit-sourceip",
 		},
 		{
@@ -135,10 +143,14 @@ func TestTranslateXds(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			dnsDomain := tc.dnsDomain
+			if dnsDomain == "" {
+				dnsDomain = "cluster.local"
+			}
 			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
 				},
 			}
 
@@ -244,7 +256,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 			ir := requireXdsIRFromInputTestData(t, "extension-xds-ir", tc.name+".yaml")
 			tr := &Translator{
 				GlobalRateLimit: &GlobalRateLimitSettings{
-					ServiceURL: infra.GetRateLimitServiceURL("envoy-gateway-system"),
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
 			ext := v1alpha1.Extension{

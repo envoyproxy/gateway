@@ -234,12 +234,12 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			switch QueryParamMatchTypeDerefOr(queryParamMatch.Type, v1beta1.QueryParamMatchExact) {
 			case v1beta1.QueryParamMatchExact:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
-					Name:  queryParamMatch.Name,
+					Name:  string(queryParamMatch.Name),
 					Exact: StringPtr(queryParamMatch.Value),
 				})
 			case v1beta1.QueryParamMatchRegularExpression:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
-					Name:      queryParamMatch.Name,
+					Name:      string(queryParamMatch.Name),
 					SafeRegex: StringPtr(queryParamMatch.Value),
 				})
 			}
@@ -289,6 +289,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	}
 	if httpFiltersContext.RateLimit != nil {
 		irRoute.RateLimit = httpFiltersContext.RateLimit
+	}
+	if len(httpFiltersContext.ExtensionRefs) > 0 {
+		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
 	}
 
 }
@@ -477,11 +480,27 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
-		hosts := computeHosts(route.GetHostnames(), listener.Hostname)
+		routeHostnames := route.GetHostnames()
+		hosts := computeHosts(routeHostnames, listener.Hostname)
 		if len(hosts) == 0 {
 			continue
 		}
 		hasHostnameIntersection = true
+
+		irKey := irStringKey(listener.gateway)
+		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
+
+		if irListener != nil {
+			// Only match on the Hostname and not on the port section within the Host header
+			// if the user specifies a Hostname to match on.
+			if len(routeHostnames) > 0 || listener.Hostname != nil {
+				irListener.StripAnyHostPort = true
+			}
+
+			if route.GetRouteType() == KindGRPCRoute {
+				irListener.IsHTTP2 = true
+			}
+		}
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
@@ -522,6 +541,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
+					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
@@ -530,13 +550,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
-
-		irKey := irStringKey(listener.gateway)
-		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
-			if route.GetRouteType() == KindGRPCRoute {
-				irListener.IsHTTP2 = true
-			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
 		// Theoretically there should only be one parent ref per

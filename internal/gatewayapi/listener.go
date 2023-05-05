@@ -35,9 +35,6 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		gwInfraIR := ir.NewInfra()
 		gwInfraIR.Proxy.Name = irKey
 		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
-		if len(t.ProxyImage) > 0 {
-			gwInfraIR.Proxy.Image = t.ProxyImage
-		}
 		if resources.EnvoyProxy != nil {
 			gwInfraIR.Proxy.Config = resources.EnvoyProxy
 		}
@@ -94,7 +91,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					Name:    irHTTPListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
-					TLS:     irTLSConfig(listener.tlsSecret),
+					TLS:     irTLSConfigs(listener.tlsSecrets),
 				}
 				if listener.Hostname != nil {
 					irListener.Hostnames = append(irListener.Hostnames, string(*listener.Hostname))

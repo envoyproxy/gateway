@@ -48,12 +48,13 @@ func TestGatewayAPIConformance(t *testing.T) {
 	}
 
 	cSuite := suite.New(suite.Options{
-		Client:                     client,
-		GatewayClassName:           *flags.GatewayClassName,
-		Debug:                      *flags.ShowDebug,
-		CleanupBaseResources:       *flags.CleanupBaseResources,
-		ValidUniqueListenerPorts:   validUniqueListenerPorts,
-		EnableAllSupportedFeatures: true,
+		Client:                   client,
+		GatewayClassName:         *flags.GatewayClassName,
+		Debug:                    *flags.ShowDebug,
+		CleanupBaseResources:     *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts: validUniqueListenerPorts,
+		SupportedFeatures:        suite.AllFeatures,
+		ExemptFeatures:           suite.MeshCoreFeatures,
 		SkipTests: []string{
 			// Remove once https://github.com/envoyproxy/gateway/issues/993 is fixed
 			tests.HTTPRouteRedirectPath.ShortName,

@@ -10,7 +10,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
-	infra "github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
@@ -65,7 +65,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: infra.GetRateLimitServiceURL(r.Namespace),
+						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
 					}
 				}
 

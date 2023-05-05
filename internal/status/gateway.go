@@ -22,7 +22,7 @@ func UpdateGatewayStatusAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) 
 // UpdateGatewayStatusProgrammedCondition updates the status addresses for the provided gateway
 // based on the status IP/Hostname of svc and updates the Programmed condition based on the
 // service and deployment state.
-func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment) {
+func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.Service, deployment *appsv1.Deployment, nodeAddresses ...string) {
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
@@ -49,6 +49,12 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 				}
 			}
 		}
+
+		if svc.Spec.Type == corev1.ServiceTypeNodePort {
+			addresses = nodeAddresses
+		}
+
+		addresses = append(addresses, svc.Spec.ExternalIPs...)
 
 		var gwAddresses []gwapiv1b1.GatewayAddress
 		for i := range addresses {

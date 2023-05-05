@@ -28,7 +28,10 @@ EnvoyGateway is the schema for the envoygateways API.
 | --- | --- |
 | `apiVersion` _string_ | `config.gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyGateway`
-| `EnvoyGatewaySpec` _[EnvoyGatewaySpec](#envoygatewayspec)_ | EnvoyGatewaySpec defines the desired state of EnvoyGateway. |
+| `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
+| `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
+| `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
+| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
 
 ## EnvoyGatewayFileProvider
@@ -51,6 +54,9 @@ EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider
 _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 
+| Field | Description |
+| --- | --- |
+| `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the manged Envoy ratelimit deployment resource are applied. |
 
 
 ## EnvoyGatewayProvider
@@ -60,6 +66,7 @@ _Appears in:_
 EnvoyGatewayProvider defines the desired configuration of a provider.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |
@@ -157,6 +164,7 @@ _Appears in:_
 Extension defines the configuration for registering an extension to the Envoy Gateway control plane.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |
@@ -207,7 +215,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](#secretobjectreference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
@@ -218,6 +226,7 @@ _Appears in:_
 Gateway defines the desired Gateway API configuration of Envoy Gateway.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |
@@ -252,8 +261,10 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#envvar-v1-core) array_ | List of environment variables to set in the container. |
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#resourcerequirements-v1-core)_ | Resources required by this container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
 | `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
+| `image` _string_ | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
 
 
 ## KubernetesDeploymentSpec
@@ -263,6 +274,7 @@ _Appears in:_
 KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 
 _Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 - [EnvoyProxyKubernetesProvider](#envoyproxykubernetesprovider)
 
 | Field | Description |
@@ -357,6 +369,7 @@ _Appears in:_
 RateLimit defines the configuration associated with the Rate Limit Service used for Global Rate Limiting.
 
 _Appears in:_
+- [EnvoyGateway](#envoygateway)
 - [EnvoyGatewaySpec](#envoygatewayspec)
 
 | Field | Description |

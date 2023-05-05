@@ -9,6 +9,10 @@
 package translator
 
 import (
+	"errors"
+	"fmt"
+	"reflect"
+
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -17,11 +21,10 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/xds/types"
-
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
+	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
 func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualHost, irRoute *ir.HTTPRoute, em *extensionTypes.Manager) error {
@@ -53,9 +56,9 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 
 	// If the extension returned a modified Route, then copy its to the one that was passed in as a reference
 	if modifiedRoute != nil {
-		// Overwrite the pointer for the original route.
-		// Uses nolint because of the ineffectual assignment check
-		route = modifiedRoute //nolint
+		if err = deepCopyPtr(modifiedRoute, route); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -81,9 +84,9 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 
 	// If the extension returned a modified Virtual Host, then copy its to the one that was passed in as a reference
 	if modifiedVH != nil {
-		// Overwrite the pointer for the original virtual host.
-		// Uses nolint because of the ineffectual assignment check
-		vHost = modifiedVH //nolint
+		if err = deepCopyPtr(modifiedVH, vHost); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -166,5 +169,26 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 
 	tCtx.SetResources(resourcev3.SecretType, secretResources)
 
+	return nil
+}
+
+func deepCopyPtr(src interface{}, dest interface{}) error {
+	if src == nil || dest == nil {
+		return errors.New("cannot deep copy nil pointer")
+	}
+	srcVal := reflect.ValueOf(src)
+	destVal := reflect.ValueOf(src)
+	if srcVal.Kind() == reflect.Ptr && destVal.Kind() == reflect.Ptr {
+		srcElem := srcVal.Elem()
+		destVal = reflect.New(srcElem.Type())
+		destElem := destVal.Elem()
+		destElem.Set(srcElem)
+		reflect.ValueOf(dest).Elem().Set(destVal.Elem())
+	} else {
+		return fmt.Errorf("cannot deep copy pointers to different kinds src %v != dest %v",
+			srcVal.Kind(),
+			destVal.Kind(),
+		)
+	}
 	return nil
 }

@@ -24,8 +24,14 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-per-connection-buffer-limit-bytes
+	tcpListenerPerConnectionBufferLimitBytes = 32768
 )
 
 func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener {
@@ -39,6 +45,7 @@ func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener
 				Filter:     listenerAccessLogFilter,
 			},
 		},
+		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{
@@ -94,6 +101,17 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			Name:       wellknown.Router,
 			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: routerAny},
 		}},
+		// normalize paths according to RFC 3986
+		NormalizePath: &wrapperspb.BoolValue{Value: true},
+		// merge adjacent slashes in the path
+		MergeSlashes:                 true,
+		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
+	}
+
+	if irListener.StripAnyHostPort {
+		mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{
+			StripAnyHostPort: true,
+		}
 	}
 
 	if irListener.IsHTTP2 {
@@ -146,7 +164,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	if irListener.TLS != nil {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.Name)
+		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS)
 		if err != nil {
 			return err
 		}
@@ -286,16 +304,20 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	return nil
 }
 
-func buildXdsDownstreamTLSSocket(listenerName string) (*corev3.TransportSocket, error) {
+func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
-			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{{
-				// Generate key name for this listener. The actual key will be
-				// delivered to Envoy via SDS.
-				Name:      listenerName,
-				SdsConfig: makeConfigSource(),
-			}},
+			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
+	}
+
+	for _, tlsConfig := range tlsConfigs {
+		tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
+			tlsCtx.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+			&tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.Name,
+				SdsConfig: makeConfigSource(),
+			})
 	}
 
 	tlsCtxAny, err := anypb.New(tlsCtx)
@@ -311,11 +333,10 @@ func buildXdsDownstreamTLSSocket(listenerName string) (*corev3.TransportSocket, 
 	}, nil
 }
 
-func buildXdsDownstreamTLSSecret(listenerName string,
-	tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret {
+func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret {
 	// Build the tls secret
 	return &tlsv3.Secret{
-		Name: listenerName,
+		Name: tlsConfig.Name,
 		Type: &tlsv3.Secret_TlsCertificate{
 			TlsCertificate: &tlsv3.TlsCertificate{
 				CertificateChain: &corev3.DataSource{
