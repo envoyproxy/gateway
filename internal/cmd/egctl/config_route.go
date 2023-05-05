@@ -21,6 +21,9 @@ func routeConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about route configuration for a given pod from Envoy.
   egctl config envoy-proxy route <pod-name> -n <pod-namespace>
 
+	# Retrieve summary about route configuration for a pod matching label selectors
+	egctl config envoy-proxy route --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve full configuration dump as YAML
   egctl config envoy-proxy route <pod-name> -n <pod-namespace> -o yaml
 
@@ -36,17 +39,12 @@ func routeConfigCmd() *cobra.Command {
 }
 
 func runRouteConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, RouteEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	route, err := findXDSResourceFromConfigDump(RouteEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(route, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}
