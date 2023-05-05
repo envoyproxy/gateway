@@ -415,22 +415,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `url` _string_ | URL of the Redis Database. |
-| `tls` _[RedisTLSSettings](#redistlssettings)_ | TLS defines TLS configuration for connecting to redis database. |
-
-
-## RedisTLSSettings
-
-
-
-RedisTLSSettings defines the TLS configuration for connecting to redis database.
-
-_Appears in:_
-- [RateLimitRedisSettings](#ratelimitredissettings)
-
-| Field | Description |
-| --- | --- |
-| `auth` _string_ | Auth defines auth configuration to enable password-only authentication to the redis host. |
-| `certificateRef` _string_ | CertificateRef defines the client certificate reference kubernetes secret for TLS connections. |
+| `tlsCertificateRef` _string_ | TLSCertificateRef defines the client certificate reference kubernetes secret for TLS connections. |
 
 
 ## ServiceType

@@ -111,7 +111,7 @@ func exceptedContainerVolumeMounts(ratelimit *egcfgv1a1.RateLimit) []corev1.Volu
 	}
 
 	// mount the cert
-	if ratelimit.Backend.Redis.TLS != nil && ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+	if ratelimit.Backend.Redis.TLSCertificateRef != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "certs",
 			MountPath: "/certs",
@@ -139,12 +139,12 @@ func exceptedDeploymentVolumes(ratelimit *egcfgv1a1.RateLimit) []corev1.Volume {
 		},
 	}
 
-	if ratelimit.Backend.Redis.TLS != nil && ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+	if ratelimit.Backend.Redis.TLSCertificateRef != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: ratelimit.Backend.Redis.TLS.CertificateRef,
+					SecretName: ratelimit.Backend.Redis.TLSCertificateRef,
 				},
 			},
 		})
@@ -189,39 +189,29 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 	}
 
-	redisTLSSettings := ratelimit.Backend.Redis.TLS
-	if redisTLSSettings != nil {
-		if redisTLSSettings.Auth != "" {
-			env = append(env, corev1.EnvVar{
-				Name:  RedisAuthEnvVar,
-				Value: redisTLSSettings.Auth,
-			})
-		}
-
-		if redisTLSSettings.CertificateRef != "" {
-			env = append(env, []corev1.EnvVar{
-				{
-					Name:  RedisTLS,
-					Value: "true",
-				},
-				{
-					Name:  RedisTLSSkipHostNameVerificationEnvVar,
-					Value: "true",
-				},
-				{
-					Name:  RedisTLSClientCertEnvVar,
-					Value: RedisTLSClientCertFilename,
-				},
-				{
-					Name:  RedisTLSClientKeyEnvVar,
-					Value: RedisTLSClientKeyFilename,
-				},
-				{
-					Name:  RedisTLSCaCertEnvVar,
-					Value: RedisTLSCaCertFilename,
-				},
-			}...)
-		}
+	if ratelimit.Backend.Redis.TLSCertificateRef != "" {
+		env = append(env, []corev1.EnvVar{
+			{
+				Name:  RedisTLS,
+				Value: "true",
+			},
+			{
+				Name:  RedisTLSSkipHostNameVerificationEnvVar,
+				Value: "true",
+			},
+			{
+				Name:  RedisTLSClientCertEnvVar,
+				Value: RedisTLSClientCertFilename,
+			},
+			{
+				Name:  RedisTLSClientKeyEnvVar,
+				Value: RedisTLSClientKeyFilename,
+			},
+			{
+				Name:  RedisTLSCaCertEnvVar,
+				Value: RedisTLSCaCertFilename,
+			},
+		}...)
 	}
 
 	envAmendFunc := func(envVar corev1.EnvVar) {

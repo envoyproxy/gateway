@@ -348,11 +348,8 @@ func TestDeployment(t *testing.T) {
 				Backend: egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
-						TLS: &egcfgv1a1.RedisTLSSettings{
-							Auth:           "redis_auth_password",
-							CertificateRef: "ratelimit-cert",
-						},
+						URL:               "redis.redis.svc:6379",
+						TLSCertificateRef: "ratelimit-cert",
 					},
 				},
 			},
@@ -369,52 +366,9 @@ func TestDeployment(t *testing.T) {
 				Container: &egcfgv1a1.KubernetesContainerSpec{
 					Env: []corev1.EnvVar{
 						{
-							Name:  UseStatsdEnvVar,
-							Value: "true",
+							Name:  RedisAuthEnvVar,
+							Value: "redis_auth_password",
 						},
-					},
-					Image: pointer.String("custom-image"),
-					Resources: &corev1.ResourceRequirements{
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("400m"),
-							corev1.ResourceMemory: resource.MustParse("2Gi"),
-						},
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("200m"),
-							corev1.ResourceMemory: resource.MustParse("1Gi"),
-						},
-					},
-					SecurityContext: &corev1.SecurityContext{
-						Privileged: pointer.Bool(true),
-					},
-				},
-			},
-		},
-		{
-			caseName: "redis-auth-settings",
-			rateLimit: &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
-					Type: egcfgv1a1.RedisBackendType,
-					Redis: &egcfgv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
-						TLS: &egcfgv1a1.RedisTLSSettings{
-							Auth: "redis_auth_password",
-						},
-					},
-				},
-			},
-			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
-				Replicas: pointer.Int32(2),
-				Pod: &egcfgv1a1.KubernetesPodSpec{
-					Annotations: map[string]string{
-						"prometheus.io/scrape": "true",
-					},
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: pointer.Int64(1000),
-					},
-				},
-				Container: &egcfgv1a1.KubernetesContainerSpec{
-					Env: []corev1.EnvVar{
 						{
 							Name:  UseStatsdEnvVar,
 							Value: "true",
