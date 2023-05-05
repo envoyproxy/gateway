@@ -18,8 +18,8 @@ import (
 
 var (
 	_                RoutesTranslator = (*Translator)(nil)
-	validServiceName                  = `^(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*$`
-	validMethodName                   = `^[A-Za-z_][A-Za-z_0-9]*$`
+	validServiceName                  = `(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*`
+	validMethodName                   = `[A-Za-z_][A-Za-z_0-9]*`
 )
 
 type RoutesTranslator interface {

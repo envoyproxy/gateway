@@ -81,7 +81,7 @@ xdsIR:
       routes:
       - name: default-grpcroute-1-rule-0-match-1-*
         pathMatch:
-          SafeRegex: /^(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*$/FooBar[0-9]+
+          SafeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
         destinations:
         - host: 7.7.7.7
           port: 8080
