@@ -85,11 +85,11 @@ type KubernetesPodSpec struct {
 
 	// If specified, the pod's scheduling constraints.
 	// +optional
-	Affinity *corev1.Affinity `json:"affinity,omitempty" protobuf:"bytes,18,opt,name=affinity"`
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 
 	// If specified, the pod's tolerations.
 	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty" protobuf:"bytes,22,opt,name=tolerations"`
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
