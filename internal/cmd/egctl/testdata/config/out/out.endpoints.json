@@ -1,36 +1,40 @@
 {
-  "@type":  "type.googleapis.com/envoy.admin.v3.EndpointsConfigDump",
-  "staticEndpointConfigs":  [
-    {
-      "endpointConfig":  {
-        "@type":  "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-        "clusterName":  "xds_cluster",
-        "endpoints":  [
-          {
-            "locality":  {},
-            "lbEndpoints":  [
+	"default": {
+		"eg": {
+      "@type":  "type.googleapis.com/envoy.admin.v3.EndpointsConfigDump",
+      "staticEndpointConfigs":  [
+        {
+          "endpointConfig":  {
+            "@type":  "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
+            "clusterName":  "xds_cluster",
+            "endpoints":  [
               {
-                "endpoint":  {
-                  "address":  {
-                    "socketAddress":  {
-                      "address":  "10.106.37.54",
-                      "portValue":  18000
-                    }
-                  },
-                  "healthCheckConfig":  {},
-                  "hostname":  "envoy-gateway"
-                },
-                "healthStatus":  "HEALTHY",
-                "metadata":  {},
-                "loadBalancingWeight":  1
+                "locality":  {},
+                "lbEndpoints":  [
+                  {
+                    "endpoint":  {
+                      "address":  {
+                        "socketAddress":  {
+                          "address":  "10.106.37.54",
+                          "portValue":  18000
+                        }
+                      },
+                      "healthCheckConfig":  {},
+                      "hostname":  "envoy-gateway"
+                    },
+                    "healthStatus":  "HEALTHY",
+                    "metadata":  {},
+                    "loadBalancingWeight":  1
+                  }
+                ]
               }
-            ]
+            ],
+            "policy":  {
+              "overprovisioningFactor":  140
+            }
           }
-        ],
-        "policy":  {
-          "overprovisioningFactor":  140
         }
-      }
+      ]
     }
-  ]
+  }
 }
