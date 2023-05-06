@@ -6,13 +6,17 @@
 package egctl
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 
 	adminv3 "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
+	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
@@ -21,9 +25,10 @@ import (
 )
 
 var (
-	output       string
-	podName      string
-	podNamespace string
+	output         string
+	podName        string
+	podNamespace   string
+	labelSelectors []string
 )
 
 const (
@@ -31,56 +36,122 @@ const (
 	containerName = "envoy" // TODO: make this configurable until EG support
 )
 
-func retrieveConfigDump(args []string, includeEds bool) (*adminv3.ConfigDump, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("pod name is required")
-	}
+type aggregatedConfigDump map[string]map[string]protoreflect.ProtoMessage
 
-	podName = args[0]
+func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigType) (aggregatedConfigDump, error) {
+	if len(labelSelectors) == 0 {
+		if len(args) == 0 {
+			return nil, fmt.Errorf("pod name is required")
+		}
 
-	if podName == "" {
-		return nil, fmt.Errorf("pod name is required")
+		podName = args[0]
+
+		if podName == "" {
+			return nil, fmt.Errorf("pod name is required")
+		}
 	}
 
 	if podNamespace == "" {
 		return nil, fmt.Errorf("pod namespace is required")
 	}
 
-	fw, err := portForwarder(types.NamespacedName{
-		Namespace: podNamespace,
-		Name:      podName,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if err := fw.Start(); err != nil {
-		return nil, err
-	}
-	defer fw.Stop()
-
-	configDump, err := extractConfigDump(fw, includeEds)
+	cli, err := getCLIClient()
 	if err != nil {
 		return nil, err
 	}
 
-	return configDump, nil
+	pods, err := fetchRunningEnvoyPods(cli, types.NamespacedName{Namespace: podNamespace, Name: podName}, labelSelectors)
+	if err != nil {
+		return nil, err
+	}
+
+	podConfigDumps := make(aggregatedConfigDump, 0)
+	// Initialize the map with namespaces
+	for _, pod := range pods {
+		if _, ok := podConfigDumps[pod.Namespace]; !ok {
+			podConfigDumps[pod.Namespace] = make(map[string]protoreflect.ProtoMessage)
+		}
+	}
+
+	var errs error
+	var wg sync.WaitGroup
+	wg.Add(len(pods))
+	for _, pod := range pods {
+		pod := pod
+		go func() {
+			fw, err := portForwarder(cli, pod)
+			if err != nil {
+				errs = multierror.Append(errs, err)
+				return
+			}
+
+			if err := fw.Start(); err != nil {
+				errs = multierror.Append(errs, err)
+				return
+			}
+			defer fw.Stop()
+			defer wg.Done()
+
+			configDump, err := extractConfigDump(fw, includeEds, configType)
+			if err != nil {
+				errs = multierror.Append(errs, err)
+				return
+			}
+
+			podConfigDumps[pod.Namespace][pod.Name] = configDump
+		}()
+	}
+
+	wg.Wait()
+	if errs != nil {
+		return nil, errs
+	}
+
+	return podConfigDumps, nil
 }
 
-func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
-	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
-	if err != nil {
-		return nil, fmt.Errorf("build CLI client fail: %w", err)
+// fetchRunningEnvoyPods gets the Pods, either based on the NamespacedName or the labelSelectors.
+// It further filters out only those Pods that are in "Running" state.
+// labelSelectors, if provided, take precedence over the pod NamespacedName.
+func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelectors []string) ([]types.NamespacedName, error) {
+	var pods []corev1.Pod
+
+	if len(labelSelectors) > 0 {
+		podList, err := c.PodsForSelector(nn.Namespace, labelSelectors...)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		if len(podList.Items) == 0 {
+			return nil, fmt.Errorf("no Pods found for label selectors %+v", labelSelectors)
+		}
+
+		pods = podList.Items
+	} else {
+		pod, err := c.Pod(nn)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		pods = []corev1.Pod{*pod}
 	}
 
-	pod, err := c.Pod(nn)
-	if err != nil {
-		return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
-	}
-	if pod.Status.Phase != "Running" {
-		return nil, fmt.Errorf("pod %s is not running", nn)
+	podsNamespacedNames := []types.NamespacedName{}
+	for _, pod := range pods {
+		podNsName := types.NamespacedName{Namespace: pod.Namespace, Name: pod.Name}
+		if pod.Status.Phase != "Running" {
+			return podsNamespacedNames, fmt.Errorf("pod %s is not running", podNsName)
+		}
+
+		podsNamespacedNames = append(podsNamespacedNames, podNsName)
 	}
 
-	fw, err := kube.NewLocalPortForwarder(c, nn, 0, adminPort)
+	return podsNamespacedNames, nil
+}
+
+// portForwarder returns a port forwarder instance for a single Pod.
+func portForwarder(cli kube.CLIClient, nn types.NamespacedName) (kube.PortForwarder, error) {
+	fw, err := kube.NewLocalPortForwarder(cli, nn, 0, adminPort)
 	if err != nil {
 		return nil, err
 	}
@@ -88,36 +159,49 @@ func portForwarder(nn types.NamespacedName) (kube.PortForwarder, error) {
 	return fw, nil
 }
 
-func marshalEnvoyProxyConfig(configDump protoreflect.ProtoMessage, output string) ([]byte, error) {
-	out, err := protojson.MarshalOptions{
-		Multiline: true,
-	}.Marshal(configDump)
+// getCLIClient returns a new kubernetes CLI Client.
+func getCLIClient() (kube.CLIClient, error) {
+	c, err := kube.NewCLIClient(options.DefaultConfigFlags.ToRawKubeConfigLoader())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build CLI client fail: %w", err)
 	}
 
-	if output == "yaml" {
-		out, err = yaml.JSONToYAML(out)
-		if err != nil {
-			return nil, err
+	return c, nil
+}
+
+func marshalEnvoyProxyConfig(configDump aggregatedConfigDump, output string) ([]byte, error) {
+	configDumpMap := make(map[string]map[string]interface{})
+	for ns, nsConfigs := range configDump {
+		configDumpMap[ns] = make(map[string]interface{})
+		for pod, podConfigs := range nsConfigs {
+			var newConfig interface{}
+			if err := json.Unmarshal([]byte(protojson.MarshalOptions{Multiline: false}.Format(podConfigs)), &newConfig); err != nil {
+				return nil, err
+			}
+			configDumpMap[ns][pod] = newConfig
 		}
 	}
 
-	return out, nil
+	out, err := json.MarshalIndent(configDumpMap, "", "  ")
+	if output == "yaml" {
+		return yaml.JSONToYAML(out)
+	}
+
+	return out, err
 }
 
-func extractConfigDump(fw kube.PortForwarder, includeEds bool) (*adminv3.ConfigDump, error) {
+func extractConfigDump(fw kube.PortForwarder, includeEds bool, configType envoyConfigType) (protoreflect.ProtoMessage, error) {
 	out, err := configDumpRequest(fw.Address(), includeEds)
 	if err != nil {
 		return nil, err
 	}
 
-	configDump := &adminv3.ConfigDump{}
-	if err := protojson.Unmarshal(out, configDump); err != nil {
+	configDumpResponse := &adminv3.ConfigDump{}
+	if err := protojson.Unmarshal(out, configDumpResponse); err != nil {
 		return nil, err
 	}
 
-	return configDump, nil
+	return findXDSResourceFromConfigDump(configType, configDumpResponse)
 }
 
 func configDumpRequest(address string, includeEds bool) ([]byte, error) {

@@ -288,3 +288,25 @@ func (r gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[
 
 	return gtw
 }
+
+func (r *gatewayAPIReconciler) handleNode(obj client.Object) bool {
+	ctx := context.Background()
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	key := types.NamespacedName{Name: node.Name}
+	if err := r.client.Get(ctx, key, node); err != nil {
+		if kerrors.IsNotFound(err) {
+			r.store.removeNode(node)
+			return true
+		}
+		r.log.Error(err, "unable to find node", "name", node.Name)
+		return false
+	}
+
+	r.store.addNode(node)
+	return true
+}

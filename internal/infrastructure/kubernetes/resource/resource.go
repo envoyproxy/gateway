@@ -6,6 +6,8 @@
 package resource
 
 import (
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -30,4 +32,11 @@ func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec 
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 	}
 	return serviceSpec
+}
+
+// CompareSvc compare entire Svc.Spec but ignored the ports[*].nodePort, ClusterIP and ClusterIPs in case user have modified for some scene.
+func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
+	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
+		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
+		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"))
 }
