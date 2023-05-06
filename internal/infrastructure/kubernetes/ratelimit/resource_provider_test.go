@@ -348,8 +348,10 @@ func TestDeployment(t *testing.T) {
 				Backend: egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
-						URL:               "redis.redis.svc:6379",
-						TLSCertificateRef: "ratelimit-cert",
+						URL: "redis.redis.svc:6379",
+						TLS: &egcfgv1a1.RedisTLSSettings{
+							CertificateRef: pointer.String("ratelimit-cert"),
+						},
 					},
 				},
 			},

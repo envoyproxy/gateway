@@ -139,15 +139,23 @@ const (
 	RedisBackendType RateLimitDatabaseBackendType = "Redis"
 )
 
+// RedisTLSSettings defines the TLS configuration for connecting to redis database.
+type RedisTLSSettings struct {
+	// CertificateRef defines the client certificate reference kubernetes secret for TLS connections.
+	//
+	// +optional
+	CertificateRef *string `json:"certificateRef,omitempty"`
+}
+
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
 	URL string `json:"url"`
 
-	// TLSCertificateRef defines the client certificate reference kubernetes secret for TLS connections.
+	// TLS defines TLS configuration for connecting to redis database.
 	//
 	// +optional
-	TLSCertificateRef string `json:"tlsCertificateRef,omitempty"`
+	TLS *RedisTLSSettings `json:"tls,omitempty"`
 }
 
 // Extension defines the configuration for registering an extension to

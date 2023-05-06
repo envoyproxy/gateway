@@ -111,7 +111,7 @@ func exceptedContainerVolumeMounts(ratelimit *egcfgv1a1.RateLimit) []corev1.Volu
 	}
 
 	// mount the cert
-	if ratelimit.Backend.Redis.TLSCertificateRef != "" {
+	if ratelimit.Backend.Redis.TLS != nil && *ratelimit.Backend.Redis.TLS.CertificateRef != "" {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "certs",
 			MountPath: "/certs",
@@ -139,12 +139,12 @@ func exceptedDeploymentVolumes(ratelimit *egcfgv1a1.RateLimit) []corev1.Volume {
 		},
 	}
 
-	if ratelimit.Backend.Redis.TLSCertificateRef != "" {
+	if ratelimit.Backend.Redis.TLS != nil && *ratelimit.Backend.Redis.TLS.CertificateRef != "" {
 		volumes = append(volumes, corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: ratelimit.Backend.Redis.TLSCertificateRef,
+					SecretName: *ratelimit.Backend.Redis.TLS.CertificateRef,
 				},
 			},
 		})
@@ -189,7 +189,7 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 	}
 
-	if ratelimit.Backend.Redis.TLSCertificateRef != "" {
+	if ratelimit.Backend.Redis.TLS != nil && *ratelimit.Backend.Redis.TLS.CertificateRef != "" {
 		env = append(env, []corev1.EnvVar{
 			{
 				Name:  RedisTLS,
