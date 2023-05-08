@@ -106,6 +106,14 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// merge adjacent slashes in the path
 		MergeSlashes:                 true,
 		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
+		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{
+			MaxConcurrentStreams:        wrapperspb.UInt32(100),
+			InitialStreamWindowSize:     wrapperspb.UInt32(65536),   // 64 KiB
+			InitialConnectionWindowSize: wrapperspb.UInt32(1048576), // 1 MiB
+		},
+		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
+			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
+		},
 	}
 
 	if irListener.StripAnyHostPort {

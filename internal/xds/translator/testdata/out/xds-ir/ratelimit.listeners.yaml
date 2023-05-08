@@ -21,6 +21,12 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
             path: /dev/stdout
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.ratelimit
           typedConfig:
