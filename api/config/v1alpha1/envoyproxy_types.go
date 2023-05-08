@@ -44,6 +44,10 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:default={level: {system: info}}
 	Logging ProxyLogging `json:"logging,omitempty"`
 
+	// AccessLoggings defines access logging parameters for managed proxies.
+	// If unspecified, default settings apply.
+	AccessLoggings []ProxyAccessLogging `json:"accessLoggings,omitempty"`
+
 	// Bootstrap defines the Envoy Bootstrap as a YAML string.
 	// Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap
 	// to learn more about the syntax.
@@ -103,6 +107,94 @@ type ProxyLogging struct {
 	//
 	// +kubebuilder:default={system: info}
 	Level map[LogComponent]LogLevel `json:"level,omitempty"`
+}
+
+type ProxyAccessLogging struct {
+	// Filter defines the CEL filter to be evaluated.
+	Filter *CELFilter `json:"filter,omitempty"`
+	// Text defines text based access logs.
+	// +optional
+	Text *TextFileEnvoyProxyAccessLogging `json:"text,omitempty"`
+	// Json defines structured json based access logs.
+	// +optional
+	Json *JsonFileEnvoyProxyAccessLogging `json:"json,omitempty"`
+	// Otel defines configuration for OpenTelemetry log provider.
+	// +optional
+	Otel *OpenTelemetryEnvoyProxyAccessLogging `json:"otel,omitempty"`
+}
+
+type CELFilter struct {
+	// Expression defines the CEL expression to be evaluated.
+	Expression string `json:"expression"`
+}
+
+type TextFileEnvoyProxyAccessLogging struct {
+	// Path defines the file path used to expose envoy access log(e.g. /dev/stdout).
+	// Empty value disables access logging.
+	Path string `json:"path,omitempty"`
+	// Format is the format for the proxy access log, following Envoy access logging formatting, empty value results in proxy's default access log format.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
+	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+	Format string `json:"format,omitempty"`
+}
+
+type JsonFileEnvoyProxyAccessLogging struct {
+	// Path defines the file path used to expose envoy access log(e.g. /dev/stdout).
+	// Empty value disables access logging.
+	Path string `json:"path,omitempty"`
+	// Fields is additional attributes that describe the specific event occurrence.
+	// Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+	// can be used as values for fields within the Struct.
+	// +optional
+	Fields map[string]string `json:"fields"`
+}
+
+type OpenTelemetryEnvoyProxyAccessLogging struct {
+	// Service specifies the service that implements the Envoy ALS gRPC authorization service.
+	//
+	// Example: "otel-collector.monitoring.svc.cluster.local".
+	Service string `json:"service,omitempty"`
+	// Port specifies the port of the service.
+	Port uint32 `json:"port,omitempty"`
+	// LogName is the friendly name of the access log, empty value results in default `otel_envoy_accesslog`.
+	// +optional
+	LogName string `json:"logName,omitempty"`
+	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
+	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+	//
+	//
+	// Example:
+	// ```
+	// resources:
+	//
+	//	k8s.cluster.name: "cluster-xxxx"
+	//
+	// ```
+	// +optional
+	Resources map[string]string `json:"resources,omitempty"`
+	// Text is the format for the proxy access log, following Envoy access logging formatting, empty value results in proxy's default access log format.
+	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
+	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
+	// Alias to `body` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+	//
+	// Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"`
+	// +optional
+	Text string `json:"text,omitempty"`
+	// Fields is additional attributes that describe the specific event occurrence.
+	// Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+	// can be used as values for fields within the Struct.
+	// Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
+	//
+	// Example:
+	// ```
+	// fields:
+	//
+	//	status: "%RESPONSE_CODE%"
+	//	message: "%LOCAL_REPLY_BODY%"
+	//
+	// ```
+	// +optional
+	Fields map[string]string `json:"fields,omitempty"`
 }
 
 // LogComponent defines a component that supports a configured logging level.

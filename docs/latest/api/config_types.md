@@ -16,6 +16,20 @@ API group.
 
 
 
+## CELFilter
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `expression` _string_ | Expression defines the CEL expression to be evaluated. |
+
+
 ## EnvoyGateway
 
 
@@ -152,6 +166,7 @@ _Appears in:_
 | --- | --- |
 | `provider` _[EnvoyProxyProvider](#envoyproxyprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
+| `accessLoggings` _[ProxyAccessLogging](#proxyaccesslogging) array_ | AccessLoggings defines access logging parameters for managed proxies. If unspecified, default settings apply. |
 | `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 
 
@@ -250,6 +265,21 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+## JsonFileEnvoyProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables access logging. |
+| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. |
+
+
 ## KubernetesContainerSpec
 
 
@@ -338,6 +368,33 @@ _Appears in:_
 
 
 
+## OpenTelemetryEnvoyProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `service` _string_ | Service specifies the service that implements the Envoy ALS gRPC authorization service. 
+ Example: "otel-collector.monitoring.svc.cluster.local". |
+| `port` _integer_ | Port specifies the port of the service. |
+| `logName` _string_ | LogName is the friendly name of the access log, empty value results in default `otel_envoy_accesslog`. |
+| `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). 
+ Example: ``` resources: 
+ k8s.cluster.name: "cluster-xxxx" 
+ ``` |
+| `text` _string_ | Text is the format for the proxy access log, following Envoy access logging formatting, empty value results in proxy's default access log format. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. Alias to `body` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto) 
+ Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"` |
+| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto) 
+ Example: ``` fields: 
+ status: "%RESPONSE_CODE%" message: "%LOCAL_REPLY_BODY%" 
+ ``` |
+
+
 ## ProviderType
 
 _Underlying type:_ `string`
@@ -348,6 +405,23 @@ _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 - [EnvoyProxyProvider](#envoyproxyprovider)
 
+
+
+## ProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Description |
+| --- | --- |
+| `filter` _[CELFilter](#celfilter)_ | Filter defines the CEL filter to be evaluated. |
+| `text` _[TextFileEnvoyProxyAccessLogging](#textfileenvoyproxyaccesslogging)_ | Text defines text based access logs. |
+| `json` _[JsonFileEnvoyProxyAccessLogging](#jsonfileenvoyproxyaccesslogging)_ | Json defines structured json based access logs. |
+| `otel` _[OpenTelemetryEnvoyProxyAccessLogging](#opentelemetryenvoyproxyaccesslogging)_ | Otel defines configuration for OpenTelemetry log provider. |
 
 
 ## ProxyLogging
@@ -428,6 +502,21 @@ ServiceType string describes ingress methods for a service
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
+
+
+## TextFileEnvoyProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables access logging. |
+| `format` _string_ | Format is the format for the proxy access log, following Envoy access logging formatting, empty value results in proxy's default access log format. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 
 
 ## XDSTranslatorHook
