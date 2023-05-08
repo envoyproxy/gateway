@@ -23,10 +23,6 @@
             path: /dev/stdout
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:
@@ -58,10 +54,6 @@
             path: /dev/stdout
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:
@@ -102,10 +94,6 @@
             path: /dev/stdout
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
-        http2ProtocolOptions:
-          initialConnectionWindowSize: 1048576
-          initialStreamWindowSize: 65536
-          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.router
           typedConfig:
