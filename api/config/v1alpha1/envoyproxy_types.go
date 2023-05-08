@@ -161,15 +161,6 @@ type OpenTelemetryEnvoyProxyAccessLogging struct {
 	LogName string `json:"logName,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
-	//
-	//
-	// Example:
-	// ```
-	// resources:
-	//
-	//	k8s.cluster.name: "cluster-xxxx"
-	//
-	// ```
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
 	// Text is the format for the proxy access log, following Envoy access logging formatting, empty value results in proxy's default access log format.
@@ -184,15 +175,6 @@ type OpenTelemetryEnvoyProxyAccessLogging struct {
 	// Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
 	// can be used as values for fields within the Struct.
 	// Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
-	//
-	// Example:
-	// ```
-	// fields:
-	//
-	//	status: "%RESPONSE_CODE%"
-	//	message: "%LOCAL_REPLY_BODY%"
-	//
-	// ```
 	// +optional
 	Fields map[string]string `json:"fields,omitempty"`
 }

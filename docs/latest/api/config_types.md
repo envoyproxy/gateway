@@ -383,16 +383,10 @@ _Appears in:_
  Example: "otel-collector.monitoring.svc.cluster.local". |
 | `port` _integer_ | Port specifies the port of the service. |
 | `logName` _string_ | LogName is the friendly name of the access log, empty value results in default `otel_envoy_accesslog`. |
-| `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). 
- Example: ``` resources: 
- k8s.cluster.name: "cluster-xxxx" 
- ``` |
+| `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
 | `text` _string_ | Text is the format for the proxy access log, following Envoy access logging formatting, empty value results in proxy's default access log format. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. Alias to `body` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto) 
  Example: `text: "%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%"` |
-| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto) 
- Example: ``` fields: 
- status: "%RESPONSE_CODE%" message: "%LOCAL_REPLY_BODY%" 
- ``` |
+| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. Alias to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto) |
 
 
 ## ProviderType
