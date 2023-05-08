@@ -109,7 +109,7 @@ type EnvoyGatewayCustomProvider struct {
 	Resource EnvoyGatewayResourceProvider `json:"resource"`
 	// Infrastructure defines the desired infrastructure provider.
 	// This provider is used to specify the provider to be used
-	// to provide an environement to deploy the out resources like
+	// to provide an environment to deploy the out resources like
 	// the Envoy Proxy data plane.
 	Infrastructure EnvoyGatewayInfrastructureProvider `json:"infrastructure"`
 }
