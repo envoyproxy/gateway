@@ -1,8 +1,13 @@
+name: Cherry pick
 on:
   pull_request:
     branches:
       - main
     types: ["closed"]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   cherry_pick_release_v0_4:
