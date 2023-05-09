@@ -429,7 +429,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _string_ | CertificateRef defines the client certificate reference kubernetes secret for TLS connections. |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference kubernetes secret for TLS connections. |
 
 
 ## ServiceType

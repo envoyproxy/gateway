@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -47,7 +48,7 @@ func TestRateLimitLabels(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			name: "ratelimit-labels",
+			name: "rateLimit-labels",
 			expected: map[string]string{
 				"app.kubernetes.io/name":       InfraName,
 				"app.kubernetes.io/component":  "ratelimit",
@@ -350,7 +351,9 @@ func TestDeployment(t *testing.T) {
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "redis.redis.svc:6379",
 						TLS: &egcfgv1a1.RedisTLSSettings{
-							CertificateRef: pointer.String("ratelimit-cert"),
+							CertificateRef: &gwapiv1b1.SecretObjectReference{
+								Name: "ratelimit-cert",
+							},
 						},
 					},
 				},

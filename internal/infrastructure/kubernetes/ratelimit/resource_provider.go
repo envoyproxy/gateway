@@ -22,7 +22,7 @@ type ResourceRender struct {
 	Namespace string
 
 	infra               *ir.RateLimitInfra
-	ratelimit           *egcfgv1a1.RateLimit
+	rateLimit           *egcfgv1a1.RateLimit
 	rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec
 }
 
@@ -31,7 +31,7 @@ func NewResourceRender(ns string, infra *ir.RateLimitInfra, gateway *egcfgv1a1.E
 	return &ResourceRender{
 		Namespace:           ns,
 		infra:               infra,
-		ratelimit:           gateway.RateLimit,
+		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 	}
 }
@@ -96,7 +96,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	return svc, nil
 }
 
-// ServiceAccount returns the expected ratelimit serviceAccount.
+// ServiceAccount returns the expected rateLimit serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	return &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
@@ -112,7 +112,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	containers := expectedRateLimitContainers(r.ratelimit, r.rateLimitDeployment)
+	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment)
 	labels := rateLimitLabels()
 	selector := resource.GetSelector(labels)
 
@@ -148,7 +148,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					Volumes:                       exceptedDeploymentVolumes(r.ratelimit),
+					Volumes:                       exceptedDeploymentVolumes(r.rateLimit),
 				},
 			},
 		},

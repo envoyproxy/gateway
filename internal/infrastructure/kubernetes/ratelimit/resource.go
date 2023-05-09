@@ -6,12 +6,15 @@
 package ratelimit
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
 const (
@@ -70,7 +73,7 @@ func rateLimitLabels() map[string]string {
 }
 
 // expectedRateLimitContainers returns expected rateLimit containers.
-func expectedRateLimitContainers(ratelimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Container {
+func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
 			Name:          "http",
@@ -87,11 +90,11 @@ func expectedRateLimitContainers(ratelimit *egcfgv1a1.RateLimit, rateLimitDeploy
 			Command: []string{
 				"/bin/ratelimit",
 			},
-			Env:                      expectedRateLimitContainerEnv(ratelimit, rateLimitDeployment),
+			Env:                      expectedRateLimitContainerEnv(rateLimit, rateLimitDeployment),
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
 			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
-			VolumeMounts:             exceptedContainerVolumeMounts(ratelimit),
+			VolumeMounts:             exceptedContainerVolumeMounts(rateLimit),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
@@ -100,8 +103,8 @@ func expectedRateLimitContainers(ratelimit *egcfgv1a1.RateLimit, rateLimitDeploy
 	return containers
 }
 
-// exceptedContainerVolumeMounts returns expected ratelimit container volume mounts.
-func exceptedContainerVolumeMounts(ratelimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
+// exceptedContainerVolumeMounts returns expected rateLimit container volume mounts.
+func exceptedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      InfraName,
@@ -111,7 +114,7 @@ func exceptedContainerVolumeMounts(ratelimit *egcfgv1a1.RateLimit) []corev1.Volu
 	}
 
 	// mount the cert
-	if ratelimit.Backend.Redis.TLS != nil && *ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "certs",
 			MountPath: "/certs",
@@ -122,8 +125,8 @@ func exceptedContainerVolumeMounts(ratelimit *egcfgv1a1.RateLimit) []corev1.Volu
 	return volumeMounts
 }
 
-// exceptedDeploymentVolumes returns expected ratelimit deployment volumes.
-func exceptedDeploymentVolumes(ratelimit *egcfgv1a1.RateLimit) []corev1.Volume {
+// exceptedDeploymentVolumes returns expected rateLimit deployment volumes.
+func exceptedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: InfraName,
@@ -139,12 +142,12 @@ func exceptedDeploymentVolumes(ratelimit *egcfgv1a1.RateLimit) []corev1.Volume {
 		},
 	}
 
-	if ratelimit.Backend.Redis.TLS != nil && *ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: *ratelimit.Backend.Redis.TLS.CertificateRef,
+					SecretName: string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
 				},
 			},
 		})
@@ -152,8 +155,8 @@ func exceptedDeploymentVolumes(ratelimit *egcfgv1a1.RateLimit) []corev1.Volume {
 	return volumes
 }
 
-// expectedRateLimitContainerEnv returns expected ratelimit container envs.
-func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
+// expectedRateLimitContainerEnv returns expected rateLimit container envs.
+func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name:  RedisSocketTypeEnvVar,
@@ -161,7 +164,7 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 		{
 			Name:  RedisURLEnvVar,
-			Value: ratelimit.Backend.Redis.URL,
+			Value: rateLimit.Backend.Redis.URL,
 		},
 		{
 			Name:  RuntimeRootEnvVar,
@@ -189,7 +192,7 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 	}
 
-	if ratelimit.Backend.Redis.TLS != nil && *ratelimit.Backend.Redis.TLS.CertificateRef != "" {
+	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		env = append(env, []corev1.EnvVar{
 			{
 				Name:  RedisTLS,
@@ -229,4 +232,20 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 	}
 
 	return env
+}
+
+// Validate the ratelimit tls secret validating.
+func Validate(ctx context.Context, client client.Client, gateway *egcfgv1a1.EnvoyGateway, namespace string) error {
+	if gateway.RateLimit.Backend.Redis.TLS == nil {
+		return nil
+	}
+
+	certificateRef := gateway.RateLimit.Backend.Redis.TLS.CertificateRef
+	if certificateRef == nil {
+		return nil
+	}
+
+	_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, *certificateRef, namespace)
+
+	return err
 }

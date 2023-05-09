@@ -16,7 +16,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	corev1 "k8s.io/api/core/v1"
-	k8smachinery "k8s.io/apimachinery/pkg/types"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -25,7 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
@@ -217,30 +216,17 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *v1alpha1.Exte
 	var creds credentials.TransportCredentials
 	if ext.Service.TLS != nil {
 		certRef := ext.Service.TLS.CertificateRef
-		if (certRef.Group == nil || *certRef.Group == corev1.GroupName) &&
-			(certRef.Kind == nil || *certRef.Kind == gatewayapi.KindSecret) {
-			secret := &corev1.Secret{}
-			secretNamespace := namespace
-			if certRef.Namespace != nil && string(*certRef.Namespace) != "" {
-				secretNamespace = string(*certRef.Namespace)
-			}
-			key := k8smachinery.NamespacedName{
-				Namespace: secretNamespace,
-				Name:      string(certRef.Name),
-			}
-			if err := client.Get(ctx, key, secret); err != nil {
-				return nil, fmt.Errorf("cannot find TLS Secret %s in namespace %s", string(certRef.Name), secretNamespace)
-			}
-			cp, err := parseCA(secret)
-			if err != nil {
-				return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", string(certRef.Name), secretNamespace)
-			}
-			creds = credentials.NewClientTLSFromCert(cp, "")
-
-		} else {
-			return nil, errors.New("unsupported Extension TLS certificateRef group/kind")
+		secret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, certRef, namespace)
+		if err != nil {
+			return nil, err
 		}
 
+		cp, err := parseCA(secret)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing cert in Secret %s in namespace %s", string(certRef.Name), secretNamespace)
+		}
+
+		creds = credentials.NewClientTLSFromCert(cp, "")
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
