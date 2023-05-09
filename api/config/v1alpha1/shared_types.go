@@ -14,6 +14,14 @@ const (
 	DefaultDeploymentCPUResourceRequests = "100m"
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
+	// DefaultTLSConfigSecretName is the default secret used for the Envoy deployment tls config.
+	DefaultTLSConfigSecretName = "envoy"
+	// DefaultTLSConfigCertificate is the default path used for a TLSConfig certificate.
+	DefaultTLSConfigCertificate = "tls.crt"
+	// DefaultTLSConfigPrivateKey is the default path used for a TLSConfig private key.
+	DefaultTLSConfigPrivateKey = "tls.key"
+	// DefaultTLSConfigCACertificate is the default path used for a TLSConfig CA cert.
+	DefaultTLSConfigCACertificate = "ca.crt"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
 	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
@@ -101,6 +109,24 @@ type KubernetesContainerSpec struct {
 	//
 	// +optional
 	Image *string `json:"image,omitempty"`
+}
+
+// KubernetesTLSConfigSecret is a reference to a secret containing a TLSConfig.
+type KubernetesTLSConfigSecret struct {
+	// Name is the name of the secret.
+	Name string `json:"name"`
+	// TLSConfig contains the file paths to a certificate, private key, and ca cert.
+	TLSConfig `json:",inline"`
+}
+
+// TLSConfig contains the file paths to a certificate, private key, and ca cert.
+type TLSConfig struct {
+	// Certificate is the path key where the certificate is stored.
+	Certificate string `json:"certificate"`
+	// PrivateKey is the path where the private key is stored.
+	PrivateKey string `json:"privateKey"`
+	// CACertificate is the path where CA certificate is stored.
+	CACertificate string `json:"caCertificate"`
 }
 
 // ServiceType string describes ingress methods for a service

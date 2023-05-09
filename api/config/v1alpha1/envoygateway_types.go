@@ -42,6 +42,11 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Provider *EnvoyGatewayProvider `json:"provider,omitempty"`
 
+	// XDSServer defines the desired xds server configuration.
+	//
+	// +optional
+	XDSServer *XDSServer `json:"xdsServer,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -103,6 +108,14 @@ type EnvoyGatewayKubernetesProvider struct {
 // EnvoyGatewayFileProvider defines configuration for the File provider.
 type EnvoyGatewayFileProvider struct {
 	// TODO: Add config as use cases are better understood.
+}
+
+// XDSServer defines configuration for the xds server.
+type XDSServer struct {
+	// TLSConfig configures the file paths to the tls cert, private key, and ca cert.
+	//
+	// +optional
+	TLSConfig *TLSConfig `json:"tlsConfig,omitempty"`
 }
 
 // RateLimit defines the configuration associated with the Rate Limit Service

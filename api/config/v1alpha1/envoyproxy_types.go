@@ -93,6 +93,14 @@ type EnvoyProxyKubernetesProvider struct {
 	//
 	// +optional
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
+
+	// TLSConfigSecret is a reference to the secret containing the TLS certificate,
+	// certificate authority certificate, and private key used to secure Envoy's
+	// client connection to the control plane. Defaults to {Name: "envoy",
+	// Certificate: "tls.crt", PrivateKey: "tls.key", CACertificate: "ca.crt"}.
+	//
+	// +optional
+	TLSConfigSecret *KubernetesTLSConfigSecret `json:"tlsConfigSecret,omitempty"`
 }
 
 // ProxyLogging defines logging parameters for managed proxies. This type is not
