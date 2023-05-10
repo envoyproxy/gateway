@@ -46,14 +46,10 @@ spec:
               value: "true"
             - name: REDIS_TLS
               value: "true"
-            - name: REDIS_TLS_SKIP_HOSTNAME_VERIFICATION
-              value: "true"
             - name: REDIS_TLS_CLIENT_CERT
               value: "/certs/tls.crt"
             - name: REDIS_TLS_CLIENT_KEY
               value: "/certs/tls.key"
-            - name: REDIS_TLS_CACERT
-              value: "/certs/ca.crt"
             - name: REDIS_AUTH
               value: "redis_auth_password"
           image: custom-image

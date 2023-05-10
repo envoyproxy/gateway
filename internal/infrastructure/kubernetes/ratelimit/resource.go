@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
+	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 const (
@@ -22,8 +22,6 @@ const (
 	RedisSocketTypeEnvVar = "REDIS_SOCKET_TYPE"
 	// RedisURLEnvVar is the redis url.
 	RedisURLEnvVar = "REDIS_URL"
-	// RedisAuthEnvVar is the redis auth.
-	RedisAuthEnvVar = "REDIS_AUTH"
 	// RedisTLS is the redis tls.
 	RedisTLS = "REDIS_TLS"
 	// RedisTLSClientCertEnvVar is the redis tls client cert.
@@ -34,12 +32,6 @@ const (
 	RedisTLSClientKeyEnvVar = "REDIS_TLS_CLIENT_KEY"
 	// RedisTLSClientKeyFilename is the redis client key file.
 	RedisTLSClientKeyFilename = "/certs/tls.key"
-	// RedisTLSCaCertEnvVar is the redis tls ca cert.
-	RedisTLSCaCertEnvVar = "REDIS_TLS_CACERT"
-	// RedisTLSCaCertFilename is the redis tls ca cert file.
-	RedisTLSCaCertFilename = "/certs/ca.crt"
-	// RedisTLSSkipHostNameVerificationEnvVar is the redis skip hostname verification.
-	RedisTLSSkipHostNameVerificationEnvVar = "REDIS_TLS_SKIP_HOSTNAME_VERIFICATION"
 	// RuntimeRootEnvVar is the runtime root.
 	RuntimeRootEnvVar = "RUNTIME_ROOT"
 	// RuntimeSubdirectoryEnvVar is the runtime subdirectory.
@@ -94,7 +86,7 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
 			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
-			VolumeMounts:             exceptedContainerVolumeMounts(rateLimit),
+			VolumeMounts:             expectedContainerVolumeMounts(rateLimit),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
@@ -103,8 +95,8 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 	return containers
 }
 
-// exceptedContainerVolumeMounts returns expected rateLimit container volume mounts.
-func exceptedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
+// expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
+func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      InfraName,
@@ -114,7 +106,7 @@ func exceptedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.Volu
 	}
 
 	// mount the cert
-	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
+	if rateLimit.Backend.Redis.TLS != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      "certs",
 			MountPath: "/certs",
@@ -125,8 +117,8 @@ func exceptedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.Volu
 	return volumeMounts
 }
 
-// exceptedDeploymentVolumes returns expected rateLimit deployment volumes.
-func exceptedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
+// expectedDeploymentVolumes returns expected rateLimit deployment volumes.
+func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: InfraName,
@@ -142,7 +134,7 @@ func exceptedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
 		},
 	}
 
-	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
+	if rateLimit.Backend.Redis.TLS != nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
@@ -192,14 +184,10 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 	}
 
-	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
+	if rateLimit.Backend.Redis.TLS != nil {
 		env = append(env, []corev1.EnvVar{
 			{
 				Name:  RedisTLS,
-				Value: "true",
-			},
-			{
-				Name:  RedisTLSSkipHostNameVerificationEnvVar,
 				Value: "true",
 			},
 			{
@@ -209,10 +197,6 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 			{
 				Name:  RedisTLSClientKeyEnvVar,
 				Value: RedisTLSClientKeyFilename,
-			},
-			{
-				Name:  RedisTLSCaCertEnvVar,
-				Value: RedisTLSCaCertFilename,
 			},
 		}...)
 	}
@@ -241,11 +225,7 @@ func Validate(ctx context.Context, client client.Client, gateway *egcfgv1a1.Envo
 	}
 
 	certificateRef := gateway.RateLimit.Backend.Redis.TLS.CertificateRef
-	if certificateRef == nil {
-		return nil
-	}
-
-	_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, *certificateRef, namespace)
+	_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, certificateRef, namespace)
 
 	return err
 }

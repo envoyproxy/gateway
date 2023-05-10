@@ -24,7 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"
-	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
+	"github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/envoyproxy/gateway/proto/extension"
 )
 
