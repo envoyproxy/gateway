@@ -55,14 +55,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 		ValidUniqueListenerPorts: validUniqueListenerPorts,
 		SupportedFeatures:        suite.AllFeatures,
 		ExemptFeatures:           suite.MeshCoreFeatures,
-		SkipTests: []string{
-			// Remove once https://github.com/envoyproxy/gateway/issues/993 is fixed
-			tests.HTTPRouteRedirectPath.ShortName,
-			// Remove once https://github.com/envoyproxy/gateway/issues/992 is fixed
-			tests.HTTPRouteRedirectHostAndStatus.ShortName,
-			// Remove once https://github.com/envoyproxy/gateway/issues/994 is fixed
-			tests.HTTPRouteRedirectScheme.ShortName,
-		},
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)
