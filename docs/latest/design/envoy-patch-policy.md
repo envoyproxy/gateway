@@ -22,6 +22,9 @@ Envoy xDS API and its capabilities, this API is being introduced.
 
 ## Implementation
 `EnvoyPatchPolicy` is a [Direct Policy Attachment][] type API that can be used to extend [Gateway API][]
+Modifications to the generated xDS configuration can be provided as a JSON Patch which is defined in
+[RFC 6902][]. This patching mechanism has been adopted in [Kubernetes][] as well as [Kustomize][] to update
+resource objects.
 
 ### Example
 Here is an example highlighting how a user can configure global ratelimiting using an external rate limit service using this API.
@@ -135,7 +138,10 @@ patches will work.
 
 
 [Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment 
+[RFC 6902]: https://datatracker.ietf.org/doc/html/rfc6902
 [Gateway API]: https://gateway-api.sigs.k8s.io/
+[Kubernetes]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
+[Kustomize]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md
 [Extension APIs]: https://gateway.envoyproxy.io/latest/api/extension_types.html
 [RateLimit]: https://gateway.envoyproxy.io/latest/user/rate-limit.html
 [Extending the Control Plane]: https://gateway.envoyproxy.io/latest/design/extending-envoy-gateway.html
