@@ -32,6 +32,12 @@ import (
 const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto#envoy-v3-api-field-config-listener-v3-listener-per-connection-buffer-limit-bytes
 	tcpListenerPerConnectionBufferLimitBytes = 32768
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-max-concurrent-streams
+	http2MaxConcurrentStreamsLimit = 100
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-stream-window-size
+	http2InitialStreamWindowSize = 65536 // 64 KiB
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size
+	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 )
 
 func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener {
@@ -106,6 +112,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		// merge adjacent slashes in the path
 		MergeSlashes:                 true,
 		PathWithEscapedSlashesAction: hcmv3.HttpConnectionManager_UNESCAPE_AND_REDIRECT,
+		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
+			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
+		},
 	}
 
 	if irListener.StripAnyHostPort {
@@ -122,6 +131,13 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		grpcWebAny, err := anypb.New(&grpc_webv3.GrpcWeb{})
 		if err != nil {
 			return err
+		}
+
+		// Add HTTP2 protocol options
+		mgr.Http2ProtocolOptions = &corev3.Http2ProtocolOptions{
+			MaxConcurrentStreams:        wrapperspb.UInt32(http2MaxConcurrentStreamsLimit),
+			InitialStreamWindowSize:     wrapperspb.UInt32(http2InitialStreamWindowSize),
+			InitialConnectionWindowSize: wrapperspb.UInt32(http2InitialConnectionWindowSize),
 		}
 
 		grpcWebFilter := &hcmv3.HttpFilter{
