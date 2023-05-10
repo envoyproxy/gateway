@@ -2,9 +2,6 @@ module github.com/envoyproxy/gateway
 
 go 1.20
 
-// TODO: remove this after there's a release of controller-runtime that includes
-replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.13.1-0.20230417175046-71885c9b8a6b
-
 require (
 	github.com/cncf/xds/go v0.0.0-20230310173818-32f1caf87195
 	github.com/envoyproxy/go-control-plane v0.11.1-0.20230320001644-5efe59dc39e4
@@ -31,7 +28,7 @@ require (
 	k8s.io/client-go v0.27.1
 	k8s.io/kubectl v0.27.1
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
-	sigs.k8s.io/controller-runtime v0.14.6
+	sigs.k8s.io/controller-runtime v0.15.0-alpha.0
 	sigs.k8s.io/gateway-api v0.7.0-rc1
 	sigs.k8s.io/yaml v1.3.0
 )
@@ -87,7 +84,7 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
+	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tsaarni/x500dn v1.0.0 // indirect
 	github.com/xlab/treeprint v1.1.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
@@ -105,7 +102,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/apiextensions-apiserver v0.26.3 // indirect
+	k8s.io/apiextensions-apiserver v0.27.1 // indirect
 	k8s.io/component-base v0.27.1 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a // indirect
