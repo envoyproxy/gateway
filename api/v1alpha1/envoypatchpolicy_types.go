@@ -80,7 +80,7 @@ const (
 	// ListenerEnvoyResourceType defines the Type URL of the Listener resource
 	ListenerEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.listener.v3.Listener"
 	// RouteConfigurationEnvoyResourceType defines the Type URL of the RouteConfiguration resource
-	RouteConfigurationEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.listener.v3.RouteConfiguration"
+	RouteConfigurationEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
 	// ClusterEnvoyResourceType defines the Type URL of the Cluster resource
 	ClusterEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.cluster.v3.Cluster"
 	// ClusterLoadAssignmentEnvoyResourceType defines the Type URL of the ClusterLoadAssignment resource
