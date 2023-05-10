@@ -72,6 +72,11 @@ spec:
       serviceAccountName: envoy-ratelimit
       securityContext:
         runAsUser: 1000
+      tolerations:
+      - effect: NoSchedule
+        key: node-type
+        operator: Exists
+        value: "router"
       terminationGracePeriodSeconds: 300
       volumes:
       - configMap:

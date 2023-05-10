@@ -148,6 +148,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
+					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
+					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 					Volumes: []corev1.Volume{
 						{
 							Name: InfraName,

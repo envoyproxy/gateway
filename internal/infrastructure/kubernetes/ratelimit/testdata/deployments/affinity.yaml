@@ -72,6 +72,15 @@ spec:
       serviceAccountName: envoy-ratelimit
       securityContext:
         runAsUser: 1000
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cloud.google.com/gke-nodepool
+                operator: In
+                values:
+                - router-node
       terminationGracePeriodSeconds: 300
       volumes:
       - configMap:
