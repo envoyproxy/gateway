@@ -47,6 +47,9 @@ grpcRoutes:
       - method:
           method: "ExampleExact"
           type: Exact
+      - method:
+          method: "FooBar[0-9]+"
+          type: RegularExpression
       backendRefs:
       - name: service-1
         port: 8080
@@ -76,6 +79,13 @@ xdsIR:
       - "*"
       isHTTP2: true
       routes:
+      - name: default-grpcroute-1-rule-0-match-1-*
+        pathMatch:
+          SafeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
       - name: default-grpcroute-1-rule-0-match-0-*
         headerMatches:
         - name: ":path"

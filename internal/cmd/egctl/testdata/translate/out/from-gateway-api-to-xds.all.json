@@ -409,6 +409,9 @@
                               }
                             }
                           ],
+                          "commonHttpProtocolOptions": {
+                            "headersWithUnderscoresAction": "REJECT_REQUEST"
+                          },
                           "httpFilters": [
                             {
                               "name": "envoy.filters.http.router",
@@ -486,6 +489,14 @@
                             }
                           ],
                           "codecType": "HTTP2",
+                          "commonHttpProtocolOptions": {
+                            "headersWithUnderscoresAction": "REJECT_REQUEST"
+                          },
+                          "http2ProtocolOptions": {
+                            "initialConnectionWindowSize": 1048576,
+                            "initialStreamWindowSize": 65536,
+                            "maxConcurrentStreams": 100
+                          },
                           "httpFilters": [
                             {
                               "name": "envoy.filters.http.grpc_web",
