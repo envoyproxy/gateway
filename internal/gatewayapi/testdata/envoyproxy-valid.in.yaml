@@ -30,8 +30,6 @@ envoyproxy:
             annotations:
               key1: val1
               key2: val2
-            nodeSelector:
-              node-role.kubernetes.io/master: ""
             affinity:
               nodeAffinity:
                 requiredDuringSchedulingIgnoredDuringExecution:
