@@ -8,7 +8,7 @@ that Envoy Gateway generates before sending it to Envoy Proxy.
 Envoy Gateway allows users to configure networking and security intent using the
 upstream [Gateway API][] as well as implementation specific [Extension APIs][] defined in this project
 to provide a more batteries included experience for application developers.
-* These APIs are an abstacted version of the underlying Envoy xDS API to provide a a better user experience for the application developer, exposing and setting only a subset of the fields for a specific feature, sometimes in a opinionated way (e.g [RateLimit][])
+* These APIs are an abstracted version of the underlying Envoy xDS API to provide a a better user experience for the application developer, exposing and setting only a subset of the fields for a specific feature, sometimes in a opinionated way (e.g [RateLimit][])
 * These APIs do not expose all the features capabilities that Envoy has either because these features are desired but the API
 is not defined yet or the project cannot support such an extensive list of features.
 To alleviate this problem, and provide an interim solution for a small section of advanced users who are well versed in
