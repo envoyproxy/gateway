@@ -57,6 +57,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the manged Envoy ratelimit deployment resource are applied. |
+| `mode` _[KubernetesMode](#kubernetesmode)_ | Mode defines the configuration that decides the deployment model of the controller |
 
 
 ## EnvoyGatewayProvider
@@ -267,6 +268,17 @@ _Appears in:_
 | `image` _string_ | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
 
 
+## KubernetesDeployMode
+
+
+
+KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy data plane fleet.
+
+_Appears in:_
+- [KubernetesMode](#kubernetesmode)
+
+
+
 ## KubernetesDeploymentSpec
 
 
@@ -282,6 +294,21 @@ _Appears in:_
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
 | `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired annotations and securityContext of container. |
 | `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the resources and securityContext of container. |
+
+
+## KubernetesMode
+
+
+
+KubernetesMode holds the deployment model configuration when running Envoy Gateway in Kubernetes
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Description |
+| --- | --- |
+| `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
+| `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 
 
 ## KubernetesPodSpec
@@ -312,6 +339,20 @@ _Appears in:_
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations that should be appended to the service. By default, no annotations are appended. |
 | `type` _[ServiceType](#servicetype)_ | Type determines how the Service is exposed. Defaults to LoadBalancer. Valid options are ClusterIP, LoadBalancer and NodePort. "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it). "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP. "NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
+
+
+## KubernetesWatchMode
+
+
+
+KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
+
+_Appears in:_
+- [KubernetesMode](#kubernetesmode)
+
+| Field | Description |
+| --- | --- |
+| `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relavant cluster scoped resources such as GatewayClass that it is linked to. By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
 
 
 ## LogComponent
