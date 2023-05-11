@@ -44,6 +44,14 @@ spec:
           value: info
         - name: USE_STATSD
           value: "true"
+        - name: REDIS_TLS
+          value: "true"
+        - name: REDIS_TLS_CLIENT_CERT
+          value: "/certs/tls.crt"
+        - name: REDIS_TLS_CLIENT_KEY
+          value: "/certs/tls.key"
+        - name: REDIS_AUTH
+          value: "redis_auth_password"
         image: custom-image
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
@@ -66,12 +74,20 @@ spec:
         - mountPath: /data/ratelimit/config
           name: envoy-ratelimit
           readOnly: true
+        - mountPath: /certs
+          name: certs
+          readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit
       securityContext:
         runAsUser: 1000
+      tolerations:
+      - effect: NoSchedule
+        key: node-type
+        operator: Exists
+        value: "router"
       terminationGracePeriodSeconds: 300
       volumes:
       - configMap:
@@ -79,3 +95,6 @@ spec:
           name: envoy-ratelimit
           optional: false
         name: envoy-ratelimit
+      - name: certs
+        secret:
+          secretName: ratelimit-cert

@@ -149,6 +149,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
 					Volumes:                       expectedDeploymentVolumes(r.rateLimit),
+					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
+					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 				},
 			},
 		},
