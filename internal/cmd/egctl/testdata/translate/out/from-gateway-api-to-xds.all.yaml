@@ -144,6 +144,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-backend-rule-0-match-0-www.example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -158,6 +159,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -177,6 +179,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-eg-tls-passthrough-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -191,6 +194,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-eg-tcp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -205,6 +209,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-eg-udp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
