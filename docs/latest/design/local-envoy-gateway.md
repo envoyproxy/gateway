@@ -42,7 +42,8 @@ provider:
     resource:
       type: File
       file:
-        path: "config.yaml"
+        paths: 
+        - "config.yaml"
     infrastructure:
       type: Host
       host: {}
