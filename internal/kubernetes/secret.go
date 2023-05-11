@@ -9,12 +9,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	k8smachinery "k8s.io/apimachinery/pkg/types"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/pkg/errors"
 
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 )
