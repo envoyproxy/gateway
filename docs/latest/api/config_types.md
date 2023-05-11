@@ -501,7 +501,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currenly only a Kubernetes Secret of type TLS is supported. |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
 
 
 ## ResourceProviderType
