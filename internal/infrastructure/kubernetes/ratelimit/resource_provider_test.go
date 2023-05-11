@@ -356,7 +356,7 @@ func TestDeployment(t *testing.T) {
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "redis.redis.svc:6379",
 						TLS: &egcfgv1a1.RedisTLSSettings{
-							CertificateRef: gwapiv1b1.SecretObjectReference{
+							CertificateRef: &gwapiv1b1.SecretObjectReference{
 								Name: "ratelimit-cert",
 							},
 						},
@@ -409,7 +409,7 @@ func TestDeployment(t *testing.T) {
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "redis.redis.svc:6379",
 						TLS: &egcfgv1a1.RedisTLSSettings{
-							CertificateRef: gwapiv1b1.SecretObjectReference{
+							CertificateRef: &gwapiv1b1.SecretObjectReference{
 								Name: "ratelimit-cert",
 							},
 						},

@@ -175,7 +175,7 @@ func TestDecode(t *testing.T) {
 							Redis: &v1alpha1.RateLimitRedisSettings{
 								URL: "localhost:6379",
 								TLS: &v1alpha1.RedisTLSSettings{
-									CertificateRef: gwapiv1b1.SecretObjectReference{
+									CertificateRef: &gwapiv1b1.SecretObjectReference{
 										Name: "ratelimit-cert",
 									},
 								},
