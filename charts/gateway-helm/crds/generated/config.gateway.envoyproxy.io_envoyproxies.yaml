@@ -37,21 +37,11 @@ spec:
             properties:
               accessLoggings:
                 description: AccessLoggings defines access logging parameters for
-                  managed proxies. If unspecified, default settings apply.
+                  managed proxies. If unspecified, access log is disabled.
                 items:
                   properties:
-                    filter:
-                      description: Filter defines the CEL filter to be evaluated.
-                      properties:
-                        expression:
-                          description: Expression defines the CEL expression to be
-                            evaluated.
-                          type: string
-                      required:
-                      - expression
-                      type: object
-                    json:
-                      description: Json defines structured json based access logs.
+                    format:
+                      description: Format defines the format of access logging.
                       properties:
                         fields:
                           additionalProperties:
@@ -59,75 +49,66 @@ spec:
                           description: Fields is additional attributes that describe
                             the specific event occurrence. Structured format for the
                             envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
-                            can be used as values for fields within the Struct.
+                            can be used as values for fields within the Struct. It's
+                            required when the format type is "json".
                           type: object
-                        path:
-                          description: Path defines the file path used to expose envoy
-                            access log(e.g. /dev/stdout). Empty value disables access
-                            logging.
-                          type: string
-                      type: object
-                    otel:
-                      description: Otel defines configuration for OpenTelemetry log
-                        provider.
-                      properties:
-                        fields:
-                          additionalProperties:
-                            type: string
-                          description: Fields is additional attributes that describe
-                            the specific event occurrence. Structured format for the
-                            envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
-                            can be used as values for fields within the Struct. Alias
-                            to `attributes` filed in [Open Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
-                          type: object
-                        logName:
-                          description: LogName is the friendly name of the access
-                            log, empty value results in default `otel_envoy_accesslog`.
-                          type: string
-                        port:
-                          description: Port specifies the port of the service.
-                          format: int32
-                          type: integer
-                        resources:
-                          additionalProperties:
-                            type: string
-                          description: Resources is a set of labels that describe
-                            the source of a log entry, including envoy node info.
-                            It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
-                          type: object
-                        service:
-                          description: "Service specifies the service that implements
-                            the Envoy ALS gRPC authorization service. \n Example:
-                            \"otel-collector.monitoring.svc.cluster.local\"."
-                          type: string
                         text:
-                          description: "Text is the format for the proxy access log,
+                          description: Text defines the text access logging format,
                             following Envoy access logging formatting, empty value
-                            results in proxy's default access log format. Envoy [command
-                            operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
-                            may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
-                            provides more information. Alias to `body` filed in [Open
-                            Telemetry](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/access_loggers/open_telemetry/v3/logs_service.proto)
-                            \n Example: `text: \"%LOCAL_REPLY_BODY%:%RESPONSE_CODE%:path=%REQ(:path)%\"`"
-                          type: string
-                      type: object
-                    text:
-                      description: Text defines text based access logs.
-                      properties:
-                        format:
-                          description: Format is the format for the proxy access log,
-                            following Envoy access logging formatting, empty value
-                            results in proxy's default access log format. Envoy [command
-                            operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                            results in proxy's default access log format. It's required
+                            when the format type is "text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
                             may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
                             provides more information.
                           type: string
-                        path:
-                          description: Path defines the file path used to expose envoy
-                            access log(e.g. /dev/stdout). Empty value disables access
-                            logging.
+                        type:
                           type: string
                       type: object
+                    sink:
+                      description: Sink defines the sink of access logging.
+                      properties:
+                        file:
+                          description: File defines the file access logging sink.
+                          properties:
+                            path:
+                              description: Path defines the file path used to expose
+                                envoy access log(e.g. /dev/stdout). Empty value disables
+                                access logging.
+                              type: string
+                          type: object
+                        opentelemetry:
+                          description: OpenTelemetry defines the OpenTelemetry access
+                            logging sink.
+                          properties:
+                            host:
+                              description: Host define the extension service hostname.
+                              type: string
+                            port:
+                              default: 80
+                              description: Port defines the port the extension service
+                                is exposed on.
+                              format: int32
+                              minimum: 0
+                              type: integer
+                            resources:
+                              additionalProperties:
+                                type: string
+                              description: Resources is a set of labels that describe
+                                the source of a log entry, including envoy node info.
+                                It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
+                              type: object
+                          required:
+                          - host
+                          type: object
+                        type:
+                          description: Type defines the type of access logging sink.
+                          enum:
+                          - file
+                          - opentelemetry
+                          type: string
+                      type: object
+                  required:
+                  - format
+                  - sink
                   type: object
                 type: array
               bootstrap:
