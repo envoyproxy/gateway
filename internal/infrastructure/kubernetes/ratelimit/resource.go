@@ -7,6 +7,8 @@ package ratelimit
 
 import (
 	"fmt"
+	"net"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -34,6 +36,17 @@ const (
 	InfraName = "envoy-ratelimit"
 	// InfraGRPCPort is the grpc port that the rate limit service listens on.
 	InfraGRPCPort = 8081
+	// ConfigType is the configuration loading method for ratelimit.
+	ConfigType = "CONFIG_TYPE"
+	// ConfigGrpcXdsServerURL is the url of ratelimit config xds server.
+	ConfigGrpcXdsServerURL = "CONFIG_GRPC_XDS_SERVER_URL"
+	// ConfigGrpcXdsNodeID is the id of ratelimit node.
+	ConfigGrpcXdsNodeID = "CONFIG_GRPC_XDS_NODE_ID"
+
+	// XdsGrpcSotwConfigServerPort is the listening port of the RateLimit xDS config server.
+	XdsGrpcSotwConfigServerPort = 18001
+	// XdsGrpcSotwConfigServerHost is the hostname of the RateLimit xDS config server.
+	XdsGrpcSotwConfigServerHost = "envoy-gateway"
 )
 
 // GetServiceURL returns the URL for the rate limit service.
@@ -121,6 +134,18 @@ func expectedRateLimitContainerEnv(ratelimit *egcfgv1a1.RateLimit, rateLimitDepl
 		{
 			Name:  UseStatsdEnvVar,
 			Value: "false",
+		},
+		{
+			Name:  ConfigType,
+			Value: "GRPC_XDS_SOTW",
+		},
+		{
+			Name:  ConfigGrpcXdsServerURL,
+			Value: net.JoinHostPort(XdsGrpcSotwConfigServerHost, strconv.Itoa(XdsGrpcSotwConfigServerPort)),
+		},
+		{
+			Name:  ConfigGrpcXdsNodeID,
+			Value: InfraName,
 		},
 	}
 

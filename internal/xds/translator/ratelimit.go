@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"net/url"
 	"strconv"
+	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
@@ -16,7 +17,8 @@ import (
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
+	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
+	"github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
@@ -186,111 +188,111 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 	return rateLimits
 }
 
-// GetRateLimitServiceConfigStr returns the YAML string for the rate limit service configuration.
-func GetRateLimitServiceConfigStr(yamlRoot *ratelimitserviceconfig.YamlRoot) (string, error) {
+// GetRateLimitServiceConfigStr returns the PB string for the rate limit service configuration.
+func GetRateLimitServiceConfigStr(pbCfg *rlsconfv3.RateLimitConfig) (string, error) {
 	var buf bytes.Buffer
 	enc := goyaml.NewEncoder(&buf)
 	enc.SetIndent(2)
+	// Translate pb config to yaml
+	yamlRoot := config.ConfigXdsProtoToYaml(pbCfg)
 	err := enc.Encode(*yamlRoot)
 	return buf.String(), err
 }
 
 // BuildRateLimitServiceConfig builds the rate limit service configuration based on
 // https://github.com/envoyproxy/ratelimit#the-configuration-format
-func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *ratelimitserviceconfig.YamlRoot {
-	yamlDescriptors := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
+func BuildRateLimitServiceConfig(irListener *ir.HTTPListener) *rlsconfv3.RateLimitConfig {
+	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, 1)
 
 	for _, route := range irListener.Routes {
 		if route.RateLimit != nil && route.RateLimit.Global != nil {
 			serviceDescriptors := buildRateLimitServiceDescriptors(route.Name, route.RateLimit.Global)
-			yamlDescriptors = append(yamlDescriptors, serviceDescriptors...)
+			pbDescriptors = append(pbDescriptors, serviceDescriptors...)
 		}
 	}
 
-	if len(yamlDescriptors) == 0 {
+	if len(pbDescriptors) == 0 {
 		return nil
 	}
 
-	return &ratelimitserviceconfig.YamlRoot{
+	return &rlsconfv3.RateLimitConfig{
 		Domain:      getRateLimitDomain(irListener),
-		Descriptors: yamlDescriptors,
+		Descriptors: pbDescriptors,
 	}
 }
 
-// buildRateLimitServiceDescriptors creates the rate limit service yaml descriptors based on the global rate limit IR config.
-func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.GlobalRateLimit) []ratelimitserviceconfig.YamlDescriptor {
-	yamlDescriptors := make([]ratelimitserviceconfig.YamlDescriptor, 0, 1)
+// buildRateLimitServiceDescriptors creates the rate limit service pb descriptors based on the global rate limit IR config.
+func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.GlobalRateLimit) []*rlsconfv3.RateLimitDescriptor {
+	pbDescriptors := make([]*rlsconfv3.RateLimitDescriptor, 0, 1)
 
 	for rIdx, rule := range global.Rules {
-		var head, cur *ratelimitserviceconfig.YamlDescriptor
+		var head, cur *rlsconfv3.RateLimitDescriptor
 		if !rule.IsMatchSet() {
-			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			// GenericKey case
-			yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
-			yamlDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1)
-			rateLimit := ratelimitserviceconfig.YamlRateLimit{
+			pbDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, -1)
+			pbDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, -1)
+			rateLimit := rlsconfv3.RateLimitPolicy{
 				RequestsPerUnit: uint32(rule.Limit.Requests),
-				Unit:            string(rule.Limit.Unit),
+				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 			}
-			yamlDesc.RateLimit = &rateLimit
-
-			head = yamlDesc
+			pbDesc.RateLimit = &rateLimit
+			head = pbDesc
 			cur = head
 		}
 
 		for mIdx, match := range rule.HeaderMatches {
-			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
 			// Case for distinct match
 			if match.Distinct {
 				// RequestHeader case
-				yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
+				pbDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
 			} else {
 				// HeaderValueMatch case
-				yamlDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
-				yamlDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
+				pbDesc.Key = getRateLimitDescriptorKey(descriptorPrefix, rIdx, mIdx)
+				pbDesc.Value = getRateLimitDescriptorValue(descriptorPrefix, rIdx, mIdx)
 			}
 
 			// Add the ratelimit values to the last descriptor
 			if mIdx == len(rule.HeaderMatches)-1 {
-				rateLimit := ratelimitserviceconfig.YamlRateLimit{
+				rateLimit := rlsconfv3.RateLimitPolicy{
 					RequestsPerUnit: uint32(rule.Limit.Requests),
-					Unit:            string(rule.Limit.Unit),
+					Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 				}
-				yamlDesc.RateLimit = &rateLimit
+				pbDesc.RateLimit = &rateLimit
 			}
 
 			if mIdx == 0 {
-				head = yamlDesc
+				head = pbDesc
 			} else {
-				cur.Descriptors = []ratelimitserviceconfig.YamlDescriptor{*yamlDesc}
+				cur.Descriptors = []*rlsconfv3.RateLimitDescriptor{pbDesc}
 			}
 
-			cur = yamlDesc
+			cur = pbDesc
 		}
 
 		if rule.CIDRMatch != nil {
 			// MaskedRemoteAddress case
-			yamlDesc := new(ratelimitserviceconfig.YamlDescriptor)
-			yamlDesc.Key = "masked_remote_address"
-			yamlDesc.Value = rule.CIDRMatch.CIDR
-			rateLimit := ratelimitserviceconfig.YamlRateLimit{
+			pbDesc := new(rlsconfv3.RateLimitDescriptor)
+			pbDesc.Key = "masked_remote_address"
+			pbDesc.Value = rule.CIDRMatch.CIDR
+			rateLimit := rlsconfv3.RateLimitPolicy{
 				RequestsPerUnit: uint32(rule.Limit.Requests),
-				Unit:            string(rule.Limit.Unit),
+				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 			}
-			yamlDesc.RateLimit = &rateLimit
-
-			head = yamlDesc
+			pbDesc.RateLimit = &rateLimit
+			head = pbDesc
 			cur = head
 		}
 
-		yamlDescriptors = append(yamlDescriptors, *head)
+		pbDescriptors = append(pbDescriptors, head)
 	}
 
-	return yamlDescriptors
+	return pbDescriptors
 }
 
 func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
-	// Return early if rate limits dont exist.
+	// Return early if rate limits don't exist.
 	if !t.isRateLimitPresent(irListener) {
 		return nil
 	}
