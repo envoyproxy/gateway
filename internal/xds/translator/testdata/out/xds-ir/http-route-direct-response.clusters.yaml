@@ -6,6 +6,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: direct-route
   name: direct-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

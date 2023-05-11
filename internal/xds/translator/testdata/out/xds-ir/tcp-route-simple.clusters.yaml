@@ -6,6 +6,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-simple
   name: tcp-route-simple
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
