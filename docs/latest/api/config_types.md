@@ -479,7 +479,7 @@ _Appears in:_
 
 
 
-RateLimitRedisSettings defines the configuration for connecting to a Redis database.
+RateLimitRedisSettings defines the configuration for connecting to redis database.
 
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
@@ -487,6 +487,21 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `url` _string_ | URL of the Redis Database. |
+| `tls` _[RedisTLSSettings](#redistlssettings)_ | TLS defines TLS configuration for connecting to redis database. |
+
+
+## RedisTLSSettings
+
+
+
+RedisTLSSettings defines the TLS configuration for connecting to redis database.
+
+_Appears in:_
+- [RateLimitRedisSettings](#ratelimitredissettings)
+
+| Field | Description |
+| --- | --- |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference kubernetes secret for TLS connections. |
 
 
 ## ResourceProviderType

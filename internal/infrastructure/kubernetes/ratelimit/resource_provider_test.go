@@ -16,11 +16,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/ir"
+)
+
+const (
+	// RedisAuthEnvVar is the redis auth.
+	RedisAuthEnvVar = "REDIS_AUTH"
 )
 
 var (
@@ -47,7 +53,7 @@ func TestRateLimitLabels(t *testing.T) {
 		expected map[string]string
 	}{
 		{
-			name: "ratelimit-labels",
+			name: "rateLimit-labels",
 			expected: map[string]string{
 				"app.kubernetes.io/name":       InfraName,
 				"app.kubernetes.io/component":  "ratelimit",
@@ -183,17 +189,27 @@ func loadService() (*corev1.Service, error) {
 func TestDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
-
+	rateLimit := &egcfgv1a1.RateLimit{
+		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+			Type: egcfgv1a1.RedisBackendType,
+			Redis: &egcfgv1a1.RateLimitRedisSettings{
+				URL: "redis.redis.svc:6379",
+			},
+		},
+	}
 	cases := []struct {
-		caseName string
-		deploy   *egcfgv1a1.KubernetesDeploymentSpec
+		caseName  string
+		rateLimit *egcfgv1a1.RateLimit
+		deploy    *egcfgv1a1.KubernetesDeploymentSpec
 	}{
 		{
-			caseName: "default",
-			deploy:   cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+			caseName:  "default",
+			rateLimit: rateLimit,
+			deploy:    cfg.EnvoyGateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 		},
 		{
-			caseName: "custom",
+			caseName:  "custom",
+			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
@@ -223,7 +239,8 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
-			caseName: "extension-env",
+			caseName:  "extension-env",
+			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
@@ -263,7 +280,8 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
-			caseName: "default-env",
+			caseName:  "default-env",
+			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
@@ -294,7 +312,8 @@ func TestDeployment(t *testing.T) {
 			},
 		},
 		{
-			caseName: "override-env",
+			caseName:  "override-env",
+			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
@@ -329,6 +348,120 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "redis-tls-settings",
+			rateLimit: &egcfgv1a1.RateLimit{
+				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+					Type: egcfgv1a1.RedisBackendType,
+					Redis: &egcfgv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+						TLS: &egcfgv1a1.RedisTLSSettings{
+							CertificateRef: gwapiv1b1.SecretObjectReference{
+								Name: "ratelimit-cert",
+							},
+						},
+					},
+				},
+			},
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  RedisAuthEnvVar,
+							Value: "redis_auth_password",
+						},
+						{
+							Name:  UseStatsdEnvVar,
+							Value: "true",
+						},
+					},
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
+		{
+			caseName: "tolerations",
+			rateLimit: &egcfgv1a1.RateLimit{
+				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+					Type: egcfgv1a1.RedisBackendType,
+					Redis: &egcfgv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+						TLS: &egcfgv1a1.RedisTLSSettings{
+							CertificateRef: gwapiv1b1.SecretObjectReference{
+								Name: "ratelimit-cert",
+							},
+						},
+					},
+				},
+			},
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "node-type",
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoSchedule,
+							Value:    "router",
+						},
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  RedisAuthEnvVar,
+							Value: "redis_auth_password",
+						},
+						{
+							Name:  UseStatsdEnvVar,
+							Value: "true",
+						},
+					},
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -341,14 +474,8 @@ func TestDeployment(t *testing.T) {
 				},
 			}
 
-			cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
-					Type: egcfgv1a1.RedisBackendType,
-					Redis: &egcfgv1a1.RateLimitRedisSettings{
-						URL: "redis.redis.svc:6379",
-					},
-				},
-			}
+			cfg.EnvoyGateway.RateLimit = tc.rateLimit
+
 			cfg.EnvoyGateway.Provider = &egcfgv1a1.EnvoyGatewayProvider{
 				Type: egcfgv1a1.ProviderTypeKubernetes,
 				Kubernetes: &egcfgv1a1.EnvoyGatewayKubernetesProvider{
