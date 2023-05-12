@@ -122,10 +122,7 @@ type KubernetesWatchMode struct {
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
 // data plane fleet.
 type KubernetesDeployMode struct {
-	// EnvoyNamespaceType decides the namespace in which the managed Envoy Proxy data plane fleet
-	// will be deployed in.
-	// +optional
-	EnvoyNamespaceType *EnvoyKubernetesNamespaceType `json:"envoyNamespaceType,omitempty"`
+	// TODO
 }
 
 // EnvoyGatewayFileProvider defines configuration for the File provider.

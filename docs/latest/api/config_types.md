@@ -57,7 +57,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the manged Envoy ratelimit deployment resource are applied. |
-| `mode` _[KubernetesMode](#kubernetesmode)_ | Mode defines the configuration that decides the deployment model of the controller |
+| `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
+| `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 
 
 ## EnvoyGatewayProvider
@@ -275,7 +276,7 @@ _Appears in:_
 KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy data plane fleet.
 
 _Appears in:_
-- [KubernetesMode](#kubernetesmode)
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 
 
@@ -294,21 +295,6 @@ _Appears in:_
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
 | `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired annotations and securityContext of container. |
 | `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the resources and securityContext of container. |
-
-
-## KubernetesMode
-
-
-
-KubernetesMode holds the deployment model configuration when running Envoy Gateway in Kubernetes
-
-_Appears in:_
-- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
-
-| Field | Description |
-| --- | --- |
-| `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
-| `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 
 
 ## KubernetesPodSpec
@@ -348,7 +334,7 @@ _Appears in:_
 KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
 
 _Appears in:_
-- [KubernetesMode](#kubernetesmode)
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
 
 | Field | Description |
 | --- | --- |
