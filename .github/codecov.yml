@@ -5,3 +5,6 @@ coverage:
         target: 60%
         threshold: 5%
         if_ci_failed: error
+
+ignore:
+  - api # ignore all files in api folder
