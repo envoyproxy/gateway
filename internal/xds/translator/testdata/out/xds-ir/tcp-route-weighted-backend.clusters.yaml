@@ -6,6 +6,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-weighted-backend
   name: tcp-route-weighted-backend
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

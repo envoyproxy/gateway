@@ -6,6 +6,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: response-header-route
   name: response-header-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

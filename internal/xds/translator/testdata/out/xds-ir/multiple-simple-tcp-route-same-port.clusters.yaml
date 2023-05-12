@@ -6,6 +6,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-simple
   name: tcp-route-simple
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -18,6 +19,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-simple-1
   name: tcp-route-simple-1
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -30,6 +32,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-simple-2
   name: tcp-route-simple-2
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -42,6 +45,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-simple-3
   name: tcp-route-simple-3
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -54,6 +58,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: tcp-route-simple-4
   name: tcp-route-simple-4
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

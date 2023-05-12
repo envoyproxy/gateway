@@ -19,6 +19,10 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.Rate
 		return errors.New("ratelimit infra ir is nil")
 	}
 
+	if err := ratelimit.Validate(ctx, i.Client.Client, i.EnvoyGateway, i.Namespace); err != nil {
+		return err
+	}
+
 	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway)
 	return i.createOrUpdate(ctx, r)
 }
@@ -27,6 +31,10 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.Rate
 func (i *Infra) DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error {
 	if infra == nil {
 		return errors.New("ratelimit infra ir is nil")
+	}
+
+	if err := ratelimit.Validate(ctx, i.Client.Client, i.EnvoyGateway, i.Namespace); err != nil {
+		return err
 	}
 
 	r := ratelimit.NewResourceRender(i.Namespace, infra, i.EnvoyGateway)
