@@ -61,6 +61,10 @@ spec:
                             provides more information.
                           type: string
                         type:
+                          description: Type defines the type of access logging format.
+                          enum:
+                          - Text
+                          - JSON
                           type: string
                       type: object
                     sink:
@@ -83,7 +87,7 @@ spec:
                               description: Host define the extension service hostname.
                               type: string
                             port:
-                              default: 80
+                              default: 4317
                               description: Port defines the port the extension service
                                 is exposed on.
                               format: int32

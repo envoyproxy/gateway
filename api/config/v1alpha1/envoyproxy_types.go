@@ -120,13 +120,15 @@ type ProxyAccessLoggingFormatType string
 
 const (
 	// ProxyAccessLoggingFormatTypeText defines the text access logging format.
-	ProxyAccessLoggingFormatTypeText ProxyAccessLoggingFormatType = "text"
+	ProxyAccessLoggingFormatTypeText ProxyAccessLoggingFormatType = "Text"
 	// ProxyAccessLoggingFormatTypeJSON defines the JSON access logging format.
-	ProxyAccessLoggingFormatTypeJSON ProxyAccessLoggingFormatType = "json"
+	ProxyAccessLoggingFormatTypeJSON ProxyAccessLoggingFormatType = "JSON"
 	// TODO: support format type "mix" in the future.
 )
 
 type ProxyAccessLoggingFormat struct {
+	// Type defines the type of access logging format.
+	// +kubebuilder:validation:Enum=Text;JSON
 	Type ProxyAccessLoggingFormatType `json:"type,omitempty"`
 	// Text defines the text access logging format, following Envoy access logging formatting,
 	// empty value results in proxy's default access log format.
@@ -149,7 +151,7 @@ const (
 	// ProxyAccessLoggingSinkTypeFile defines the file access logging sink.
 	ProxyAccessLoggingSinkTypeFile ProxyAccessLoggingSinkType = "file"
 	// ProxyAccessLoggingSinkTypeOpenTelemetry defines the OpenTelemetry access logging sink.
-	ProxyAccessLoggingSinkTypeOpenTelemetry ProxyAccessLoggingSinkType = "opentelemetry"
+	ProxyAccessLoggingSinkTypeOpenTelemetry ProxyAccessLoggingSinkType = "Opentelemetry"
 )
 
 type ProxyAccessLoggingSink struct {
@@ -178,7 +180,7 @@ type OpenTelemetryEnvoyProxyAccessLogging struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=80
+	// +kubebuilder:default=4317
 	Port int32 `json:"port,omitempty"`
 	// Resources is a set of labels that describe the source of a log entry, including envoy node info.
 	// It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/).
