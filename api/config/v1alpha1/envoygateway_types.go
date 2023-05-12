@@ -208,10 +208,10 @@ const (
 
 // RedisTLSSettings defines the TLS configuration for connecting to redis database.
 type RedisTLSSettings struct {
-	// CertificateRef defines the client certificate reference kubernetes secret for TLS connections.
-	//
-	// +kubebuilder:validation:Required
-	CertificateRef gwapiv1b1.SecretObjectReference `json:"certificateRef,omitempty"`
+	// CertificateRef defines the client certificate reference for TLS connections.
+	// Currently only a Kubernetes Secret of type TLS is supported.
+	// +optional
+	CertificateRef *gwapiv1b1.SecretObjectReference `json:"certificateRef,omitempty"`
 }
 
 // RateLimitRedisSettings defines the configuration for connecting to redis database.

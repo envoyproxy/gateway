@@ -19,7 +19,7 @@ import (
 )
 
 // ValidateSecretObjectReference validate secret object reference for extension tls and ratelimit tls settings.
-func ValidateSecretObjectReference(ctx context.Context, client k8sclient.Client, secretObjRef gwapiv1b1.SecretObjectReference, namespace string) (*corev1.Secret, string, error) {
+func ValidateSecretObjectReference(ctx context.Context, client k8sclient.Client, secretObjRef *gwapiv1b1.SecretObjectReference, namespace string) (*corev1.Secret, string, error) {
 	if (secretObjRef.Group == nil || *secretObjRef.Group == corev1.GroupName) &&
 		(secretObjRef.Kind == nil || *secretObjRef.Kind == gatewayapi.KindSecret) {
 		secret := &corev1.Secret{}

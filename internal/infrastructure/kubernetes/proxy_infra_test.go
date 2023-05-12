@@ -43,7 +43,7 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "",
 						TLS: &egcfgv1a1.RedisTLSSettings{
-							CertificateRef: gwapiv1b1.SecretObjectReference{
+							CertificateRef: &gwapiv1b1.SecretObjectReference{
 								Name: "ratelimit-cert",
 							},
 						},

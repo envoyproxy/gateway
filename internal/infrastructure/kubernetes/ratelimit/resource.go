@@ -134,7 +134,7 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
 		},
 	}
 
-	if rateLimit.Backend.Redis.TLS != nil {
+	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumes = append(volumes, corev1.Volume{
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
@@ -185,20 +185,23 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 	}
 
 	if rateLimit.Backend.Redis.TLS != nil {
-		env = append(env, []corev1.EnvVar{
-			{
-				Name:  RedisTLS,
-				Value: "true",
-			},
-			{
-				Name:  RedisTLSClientCertEnvVar,
-				Value: RedisTLSClientCertFilename,
-			},
-			{
-				Name:  RedisTLSClientKeyEnvVar,
-				Value: RedisTLSClientKeyFilename,
-			},
-		}...)
+		env = append(env, corev1.EnvVar{
+			Name:  RedisTLS,
+			Value: "true",
+		})
+
+		if rateLimit.Backend.Redis.TLS.CertificateRef != nil {
+			env = append(env, []corev1.EnvVar{
+				{
+					Name:  RedisTLSClientCertEnvVar,
+					Value: RedisTLSClientCertFilename,
+				},
+				{
+					Name:  RedisTLSClientKeyEnvVar,
+					Value: RedisTLSClientKeyFilename,
+				},
+			}...)
+		}
 	}
 
 	envAmendFunc := func(envVar corev1.EnvVar) {
@@ -220,12 +223,11 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 
 // Validate the ratelimit tls secret validating.
 func Validate(ctx context.Context, client client.Client, gateway *egcfgv1a1.EnvoyGateway, namespace string) error {
-	if gateway.RateLimit.Backend.Redis.TLS == nil {
-		return nil
+	if gateway.RateLimit.Backend.Redis.TLS != nil && gateway.RateLimit.Backend.Redis.TLS.CertificateRef != nil {
+		certificateRef := gateway.RateLimit.Backend.Redis.TLS.CertificateRef
+		_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, certificateRef, namespace)
+		return err
 	}
 
-	certificateRef := gateway.RateLimit.Backend.Redis.TLS.CertificateRef
-	_, _, err := kubernetes.ValidateSecretObjectReference(ctx, client, certificateRef, namespace)
-
-	return err
+	return nil
 }

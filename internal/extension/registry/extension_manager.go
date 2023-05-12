@@ -216,7 +216,7 @@ func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *v1alpha1.Exte
 	var creds credentials.TransportCredentials
 	if ext.Service.TLS != nil {
 		certRef := ext.Service.TLS.CertificateRef
-		secret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, certRef, namespace)
+		secret, secretNamespace, err := kubernetes.ValidateSecretObjectReference(ctx, client, &certRef, namespace)
 		if err != nil {
 			return nil, err
 		}
