@@ -144,6 +144,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-backend-rule-0-match-0-www.example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -158,6 +159,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -177,6 +179,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-eg-tls-passthrough-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -191,6 +194,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-eg-tcp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -205,6 +209,7 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
+            serviceName: default-eg-udp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
@@ -240,6 +245,8 @@ xds:
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                       path: /dev/stdout
+                  commonHttpProtocolOptions:
+                    headersWithUnderscoresAction: REJECT_REQUEST
                   httpFilters:
                   - name: envoy.filters.http.router
                     typedConfig:
@@ -286,13 +293,19 @@ xds:
                       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                       path: /dev/stdout
                   codecType: HTTP2
+                  commonHttpProtocolOptions:
+                    headersWithUnderscoresAction: REJECT_REQUEST
+                  http2ProtocolOptions:
+                    initialConnectionWindowSize: 1048576
+                    initialStreamWindowSize: 65536
+                    maxConcurrentStreams: 100    
                   httpFilters:
                   - name: envoy.filters.http.grpc_web
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
                   - name: envoy.filters.http.router
                     typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router   
                   mergeSlashes: true
                   normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT

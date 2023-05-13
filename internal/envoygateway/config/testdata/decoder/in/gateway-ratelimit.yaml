@@ -35,3 +35,6 @@ rateLimit:
     type: Redis
     redis:
       url: localhost:6379
+      tls:
+        certificateRef:
+          name: ratelimit-cert

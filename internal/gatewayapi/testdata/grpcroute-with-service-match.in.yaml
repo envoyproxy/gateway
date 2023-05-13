@@ -29,6 +29,9 @@ grpcRoutes:
       - method:
           service: com.ExampleExact
           type: Exact
+      - method:
+          service: com.[A-Z]+
+          type: RegularExpression
       backendRefs:
       - name: service-1
         port: 8080

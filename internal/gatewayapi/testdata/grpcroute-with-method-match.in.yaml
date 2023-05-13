@@ -29,6 +29,9 @@ grpcRoutes:
       - method:
           method: ExampleExact
           type: Exact
+      - method:
+          method: FooBar[0-9]+
+          type: RegularExpression
       backendRefs:
       - name: service-1
         port: 8080

@@ -573,6 +573,8 @@ transfer-encoding: chunked
 limit kubernetes resources settings. such as `replicas` is 1, requests resources cpu is `100m`, memory is `512Mi`. the others
 like container `image`, `securityContext`, `env` and pod `annotations` and `securityContext` can be modified by modifying the `ConfigMap`.
 
+* `tls.certificateRef` set the client certificate for redis server TLS connections.
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -617,6 +619,9 @@ data:
         type: Redis
         redis:
           url: redis.redis-system.svc.cluster.local:6379
+          tls:
+            certificateRef:
+              name: ratelimit-cert
 EOF
 ```
 

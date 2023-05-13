@@ -17,7 +17,7 @@ const (
 	GatewayControllerName = "gateway.envoyproxy.io/gatewayclass-controller"
 )
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // EnvoyGateway is the schema for the envoygateways API.
 type EnvoyGateway struct {
@@ -82,12 +82,12 @@ type EnvoyGatewayProvider struct {
 	// +optional
 	Kubernetes *EnvoyGatewayKubernetesProvider `json:"kubernetes,omitempty"`
 
-	// File defines the configuration of the File provider. File provides runtime
-	// configuration defined by one or more files. This type is not implemented
-	// until https://github.com/envoyproxy/gateway/issues/1001 is fixed.
+	// Custom defines the configuration for the Custom provider. This provider
+	// allows you to define a specific resource provider and a infrastructure
+	// provider.
 	//
 	// +optional
-	File *EnvoyGatewayFileProvider `json:"file,omitempty"`
+	Custom *EnvoyGatewayCustomProvider `json:"custom,omitempty"`
 }
 
 // EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.
@@ -100,8 +100,75 @@ type EnvoyGatewayKubernetesProvider struct {
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
 }
 
-// EnvoyGatewayFileProvider defines configuration for the File provider.
-type EnvoyGatewayFileProvider struct {
+// EnvoyGatewayCustomProvider defines configuration for the Custom provider.
+type EnvoyGatewayCustomProvider struct {
+	// Resource defines the desired resource provider.
+	// This provider is used to specify the provider to be used
+	// to retrieve the resource configurations such as Gateway API
+	// resources
+	Resource EnvoyGatewayResourceProvider `json:"resource"`
+	// Infrastructure defines the desired infrastructure provider.
+	// This provider is used to specify the provider to be used
+	// to provide an environment to deploy the out resources like
+	// the Envoy Proxy data plane.
+	Infrastructure EnvoyGatewayInfrastructureProvider `json:"infrastructure"`
+}
+
+// ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=File
+type ResourceProviderType string
+
+const (
+	// ResourceProviderTypeFile defines the "File" provider.
+	ResourceProviderTypeFile ResourceProviderType = "File"
+)
+
+// EnvoyGatewayResourceProvider defines configuration for the Custom Resource provider.
+type EnvoyGatewayResourceProvider struct {
+	// Type is the type of resource provider to use. Supported types are "File".
+	//
+	// +unionDiscriminator
+	Type ResourceProviderType `json:"type"`
+	// File defines the configuration of the File provider. File provides runtime
+	// configuration defined by one or more files.
+	//
+	// +optional
+	File *EnvoyGatewayFileResourceProvider `json:"file,omitempty"`
+}
+
+// EnvoyGatewayFileResourceProvider defines configuration for the File Resource provider.
+type EnvoyGatewayFileResourceProvider struct {
+	// Paths are the paths to a directory or file containing the resource configuration.
+	// Recursive sub directories are not currently supported.
+	Paths []string `json:"paths"`
+}
+
+// InfrastructureProviderType defines the types of custom infrastructure providers supported by Envoy Gateway.
+//
+// +kubebuilder:validation:Enum=Host
+type InfrastructureProviderType string
+
+const (
+	// InfrastructureProviderTypeHost defines the "Host" provider.
+	InfrastructureProviderTypeHost InfrastructureProviderType = "Host"
+)
+
+// EnvoyGatewayInfrastructureProvider defines configuration for the Custom Infrastructure provider.
+type EnvoyGatewayInfrastructureProvider struct {
+	// Type is the type of infrastructure providers to use. Supported types are "Host".
+	//
+	// +unionDiscriminator
+	Type InfrastructureProviderType `json:"type"`
+	// Host defines the configuration of the Host provider. Host provides runtime
+	// deployment of the data plane as a child process on the host environment.
+	//
+	// +optional
+	Host *EnvoyGatewayHostInfrastructureProvider `json:"host,omitempty"`
+}
+
+// EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infrastructure provider.
+type EnvoyGatewayHostInfrastructureProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 
@@ -139,11 +206,23 @@ const (
 	RedisBackendType RateLimitDatabaseBackendType = "Redis"
 )
 
-// RateLimitRedisSettings defines the configuration for connecting to
-// a Redis database.
+// RedisTLSSettings defines the TLS configuration for connecting to redis database.
+type RedisTLSSettings struct {
+	// CertificateRef defines the client certificate reference for TLS connections.
+	// Currently only a Kubernetes Secret of type TLS is supported.
+	// +optional
+	CertificateRef *gwapiv1b1.SecretObjectReference `json:"certificateRef,omitempty"`
+}
+
+// RateLimitRedisSettings defines the configuration for connecting to redis database.
 type RateLimitRedisSettings struct {
 	// URL of the Redis Database.
 	URL string `json:"url"`
+
+	// TLS defines TLS configuration for connecting to redis database.
+	//
+	// +optional
+	TLS *RedisTLSSettings `json:"tls,omitempty"`
 }
 
 // Extension defines the configuration for registering an extension to

@@ -34,15 +34,59 @@ EnvoyGateway is the schema for the envoygateways API.
 | `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
 
-## EnvoyGatewayFileProvider
+## EnvoyGatewayCustomProvider
 
 
 
-EnvoyGatewayFileProvider defines configuration for the File provider.
+EnvoyGatewayCustomProvider defines configuration for the Custom provider.
 
 _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 
+| Field | Description |
+| --- | --- |
+| `resource` _[EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)_ | Resource defines the desired resource provider. This provider is used to specify the provider to be used to retrieve the resource configurations such as Gateway API resources |
+| `infrastructure` _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ | Infrastructure defines the desired infrastructure provider. This provider is used to specify the provider to be used to provide an environment to deploy the out resources like the Envoy Proxy data plane. |
+
+
+## EnvoyGatewayFileResourceProvider
+
+
+
+EnvoyGatewayFileResourceProvider defines configuration for the File Resource provider.
+
+_Appears in:_
+- [EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)
+
+| Field | Description |
+| --- | --- |
+| `paths` _string array_ | Paths are the paths to a directory or file containing the resource configuration. Recursive sub directories are not currently supported. |
+
+
+## EnvoyGatewayHostInfrastructureProvider
+
+
+
+EnvoyGatewayHostInfrastructureProvider defines configuration for the Host Infrastructure provider.
+
+_Appears in:_
+- [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
+
+
+
+## EnvoyGatewayInfrastructureProvider
+
+
+
+EnvoyGatewayInfrastructureProvider defines configuration for the Custom Infrastructure provider.
+
+_Appears in:_
+- [EnvoyGatewayCustomProvider](#envoygatewaycustomprovider)
+
+| Field | Description |
+| --- | --- |
+| `type` _[InfrastructureProviderType](#infrastructureprovidertype)_ | Type is the type of infrastructure providers to use. Supported types are "Host". |
+| `host` _[EnvoyGatewayHostInfrastructureProvider](#envoygatewayhostinfrastructureprovider)_ | Host defines the configuration of the Host provider. Host provides runtime deployment of the data plane as a child process on the host environment. |
 
 
 ## EnvoyGatewayKubernetesProvider
@@ -73,7 +117,22 @@ _Appears in:_
 | --- | --- |
 | `type` _[ProviderType](#providertype)_ | Type is the type of provider to use. Supported types are "Kubernetes". |
 | `kubernetes` _[EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)_ | Kubernetes defines the configuration of the Kubernetes provider. Kubernetes provides runtime configuration via the Kubernetes API. |
-| `file` _[EnvoyGatewayFileProvider](#envoygatewayfileprovider)_ | File defines the configuration of the File provider. File provides runtime configuration defined by one or more files. This type is not implemented until https://github.com/envoyproxy/gateway/issues/1001 is fixed. |
+| `custom` _[EnvoyGatewayCustomProvider](#envoygatewaycustomprovider)_ | Custom defines the configuration for the Custom provider. This provider allows you to define a specific resource provider and a infrastructure provider. |
+
+
+## EnvoyGatewayResourceProvider
+
+
+
+EnvoyGatewayResourceProvider defines configuration for the Custom Resource provider.
+
+_Appears in:_
+- [EnvoyGatewayCustomProvider](#envoygatewaycustomprovider)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ResourceProviderType](#resourceprovidertype)_ | Type is the type of resource provider to use. Supported types are "File". |
+| `file` _[EnvoyGatewayFileResourceProvider](#envoygatewayfileresourceprovider)_ | File defines the configuration of the File provider. File provides runtime configuration defined by one or more files. |
 
 
 ## EnvoyGatewaySpec
@@ -250,6 +309,17 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+## InfrastructureProviderType
+
+_Underlying type:_ `string`
+
+InfrastructureProviderType defines the types of custom infrastructure providers supported by Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)
+
+
+
 ## KubernetesContainerSpec
 
 
@@ -297,6 +367,8 @@ _Appears in:_
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations are the annotations that should be appended to the pods. By default, no pod annotations are appended. |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
 
 
 ## KubernetesServiceSpec
@@ -407,7 +479,7 @@ _Appears in:_
 
 
 
-RateLimitRedisSettings defines the configuration for connecting to a Redis database.
+RateLimitRedisSettings defines the configuration for connecting to redis database.
 
 _Appears in:_
 - [RateLimitDatabaseBackend](#ratelimitdatabasebackend)
@@ -415,6 +487,32 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `url` _string_ | URL of the Redis Database. |
+| `tls` _[RedisTLSSettings](#redistlssettings)_ | TLS defines TLS configuration for connecting to redis database. |
+
+
+## RedisTLSSettings
+
+
+
+RedisTLSSettings defines the TLS configuration for connecting to redis database.
+
+_Appears in:_
+- [RateLimitRedisSettings](#ratelimitredissettings)
+
+| Field | Description |
+| --- | --- |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
+
+
+## ResourceProviderType
+
+_Underlying type:_ `string`
+
+ResourceProviderType defines the types of custom resource providers supported by Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)
+
 
 
 ## ServiceType

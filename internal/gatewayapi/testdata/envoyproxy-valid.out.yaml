@@ -67,7 +67,7 @@ infraIR:
                     value: env_a_value
                   - name: env_b
                     value: env_b_name
-                  image: "envoyproxy/gateway:v0.4.0"
+                  image: "envoyproxy/envoy-dev:latest"
                   resources:
                     requests:
                       cpu: 100m
@@ -79,6 +79,20 @@ infraIR:
                   annotations:
                     key1: val1
                     key2: val2
+                  affinity:
+                    nodeAffinity:
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        nodeSelectorTerms:
+                        - matchExpressions:
+                          - key: cloud.google.com/gke-nodepool
+                            operator: In
+                            values:
+                            - router-node
+                  tolerations:
+                  - effect: NoSchedule
+                    key: node-type
+                    operator: Exists
+                    value: "router"
                   securityContext:
                     runAsUser: 1000
                     runAsGroup: 3000

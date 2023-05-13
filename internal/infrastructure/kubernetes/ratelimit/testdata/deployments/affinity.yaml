@@ -8,7 +8,7 @@ metadata:
   name: envoy-ratelimit
   namespace: envoy-gateway-system
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: envoy-ratelimit
@@ -20,6 +20,8 @@ spec:
         app.kubernetes.io/name: envoy-ratelimit
         app.kubernetes.io/component: ratelimit
         app.kubernetes.io/managed-by: envoy-gateway
+      annotations:
+        prometheus.io/scrape: "true"
     spec:
       automountServiceAccountToken: false
       containers:
@@ -41,24 +43,23 @@ spec:
         - name: LOG_LEVEL
           value: info
         - name: USE_STATSD
-          value: "false"
-        - name: CONFIG_TYPE
-          value: GRPC_XDS_SOTW
-        - name: CONFIG_GRPC_XDS_SERVER_URL
-          value: envoy-gateway:18001
-        - name: CONFIG_GRPC_XDS_NODE_ID
-          value: envoy-ratelimit
-        image: envoyproxy/ratelimit:master
+          value: "true"
+        image: custom-image
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:
         - containerPort: 8081
           name: http
           protocol: TCP
+        securityContext:
+          privileged: true
         resources:
+          limits:
+            cpu: 400m
+            memory: 2Gi
           requests:
-            cpu: 100m
-            memory: 512Mi
+            cpu: 200m
+            memory: 1Gi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
@@ -69,6 +70,17 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       serviceAccountName: envoy-ratelimit
+      securityContext:
+        runAsUser: 1000
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: cloud.google.com/gke-nodepool
+                operator: In
+                values:
+                - router-node
       terminationGracePeriodSeconds: 300
       volumes:
       - configMap:
