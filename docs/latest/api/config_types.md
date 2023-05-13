@@ -463,7 +463,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `format` _[ProxyAccessLoggingFormat](#proxyaccessloggingformat)_ | Format defines the format of access logging. |
-| `sink` _[ProxyAccessLoggingSink](#proxyaccessloggingsink)_ | Sink defines the sink of access logging. |
+| `sinks` _[ProxyAccessLoggingSink](#proxyaccessloggingsink) array_ | Sinks defines the sinks of access logging. |
 
 
 ## ProxyAccessLoggingFormat
