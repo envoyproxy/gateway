@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	// XdsGrpcSotwConfigServerAddress is the listening address of the RateLimit xDS config server.
+	// XdsGrpcSotwConfigServerAddress is the listening address of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerAddress = "0.0.0.0"
 )
 
@@ -58,10 +58,9 @@ func New(cfg *Config) *Runner {
 func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
 
-	// Set up the gRPC server for RateLimit xDS Config.
+	// Set up the gRPC server for ratelimit xDS Config.
 	r.grpc = grpc.NewServer()
 
-	//r.cache = cache.NewSnapshotCache(false, r.Logger)
 	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, cache.NewLogrWrapper(r.Logger))
 
 	// Register xDS Config server.
@@ -73,6 +72,7 @@ func (r *Runner) Start(ctx context.Context) error {
 
 	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
+
 	r.Logger.Info("started")
 	return nil
 }
@@ -106,7 +106,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.Logger.Error(err, "failed to update the config snapshot")
 				}
 			} else {
-				// Translate to RateLimit infra IR and RateLimit xDS Config.
+				// Translate to ratelimit infra IR and ratelimit xDS Config.
 				rlIR, rvt, err := r.translate(update.Value)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir and config")

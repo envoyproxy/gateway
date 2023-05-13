@@ -43,9 +43,9 @@ const (
 	// ConfigGrpcXdsNodeID is the id of ratelimit node.
 	ConfigGrpcXdsNodeID = "CONFIG_GRPC_XDS_NODE_ID"
 
-	// XdsGrpcSotwConfigServerPort is the listening port of the RateLimit xDS config server.
+	// XdsGrpcSotwConfigServerPort is the listening port of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerPort = 18001
-	// XdsGrpcSotwConfigServerHost is the hostname of the RateLimit xDS config server.
+	// XdsGrpcSotwConfigServerHost is the hostname of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerHost = "envoy-gateway"
 )
 

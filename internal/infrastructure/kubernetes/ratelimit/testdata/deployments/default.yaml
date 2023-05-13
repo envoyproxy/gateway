@@ -42,6 +42,12 @@ spec:
               value: info
             - name: USE_STATSD
               value: "false"
+            - name: CONFIG_TYPE
+              value: GRPC_XDS_SOTW
+            - name: CONFIG_GRPC_XDS_SERVER_URL
+              value: envoy-gateway:18001
+            - name: CONFIG_GRPC_XDS_NODE_ID
+              value: envoy-ratelimit
           image: envoyproxy/ratelimit:master
           imagePullPolicy: IfNotPresent
           name: envoy-ratelimit
