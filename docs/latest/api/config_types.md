@@ -479,7 +479,7 @@ _Appears in:_
 | --- | --- |
 | `type` _[ProxyAccessLoggingFormatType](#proxyaccessloggingformattype)_ | Type defines the type of access logging format. |
 | `text` _string_ | Text defines the text access logging format, following Envoy access logging formatting, empty value results in proxy's default access log format. It's required when the format type is "text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
-| `fields` _map[string]string_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "json". |
+| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "json". |
 
 
 ## ProxyAccessLoggingFormatType

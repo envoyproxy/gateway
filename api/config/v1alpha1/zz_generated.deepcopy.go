@@ -678,13 +678,9 @@ func (in *ProxyAccessLoggingFormat) DeepCopyInto(out *ProxyAccessLoggingFormat) 
 	}
 	if in.Fields != nil {
 		in, out := &in.Fields, &out.Fields
-		*out = new(map[string]string)
-		if **in != nil {
-			in, out := *in, *out
-			*out = make(map[string]string, len(*in))
-			for key, val := range *in {
-				(*out)[key] = val
-			}
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
 		}
 	}
 }

@@ -142,14 +142,14 @@ type ProxyAccessLoggingFormat struct {
 	// can be used as values for fields within the Struct.
 	// It's required when the format type is "json".
 	// +optional
-	Fields *map[string]string `json:"fields,omitempty"`
+	Fields map[string]string `json:"fields,omitempty"`
 }
 
 type ProxyAccessLoggingSinkType string
 
 const (
 	// ProxyAccessLoggingSinkTypeFile defines the file access logging sink.
-	ProxyAccessLoggingSinkTypeFile ProxyAccessLoggingSinkType = "file"
+	ProxyAccessLoggingSinkTypeFile ProxyAccessLoggingSinkType = "File"
 	// ProxyAccessLoggingSinkTypeOpenTelemetry defines the OpenTelemetry access logging sink.
 	ProxyAccessLoggingSinkTypeOpenTelemetry ProxyAccessLoggingSinkType = "Opentelemetry"
 )
