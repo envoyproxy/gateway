@@ -57,7 +57,7 @@ To uninstall the chart:
 ## Values
 
 | Key                                                | Type   | Default                                           | Description |
-| -------------------------------------------------- | ------ | ------------------------------------------------- | ----------- |
+|----------------------------------------------------| ------ |---------------------------------------------------| ----------- |
 | config.envoyGateway.gateway.controllerName         | string | `"gateway.envoyproxy.io/gatewayclass-controller"` |             |
 | config.envoyGateway.provider.type                  | string | `"Kubernetes"`                                    |             |
 | deployment.envoyGateway.image.repository           | string | `"docker.io/envoyproxy/gateway-dev"`              |             |
@@ -76,6 +76,9 @@ To uninstall the chart:
 | deployment.ports[0].name                           | string | `"grpc"`                                          |             |
 | deployment.ports[0].port                           | int    | `18000`                                           |             |
 | deployment.ports[0].targetPort                     | int    | `18000`                                           |             |
+| deployment.ports[1].name                           | string | `"ratelimit"`                                     |             |
+| deployment.ports[1].port                           | int    | `18001`                                           |             |
+| deployment.ports[1].targetPort                     | int    | `18001`                                           |             |
 | deployment.replicas                                | int    | `1`                                               |             |
 | envoyGatewayMetricsService.ports[0].name           | string | `"https"`                                         |             |
 | envoyGatewayMetricsService.ports[0].port           | int    | `8443`                                            |             |
