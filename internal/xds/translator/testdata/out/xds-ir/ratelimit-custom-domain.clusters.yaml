@@ -6,6 +6,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: first-route
   name: first-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -18,6 +19,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: second-route
   name: second-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -30,6 +32,7 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
+    serviceName: third-route
   name: third-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

@@ -21,6 +21,9 @@ func clusterConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about cluster configuration for a given pod from Envoy.
   egctl config envoy-proxy cluster <pod-name> -n <pod-namespace>
 
+  # Retrieve summary about cluster configuration for a pod matching label selectors
+  egctl config envoy-proxy cluster --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve full configuration dump as YAML
   egctl config envoy-proxy cluster <pod-name> -n <pod-namespace> -o yaml
 
@@ -36,17 +39,12 @@ func clusterConfigCmd() *cobra.Command {
 }
 
 func runClusterConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, false)
+	configDump, err := retrieveConfigDump(args, false, ClusterEnvoyConfigType)
 	if err != nil {
 		return err
 	}
 
-	cluster, err := findXDSResourceFromConfigDump(ClusterEnvoyConfigType, configDump)
-	if err != nil {
-		return err
-	}
-
-	out, err := marshalEnvoyProxyConfig(cluster, output)
+	out, err := marshalEnvoyProxyConfig(configDump, output)
 	if err != nil {
 		return err
 	}

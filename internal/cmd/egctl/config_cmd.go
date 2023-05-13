@@ -29,6 +29,7 @@ func newConfigCommand() *cobra.Command {
 
 	cfgCommand.PersistentFlags().StringVarP(&output, "output", "o", "json", "One of 'yaml' or 'json'")
 	cfgCommand.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
+	cfgCommand.PersistentFlags().StringArrayVarP(&labelSelectors, "labels", "l", nil, "Labels to select the envoy proxy pod.")
 
 	return cfgCommand
 }
@@ -58,6 +59,9 @@ func allConfigCmd() *cobra.Command {
 		Example: `  # Retrieve summary about all configuration for a given pod from Envoy.
   egctl config envoy-proxy all <pod-name> -n <pod-namespace>
 
+  # Retrieve summary about all configuration for a pod matching label selectors
+  egctl config envoy-proxy all --labels gateway.envoyproxy.io/owning-gateway-name=eg -l gateway.envoyproxy.io/owning-gateway-namespace=default
+
   # Retrieve full configuration dump as YAML
   egctl config envoy-proxy all <pod-name> -n <pod-namespace> -o yaml
 
@@ -73,7 +77,7 @@ func allConfigCmd() *cobra.Command {
 }
 
 func runAllConfig(c *cobra.Command, args []string) error {
-	configDump, err := retrieveConfigDump(args, true)
+	configDump, err := retrieveConfigDump(args, true, AllEnvoyConfigType)
 	if err != nil {
 		return err
 	}

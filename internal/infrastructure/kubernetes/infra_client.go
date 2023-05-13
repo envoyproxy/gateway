@@ -22,7 +22,7 @@ func New(cli client.Client) *InfraClient {
 	}
 }
 
-func (cli *InfraClient) Create(ctx context.Context, key client.ObjectKey, current client.Object, specific client.Object, updateChecker func() bool) error {
+func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey, current client.Object, specific client.Object, updateChecker func() bool) error {
 	if err := cli.Client.Get(ctx, key, current); err != nil {
 		if kerrors.IsNotFound(err) {
 			// Create if it does not exist.

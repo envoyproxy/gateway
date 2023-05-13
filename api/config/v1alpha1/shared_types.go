@@ -75,6 +75,14 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	SecurityContext *corev1.PodSecurityContext `json:"securityContext,omitempty"`
+
+	// If specified, the pod's scheduling constraints.
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// If specified, the pod's tolerations.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
@@ -105,17 +113,21 @@ type KubernetesContainerSpec struct {
 
 // ServiceType string describes ingress methods for a service
 // +enum
-// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
+// +kubebuilder:validation:Enum=ClusterIP;LoadBalancer;NodePort
 type ServiceType string
 
 const (
+	// ServiceTypeClusterIP means a service will only be accessible inside the
+	// cluster, via the cluster IP.
+	ServiceTypeClusterIP ServiceType = "ClusterIP"
+
 	// ServiceTypeLoadBalancer means a service will be exposed via an
 	// external load balancer (if the cloud provider supports it).
 	ServiceTypeLoadBalancer ServiceType = "LoadBalancer"
 
-	// ServiceTypeClusterIP means a service will only be accessible inside the
-	// cluster, via the cluster IP.
-	ServiceTypeClusterIP ServiceType = "ClusterIP"
+	// ServiceTypeNodePort means a service will be exposed on each Kubernetes Node
+	// at a static Port, common across all Nodes.
+	ServiceTypeNodePort ServiceType = "NodePort"
 )
 
 // KubernetesServiceSpec defines the desired state of the Kubernetes service resource.
@@ -127,9 +139,10 @@ type KubernetesServiceSpec struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// Type determines how the Service is exposed. Defaults to LoadBalancer.
-	// Valid options are ClusterIP and LoadBalancer.
+	// Valid options are ClusterIP, LoadBalancer and NodePort.
 	// "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it).
 	// "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP.
+	// "NodePort" means a service will be exposed on a static Port on all Nodes of the cluster.
 	// +kubebuilder:default:="LoadBalancer"
 	// +optional
 	Type *ServiceType `json:"type,omitempty"`

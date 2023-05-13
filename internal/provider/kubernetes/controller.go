@@ -66,6 +66,7 @@ type gatewayAPIReconciler struct {
 	log             logr.Logger
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
+	store           *kubernetesProviderStore
 	namespace       string
 
 	resources *message.ProviderResources
@@ -93,6 +94,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		statusUpdater:   su,
 		resources:       resources,
 		extGVKs:         extGVKs,
+		store:           newProviderStore(),
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -369,7 +371,7 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	// update accepted condition
 	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
 	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy)
+	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy, r.store.listNodeAddresses()...)
 
 	key := utils.NamespacedName(gtw)
 
@@ -1345,6 +1347,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.validateServiceForReconcile)); err != nil {
+		return err
+	}
+
+	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
+	// Node creation/deletion and ExternalIP updates would require update in the Gateway
+	// resource address.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &corev1.Node{}),
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.handleNode),
+	); err != nil {
 		return err
 	}
 

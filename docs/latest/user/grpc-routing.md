@@ -92,10 +92,14 @@ curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grp
 
 ## GRPCRoute Match
 The `matches` field can be used to restrict the route to a specific set of requests based on GRPC's service and/or method names.
+It supports two match types: `Exact` and `RegularExpression`.
+
+### Exact
+
+`Exact` match is the default match type.
+
 The following example shows how to match a request based on the service and method names for `grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo`,
 as well as a match for all services with a method name `Ping` which matches `yages.Echo/Ping` in our deployment.
-
-Current implementation supports only `Exact` match. `RegularExpression` match will be supported after https://github.com/kubernetes-sigs/gateway-api/issues/1746 is resolved.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -117,6 +121,55 @@ spec:
           service: grpc.reflection.v1alpha.ServerReflection
       - method:
           method: Ping
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: yages
+          port: 9000
+          weight: 1
+EOF
+```
+
+Verify the GRPCRoute status:
+
+```shell
+kubectl get grpcroutes --selector=example=grpc-routing -o yaml
+```
+
+Test GRPC routing to the `yages` backend using the [grpcurl][] command.
+
+```shell
+grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping
+```
+
+### RegularExpression
+
+The following example shows how to match a request based on the service and method names
+with match type `RegularExpression`. It matches all the services and methods with pattern
+`/.*.Echo/Pin.+`, which matches `yages.Echo/Ping` in our deployment.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+    - name: example-gateway
+  hostnames:
+    - "grpc-example.com"
+  rules:
+    - matches:
+      - method:
+          method: ServerReflectionInfo
+          service: grpc.reflection.v1alpha.ServerReflection
+      - method:
+          method: "Pin.+"
+          service: ".*.Echo"
+          type: RegularExpression
       backendRefs:
         - group: ""
           kind: Service

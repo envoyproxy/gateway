@@ -93,6 +93,7 @@ xds:
         connectTimeout: 10s
         dnsLookupFamily: V4_ONLY
         edsClusterConfig:
+          serviceName: envoy-gateway-system-backend-rule-0-match-0-www.example.com
           edsConfig:
             ads: {}
             resourceApiVersion: V3

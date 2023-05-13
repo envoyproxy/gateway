@@ -30,6 +30,10 @@ grpcRoutes:
           method: "Example"
           service: "com.example"
           type: Exact
+      - method:
+          method: "Foobar"
+          service: "foo.*"
+          type: RegularExpression
       backendRefs:
       - name: service-1
         port: 8080

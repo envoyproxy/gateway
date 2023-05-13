@@ -264,6 +264,7 @@
 								"connectTimeout": "10s",
 								"dnsLookupFamily": "V4_ONLY",
 								"edsClusterConfig": {
+									"serviceName": "default-backend-rule-0-match-0-www.example.com",
 									"edsConfig": {
 										"ads": {},
 										"resourceApiVersion": "V3"
@@ -284,6 +285,7 @@
 								"connectTimeout": "10s",
 								"dnsLookupFamily": "V4_ONLY",
 								"edsClusterConfig": {
+									"serviceName": "default-backend-rule-0-match-0-www.grpc-example.com",
 									"edsConfig": {
 										"ads": {},
 										"resourceApiVersion": "V3"
@@ -312,6 +314,7 @@
 								"connectTimeout": "10s",
 								"dnsLookupFamily": "V4_ONLY",
 								"edsClusterConfig": {
+									"serviceName": "default-eg-tls-passthrough-backend",
 									"edsConfig": {
 										"ads": {},
 										"resourceApiVersion": "V3"
@@ -332,6 +335,7 @@
 								"connectTimeout": "10s",
 								"dnsLookupFamily": "V4_ONLY",
 								"edsClusterConfig": {
+									"serviceName": "default-eg-tcp-backend",
 									"edsConfig": {
 										"ads": {},
 										"resourceApiVersion": "V3"
@@ -352,6 +356,7 @@
 								"connectTimeout": "10s",
 								"dnsLookupFamily": "V4_ONLY",
 								"edsClusterConfig": {
+									"serviceName": "default-eg-udp-backend",
 									"edsConfig": {
 										"ads": {},
 										"resourceApiVersion": "V3"
@@ -409,6 +414,9 @@
 															}
 														}
 													],
+													"commonHttpProtocolOptions": {
+														"headersWithUnderscoresAction": "REJECT_REQUEST"
+													},
 													"httpFilters": [
 														{
 															"name": "envoy.filters.http.health_check",
@@ -498,6 +506,14 @@
 															}
 														}
 													],
+													"commonHttpProtocolOptions": {
+														"headersWithUnderscoresAction": "REJECT_REQUEST"
+													},
+													"http2ProtocolOptions": {
+														"initialConnectionWindowSize": 1048576,
+														"initialStreamWindowSize": 65536,
+														"maxConcurrentStreams": 100
+													},
 													"httpFilters": [
 														{
 															"name": "envoy.filters.http.grpc_web",
@@ -732,11 +748,11 @@
 								"name": "default-eg-http",
 								"responseHeadersToAdd": [
 									{
-									 "header": {
-									  "key": "x-request-id",
-									  "value": "%REQ(X-REQUEST-ID)%"
-									 },
-									 "append": false
+										"header": {
+											"key": "x-request-id",
+											"value": "%REQ(X-REQUEST-ID)%"
+										},
+										"append": false
 									}
 								],
 								"virtualHosts": [
@@ -774,11 +790,11 @@
 								"name": "default-eg-grpc",
 								"responseHeadersToAdd": [
 									{
-									 "header": {
-									  "key": "x-request-id",
-									  "value": "%REQ(X-REQUEST-ID)%"
-									 },
-									 "append": false
+										"header": {
+											"key": "x-request-id",
+											"value": "%REQ(X-REQUEST-ID)%"
+										},
+										"append": false
 									}
 								],
 								"virtualHosts": [
