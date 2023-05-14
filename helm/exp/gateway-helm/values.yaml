@@ -43,3 +43,5 @@ envoyGatewayMetricsService:
     targetPort: https
 
 createNamespace: false
+
+kubernetesClusterDomain: cluster.local
