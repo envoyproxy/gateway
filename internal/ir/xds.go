@@ -612,7 +612,9 @@ type TCPListener struct {
 	Port uint32
 	// TLS information required for TLS Passthrough, If provided, incoming
 	// connections' server names are inspected and routed to backends accordingly.
-	TLS *TLSInspectorConfig
+	TLSInspectorConfig *TLSInspectorConfig
+	// TLS information required for TLS Termination
+	TLSListenerConfig []*TLSListenerConfig
 	// Destinations associated with TCP traffic to the service.
 	Destinations []*RouteDestination
 }
@@ -629,11 +631,20 @@ func (h TCPListener) Validate() error {
 	if h.Port == 0 {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
-	if h.TLS != nil {
-		if err := h.TLS.Validate(); err != nil {
+	if h.TLSInspectorConfig != nil {
+		if err := h.TLSInspectorConfig.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
+
+	if h.TLSListenerConfig != nil {
+		for t := range h.TLSListenerConfig {
+			if err := h.TLSListenerConfig[t].Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
+		}
+	}
+
 	for _, route := range h.Destinations {
 		if err := route.Validate(); err != nil {
 			errs = multierror.Append(errs, err)

@@ -181,7 +181,8 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 // for TLS termination.
 func terminatesTLS(listener *gwapiv1b1.Listener) bool {
 	if listener.TLS != nil &&
-		listener.Protocol == gwapiv1b1.HTTPSProtocolType &&
+		(listener.Protocol == gwapiv1b1.HTTPSProtocolType ||
+			listener.Protocol == gwapiv1b1.TLSProtocolType) &&
 		listener.TLS.Mode != nil &&
 		*listener.TLS.Mode == gwapiv1b1.TLSModeTerminate {
 		return true

@@ -66,12 +66,25 @@ var (
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:         "happy",
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Name:               "happy",
+		Address:            "0.0.0.0",
+		Port:               80,
+		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations:       []*RouteDestination{&happyRouteDestination},
+	}
+
+	happyTCPListenerTLSTerminate = TCPListener{
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		TLSListenerConfig: []*TLSListenerConfig{{
+			Name:              "happy",
+			ServerCertificate: []byte("server-cert"),
+			PrivateKey:        []byte("priv-key"),
+		}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
+
 	emptySNITCPListenerTLSPassthrough = TCPListener{
 		Name:         "empty-sni",
 		Address:      "0.0.0.0",
@@ -79,23 +92,23 @@ var (
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address:            "0.0.0.0",
+		Port:               80,
+		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations:       []*RouteDestination{&happyRouteDestination},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:         "invalid-addr",
-		Address:      "1.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:               "invalid-addr",
+		Address:            "1.0.0",
+		Port:               80,
+		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		Destinations:       []*RouteDestination{&happyRouteDestination},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address:            "0.0.0.0",
+		Port:               80,
+		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}},
+		Destinations:       []*RouteDestination{&happyRouteDestination},
 	}
 
 	// UDPListener
@@ -469,9 +482,16 @@ func TestValidateXds(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "happy tls",
+			name: "happy tls passthrough",
 			input: Xds{
 				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
+			},
+			want: nil,
+		},
+		{
+			name: "happy tls terminate",
+			input: Xds{
+				TCP: []*TCPListener{&happyTCPListenerTLSTerminate},
 			},
 			want: nil,
 		},

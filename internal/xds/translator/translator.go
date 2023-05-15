@@ -207,6 +207,12 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			endpoint:     Static,
 		})
 
+		if tcpListener.TLSListenerConfig != nil {
+			for _, s := range tcpListener.TLSListenerConfig {
+				secret := buildXdsDownstreamTLSSecret(s)
+				tCtx.AddXdsResource(resourcev3.SecretType, secret)
+			}
+		}
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {

@@ -17,8 +17,10 @@ gateways:
       listeners:
         - name: tls
           supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: TLSRoute
+          - group: gateway.networking.k8s.io
+            kind: TCPRoute
+          - group: gateway.networking.k8s.io
+            kind: TLSRoute
           attachedRoutes: 0
           conditions:
             - type: Programmed

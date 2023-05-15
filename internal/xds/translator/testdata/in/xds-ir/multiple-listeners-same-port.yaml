@@ -55,7 +55,7 @@ tcp:
 - name: "fifth-listener"
   address: "0.0.0.0"
   port: 10080
-  tls:
+  tlsInspectorConfig:
     snis:
     - bar.com
   destinations:
@@ -64,7 +64,7 @@ tcp:
 - name: "sixth-listener"
   address: "0.0.0.0"
   port: 10080
-  tls:
+  tlsInspectorConfig:
     snis:
     - bar.net 
     destinations:

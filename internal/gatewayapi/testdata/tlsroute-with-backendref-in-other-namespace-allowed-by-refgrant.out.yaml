@@ -68,7 +68,7 @@ xdsIR:
       - name: envoy-gateway-gateway-1-tls-tlsroute-1
         address: 0.0.0.0
         port: 10090
-        tls:
+        tlsInspectorConfig:
           snis:
             - foo.com
         destinations:
