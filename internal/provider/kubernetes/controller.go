@@ -170,7 +170,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// The gatewayclass was already deleted/finalized and there are stale queue entries.
 	acceptedGC := cc.acceptedClass()
 	if acceptedGC == nil {
-		r.log.Info("failed to find an accepted gatewayclass")
+		r.log.Info("no accepted gatewayclass")
 		return reconcile.Result{}, nil
 	}
 
