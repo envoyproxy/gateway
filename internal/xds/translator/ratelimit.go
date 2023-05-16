@@ -174,6 +174,17 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 				},
 			}
 			rlActions = append(rlActions, action)
+
+			// Setup RemoteAddress action if distinct match is set
+			if rule.CIDRMatch.Distinct {
+				// Setup RemoteAddress action
+				action := &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
+						RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
+					},
+				}
+				rlActions = append(rlActions, action)
+			}
 		}
 
 		// Case when header match is not set and the rate limit is applied

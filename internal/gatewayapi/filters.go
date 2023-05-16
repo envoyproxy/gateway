@@ -739,8 +739,19 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 							}
 						}
 
-						if match.SourceIP != nil {
-							ip, ipn, err := net.ParseCIDR(*match.SourceIP)
+						if match.SourceCIDR != nil || match.SourceIP != nil {
+							sourceCIDR := ""
+							distinct := false
+							if match.SourceCIDR != nil {
+								sourceCIDR = match.SourceCIDR.Value
+								if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+									distinct = true
+								}
+							} else {
+								sourceCIDR = *match.SourceIP
+							}
+
+							ip, ipn, err := net.ParseCIDR(sourceCIDR)
 							if err != nil {
 								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
 									extFilter.Name)
@@ -750,13 +761,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 
 							mask, _ := ipn.Mask.Size()
 							rules[i].CIDRMatch = &ir.CIDRMatch{
-								CIDR:    ipn.String(),
-								IPv6:    ip.To4() == nil,
-								MaskLen: mask,
+								CIDR:     ipn.String(),
+								IPv6:     ip.To4() == nil,
+								MaskLen:  mask,
+								Distinct: distinct,
 							}
 						}
 					}
-
 				}
 				filterContext.HTTPFilterIR.RateLimit = rateLimit
 				return
