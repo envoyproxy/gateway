@@ -160,6 +160,37 @@ EOF
 
 After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
 
+## Customize EnvoyProxy Deployment Volumes or VolumeMounts
+
+You can customize the EnvoyProxy Deployment Volumes or VolumeMounts via EnvoyProxy Config like:
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        container:
+          volumeMounts:
+          - mountPath: /certs
+            name: certs
+            readOnly: true
+        pod:
+          volumes:
+          - name: certs
+            secret:
+            secretName: envoy-cert   
+EOF
+```
+
+After applying the config, you can get the envoyproxy deployment, and see resources has been changed.
+
 ## Customize EnvoyProxy Service Annotations
 
 You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:
