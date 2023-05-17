@@ -9,6 +9,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -34,11 +36,10 @@ func validateTLSSecretData(secret *corev1.Secret, domain string) error {
 	if keyBlock == nil {
 		return fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
 	}
-
-	if domain != "" && len(cert.DNSNames) > 0 {
-		err = cert.VerifyHostname(domain)
+	if domain != "" {
+		err = verifyHostname(cert, domain)
 		if err != nil {
-			return fmt.Errorf("hostname %s does not match DNS Names in certificate %s", domain, corev1.TLSCertKey)
+			return fmt.Errorf("hostname %s does not match Common Name or DNS Names in the certificate %s", domain, corev1.TLSCertKey)
 		}
 	}
 
@@ -65,4 +66,79 @@ func validateTLSSecretData(secret *corev1.Secret, domain string) error {
 	}
 
 	return parseErr
+}
+
+// https://golang.google.cn/doc/go1.15#commonname
+func verifyHostname(cert *x509.Certificate, host string) error {
+	lowered := toLowerCaseASCII(host)
+	if len(cert.DNSNames) > 0 {
+		for _, match := range cert.DNSNames {
+			if matchHostnames(toLowerCaseASCII(match), lowered) {
+				return nil
+			}
+		}
+	} else if matchHostnames(toLowerCaseASCII(cert.Subject.CommonName), lowered) {
+		return nil
+	}
+
+	return x509.HostnameError{Certificate: cert, Host: host}
+}
+
+func matchHostnames(pattern, host string) bool {
+	host = strings.TrimSuffix(host, ".")
+	pattern = strings.TrimSuffix(pattern, ".")
+
+	if len(pattern) == 0 || len(host) == 0 {
+		return false
+	}
+
+	patternParts := strings.Split(pattern, ".")
+	hostParts := strings.Split(host, ".")
+
+	if len(patternParts) != len(hostParts) {
+		return false
+	}
+
+	for i, patternPart := range patternParts {
+		if i == 0 && patternPart == "*" {
+			continue
+		}
+		if patternPart != hostParts[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// toLowerCaseASCII returns a lower-case version of in. See RFC 6125 6.4.1. We use
+// an explicitly ASCII function to avoid any sharp corners resulting from
+// performing Unicode operations on DNS labels.
+func toLowerCaseASCII(in string) string {
+	// If the string is already lower-case then there's nothing to do.
+	isAlreadyLowerCase := true
+	for _, c := range in {
+		if c == utf8.RuneError {
+			// If we get a UTF-8 error then there might be
+			// upper-case ASCII bytes in the invalid sequence.
+			isAlreadyLowerCase = false
+			break
+		}
+		if 'A' <= c && c <= 'Z' {
+			isAlreadyLowerCase = false
+			break
+		}
+	}
+
+	if isAlreadyLowerCase {
+		return in
+	}
+
+	out := []byte(in)
+	for i, c := range out {
+		if 'A' <= c && c <= 'Z' {
+			out[i] += 'a' - 'A'
+		}
+	}
+	return string(out)
 }
