@@ -84,8 +84,7 @@ func (r *Runner) serverXdsConfigServer(ctx context.Context) {
 		r.Logger.Error(err, "failed to listen on address", "address", addr)
 		return
 	}
-	err = r.grpc.Serve(l)
-	if err != nil {
+	if err = r.grpc.Serve(l); err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds config server")
 	}
 
@@ -101,8 +100,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
-				err := r.addNewSnapshot(ctx, nil)
-				if err != nil {
+				if err := r.addNewSnapshot(ctx, nil); err != nil {
 					r.Logger.Error(err, "failed to update the config snapshot")
 				}
 			} else {
@@ -110,25 +108,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				rlIR, rvt, err := r.translate(update.Value)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir and config")
-				} else {
-					// Update ratelimit xDS config cache.
-					if rvt != nil {
-						if r.cache == nil {
-							r.Logger.Error(err, "failed to init the snapshot cache")
-						} else {
-							err = r.addNewSnapshot(ctx, rvt.XdsResources)
-							if err != nil {
-								r.Logger.Error(err, "failed to update the snapshot cache")
-							}
-						}
-					}
+					return
+				}
 
-					// Publish ratelimit infra IR.
-					if rlIR == nil {
-						r.RateLimitInfraIR.Delete(r.Name())
-					} else {
-						r.RateLimitInfraIR.Store(r.Name(), rlIR)
-					}
+				// Update ratelimit xDS config cache.
+				if rvt != nil {
+					r.updateSnapshot(ctx, rvt.XdsResources)
+				}
+
+				// Publish ratelimit infra IR.
+				if rlIR == nil {
+					r.RateLimitInfraIR.Delete(r.Name())
+				} else {
+					r.RateLimitInfraIR.Store(r.Name(), rlIR)
 				}
 			}
 		},
@@ -158,6 +150,17 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVe
 		}
 	}
 	return ratelimitInfra, resourceVT, nil
+}
+
+func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {
+	if r.cache == nil {
+		r.Logger.Error(nil, "failed to init the snapshot cache")
+		return
+	}
+
+	if err := r.addNewSnapshot(ctx, resource); err != nil {
+		r.Logger.Error(err, "failed to update the snapshot cache")
+	}
 }
 
 func (r *Runner) addNewSnapshot(ctx context.Context, resource types.XdsResources) error {
