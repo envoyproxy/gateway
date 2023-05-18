@@ -1,4 +1,3 @@
-
 gateways:
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: Gateway
@@ -82,6 +81,5 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-
       listeners:
         - address: ""
