@@ -1,0 +1,56 @@
+gateways:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: Gateway
+    metadata:
+      namespace: envoy-gateway
+      name: gateway-1
+    spec:
+      gatewayClassName: envoy-gateway-class
+      listeners:
+        - name: tls
+          protocol: HTTPS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: tls-secret-ecdsa-1
+              - name: tls-secret-ecdsa-2
+secrets:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: tls-secret-ecdsa-1
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJHekNCd2dJSkFJL3gxc0NEL0lSa01Bb0dDQ3FHU000OUJBTUNNQll4RkRBU0JnTlZCQU1NQzJadmJ5NWkKWVhJdVkyOXRNQjRYRFRJek1ERXdOVEl4TlRNeU9Wb1hEVEkwTURFd05USXhOVE15T1Zvd0ZqRVVNQklHQTFVRQpBd3dMWm05dkxtSmhjaTVqYjIwd1dUQVRCZ2NxaGtqT1BRSUJCZ2dxaGtqT1BRTUJCd05DQUFRZmxXMnR6T3M4Cm82Nk5USVRmYUhucEc2UzI3Y2hkSldzallKdWJISkFtT2tYdS8rVGxLTXhGUzl4R2tHK09BQjAyR0ZQaHhQVzcKRnFaTFJoOEp0YlZkTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFEdlplU1pBZ1VWV2VpM3o0ZEhOTEd0aHpiaQoxRHZ0anRQekhYZ1R3WS92YmdJZ05KWStNcTRweFJnNit3eU04R1R4czVUV3k5Zml5RGhMUEU5QnhlbEsxSjQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUxEbnZNM1RKM3NHYm9EeTF4T3dqSVppVFNWeWZXVWF5YVExcWdrdUdacEtvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFSDVWdHJjenJQS091alV5RTMyaDU2UnVrdHUzSVhTVnJJMkNibXh5UUpqcEY3di9rNVNqTQpSVXZjUnBCdmpnQWROaGhUNGNUMXV4YW1TMFlmQ2JXMVhRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      namespace: envoy-gateway
+      name: tls-secret-ecdsa-2
+    type: kubernetes.io/tls
+    data:
+      tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJWekNCM3dJSkFJN1BZQlRZU0NXYk1Bb0dDQ3FHU000OUJBTUNNQll4RkRBU0JnTlZCQU1NQzJadmJ5NWkKWVhJdVkyOXRNQjRYRFRJek1ERXdOVEl4TlRjek1Gb1hEVEkwTURFd05USXhOVGN6TUZvd0ZqRVVNQklHQTFVRQpBd3dMWm05dkxtSmhjaTVqYjIwd2RqQVFCZ2NxaGtqT1BRSUJCZ1VyZ1FRQUlnTmlBQVRqK3RQWThsV3ZyUjlyCjU0U0FhOGNuQnRJTUZnLzZJajUxR1JBWitXR1FjZW1KUlEzblBCUHJoc1Y5dGp1TXZVdkxORCtINkJ0eWduNVUKMjJNM2w3OE9aUkZsNGszZHBPd2xlZUpOUVBqbHl3MGNCdGNwVzJhWUdPUVREMndxVzdNd0NnWUlLb1pJemowRQpBd0lEWndBd1pBSXdXblBCV3NLQ3M2ZUV4RFVXN0tSL0ZoNjBVbXAzUmF4bjBjaWFKYVhGc1NPQ0NQQmZydDJjCm1zOGRneUVTczFkQ0FqQnJaaVNweWNkc0RCTXJNZGhJaHBLV0dTWG0zTGVJeFlEYmMwK3JZaHpKZDZkdmNHWHQKcjZXUkJlbzV4eW5RWXZ3PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+      tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1JR2tBZ0VCQkRCTFhMK3ExWFBhYnpzZGhyOXVwcWlWTTQwcTBXUVkwMTYvZlVJNFEzL1gvR2NyZHhTTUQrZEQKQk9HZHZLZFlvLzZnQndZRks0RUVBQ0toWkFOaUFBVGordFBZOGxXdnJSOXI1NFNBYThjbkJ0SU1GZy82SWo1MQpHUkFaK1dHUWNlbUpSUTNuUEJQcmhzVjl0anVNdlV2TE5EK0g2QnR5Z241VTIyTTNsNzhPWlJGbDRrM2RwT3dsCmVlSk5RUGpseXcwY0J0Y3BXMmFZR09RVEQyd3FXN009Ci0tLS0tRU5EIEVDIFBSSVZBVEUgS0VZLS0tLS0K
+httpRoutes:
+  - apiVersion: gateway.networking.k8s.io/v1beta1
+    kind: HTTPRoute
+    metadata:
+      namespace: default
+      name: httproute-1
+    spec:
+      parentRefs:
+        - namespace: envoy-gateway
+          name: gateway-1
+      rules:
+        - matches:
+            - path:
+                value: "/"
+          backendRefs:
+            - name: service-1
+              port: 8080
