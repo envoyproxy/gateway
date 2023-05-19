@@ -98,6 +98,31 @@ type EnvoyGatewayKubernetesProvider struct {
 	//
 	// +optional
 	RateLimitDeployment *KubernetesDeploymentSpec `json:"rateLimitDeployment,omitempty"`
+
+	// Watch holds configuration of which input resources should be watched and reconciled.
+	// +optional
+	Watch *KubernetesWatchMode `json:"watch,omitempty"`
+	// Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane
+	// should be deployed
+	// +optional
+	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
+}
+
+// KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
+type KubernetesWatchMode struct {
+	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
+	// resources such as Gateway, HTTPRoute and Service.
+	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
+	// GatewayClass that it is linked to.
+	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
+	// from all namespaces.
+	Namespaces []string
+}
+
+// KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
+// data plane fleet.
+type KubernetesDeployMode struct {
+	// TODO
 }
 
 // EnvoyGatewayCustomProvider defines configuration for the Custom provider.
