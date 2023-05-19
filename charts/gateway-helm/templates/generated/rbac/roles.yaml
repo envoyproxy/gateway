@@ -58,8 +58,8 @@ rules:
   verbs:
   - get
   - list
-  - update
   - patch
+  - update
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
