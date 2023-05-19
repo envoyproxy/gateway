@@ -855,9 +855,9 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b
 		}
 
 		if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
-			updated := gc.DeepCopy()
-			updated.Finalizers = slice.RemoveString(updated.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Update(ctx, updated); err != nil {
+			base := client.MergeFrom(gc.DeepCopy())
+			gc.Finalizers = slice.RemoveString(gc.Finalizers, gatewayClassFinalizer)
+			if err := r.client.Patch(context.Background(), gc, base); err != nil {
 				return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
 			}
 		}
@@ -880,9 +880,9 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.G
 		}
 
 		if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
-			updated := gc.DeepCopy()
-			updated.Finalizers = append(updated.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Update(ctx, updated); err != nil {
+			base := client.MergeFrom(gc.DeepCopy())
+			gc.Finalizers = append(gc.Finalizers, gatewayClassFinalizer)
+			if err := r.client.Patch(context.Background(), gc, base); err != nil {
 				return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
 			}
 		}
