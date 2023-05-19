@@ -59,6 +59,7 @@ rules:
   - get
   - list
   - update
+  - patch
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
