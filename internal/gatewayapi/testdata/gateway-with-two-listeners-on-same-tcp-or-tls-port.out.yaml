@@ -37,10 +37,10 @@ gateways:
               message: Listener has been successfully translated
         - name: tcp2
           supportedKinds:
-          - group: gateway.networking.k8s.io
-            kind: TCPRoute
-          - group: gateway.networking.k8s.io
-            kind: TLSRoute
+            - group: gateway.networking.k8s.io
+              kind: TCPRoute
+            - group: gateway.networking.k8s.io
+              kind: TLSRoute
           AttachedRoutes: 0
           conditions:
             - type: Conflicted

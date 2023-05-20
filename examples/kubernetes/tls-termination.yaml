@@ -39,9 +39,9 @@ metadata:
     service: backend
 spec:
   ports:
-    - name: http
-      port: 3000
-      targetPort: 3000
+  - name: http
+    port: 3000
+    targetPort: 3000
   selector:
     app: backend
 ---
@@ -63,20 +63,20 @@ spec:
     spec:
       serviceAccountName: backend
       containers:
-        - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
-          imagePullPolicy: IfNotPresent
-          name: backend
-          ports:
-            - containerPort: 3000
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+      - image: gcr.io/k8s-staging-ingressconformance/echoserver:v20221109-7ee2f3e
+        imagePullPolicy: IfNotPresent
+        name: backend
+        ports:
+        - containerPort: 3000
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: TCPRoute
@@ -84,9 +84,9 @@ metadata:
   name: backend
 spec:
   parentRefs:
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      name: eg
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
   rules:
   - backendRefs:
     - group: ""

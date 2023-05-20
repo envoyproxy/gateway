@@ -12,9 +12,9 @@ gateways:
           port: 90
           tls:
             certificateRefs:
-            - group: ""
-              kind: Secret
-              name: tls-secret-1
+              - group: ""
+                kind: Secret
+                name: tls-secret-1
             mode: Terminate
           allowedRoutes:
             namespaces:
