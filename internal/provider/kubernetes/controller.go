@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -845,50 +844,24 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 
 // removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
 func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
-	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		// Get the resource.
-		if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
-			if kerrors.IsNotFound(err) {
-				return nil
-			}
-			return err
+	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+		base := client.MergeFrom(gc.DeepCopy())
+		gc.Finalizers = slice.RemoveString(gc.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Patch(ctx, gc, base); err != nil {
+			return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
 		}
-
-		if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
-			updated := gc.DeepCopy()
-			updated.Finalizers = slice.RemoveString(updated.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Update(ctx, updated); err != nil {
-				return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
 	}
 	return nil
 }
 
 // addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
 func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
-	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		// Get the resource.
-		if err := r.client.Get(ctx, utils.NamespacedName(gc), gc); err != nil {
-			if kerrors.IsNotFound(err) {
-				return nil
-			}
-			return err
+	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
+		base := client.MergeFrom(gc.DeepCopy())
+		gc.Finalizers = append(gc.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Patch(ctx, gc, base); err != nil {
+			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
 		}
-
-		if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
-			updated := gc.DeepCopy()
-			updated.Finalizers = append(updated.Finalizers, gatewayClassFinalizer)
-			if err := r.client.Update(ctx, updated); err != nil {
-				return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
-			}
-		}
-		return nil
-	}); err != nil {
-		return err
 	}
 	return nil
 }
