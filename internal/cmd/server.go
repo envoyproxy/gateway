@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -47,6 +48,10 @@ func server() error {
 	if err != nil {
 		return err
 	}
+
+	config := spew.NewDefaultConfig()
+	config.DisableMethods = true
+	config.Dump(cfg)
 
 	if err := setupRunners(cfg); err != nil {
 		return err
