@@ -185,7 +185,7 @@ spec:
           volumes:
           - name: certs
             secret:
-            secretName: envoy-cert   
+              secretName: envoy-cert   
 EOF
 ```
 

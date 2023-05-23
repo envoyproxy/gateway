@@ -475,7 +475,7 @@ spec:
                                     type: object
                                 type: object
                               volumeMounts:
-                                description: VolumeMounts Pod volumes to mount into
+                                description: VolumeMounts are volumes to mount into
                                   the container's filesystem. Cannot be updated.
                                 items:
                                   description: VolumeMount describes a mounting of
@@ -1816,9 +1816,8 @@ spec:
                                   type: object
                                 type: array
                               volumes:
-                                description: 'Volumes List of volumes that can be
-                                  mounted by containers belonging to the pod. More
-                                  info: https://kubernetes.io/docs/concepts/storage/volumes'
+                                description: 'Volumes that can be mounted by containers
+                                  belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes'
                                 items:
                                   description: Volume represents a named volume in
                                     a pod that may be accessed by any container in

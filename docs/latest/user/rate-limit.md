@@ -603,9 +603,6 @@ data:
             securityContext:
               runAsUser: 2000
               allowPrivilegeEscalation: false
-            volumeMounts:
-            - mountPath: /data/ratelimit/config
-              name: envoy-ratelimit
           pod:
             annotations:
               key1: val1
@@ -615,12 +612,6 @@ data:
               runAsGroup: 3000
               fsGroup: 2000
               fsGroupChangePolicy: "OnRootMismatch"
-            volumes:
-           - configMap:
-               defaultMode: 420
-               name: envoy-ratelimit
-               optional: false
-             name: envoy-ratelimit
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     rateLimit:

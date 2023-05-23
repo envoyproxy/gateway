@@ -84,7 +84,7 @@ type KubernetesPodSpec struct {
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
-	// Volumes List of volumes that can be mounted by containers belonging to the pod.
+	// Volumes that can be mounted by containers belonging to the pod.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes
 	//
 	// +optional
@@ -116,7 +116,7 @@ type KubernetesContainerSpec struct {
 	// +optional
 	Image *string `json:"image,omitempty"`
 
-	// VolumeMounts Pod volumes to mount into the container's filesystem.
+	// VolumeMounts are volumes to mount into the container's filesystem.
 	// Cannot be updated.
 	//
 	// +optional
