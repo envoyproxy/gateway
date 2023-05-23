@@ -17,60 +17,70 @@ import (
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretData(secret *corev1.Secret, domain string) (string, string, error) {
+func validateTLSSecretsData(secrets []*corev1.Secret, domain string) error {
 	var publicKeyAlgorithm string
 	var certFQDN string
-	certData := secret.Data[corev1.TLSCertKey]
-
-	certBlock, _ := pem.Decode(certData)
-	if certBlock == nil {
-		return publicKeyAlgorithm, certFQDN, fmt.Errorf("unable to decode pem data in %s", corev1.TLSCertKey)
-	}
-
-	cert, err := x509.ParseCertificate(certBlock.Bytes)
-	if err != nil {
-		return publicKeyAlgorithm, certFQDN, fmt.Errorf("unable to parse certificate in %s: %w", corev1.TLSCertKey, err)
-	}
-	publicKeyAlgorithm = cert.PublicKeyAlgorithm.String()
-
-	keyData := secret.Data[corev1.TLSPrivateKeyKey]
-
-	keyBlock, _ := pem.Decode(keyData)
-	if keyBlock == nil {
-		return publicKeyAlgorithm, certFQDN, fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
-	}
-
-	if domain != "" {
-		err = verifyHostname(cert, domain)
-		if err != nil {
-			return publicKeyAlgorithm, certFQDN, fmt.Errorf("hostname %s does not match Common Name or DNS Names in the certificate %s", domain, corev1.TLSCertKey)
-		}
-	}
-	certFQDN = getFQDN(cert)
-
 	var parseErr error
 
-	switch keyBlock.Type {
-	case "PRIVATE KEY":
-		_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
-		if err != nil {
-			parseErr = fmt.Errorf("unable to parse PKCS8 formatted private key in %s", corev1.TLSPrivateKeyKey)
+	pkaSecretSet := make(map[string]string)
+	for _, secret := range secrets {
+		certData := secret.Data[corev1.TLSCertKey]
+
+		certBlock, _ := pem.Decode(certData)
+		if certBlock == nil {
+			return fmt.Errorf("unable to decode pem data in %s", corev1.TLSCertKey)
 		}
-	case "RSA PRIVATE KEY":
-		_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+
+		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
-			parseErr = fmt.Errorf("unable to parse PKCS1 formatted private key in %s", corev1.TLSPrivateKeyKey)
+			return fmt.Errorf("unable to parse certificate in %s: %w", corev1.TLSCertKey, err)
 		}
-	case "EC PRIVATE KEY":
-		_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
-		if err != nil {
-			parseErr = fmt.Errorf("unable to parse EC formatted private key in %s", corev1.TLSPrivateKeyKey)
+		publicKeyAlgorithm = cert.PublicKeyAlgorithm.String()
+
+		keyData := secret.Data[corev1.TLSPrivateKeyKey]
+
+		keyBlock, _ := pem.Decode(keyData)
+		if keyBlock == nil {
+			return fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
 		}
-	default:
-		return publicKeyAlgorithm, certFQDN, fmt.Errorf("%s key format found in %s, supported formats are PKCS1, PKCS8 or EC", keyBlock.Type, corev1.TLSPrivateKeyKey)
+
+		if domain != "" {
+			err = verifyHostname(cert, domain)
+			if err != nil {
+				return fmt.Errorf("hostname %s does not match Common Name or DNS Names in the certificate %s", domain, corev1.TLSCertKey)
+			}
+		}
+		certFQDN = getFQDN(cert)
+		// Check whether the public key algorithm in the referenced secrets are unique.
+		if certFQDN, ok := pkaSecretSet[publicKeyAlgorithm]; ok {
+			return fmt.Errorf("secret %s/%s public key algorithm must be unique. Cerificate FQDN %s has a conficting algorithm [%s]",
+				secret.Namespace, secret.Name, certFQDN, publicKeyAlgorithm)
+
+		}
+		pkaSecretSet[publicKeyAlgorithm] = certFQDN
+
+		switch keyBlock.Type {
+		case "PRIVATE KEY":
+			_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
+			if err != nil {
+				parseErr = fmt.Errorf("unable to parse PKCS8 formatted private key in %s", corev1.TLSPrivateKeyKey)
+			}
+		case "RSA PRIVATE KEY":
+			_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
+			if err != nil {
+				parseErr = fmt.Errorf("unable to parse PKCS1 formatted private key in %s", corev1.TLSPrivateKeyKey)
+			}
+		case "EC PRIVATE KEY":
+			_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
+			if err != nil {
+				parseErr = fmt.Errorf("unable to parse EC formatted private key in %s", corev1.TLSPrivateKeyKey)
+			}
+		default:
+			return fmt.Errorf("%s key format found in %s, supported formats are PKCS1, PKCS8 or EC", keyBlock.Type, corev1.TLSPrivateKeyKey)
+		}
 	}
 
-	return publicKeyAlgorithm, certFQDN, parseErr
+	return parseErr
 }
 
 func getFQDN(cert *x509.Certificate) string {
@@ -85,8 +95,14 @@ func getFQDN(cert *x509.Certificate) string {
 	return fqdn
 }
 
+// Since Go 1.9 CommonName is deprecated for validation in the x509.Certificate
 // https://golang.google.cn/doc/go1.15#commonname
+// Restoring this behavior to support certificates without SAN.
 func verifyHostname(cert *x509.Certificate, host string) error {
+	if host == "*" {
+		return nil
+	}
+
 	lowered := toLowerCaseASCII(host)
 	if len(cert.DNSNames) > 0 {
 		for _, match := range cert.DNSNames {

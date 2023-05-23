@@ -303,7 +303,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 			break
 		}
 
-		err := validateTLSSecretData(secret)
+		err := validateTLSSecretsData(secret)
 		if err != nil {
 			listener.SetCondition(
 				v1beta1.ListenerConditionResolvedRefs,
@@ -362,11 +362,6 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			break
 		}
 
-<<<<<<< HEAD
-=======
-		secrets := make([]*v1.Secret, 0)
-		pkaSecretSet := make(map[string]string)
->>>>>>> 20910ec (Add scenarios for duplicate algorithm for fqdn and invalid hostname in certificate)
 		for _, certificateRef := range listener.TLS.CertificateRefs {
 			if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
 				listener.SetCondition(
@@ -418,6 +413,7 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 			}
 
 			secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
+			secrets = append(secrets, secret)
 
 			if secret == nil {
 				listener.SetCondition(
@@ -448,12 +444,13 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
+
 			var hostname string
 			if listener.Hostname != nil {
 				hostname = string(*listener.Hostname)
 			}
 
-			pka, certFQDN, err := validateTLSSecretData(secret, hostname)
+			err := validateTLSSecretsData(secrets, hostname)
 			if err != nil {
 				listener.SetCondition(
 					v1beta1.ListenerConditionResolvedRefs,
@@ -463,20 +460,6 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 				)
 				break
 			}
-
-			// Check whether the public key algorithm in the referenced secrets are unique.
-			if certFQDN, ok := pkaSecretSet[pka]; ok {
-				listener.SetCondition(
-					v1beta1.ListenerConditionProgrammed,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalid,
-					fmt.Sprintf("Secret %s/%s public key algorithm must be unique. Cerificate FQDN %s has a conficting algorithm [%s]",
-						secret.Namespace, secret.Name, certFQDN, pka),
-				)
-				break
-			}
-			pkaSecretSet[pka] = certFQDN
-			secrets = append(secrets, secret)
 		}
 
 		listener.SetTLSSecrets(secrets)

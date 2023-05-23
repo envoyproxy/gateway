@@ -24,11 +24,15 @@ gateways:
           attachedRoutes: 0
           conditions:
             - lastTransitionTime: "2023-04-02T11:08:00Z"
-              message: "Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
-                be unique. Cerificate FQDN foo.bar.com has a conficting algorithm [ECDSA]"
-              reason: Invalid
+              message: "Secret envoy-gateway/tls-secret-ecdsa-2 must contain valid tls.crt and tls.key, secret envoy-gateway/tls-secret-ecdsa-2 
+                public key algorithm must be unique. Cerificate FQDN foo.bar.com has a conficting algorithm [ECDSA]."
+              reason: InvalidCertificateRef
               status: "False"
-              type: Programmed
+              type: ResolvedRefs
+            - type: Programmed
+              status: "False"
+              reason: Invalid
+              message: Listener is invalid, see other Conditions for details.              
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
