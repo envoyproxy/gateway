@@ -35,7 +35,7 @@ var RateLimitTest = suite.ConformanceTest{
 
 			// TODO: find a better to make sure ratelimit load new configuration
 			// just wait a bit more time for now
-			time.Sleep(60 * time.Second)
+			time.Sleep(30 * time.Second)
 
 			// TODO: should just send exactly 4 requests, and expect 429
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
