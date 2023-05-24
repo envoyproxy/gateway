@@ -24,7 +24,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gatewayclasses.gateway.networking.k8s.io
@@ -459,7 +459,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gateways.gateway.networking.k8s.io
@@ -1898,7 +1898,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: grpcroutes.gateway.networking.k8s.io
@@ -3399,7 +3399,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
@@ -3976,8 +3976,17 @@ spec:
                                     port:
                                       description: "Port is the port to be used in
                                         the value of the `Location` header in the
-                                        response. \n When empty, the Gateway Listener
-                                        port is used. \n Implementations SHOULD NOT
+                                        response. \n If no port is specified, the
+                                        redirect port MUST be derived using the following
+                                        rules: \n * If redirect scheme is not-empty,
+                                        the redirect port MUST be the well-known port
+                                        associated with the redirect scheme. Specifically
+                                        \"http\" to port 80 and \"https\" to port
+                                        443. If the redirect scheme does not have
+                                        a well-known port, the listener port of the
+                                        Gateway SHOULD be used. * If redirect scheme
+                                        is empty, the redirect port MUST be the Gateway
+                                        Listener port. \n Implementations SHOULD NOT
                                         add the port number in the 'Location' header
                                         in the following cases: \n * A Location header
                                         that will use HTTP (whether that is determined
@@ -3994,8 +4003,11 @@ spec:
                                       description: "Scheme is the scheme to be used
                                         in the value of the `Location` header in the
                                         response. When empty, the scheme of the request
-                                        is used. \n Note that values may be added
-                                        to this enum, implementations must ensure
+                                        is used. \n Scheme redirects can affect the
+                                        port of the redirect, for more information,
+                                        refer to the documentation for the port field
+                                        of this filter. \n Note that values may be
+                                        added to this enum, implementations must ensure
                                         that unknown values will not cause a crash.
                                         \n Unknown values here must result in the
                                         implementation setting the Accepted Condition
@@ -4617,16 +4629,24 @@ spec:
                                 type: object
                               port:
                                 description: "Port is the port to be used in the value
-                                  of the `Location` header in the response. \n When
-                                  empty, the Gateway Listener port is used. \n Implementations
-                                  SHOULD NOT add the port number in the 'Location'
-                                  header in the following cases: \n * A Location header
-                                  that will use HTTP (whether that is determined via
-                                  the Listener protocol or the Scheme field) _and_
-                                  use port 80. * A Location header that will use HTTPS
-                                  (whether that is determined via the Listener protocol
-                                  or the Scheme field) _and_ use port 443. \n Support:
-                                  Extended"
+                                  of the `Location` header in the response. \n If
+                                  no port is specified, the redirect port MUST be
+                                  derived using the following rules: \n * If redirect
+                                  scheme is not-empty, the redirect port MUST be the
+                                  well-known port associated with the redirect scheme.
+                                  Specifically \"http\" to port 80 and \"https\" to
+                                  port 443. If the redirect scheme does not have a
+                                  well-known port, the listener port of the Gateway
+                                  SHOULD be used. * If redirect scheme is empty, the
+                                  redirect port MUST be the Gateway Listener port.
+                                  \n Implementations SHOULD NOT add the port number
+                                  in the 'Location' header in the following cases:
+                                  \n * A Location header that will use HTTP (whether
+                                  that is determined via the Listener protocol or
+                                  the Scheme field) _and_ use port 80. * A Location
+                                  header that will use HTTPS (whether that is determined
+                                  via the Listener protocol or the Scheme field) _and_
+                                  use port 443. \n Support: Extended"
                                 format: int32
                                 maximum: 65535
                                 minimum: 1
@@ -4635,7 +4655,10 @@ spec:
                                 description: "Scheme is the scheme to be used in the
                                   value of the `Location` header in the response.
                                   When empty, the scheme of the request is used. \n
-                                  Note that values may be added to this enum, implementations
+                                  Scheme redirects can affect the port of the redirect,
+                                  for more information, refer to the documentation
+                                  for the port field of this filter. \n Note that
+                                  values may be added to this enum, implementations
                                   must ensure that unknown values will not cause a
                                   crash. \n Unknown values here must result in the
                                   implementation setting the Accepted Condition for
@@ -5871,8 +5894,17 @@ spec:
                                     port:
                                       description: "Port is the port to be used in
                                         the value of the `Location` header in the
-                                        response. \n When empty, the Gateway Listener
-                                        port is used. \n Implementations SHOULD NOT
+                                        response. \n If no port is specified, the
+                                        redirect port MUST be derived using the following
+                                        rules: \n * If redirect scheme is not-empty,
+                                        the redirect port MUST be the well-known port
+                                        associated with the redirect scheme. Specifically
+                                        \"http\" to port 80 and \"https\" to port
+                                        443. If the redirect scheme does not have
+                                        a well-known port, the listener port of the
+                                        Gateway SHOULD be used. * If redirect scheme
+                                        is empty, the redirect port MUST be the Gateway
+                                        Listener port. \n Implementations SHOULD NOT
                                         add the port number in the 'Location' header
                                         in the following cases: \n * A Location header
                                         that will use HTTP (whether that is determined
@@ -5889,8 +5921,11 @@ spec:
                                       description: "Scheme is the scheme to be used
                                         in the value of the `Location` header in the
                                         response. When empty, the scheme of the request
-                                        is used. \n Note that values may be added
-                                        to this enum, implementations must ensure
+                                        is used. \n Scheme redirects can affect the
+                                        port of the redirect, for more information,
+                                        refer to the documentation for the port field
+                                        of this filter. \n Note that values may be
+                                        added to this enum, implementations must ensure
                                         that unknown values will not cause a crash.
                                         \n Unknown values here must result in the
                                         implementation setting the Accepted Condition
@@ -6512,16 +6547,24 @@ spec:
                                 type: object
                               port:
                                 description: "Port is the port to be used in the value
-                                  of the `Location` header in the response. \n When
-                                  empty, the Gateway Listener port is used. \n Implementations
-                                  SHOULD NOT add the port number in the 'Location'
-                                  header in the following cases: \n * A Location header
-                                  that will use HTTP (whether that is determined via
-                                  the Listener protocol or the Scheme field) _and_
-                                  use port 80. * A Location header that will use HTTPS
-                                  (whether that is determined via the Listener protocol
-                                  or the Scheme field) _and_ use port 443. \n Support:
-                                  Extended"
+                                  of the `Location` header in the response. \n If
+                                  no port is specified, the redirect port MUST be
+                                  derived using the following rules: \n * If redirect
+                                  scheme is not-empty, the redirect port MUST be the
+                                  well-known port associated with the redirect scheme.
+                                  Specifically \"http\" to port 80 and \"https\" to
+                                  port 443. If the redirect scheme does not have a
+                                  well-known port, the listener port of the Gateway
+                                  SHOULD be used. * If redirect scheme is empty, the
+                                  redirect port MUST be the Gateway Listener port.
+                                  \n Implementations SHOULD NOT add the port number
+                                  in the 'Location' header in the following cases:
+                                  \n * A Location header that will use HTTP (whether
+                                  that is determined via the Listener protocol or
+                                  the Scheme field) _and_ use port 80. * A Location
+                                  header that will use HTTPS (whether that is determined
+                                  via the Listener protocol or the Scheme field) _and_
+                                  use port 443. \n Support: Extended"
                                 format: int32
                                 maximum: 65535
                                 minimum: 1
@@ -6530,7 +6573,10 @@ spec:
                                 description: "Scheme is the scheme to be used in the
                                   value of the `Location` header in the response.
                                   When empty, the scheme of the request is used. \n
-                                  Note that values may be added to this enum, implementations
+                                  Scheme redirects can affect the port of the redirect,
+                                  for more information, refer to the documentation
+                                  for the port field of this filter. \n Note that
+                                  values may be added to this enum, implementations
                                   must ensure that unknown values will not cause a
                                   crash. \n Unknown values here must result in the
                                   implementation setting the Accepted Condition for
@@ -7222,7 +7268,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: referencegrants.gateway.networking.k8s.io
@@ -7504,7 +7550,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tcproutes.gateway.networking.k8s.io
@@ -8034,7 +8080,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tlsroutes.gateway.networking.k8s.io
@@ -8613,7 +8659,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/1923
-    gateway.networking.k8s.io/bundle-version: v0.7.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.7.0
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: udproutes.gateway.networking.k8s.io
@@ -9204,7 +9250,7 @@ spec:
     spec:
       containers:
       - name: webhook
-        image: registry.k8s.io/gateway-api/admission-server:v0.7.0-rc1
+        image: registry.k8s.io/gateway-api/admission-server:v0.7.0
         imagePullPolicy: Always
         args:
         - -logtostderr
