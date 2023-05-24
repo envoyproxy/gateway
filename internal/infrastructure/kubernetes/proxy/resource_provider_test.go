@@ -182,6 +182,57 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "volumes",
+			infra:    newTestInfra(),
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "certs",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "custom-envoy-cert",
+								},
+							},
+						},
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  "env_a",
+							Value: "env_a_value",
+						},
+						{
+							Name:  "env_b",
+							Value: "env_b_value",
+						},
+					},
+					Image: pointer.String("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
 		// TODO: add test cases for custom ProxyLogging
 	}
 	for _, tc := range cases {

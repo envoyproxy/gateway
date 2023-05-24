@@ -83,6 +83,12 @@ type KubernetesPodSpec struct {
 	// If specified, the pod's tolerations.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
+	// Volumes that can be mounted by containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/storage/volumes
+	//
+	// +optional
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.
@@ -109,6 +115,12 @@ type KubernetesContainerSpec struct {
 	//
 	// +optional
 	Image *string `json:"image,omitempty"`
+
+	// VolumeMounts are volumes to mount into the container's filesystem.
+	// Cannot be updated.
+	//
+	// +optional
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // ServiceType string describes ingress methods for a service

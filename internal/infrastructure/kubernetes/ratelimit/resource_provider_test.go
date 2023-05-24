@@ -462,6 +462,78 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName: "volumes",
+			rateLimit: &egcfgv1a1.RateLimit{
+				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+					Type: egcfgv1a1.RedisBackendType,
+					Redis: &egcfgv1a1.RateLimitRedisSettings{
+						URL: "redis.redis.svc:6379",
+						TLS: &egcfgv1a1.RedisTLSSettings{
+							CertificateRef: &gwapiv1b1.SecretObjectReference{
+								Name: "ratelimit-cert-origin",
+							},
+						},
+					},
+				},
+			},
+			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(2),
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+					Tolerations: []corev1.Toleration{
+						{
+							Key:      "node-type",
+							Operator: corev1.TolerationOpExists,
+							Effect:   corev1.TaintEffectNoSchedule,
+							Value:    "router",
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "certs",
+							VolumeSource: corev1.VolumeSource{
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: "custom-cert",
+								},
+							},
+						},
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Env: []corev1.EnvVar{
+						{
+							Name:  RedisAuthEnvVar,
+							Value: "redis_auth_password",
+						},
+						{
+							Name:  UseStatsdEnvVar,
+							Value: "true",
+						},
+					},
+					Image: pointer.String("custom-image"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+					VolumeMounts: []corev1.VolumeMount{},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
