@@ -105,11 +105,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			} else {
 				// Translate to ratelimit infra IR and ratelimit xDS Config.
-				rlIR, rvt, err := r.translate(update.Value)
-				if err != nil {
-					r.Logger.Error(err, "failed to translate xds ir and config")
-					return
-				}
+				rlIR, rvt := r.translate(update.Value)
 
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
@@ -128,7 +124,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("subscriber shutting down")
 }
 
-func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVersionTable, error) {
+func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVersionTable) {
 	ratelimitInfra := new(ir.RateLimitInfra)
 	resourceVT := new(types.ResourceVersionTable)
 
@@ -141,7 +137,7 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVe
 			ratelimitInfra.ServiceNames = append(ratelimitInfra.ServiceNames, listener.Name)
 		}
 	}
-	return ratelimitInfra, resourceVT, nil
+	return ratelimitInfra, resourceVT
 }
 
 func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {
