@@ -138,15 +138,7 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVe
 			// Add to xDS Config resources.
 			resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg)
 
-			str, err := translator.GetRateLimitServiceConfigStr(cfg)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to get rate limit config string: %w", err)
-			}
-			c := &ir.RateLimitServiceConfig{
-				Name:   listener.Name,
-				Config: str,
-			}
-			ratelimitInfra.ServiceConfigs = append(ratelimitInfra.ServiceConfigs, c)
+			ratelimitInfra.ServiceNames = append(ratelimitInfra.ServiceNames, listener.Name)
 		}
 	}
 	return ratelimitInfra, resourceVT, nil

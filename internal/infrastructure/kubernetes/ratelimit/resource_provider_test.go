@@ -31,20 +31,6 @@ const (
 
 var (
 	rateLimitListener = "ratelimit-listener"
-	rateLimitConfig   = `
-domain: first-listener
-descriptors:
-  - key: first-route-key-rule-0-match-0
-    value: first-route-value-rule-0-match-0
-    rate_limit:
-      requests_per_unit: 5
-      unit: second
-      unlimited: false
-      name: ""
-      replaces: []
-    descriptors: []
-    shadow_mode: false
-`
 )
 
 func TestRateLimitLabels(t *testing.T) {
@@ -110,12 +96,7 @@ func TestConfigMap(t *testing.T) {
 	require.NoError(t, err)
 
 	rateLimitInfra := &ir.RateLimitInfra{
-		ServiceConfigs: []*ir.RateLimitServiceConfig{
-			{
-				Name:   rateLimitListener,
-				Config: rateLimitConfig,
-			},
-		},
+		ServiceNames: []string{rateLimitListener},
 	}
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
@@ -151,12 +132,7 @@ func TestService(t *testing.T) {
 	require.NoError(t, err)
 
 	rateLimitInfra := &ir.RateLimitInfra{
-		ServiceConfigs: []*ir.RateLimitServiceConfig{
-			{
-				Name:   rateLimitListener,
-				Config: rateLimitConfig,
-			},
-		},
+		ServiceNames: []string{rateLimitListener},
 	}
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
@@ -538,12 +514,7 @@ func TestDeployment(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
 			rateLimitInfra := &ir.RateLimitInfra{
-				ServiceConfigs: []*ir.RateLimitServiceConfig{
-					{
-						Name:   rateLimitListener,
-						Config: rateLimitConfig,
-					},
-				},
+				ServiceNames: []string{rateLimitListener},
 			}
 
 			cfg.EnvoyGateway.RateLimit = tc.rateLimit

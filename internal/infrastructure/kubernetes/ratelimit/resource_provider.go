@@ -43,11 +43,6 @@ func (r *ResourceRender) Name() string {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	labels := rateLimitLabels()
-	data := make(map[string]string)
-
-	for _, config := range r.infra.ServiceConfigs {
-		data[config.Name] = config.Config
-	}
 
 	return &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -59,7 +54,6 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 			Name:      InfraName,
 			Labels:    labels,
 		},
-		Data: data,
 	}, nil
 }
 

@@ -26,20 +26,6 @@ import (
 
 var (
 	rateLimitListener = "ratelimit-listener"
-	rateLimitConfig   = `
-domain: first-listener
-descriptors:
-  - key: first-route-key-rule-0-match-0
-    value: first-route-value-rule-0-match-0
-    rate_limit:
-      requests_per_unit: 5
-      unit: second
-      unlimited: false
-      name: ""
-      replaces: []
-    descriptors: []
-    shadow_mode: false
-`
 )
 
 func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
@@ -47,10 +33,7 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 	require.NoError(t, err)
 
 	rateLimitInfra := new(ir.RateLimitInfra)
-	rateLimitInfra.ServiceConfigs = append(rateLimitInfra.ServiceConfigs, &ir.RateLimitServiceConfig{
-		Name:   rateLimitListener,
-		Config: rateLimitConfig,
-	})
+	rateLimitInfra.ServiceNames = append(rateLimitInfra.ServiceNames, rateLimitListener)
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
@@ -78,34 +61,6 @@ func TestCreateOrUpdateRateLimitConfigMap(t *testing.T) {
 						"app.kubernetes.io/managed-by": "envoy-gateway",
 					},
 				},
-				Data: map[string]string{rateLimitListener: rateLimitConfig},
-			},
-		},
-		{
-			name: "update ratelimit configmap",
-			current: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
-					Name:      ratelimit.InfraName,
-					Labels: map[string]string{
-						"app.kubernetes.io/name":       ratelimit.InfraName,
-						"app.kubernetes.io/component":  "ratelimit",
-						"app.kubernetes.io/managed-by": "envoy-gateway",
-					},
-				},
-				Data: map[string]string{"foo": "bar"},
-			},
-			expect: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: cfg.Namespace,
-					Name:      ratelimit.InfraName,
-					Labels: map[string]string{
-						"app.kubernetes.io/name":       ratelimit.InfraName,
-						"app.kubernetes.io/component":  "ratelimit",
-						"app.kubernetes.io/managed-by": "envoy-gateway",
-					},
-				},
-				Data: map[string]string{rateLimitListener: rateLimitConfig},
 			},
 		},
 	}
