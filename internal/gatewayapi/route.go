@@ -663,9 +663,9 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				Name:    irTLSListenerName(listener, tlsRoute),
 				Address: "0.0.0.0",
 				Port:    uint32(containerPort),
-				TLSInspectorConfig: &ir.TLSInspectorConfig{
+				TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
 					SNIs: hosts,
-				},
+				}},
 				Destinations: routeDestinations,
 			}
 			gwXdsIR := xdsIR[irKey]
@@ -942,11 +942,11 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			// Create the TCP Listener while parsing the TCPRoute since
 			// the listener directly links to a routeDestination.
 			irListener := &ir.TCPListener{
-				Name:              irTCPListenerName(listener, tcpRoute),
-				Address:           "0.0.0.0",
-				Port:              uint32(containerPort),
-				Destinations:      routeDestinations,
-				TLSListenerConfig: irTLSConfigs(listener.tlsSecrets),
+				Name:         irTCPListenerName(listener, tcpRoute),
+				Address:      "0.0.0.0",
+				Port:         uint32(containerPort),
+				Destinations: routeDestinations,
+				TLS:          &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)

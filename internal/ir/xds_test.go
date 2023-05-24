@@ -66,22 +66,22 @@ var (
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:               "happy",
-		Address:            "0.0.0.0",
-		Port:               80,
-		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations:       []*RouteDestination{&happyRouteDestination},
+		Name:         "happy",
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
 	happyTCPListenerTLSTerminate = TCPListener{
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
-		TLSListenerConfig: []*TLSListenerConfig{{
+		TLS: &TLS{Terminate: []*TLSListenerConfig{{
 			Name:              "happy",
 			ServerCertificate: []byte("server-cert"),
 			PrivateKey:        []byte("priv-key"),
-		}},
+		}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
@@ -92,23 +92,23 @@ var (
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:            "0.0.0.0",
-		Port:               80,
-		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations:       []*RouteDestination{&happyRouteDestination},
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:               "invalid-addr",
-		Address:            "1.0.0",
-		Port:               80,
-		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{"example.com"}},
-		Destinations:       []*RouteDestination{&happyRouteDestination},
+		Name:         "invalid-addr",
+		Address:      "1.0.0",
+		Port:         80,
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:            "0.0.0.0",
-		Port:               80,
-		TLSInspectorConfig: &TLSInspectorConfig{SNIs: []string{}},
-		Destinations:       []*RouteDestination{&happyRouteDestination},
+		Address:      "0.0.0.0",
+		Port:         80,
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
 	// UDPListener

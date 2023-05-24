@@ -55,18 +55,20 @@ tcp:
 - name: "fifth-listener"
   address: "0.0.0.0"
   port: 10080
-  tlsInspectorConfig:
-    snis:
-    - bar.com
+  tls:
+    passthrough:
+      snis:
+      - bar.com
   destinations:
   - host: "1.2.3.4"
     port: 50000
 - name: "sixth-listener"
   address: "0.0.0.0"
   port: 10080
-  tlsInspectorConfig:
-    snis:
-    - bar.net 
+  tls:
+    passthrough:
+      snis:
+      - bar.net
     destinations:
     - host: "1.2.3.4"
       port: 50000

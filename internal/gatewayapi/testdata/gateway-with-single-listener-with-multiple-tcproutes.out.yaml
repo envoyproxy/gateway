@@ -95,6 +95,7 @@ xdsIR:
         destinations:
           - host: "7.7.7.7"
             port: 8163
+        tls: {}
 
 infraIR:
   envoy-gateway-gateway-1:

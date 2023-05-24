@@ -2,11 +2,12 @@ tcp:
 - name: "tcp-route-complex"
   address: "0.0.0.0"
   port: 10080
-  tlsInspectorConfig:
-    snis:
-    - foo.com
-    - bar.com
-    - example.com
+  tls:
+    passthrough:
+      snis:
+      - foo.com
+      - bar.com
+      - example.com
   destinations:
   - host: "1.2.3.4"
     port: 50000

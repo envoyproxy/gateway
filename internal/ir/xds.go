@@ -610,13 +610,20 @@ type TCPListener struct {
 	Address string
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32
-	// TLS information required for TLS Passthrough, If provided, incoming
-	// connections' server names are inspected and routed to backends accordingly.
-	TLSInspectorConfig *TLSInspectorConfig
-	// TLS information required for TLS Termination
-	TLSListenerConfig []*TLSListenerConfig
+	// TLS holds information for configuring TLS on a listener
+	TLS *TLS
 	// Destinations associated with TCP traffic to the service.
 	Destinations []*RouteDestination
+}
+
+// TLS holds information for configuring TLS on a listener
+// +k8s:deepcopy-gen=true
+type TLS struct {
+	// TLS information required for TLS Passthrough, If provided, incoming
+	// connections' server names are inspected and routed to backends accordingly.
+	Passthrough *TLSInspectorConfig
+	// TLS information required for TLS Termination
+	Terminate []*TLSListenerConfig
 }
 
 // Validate the fields within the TCPListener structure
@@ -631,15 +638,15 @@ func (h TCPListener) Validate() error {
 	if h.Port == 0 {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
-	if h.TLSInspectorConfig != nil {
-		if err := h.TLSInspectorConfig.Validate(); err != nil {
+	if h.TLS != nil && h.TLS.Passthrough != nil {
+		if err := h.TLS.Passthrough.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
 
-	if h.TLSListenerConfig != nil {
-		for t := range h.TLSListenerConfig {
-			if err := h.TLSListenerConfig[t].Validate(); err != nil {
+	if h.TLS != nil && h.TLS.Terminate != nil {
+		for t := range h.TLS.Terminate {
+			if err := h.TLS.Terminate[t].Validate(); err != nil {
 				errs = multierror.Append(errs, err)
 			}
 		}

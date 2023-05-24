@@ -207,8 +207,8 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			endpoint:     Static,
 		})
 
-		if tcpListener.TLSListenerConfig != nil {
-			for _, s := range tcpListener.TLSListenerConfig {
+		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
+			for _, s := range tcpListener.TLS.Terminate {
 				secret := buildXdsDownstreamTLSSecret(s)
 				tCtx.AddXdsResource(resourcev3.SecretType, secret)
 			}

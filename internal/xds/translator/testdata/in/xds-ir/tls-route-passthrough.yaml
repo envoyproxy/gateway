@@ -2,9 +2,10 @@ tcp:
 - name: "tls-passthrough"
   address: "0.0.0.0"
   port: 10080
-  tlsInspectorConfig:
-    snis:
-    - foo.com
+  tls:
+    passthrough:
+      snis:
+      - foo.com
   destinations:
   - host: "1.2.3.4"
     port: 50000
