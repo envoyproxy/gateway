@@ -497,7 +497,7 @@ _Appears in:_
 
 
 
-
+ProxyAccessLoggingFormat defines the format of access logging.
 
 _Appears in:_
 - [ProxyAccessLogging](#proxyaccesslogging)
@@ -505,8 +505,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[ProxyAccessLoggingFormatType](#proxyaccessloggingformattype)_ | Type defines the type of access logging format. |
-| `text` _string_ | Text defines the text access logging format, following Envoy access logging formatting, empty value results in proxy's default access log format. It's required when the format type is "text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
-| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "json". |
+| `text` _string_ | Text defines the text access logging format, following Envoy access logging formatting, empty value results in proxy's default access log format. It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
+| `fields` _object (keys:string, values:string)_ | Fields is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "JSON". |
 
 
 ## ProxyAccessLoggingFormatType
@@ -533,7 +533,7 @@ _Appears in:_
 | --- | --- |
 | `type` _[ProxyAccessLoggingSinkType](#proxyaccessloggingsinktype)_ | Type defines the type of access logging sink. |
 | `file` _[FileEnvoyProxyAccessLogging](#fileenvoyproxyaccesslogging)_ | File defines the file access logging sink. |
-| `opentelemetry` _[OpenTelemetryEnvoyProxyAccessLogging](#opentelemetryenvoyproxyaccesslogging)_ | OpenTelemetry defines the OpenTelemetry access logging sink. |
+| `openTelemetry` _[OpenTelemetryEnvoyProxyAccessLogging](#opentelemetryenvoyproxyaccesslogging)_ | OpenTelemetry defines the OpenTelemetry access logging sink. |
 
 
 ## ProxyAccessLoggingSinkType

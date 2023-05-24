@@ -50,13 +50,13 @@ spec:
                             the specific event occurrence. Structured format for the
                             envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
                             can be used as values for fields within the Struct. It's
-                            required when the format type is "json".
+                            required when the format type is "JSON".
                           type: object
                         text:
                           description: Text defines the text access logging format,
                             following Envoy access logging formatting, empty value
                             results in proxy's default access log format. It's required
-                            when the format type is "text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                            when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
                             may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
                             provides more information.
                           type: string
@@ -80,7 +80,7 @@ spec:
                                   disables access logging.
                                 type: string
                             type: object
-                          opentelemetry:
+                          openTelemetry:
                             description: OpenTelemetry defines the OpenTelemetry access
                               logging sink.
                             properties:
@@ -107,8 +107,8 @@ spec:
                           type:
                             description: Type defines the type of access logging sink.
                             enum:
-                            - file
-                            - opentelemetry
+                            - File
+                            - OpenTelemetry
                             type: string
                         type: object
                       minItems: 1
