@@ -57,6 +57,81 @@ func newTestInfra() *ir.Infra {
 	return i
 }
 
+func TestDaemonSet(t *testing.T) {
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	cases := []struct {
+		caseName  string
+		infra     *ir.Infra
+		daemonSet *egcfgv1a1.KubernetesDaemonSetSpec
+	}{
+		{
+			caseName: "custom",
+			infra:    newTestInfra(),
+			daemonSet: &egcfgv1a1.KubernetesDaemonSetSpec{
+				Pod: &egcfgv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+				},
+				Container: &egcfgv1a1.KubernetesContainerSpec{
+					Image: pointer.String("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.caseName, func(t *testing.T) {
+			kube := tc.infra.GetProxyInfra().GetProxyConfig().GetEnvoyProxyProvider().GetEnvoyProxyKubeProvider()
+			kube.EnvoyDaemonSet = tc.daemonSet
+
+			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
+			dset, err := r.DaemonSet()
+			require.NoError(t, err)
+
+			expected, err := loadDaemonSet(tc.caseName)
+			require.NoError(t, err)
+
+			sortEnv := func(env []corev1.EnvVar) {
+				sort.Slice(env, func(i, j int) bool {
+					return env[i].Name > env[j].Name
+				})
+			}
+
+			sortEnv(dset.Spec.Template.Spec.Containers[0].Env)
+			sortEnv(expected.Spec.Template.Spec.Containers[0].Env)
+			assert.Equal(t, expected, dset)
+		})
+	}
+}
+
+func loadDaemonSet(caseName string) (*appsv1.DaemonSet, error) {
+	daemonSetYAML, err := os.ReadFile(fmt.Sprintf("testdata/daemonsets/%s.yaml", caseName))
+	if err != nil {
+		return nil, err
+	}
+	daemonSet := &appsv1.DaemonSet{}
+	_ = yaml.Unmarshal(daemonSetYAML, daemonSet)
+	return daemonSet, nil
+}
+
 func TestDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)

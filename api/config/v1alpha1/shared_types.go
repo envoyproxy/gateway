@@ -42,6 +42,21 @@ const (
 	ProviderTypeFile ProviderType = "File"
 )
 
+// KubernetesDaemonSetSpec defines the desired state of the Kubernetes daemon set resource.
+type KubernetesDaemonSetSpec struct {
+	// Pod defines the desired annotations and securityContext of container.
+	//
+	// +optional
+	Pod *KubernetesPodSpec `json:"pod,omitempty"`
+
+	// Container defines the resources and securityContext of container.
+	//
+	// +optional
+	Container *KubernetesContainerSpec `json:"container,omitempty"`
+
+	// TODO: Expose config as use cases are better understood, e.g. labels.
+}
+
 // KubernetesDeploymentSpec defines the desired state of the Kubernetes deployment resource.
 type KubernetesDeploymentSpec struct {
 	// Replicas is the number of desired pods. Defaults to 1.
@@ -79,6 +94,10 @@ type KubernetesPodSpec struct {
 	// If specified, the pod's scheduling constraints.
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+
+	// If specified, the label matches for assigning pods to nodes.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// If specified, the pod's tolerations.
 	// +optional

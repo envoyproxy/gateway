@@ -312,23 +312,30 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 		return
 	}
 
-	// Get deployment
-	deploy, err := r.envoyDeploymentForGateway(ctx, gtw)
-	if err != nil {
-		r.log.Info("failed to get Deployment for gateway",
-			"namespace", gtw.Namespace, "name", gtw.Name)
-	}
-
 	// Get service
 	svc, err := r.envoyServiceForGateway(ctx, gtw)
 	if err != nil {
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
+
+	// Get deployment xor daemon set
+	if deploy, err := r.envoyDeploymentForGateway(ctx, gtw); err != nil {
+		r.log.Info("failed to get Deployment for gateway",
+			"namespace", gtw.Namespace, "name", gtw.Name)
+	} else if deploy != nil {
+		// update address field and programmed condition
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, (*status.DeploymentPodSet)(deploy), r.store.listNodeAddresses()...)
+	} else if dset, err := r.envoyDaemonSetForGateway(ctx, gtw); err != nil {
+		r.log.Info("failed to get DaemonSet for gateway",
+			"namespace", gtw.Namespace, "name", gtw.Name)
+	} else {
+		// update address field and programmed condition
+		status.UpdateGatewayStatusProgrammedCondition(gtw, svc, (*status.DaemonSetPodSet)(dset), r.store.listNodeAddresses()...)
+	}
+
 	// update accepted condition
 	status.UpdateGatewayStatusAcceptedCondition(gtw, true)
-	// update address field and programmed condition
-	status.UpdateGatewayStatusProgrammedCondition(gtw, svc, deploy, r.store.listNodeAddresses()...)
 
 	key := utils.NamespacedName(gtw)
 
@@ -1162,7 +1169,16 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &appsv1.Deployment{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
+		predicate.NewPredicateFuncs(r.validatePodSetForReconcile),
+	); err != nil {
+		return err
+	}
+
+	// Watch DaemonSet CRUDs and process affected Gateways.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &appsv1.DaemonSet{}),
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validatePodSetForReconcile),
 	); err != nil {
 		return err
 	}

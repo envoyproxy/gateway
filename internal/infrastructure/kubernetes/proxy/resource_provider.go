@@ -141,69 +141,118 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	}, nil
 }
 
+// DaemonSet returns the expected DaemonSet based on the provided infra.
+func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
+	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+	daemonSetConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDaemonSet
+
+	if daemonSetConfig == nil {
+		return nil, nil
+	}
+
+	objectMeta, err := r.podSetObjectMeta()
+	if err != nil {
+		return nil, err
+	}
+
+	selector := resource.GetSelector(objectMeta.Labels)
+	podTemplate, err := r.podSetPodTemplateSpec(selector.MatchLabels, daemonSetConfig.Container, daemonSetConfig.Pod)
+	if err != nil {
+		return nil, err
+	}
+
+	return &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: objectMeta,
+		Spec: appsv1.DaemonSetSpec{
+			Selector: selector,
+			Template: podTemplate,
+		},
+	}, nil
+}
+
 // Deployment returns the expected Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
-	// Get the EnvoyProxy config to configure the deployment.
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
 	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
-	// Get expected bootstrap configurations rendered ProxyContainers
-	containers, err := expectedProxyContainers(r.infra, deploymentConfig)
+	if deploymentConfig == nil {
+		return nil, nil
+	}
+
+	objectMeta, err := r.podSetObjectMeta()
 	if err != nil {
 		return nil, err
 	}
 
-	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
-		return nil, fmt.Errorf("missing owning gateway labels")
+	selector := resource.GetSelector(objectMeta.Labels)
+	podTemplate, err := r.podSetPodTemplateSpec(selector.MatchLabels, deploymentConfig.Container, deploymentConfig.Pod)
+	if err != nil {
+		return nil, err
 	}
 
-	selector := resource.GetSelector(labels)
-
-	// Get annotations
-	var annotations map[string]string
-	if deploymentConfig.Pod.Annotations != nil {
-		annotations = deploymentConfig.Pod.Annotations
-	}
-
-	deployment := &appsv1.Deployment{
+	return &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: "apps/v1",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Name),
-			Labels:    labels,
-		},
+		ObjectMeta: objectMeta,
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
 			Selector: selector,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
-					Annotations: annotations,
-				},
-				Spec: corev1.PodSpec{
-					Containers:                    containers,
-					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
-					AutomountServiceAccountToken:  pointer.Bool(false),
-					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
-					DNSPolicy:                     corev1.DNSClusterFirst,
-					RestartPolicy:                 corev1.RestartPolicyAlways,
-					SchedulerName:                 "default-scheduler",
-					SecurityContext:               deploymentConfig.Pod.SecurityContext,
-					Affinity:                      deploymentConfig.Pod.Affinity,
-					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
-				},
-			},
+			Template: podTemplate,
 		},
+	}, nil
+}
+
+func (r *ResourceRender) podSetObjectMeta() (metav1.ObjectMeta, error) {
+	// Set the labels based on the owning gateway name.
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
+	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+		return metav1.ObjectMeta{}, fmt.Errorf("missing owning gateway labels")
 	}
 
-	return deployment, nil
+	return metav1.ObjectMeta{
+		Namespace: r.Namespace,
+		Name:      ExpectedResourceHashedName(r.infra.Name),
+		Labels:    labels,
+	}, nil
+}
+
+func (r *ResourceRender) podSetPodTemplateSpec(labels map[string]string, containerSpec *egcfgv1a1.KubernetesContainerSpec, podSpec *egcfgv1a1.KubernetesPodSpec) (corev1.PodTemplateSpec, error) {
+	// Get expected bootstrap configurations rendered ProxyContainers
+	containers, err := expectedProxyContainers(r.infra, containerSpec)
+	if err != nil {
+		return corev1.PodTemplateSpec{}, err
+	}
+
+	return corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels:      labels,
+			Annotations: podSpec.Annotations,
+		},
+		Spec: corev1.PodSpec{
+			Containers:                    containers,
+			ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
+			AutomountServiceAccountToken:  pointer.Bool(false),
+			TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
+			DNSPolicy:                     corev1.DNSClusterFirst,
+			RestartPolicy:                 corev1.RestartPolicyAlways,
+			SchedulerName:                 "default-scheduler",
+			SecurityContext:               podSpec.SecurityContext,
+			Affinity:                      podSpec.Affinity,
+			NodeSelector:                  podSpec.NodeSelector,
+			Tolerations:                   podSpec.Tolerations,
+			Volumes:                       expectedPodSetVolumes(r.infra.Name, podSpec),
+		},
+	}, nil
 }

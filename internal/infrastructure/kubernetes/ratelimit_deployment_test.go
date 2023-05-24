@@ -78,7 +78,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
 			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, kube.EnvoyGateway)
-			err := kube.createOrUpdateDeployment(context.Background(), r)
+			err := kube.createOrUpdatePodSet(context.Background(), r)
 			require.NoError(t, err)
 
 			actual := &appsv1.Deployment{
@@ -121,7 +121,7 @@ func TestDeleteRateLimitDeployment(t *testing.T) {
 			rateLimitInfra := new(ir.RateLimitInfra)
 			kube.EnvoyGateway.RateLimit = rl
 			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
-			err := kube.createOrUpdateDeployment(context.Background(), r)
+			err := kube.createOrUpdatePodSet(context.Background(), r)
 			require.NoError(t, err)
 
 			err = kube.deleteDeployment(context.Background(), r)

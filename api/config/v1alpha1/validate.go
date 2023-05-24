@@ -59,21 +59,25 @@ func validateEnvoyProxySpec(spec *EnvoyProxySpec) error {
 func validateProvider(spec *EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
-		if spec.Provider.Type != ProviderTypeKubernetes {
+		switch spec.Provider.Type {
+		case ProviderTypeKubernetes:
+			errs = append(errs, validateEnvoyProxyKubernetesProvider(spec.Provider.Kubernetes)...)
+
+		default:
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
-		}
-		validateServiceTypeErrs := validateServiceType(spec)
-		if len(validateServiceTypeErrs) != 0 {
-			errs = append(errs, validateServiceTypeErrs...)
 		}
 	}
 	return errs
 }
 
-func validateServiceType(spec *EnvoyProxySpec) []error {
+func validateEnvoyProxyKubernetesProvider(provider *EnvoyProxyKubernetesProvider) []error {
 	var errs []error
-	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
-		if serviceType := spec.Provider.Kubernetes.EnvoyService.Type; serviceType != nil {
+	if provider.EnvoyDaemonSet != nil && provider.EnvoyDeployment != nil {
+		errs = append(errs, fmt.Errorf("only one of envoyDaemonSet and envoyDeployment may be set"))
+	}
+
+	if provider.EnvoyService != nil {
+		if serviceType := provider.EnvoyService.Type; serviceType != nil {
 			if *serviceType != ServiceTypeLoadBalancer &&
 				*serviceType != ServiceTypeClusterIP &&
 				*serviceType != ServiceTypeNodePort {

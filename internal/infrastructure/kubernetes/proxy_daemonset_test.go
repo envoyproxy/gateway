@@ -24,12 +24,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-const (
-	// envoyContainerName is the name of the Envoy container.
-	envoyContainerName = "envoy"
-)
-
-func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deployment {
+func daemonSetWithImage(deploy *appsv1.DaemonSet, image string) *appsv1.DaemonSet {
 	dCopy := deploy.DeepCopy()
 	for i, c := range dCopy.Spec.Template.Spec.Containers {
 		if c.Name == envoyContainerName {
@@ -39,7 +34,7 @@ func deploymentWithImage(deploy *appsv1.Deployment, image string) *appsv1.Deploy
 	return dCopy
 }
 
-func TestCreateOrUpdateProxyDeployment(t *testing.T) {
+func TestCreateOrUpdateProxyDaemonSet(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
@@ -51,38 +46,37 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 	deploy, err := r.Deployment()
 	require.NoError(t, err)
 
-	// Extract what the DaemonSet would look like, had it been configured.
 	infra.Proxy.GetProxyConfig().Spec.Provider = &egcfgv1a1.EnvoyProxyProvider{
 		Type: egcfgv1a1.ProviderTypeKubernetes,
 		Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 			EnvoyDaemonSet: &egcfgv1a1.KubernetesDaemonSetSpec{},
 		},
 	}
+
 	r = proxy.NewResourceRender(cfg.Namespace, infra.GetProxyInfra())
-	wantDaemonSet, err := r.DaemonSet()
+	dset, err := r.DaemonSet()
 	require.NoError(t, err)
-	infra.Proxy.GetProxyConfig().Spec.Provider = nil
 
 	testCases := []struct {
-		name          string
-		in            *ir.Infra
-		current       *appsv1.Deployment
-		want          *appsv1.Deployment
-		wantDaemonSet *appsv1.DaemonSet
+		name       string
+		in         *ir.Infra
+		current    *appsv1.DaemonSet
+		want       *appsv1.DaemonSet
+		wantDeploy *appsv1.Deployment
 	}{
 		{
-			name: "create deployment",
+			name: "create",
 			in:   infra,
-			want: deploy,
+			want: dset,
 		},
 		{
-			name:    "deployment exists",
+			name:    "no update",
 			in:      infra,
-			current: deploy,
-			want:    deploy,
+			current: dset,
+			want:    dset,
 		},
 		{
-			name: "update deployment image",
+			name: "update image",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -96,7 +90,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							Provider: &egcfgv1a1.EnvoyProxyProvider{
 								Type: egcfgv1a1.ProviderTypeKubernetes,
 								Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+									EnvoyDaemonSet: &egcfgv1a1.KubernetesDaemonSetSpec{
 										Container: &egcfgv1a1.KubernetesContainerSpec{
 											Image: pointer.String("envoyproxy/envoy-dev:v1.2.3"),
 										},
@@ -109,11 +103,11 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
-			current: deploy,
-			want:    deploymentWithImage(deploy, "envoyproxy/envoy-dev:v1.2.3"),
+			current: dset,
+			want:    daemonSetWithImage(dset, "envoyproxy/envoy-dev:v1.2.3"),
 		},
 		{
-			name: "update to daemon set",
+			name: "change to deployment",
 			in: &ir.Infra{
 				Proxy: &ir.ProxyInfra{
 					Metadata: &ir.InfraMetadata{
@@ -126,9 +120,8 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 						Spec: egcfgv1a1.EnvoyProxySpec{
 							Provider: &egcfgv1a1.EnvoyProxyProvider{
 								Type: egcfgv1a1.ProviderTypeKubernetes,
-								Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDaemonSet: &egcfgv1a1.KubernetesDaemonSetSpec{},
-								},
+								// The default is Deployment.
+								Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{},
 							},
 						},
 					},
@@ -136,8 +129,8 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 					Listeners: ir.NewProxyListeners(),
 				},
 			},
-			current:       deploy,
-			wantDaemonSet: wantDaemonSet,
+			current:    dset,
+			wantDeploy: deploy,
 		},
 	}
 
@@ -156,7 +149,7 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 			err := kube.createOrUpdatePodSet(context.Background(), r)
 			require.NoError(t, err)
 
-			actual := &appsv1.Deployment{
+			actual := &appsv1.DaemonSet{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: kube.Namespace,
 					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
@@ -169,21 +162,23 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 				require.Error(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 			}
 
-			if tc.wantDaemonSet != nil {
-				actual := &appsv1.DaemonSet{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
-					},
-				}
-				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
-				require.Equal(t, tc.wantDaemonSet.Spec, actual.Spec)
+			actualDeploy := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: kube.Namespace,
+					Name:      proxy.ExpectedResourceHashedName(tc.in.Proxy.Name),
+				},
+			}
+			if tc.wantDeploy != nil {
+				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actualDeploy), actualDeploy))
+				require.Equal(t, tc.wantDeploy.Spec, actualDeploy.Spec)
+			} else {
+				require.Error(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actualDeploy), actualDeploy))
 			}
 		})
 	}
 }
 
-func TestDeleteProxyDeployment(t *testing.T) {
+func TestDeleteProxyDaemonSet(t *testing.T) {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects().Build()
 	cfg, err := config.New()
 	require.NoError(t, err)
@@ -193,7 +188,7 @@ func TestDeleteProxyDeployment(t *testing.T) {
 		expect bool
 	}{
 		{
-			name:   "delete deployment",
+			name:   "delete",
 			expect: false,
 		},
 	}
@@ -206,12 +201,18 @@ func TestDeleteProxyDeployment(t *testing.T) {
 			infra := ir.NewInfra()
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNamespaceLabel] = "default"
 			infra.Proxy.GetProxyMetadata().Labels[gatewayapi.OwningGatewayNameLabel] = infra.Proxy.Name
+			infra.Proxy.GetProxyConfig().Spec.Provider = &egcfgv1a1.EnvoyProxyProvider{
+				Type: egcfgv1a1.ProviderTypeKubernetes,
+				Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+					EnvoyDaemonSet: &egcfgv1a1.KubernetesDaemonSetSpec{},
+				},
+			}
 			r := proxy.NewResourceRender(kube.Namespace, infra.GetProxyInfra())
 
 			err := kube.createOrUpdatePodSet(context.Background(), r)
 			require.NoError(t, err)
 
-			err = kube.deleteDeployment(context.Background(), r)
+			err = kube.deleteDaemonSet(context.Background(), r)
 			require.NoError(t, err)
 		})
 	}

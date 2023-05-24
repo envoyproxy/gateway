@@ -24,6 +24,7 @@ type ResourceRender interface {
 	ServiceAccount() (*corev1.ServiceAccount, error)
 	Service() (*corev1.Service, error)
 	ConfigMap() (*corev1.ConfigMap, error)
+	DaemonSet() (*appsv1.DaemonSet, error)
 	Deployment() (*appsv1.Deployment, error)
 }
 
@@ -49,7 +50,7 @@ func NewInfra(cli client.Client, cfg *config.Server) *Infra {
 	}
 }
 
-// createOrUpdate creates a ServiceAccount/ConfigMap/Deployment/Service in the kube api server based on the
+// createOrUpdate creates a ServiceAccount/ConfigMap/DaemonSet/Deployment/Service in the kube api server based on the
 // provided ResourceRender, if it doesn't exist and updates it if it does.
 func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 	if err := i.createOrUpdateServiceAccount(ctx, r); err != nil {
@@ -60,8 +61,8 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 		return errors.Wrapf(err, "failed to create or update configmap %s/%s", i.Namespace, r.Name())
 	}
 
-	if err := i.createOrUpdateDeployment(ctx, r); err != nil {
-		return errors.Wrapf(err, "failed to create or update deployment %s/%s", i.Namespace, r.Name())
+	if err := i.createOrUpdatePodSet(ctx, r); err != nil {
+		return errors.Wrapf(err, "failed to create or update deployment/daemonset %s/%s", i.Namespace, r.Name())
 	}
 
 	if err := i.createOrUpdateService(ctx, r); err != nil {
@@ -71,7 +72,7 @@ func (i *Infra) createOrUpdate(ctx context.Context, r ResourceRender) error {
 	return nil
 }
 
-// delete deletes the ServiceAccount/ConfigMap/Deployment/Service in the kube api server, if it exists.
+// delete deletes the ServiceAccount/ConfigMap/DaemonSet/Deployment/Service in the kube api server, if it exists.
 func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 	if err := i.deleteServiceAccount(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete serviceaccount %s/%s", i.Namespace, r.Name())
@@ -79,6 +80,10 @@ func (i *Infra) delete(ctx context.Context, r ResourceRender) error {
 
 	if err := i.deleteConfigMap(ctx, r); err != nil {
 		return errors.Wrapf(err, "failed to delete configmap %s/%s", i.Namespace, r.Name())
+	}
+
+	if err := i.deleteDaemonSet(ctx, r); err != nil {
+		return errors.Wrapf(err, "failed to delete daemon set %s/%s", i.Namespace, r.Name())
 	}
 
 	if err := i.deleteDeployment(ctx, r); err != nil {

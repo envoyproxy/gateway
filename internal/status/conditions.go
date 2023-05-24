@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
@@ -72,7 +71,7 @@ func computeGatewayAcceptedCondition(gw *gwapiv1b1.Gateway, accepted bool) metav
 
 // computeGatewayProgrammedCondition computes the Gateway Programmed status condition.
 // Programmed condition surfaces true when the Envoy Deployment status is ready.
-func computeGatewayProgrammedCondition(gw *gwapiv1b1.Gateway, deployment *appsv1.Deployment) metav1.Condition {
+func computeGatewayProgrammedCondition(gw *gwapiv1b1.Gateway, podSet PodSet) metav1.Condition {
 	if len(gw.Status.Addresses) == 0 {
 		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonAddressNotAssigned),
@@ -82,14 +81,14 @@ func computeGatewayProgrammedCondition(gw *gwapiv1b1.Gateway, deployment *appsv1
 	// If there are no available replicas for the Envoy Deployment, don't
 	// mark the Gateway as ready yet.
 
-	if deployment == nil || deployment.Status.AvailableReplicas == 0 {
+	if podSet == nil || podSet.AvailableReplicas() == 0 {
 		return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionFalse,
 			string(gwapiv1b1.GatewayReasonNoResources),
 			"Deployment replicas unavailable", time.Now(), gw.Generation)
 	}
 
-	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy Deployment replicas available",
-		deployment.Status.AvailableReplicas, deployment.Status.Replicas)
+	message := fmt.Sprintf("Address assigned to the Gateway, %d/%d envoy %s replicas available",
+		podSet.AvailableReplicas(), podSet.DesiredReplicas(), podSet.Kind())
 	return newCondition(string(gwapiv1b1.GatewayConditionProgrammed), metav1.ConditionTrue,
 		string(gwapiv1b1.GatewayConditionProgrammed), message, time.Now(), gw.Generation)
 }

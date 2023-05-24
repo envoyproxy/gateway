@@ -166,25 +166,27 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	return allAssociatedRoutes != 0
 }
 
-// validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
-// if it exists, finds the Gateway's Service, and further updates the Gateway
-// status Ready condition. No Deployments are pushed for reconciliation.
-func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object) bool {
+// validatePodSetForReconcile tries finding the owning Gateway of the
+// Deployment/DaemonSet if it exists, finds the Gateway's Service, and
+// further updates the Gateway status Ready condition. No Deployments
+// are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validatePodSetForReconcile(obj client.Object) bool {
 	ctx := context.Background()
-	deployment, ok := obj.(*appsv1.Deployment)
-	if !ok {
-		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
-		return false
-	}
 
-	// Only deployments in the configured namespace should be reconciled.
-	if deployment.Namespace == r.namespace {
-		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
-		gtw := r.findOwningGateway(ctx, deployment.GetLabels())
-		if gtw != nil {
-			r.statusUpdateForGateway(ctx, gtw)
-			return false
+	switch obj.(type) {
+	case *appsv1.Deployment, *appsv1.DaemonSet:
+		// Only deployments in the configured namespace should be reconciled.
+		if obj.GetNamespace() == r.namespace {
+			// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
+			gtw := r.findOwningGateway(ctx, obj.GetLabels())
+			if gtw != nil {
+				r.statusUpdateForGateway(ctx, gtw)
+				return false
+			}
 		}
+
+	default:
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
 	}
 
 	// There is no need to reconcile the Deployment any further.
@@ -233,6 +235,22 @@ func (r *gatewayAPIReconciler) httpRoutesForRateLimitFilter(obj client.Object) b
 	}
 
 	return len(httpRouteList.Items) != 0
+}
+
+// envoyDaemonSetForGateway returns the Envoy DaemonSet, returning nil if it doesn't exist.
+func (r *gatewayAPIReconciler) envoyDaemonSetForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*appsv1.DaemonSet, error) {
+	key := types.NamespacedName{
+		Namespace: r.namespace,
+		Name:      infraDeploymentName(gateway),
+	}
+	dset := new(appsv1.DaemonSet)
+	if err := r.client.Get(ctx, key, dset); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return dset, nil
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.

@@ -92,6 +92,11 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	}, nil
 }
 
+// DaemonSet returns the expected DaemonSet based on the provided infra.
+func (r *ResourceRender) DaemonSet() (*appsv1.DaemonSet, error) {
+	return nil, nil
+}
+
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment)

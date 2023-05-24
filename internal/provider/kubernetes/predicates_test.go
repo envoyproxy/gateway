@@ -305,9 +305,9 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 }
 
-// TestValidateDeploymentForReconcile tests the validateDeploymentForReconcile
+// TestValidatePodSetForReconcile tests the validateDeploymentForReconcile
 // predicate function.
-func TestValidateDeploymentForReconcile(t *testing.T) {
+func TestValidatePodSetForReconcile(t *testing.T) {
 	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc")
 
 	testCases := []struct {
@@ -348,7 +348,7 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 		tc := tc
 		r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.configs...).Build()
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.validateDeploymentForReconcile(tc.deployment)
+			res := r.validatePodSetForReconcile(tc.deployment)
 			require.Equal(t, tc.expect, res)
 		})
 	}

@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
@@ -58,23 +59,57 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 	})
 }
 
-// createOrUpdateDeployment creates a Deployment in the kube api server based on the provided
-// ResourceRender, if it doesn't exist and updates it if it does.
-func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) error {
+// createOrUpdateSet creates a Deployment or DaemonSet in the kube api server based on the provided
+// ResourceRender, if it doesn't exist and updates it if it does. They are mutually exclusive, so
+// if a DaemonSet is provided, the corresponding Deployment is deleted, and vice versa.
+func (i *Infra) createOrUpdatePodSet(ctx context.Context, r ResourceRender) error {
+	dset, err := r.DaemonSet()
+	if err != nil {
+		return err
+	}
 	deployment, err := r.Deployment()
 	if err != nil {
 		return err
 	}
 
-	current := &appsv1.Deployment{}
-	key := types.NamespacedName{
-		Namespace: deployment.Namespace,
-		Name:      deployment.Name,
+	// Delete the one that is nil.
+	var toDelete client.Object
+	if dset == nil {
+		toDelete = &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: i.Namespace,
+				Name:      r.Name(),
+			},
+		}
+	} else {
+		toDelete = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: i.Namespace,
+				Name:      r.Name(),
+			},
+		}
+	}
+	if err := i.Client.Delete(ctx, toDelete); err != nil {
+		return err
 	}
 
-	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
-		return !reflect.DeepEqual(deployment.Spec, current.Spec)
-	})
+	key := types.NamespacedName{
+		Namespace: i.Namespace,
+		Name:      r.Name(),
+	}
+
+	// Create or update the one that is non-nil.
+	if dset != nil {
+		current := &appsv1.DaemonSet{}
+		return i.Client.CreateOrUpdate(ctx, key, current, dset, func() bool {
+			return !reflect.DeepEqual(dset.Spec, current.Spec)
+		})
+	} else {
+		current := &appsv1.Deployment{}
+		return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
+			return !reflect.DeepEqual(deployment.Spec, current.Spec)
+		})
+	}
 }
 
 // createOrUpdateRateLimitService creates a Service in the kube api server based on the provided ResourceRender,
@@ -106,6 +141,18 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) erro
 	}
 
 	return i.Client.Delete(ctx, sa)
+}
+
+// deleteDaemonSet deletes the Envoy DaemonSet in the kube api server, if it exists.
+func (i *Infra) deleteDaemonSet(ctx context.Context, r ResourceRender) error {
+	dset := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: i.Namespace,
+			Name:      r.Name(),
+		},
+	}
+
+	return i.Client.Delete(ctx, dset)
 }
 
 // deleteDeployment deletes the Envoy Deployment in the kube api server, if it exists.

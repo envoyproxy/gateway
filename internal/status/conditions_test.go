@@ -332,7 +332,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 				}
 			}
 
-			deployment := &appsv1.Deployment{Status: tc.deploymentStatus}
+			deployment := &DeploymentPodSet{Status: tc.deploymentStatus}
 			got := computeGatewayProgrammedCondition(gtw, deployment)
 
 			assert.Equal(t, string(gwapiv1b1.GatewayConditionProgrammed), got.Type)

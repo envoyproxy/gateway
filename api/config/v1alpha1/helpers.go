@@ -174,28 +174,38 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		return r.Kubernetes
 	}
 
-	if r.Kubernetes.EnvoyDeployment == nil {
-		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
+	var podp **KubernetesPodSpec
+	var contp **KubernetesContainerSpec
+	if r.Kubernetes.EnvoyDaemonSet == nil {
+		if r.Kubernetes.EnvoyDeployment == nil {
+			r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
+		}
+
+		if r.Kubernetes.EnvoyDeployment.Replicas == nil {
+			r.Kubernetes.EnvoyDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
+		}
+
+		podp = &r.Kubernetes.EnvoyDeployment.Pod
+		contp = &r.Kubernetes.EnvoyDeployment.Container
+	} else {
+		podp = &r.Kubernetes.EnvoyDaemonSet.Pod
+		contp = &r.Kubernetes.EnvoyDaemonSet.Container
 	}
 
-	if r.Kubernetes.EnvoyDeployment.Replicas == nil {
-		r.Kubernetes.EnvoyDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	if *podp == nil {
+		*podp = DefaultKubernetesPod()
 	}
 
-	if r.Kubernetes.EnvoyDeployment.Pod == nil {
-		r.Kubernetes.EnvoyDeployment.Pod = DefaultKubernetesPod()
+	if *contp == nil {
+		*contp = DefaultKubernetesContainer(DefaultEnvoyProxyImage)
 	}
 
-	if r.Kubernetes.EnvoyDeployment.Container == nil {
-		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer(DefaultEnvoyProxyImage)
+	if (*contp).Resources == nil {
+		(*contp).Resources = DefaultResourceRequirements()
 	}
 
-	if r.Kubernetes.EnvoyDeployment.Container.Resources == nil {
-		r.Kubernetes.EnvoyDeployment.Container.Resources = DefaultResourceRequirements()
-	}
-
-	if r.Kubernetes.EnvoyDeployment.Container.Image == nil {
-		r.Kubernetes.EnvoyDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultEnvoyProxyImage)
+	if (*contp).Image == nil {
+		(*contp).Image = DefaultKubernetesContainerImage(DefaultEnvoyProxyImage)
 	}
 
 	if r.Kubernetes.EnvoyService == nil {

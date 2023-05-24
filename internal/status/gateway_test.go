@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -22,7 +21,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	type args struct {
 		gw         *gwapiv1b1.Gateway
 		svc        *corev1.Service
-		deployment *appsv1.Deployment
+		deployment PodSet
 		addresses  []gwapiv1b1.GatewayAddress
 	}
 	tests := []struct {

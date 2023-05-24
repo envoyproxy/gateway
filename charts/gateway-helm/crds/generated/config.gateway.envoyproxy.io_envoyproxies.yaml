@@ -1649,6 +1649,12 @@ spec:
                                   should be appended to the pods. By default, no pod
                                   annotations are appended.
                                 type: object
+                              nodeSelector:
+                                additionalProperties:
+                                  type: string
+                                description: If specified, the label matches for assigning
+                                  pods to nodes.
+                                type: object
                               securityContext:
                                 description: 'SecurityContext holds pod-level security
                                   attributes and common container settings. Optional:
@@ -3793,7 +3799,8 @@ spec:
                             type: object
                           replicas:
                             description: Replicas is the number of desired pods. Defaults
-                              to 1.
+                              to 1. If this is set to -1, a DaemonSet is used instead
+                              of a Deployment.
                             format: int32
                             type: integer
                         type: object

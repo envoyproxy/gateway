@@ -84,9 +84,19 @@ type EnvoyProxyProvider struct {
 // EnvoyProxyKubernetesProvider defines configuration for the Kubernetes resource
 // provider.
 type EnvoyProxyKubernetesProvider struct {
+	// EnvoyDaemonSet defines the desired state of the Envoy daemon set resource.
+	// If unspecified, EnvoyDeployment is used instead.
+	//
+	// Only one of EnvoyDaemonSet and EnvoyDeployment can be specified.
+	//
+	// +optional
+	EnvoyDaemonSet *KubernetesDaemonSetSpec `json:"envoyDaemonSet,omitempty"`
+
 	// EnvoyDeployment defines the desired state of the Envoy deployment resource.
 	// If unspecified, default settings for the manged Envoy deployment resource
 	// are applied.
+	//
+	// Only one of EnvoyDaemonSet and EnvoyDeployment can be specified.
 	//
 	// +optional
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`

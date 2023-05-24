@@ -15,4 +15,4 @@ package kubernetes
 
 // RBAC for watched resources of Gateway API controllers.
 // +kubebuilder:rbac:groups="",resources=secrets;services;namespaces;nodes,verbs=get;list;watch
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps,resources=daemonsets;deployments,verbs=get;list;watch
