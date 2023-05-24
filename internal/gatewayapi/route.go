@@ -527,13 +527,14 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			for _, routeRoute := range routeRoutes {
 				// Set redirect port to listener port when redirect port and scheme is
 				// unspecified
-				if routeRoute.Redirect != nil &&
-					routeRoute.Redirect.Port == nil &&
-					routeRoute.Redirect.Scheme == nil {
-					port := uint32(listener.Port)
-					routeRoute.Redirect.Port = &port
-				}
-
+				/*
+					if routeRoute.Redirect != nil &&
+						routeRoute.Redirect.Port == nil &&
+						routeRoute.Redirect.Scheme == nil {
+						port := uint32(listener.Port)
+						routeRoute.Redirect.Port = &port
+					}
+				*/
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
 					PathMatch:             routeRoute.PathMatch,
