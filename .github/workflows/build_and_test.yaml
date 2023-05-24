@@ -93,7 +93,6 @@ jobs:
     - name: Run Conformance Tests 
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
-        CONFORMANCE_UNIQUE_PORTS: false
         IMAGE_PULL_POLICY: IfNotPresent
       run: make conformance
   
@@ -122,7 +121,6 @@ jobs:
     - name: Run E2E Tests 
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
-        CONFORMANCE_UNIQUE_PORTS: false
         IMAGE_PULL_POLICY: IfNotPresent
       run: make e2e
 
