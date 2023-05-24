@@ -49,6 +49,10 @@ envoyproxy:
               runAsGroup: 3000
               fsGroup: 2000
               fsGroupChangePolicy: "OnRootMismatch"
+            volumes:
+            - name: certs
+              secret:
+                secretName: envoy-cert
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway

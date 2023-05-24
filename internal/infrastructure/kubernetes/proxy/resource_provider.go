@@ -199,38 +199,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					SecurityContext:               deploymentConfig.Pod.SecurityContext,
 					Affinity:                      deploymentConfig.Pod.Affinity,
 					Tolerations:                   deploymentConfig.Pod.Tolerations,
-					Volumes: []corev1.Volume{
-						{
-							Name: "certs",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "envoy",
-								},
-							},
-						},
-						{
-							Name: "sds",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: ExpectedResourceHashedName(r.infra.Name),
-									},
-									Items: []corev1.KeyToPath{
-										{
-											Key:  SdsCAFilename,
-											Path: SdsCAFilename,
-										},
-										{
-											Key:  SdsCertFilename,
-											Path: SdsCertFilename,
-										},
-									},
-									DefaultMode: pointer.Int32(int32(420)),
-									Optional:    pointer.Bool(false),
-								},
-							},
-						},
-					},
+					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
 				},
 			},
 		},
