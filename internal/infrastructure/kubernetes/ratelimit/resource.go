@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
@@ -86,7 +87,7 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
 			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
-			VolumeMounts:             expectedContainerVolumeMounts(rateLimit),
+			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
@@ -96,7 +97,7 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
-func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      InfraName,
@@ -114,11 +115,11 @@ func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.Volu
 		})
 	}
 
-	return volumeMounts
+	return resource.ExpectedContainerVolumeMounts(rateLimitDeployment.Container, volumeMounts)
 }
 
 // expectedDeploymentVolumes returns expected rateLimit deployment volumes.
-func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
+func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: InfraName,
@@ -144,7 +145,8 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
 			},
 		})
 	}
-	return volumes
+
+	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
@@ -204,21 +206,7 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 		}
 	}
 
-	envAmendFunc := func(envVar corev1.EnvVar) {
-		for index, e := range env {
-			if e.Name == envVar.Name {
-				env[index] = envVar
-				return
-			}
-		}
-		env = append(env, envVar)
-	}
-
-	for _, envVar := range rateLimitDeployment.Container.Env {
-		envAmendFunc(envVar)
-	}
-
-	return env
+	return resource.ExpectedProxyContainerEnv(rateLimitDeployment.Container, env)
 }
 
 // Validate the ratelimit tls secret validating.
