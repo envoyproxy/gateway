@@ -3,10 +3,11 @@ tcp:
   address: "0.0.0.0"
   port: 10080
   tls:
-    snis:
-    - foo.com
-    - bar.com
-    - example.com
+    passthrough:
+      snis:
+      - foo.com
+      - bar.com
+      - example.com
   destinations:
   - host: "1.1.1.1"
     port: 50001

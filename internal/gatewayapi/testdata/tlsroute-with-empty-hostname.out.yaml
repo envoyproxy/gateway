@@ -67,8 +67,9 @@ xdsIR:
       address: 0.0.0.0
       port: 10091
       tls:
-        snis:
-        - "*" 
+        passthrough:
+          snis:
+          - "*"
       destinations:
       - host: 7.7.7.7
         port: 8080
