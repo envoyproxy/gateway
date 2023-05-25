@@ -21,17 +21,19 @@ spec:
     kubernetes:
       envoyDeployment:
         replicas: 2
-        image: envoyproxy/envoy:v1.25-latest
-        podAnnotations:
-          custom1: deploy-annotation1
-          custom2: deploy-annotation2
-        resources:
-          requests:
-            cpu: 150m
-            memory: 640Mi
-          limits:
-            cpu: 500m
-            memory: 1Gi
+        container:
+          image: envoyproxy/envoy:v1.26-latest
+          resources:
+            requests:
+              cpu: 150m
+              memory: 640Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+        pod:
+          annotations:
+            custom1: deploy-annotation1
+            custom2: deploy-annotation2
       envoyService:
         annotations:
           custom1: svc-annotation1

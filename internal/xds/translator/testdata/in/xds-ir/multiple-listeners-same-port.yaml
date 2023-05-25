@@ -56,8 +56,9 @@ tcp:
   address: "0.0.0.0"
   port: 10080
   tls:
-    snis:
-    - bar.com
+    passthrough:
+      snis:
+      - bar.com
   destinations:
   - host: "1.2.3.4"
     port: 50000
@@ -65,8 +66,9 @@ tcp:
   address: "0.0.0.0"
   port: 10080
   tls:
-    snis:
-    - bar.net 
+    passthrough:
+      snis:
+      - bar.net
     destinations:
     - host: "1.2.3.4"
       port: 50000

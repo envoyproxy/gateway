@@ -14,7 +14,7 @@ gateways:
             namespaces:
               from: All
         - name: tcp2
-          protocol: TCP
+          protocol: TLS
           port: 162
           allowedRoutes:
             namespaces:
@@ -39,16 +39,18 @@ gateways:
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: TCPRoute
+            - group: gateway.networking.k8s.io
+              kind: TLSRoute
           AttachedRoutes: 0
           conditions:
             - type: Conflicted
               status: "True"
               reason: ProtocolConflict
-              message: Only one TCP listener is allowed in a given port
+              message: Only one TCP/TLS listener is allowed in a given port
             - type: Programmed
               status: "False"
               reason: Invalid
-              message: Listener is invalid, see other Conditions for details.
+              message: Listener must have TLS set when protocol is TLS.
 tcpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1alpha2
     kind: TCPRoute
@@ -87,6 +89,7 @@ xdsIR:
         destinations:
           - host: "7.7.7.7"
             port: 8163
+        tls: {}
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
