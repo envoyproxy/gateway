@@ -741,8 +741,8 @@ func (in *ProxyAccessLoggingFormat) DeepCopyInto(out *ProxyAccessLoggingFormat) 
 		*out = new(string)
 		**out = **in
 	}
-	if in.Fields != nil {
-		in, out := &in.Fields, &out.Fields
+	if in.JSON != nil {
+		in, out := &in.JSON, &out.JSON
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val

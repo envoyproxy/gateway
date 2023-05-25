@@ -37,12 +37,12 @@ type ProxyAccessLoggingFormat struct {
 	// The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information.
 	// +optional
 	Text *string `json:"text,omitempty"`
-	// Fields is additional attributes that describe the specific event occurrence.
+	// JSON is additional attributes that describe the specific event occurrence.
 	// Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
 	// can be used as values for fields within the Struct.
 	// It's required when the format type is "JSON".
 	// +optional
-	Fields map[string]string `json:"fields,omitempty"`
+	JSON map[string]string `json:"json,omitempty"`
 }
 
 type ProxyAccessLoggingSinkType string

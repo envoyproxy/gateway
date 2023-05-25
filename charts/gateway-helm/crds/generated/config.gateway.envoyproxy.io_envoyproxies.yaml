@@ -43,10 +43,10 @@ spec:
                     format:
                       description: Format defines the format of access logging.
                       properties:
-                        fields:
+                        json:
                           additionalProperties:
                             type: string
-                          description: Fields is additional attributes that describe
+                          description: JSON is additional attributes that describe
                             the specific event occurrence. Structured format for the
                             envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
                             can be used as values for fields within the Struct. It's
