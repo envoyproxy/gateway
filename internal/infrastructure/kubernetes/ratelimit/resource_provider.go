@@ -40,7 +40,7 @@ func (r *ResourceRender) Name() string {
 	return InfraName
 }
 
-// ConfigMap returns the expected ConfigMap based on the provided infra.
+// ConfigMap is deprecated since ratelimit supports xds grpc config server.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	return nil, nil
 }
