@@ -116,12 +116,14 @@ xdsIR:
       - name: "envoy-gateway-gateway-1-tcp1-tcproute-1"
         address: "0.0.0.0"
         port: 10162
+        tls: {}
         destinations:
           - host: "7.7.7.7"
             port: 8163
       - name: "envoy-gateway-gateway-1-tcp2-tcproute-2"
         address: "0.0.0.0"
         port: 10163
+        tls: {}
         destinations:
           - host: "7.7.7.7"
             port: 8163
