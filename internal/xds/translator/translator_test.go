@@ -86,6 +86,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "tcp-route-complex",
 		},
 		{
+			name: "tcp-route-tls-terminate",
+		},
+		{
 			name: "multiple-simple-tcp-route-same-port",
 		},
 		{

@@ -69,9 +69,22 @@ var (
 		Name:         "happy",
 		Address:      "0.0.0.0",
 		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
+
+	happyTCPListenerTLSTerminate = TCPListener{
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		TLS: &TLS{Terminate: []*TLSListenerConfig{{
+			Name:              "happy",
+			ServerCertificate: []byte("server-cert"),
+			PrivateKey:        []byte("priv-key"),
+		}}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+
 	emptySNITCPListenerTLSPassthrough = TCPListener{
 		Name:         "empty-sni",
 		Address:      "0.0.0.0",
@@ -81,20 +94,20 @@ var (
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
 		Address:      "0.0.0.0",
 		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
 		Name:         "invalid-addr",
 		Address:      "1.0.0",
 		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{"example.com"}},
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
 		Address:      "0.0.0.0",
 		Port:         80,
-		TLS:          &TLSInspectorConfig{SNIs: []string{}},
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 
@@ -469,9 +482,16 @@ func TestValidateXds(t *testing.T) {
 			want: nil,
 		},
 		{
-			name: "happy tls",
+			name: "happy tls passthrough",
 			input: Xds{
 				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
+			},
+			want: nil,
+		},
+		{
+			name: "happy tls terminate",
+			input: Xds{
+				TCP: []*TCPListener{&happyTCPListenerTLSTerminate},
 			},
 			want: nil,
 		},
