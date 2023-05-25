@@ -14,7 +14,7 @@ gateways:
             namespaces:
               from: All
         - name: tcp2
-          protocol: TCP
+          protocol: TLS
           port: 162
           allowedRoutes:
             namespaces:
