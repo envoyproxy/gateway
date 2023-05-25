@@ -146,14 +146,9 @@ xdsIR:
         address: 0.0.0.0
         port: 10090
         tls:
-<<<<<<< HEAD
           passthrough:
             snis:
-              - "foo.com"
-=======
-          snis:
-            - "foo.bar.com"
->>>>>>> d422af8 (add hostname validation for TLS certifcate in listener)
+              - "foo.bar.com"
         destinations:
           - host: 7.7.7.7
             port: 8080

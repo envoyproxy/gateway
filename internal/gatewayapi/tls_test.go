@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // createTestSecret creates a K8s tls secret using testdata
@@ -52,6 +53,11 @@ using openssl (LibreSSL 3.3.6)
 	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout rsa-pkcs8-san.key -out rsa-cert-san.pem -subj "/CN=Test Inc" -addext "subjectAltName = DNS:foo.bar.com"
 	openssl rsa -in rsa-pkcs8-san.key -out rsa-pkcs1-san.key
 
+# RSA with wildcard SAN domain
+
+	openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout rsa-pkcs8-wildcard.key -out rsa-cert-wildcard.pem -subj "/CN=Test Inc" -addext "subjectAltName = DNS:*, DNS:*.example.com"
+	openssl rsa -in rsa-pkcs8-wildcard.key -out rsa-pkcs1-wildcard.key
+
 # ECDSA-p256
 
 	openssl ecparam -name prime256v1 -genkey -noout -out ecdsa-p256.key
@@ -67,7 +73,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 		Name        string
 		CertFile    string
 		KeyFile     string
-		Domain      string
+		Domain      v1beta1.Hostname
 		ExpectedErr error
 	}
 
@@ -87,17 +93,17 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			ExpectedErr: nil,
 		},
 		{
-			Name:        "valid-rsa-pkcs8-san-domain",
+			Name:        "valid-rsa-san-domain",
 			CertFile:    "rsa-cert-san.pem",
 			KeyFile:     "rsa-pkcs8-san.key",
 			Domain:      "foo.bar.com",
 			ExpectedErr: nil,
 		},
 		{
-			Name:        "valid-rsa-pkcs1-san-domain",
-			CertFile:    "rsa-cert-san.pem",
-			KeyFile:     "rsa-pkcs1-san.key",
-			Domain:      "*",
+			Name:        "valid-rsa-wildcard-domain",
+			CertFile:    "rsa-cert-wildcard.pem",
+			KeyFile:     "rsa-pkcs1-wildcard.key",
+			Domain:      "foo.bar.com",
 			ExpectedErr: nil,
 		},
 		{
@@ -177,7 +183,7 @@ func TestValidateTLSSecretsData(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			secrets := createTestSecrets(t, tc.CertFile, tc.KeyFile)
 			require.NotNil(t, secrets)
-			err := validateTLSSecretsData(secrets, tc.Domain)
+			err := validateTLSSecretsData(secrets, &tc.Domain)
 			if tc.ExpectedErr == nil {
 				require.NoError(t, err)
 			} else {

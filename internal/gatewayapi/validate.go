@@ -272,6 +272,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		}
 
 		secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
+		secrets = append(secrets, secret)
 
 		if secret == nil {
 			listener.SetCondition(
@@ -303,7 +304,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 			break
 		}
 
-		err := validateTLSSecretsData(secret)
+		err := validateTLSSecretsData(secrets, listener.Hostname)
 		if err != nil {
 			listener.SetCondition(
 				v1beta1.ListenerConditionResolvedRefs,
@@ -313,7 +314,6 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 			)
 			break
 		}
-		secrets = append(secrets, secret)
 	}
 
 	return secrets
@@ -352,116 +352,6 @@ func (t *Translator) validateTLSConfiguration(listener *ListenerContext, resourc
 		}
 
 		secrets := t.validateTerminateModeAndGetTLSSecrets(listener, resources)
-		if len(listener.TLS.CertificateRefs) == 0 {
-			listener.SetCondition(
-				v1beta1.ListenerConditionProgrammed,
-				metav1.ConditionFalse,
-				v1beta1.ListenerReasonInvalid,
-				"Listener must have at least 1 TLS certificate ref",
-			)
-			break
-		}
-
-		for _, certificateRef := range listener.TLS.CertificateRefs {
-			if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidCertificateRef,
-					"Listener's TLS certificate ref group must be unspecified/empty.",
-				)
-				break
-			}
-
-			if certificateRef.Kind != nil && string(*certificateRef.Kind) != KindSecret {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidCertificateRef,
-					fmt.Sprintf("Listener's TLS certificate ref kind must be %s.", KindSecret),
-				)
-				break
-			}
-
-			secretNamespace := listener.gateway.Namespace
-
-			if certificateRef.Namespace != nil && string(*certificateRef.Namespace) != "" && string(*certificateRef.Namespace) != listener.gateway.Namespace {
-				if !t.validateCrossNamespaceRef(
-					crossNamespaceFrom{
-						group:     v1beta1.GroupName,
-						kind:      KindGateway,
-						namespace: listener.gateway.Namespace,
-					},
-					crossNamespaceTo{
-						group:     "",
-						kind:      KindSecret,
-						namespace: string(*certificateRef.Namespace),
-						name:      string(certificateRef.Name),
-					},
-					resources.ReferenceGrants,
-				) {
-					listener.SetCondition(
-						v1beta1.ListenerConditionResolvedRefs,
-						metav1.ConditionFalse,
-						v1beta1.ListenerReasonRefNotPermitted,
-						fmt.Sprintf("Certificate ref to secret %s/%s not permitted by any ReferenceGrant.", *certificateRef.Namespace, certificateRef.Name),
-					)
-					break
-				}
-
-				secretNamespace = string(*certificateRef.Namespace)
-			}
-
-			secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
-			secrets = append(secrets, secret)
-
-			if secret == nil {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidCertificateRef,
-					fmt.Sprintf("Secret %s/%s does not exist.", listener.gateway.Namespace, certificateRef.Name),
-				)
-				break
-			}
-
-			if secret.Type != v1.SecretTypeTLS {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidCertificateRef,
-					fmt.Sprintf("Secret %s/%s must be of type %s.", listener.gateway.Namespace, certificateRef.Name, v1.SecretTypeTLS),
-				)
-				break
-			}
-
-			if len(secret.Data[v1.TLSCertKey]) == 0 || len(secret.Data[v1.TLSPrivateKeyKey]) == 0 {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidCertificateRef,
-					fmt.Sprintf("Secret %s/%s must contain %s and %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey),
-				)
-				break
-			}
-
-			var hostname string
-			if listener.Hostname != nil {
-				hostname = string(*listener.Hostname)
-			}
-
-			err := validateTLSSecretsData(secrets, hostname)
-			if err != nil {
-				listener.SetCondition(
-					v1beta1.ListenerConditionResolvedRefs,
-					metav1.ConditionFalse,
-					v1beta1.ListenerReasonInvalidCertificateRef,
-					fmt.Sprintf("Secret %s/%s must contain valid %s and %s, %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey, err.Error()),
-				)
-				break
-			}
-		}
-
 		listener.SetTLSSecrets(secrets)
 
 	case v1beta1.TLSProtocolType:
