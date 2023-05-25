@@ -42,19 +42,7 @@ func (r *ResourceRender) Name() string {
 
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
-	labels := rateLimitLabels()
-
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      InfraName,
-			Labels:    labels,
-		},
-	}, nil
+	return nil, nil
 }
 
 // Service returns the expected rate limit Service based on the provided infra.

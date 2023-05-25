@@ -91,42 +91,6 @@ func loadServiceAccount() (*corev1.ServiceAccount, error) {
 	return sa, nil
 }
 
-func TestConfigMap(t *testing.T) {
-	cfg, err := config.New()
-	require.NoError(t, err)
-
-	rateLimitInfra := &ir.RateLimitInfra{
-		ServiceNames: []string{rateLimitListener},
-	}
-	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
-			Type: egcfgv1a1.RedisBackendType,
-			Redis: &egcfgv1a1.RateLimitRedisSettings{
-				URL: "redis.redis.svc:6379",
-			},
-		},
-	}
-
-	r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
-	cm, err := r.ConfigMap()
-	require.NoError(t, err)
-
-	expected, err := loadConfigmap()
-	require.NoError(t, err)
-
-	assert.Equal(t, expected, cm)
-}
-
-func loadConfigmap() (*corev1.ConfigMap, error) {
-	cmYAML, err := os.ReadFile("testdata/envoy-ratelimit-configmap.yaml")
-	if err != nil {
-		return nil, err
-	}
-	cm := &corev1.ConfigMap{}
-	_ = yaml.Unmarshal(cmYAML, cm)
-	return cm, nil
-}
-
 func TestService(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)

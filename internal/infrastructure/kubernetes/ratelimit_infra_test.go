@@ -83,14 +83,6 @@ func TestCreateRateLimitInfra(t *testing.T) {
 				}
 				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(sa), sa))
 
-				cm := &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: kube.Namespace,
-						Name:      ratelimit.InfraName,
-					},
-				}
-				require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(cm), cm))
-
 				deploy := &appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: kube.Namespace,
