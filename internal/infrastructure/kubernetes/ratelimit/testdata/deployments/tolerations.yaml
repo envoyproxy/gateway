@@ -77,9 +77,6 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /data/ratelimit/config
-          name: envoy-ratelimit
-          readOnly: true
         - mountPath: /certs
           name: certs
           readOnly: true
@@ -96,11 +93,6 @@ spec:
         value: "router"
       terminationGracePeriodSeconds: 300
       volumes:
-      - configMap:
-          defaultMode: 420
-          name: envoy-ratelimit
-          optional: false
-        name: envoy-ratelimit
       - name: certs
         secret:
           secretName: ratelimit-cert
