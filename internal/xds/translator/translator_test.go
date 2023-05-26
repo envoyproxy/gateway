@@ -12,7 +12,7 @@ import (
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	ratelimitserviceconfig "github.com/envoyproxy/ratelimit/src/config"
+	ratelimitv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
@@ -337,8 +337,8 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	return string(content)
 }
 
-func requireYamlRootToYAMLString(t *testing.T, yamlRoot *ratelimitserviceconfig.YamlRoot) string {
-	str, err := GetRateLimitServiceConfigStr(yamlRoot)
+func requireYamlRootToYAMLString(t *testing.T, pbRoot *ratelimitv3.RateLimitConfig) string {
+	str, err := GetRateLimitServiceConfigStr(pbRoot)
 	require.NoError(t, err)
 	return str
 }

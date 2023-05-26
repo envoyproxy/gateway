@@ -166,7 +166,7 @@ func setupRunners(cfg *config.Server) error {
 
 	// Start the xDS Server
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
-	// via the xDS Protocol
+	// via the xDS Protocol.
 	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
 		Server: *cfg,
 		Xds:    xds,

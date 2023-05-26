@@ -40,27 +40,9 @@ func (r *ResourceRender) Name() string {
 	return InfraName
 }
 
-// ConfigMap returns the expected ConfigMap based on the provided infra.
+// ConfigMap is deprecated since ratelimit supports xds grpc config server.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
-	labels := rateLimitLabels()
-	data := make(map[string]string)
-
-	for _, config := range r.infra.ServiceConfigs {
-		data[config.Name] = config.Config
-	}
-
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      InfraName,
-			Labels:    labels,
-		},
-		Data: data,
-	}, nil
+	return nil, nil
 }
 
 // Service returns the expected rate limit Service based on the provided infra.

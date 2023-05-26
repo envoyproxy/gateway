@@ -44,6 +44,12 @@ spec:
           value: info
         - name: USE_STATSD
           value: "true"
+        - name: CONFIG_TYPE
+          value: GRPC_XDS_SOTW
+        - name: CONFIG_GRPC_XDS_SERVER_URL
+          value: envoy-gateway:18001
+        - name: CONFIG_GRPC_XDS_NODE_ID
+          value: envoy-ratelimit
         - name: REDIS_TLS
           value: "true"
         - name: REDIS_TLS_CLIENT_CERT
@@ -71,9 +77,6 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - mountPath: /data/ratelimit/config
-          name: envoy-ratelimit
-          readOnly: true
         - mountPath: /certs
           name: certs
           readOnly: true
@@ -90,11 +93,6 @@ spec:
         value: "router"
       terminationGracePeriodSeconds: 300
       volumes:
-      - configMap:
-          defaultMode: 420
-          name: envoy-ratelimit
-          optional: false
-        name: envoy-ratelimit
       - name: certs
         secret:
           secretName: ratelimit-cert
