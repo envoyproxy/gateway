@@ -64,6 +64,15 @@ func EnvoyAppLabel() map[string]string {
 	}
 }
 
+// EnvoyAppLabelSelector returns the labels used for all Envoy resources.
+func EnvoyAppLabelSelector() []string {
+	return []string{
+		"app.kubernetes.io/name=envoy",
+		"app.kubernetes.io/component=proxy",
+		"app.kubernetes.io/managed-by=envoy-gateway",
+	}
+}
+
 // envoyLabels returns the labels, including extraLabels, used for Envoy resources.
 func envoyLabels(extraLabels map[string]string) map[string]string {
 	labels := EnvoyAppLabel()
