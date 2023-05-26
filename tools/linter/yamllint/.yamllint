@@ -1,8 +1,11 @@
 ---
 
 ignore: |
+  # This directory fails checks since many files
+  # are templated. Instead, we run the linter
+  # after running `make generate-manifests` which creates
+  # the Install YAML in bin/
   charts/gateway-helm/
-  bin/install.yaml
 
 rules:
   braces:

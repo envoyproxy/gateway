@@ -18,6 +18,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps
+    # Generate the install manifests first so it can checked
+    # for errors while running `make -k lint`
+    - run: make generate-manifests
     - run: make lint-deps
     - run: make -k lint
 
