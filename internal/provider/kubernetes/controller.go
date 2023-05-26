@@ -475,6 +475,9 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 			return err
 		}
 
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		gtw.Status = gwapiv1b1.GatewayStatus{}
 		resourceTree.Gateways = append(resourceTree.Gateways, &gtw)
 	}
 	return nil
