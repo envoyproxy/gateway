@@ -213,6 +213,7 @@ _Appears in:_
 | --- | --- |
 | `provider` _[EnvoyProxyProvider](#envoyproxyprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
+| `accessLoggings` _[ProxyAccessLogging](#proxyaccesslogging) array_ | AccessLoggings defines access logging parameters for managed proxies. If unspecified, access log is disabled. |
 | `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 
 
@@ -278,6 +279,20 @@ _Appears in:_
 | --- | --- |
 | `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
  CertificateRef can only reference a Kubernetes Secret at this time. |
+
+
+## FileEnvoyProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables access logging. |
 
 
 ## Gateway
@@ -437,6 +452,22 @@ _Appears in:_
 
 
 
+## OpenTelemetryEnvoyProxyAccessLogging
+
+
+
+TODO: consider reuse ExtensionService?
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the extension service hostname. |
+| `port` _integer_ | Port defines the port the extension service is exposed on. |
+| `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
 ## ProviderType
 
 _Underlying type:_ `string`
@@ -446,6 +477,75 @@ ProviderType defines the types of providers supported by Envoy Gateway.
 _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 - [EnvoyProxyProvider](#envoyproxyprovider)
+
+
+
+## ProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Description |
+| --- | --- |
+| `format` _[ProxyAccessLoggingFormat](#proxyaccessloggingformat)_ | Format defines the format of access logging. |
+| `sinks` _[ProxyAccessLoggingSink](#proxyaccessloggingsink) array_ | Sinks defines the sinks of access logging. |
+
+
+## ProxyAccessLoggingFormat
+
+
+
+ProxyAccessLoggingFormat defines the format of access logging.
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ProxyAccessLoggingFormatType](#proxyaccessloggingformattype)_ | Type defines the type of access logging format. |
+| `text` _string_ | Text defines the text access logging format, following Envoy access logging formatting, empty value results in proxy's default access log format. It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
+| `json` _object (keys:string, values:string)_ | JSON is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "JSON". |
+
+
+## ProxyAccessLoggingFormatType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingFormat](#proxyaccessloggingformat)
+
+
+
+## ProxyAccessLoggingSink
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ProxyAccessLoggingSinkType](#proxyaccessloggingsinktype)_ | Type defines the type of access logging sink. |
+| `file` _[FileEnvoyProxyAccessLogging](#fileenvoyproxyaccesslogging)_ | File defines the file access logging sink. |
+| `openTelemetry` _[OpenTelemetryEnvoyProxyAccessLogging](#opentelemetryenvoyproxyaccesslogging)_ | OpenTelemetry defines the OpenTelemetry access logging sink. |
+
+
+## ProxyAccessLoggingSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
 
 
 
