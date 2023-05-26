@@ -126,14 +126,15 @@ metadata:
   name: text-access-logging
 spec:
   accessLoggings:
-  - format:
-      type: text
-      text: |
-		[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
-	sinks:
-	- type: "file"
-      file:
-	    path: /dev/stdout
+    - format:
+        type: text
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+      sinks:
+        - type: "file"
+          file:
+            path: /dev/stdout
+
 ```
 
 1. The following is an example with json format access log.
@@ -145,15 +146,16 @@ metadata:
   name: json-access-logging
 spec:
   accessLoggings:
-  - format:
-      type: text
-      json:
-        status: "%RESPONSE_CODE%"
-        message: "%LOCAL_REPLY_BODY%"
-	sinks:
-	- type: "file"
-	  file:
-	    path: /dev/stdout
+    - format:
+        type: text
+        json:
+          status: "%RESPONSE_CODE%"
+          message: "%LOCAL_REPLY_BODY%"
+      sinks:
+        - type: "file"
+          file:
+            path: /dev/stdout
+
 ```
 
 1. The following is an example with OpenTelemetry format access log.
@@ -164,16 +166,18 @@ kind: EnvoyProxy
 metadata:
   name: otel-access-logging
 spec:
-  - format:
-      type: text
-      text: |
-		[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
-	sinks:
-	- type: "opentelemetry"
-      opentelemetry:
-	    address: otel-collector.monitoring.svc.cluster.local:4317
-		resources:
-          k8s.cluster.name: "cluster-1"
+  accessLoggings:
+    - format:
+        type: text
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+      sinks:
+        - type: "opentelemetry"
+          opentelemetry:
+            address: otel-collector.monitoring.svc.cluster.local:4317
+          resources:
+            k8s.cluster.name: "cluster-1"
+
 ```
 
 1. The following is an example of sending same format to different sinks.
@@ -184,17 +188,19 @@ kind: EnvoyProxy
 metadata:
   name: multi-providers
 spec:
-  - format:
-      type: text
-      text: |
-		[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
-	sinks:
-	- type: "file"
-      file:
-	    path: /dev/stdout
-    - type: "opentelemetry"
-      opentelemetry:
-	    address: otel-collector.monitoring.svc.cluster.local:4317
-		resources:
-          k8s.cluster.name: "cluster-1"
+  accessLoggings:
+    - format:
+        type: text
+        text: |
+          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+      sinks:
+        - type: "file"
+          file:
+            path: /dev/stdout
+        - type: "opentelemetry"
+          opentelemetry:
+            address: otel-collector.monitoring.svc.cluster.local:4317
+            resources:
+              k8s.cluster.name: "cluster-1"
+
 ```
