@@ -28,9 +28,9 @@ type Manager interface {
 	// DeleteProxyInfra deletes infra.
 	DeleteProxyInfra(ctx context.Context, infra *ir.Infra) error
 	// CreateOrUpdateRateLimitInfra creates or updates rate limit infra.
-	CreateOrUpdateRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error
+	CreateOrUpdateRateLimitInfra(ctx context.Context) error
 	// DeleteRateLimitInfra deletes rate limit infra.
-	DeleteRateLimitInfra(ctx context.Context, infra *ir.RateLimitInfra) error
+	DeleteRateLimitInfra(ctx context.Context) error
 }
 
 // NewManager returns a new infrastructure Manager.

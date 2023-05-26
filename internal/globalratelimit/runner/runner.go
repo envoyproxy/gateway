@@ -35,11 +35,10 @@ const (
 
 type Config struct {
 	config.Server
-	XdsIR            *message.XdsIR
-	RateLimitInfraIR *message.RateLimitInfraIR
-	grpc             *grpc.Server
-	cache            cachev3.SnapshotCache
-	snapshotVersion  int64
+	XdsIR           *message.XdsIR
+	grpc            *grpc.Server
+	cache           cachev3.SnapshotCache
+	snapshotVersion int64
 }
 
 type Runner struct {
@@ -104,19 +103,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 					r.Logger.Error(err, "failed to update the config snapshot")
 				}
 			} else {
-				// Translate to ratelimit infra IR and ratelimit xDS Config.
-				rlIR, rvt := r.translate(update.Value)
+				// Translate to ratelimit xDS Config.
+				rvt := r.translate(update.Value)
 
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
 					r.updateSnapshot(ctx, rvt.XdsResources)
-				}
-
-				// Publish ratelimit infra IR.
-				if rlIR == nil {
-					r.RateLimitInfraIR.Delete(r.Name())
-				} else {
-					r.RateLimitInfraIR.Store(r.Name(), rlIR)
 				}
 			}
 		},
@@ -124,8 +116,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("subscriber shutting down")
 }
 
-func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVersionTable) {
-	ratelimitInfra := new(ir.RateLimitInfra)
+func (r *Runner) translate(xdsIR *ir.Xds) *types.ResourceVersionTable {
 	resourceVT := new(types.ResourceVersionTable)
 
 	for _, listener := range xdsIR.HTTP {
@@ -133,11 +124,9 @@ func (r *Runner) translate(xdsIR *ir.Xds) (*ir.RateLimitInfra, *types.ResourceVe
 		if cfg != nil {
 			// Add to xDS Config resources.
 			resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg)
-
-			ratelimitInfra.ServiceNames = append(ratelimitInfra.ServiceNames, listener.Name)
 		}
 	}
-	return ratelimitInfra, resourceVT
+	return resourceVT
 }
 
 func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {

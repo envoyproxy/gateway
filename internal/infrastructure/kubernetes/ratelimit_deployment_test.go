@@ -19,14 +19,12 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	rateLimitInfra := new(ir.RateLimitInfra)
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
@@ -36,30 +34,26 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 		},
 	}
 
-	r := ratelimit.NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
+	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
 	deployment, err := r.Deployment()
 	require.NoError(t, err)
 
 	testCases := []struct {
 		name    string
-		in      *ir.RateLimitInfra
 		current *appsv1.Deployment
 		want    *appsv1.Deployment
 	}{
 		{
 			name: "create ratelimit deployment",
-			in:   rateLimitInfra,
 			want: deployment,
 		},
 		{
 			name:    "ratelimit deployment exists",
-			in:      rateLimitInfra,
 			current: deployment,
 			want:    deployment,
 		},
 		{
 			name:    "update ratelimit deployment image",
-			in:      &ir.RateLimitInfra{},
 			current: deployment,
 			want:    deploymentWithImage(deployment, egcfgv1a1.DefaultRateLimitImage),
 		},
@@ -77,7 +71,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
-			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
@@ -118,9 +112,8 @@ func TestDeleteRateLimitDeployment(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			kube := newTestInfra(t)
-			rateLimitInfra := new(ir.RateLimitInfra)
 			kube.EnvoyGateway.RateLimit = rl
-			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
