@@ -175,13 +175,7 @@ func setupRunners(cfg *config.Server) error {
 
 	// Start the global rateLimit if it has been enabled through the config
 	if cfg.EnvoyGateway.RateLimit != nil {
-		// Create the global ratelimit infra statically.
-		mgr := infraRunner.Manager()
-		if err := mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
-			return err
-		}
-
-		// Start the Global RateLimit
+		// Start the Global RateLimit xDS Server
 		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
 		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
 			Server: *cfg,
