@@ -138,7 +138,7 @@ verify signature was copied to [JWK Creator][] for generating the JWK. The JWK C
 settings, i.e. `Signing` public key use and the `RS256` algorithm. The generated JWK was wrapped in a JWKS structure
 and is hosted in the repo.
 
-[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/user/quickstart.md
+[Quickstart]: https://github.com/envoyproxy/gateway/blob/main/docs/latest/user/quickstart.md
 [make]: https://www.gnu.org/software/make/
 [Github Actions]: https://docs.github.com/en/actions
 [workflows]: https://github.com/envoyproxy/gateway/tree/main/.github/workflows
