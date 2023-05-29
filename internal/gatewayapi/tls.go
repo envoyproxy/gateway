@@ -20,7 +20,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 	var publicKeyAlgorithm string
 	var parseErr error
 
-	pkaSecretSet := make(map[string]string)
+	pkaSecretSet := make(map[string][]string)
 	for _, secret := range secrets {
 		certData := secret.Data[corev1.TLSCertKey]
 
@@ -49,12 +49,12 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 		pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, matchedFQDN)
 
 		// Check whether the public key algorithm and matched certificate FQDN in the referenced secrets are unique.
-		if certFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
-			return fmt.Errorf("secret %s/%s public key algorithm must be unique. Cerificate FQDN %s has a conficting algorithm [%s]",
-				secret.Namespace, secret.Name, certFQDN, publicKeyAlgorithm)
+		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
+			return fmt.Errorf("secret %s/%s public key algorithm must be unique. Matched cerificate FQDN %s has a conficting algorithm [%s]",
+				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
 
 		}
-		pkaSecretSet[pkaSecretKey] = getCertFQDN(cert)
+		pkaSecretSet[pkaSecretKey] = matchedFQDN
 
 		switch keyBlock.Type {
 		case "PRIVATE KEY":
@@ -78,18 +78,6 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 	}
 
 	return parseErr
-}
-
-func getCertFQDN(cert *x509.Certificate) string {
-	fqdn := ""
-	if len(cert.DNSNames) > 0 {
-		for _, name := range cert.DNSNames {
-			fqdn += name + ","
-		}
-	} else {
-		fqdn = cert.Subject.CommonName
-	}
-	return fqdn
 }
 
 // verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
