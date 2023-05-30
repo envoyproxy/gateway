@@ -26,7 +26,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 	var addresses, hostnames []string
 	// Update the status addresses field.
 	if svc != nil {
-		// If the addresses if explictly set in the Gateway spec by the user, use it
+		// If the addresses if explicitly set in the Gateway spec by the user, use it
 		// to populate the Status
 		if len(gw.Spec.Addresses) > 0 {
 			// Make sure the addresses have been populated into ExternalIPs
