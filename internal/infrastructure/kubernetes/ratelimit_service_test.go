@@ -13,7 +13,6 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestDeleteRateLimitService(t *testing.T) {
@@ -39,9 +38,8 @@ func TestDeleteRateLimitService(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			kube := newTestInfra(t)
 
-			rateLimitInfra := new(ir.RateLimitInfra)
 			kube.EnvoyGateway.RateLimit = rl
-			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
 			err := kube.createOrUpdateService(context.Background(), r)
 			require.NoError(t, err)
 

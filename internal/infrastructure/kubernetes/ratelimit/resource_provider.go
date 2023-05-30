@@ -14,23 +14,20 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 type ResourceRender struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 
-	infra               *ir.RateLimitInfra
 	rateLimit           *egcfgv1a1.RateLimit
 	rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, infra *ir.RateLimitInfra, gateway *egcfgv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
 		Namespace:           ns,
-		infra:               infra,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 	}

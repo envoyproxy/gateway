@@ -21,16 +21,11 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
 	// RedisAuthEnvVar is the redis auth.
 	RedisAuthEnvVar = "REDIS_AUTH"
-)
-
-var (
-	rateLimitListener = "ratelimit-listener"
 )
 
 func TestRateLimitLabels(t *testing.T) {
@@ -61,7 +56,6 @@ func TestServiceAccount(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	rateLimitInfra := new(ir.RateLimitInfra)
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
@@ -70,7 +64,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -95,9 +89,6 @@ func TestService(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	rateLimitInfra := &ir.RateLimitInfra{
-		ServiceNames: []string{rateLimitListener},
-	}
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
 		Backend: egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
@@ -106,7 +97,7 @@ func TestService(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
 	svc, err := r.Service()
 	require.NoError(t, err)
 
@@ -477,10 +468,6 @@ func TestDeployment(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			rateLimitInfra := &ir.RateLimitInfra{
-				ServiceNames: []string{rateLimitListener},
-			}
-
 			cfg.EnvoyGateway.RateLimit = tc.rateLimit
 
 			cfg.EnvoyGateway.Provider = &egcfgv1a1.EnvoyGatewayProvider{
@@ -488,7 +475,7 @@ func TestDeployment(t *testing.T) {
 				Kubernetes: &egcfgv1a1.EnvoyGatewayKubernetesProvider{
 					RateLimitDeployment: tc.deploy,
 				}}
-			r := NewResourceRender(cfg.Namespace, rateLimitInfra, cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 

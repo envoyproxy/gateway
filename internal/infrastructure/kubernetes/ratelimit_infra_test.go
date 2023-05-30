@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
@@ -41,21 +40,12 @@ func createRateLimitTLSSecret(t *testing.T, client client.Client) {
 }
 
 func TestCreateRateLimitInfra(t *testing.T) {
-	rateLimitInfra := new(ir.RateLimitInfra)
-
 	testCases := []struct {
 		name   string
-		in     *ir.RateLimitInfra
 		expect bool
 	}{
 		{
-			name:   "nil-infra",
-			in:     nil,
-			expect: false,
-		},
-		{
 			name:   "default infra",
-			in:     rateLimitInfra,
 			expect: true,
 		},
 	}
@@ -68,7 +58,7 @@ func TestCreateRateLimitInfra(t *testing.T) {
 
 			createRateLimitTLSSecret(t, kube.Client.Client)
 
-			err := kube.CreateOrUpdateRateLimitInfra(context.Background(), tc.in)
+			err := kube.CreateOrUpdateRateLimitInfra(context.Background())
 			if !tc.expect {
 				require.Error(t, err)
 			} else {
@@ -106,17 +96,10 @@ func TestCreateRateLimitInfra(t *testing.T) {
 func TestDeleteRateLimitInfra(t *testing.T) {
 	testCases := []struct {
 		name   string
-		in     *ir.RateLimitInfra
 		expect bool
 	}{
 		{
-			name:   "nil infra",
-			in:     nil,
-			expect: false,
-		},
-		{
 			name:   "default infra",
-			in:     new(ir.RateLimitInfra),
 			expect: true,
 		},
 	}
@@ -129,7 +112,7 @@ func TestDeleteRateLimitInfra(t *testing.T) {
 
 			createRateLimitTLSSecret(t, kube.Client.Client)
 
-			err := kube.DeleteRateLimitInfra(context.Background(), tc.in)
+			err := kube.DeleteRateLimitInfra(context.Background())
 			if !tc.expect {
 				require.Error(t, err)
 			} else {
