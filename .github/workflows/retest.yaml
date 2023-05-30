@@ -1,0 +1,40 @@
+name: Rerun Action on PR Comment
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  rerun-action:
+    if: ${{ github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if PR comment contains trigger phrase
+        id: check_comment
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const triggerPhrase = '/retest';
+            const comment = context.payload.comment.body.toLowerCase();
+            const containsTrigger = comment.includes(triggerPhrase);
+            console.log(`Comment: ${comment}`);
+            console.log(`Contains Trigger: ${containsTrigger}`);
+            return containsTrigger;
+
+      - name: Rerun Action
+        if: steps.check_comment.outputs.result == 'true'
+        uses: actions/github-script@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const workflowId = 'build_and_test.yaml';
+            const { number } = context.issue;
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+            await octokit.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: workflowId,
+              ref: `pull/${number}/merge`
+            });
