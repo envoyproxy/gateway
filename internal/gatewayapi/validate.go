@@ -272,7 +272,6 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		}
 
 		secret := resources.GetSecret(secretNamespace, string(certificateRef.Name))
-		secrets = append(secrets, secret)
 
 		if secret == nil {
 			listener.SetCondition(
@@ -304,6 +303,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 			break
 		}
 
+		secrets = append(secrets, secret)
 		err := validateTLSSecretsData(secrets, listener.Hostname)
 		if err != nil {
 			listener.SetCondition(
