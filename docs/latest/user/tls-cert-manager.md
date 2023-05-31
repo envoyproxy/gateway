@@ -131,15 +131,15 @@ $ curl -kv -HHost:www.example.com https://127.0.0.1/get
 
 ### How cert-manager and Envoy Gateway Interact
 
-*This explains [cert-manager Concepts](https://cert-manager.io/docs/concepts/) in a Envoy Gateway context.*
+*This explains [cert-manager Concepts](https://cert-manager.io/docs/concepts/) in an Envoy Gateway context.*
 
 In the interaction between the two, cert-manager does all the heavy lifting.
 It subscribes to changes to Gateway resources (using the [`gateway-shim` component](https://github.com/cert-manager/cert-manager/tree/master/pkg/controller/certificate-shim/gateways).)
 For any Gateway it finds, it looks for any [TLS listeners](https://gateway-api.sigs.k8s.io/guides/tls/#listeners-and-tls), and the associated `tls.certificateRefs`.
 Note that while Gateway API supports multiple refs here, Envoy Gateway only uses one.
 cert-manager also looks at the `hostname` of the listener to figure out which hosts the certificate is expected to cover.
-More than one listeners can use the same certificate Secret, which means cert-manager needs to find all listeners using the same Secret before deciding what to do.
-If the `certificatRef` points to a valid certificate, given the hostnames, cert-manager has nothing to do.
+More than one listener can use the same certificate Secret, which means cert-manager needs to find all listeners using the same Secret before deciding what to do.
+If the `certificatRef` points to a valid certificate, given the hostnames found in listeners, cert-manager has nothing to do.
 
 If there is no valid certificate, or it is about to expire, cert-manager's `gateway-shim` creates a Certificate resource, or updates the existing one.
 cert-manager then follows the [Certificate Lifecycle](https://cert-manager.io/docs/concepts/certificate/#certificate-lifecycle).
@@ -158,7 +158,7 @@ As you can imagine, cert-manager requires quite broad permissions to update Secr
 ## Using the ACME Issuer With Let's Encrypt and HTTP-01
 
 We will start using the Let's Encrypt staging environment, to spare their production environment.
-Our Gateway already contains a HTTP listener, so we will use that for the HTTP-01 challenges.
+Our Gateway already contains an HTTP listener, so we will use that for the HTTP-01 challenges.
 
 In the case of ACME, the plugin is a cluster-wide issuer type, so we have to use ClusterIssuer:
 
@@ -187,7 +187,7 @@ spec:
 The important parts are
 
 * using `spec.acme` with a server URI and contact email address, and
-* referencing our plain HTTP gateway.
+* referencing our plain HTTP gateway so the challenge HTTPRoute is attached to the right place.
 
 Check the account registration process using the Ready condition:
 
@@ -197,7 +197,7 @@ $ kubectl describe clusterissuer/letsencrypt-staging
 ...
 Status:
   Acme:
-    Uri:                    https://acme-staging-v02.api.letsencrypt.org/acme/acct/123456789
+    Uri:                   https://acme-staging-v02.api.letsencrypt.org/acme/acct/123456789
   Conditions:
     Message:               The ACME account was registered with the ACME server
     Reason:                ACMEAccountRegistered
@@ -302,11 +302,11 @@ You probably want to set the `cert-manager.io/revision-history-limit` annotation
 The [ExternalDNS](https://kubernetes-sigs.github.io/external-dns/latest/) controller maintains DNS records based on Kubernetes resources.
 Together with cert-manager, this can be used to fully automate hostname management.
 It can use various source resources, among them Gateway Routes.
-Just specify a Gateway Route resource, let ExternalDNS create the domain records and then cert-manager the TLS certificate.
+Just specify a Gateway Route resource, let ExternalDNS create the domain records, and then cert-manager the TLS certificate.
 
 [The tutorial on Gateway API](https://kubernetes-sigs.github.io/external-dns/latest/tutorials/gateway-api/) uses kubectl.
 They also have a [Helm chart](https://github.com/kubernetes-sigs/external-dns/blob/master/charts/external-dns/README.md), which is easier to customize.
-What is relevant for Envoy Gateway is to set the sources:
+The only thing relevant to Envoy Gateway is to set the sources:
 
 ```yaml
 # values.yaml
@@ -355,7 +355,7 @@ Events:
 The main question is if cert-manager has picked up on the Gateway.
 I.e., has it created a Certificate for it?
 The above `describe` contains an event from `cert-manager-gateway-shim` telling you of one such issue.
-Be aware that if you have a non-TLS listener in the Gateway, like we did, there will be events saying they are not eligible, which is of course expected.
+Be aware that if you have a non-TLS listener in the Gateway, like we did, there will be events saying it is not eligible, which is of course expected.
 
 Another option is looking at Deployment logs.
 The cert-manager logs are not very verbose by default, but setting the Helm value `global.logLevel` to 6 will enable all debug logs (the default is 2.)
@@ -387,8 +387,21 @@ default     eg-https-xxxxx   True                True    selfsigned   system:ser
 The ACME issuer also has `Order` and `Challenge` resources to watch:
 
 ```console
-$ kubectl get order,challenge --all-namespaces
-...
+$ kubectl get order --all-namespaces -o wide
+NAME                                                     STATE     ISSUER                REASON   AGE
+order.acme.cert-manager.io/envoy-https-xxxxx-123456789   pending   letsencrypt-staging            42m
+
+$ kubectl get challenge --all-namespaces
+NAME                                                                    STATE     DOMAIN            AGE
+challenge.acme.cert-manager.io/envoy-https-xxxxx-123456789-1234567890   pending   www.example.com   42m
+```
+
+Using `kubetctl get -o wide` or `kubectl describe` on the Challenge will explain its state more.
+
+```console
+$ kubectl get order --all-namespaces -o wide
+NAME                                                     STATE   ISSUER                REASON   AGE
+order.acme.cert-manager.io/envoy-https-xxxxx-123456789   valid   letsencrypt-staging            42m
 ```
 
 Finally, since cert-manager creates the Secret referenced by the Gateway listener as its last step, we can also look for that:
