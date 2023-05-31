@@ -126,7 +126,7 @@ patches will work.
 * This API will always be an experimental API and cannot be graduated into a stable API because Envoy Gateway cannot garuntee
   * that the naming scheme for the generated resources names will not change across releases
   * that the underlying Envoy Proxy API will not change across releases
-* This API needs to be explictly enabled using the [EnvoyGateway][] API
+* This API needs to be explicitly enabled using the [EnvoyGateway][] API
 
 ## Open Questions
 * Should the value only support JSON or YAML as well (which is a JSON superset) ?
