@@ -333,9 +333,15 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		return errors.New("tcp listener is nil")
 	}
 
+	isTLSPassthrough := irListener.TLS != nil && irListener.TLS.Passthrough != nil
+	isTLSTerminate := irListener.TLS != nil && irListener.TLS.Terminate != nil
 	statPrefix := "tcp"
-	if irListener.TLS != nil {
+	if isTLSPassthrough {
 		statPrefix = "passthrough"
+	}
+
+	if isTLSTerminate {
+		statPrefix = "terminate"
 	}
 
 	accesslogAny, err := anypb.New(stdoutFileAccessLog)
@@ -369,10 +375,18 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		}},
 	}
 
-	if irListener.TLS != nil {
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.SNIs); err != nil {
+	if isTLSPassthrough {
+		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.Passthrough.SNIs); err != nil {
 			return err
 		}
+	}
+
+	if isTLSTerminate {
+		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate)
+		if err != nil {
+			return err
+		}
+		filterChain.TransportSocket = tSocket
 	}
 
 	xdsListener.FilterChains = append(xdsListener.FilterChains, filterChain)

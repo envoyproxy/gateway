@@ -101,6 +101,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the manged Envoy ratelimit deployment resource are applied. |
+| `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
+| `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 
 
 ## EnvoyGatewayProvider
@@ -211,6 +213,7 @@ _Appears in:_
 | --- | --- |
 | `provider` _[EnvoyProxyProvider](#envoyproxyprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
+| `accessLoggings` _[ProxyAccessLogging](#proxyaccesslogging) array_ | AccessLoggings defines access logging parameters for managed proxies. If unspecified, access log is disabled. |
 | `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 
 
@@ -278,6 +281,20 @@ _Appears in:_
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
+## FileEnvoyProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
+
+| Field | Description |
+| --- | --- |
+| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables access logging. |
+
+
 ## Gateway
 
 
@@ -335,6 +352,18 @@ _Appears in:_
 | `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#resourcerequirements-v1-core)_ | Resources required by this container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
 | `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` _string_ | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volumemount-v1-core) array_ | VolumeMounts are volumes to mount into the container's filesystem. Cannot be updated. |
+
+
+## KubernetesDeployMode
+
+
+
+KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy data plane fleet.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
 
 
 ## KubernetesDeploymentSpec
@@ -369,6 +398,7 @@ _Appears in:_
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volume-v1-core) array_ | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
 
 
 ## KubernetesServiceSpec
@@ -384,6 +414,20 @@ _Appears in:_
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations that should be appended to the service. By default, no annotations are appended. |
 | `type` _[ServiceType](#servicetype)_ | Type determines how the Service is exposed. Defaults to LoadBalancer. Valid options are ClusterIP, LoadBalancer and NodePort. "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it). "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP. "NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
+
+
+## KubernetesWatchMode
+
+
+
+KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
+
+_Appears in:_
+- [EnvoyGatewayKubernetesProvider](#envoygatewaykubernetesprovider)
+
+| Field | Description |
+| --- | --- |
+| `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
 
 
 ## LogComponent
@@ -408,6 +452,22 @@ _Appears in:_
 
 
 
+## OpenTelemetryEnvoyProxyAccessLogging
+
+
+
+TODO: consider reuse ExtensionService?
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the extension service hostname. |
+| `port` _integer_ | Port defines the port the extension service is exposed on. |
+| `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
 ## ProviderType
 
 _Underlying type:_ `string`
@@ -417,6 +477,75 @@ ProviderType defines the types of providers supported by Envoy Gateway.
 _Appears in:_
 - [EnvoyGatewayProvider](#envoygatewayprovider)
 - [EnvoyProxyProvider](#envoyproxyprovider)
+
+
+
+## ProxyAccessLogging
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Description |
+| --- | --- |
+| `format` _[ProxyAccessLoggingFormat](#proxyaccessloggingformat)_ | Format defines the format of access logging. |
+| `sinks` _[ProxyAccessLoggingSink](#proxyaccessloggingsink) array_ | Sinks defines the sinks of access logging. |
+
+
+## ProxyAccessLoggingFormat
+
+
+
+ProxyAccessLoggingFormat defines the format of access logging.
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ProxyAccessLoggingFormatType](#proxyaccessloggingformattype)_ | Type defines the type of access logging format. |
+| `text` _string_ | Text defines the text access logging format, following Envoy access logging formatting, empty value results in proxy's default access log format. It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
+| `json` _object (keys:string, values:string)_ | JSON is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "JSON". |
+
+
+## ProxyAccessLoggingFormatType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingFormat](#proxyaccessloggingformat)
+
+
+
+## ProxyAccessLoggingSink
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLogging](#proxyaccesslogging)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ProxyAccessLoggingSinkType](#proxyaccessloggingsinktype)_ | Type defines the type of access logging sink. |
+| `file` _[FileEnvoyProxyAccessLogging](#fileenvoyproxyaccesslogging)_ | File defines the file access logging sink. |
+| `openTelemetry` _[OpenTelemetryEnvoyProxyAccessLogging](#opentelemetryenvoyproxyaccesslogging)_ | OpenTelemetry defines the OpenTelemetry access logging sink. |
+
+
+## ProxyAccessLoggingSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
 
 
 

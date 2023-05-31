@@ -6,6 +6,7 @@
 package egctl
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,10 +18,12 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/cmd/options"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/proxy"
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
@@ -29,6 +32,7 @@ var (
 	podName        string
 	podNamespace   string
 	labelSelectors []string
+	allNamespaces  bool
 )
 
 const (
@@ -39,20 +43,16 @@ const (
 type aggregatedConfigDump map[string]map[string]protoreflect.ProtoMessage
 
 func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigType) (aggregatedConfigDump, error) {
-	if len(labelSelectors) == 0 {
-		if len(args) == 0 {
-			return nil, fmt.Errorf("pod name is required")
+	if !allNamespaces {
+		if len(labelSelectors) == 0 {
+			if len(args) != 0 && args[0] != "" {
+				podName = args[0]
+			}
 		}
 
-		podName = args[0]
-
-		if podName == "" {
-			return nil, fmt.Errorf("pod name is required")
+		if podNamespace == "" {
+			return nil, fmt.Errorf("pod namespace is required")
 		}
-	}
-
-	if podNamespace == "" {
-		return nil, fmt.Errorf("pod namespace is required")
 	}
 
 	cli, err := getCLIClient()
@@ -60,7 +60,7 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 		return nil, err
 	}
 
-	pods, err := fetchRunningEnvoyPods(cli, types.NamespacedName{Namespace: podNamespace, Name: podName}, labelSelectors)
+	pods, err := fetchRunningEnvoyPods(cli, types.NamespacedName{Namespace: podNamespace, Name: podName}, labelSelectors, allNamespaces)
 	if err != nil {
 		return nil, err
 	}
@@ -113,10 +113,28 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 // fetchRunningEnvoyPods gets the Pods, either based on the NamespacedName or the labelSelectors.
 // It further filters out only those Pods that are in "Running" state.
 // labelSelectors, if provided, take precedence over the pod NamespacedName.
-func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelectors []string) ([]types.NamespacedName, error) {
+func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelectors []string, allNamespaces bool) ([]types.NamespacedName, error) {
 	var pods []corev1.Pod
 
-	if len(labelSelectors) > 0 {
+	switch {
+	case allNamespaces:
+		namespaces, err := c.Kube().CoreV1().Namespaces().List(context.Background(), v1.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		for _, i := range namespaces.Items {
+			podList, err := c.PodsForSelector(i.Name, proxy.EnvoyAppLabelSelector()...)
+			if err != nil {
+				return nil, fmt.Errorf("list pods failed in ns %s: %w", i.Name, err)
+			}
+
+			if len(podList.Items) == 0 {
+				continue
+			}
+
+			pods = append(pods, podList.Items...)
+		}
+	case len(labelSelectors) > 0:
 		podList, err := c.PodsForSelector(nn.Namespace, labelSelectors...)
 		if err != nil {
 			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
@@ -127,13 +145,25 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 		}
 
 		pods = podList.Items
-	} else {
+	case nn.Name != "":
 		pod, err := c.Pod(nn)
 		if err != nil {
 			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
 		}
 
 		pods = []corev1.Pod{*pod}
+
+	case nn.Name == "":
+		podList, err := c.PodsForSelector(nn.Namespace, proxy.EnvoyAppLabelSelector()...)
+		if err != nil {
+			return nil, fmt.Errorf("get pod %s fail: %w", nn, err)
+		}
+
+		if len(podList.Items) == 0 {
+			return nil, fmt.Errorf("no Pods found for label selectors %+v", proxy.EnvoyAppLabelSelector())
+		}
+
+		pods = podList.Items
 	}
 
 	podsNamespacedNames := []types.NamespacedName{}

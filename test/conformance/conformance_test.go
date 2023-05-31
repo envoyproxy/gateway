@@ -22,8 +22,6 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
-var useUniquePorts = flag.Bool("use-unique-ports", true, "whether to use unique ports")
-
 func TestGatewayAPIConformance(t *testing.T) {
 	flag.Parse()
 
@@ -35,17 +33,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, v1beta1.AddToScheme(client.Scheme()))
-
-	validUniqueListenerPorts := []v1alpha2.PortNumber{
-		v1alpha2.PortNumber(int32(80)),
-		v1alpha2.PortNumber(int32(81)),
-		v1alpha2.PortNumber(int32(82)),
-		v1alpha2.PortNumber(int32(83)),
-	}
-
-	if !*useUniquePorts {
-		validUniqueListenerPorts = []v1alpha2.PortNumber{}
-	}
 
 	cSuite := suite.New(suite.Options{
 		Client:                     client,
@@ -63,6 +50,14 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.HTTPRouteRedirectScheme.ShortName,
 			tests.MeshBasic.ShortName,
 			tests.MeshTrafficSplit.ShortName,
+		Client:               client,
+		GatewayClassName:     *flags.GatewayClassName,
+		Debug:                *flags.ShowDebug,
+		CleanupBaseResources: *flags.CleanupBaseResources,
+		SupportedFeatures:    suite.AllFeatures,
+		ExemptFeatures:       suite.MeshCoreFeatures,
+		SkipTests: []string{
+			tests.HTTPRouteRedirectPortAndScheme.ShortName,
 		},
 	})
 	cSuite.Setup(t)

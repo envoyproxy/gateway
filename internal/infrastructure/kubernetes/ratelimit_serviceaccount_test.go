@@ -22,7 +22,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
@@ -38,14 +37,12 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 	testCases := []struct {
 		name    string
 		ns      string
-		in      *ir.RateLimitInfra
 		current *corev1.ServiceAccount
 		want    *corev1.ServiceAccount
 	}{
 		{
 			name: "create-ratelimit-sa",
 			ns:   "envoy-gateway-system",
-			in:   new(ir.RateLimitInfra),
 			want: &corev1.ServiceAccount{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ServiceAccount",
@@ -60,7 +57,6 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 		{
 			name: "ratelimit-sa-exists",
 			ns:   "envoy-gateway-system",
-			in:   new(ir.RateLimitInfra),
 			want: &corev1.ServiceAccount{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ServiceAccount",
@@ -91,7 +87,7 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, tc.in, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
 
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
@@ -133,10 +129,9 @@ func TestDeleteRateLimitServiceAccount(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
 
-			rateLimitInfra := new(ir.RateLimitInfra)
 			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, rateLimitInfra, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 

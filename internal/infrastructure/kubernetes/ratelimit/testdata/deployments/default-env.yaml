@@ -44,6 +44,12 @@ spec:
           value: info
         - name: USE_STATSD
           value: "false"
+        - name: CONFIG_TYPE
+          value: GRPC_XDS_SOTW
+        - name: CONFIG_GRPC_XDS_SERVER_URL
+          value: envoy-gateway:18001
+        - name: CONFIG_GRPC_XDS_NODE_ID
+          value: envoy-ratelimit
         image: custom-image
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
@@ -62,10 +68,6 @@ spec:
             memory: 1Gi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-        volumeMounts:
-        - mountPath: /data/ratelimit/config
-          name: envoy-ratelimit
-          readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -73,9 +75,3 @@ spec:
       securityContext:
         runAsUser: 1000
       terminationGracePeriodSeconds: 300
-      volumes:
-      - configMap:
-          defaultMode: 420
-          name: envoy-ratelimit
-          optional: false
-        name: envoy-ratelimit

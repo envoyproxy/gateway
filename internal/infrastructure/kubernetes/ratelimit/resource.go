@@ -8,12 +8,14 @@ package ratelimit
 import (
 	"context"
 	"fmt"
+	"net"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
@@ -48,6 +50,17 @@ const (
 	InfraName = "envoy-ratelimit"
 	// InfraGRPCPort is the grpc port that the rate limit service listens on.
 	InfraGRPCPort = 8081
+	// ConfigType is the configuration loading method for ratelimit.
+	ConfigType = "CONFIG_TYPE"
+	// ConfigGrpcXdsServerURL is the url of ratelimit config xds server.
+	ConfigGrpcXdsServerURL = "CONFIG_GRPC_XDS_SERVER_URL"
+	// ConfigGrpcXdsNodeID is the id of ratelimit node.
+	ConfigGrpcXdsNodeID = "CONFIG_GRPC_XDS_NODE_ID"
+
+	// XdsGrpcSotwConfigServerPort is the listening port of the ratelimit xDS config server.
+	XdsGrpcSotwConfigServerPort = 18001
+	// XdsGrpcSotwConfigServerHost is the hostname of the ratelimit xDS config server.
+	XdsGrpcSotwConfigServerHost = "envoy-gateway"
 )
 
 // GetServiceURL returns the URL for the rate limit service.
@@ -86,7 +99,7 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 			Ports:                    ports,
 			Resources:                *rateLimitDeployment.Container.Resources,
 			SecurityContext:          rateLimitDeployment.Container.SecurityContext,
-			VolumeMounts:             expectedContainerVolumeMounts(rateLimit),
+			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
@@ -96,14 +109,8 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 }
 
 // expectedContainerVolumeMounts returns expected rateLimit container volume mounts.
-func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.VolumeMount {
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      InfraName,
-			MountPath: "/data/ratelimit/config",
-			ReadOnly:  true,
-		},
-	}
+func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
+	var volumeMounts []corev1.VolumeMount
 
 	// mount the cert
 	if rateLimit.Backend.Redis.TLS != nil {
@@ -114,25 +121,12 @@ func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit) []corev1.Volu
 		})
 	}
 
-	return volumeMounts
+	return resource.ExpectedContainerVolumeMounts(rateLimitDeployment.Container, volumeMounts)
 }
 
 // expectedDeploymentVolumes returns expected rateLimit deployment volumes.
-func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
-	volumes := []corev1.Volume{
-		{
-			Name: InfraName,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: InfraName,
-					},
-					DefaultMode: pointer.Int32(int32(420)),
-					Optional:    pointer.Bool(false),
-				},
-			},
-		},
-	}
+func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+	var volumes []corev1.Volume
 
 	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumes = append(volumes, corev1.Volume{
@@ -144,7 +138,8 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit) []corev1.Volume {
 			},
 		})
 	}
-	return volumes
+
+	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
 }
 
 // expectedRateLimitContainerEnv returns expected rateLimit container envs.
@@ -182,6 +177,18 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 			Name:  UseStatsdEnvVar,
 			Value: "false",
 		},
+		{
+			Name:  ConfigType,
+			Value: "GRPC_XDS_SOTW",
+		},
+		{
+			Name:  ConfigGrpcXdsServerURL,
+			Value: net.JoinHostPort(XdsGrpcSotwConfigServerHost, strconv.Itoa(XdsGrpcSotwConfigServerPort)),
+		},
+		{
+			Name:  ConfigGrpcXdsNodeID,
+			Value: InfraName,
+		},
 	}
 
 	if rateLimit.Backend.Redis.TLS != nil {
@@ -204,21 +211,7 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 		}
 	}
 
-	envAmendFunc := func(envVar corev1.EnvVar) {
-		for index, e := range env {
-			if e.Name == envVar.Name {
-				env[index] = envVar
-				return
-			}
-		}
-		env = append(env, envVar)
-	}
-
-	for _, envVar := range rateLimitDeployment.Container.Env {
-		envAmendFunc(envVar)
-	}
-
-	return env
+	return resource.ExpectedProxyContainerEnv(rateLimitDeployment.Container, env)
 }
 
 // Validate the ratelimit tls secret validating.

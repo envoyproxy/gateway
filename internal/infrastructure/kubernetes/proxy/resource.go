@@ -9,9 +9,11 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
 	providerutils "github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -59,6 +61,15 @@ func EnvoyAppLabel() map[string]string {
 		"app.kubernetes.io/name":       "envoy",
 		"app.kubernetes.io/component":  "proxy",
 		"app.kubernetes.io/managed-by": "envoy-gateway",
+	}
+}
+
+// EnvoyAppLabelSelector returns the labels used for all Envoy resources.
+func EnvoyAppLabelSelector() []string {
+	return []string{
+		"app.kubernetes.io/name=envoy",
+		"app.kubernetes.io/component=proxy",
+		"app.kubernetes.io/managed-by=envoy-gateway",
 	}
 }
 
@@ -127,27 +138,72 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 				fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 				"--log-level info",
 			},
-			Env:             expectedProxyContainerEnv(deploymentConfig),
-			Resources:       *deploymentConfig.Container.Resources,
-			SecurityContext: deploymentConfig.Container.SecurityContext,
-			Ports:           ports,
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      "certs",
-					MountPath: "/certs",
-					ReadOnly:  true,
-				},
-				{
-					Name:      "sds",
-					MountPath: "/sds",
-				},
-			},
+			Env:                      expectedProxyContainerEnv(deploymentConfig),
+			Resources:                *deploymentConfig.Container.Resources,
+			SecurityContext:          deploymentConfig.Container.SecurityContext,
+			Ports:                    ports,
+			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
 		},
 	}
 
 	return containers, nil
+}
+
+// expectedContainerVolumeMounts returns expected proxy container volume mounts.
+func expectedContainerVolumeMounts(deploymentSpec *egcfgv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{
+		{
+			Name:      "certs",
+			MountPath: "/certs",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "sds",
+			MountPath: "/sds",
+		},
+	}
+
+	return resource.ExpectedContainerVolumeMounts(deploymentSpec.Container, volumeMounts)
+}
+
+// expectedDeploymentVolumes returns expected proxy deployment volumes.
+func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+	volumes := []corev1.Volume{
+		{
+			Name: "certs",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: "envoy",
+				},
+			},
+		},
+		{
+			Name: "sds",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: ExpectedResourceHashedName(name),
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  SdsCAFilename,
+							Path: SdsCAFilename,
+						},
+						{
+							Key:  SdsCertFilename,
+							Path: SdsCertFilename,
+						},
+					},
+					DefaultMode: pointer.Int32(int32(420)),
+					Optional:    pointer.Bool(false),
+				},
+			},
+		},
+	}
+
+	return resource.ExpectedDeploymentVolumes(deploymentSpec.Pod, volumes)
 }
 
 // expectedProxyContainerEnv returns expected proxy container envs.
@@ -173,9 +229,5 @@ func expectedProxyContainerEnv(deploymentConfig *egcfgv1a1.KubernetesDeploymentS
 		},
 	}
 
-	if extensionEnv := deploymentConfig.Container.Env; extensionEnv != nil {
-		env = append(env, extensionEnv...)
-	}
-
-	return env
+	return resource.ExpectedProxyContainerEnv(deploymentConfig.Container, env)
 }

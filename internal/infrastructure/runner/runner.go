@@ -17,8 +17,7 @@ import (
 
 type Config struct {
 	config.Server
-	InfraIR          *message.InfraIR
-	RateLimitInfraIR *message.RateLimitInfraIR
+	InfraIR *message.InfraIR
 }
 
 type Runner struct {
@@ -45,10 +44,11 @@ func (r *Runner) Start(ctx context.Context) error {
 	}
 	go r.subscribeToProxyInfraIR(ctx)
 
-	// subscribe to rate limit infra IR if ratelimit has been enabled in the config.
+	// Enable global ratelimit if it has been configured.
 	if r.EnvoyGateway.RateLimit != nil {
-		go r.subscribeToRateLimitInfraIR(ctx)
+		go r.enableRateLimitInfra(ctx)
 	}
+
 	r.Logger.Info("started")
 	return nil
 }
@@ -75,22 +75,16 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	r.Logger.Info("infra subscriber shutting down")
 }
 
-func (r *Runner) subscribeToRateLimitInfraIR(ctx context.Context) {
-	// Subscribe to resources
-	message.HandleSubscription(r.RateLimitInfraIR.Subscribe(ctx),
-		func(update message.Update[string, *ir.RateLimitInfra]) {
-			val := update.Value
-			if update.Delete {
-				if err := r.mgr.DeleteRateLimitInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to delete rate limit infra")
-				}
-			} else {
-				// Manage the rate limit infra.
-				if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx, val); err != nil {
-					r.Logger.Error(err, "failed to create new rate limit infra")
-				}
-			}
-		},
-	)
-	r.Logger.Info("ratelimit infra subscriber shutting down")
+func (r *Runner) enableRateLimitInfra(ctx context.Context) {
+	if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
+		r.Logger.Error(err, "failed to create ratelimit infra")
+	}
+
+	<-ctx.Done()
+	r.Logger.Info("deleting ratelimit infra")
+	if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
+		r.Logger.Error(err, "failed to delete ratelimit infra")
+	} else {
+		r.Logger.Info("ratelimit infra deleted")
+	}
 }

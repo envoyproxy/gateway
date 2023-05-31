@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -47,6 +48,10 @@ func server() error {
 	if err != nil {
 		return err
 	}
+
+	config := spew.NewDefaultConfig()
+	config.DisableMethods = true
+	config.Dump(cfg)
 
 	if err := setupRunners(cfg); err != nil {
 		return err
@@ -146,14 +151,12 @@ func setupRunners(cfg *config.Server) error {
 		return err
 	}
 
-	rateLimitInfraIR := new(message.RateLimitInfraIR)
 	// Start the Infra Manager Runner
 	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
 	// resources such as K8s deployment and services.
 	infraRunner := infrarunner.New(&infrarunner.Config{
-		Server:           *cfg,
-		InfraIR:          infraIR,
-		RateLimitInfraIR: rateLimitInfraIR,
+		Server:  *cfg,
+		InfraIR: infraIR,
 	})
 	if err := infraRunner.Start(ctx); err != nil {
 		return err
@@ -161,7 +164,7 @@ func setupRunners(cfg *config.Server) error {
 
 	// Start the xDS Server
 	// It subscribes to the xds Resources and configures the remote Envoy Proxy
-	// via the xDS Protocol
+	// via the xDS Protocol.
 	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
 		Server: *cfg,
 		Xds:    xds,
@@ -170,15 +173,13 @@ func setupRunners(cfg *config.Server) error {
 		return err
 	}
 
-	// Start the global rateLimit runner if it has been enabled through the config
+	// Start the global rateLimit if it has been enabled through the config
 	if cfg.EnvoyGateway.RateLimit != nil {
-		// Start the Global RateLimit Runner
-		// It subscribes to the xds Resources and translates it to Envoy Ratelimit Service
-		// infrastructure and configuration.
+		// Start the Global RateLimit xDS Server
+		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
 		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
-			Server:           *cfg,
-			XdsIR:            xdsIR,
-			RateLimitInfraIR: rateLimitInfraIR,
+			Server: *cfg,
+			XdsIR:  xdsIR,
 		})
 		if err := rateLimitRunner.Start(ctx); err != nil {
 			return err
@@ -191,7 +192,6 @@ func setupRunners(cfg *config.Server) error {
 	pResources.Close()
 	xdsIR.Close()
 	infraIR.Close()
-	rateLimitInfraIR.Close()
 	xds.Close()
 
 	cfg.Logger.Info("shutting down")

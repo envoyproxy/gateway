@@ -8,10 +8,12 @@ descriptors:
         value: first-route-value-rule-0-match-1
         rate_limit:
           requests_per_unit: 5
-          unit: second
+          unit: SECOND
           unlimited: false
           name: ""
           replaces: []
         descriptors: []
         shadow_mode: false
+        detailed_metric: false
     shadow_mode: false
+    detailed_metric: false

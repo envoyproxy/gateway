@@ -28,7 +28,7 @@ type ListenersTranslator interface {
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	t.validateConflictedLayer7Listeners(gateways)
-	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType, v1beta1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, v1beta1.UDPProtocolType)
 
 	// Iterate through all listeners to validate spec
@@ -67,7 +67,18 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			// Process protocol & supported kinds
 			switch listener.Protocol {
 			case v1beta1.TLSProtocolType:
-				t.validateAllowedRoutes(listener, KindTLSRoute)
+				if listener.TLS != nil {
+					switch *listener.TLS.Mode {
+					case v1beta1.TLSModePassthrough:
+						t.validateAllowedRoutes(listener, KindTLSRoute)
+					case v1beta1.TLSModeTerminate:
+						t.validateAllowedRoutes(listener, KindTCPRoute)
+					default:
+						t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
+					}
+				} else {
+					t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
+				}
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
 				t.validateAllowedRoutes(listener, KindHTTPRoute, KindGRPCRoute, KindCustomGRPCRoute)
 			case v1beta1.TCPProtocolType:

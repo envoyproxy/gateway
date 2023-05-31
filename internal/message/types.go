@@ -73,11 +73,6 @@ type InfraIR struct {
 	watchable.Map[string, *ir.Infra]
 }
 
-// RateLimitInfraIR message
-type RateLimitInfraIR struct {
-	watchable.Map[string, *ir.RateLimitInfra]
-}
-
 // Xds message
 type Xds struct {
 	watchable.Map[string, *xdstypes.ResourceVersionTable]

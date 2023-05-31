@@ -73,6 +73,9 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		}
 
 		resourceMap.allAssociatedNamespaces[tlsRoute.Namespace] = struct{}{}
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		tlsRoute.Status = gwapiv1a2.TLSRouteStatus{}
 		resourceTree.TLSRoutes = append(resourceTree.TLSRoutes, &tlsRoute)
 	}
 
@@ -188,6 +191,9 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		}
 
 		resourceMap.allAssociatedNamespaces[grpcRoute.Namespace] = struct{}{}
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		grpcRoute.Status = gwapiv1a2.GRPCRouteStatus{}
 		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, &grpcRoute)
 	}
 
@@ -511,6 +517,9 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		}
 
 		resourceMap.allAssociatedNamespaces[httpRoute.Namespace] = struct{}{}
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		httpRoute.Status = gwapiv1b1.HTTPRouteStatus{}
 		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes, &httpRoute)
 	}
 
@@ -568,6 +577,9 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		}
 
 		resourceMap.allAssociatedNamespaces[tcpRoute.Namespace] = struct{}{}
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		tcpRoute.Status = gwapiv1a2.TCPRouteStatus{}
 		resourceTree.TCPRoutes = append(resourceTree.TCPRoutes, &tcpRoute)
 	}
 
@@ -625,6 +637,9 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		}
 
 		resourceMap.allAssociatedNamespaces[udpRoute.Namespace] = struct{}{}
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
 		resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, &udpRoute)
 	}
 

@@ -483,3 +483,11 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {
 func irTLSListenerConfigName(secret *v1.Secret) string {
 	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
 }
+
+func protocolSliceToStringSlice(protocols []v1beta1.ProtocolType) []string {
+	var protocolStrings []string
+	for _, protocol := range protocols {
+		protocolStrings = append(protocolStrings, string(protocol))
+	}
+	return protocolStrings
+}

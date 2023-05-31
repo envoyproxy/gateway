@@ -15,5 +15,5 @@ package extensions
 //go:generate sh -c "echo '// the root of the repo.\n' >> extensions.gen.go"
 //go:generate sh -c "echo '// GENERATED FILE -- DO NOT EDIT\n' >> extensions.gen.go"
 //go:generate sh -c "echo 'package extensions\n\nimport (' >> extensions.gen.go"
-//go:generate sh -c "go list github.com/envoyproxy/go-control-plane/... | grep 'v[2-9]' | grep -v /pkg/ | xargs -I{} echo '\t_ \"{}\"' >> extensions.gen.go"
+//go:generate sh -c "go list github.com/envoyproxy/go-control-plane/... | grep 'v[3-9]' | grep -v /pkg/ | xargs -I{} echo '\t_ \"{}\"' >> extensions.gen.go"
 //go:generate sh -c "echo ')' >> extensions.gen.go"

@@ -71,7 +71,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	r.Logger = r.Logger.WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
-	// Create SnapshotCache beforce start subscribeAndTranslate,
+	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
 	cfg := r.tlsConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
 	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))

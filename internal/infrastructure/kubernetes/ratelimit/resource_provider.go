@@ -14,23 +14,20 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
-	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 type ResourceRender struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 
-	infra               *ir.RateLimitInfra
 	rateLimit           *egcfgv1a1.RateLimit
 	rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, infra *ir.RateLimitInfra, gateway *egcfgv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway) *ResourceRender {
 	return &ResourceRender{
 		Namespace:           ns,
-		infra:               infra,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
 	}
@@ -40,27 +37,9 @@ func (r *ResourceRender) Name() string {
 	return InfraName
 }
 
-// ConfigMap returns the expected ConfigMap based on the provided infra.
+// ConfigMap is deprecated since ratelimit supports xds grpc config server.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
-	labels := rateLimitLabels()
-	data := make(map[string]string)
-
-	for _, config := range r.infra.ServiceConfigs {
-		data[config.Name] = config.Config
-	}
-
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: r.Namespace,
-			Name:      InfraName,
-			Labels:    labels,
-		},
-		Data: data,
-	}, nil
+	return nil, nil
 }
 
 // Service returns the expected rate limit Service based on the provided infra.
@@ -148,7 +127,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
-					Volumes:                       expectedDeploymentVolumes(r.rateLimit),
+					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 				},

@@ -44,6 +44,9 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 		return err
 	}
 
+	if cm == nil {
+		return nil
+	}
 	current := &corev1.ConfigMap{}
 	key := types.NamespacedName{
 		Namespace: cm.Namespace,

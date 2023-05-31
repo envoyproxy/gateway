@@ -37,6 +37,9 @@ type CLIClient interface {
 
 	// PodExec takes a command and the pod data to run the command in the specified pod.
 	PodExec(namespacedName types.NamespacedName, container string, command string) (stdout string, stderr string, err error)
+
+	// Kube returns kube client.
+	Kube() kubernetes.Interface
 }
 
 var _ CLIClient = &client{}
@@ -106,6 +109,10 @@ func (c *client) RESTConfig() *rest.Config {
 	}
 	cpy := *c.config
 	return &cpy
+}
+
+func (c *client) Kube() kubernetes.Interface {
+	return c.kube
 }
 
 func (c *client) PodsForSelector(namespace string, podSelectors ...string) (*corev1.PodList, error) {

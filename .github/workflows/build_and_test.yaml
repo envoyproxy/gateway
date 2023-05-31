@@ -22,6 +22,9 @@ jobs:
       with:
         submodules: recursive
     - uses: ./tools/github-actions/setup-deps
+    # Generate the install manifests first so it can checked
+    # for errors while running `make -k lint`
+    - run: make generate-manifests
     - run: make lint-deps
     - run: make -k lint
   
@@ -107,7 +110,6 @@ jobs:
     - name: Run Conformance Tests 
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
-        CONFORMANCE_UNIQUE_PORTS: false
         IMAGE_PULL_POLICY: IfNotPresent
       run: make conformance
   
@@ -136,7 +138,6 @@ jobs:
     - name: Run E2E Tests 
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
-        CONFORMANCE_UNIQUE_PORTS: false
         IMAGE_PULL_POLICY: IfNotPresent
       run: make e2e
 
