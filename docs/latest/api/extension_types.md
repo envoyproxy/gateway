@@ -112,7 +112,7 @@ EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
 
 
 
-EnvoyPatchPolicySpec defines the desired state of RateLimitFilter.
+EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
 
 _Appears in:_
 - [EnvoyPatchPolicy](#envoypatchpolicy)
@@ -122,6 +122,7 @@ _Appears in:_
 | `type` _[EnvoyPatchType](#envoypatchtype)_ | Type decides the type of patch. Valid EnvoyPatchType values are "JSONPatch". |
 | `jsonPatches` _[EnvoyJSONPatchConfig](#envoyjsonpatchconfig) array_ | JSONPatch defines the JSONPatch configuration. |
 | `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef is the name of the Gateway API resource this policy is being attached to. Currently only attaching to Gateway is supported This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway TargetRef |
+| `priority` _integer_ | Priority of the EnvoyPatchPolicy. If multiple EnvoyPatchPolicies are applied to the same TargetRef, they will be applied in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
 
 
 

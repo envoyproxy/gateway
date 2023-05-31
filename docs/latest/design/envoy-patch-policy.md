@@ -8,7 +8,7 @@ that Envoy Gateway generates before sending it to Envoy Proxy.
 Envoy Gateway allows users to configure networking and security intent using the
 upstream [Gateway API][] as well as implementation specific [Extension APIs][] defined in this project
 to provide a more batteries included experience for application developers.
-* These APIs are an abstracted version of the underlying Envoy xDS API to provide a a better user experience for the application developer, exposing and setting only a subset of the fields for a specific feature, sometimes in a opinionated way (e.g [RateLimit][])
+* These APIs are an abstracted version of the underlying Envoy xDS API to provide a better user experience for the application developer, exposing and setting only a subset of the fields for a specific feature, sometimes in a opinionated way (e.g [RateLimit][])
 * These APIs do not expose all the features capabilities that Envoy has either because these features are desired but the API
 is not defined yet or the project cannot support such an extensive list of features.
 To alleviate this problem, and provide an interim solution for a small section of advanced users who are well versed in
@@ -126,9 +126,9 @@ patches will work.
 * This API will always be an experimental API and cannot be graduated into a stable API because Envoy Gateway cannot garuntee
   * that the naming scheme for the generated resources names will not change across releases
   * that the underlying Envoy Proxy API will not change across releases
+* This API needs to be explictly enabled using the [EnvoyGateway][] API
 
 ## Open Questions
-* Should this be an Opt In API disabled by default ?
 * Should the value only support JSON or YAML as well (which is a JSON superset) ?
 
 ## Alternatives
@@ -144,6 +144,7 @@ patches will work.
 [Kustomize]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md
 [Extension APIs]: https://gateway.envoyproxy.io/latest/api/extension_types.html
 [RateLimit]: https://gateway.envoyproxy.io/latest/user/rate-limit.html
+[EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway
 [Extending the Control Plane]: https://gateway.envoyproxy.io/latest/design/extending-envoy-gateway.html
 [EnvoyFilter]: https://istio.io/latest/docs/reference/config/networking/envoy-filter
 [egctl x translate]: https://gateway.envoyproxy.io/latest/user/egctl.html#egctl-experimental-translate

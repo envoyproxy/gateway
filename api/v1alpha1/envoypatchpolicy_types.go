@@ -30,7 +30,7 @@ type EnvoyPatchPolicy struct {
 	Status EnvoyPatchPolicyStatus `json:"status"`
 }
 
-// EnvoyPatchPolicySpec defines the desired state of RateLimitFilter.
+// EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
 // +union
 type EnvoyPatchPolicySpec struct {
 	// Type decides the type of patch.
@@ -49,6 +49,13 @@ type EnvoyPatchPolicySpec struct {
 	// for this Policy to have effect and be applied to the Gateway
 	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReference `json:"targetRef"`
+	// Priority of the EnvoyPatchPolicy.
+	// If multiple EnvoyPatchPolicies are applied to the same
+	// TargetRef, they will be applied in the ascending order of
+	// the priority i.e. int32.min has the highest priority and
+	// int32.max has the lowest priority.
+	// Defaults to 0.
+	Priority int32 `json:"priority"`
 }
 
 // EnvoyPatchType specifies the types of Envoy patching mechanisms.
