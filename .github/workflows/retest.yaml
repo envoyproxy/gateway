@@ -21,14 +21,16 @@ jobs:
             console.log(`Comment: ${comment}`);
             console.log(`Contains Trigger: ${containsTrigger}`);
             return containsTrigger;
- 
+      
+      - name: Install @octokit/core
+        run: npm install @octokit/core@^3
+      
       - name: Rerun Action
         if: steps.check_comment.outputs.result == 'true'
         uses: actions/github-script@v5
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          run: |
-            npm install @octokit/core@^3
+          script: |
             const { Octokit } = require("@octokit/core");
             const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
             const { owner, repo } = context.repo;
