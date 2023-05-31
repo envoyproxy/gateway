@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
+	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
@@ -32,8 +33,22 @@ var RateLimitTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			// TODO: should just send exactly 4 requests, and expect 429
-			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
+			// should just send exactly 4 requests, and expect 429
+			firstThreeExpResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			firstThreeReq := http.MakeRequest(t, &firstThreeExpResp, gwAddr, "HTTP", "http")
+			if err := GotNTimesExpectedResponse(t, 3, suite.RoundTripper, firstThreeReq, firstThreeExpResp); err != nil {
+				t.Errorf("fail to get expected response at first three request: %v", err)
+			}
+
+			lastFourthExpResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
 				},
@@ -41,7 +56,25 @@ var RateLimitTest = suite.ConformanceTest{
 					StatusCode: 429,
 				},
 				Namespace: ns,
-			})
+			}
+			lastFourthReq := http.MakeRequest(t, &lastFourthExpResp, gwAddr, "HTTP", "http")
+			if err := GotNTimesExpectedResponse(t, 1, suite.RoundTripper, lastFourthReq, lastFourthExpResp); err != nil {
+				t.Errorf("fail to get expected response at last fourth request: %v", err)
+			}
 		})
 	},
+}
+
+func GotNTimesExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
+	for i := 0; i < n; i++ {
+		cReq, cRes, err := r.CaptureRoundTrip(req)
+		if err != nil {
+			return err
+		}
+
+		if err = http.CompareRequest(t, &req, cReq, cRes, resp); err != nil {
+			return err
+		}
+	}
+	return nil
 }
