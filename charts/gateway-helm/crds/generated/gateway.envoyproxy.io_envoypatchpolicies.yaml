@@ -78,6 +78,13 @@ spec:
                   - type
                   type: object
                 type: array
+              priority:
+                description: Priority of the EnvoyPatchPolicy. If multiple EnvoyPatchPolicies
+                  are applied to the same TargetRef, they will be applied in the ascending
+                  order of the priority i.e. int32.min has the highest priority and
+                  int32.max has the lowest priority. Defaults to 0.
+                format: int32
+                type: integer
               targetRef:
                 description: TargetRef is the name of the Gateway API resource this
                   policy is being attached to. Currently only attaching to Gateway
@@ -121,6 +128,7 @@ spec:
                 - JSONPatch
                 type: string
             required:
+            - priority
             - targetRef
             - type
             type: object
