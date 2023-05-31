@@ -103,6 +103,7 @@ install-ratelimit:
 	kubectl apply -f examples/redis/redis.yaml
 	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
 run-e2e:

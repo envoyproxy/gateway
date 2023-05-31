@@ -10,7 +10,6 @@ package tests
 
 import (
 	"testing"
-	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/conformance/utils/http"
@@ -32,10 +31,6 @@ var RateLimitTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-ratelimit", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
-
-			// TODO: find a better to make sure ratelimit load new configuration
-			// just wait a bit more time for now
-			time.Sleep(30 * time.Second)
 
 			// TODO: should just send exactly 4 requests, and expect 429
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, http.ExpectedResponse{
