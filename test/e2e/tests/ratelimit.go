@@ -33,8 +33,7 @@ var RateLimitTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			// should just send exactly 4 requests, and expect 429
-			firstThreeExpResp := http.ExpectedResponse{
+			expectOkResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
 				},
@@ -43,12 +42,9 @@ var RateLimitTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			firstThreeReq := http.MakeRequest(t, &firstThreeExpResp, gwAddr, "HTTP", "http")
-			if err := GotNTimesExpectedResponse(t, 3, suite.RoundTripper, firstThreeReq, firstThreeExpResp); err != nil {
-				t.Errorf("fail to get expected response at first three request: %v", err)
-			}
+			expectOkReq := http.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
 
-			lastFourthExpResp := http.ExpectedResponse{
+			expectLimitResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/",
 				},
@@ -57,15 +53,25 @@ var RateLimitTest = suite.ConformanceTest{
 				},
 				Namespace: ns,
 			}
-			lastFourthReq := http.MakeRequest(t, &lastFourthExpResp, gwAddr, "HTTP", "http")
-			if err := GotNTimesExpectedResponse(t, 1, suite.RoundTripper, lastFourthReq, lastFourthExpResp); err != nil {
+			expectLimitReq := http.MakeRequest(t, &expectLimitResp, gwAddr, "HTTP", "http")
+
+			// should just send exactly 4 requests, and expect 429
+
+			// keep sending requests till get 200 first, that will cost one 200
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectOkResp)
+
+			// fire the rest request
+			if err := GotExactNExpectedResponse(t, 2, suite.RoundTripper, expectOkReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at first three request: %v", err)
+			}
+			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
 				t.Errorf("fail to get expected response at last fourth request: %v", err)
 			}
 		})
 	},
 }
 
-func GotNTimesExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
+func GotExactNExpectedResponse(t *testing.T, n int, r roundtripper.RoundTripper, req roundtripper.Request, resp http.ExpectedResponse) error {
 	for i := 0; i < n; i++ {
 		cReq, cRes, err := r.CaptureRoundTrip(req)
 		if err != nil {
