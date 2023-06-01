@@ -145,13 +145,13 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 
 		for _, backendRef := range rule.BackendRefs {
-			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
+			destinations, backendWeight := t.processRouteDestinations(backendRef.BackendRef, parentRef, httpRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
 				if route.DirectResponse == nil && route.Redirect == nil {
-					if destination != nil {
-						route.Destinations = append(route.Destinations, destination)
+					if len(destinations) > 0 {
+						route.Destinations = append(route.Destinations, destinations...)
 						route.BackendWeights.Valid += backendWeight
 
 					} else {
@@ -354,13 +354,13 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var ruleRoutes = t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
 
 		for _, backendRef := range rule.BackendRefs {
-			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
+			destinations, backendWeight := t.processRouteDestinations(backendRef.BackendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
 				if route.DirectResponse == nil && route.Redirect == nil {
-					if destination != nil {
-						route.Destinations = append(route.Destinations, destination)
+					if len(destinations) > 0 {
+						route.Destinations = append(route.Destinations, destinations...)
 						route.BackendWeights.Valid += backendWeight
 
 					} else {
@@ -604,24 +604,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
-				// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when TLSRoute graduates to v1beta1.
-				serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
-				service := resources.GetService(serviceNamespace, string(backendRef.Name))
-
-				if !t.validateBackendRef(&backendRef, parentRef, tlsRoute, resources, serviceNamespace, KindTLSRoute) {
-					continue
-				}
-
-				weight := uint32(1)
-				if backendRef.Weight != nil {
-					weight = uint32(*backendRef.Weight)
-				}
-
-				routeDestinations = append(routeDestinations, ir.NewRouteDestWithWeight(
-					service.Spec.ClusterIP,
-					uint32(*backendRef.Port),
-					weight,
-				))
+				destinations, _ := t.processRouteDestinations(backendRef, parentRef, tlsRoute, resources)
+				routeDestinations = append(routeDestinations, destinations...)
 			}
 
 			// TODO handle:
@@ -758,20 +742,13 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-		// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when UDPRoute graduates to v1beta1.
-		serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
-		service := resources.GetService(serviceNamespace, string(backendRef.Name))
-
-		if !t.validateBackendRef(&backendRef, parentRef, udpRoute, resources, serviceNamespace, KindUDPRoute) {
+		destinations, _ := t.processRouteDestinations(backendRef, parentRef, udpRoute, resources)
+		// Skip further processing if route destination is not valid
+		if len(destinations) == 0 {
 			continue
 		}
 
-		// weight is not used in udp route destinations
-		routeDestinations = append(routeDestinations, ir.NewRouteDest(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port),
-		))
-
+		routeDestinations = append(routeDestinations, destinations...)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(udpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(udpRoute,
@@ -898,20 +875,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
-		// TODO: [v1alpha2-v1beta1] Replace with NamespaceDerefOr when TCPRoute graduates to v1beta1.
-		serviceNamespace := NamespaceDerefOrAlpha(backendRef.Namespace, tcpRoute.Namespace)
-		service := resources.GetService(serviceNamespace, string(backendRef.Name))
-
-		if !t.validateBackendRef(&backendRef, parentRef, tcpRoute, resources, serviceNamespace, KindTCPRoute) {
+		destinations, _ := t.processRouteDestinations(backendRef, parentRef, tcpRoute, resources)
+		// Skip further processing if route destination is not valid
+		if len(destinations) == 0 {
 			continue
 		}
-
-		// weight is not used in tcp route destinations
-		routeDestinations = append(routeDestinations, ir.NewRouteDest(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port),
-		))
-
+		routeDestinations = append(routeDestinations, destinations...)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(tcpRoute,
@@ -981,13 +950,13 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 	}
 }
 
-// processRouteDestination takes a backendRef and translates it into a destination or sets error statuses and
+// processRouteDestinations takes a backendRef and translates it into route destinations or sets error statuses and
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
-func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
+func (t *Translator) processRouteDestinations(backendRef v1beta1.BackendRef,
 	parentRef *RouteParentContext,
 	route RouteContext,
-	resources *Resources) (destination *ir.RouteDestination, backendWeight uint32) {
+	resources *Resources) (destinations []*ir.RouteDestination, backendWeight uint32) {
 
 	weight := uint32(1)
 	if backendRef.Weight != nil {
@@ -997,17 +966,25 @@ func (t *Translator) processRouteDestination(backendRef v1beta1.BackendRef,
 	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, KindHTTPRoute) {
+	routeType := route.GetRouteType()
+	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, routeType) {
 		return nil, weight
 	}
 
-	// we need to validate backendRef first before using its data to create routeDestination
-	return ir.NewRouteDestWithWeight(
-		service.Spec.ClusterIP,
-		uint32(*backendRef.Port),
-		weight,
-	), weight
-
+	var dest *ir.RouteDestination
+	// Weights are not relevant for TCP and UDP Routes
+	if routeType == KindTCPRoute || routeType == KindUDPRoute {
+		dest = ir.NewRouteDest(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port))
+	} else {
+		dest = ir.NewRouteDestWithWeight(
+			service.Spec.ClusterIP,
+			uint32(*backendRef.Port),
+			weight)
+	}
+	destinations = append(destinations, dest)
+	return destinations, weight
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
