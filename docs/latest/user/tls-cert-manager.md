@@ -30,7 +30,7 @@ $ helm repo add jetstack https://charts.jetstack.io
 $ helm upgrade --install --create-namespace --namespace cert-manager --set installCRDs=true --set featureGates=ExperimentalGatewayAPISupport=true cert-manager jetstack/cert-manager
 ```
 
-You should now have `cert-manager` running and having nothing to do:
+You should now have `cert-manager` running with nothing to do:
 
 ```console
 $ kubectl wait --for=condition=Available deployment -n cert-manager --all
@@ -51,33 +51,33 @@ cert-manager can have any number of *issuer* configurations.
 The simplest issuer type is [SelfSigned](https://cert-manager.io/docs/configuration/selfsigned/).
 It simply takes the certificate request and signs it with the private key it generates for the TLS Secret.
 
+```{note}
+Self-signed certificates don't provide any help in establishing trust between certificates.
+However, they are great for initial testing, due to their simplicity.
+```
+
 To install self-signing, run
 
 ```console
 $ kubectl apply -f - <<EOF
 apiVersion: cert-manager.io/v1
-kind: Issuer
+kind: ClusterIssuer
 metadata:
   name: selfsigned
-  namespace: default
 spec:
   selfSigned: {}
 EOF
 ```
 
-The `selfSigned` issuer type is namespaced, which means it will use the Issuer resource kind.
-It can only issue certificates for Secrets in the same namespace, here "default."
-You could also use [ClusterIssuer](https://cert-manager.io/docs/concepts/issuer/), which can be used from any namespace.
-
 ## Creating a TLS Gateway Listener
 
-We now have to create (or patch) a Gateway to reference cert-manager:
+We now have to patch the example Gateway to reference cert-manager:
 
 ```console
 $ kubectl patch gateway/eg --patch-file - <<EOF
 metadata:
   annotations:
-    cert-manager.io/issuer: selfsigned
+    cert-manager.io/clusterissuer: selfsigned
     cert-manager.io/common-name: "Hello World!"
 spec:
   listeners:
@@ -99,7 +99,7 @@ cert-manager doesn't care, but we'll keep it all together in this guide.
 Nowadays, X.509 certificates don't use the subject Common Name for hostname matching, so you can set it to whatever you want, or leave it empty.
 The important parts here are
 
-* the annotation referencing the "selfsigned" Issuer we created above,
+* the annotation referencing the "selfsigned" ClusterIssuer we created above,
 * the `hostname`, which is required (but see [#6051](https://github.com/cert-manager/cert-manager/issues/6051) for computing it based on attached HTTPRoutes), and
 * the named Secret, which is what cert-manager will create for us.
 
@@ -143,8 +143,8 @@ If the `certificatRef` points to a valid certificate, given the hostnames found 
 
 If there is no valid certificate, or it is about to expire, cert-manager's `gateway-shim` creates a Certificate resource, or updates the existing one.
 cert-manager then follows the [Certificate Lifecycle](https://cert-manager.io/docs/concepts/certificate/#certificate-lifecycle).
-To know how to issue the certificate, an Issuer is configured, and referenced through annotations on the Gateway resource, which you did above.
-Once a matching Issuer is found, that plugin does what needs to be done to acquire a signed certificate.
+To know how to issue the certificate, an ClusterIssuer is configured, and referenced through annotations on the Gateway resource, which you did above.
+Once a matching ClusterIssuer is found, that plugin does what needs to be done to acquire a signed certificate.
 
 In the case of the ACME protocol (used by Let's Encrypt,) cert-manager can also use an HTTP Gateway to solve the HTTP-01 challenge type.
 This is the other side of cert-manager's Gateway API support:
@@ -184,12 +184,8 @@ spec:
 
 The important parts are
 
-* we chose a ClusterIssuer kind so it can operate on any namespace,
 * using `spec.acme` with a server URI and contact email address, and
 * referencing our plain HTTP gateway so the challenge HTTPRoute is attached to the right place.
-
-We switched to ClusterIssuer to have an opportunity to show it off, not because ACME requires it.
-It is slightly simpler to work with, as you don't have to care about namespaces.
 
 Check the account registration process using the Ready condition:
 
@@ -211,10 +207,9 @@ Status:
 Now we're ready to update the Gateway annotation to use this issuer instead:
 
 ```console
-$ kubectl annotate gateway/eg cert-manager.io/issuer- cert-manager.io/clusterissuer=letsencrypt-staging
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt-staging
 ```
 
-Since the ClusterIssuer has a different annotation key, we removed the old and added the new.
 The Gateway should be picked up by cert-manager, which will create a new certificate for you, and replace the Secret.
 
 You should see a new CertificateRequest to track:
@@ -292,12 +287,22 @@ $ curl -v -HHost:www.example.com --resolve www.example.com:127.0.0.1 https://www
 
 ## Collecting Garbage
 
-cert-manager [deletes unused Certificate resources](https://github.com/cert-manager/cert-manager/blob/c5e6bf39d688d202592318eaf91988466a7ee37b/pkg/controller/certificate-shim/sync.go#L171), and they are updated in-place when possible, so there should be no need for cleaning up Certificate resources:
-If no Secret points to a Certificate, the Certificate is deleted.
-
-The other way around is also possible, using [a flag](https://cert-manager.io/docs/usage/certificate/#cleaning-up-secrets-when-certificates-are-deleted).
-
 You probably want to set the `cert-manager.io/revision-history-limit` annotation on your Gateway to make cert-manager prune the CertificateRequest history.
+
+cert-manager [deletes unused Certificate resources](https://github.com/cert-manager/cert-manager/blob/c5e6bf39d688d202592318eaf91988466a7ee37b/pkg/controller/certificate-shim/sync.go#L171), and they are updated in-place when possible, so there should be no need for cleaning up Certificate resources.
+The deletion is based on whether a Gateway still holds a `tls.certificateRefs` that requires the Certificate.
+
+If you remove a TLS listener from a Gateway, you may still have a Secret lingering.
+cert-manager can clean it up using [a flag](https://cert-manager.io/docs/usage/certificate/#cleaning-up-secrets-when-certificates-are-deleted).
+
+## Issuer Namespaces
+
+We have used ClusterIssuer resources in this tutorial.
+They are not bound to any namespace, and will read annotations from Gateways in any namespace.
+You could also use [Issuer](https://cert-manager.io/docs/concepts/issuer/), which is bound to a namespace.
+This is useful e.g. if you want to use different ACME accounts for different namespaces.
+
+If you change the issuer kind, you also need to change the annotation key from `cert-manager.io/clusterissuer` to `cert-manager.io/issuer`.
 
 ## Using ExternalDNS
 
