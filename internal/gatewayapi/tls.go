@@ -26,12 +26,12 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 
 		certBlock, _ := pem.Decode(certData)
 		if certBlock == nil {
-			return fmt.Errorf("unable to decode pem data in %s", corev1.TLSCertKey)
+			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey)
 		}
 
 		cert, err := x509.ParseCertificate(certBlock.Bytes)
 		if err != nil {
-			return fmt.Errorf("unable to parse certificate in %s: %w", corev1.TLSCertKey, err)
+			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse certificate in %s: %w", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSCertKey, err)
 		}
 		publicKeyAlgorithm = cert.PublicKeyAlgorithm.String()
 
@@ -39,18 +39,18 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 
 		keyBlock, _ := pem.Decode(keyData)
 		if keyBlock == nil {
-			return fmt.Errorf("unable to decode pem data in %s", corev1.TLSPrivateKeyKey)
+			return fmt.Errorf("%s/%s must contain valid %s and %s, unable to decode pem data in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 		}
 
 		matchedFQDN, err := verifyHostname(cert, host)
 		if err != nil {
-			return fmt.Errorf("hostname %s does not match Common Name or DNS Names in the certificate %s", string(*host), corev1.TLSCertKey)
+			return fmt.Errorf("%s/%s must contain valid %s and %s, hostname %s does not match Common Name or DNS Names in the certificate %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, string(*host), corev1.TLSCertKey)
 		}
 		pkaSecretKey := fmt.Sprintf("%s/%s", publicKeyAlgorithm, matchedFQDN)
 
 		// Check whether the public key algorithm and matched certificate FQDN in the referenced secrets are unique.
 		if matchedFQDN, ok := pkaSecretSet[pkaSecretKey]; ok {
-			return fmt.Errorf("secret %s/%s public key algorithm must be unique. Matched cerificate FQDN %s has a conficting algorithm [%s]",
+			return fmt.Errorf("%s/%s public key algorithm must be unique, matched cerificate FQDN %s has a conficting algorithm [%s]",
 				secret.Namespace, secret.Name, matchedFQDN, publicKeyAlgorithm)
 
 		}
@@ -60,20 +60,20 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 		case "PRIVATE KEY":
 			_, err := x509.ParsePKCS8PrivateKey(keyBlock.Bytes)
 			if err != nil {
-				parseErr = fmt.Errorf("unable to parse PKCS8 formatted private key in %s", corev1.TLSPrivateKeyKey)
+				parseErr = fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS8 formatted private key in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 			}
 		case "RSA PRIVATE KEY":
 			_, err := x509.ParsePKCS1PrivateKey(keyBlock.Bytes)
 			if err != nil {
-				parseErr = fmt.Errorf("unable to parse PKCS1 formatted private key in %s", corev1.TLSPrivateKeyKey)
+				parseErr = fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse PKCS1 formatted private key in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 			}
 		case "EC PRIVATE KEY":
 			_, err := x509.ParseECPrivateKey(keyBlock.Bytes)
 			if err != nil {
-				parseErr = fmt.Errorf("unable to parse EC formatted private key in %s", corev1.TLSPrivateKeyKey)
+				parseErr = fmt.Errorf("%s/%s must contain valid %s and %s, unable to parse EC formatted private key in %s", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, corev1.TLSPrivateKeyKey)
 			}
 		default:
-			return fmt.Errorf("%s key format found in %s, supported formats are PKCS1, PKCS8 or EC", keyBlock.Type, corev1.TLSPrivateKeyKey)
+			return fmt.Errorf("%s/%s must contain valid %s and %s, %s key format found in %s, supported formats are PKCS1, PKCS8 or EC", secret.Namespace, secret.Name, corev1.TLSCertKey, corev1.TLSPrivateKeyKey, keyBlock.Type, corev1.TLSPrivateKeyKey)
 		}
 	}
 

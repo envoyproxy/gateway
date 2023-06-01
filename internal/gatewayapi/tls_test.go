@@ -13,7 +13,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+)
+
+const (
+	secretName      = "secret"
+	secretNamespace = "test"
 )
 
 // createTestSecret creates a K8s tls secret using testdata
@@ -28,6 +34,10 @@ func createTestSecrets(t *testing.T, certFile, keyFile string) []*corev1.Secret 
 	require.NoError(t, err)
 
 	return []*corev1.Secret{{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: secretNamespace,
+		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       certData,
@@ -125,56 +135,56 @@ func TestValidateTLSSecretsData(t *testing.T) {
 			CertFile:    "malformed-encoding.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("unable to decode pem data in tls.crt"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to decode pem data in tls.crt"),
 		},
 		{
 			Name:        "malformed-key-pem-encoding",
 			CertFile:    "rsa-cert.pem",
 			KeyFile:     "malformed-encoding.pem",
 			Domain:      "*",
-			ExpectedErr: errors.New("unable to decode pem data in tls.key"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to decode pem data in tls.key"),
 		},
 		{
 			Name:        "malformed-cert",
 			CertFile:    "malformed-cert.pem",
 			KeyFile:     "rsa-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("unable to parse certificate in tls.crt: x509: malformed certificate"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to parse certificate in tls.crt: x509: malformed certificate"),
 		},
 		{
 			Name:        "malformed-pkcs8-key",
 			CertFile:    "rsa-cert.pem",
 			KeyFile:     "malformed-pkcs8.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("unable to parse PKCS8 formatted private key in tls.key"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to parse PKCS8 formatted private key in tls.key"),
 		},
 		{
 			Name:        "malformed-pkcs1-key",
 			CertFile:    "rsa-cert.pem",
 			KeyFile:     "malformed-pkcs1.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("unable to parse PKCS1 formatted private key in tls.key"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to parse PKCS1 formatted private key in tls.key"),
 		},
 		{
 			Name:        "malformed-ecdsa-key",
 			CertFile:    "rsa-cert.pem",
 			KeyFile:     "malformed-ecdsa.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("unable to parse EC formatted private key in tls.key"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, unable to parse EC formatted private key in tls.key"),
 		},
 		{
 			Name:        "invalid-key-type",
 			CertFile:    "rsa-cert.pem",
 			KeyFile:     "invalid-key-type.key",
 			Domain:      "*",
-			ExpectedErr: errors.New("FOO key format found in tls.key, supported formats are PKCS1, PKCS8 or EC"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, FOO key format found in tls.key, supported formats are PKCS1, PKCS8 or EC"),
 		},
 		{
 			Name:        "invalid-domain-cert",
 			CertFile:    "rsa-cert-san.pem",
 			KeyFile:     "rsa-pkcs8-san.key",
 			Domain:      "*.example.com",
-			ExpectedErr: errors.New("hostname *.example.com does not match Common Name or DNS Names in the certificate tls.crt"),
+			ExpectedErr: errors.New("test/secret must contain valid tls.crt and tls.key, hostname *.example.com does not match Common Name or DNS Names in the certificate tls.crt"),
 		},
 	}
 

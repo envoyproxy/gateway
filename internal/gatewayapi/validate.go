@@ -304,16 +304,16 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 		}
 
 		secrets = append(secrets, secret)
-		err := validateTLSSecretsData(secrets, listener.Hostname)
-		if err != nil {
-			listener.SetCondition(
-				v1beta1.ListenerConditionResolvedRefs,
-				metav1.ConditionFalse,
-				v1beta1.ListenerReasonInvalidCertificateRef,
-				fmt.Sprintf("Secret %s/%s must contain valid %s and %s, %s.", listener.gateway.Namespace, certificateRef.Name, v1.TLSCertKey, v1.TLSPrivateKeyKey, err.Error()),
-			)
-			break
-		}
+	}
+
+	err := validateTLSSecretsData(secrets, listener.Hostname)
+	if err != nil {
+		listener.SetCondition(
+			v1beta1.ListenerConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.ListenerReasonInvalidCertificateRef,
+			fmt.Sprintf("Secret %s.", err.Error()),
+		)
 	}
 
 	return secrets

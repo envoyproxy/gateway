@@ -18,14 +18,15 @@ gateways:
             certificateRefs:
               - name: tls-secret-ecdsa-1
               - name: tls-secret-ecdsa-2
+              - name: tls-secret-1
     status:
       listeners:
         - name: tls
           attachedRoutes: 0
           conditions:
             - lastTransitionTime: "2023-04-02T11:08:00Z"
-              message: "Secret envoy-gateway/tls-secret-ecdsa-2 must contain valid tls.crt and tls.key, secret envoy-gateway/tls-secret-ecdsa-2 
-                public key algorithm must be unique. Matched cerificate FQDN [foo.bar.com] has a conficting algorithm [ECDSA]."
+              message: "Secret envoy-gateway/tls-secret-ecdsa-2 
+                public key algorithm must be unique, matched cerificate FQDN [foo.bar.com] has a conficting algorithm [ECDSA]."
               reason: InvalidCertificateRef
               status: "False"
               type: ResolvedRefs
