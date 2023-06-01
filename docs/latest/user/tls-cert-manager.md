@@ -67,7 +67,7 @@ EOF
 
 The `selfSigned` issuer type is namespaced, which means it will use the Issuer resource kind.
 It can only issue certificates for Secrets in the same namespace, here "default."
-We will later see ClusterIssuer used, which can deal with Secrets (and hence Gateways) in any namespace.
+You could also use [ClusterIssuer](https://cert-manager.io/docs/concepts/issuer/), which can be used from any namespace.
 
 ## Creating a TLS Gateway Listener
 
@@ -160,8 +160,6 @@ As you can imagine, cert-manager requires quite broad permissions to update Secr
 We will start using the Let's Encrypt staging environment, to spare their production environment.
 Our Gateway already contains an HTTP listener, so we will use that for the HTTP-01 challenges.
 
-In the case of ACME, the plugin is a cluster-wide issuer type, so we have to use ClusterIssuer:
-
 ```console
 $ CERT_MANAGER_CONTACT_EMAIL=$(git config user.email)  # Or whatever...
 $ kubectl apply -f - <<EOF
@@ -186,8 +184,12 @@ spec:
 
 The important parts are
 
+* we chose a ClusterIssuer kind so it can operate on any namespace,
 * using `spec.acme` with a server URI and contact email address, and
 * referencing our plain HTTP gateway so the challenge HTTPRoute is attached to the right place.
+
+We switched to ClusterIssuer to have an opportunity to show it off, not because ACME requires it.
+It is slightly simpler to work with, as you don't have to care about namespaces.
 
 Check the account registration process using the Ready condition:
 
