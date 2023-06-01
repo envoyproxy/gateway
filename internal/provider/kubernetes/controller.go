@@ -218,8 +218,8 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				r.log.Error(err, "failed to get EndpointSlices", "namespace", serviceNamespaceName.Namespace,
 					"service", serviceNamespaceName.Name)
 			} else {
-				for i := range endpointSliceList.Items {
-					endpointSlice := endpointSliceList.Items[i]
+				for _, endpointSlice := range endpointSliceList.Items {
+					endpointSlice := endpointSlice
 					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
 						"name", endpointSlice.Name)
 					resourceTree.EndpointSlices = append(resourceTree.EndpointSlices, &endpointSlice)
