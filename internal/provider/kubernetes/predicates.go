@@ -10,6 +10,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
@@ -21,8 +22,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
-
-// TODO: all predicate functions are unti test candidates.
 
 // hasMatchingController returns true if the provided object is a GatewayClass
 // with a Spec.Controller string matching this Envoy Gateway's controller string,
@@ -116,9 +115,17 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
+	nsName := utils.NamespacedName(svc)
+	return r.isRouteReferencingService(&nsName)
+}
+
+// isRouteReferencingService returns true if the service is referenced by any of the xRoutes
+// in the system, else returns false.
+func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.NamespacedName) bool {
+	ctx := context.Background()
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, utils.NamespacedName(svc).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated HTTPRoutes")
 		return false
@@ -126,7 +133,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceGRPCRouteIndex, utils.NamespacedName(svc).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceGRPCRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated GRPCRoutes")
 		return false
@@ -134,7 +141,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, utils.NamespacedName(svc).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated TLSRoutes")
 		return false
@@ -142,7 +149,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTCPRouteIndex, utils.NamespacedName(svc).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceTCPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated TCPRoutes")
 		return false
@@ -150,7 +157,7 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndex, utils.NamespacedName(svc).String()),
+		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated UDPRoutes")
 		return false
@@ -164,6 +171,29 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		len(udpRouteList.Items)
 
 	return allAssociatedRoutes != 0
+}
+
+// validateEndpointSliceForReconcile returns true if the the endpointSlice references
+// a service that is referenced by a xRoute
+func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Object) bool {
+	ep, ok := obj.(*discoveryv1.EndpointSlice)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	svcName, ok := ep.GetLabels()[discoveryv1.LabelServiceName]
+	if !ok {
+		r.log.Info("endpointslice is missing kubernetes.io/service-name label", "object", obj)
+		return false
+	}
+
+	nsName := types.NamespacedName{
+		Namespace: obj.GetNamespace(),
+		Name:      svcName,
+	}
+
+	return r.isRouteReferencingService(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
