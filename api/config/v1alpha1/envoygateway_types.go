@@ -160,6 +160,8 @@ type EnvoyGatewayKubernetesProvider struct {
 	// should be deployed
 	// +optional
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
+	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
+	OverwriteControlPlaneCerts bool `json:"overwrite_control_plane_certs,omitempty"`
 }
 
 // KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.

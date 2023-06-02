@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/envoyproxy/gateway/internal/crypto"
+	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
 // caCertificateKey is the key name for accessing TLS CA certificate bundles
@@ -67,7 +68,8 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 
 // CreateOrUpdateSecrets creates the provided secrets if they don't exist or updates
 // them if they do.
-func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []corev1.Secret) ([]corev1.Secret, error) {
+func CreateOrUpdateSecrets(ctx context.Context, client client.Client, cfg *config.Server, secrets []corev1.Secret) ([]corev1.Secret, error) {
+	log := cfg.Logger
 	var tidySecrets []corev1.Secret
 	for i := range secrets {
 		secret := secrets[i]
@@ -82,9 +84,22 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 				if err := client.Create(ctx, &secret); err != nil {
 					return nil, fmt.Errorf("failed to create secret %s/%s: %w", secret.Namespace, secret.Name, err)
 				}
+			} else {
+				return nil, fmt.Errorf("failed to get secret %s/%s: %w", secret.Namespace, secret.Name, err)
 			}
+			// Update if current value is different and overwrite is set.
 		} else {
-			// Update if current value is different.
+			if cfg.EnvoyGateway == nil ||
+				cfg.EnvoyGateway.Provider == nil ||
+				cfg.EnvoyGateway.Provider.Kubernetes == nil ||
+				!cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
+				log.Info("skipped creating secret, since it already exists. "+
+					"Either update it manually or set overwriteControlPlaneCerts "+
+					"in the EnvoyGateway config", "namespace", secret.Namespace, "name", secret.Name)
+				return nil, nil
+			}
+
+			// Update if current value is different and overwrite is set.
 			if !reflect.DeepEqual(secret.Data, current.Data) {
 				if err := client.Update(ctx, &secret); err != nil {
 					return nil, fmt.Errorf("failed to update secret %s/%s: %w", secret.Namespace, secret.Name, err)
