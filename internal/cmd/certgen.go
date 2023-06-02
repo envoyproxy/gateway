@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -61,10 +62,22 @@ func certGen() error {
 
 // outputCerts outputs the provided certs to a secret in namespace ns.
 func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, certs *crypto.Certificates) error {
-	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, cfg, kubernetes.CertsToSecret(cfg.Namespace, certs))
+	var updateSecrets bool
+	if cfg.EnvoyGateway != nil &&
+		cfg.EnvoyGateway.Provider != nil &&
+		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
+		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
+		updateSecrets = true
+	}
+	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
 	log := cfg.Logger
 
 	if err != nil {
+		if errors.Is(err, kubernetes.ErrSecretExists) {
+			log.Info("exiting early", "reason", err)
+			return nil
+		}
+
 		return fmt.Errorf("failed to create or update secrets: %v", err)
 	}
 

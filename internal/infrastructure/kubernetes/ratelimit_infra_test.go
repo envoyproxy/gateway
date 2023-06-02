@@ -15,15 +15,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
 func createRateLimitTLSSecret(t *testing.T, client client.Client) {
-	cfg, err := config.New()
-	require.NoError(t, err)
-	_, secretErr := kubernetes.CreateOrUpdateSecrets(context.Background(), client, cfg, []corev1.Secret{
+	_, secretErr := kubernetes.CreateOrUpdateSecrets(context.Background(), client, []corev1.Secret{
 		{
 			Type: corev1.SecretTypeTLS,
 			TypeMeta: metav1.TypeMeta{
@@ -38,7 +35,7 @@ func createRateLimitTLSSecret(t *testing.T, client client.Client) {
 				},
 			},
 		},
-	})
+	}, false)
 	require.NoError(t, secretErr)
 }
 
