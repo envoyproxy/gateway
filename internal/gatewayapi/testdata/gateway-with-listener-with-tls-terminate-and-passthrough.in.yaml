@@ -10,7 +10,7 @@ gateways:
         - name: tls-passthrough
           protocol: TLS
           port: 90
-          hostname: foo.com
+          hostname: foo.bar.com
           tls:
             mode: Passthrough
           allowedRoutes:
@@ -19,7 +19,7 @@ gateways:
         - name: tls-terminate
           protocol: HTTPS
           port: 443
-          hostname: foo.com
+          hostname: foo.bar.com
           tls:
             mode: Terminate
             certificateRefs:
