@@ -186,6 +186,16 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			expect:        false,
 		},
 		{
+			name: "http route service routes exist, but endpointslice is associated with another service",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "other-service"),
+			expect:        false,
+		},
+		{
 			name: "http route service routes exist",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
