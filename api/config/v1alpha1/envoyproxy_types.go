@@ -61,6 +61,9 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Bootstrap *string `json:"bootstrap,omitempty"`
+	// Traffic settings in the data plane.
+	// +optional
+	Traffic *EnvoyProxyTrafficSettings `json:"traffic,omitempty"`
 }
 
 // EnvoyProxyProvider defines the desired state of a resource provider.
@@ -162,6 +165,49 @@ const (
 
 	// LogLevelError defines the "Error" logging level.
 	LogLevelError LogLevel = "error"
+)
+
+// EnvoyProxyTrafficSettings defines the traffic settings for requests being
+// processed by the EnvoyProxy data plane.
+type EnvoyProxyTrafficSettings struct {
+	// LoadBalancer defines the load balancer settings between
+	// the Envoy Proxy data plane and the upstream hosts.
+	//
+	// +optional
+	LoadBalancer *EnvoyProxyLoadBalancerSetting `json:"loadBalancer,omitempty"`
+}
+
+type EnvoyProxyLoadBalancerSetting struct {
+	// Strategy for load balancing.
+	//
+	// +kubebuilder:default=LeastRequest
+	Strategy LoadBalancerStrategy `json:"strategy,omitempty"`
+}
+
+// LoadBalancerStrategy defines the type of load balancing strategy to use.
+//
+// +kubebuilder:validation:Enum=LeastRequest;RoundRobin;Random;ClusterIP
+type LoadBalancerStrategy string
+
+const (
+	// LoadBalancerStrategyLeastRequest defines the "LeastRequest" load balancing strategy.
+	// In this mode, the upstream hosts is picked based on fewer active requests.
+	// Visit https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#weighted-least-request for more details.
+	LoadBalancerStrategyLeastRequest LoadBalancerStrategy = "LeastRequest"
+
+	// LoadBalancerStrategyRoundRobin defines the "RoundRobin" load balancing strategy.
+	// In this mode, the upstream host is selected in weighed round robin order.
+	// Visit https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/load_balancers#weighted-round-robin for more details.
+	LoadBalancerStrategyRoundRobin LoadBalancerStrategy = "RoundRobin"
+
+	// LoadBalancerStrategyRandom defines the "Random" load balancing strategy.
+	// In this mode, the upstream host is chosen randomly.
+	LoadBalancerStrategyRandom LoadBalancerStrategy = "Random"
+
+	// LoadBalancerStrategyClusterIP defines the "ClusterIP" load balancing strategy.
+	// In this mode, EnvoyProxy routes requests to the ClusterIP of the service and
+	// relies on another entity such as kube-proxy to perform load balancing to the upstream hosts.
+	LoadBalancerStrategyClusterIP LoadBalancerStrategy = "ClusterIP"
 )
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented

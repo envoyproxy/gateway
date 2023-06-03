@@ -3836,6 +3836,24 @@ spec:
                 required:
                 - type
                 type: object
+              traffic:
+                description: Traffic settings in the data plane.
+                properties:
+                  loadBalancer:
+                    description: LoadBalancer defines the load balancer settings between
+                      the Envoy Proxy data plane and the upstream hosts.
+                    properties:
+                      strategy:
+                        default: LeastRequest
+                        description: Strategy for load balancing.
+                        enum:
+                        - LeastRequest
+                        - RoundRobin
+                        - Random
+                        - ClusterIP
+                        type: string
+                    type: object
+                type: object
             type: object
           status:
             description: EnvoyProxyStatus defines the actual state of EnvoyProxy.

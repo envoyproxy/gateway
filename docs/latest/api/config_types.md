@@ -185,6 +185,20 @@ _Appears in:_
 | `envoyService` _[KubernetesServiceSpec](#kubernetesservicespec)_ | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the manged Envoy service resource are applied. |
 
 
+## EnvoyProxyLoadBalancerSetting
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxyTrafficSettings](#envoyproxytrafficsettings)
+
+| Field | Description |
+| --- | --- |
+| `strategy` _[LoadBalancerStrategy](#loadbalancerstrategy)_ | Strategy for load balancing. |
+
+
 ## EnvoyProxyProvider
 
 
@@ -215,8 +229,23 @@ _Appears in:_
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
 | `accessLoggings` _[ProxyAccessLogging](#proxyaccesslogging) array_ | AccessLoggings defines access logging parameters for managed proxies. If unspecified, access log is disabled. |
 | `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
+| `traffic` _[EnvoyProxyTrafficSettings](#envoyproxytrafficsettings)_ | Traffic settings in the data plane. |
 
 
+
+
+## EnvoyProxyTrafficSettings
+
+
+
+EnvoyProxyTrafficSettings defines the traffic settings for requests being processed by the EnvoyProxy data plane.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Description |
+| --- | --- |
+| `loadBalancer` _[EnvoyProxyLoadBalancerSetting](#envoyproxyloadbalancersetting)_ | LoadBalancer defines the load balancer settings between the Envoy Proxy data plane and the upstream hosts. |
 
 
 ## Extension
@@ -428,6 +457,17 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+
+
+## LoadBalancerStrategy
+
+_Underlying type:_ `string`
+
+LoadBalancerStrategy defines the type of load balancing strategy to use.
+
+_Appears in:_
+- [EnvoyProxyLoadBalancerSetting](#envoyproxyloadbalancersetting)
+
 
 
 ## LogComponent
