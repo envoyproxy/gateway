@@ -151,8 +151,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
-		envoyproxy.Spec.Telemetry.AccessLog.Disable ||
-		len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0 {
+		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
 		return &ir.AccessLog{
 			Text: []*ir.TextAccessLog{
@@ -161,6 +160,10 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 				},
 			},
 		}
+	}
+
+	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
+		return nil
 	}
 
 	irAccessLog := &ir.AccessLog{}
