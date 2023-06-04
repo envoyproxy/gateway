@@ -80,6 +80,9 @@ udpRoutes:
               message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     udp:
       - name: "envoy-gateway-gateway-1-udp1-udproute-1"
         address: "0.0.0.0"

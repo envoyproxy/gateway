@@ -67,6 +67,9 @@ httpRoutes:
               message: "Backend ref to service backends/service-1 not permitted by any ReferenceGrant."
 xdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     http:
       - name: envoy-gateway-gateway-1-http
         address: 0.0.0.0

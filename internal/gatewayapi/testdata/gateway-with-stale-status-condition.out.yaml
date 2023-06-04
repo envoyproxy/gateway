@@ -69,6 +69,9 @@ httpRoutes:
               message: Resolved all the Object references for the Route
 xdsIR:
   default-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     http:
       - name: default-gateway-1-https
         address: 0.0.0.0

@@ -66,21 +66,23 @@ infraIR:
           namespace: envoy-gateway-system
           name: test
         spec:
-          accessLoggings:
-          - format:
-              type: Text
-              text: |
-                [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
-            sinks:
-            - type: File
-              file:
-                path: /dev/stdout
-            - type: OpenTelemetry
-              openTelemetry:
-                host: otel-collector.monitoring.svc.cluster.local
-                port: 4317
-                resources:
-                  k8s.cluster.name: "cluster-1"
+          telemetry:
+            accessLog:
+              settings:
+              - format:
+                  type: Text
+                  text: |
+                    [%START_TIME%] "%REQ(:METHOD)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"\n
+                sinks:
+                - type: File
+                  file:
+                    path: /dev/stdout
+                - type: OpenTelemetry
+                  openTelemetry:
+                    host: otel-collector.monitoring.svc.cluster.local
+                    port: 4317
+                    resources:
+                      k8s.cluster.name: "cluster-1"
           provider:
             type: Kubernetes
             kubernetes:

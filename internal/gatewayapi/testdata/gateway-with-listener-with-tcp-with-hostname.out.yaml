@@ -26,7 +26,10 @@ gateways:
               reason: Invalid
               message: Listener must not have hostname set when protocol is TCP.
 xdsIR:
-  envoy-gateway-gateway-1: {}
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
