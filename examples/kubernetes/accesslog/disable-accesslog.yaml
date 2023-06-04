@@ -1,0 +1,21 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: config.gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: disable-accesslog
+    namespace: envoy-gateway-system
+---
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: disable-accesslog
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    accessLog:
+      disabled: true

@@ -213,7 +213,7 @@ _Appears in:_
 | --- | --- |
 | `provider` _[EnvoyProxyProvider](#envoyproxyprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
-| `accessLoggings` _[ProxyAccessLogging](#proxyaccesslogging) array_ | AccessLoggings defines access logging parameters for managed proxies. If unspecified, access log is disabled. |
+| `telemetry` _[ProxyTelemetry](#proxytelemetry)_ | Telemetry defines telemetry parameters for managed proxies. |
 | `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 
 
@@ -281,7 +281,7 @@ _Appears in:_
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
-## FileEnvoyProxyAccessLogging
+## FileEnvoyProxyAccessLog
 
 
 
@@ -292,7 +292,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables access logging. |
+| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables accesslog. |
 
 
 ## Gateway
@@ -452,7 +452,7 @@ _Appears in:_
 
 
 
-## OpenTelemetryEnvoyProxyAccessLogging
+## OpenTelemetryEnvoyProxyAccessLog
 
 
 
@@ -480,45 +480,71 @@ _Appears in:_
 
 
 
-## ProxyAccessLogging
+## ProxyAccessLog
 
 
 
 
 
 _Appears in:_
-- [EnvoyProxySpec](#envoyproxyspec)
+- [ProxyTelemetry](#proxytelemetry)
 
 | Field | Description |
 | --- | --- |
-| `format` _[ProxyAccessLoggingFormat](#proxyaccessloggingformat)_ | Format defines the format of access logging. |
-| `sinks` _[ProxyAccessLoggingSink](#proxyaccessloggingsink) array_ | Sinks defines the sinks of access logging. |
+| `disable` _boolean_ | Disable disables access logging for managed proxies if set to true. |
+| `settings` _[ProxyAccessLogSetting](#proxyaccesslogsetting) array_ | Settings defines accesslog settings for managed proxies. If unspecified, will send default format to stdout. |
 
 
-## ProxyAccessLoggingFormat
+## ProxyAccessLogFormat
 
 
 
-ProxyAccessLoggingFormat defines the format of access logging.
+ProxyAccessLogFormat defines the format of accesslog.
 
 _Appears in:_
-- [ProxyAccessLogging](#proxyaccesslogging)
+- [ProxyAccessLogSetting](#proxyaccesslogsetting)
 
 | Field | Description |
 | --- | --- |
-| `type` _[ProxyAccessLoggingFormatType](#proxyaccessloggingformattype)_ | Type defines the type of access logging format. |
-| `text` _string_ | Text defines the text access logging format, following Envoy access logging formatting, empty value results in proxy's default access log format. It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
+| `type` _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ | Type defines the type of accesslog format. |
+| `text` _string_ | Text defines the text accesslog format, following Envoy accesslog formatting, empty value results in proxy's default access log format. It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` _object (keys:string, values:string)_ | JSON is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "JSON". |
 
 
-## ProxyAccessLoggingFormatType
+## ProxyAccessLogFormatType
 
 _Underlying type:_ `string`
 
 
 
 _Appears in:_
-- [ProxyAccessLoggingFormat](#proxyaccessloggingformat)
+- [ProxyAccessLogFormat](#proxyaccesslogformat)
+
+
+
+## ProxyAccessLogSetting
+
+
+
+
+
+_Appears in:_
+- [ProxyAccessLog](#proxyaccesslog)
+
+| Field | Description |
+| --- | --- |
+| `format` _[ProxyAccessLogFormat](#proxyaccesslogformat)_ | Format defines the format of accesslog. |
+| `sinks` _[ProxyAccessLoggingSink](#proxyaccessloggingsink) array_ | Sinks defines the sinks of accesslog. |
+
+
+## ProxyAccessLogSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
 
 
 
@@ -529,24 +555,13 @@ _Appears in:_
 
 
 _Appears in:_
-- [ProxyAccessLogging](#proxyaccesslogging)
+- [ProxyAccessLogSetting](#proxyaccesslogsetting)
 
 | Field | Description |
 | --- | --- |
-| `type` _[ProxyAccessLoggingSinkType](#proxyaccessloggingsinktype)_ | Type defines the type of access logging sink. |
-| `file` _[FileEnvoyProxyAccessLogging](#fileenvoyproxyaccesslogging)_ | File defines the file access logging sink. |
-| `openTelemetry` _[OpenTelemetryEnvoyProxyAccessLogging](#opentelemetryenvoyproxyaccesslogging)_ | OpenTelemetry defines the OpenTelemetry access logging sink. |
-
-
-## ProxyAccessLoggingSinkType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
-
+| `type` _[ProxyAccessLogSinkType](#proxyaccesslogsinktype)_ | Type defines the type of accesslog sink. |
+| `file` _[FileEnvoyProxyAccessLog](#fileenvoyproxyaccesslog)_ | File defines the file accesslog sink. |
+| `openTelemetry` _[OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)_ | OpenTelemetry defines the OpenTelemetry accesslog sink. |
 
 
 ## ProxyLogging
@@ -561,6 +576,20 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "System: Info". |
+
+
+## ProxyTelemetry
+
+
+
+
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Description |
+| --- | --- |
+| `accessLog` _[ProxyAccessLog](#proxyaccesslog)_ | AccessLogs defines accesslog parameters for managed proxies. If unspecified, will send default format to stdout. |
 
 
 ## RateLimit
