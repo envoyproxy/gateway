@@ -372,7 +372,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 
 	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
-		AccessLog:  buildXdsAccessLog(accesslog, true),
+		AccessLog:  buildXdsAccessLog(accesslog, false),
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
