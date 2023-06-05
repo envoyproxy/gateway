@@ -604,7 +604,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type is the type of rate limit service to use. Supported types are: * Builtin: Uses the rate limit managed by EG. * External: Uses an external rate limit backend. |
+| `type` _[RateLimitType](#ratelimittype)_ | Type is the type of rate limit service to use. Supported types are: Builtin: Uses the rate limit managed by EG. External: Uses an external rate limit backend. |
 | `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. This field is only applicable when the rate limit type is "Builtin". |
 | `external` _[RateLimitExternalSetting](#ratelimitexternalsetting)_ | External holds the configuration associated with the external rate limit service. |
 

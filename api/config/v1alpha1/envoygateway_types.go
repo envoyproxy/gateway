@@ -213,8 +213,8 @@ const (
 // used for Global Rate Limiting.
 type RateLimit struct {
 	// Type is the type of rate limit service to use. Supported types are:
-	//	* Builtin: Uses the rate limit managed by EG.
-	//	* External: Uses an external rate limit backend.
+	//	Builtin: Uses the rate limit managed by EG.
+	//	External: Uses an external rate limit backend.
 	//
 	// +unionDiscriminator
 	// +kubebuilder:validation:Enum=Builtin;External
