@@ -8,6 +8,7 @@ package test
 import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -282,6 +283,32 @@ func GetService(nsname types.NamespacedName, labels map[string]string, ports map
 		})
 	}
 	return service
+}
+
+// GetEndpointSlice returns a sample EndpointSlice.
+func GetEndpointSlice(nsName types.NamespacedName, svcName string) *discoveryv1.EndpointSlice {
+	return &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nsName.Name,
+			Namespace: nsName.Namespace,
+			Labels:    map[string]string{discoveryv1.LabelServiceName: svcName},
+		},
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				Addresses: []string{"10.0.0.1"},
+				Conditions: discoveryv1.EndpointConditions{
+					Ready: &[]bool{true}[0],
+				},
+			},
+		},
+		Ports: []discoveryv1.EndpointPort{
+			{
+				Name:     &[]string{"dummy"}[0],
+				Port:     &[]int32{8080}[0],
+				Protocol: &[]corev1.Protocol{corev1.ProtocolTCP}[0],
+			},
+		},
+	}
 }
 
 // GetAuthenticationFilter returns a pointer to an AuthenticationFilter with the
