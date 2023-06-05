@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Check if PR comment contains trigger phrase
         id: check_comment
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -27,7 +27,7 @@ jobs:
       
       - name: Rerun Action
         if: steps.check_comment.outputs.result == 'true'
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
