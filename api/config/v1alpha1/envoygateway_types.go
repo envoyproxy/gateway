@@ -197,13 +197,51 @@ type EnvoyGatewayHostInfrastructureProvider struct {
 	// TODO: Add config as use cases are better understood.
 }
 
+type RateLimitType string
+
+const (
+	// RateLimitTypeBuiltin defines the "Builtin" rate limit type.
+	// This type means that the rate limit service is fully managed by EG.
+	RateLimitTypeBuiltin RateLimitType = "Builtin"
+	// RateLimitTypeExternal defines the "External" rate limit type.
+	// This type means that the rate limit service is managed externally
+	// by the user.
+	RateLimitTypeExternal RateLimitType = "External"
+)
+
 // RateLimit defines the configuration associated with the Rate Limit Service
 // used for Global Rate Limiting.
 type RateLimit struct {
+	// Type is the type of rate limit service to use. Supported types are:
+	//	* Builtin: Uses the rate limit managed by EG.
+	//	* External: Uses an external rate limit backend.
+	//
+	// +unionDiscriminator
+	// +kubebuilder:validation:Enum=Builtin;External
+	// +kubebuilder:default=Builtin
+	Type RateLimitType `json:"type"`
 	// Backend holds the configuration associated with the
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
-	Backend RateLimitDatabaseBackend `json:"backend"`
+	// This field is only applicable when the rate limit type is "Builtin".
+	// +optional
+	Backend *RateLimitDatabaseBackend `json:"backend,omitempty"`
+	// External holds the configuration associated with the
+	// external rate limit service.
+	// +optional
+	External *RateLimitExternalSetting `json:"external,omitempty"`
+}
+
+type RateLimitExternalSetting struct {
+	// XdsGrpcServer holds the configuration associated with the rate limit gRPC server.
+	XdsGrpcServer RateLimitExternalXdsGrpcServer `json:"xdsGrpcServer"`
+}
+
+type RateLimitExternalXdsGrpcServer struct {
+	// Host is the host of the rate limit server.
+	Host string `json:"host"`
+	// Port is the port of the rate limit server.
+	Port uint32 `json:"port"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

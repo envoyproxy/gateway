@@ -170,7 +170,7 @@ func TestDecode(t *testing.T) {
 						},
 					},
 					RateLimit: &v1alpha1.RateLimit{
-						Backend: v1alpha1.RateLimitDatabaseBackend{
+						Backend: &v1alpha1.RateLimitDatabaseBackend{
 							Type: v1alpha1.RedisBackendType,
 							Redis: &v1alpha1.RateLimitRedisSettings{
 								URL: "localhost:6379",

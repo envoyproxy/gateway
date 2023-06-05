@@ -57,7 +57,7 @@ func TestServiceAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+		Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",
@@ -90,7 +90,7 @@ func TestService(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+		Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",
@@ -121,7 +121,7 @@ func TestDeployment(t *testing.T) {
 	cfg, err := config.New()
 	require.NoError(t, err)
 	rateLimit := &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+		Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",
@@ -282,7 +282,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "redis-tls-settings",
 			rateLimit: &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+				Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "redis.redis.svc:6379",
@@ -335,7 +335,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "tolerations",
 			rateLimit: &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+				Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "redis.redis.svc:6379",
@@ -396,7 +396,7 @@ func TestDeployment(t *testing.T) {
 		{
 			caseName: "volumes",
 			rateLimit: &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+				Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "redis.redis.svc:6379",

@@ -38,7 +38,7 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 		TypeMeta: metav1.TypeMeta{},
 		EnvoyGatewaySpec: egcfgv1a1.EnvoyGatewaySpec{
 			RateLimit: &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
+				Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 					Type: egcfgv1a1.RedisBackendType,
 					Redis: &egcfgv1a1.RateLimitRedisSettings{
 						URL: "",

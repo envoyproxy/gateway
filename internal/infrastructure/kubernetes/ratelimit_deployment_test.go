@@ -26,7 +26,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg.EnvoyGateway.RateLimit = &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+		Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",
@@ -90,7 +90,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 
 func TestDeleteRateLimitDeployment(t *testing.T) {
 	rl := &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+		Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",

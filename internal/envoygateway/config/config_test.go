@@ -127,7 +127,7 @@ func TestValidate(t *testing.T) {
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
-							Backend: v1alpha1.RateLimitDatabaseBackend{
+							Backend: &v1alpha1.RateLimitDatabaseBackend{
 								Type:  v1alpha1.RedisBackendType,
 								Redis: &v1alpha1.RateLimitRedisSettings{},
 							},
@@ -146,7 +146,7 @@ func TestValidate(t *testing.T) {
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
-							Backend: v1alpha1.RateLimitDatabaseBackend{
+							Backend: &v1alpha1.RateLimitDatabaseBackend{
 								Type: v1alpha1.RedisBackendType,
 								Redis: &v1alpha1.RateLimitRedisSettings{
 									URL: ":foo",
@@ -167,7 +167,7 @@ func TestValidate(t *testing.T) {
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
-							Backend: v1alpha1.RateLimitDatabaseBackend{
+							Backend: &v1alpha1.RateLimitDatabaseBackend{
 								Type: v1alpha1.RedisBackendType,
 								Redis: &v1alpha1.RateLimitRedisSettings{
 									URL: "localhost:6376",

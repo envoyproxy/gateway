@@ -17,7 +17,7 @@ import (
 
 func TestDeleteRateLimitService(t *testing.T) {
 	rl := &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
+		Backend: &egcfgv1a1.RateLimitDatabaseBackend{
 			Type: egcfgv1a1.RedisBackendType,
 			Redis: &egcfgv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",

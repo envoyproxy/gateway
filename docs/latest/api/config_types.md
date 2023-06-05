@@ -604,7 +604,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
+| `type` _[RateLimitType](#ratelimittype)_ | Type is the type of rate limit service to use. Supported types are: * Builtin: Uses the rate limit managed by EG. * External: Uses an external rate limit backend. |
+| `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. This field is only applicable when the rate limit type is "Builtin". |
+| `external` _[RateLimitExternalSetting](#ratelimitexternalsetting)_ | External holds the configuration associated with the external rate limit service. |
 
 
 ## RateLimitDatabaseBackend
@@ -633,6 +635,35 @@ _Appears in:_
 
 
 
+## RateLimitExternalSetting
+
+
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
+| Field | Description |
+| --- | --- |
+| `xdsGrpcServer` _[RateLimitExternalXdsGrpcServer](#ratelimitexternalxdsgrpcserver)_ | XdsGrpcServer holds the configuration associated with the rate limit gRPC server. |
+
+
+## RateLimitExternalXdsGrpcServer
+
+
+
+
+
+_Appears in:_
+- [RateLimitExternalSetting](#ratelimitexternalsetting)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host is the host of the rate limit server. |
+| `port` _integer_ | Port is the port of the rate limit server. |
+
+
 ## RateLimitRedisSettings
 
 
@@ -646,6 +677,17 @@ _Appears in:_
 | --- | --- |
 | `url` _string_ | URL of the Redis Database. |
 | `tls` _[RedisTLSSettings](#redistlssettings)_ | TLS defines TLS configuration for connecting to redis database. |
+
+
+## RateLimitType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
 
 
 ## RedisTLSSettings
