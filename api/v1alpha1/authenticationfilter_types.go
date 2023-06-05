@@ -26,11 +26,11 @@ type AuthenticationFilter struct {
 	// Note: The status sub-resource has been excluded but may be added in the future.
 }
 
-// JWTClaimToHeader defins a combination of header name and claim name.
+// JWTClaimToHeader defines a combination of header name and claim name.
 type JWTClaimToHeader struct {
 	// Type defines to extract the specified jwt claim value to a custom request header.
 
-	//Custom request headers.
+	// Custom request headers.
 	HeaderName string `json:"headerName"`
 
 	// The field name for the JWT Claim : it can be a nested claim of type

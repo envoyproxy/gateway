@@ -61,6 +61,32 @@ spec:
                         email format. If not provided, the JWT issuer is not checked.
                       maxLength: 253
                       type: string
+                    jwtClaimToHeaders:
+                      description: "JWTClaimToHeaders is a list of values to extract
+                        the jwt claim value to the request header. For examples, following
+                        config: The claim must be of type; string, int, double, bool.
+                        Array type claims are not supported .. code-block:: yaml \n
+                        claim_to_headers: - name: x-jwt-claim-nested-claim claim:
+                        claim.nested.key"
+                      items:
+                        description: JWTClaimToHeader defines a combination of header
+                          name and claim name.
+                        properties:
+                          claimName:
+                            description: 'The field name for the JWT Claim : it can
+                              be a nested claim of type (eg. "claim.nested.key", "sub")
+                              String separated with "." in case of nested claims.
+                              The nested claim name must use dot "." to separate the
+                              JSON name path.'
+                            type: string
+                          headerName:
+                            description: Custom request headers.
+                            type: string
+                        required:
+                        - claimName
+                        - headerName
+                        type: object
+                      type: array
                     name:
                       description: Name defines a unique name for the JWT provider.
                         A name can have a variety of forms, including RFC1123 subdomains,
@@ -81,25 +107,6 @@ spec:
                       required:
                       - uri
                       type: object
-                    jwtClaimToHeaders:
-                      description: JwtClaimToHeaders defines a list of values to extract the 
-                        jwt claim value to the request header.
-                      items:
-                        description: Extract the specified jwt claim value to a custom request header.
-                        type: object
-                        properties:
-                          headerName:
-                            description: Custom request headers.
-                            maxLength: 253
-                            minLength: 1
-                            type: string
-                          claimName:
-                            description: The field name for the JWT Claim , it can be a nested claim of type 
-                              (eg. "claim.nested.key", "sub") String separated with "." in case of nested claims. 
-                              The nested claim name must use dot "." to separate.
-                            type: string
-                      maxItems: 4
-                      type: array
                   required:
                   - name
                   - remoteJWKS
