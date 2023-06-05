@@ -26,6 +26,12 @@ type AuthenticationFilter struct {
 	// Note: The status sub-resource has been excluded but may be added in the future.
 }
 
+// JWTClaimToHeader defins a combination of header name and claim name.
+type JWTClaimToHeader struct {
+	HeaderName string `json:"headerName"`
+	ClaimName  string `json:"claimName"`
+}
+
 // AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
 // +union
 type AuthenticationFilterSpec struct {
@@ -86,6 +92,7 @@ type JwtAuthenticationFilterProvider struct {
 	// HTTP/HTTPS endpoint.
 	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
 
+	JWTClaimToHeaders []JWTClaimToHeader `json:"jwtClaimToHeaders,omitempty"`
 	// TODO: Add TBD JWT fields based on defined use cases.
 }
 

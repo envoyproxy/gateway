@@ -80,6 +80,39 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "valid authentication filter with jwtClaimToHeader",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "test",
+							Issuer:    "test@test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+							JWTClaimToHeaders: []egv1a1.JWTClaimToHeader{
+								{
+									HeaderName: "test",
+									ClaimName:  "test",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "unqualified authentication provider name",
 			filter: &egv1a1.AuthenticationFilter{
 				TypeMeta: metav1.TypeMeta{
@@ -276,6 +309,72 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 							Audiences: []string{"test.local"},
 							RemoteJWKS: egv1a1.RemoteJWKS{
 								URI: "",
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "unspecified jwtClaimToHeader headerName",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "test",
+							Issuer:    "test@test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+							JWTClaimToHeaders: []egv1a1.JWTClaimToHeader{
+								{
+									HeaderName: "",
+									ClaimName:  "test",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "unspecified jwtClaimToHeader claimName",
+			filter: &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.AuthenticationFilterSpec{
+					Type: egv1a1.JwtAuthenticationFilterProviderType,
+					JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+						{
+							Name:      "test",
+							Issuer:    "test@test.local",
+							Audiences: []string{"test.local"},
+							RemoteJWKS: egv1a1.RemoteJWKS{
+								URI: "https://test.local/jwt/public-key/jwks.json",
+							},
+							JWTClaimToHeaders: []egv1a1.JWTClaimToHeader{
+								{
+									HeaderName: "test",
+									ClaimName:  "",
+								},
 							},
 						},
 					},
