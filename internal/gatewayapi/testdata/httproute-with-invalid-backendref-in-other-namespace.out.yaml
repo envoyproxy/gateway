@@ -20,7 +20,7 @@ gateways:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
             - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              kind: GRPCRoute
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -69,7 +69,7 @@ xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
     http:
       - name: envoy-gateway-gateway-1-http
         address: 0.0.0.0
@@ -80,7 +80,7 @@ xdsIR:
           - name: default-httproute-1-rule-0-match-0-*
             pathMatch:
               exact: "/exact"
-            backendWeights: 
+            backendWeights:
               invalid: 1
             directResponse:
               statusCode: 500

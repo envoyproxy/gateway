@@ -34,7 +34,7 @@ gateways:
               message: Sending translated listener configuration to the data plane
             - type: Accepted
               status: "True"
-              reason: Accepted 
+              reason: Accepted
               message: Listener has been successfully translated
 httpRoutes:
   - apiVersion: gateway.networking.k8s.io/v1beta1
@@ -66,13 +66,13 @@ httpRoutes:
               message: Route is accepted
             - type: ResolvedRefs
               status: "True"
-              reason: ResolvedRefs 
+              reason: ResolvedRefs
               message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
     http:
       - name: envoy-gateway-gateway-1-tls
         address: 0.0.0.0

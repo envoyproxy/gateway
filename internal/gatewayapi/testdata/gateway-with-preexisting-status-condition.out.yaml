@@ -67,7 +67,7 @@ xdsIR:
   default-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
     http:
       - name: default-gateway-1-http
         address: 0.0.0.0

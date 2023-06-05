@@ -66,7 +66,7 @@ xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
     tcp:
       - name: envoy-gateway-gateway-1-tls-tlsroute-1
         address: 0.0.0.0

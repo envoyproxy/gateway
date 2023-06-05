@@ -62,15 +62,15 @@ httpRoutes:
               status: "False"
               reason: NoMatchingParent
               message: No listeners match this parent ref
-            - type: ResolvedRefs 
+            - type: ResolvedRefs
               status: "True"
-              reason: ResolvedRefs 
+              reason: ResolvedRefs
               message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
     http:
       - name: envoy-gateway-gateway-1-http-1
         address: 0.0.0.0

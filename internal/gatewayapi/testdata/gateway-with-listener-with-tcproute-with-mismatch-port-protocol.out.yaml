@@ -62,7 +62,7 @@ xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

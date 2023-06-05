@@ -24,7 +24,7 @@ gateways:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
             - group: gateway.networking.k8s.io
-              kind: GRPCRoute              
+              kind: GRPCRoute
           attachedRoutes: 1
           conditions:
             - type: Programmed
@@ -71,7 +71,7 @@ xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-      - path: /dev/stdout
+        - path: /dev/stdout
     http:
       - name: envoy-gateway-gateway-1-tls
         address: 0.0.0.0
