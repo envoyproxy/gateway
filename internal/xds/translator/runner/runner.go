@@ -7,7 +7,10 @@ package runner
 
 import (
 	"context"
+	"net"
+	"strconv"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
@@ -64,8 +67,17 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
-					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+					switch r.EnvoyGateway.RateLimit.Type {
+					case egcfgv1a1.RateLimitTypeExternal:
+						url := net.JoinHostPort(r.EnvoyGateway.RateLimit.External.XdsGrpcServer.Host,
+							strconv.Itoa(int(r.EnvoyGateway.RateLimit.External.XdsGrpcServer.Port)))
+						t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
+							ServiceURL: url,
+						}
+					default:
+						t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
+							ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+						}
 					}
 				}
 

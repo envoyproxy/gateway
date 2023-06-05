@@ -128,7 +128,6 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						RateLimit: &v1alpha1.RateLimit{
 							Backend: &v1alpha1.RateLimitDatabaseBackend{
-								Type:  v1alpha1.RedisBackendType,
 								Redis: &v1alpha1.RateLimitRedisSettings{},
 							},
 						},
@@ -150,6 +149,84 @@ func TestValidate(t *testing.T) {
 								Type: v1alpha1.RedisBackendType,
 								Redis: &v1alpha1.RateLimitRedisSettings{
 									URL: ":foo",
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "invalid external rate limit",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Type: v1alpha1.RateLimitTypeBuiltin,
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "empty external rate limit host",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Type: v1alpha1.RateLimitTypeBuiltin,
+							External: &v1alpha1.RateLimitExternalSetting{
+								XdsGrpcServer: v1alpha1.RateLimitExternalXdsGrpcServer{},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "empty external rate limit host",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Type: v1alpha1.RateLimitTypeBuiltin,
+							External: &v1alpha1.RateLimitExternalSetting{
+								XdsGrpcServer: v1alpha1.RateLimitExternalXdsGrpcServer{
+									Host: "fake-ratelimit-backend",
+								},
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "valid external rate limit",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						RateLimit: &v1alpha1.RateLimit{
+							Type: v1alpha1.RateLimitTypeBuiltin,
+							External: &v1alpha1.RateLimitExternalSetting{
+								XdsGrpcServer: v1alpha1.RateLimitExternalXdsGrpcServer{
+									Host: "fake-ratelimit-backend",
+									Port: 8081,
 								},
 							},
 						},

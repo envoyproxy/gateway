@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
@@ -174,7 +175,8 @@ func setupRunners(cfg *config.Server) error {
 	}
 
 	// Start the global rateLimit if it has been enabled through the config
-	if cfg.EnvoyGateway.RateLimit != nil {
+	if cfg.EnvoyGateway.RateLimit != nil &&
+		cfg.EnvoyGateway.RateLimit.Type == egcfgv1a1.RateLimitTypeBuiltin {
 		// Start the Global RateLimit xDS Server
 		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
 		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{

@@ -74,14 +74,33 @@ func (s *Server) Validate() error {
 	case len(s.Namespace) == 0:
 		return errors.New("namespace is empty string")
 	case s.EnvoyGateway.RateLimit != nil:
-		if s.EnvoyGateway.RateLimit.Backend.Type != v1alpha1.RedisBackendType {
-			return fmt.Errorf("unsupported ratelimit backend %v", s.EnvoyGateway.RateLimit.Backend.Type)
-		}
-		if s.EnvoyGateway.RateLimit.Backend.Redis == nil || s.EnvoyGateway.RateLimit.Backend.Redis.URL == "" {
-			return fmt.Errorf("empty ratelimit redis settings")
-		}
-		if _, err := url.Parse(s.EnvoyGateway.RateLimit.Backend.Redis.URL); err != nil {
-			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+		switch s.EnvoyGateway.RateLimit.Type {
+		case v1alpha1.RateLimitTypeExternal:
+			// TODO: validate external rate limit config
+			if s.EnvoyGateway.RateLimit.External == nil {
+				return fmt.Errorf("empty external ratelimit config")
+			}
+
+			if s.EnvoyGateway.RateLimit.External.XdsGrpcServer.Host == "" {
+				return fmt.Errorf("empty external ratelimit xds grpc server host")
+			}
+
+			if s.EnvoyGateway.RateLimit.External.XdsGrpcServer.Port == 0 {
+				return fmt.Errorf("empty external ratelimit xds grpc server port")
+			}
+		default:
+			if s.EnvoyGateway.RateLimit.Backend == nil {
+				return fmt.Errorf("empty ratelimit backend")
+			}
+			if s.EnvoyGateway.RateLimit.Backend.Type != v1alpha1.RedisBackendType {
+				return fmt.Errorf("unsupported ratelimit backend %v", s.EnvoyGateway.RateLimit.Backend.Type)
+			}
+			if s.EnvoyGateway.RateLimit.Backend.Redis == nil || s.EnvoyGateway.RateLimit.Backend.Redis.URL == "" {
+				return fmt.Errorf("empty ratelimit redis settings")
+			}
+			if _, err := url.Parse(s.EnvoyGateway.RateLimit.Backend.Redis.URL); err != nil {
+				return fmt.Errorf("unknown ratelimit redis url format: %w", err)
+			}
 		}
 	case s.EnvoyGateway.Extension != nil:
 		if s.EnvoyGateway.Extension.Hooks == nil || s.EnvoyGateway.Extension.Hooks.XDSTranslator == nil {
