@@ -1,0 +1,22 @@
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    kubernetes:
+      envoyDeployment:
+        container:
+          image: envoyproxy/envoy:v1.25-latest
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 150m
+              memory: 640Mi
+        replicas: 2
+      envoyService:
+        type: LoadBalancer
+    type: Kubernetes
