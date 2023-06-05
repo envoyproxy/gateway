@@ -81,6 +81,25 @@ spec:
                       required:
                       - uri
                       type: object
+                    jwtClaimToHeaders:
+                      description: JwtClaimToHeaders defines a list of values to extract the 
+                        jwt claim value to the request header.
+                      items:
+                        description: Extract the specified jwt claim value to a custom request header.
+                        type: object
+                        properties:
+                          headerName:
+                            description: Custom request headers.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          claimName:
+                            description: The field name for the JWT Claim , it can be a nested claim of type 
+                              (eg. "claim.nested.key", "sub") String separated with "." in case of nested claims. 
+                              The nested claim name must use dot "." to separate.
+                            type: string
+                      maxItems: 4
+                      type: array
                   required:
                   - name
                   - remoteJWKS
