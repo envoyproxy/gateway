@@ -236,8 +236,7 @@ _Appears in:_
 | `issuer` _string_ | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
 | `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
-| `jwtClaimToHeaders` _[JWTClaimToHeader](#jwtclaimtoheader) array_ | JWTClaimToHeaders is a list of values to extract the jwt claim value to the request header. For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported .. code-block:: yaml 
- claim_to_headers: - name: x-jwt-claim-nested-claim claim: claim.nested.key |
+| `jwtClaimToHeaders` _[JWTClaimToHeader](#jwtclaimtoheader) array_ | JWTClaimToHeaders is a list of values to extract the jwt claim value to the request header. For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
 
 
 ## RateLimitFilter

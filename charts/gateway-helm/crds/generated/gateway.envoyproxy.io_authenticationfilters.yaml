@@ -62,12 +62,10 @@ spec:
                       maxLength: 253
                       type: string
                     jwtClaimToHeaders:
-                      description: "JWTClaimToHeaders is a list of values to extract
+                      description: 'JWTClaimToHeaders is a list of values to extract
                         the jwt claim value to the request header. For examples, following
                         config: The claim must be of type; string, int, double, bool.
-                        Array type claims are not supported .. code-block:: yaml \n
-                        claim_to_headers: - name: x-jwt-claim-nested-claim claim:
-                        claim.nested.key"
+                        Array type claims are not supported'
                       items:
                         description: JWTClaimToHeader defines a combination of header
                           name and claim name.

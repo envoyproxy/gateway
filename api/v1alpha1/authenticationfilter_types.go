@@ -102,11 +102,6 @@ type JwtAuthenticationFilterProvider struct {
 	// JWTClaimToHeaders is a list of values to extract the jwt claim value to the request header.
 	// For examples, following config:
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
-	// .. code-block:: yaml
-	//
-	//   claim_to_headers:
-	//     - name: x-jwt-claim-nested-claim
-	//       claim: claim.nested.key
 	//
 	JWTClaimToHeaders []JWTClaimToHeader `json:"jwtClaimToHeaders,omitempty"`
 	// TODO: Add TBD JWT fields based on defined use cases.
