@@ -616,6 +616,10 @@ xds:
               name: envoy.access_loggers.file
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                 path: /dev/stdout
             address:
               socketAddress:
@@ -630,6 +634,10 @@ xds:
                   - name: envoy.access_loggers.file
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      logFormat:
+                        textFormatSource:
+                          inlineString: |
+                            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
                   commonHttpProtocolOptions:
                     headersWithUnderscoresAction: REJECT_REQUEST
@@ -663,6 +671,10 @@ xds:
               name: envoy.access_loggers.file
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                 path: /dev/stdout
             address:
               socketAddress:
@@ -677,6 +689,10 @@ xds:
                   - name: envoy.access_loggers.file
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      logFormat:
+                        textFormatSource:
+                          inlineString: |
+                            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
                   codecType: HTTP2
                   commonHttpProtocolOptions:
@@ -716,6 +732,10 @@ xds:
               name: envoy.access_loggers.file
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                 path: /dev/stdout
             address:
               socketAddress:
@@ -733,6 +753,10 @@ xds:
                   - name: envoy.access_loggers.file
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      logFormat:
+                        textFormatSource:
+                          inlineString: |
+                            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
                   cluster: default-eg-tls-passthrough-backend
                   statPrefix: passthrough
@@ -753,6 +777,10 @@ xds:
               name: envoy.access_loggers.file
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                 path: /dev/stdout
             address:
               socketAddress:
@@ -767,6 +795,10 @@ xds:
                   - name: envoy.access_loggers.file
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      logFormat:
+                        textFormatSource:
+                          inlineString: |
+                            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
                   cluster: default-eg-tcp-backend
                   statPrefix: tcp
@@ -776,9 +808,17 @@ xds:
           listener:
             '@type': type.googleapis.com/envoy.config.listener.v3.Listener
             accessLog:
-            - name: envoy.access_loggers.file
+            - filter:
+                responseFlagFilter:
+                  flags:
+                  - NR
+              name: envoy.access_loggers.file
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                 path: /dev/stdout
             address:
               socketAddress:
@@ -793,6 +833,10 @@ xds:
                 - name: envoy.access_loggers.file
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                     path: /dev/stdout
                 matcher:
                   onNoMatch:
