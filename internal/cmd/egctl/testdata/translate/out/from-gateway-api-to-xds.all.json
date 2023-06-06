@@ -389,7 +389,12 @@
                       "name": "envoy.access_loggers.file",
                       "typedConfig": {
                         "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                        "path": "/dev/stdout"
+                        "path": "/dev/stdout",
+                        "logFormat": {
+                          "textFormatSource": {
+                            "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                          }
+                        }
                       }
                     }
                   ],
@@ -410,7 +415,12 @@
                               "name": "envoy.access_loggers.file",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                                "path": "/dev/stdout"
+                                "path": "/dev/stdout",
+                                "logFormat": {
+                                  "textFormatSource": {
+                                    "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                                  }
+                                }
                               }
                             }
                           ],
@@ -468,7 +478,12 @@
                       "name": "envoy.access_loggers.file",
                       "typedConfig": {
                         "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                        "path": "/dev/stdout"
+                        "path": "/dev/stdout",
+                        "logFormat": {
+                          "textFormatSource": {
+                            "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                          }
+                        }
                       }
                     }
                   ],
@@ -489,7 +504,12 @@
                               "name": "envoy.access_loggers.file",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                                "path": "/dev/stdout"
+                                "path": "/dev/stdout",
+                                "logFormat": {
+                                  "textFormatSource": {
+                                    "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                                  }
+                                }
                               }
                             }
                           ],
@@ -554,7 +574,12 @@
                       "name": "envoy.access_loggers.file",
                       "typedConfig": {
                         "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                        "path": "/dev/stdout"
+                        "path": "/dev/stdout",
+                        "logFormat": {
+                          "textFormatSource": {
+                            "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                          }
+                        }
                       }
                     }
                   ],
@@ -581,7 +606,12 @@
                                 "name": "envoy.access_loggers.file",
                                 "typedConfig": {
                                   "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                                  "path": "/dev/stdout"
+                                  "path": "/dev/stdout",
+                                  "logFormat": {
+                                    "textFormatSource": {
+                                      "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                                    }
+                                  }
                                 }
                               }
                             ],
@@ -621,7 +651,12 @@
                       "name": "envoy.access_loggers.file",
                       "typedConfig": {
                         "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                        "path": "/dev/stdout"
+                        "path": "/dev/stdout",
+                        "logFormat": {
+                          "textFormatSource": {
+                            "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                          }
+                        }
                       }
                     }
                   ],
@@ -643,7 +678,12 @@
                                 "name": "envoy.access_loggers.file",
                                 "typedConfig": {
                                   "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                                  "path": "/dev/stdout"
+                                  "path": "/dev/stdout",
+                                  "logFormat": {
+                                    "textFormatSource": {
+                                      "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                                    }
+                                  }
                                 }
                               }
                             ],
@@ -665,10 +705,22 @@
                   "@type": "type.googleapis.com/envoy.config.listener.v3.Listener",
                   "accessLog": [
                     {
+                      "filter": {
+                        "responseFlagFilter": {
+                          "flags": [
+                            "NR"
+                          ]
+                        }
+                      },
                       "name": "envoy.access_loggers.file",
                       "typedConfig": {
                         "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
-                        "path": "/dev/stdout"
+                        "path": "/dev/stdout",
+                        "logFormat": {
+                          "textFormatSource": {
+                            "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                          }
+                        }
                       }
                     }
                   ],
@@ -689,6 +741,11 @@
                             "name": "envoy.access_loggers.file",
                             "typedConfig": {
                               "@type": "type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog",
+                              "logFormat": {
+                                "textFormatSource": {
+                                  "inlineString": "[%START_TIME%] \"%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%\" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% \"%REQ(X-FORWARDED-FOR)%\" \"%REQ(USER-AGENT)%\" \"%REQ(X-REQUEST-ID)%\" \"%REQ(:AUTHORITY)%\" \"%UPSTREAM_HOST%\"\n"
+                                }
+                              },
                               "path": "/dev/stdout"
                             }
                           }

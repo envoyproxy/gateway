@@ -44,9 +44,8 @@ type EnvoyProxySpec struct {
 	// +kubebuilder:default={level: {system: info}}
 	Logging ProxyLogging `json:"logging,omitempty"`
 
-	// AccessLoggings defines access logging parameters for managed proxies.
-	// If unspecified, access log is disabled.
-	AccessLoggings []ProxyAccessLogging `json:"accessLoggings,omitempty"`
+	// Telemetry defines telemetry parameters for managed proxies.
+	Telemetry ProxyTelemetry `json:"telemetry,omitempty"`
 
 	// Bootstrap defines the Envoy Bootstrap as a YAML string.
 	// Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap
@@ -61,6 +60,13 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Bootstrap *string `json:"bootstrap,omitempty"`
+}
+
+type ProxyTelemetry struct {
+	// AccessLogs defines accesslog parameters for managed proxies.
+	// If unspecified, will send default format to stdout.
+	// +optional
+	AccessLog *ProxyAccessLog `json:"accessLog,omitempty"`
 }
 
 // EnvoyProxyProvider defines the desired state of a resource provider.

@@ -46,6 +46,8 @@ var (
 // used by the xDS Translator to convert it into xDS resources.
 // +k8s:deepcopy-gen=true
 type Xds struct {
+	// AccessLog configuration for the gateway.
+	AccessLog *AccessLog
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
 	// TCP Listeners exposed by the gateway.
@@ -756,4 +758,36 @@ type RateLimitValue struct {
 	Requests uint
 	// Unit of rate limiting.
 	Unit RateLimitUnit
+}
+
+// AccessLog holds the access logging configuration.
+// +k8s:deepcopy-gen=true
+type AccessLog struct {
+	Text          []*TextAccessLog          `json:"text,omitempty"`
+	JSON          []*JSONAccessLog          `json:"json,omitempty"`
+	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty"`
+}
+
+// TextAccessLog holds the configuration for text access logging.
+// +k8s:deepcopy-gen=true
+type TextAccessLog struct {
+	Format *string
+	Path   string
+}
+
+// JSONAccessLog holds the configuration for JSON access logging.
+// +k8s:deepcopy-gen=true
+type JSONAccessLog struct {
+	JSON map[string]string `json:"json"`
+	Path string            `json:"path"`
+}
+
+// OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
+// +k8s:deepcopy-gen=true
+type OpenTelemetryAccessLog struct {
+	Text       *string           `json:"text"`
+	Attributes map[string]string `json:"attributes"`
+	Host       string            `json:"host"`
+	Port       uint32            `json:"port"`
+	Resources  map[string]string `json:"resources"`
 }

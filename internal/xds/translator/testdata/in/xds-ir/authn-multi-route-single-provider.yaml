@@ -1,3 +1,6 @@
+accesslog:
+  text:
+  - path: "/dev/stdout"
 http:
 - name: "first-listener"
   address: "0.0.0.0"
