@@ -73,6 +73,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			},
 		}
 
+		// TODO: find a better way to handle this
 		accesslogAny, _ := anypb.New(filelog)
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
 			Name: wellknown.FileAccessLog,
