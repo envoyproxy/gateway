@@ -7,10 +7,10 @@ package cmd
 
 import (
 	"github.com/davecgh/go-spew/spew"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
@@ -177,7 +177,7 @@ func setupRunners(cfg *config.Server) error {
 	// Start the global rateLimit if it has been enabled through the config
 	if cfg.EnvoyGateway.RateLimit != nil {
 		switch cfg.EnvoyGateway.RateLimit.Type {
-		case v1alpha1.RateLimitTypeExternal:
+		case egcfgv1a1.RateLimitTypeExternal:
 			cfg.Logger.Info("Skipping RateLimit Runner as it has been configured to be External")
 		default:
 			cfg.Logger.Info("Starting RateLimit Runner")
