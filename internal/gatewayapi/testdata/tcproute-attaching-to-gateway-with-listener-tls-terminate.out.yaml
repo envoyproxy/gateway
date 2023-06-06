@@ -90,6 +90,9 @@ InfraIR:
       Name: envoy-gateway-gateway-1
 XdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     HTTP: null
     TCP:
     - Address: 0.0.0.0

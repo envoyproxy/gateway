@@ -24,7 +24,8 @@ gateways:
           attachedRoutes: 0
           conditions:
             - lastTransitionTime: "2023-04-02T11:08:00Z"
-              message: "Secret envoy-gateway/tls-secret-1 must contain valid tls.crt and tls.key, 
+              message:
+                "Secret envoy-gateway/tls-secret-1 must contain valid tls.crt and tls.key,
                 hostname example.com does not match Common Name or DNS Names in the certificate tls.crt."
               reason: InvalidCertificateRef
               status: "False"
@@ -69,10 +70,13 @@ httpRoutes:
               type: Accepted
             - type: ResolvedRefs
               status: "True"
-              reason: ResolvedRefs 
+              reason: ResolvedRefs
               message: Resolved all the Object references for the Route
 xdsIR:
-  envoy-gateway-gateway-1: {}
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+        - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
