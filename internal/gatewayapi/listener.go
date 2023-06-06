@@ -173,13 +173,13 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 			switch sink.Type {
 			case configv1a1.ProxyAccessLogSinkTypeFile:
 				switch accessLog.Format.Type {
-				case configv1a1.ProxyAccessLoggingFormatTypeText:
+				case configv1a1.ProxyAccessLogFormatTypeText:
 					al := &ir.TextAccessLog{
 						Format: accessLog.Format.Text,
 						Path:   sink.File.Path,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
-				case configv1a1.ProxyAccessLoggingFormatTypeJSON:
+				case configv1a1.ProxyAccessLogFormatTypeJSON:
 					if len(accessLog.Format.JSON) == 0 {
 						// TODO: use a default JSON format if not specified?
 						continue
@@ -204,9 +204,9 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 				}
 
 				switch accessLog.Format.Type {
-				case configv1a1.ProxyAccessLoggingFormatTypeJSON:
+				case configv1a1.ProxyAccessLogFormatTypeJSON:
 					al.Attributes = accessLog.Format.JSON
-				case configv1a1.ProxyAccessLoggingFormatTypeText:
+				case configv1a1.ProxyAccessLogFormatTypeText:
 					al.Text = accessLog.Format.Text
 				}
 

@@ -22,7 +22,7 @@ Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for conf
 - Configure accesslog for a `EnvoyProxy` to `OpenTelemetry` backend
 - Configure multi accesslog providers for a `EnvoyProxy`
 
-### ProxyAccessLogging API Type
+### ProxyAccessLog API Type
 
 ```golang mdox-exec="sed '1,7d' api/config/v1alpha1/accesslogging_types.go"
 type ProxyAccessLog struct {
@@ -39,16 +39,16 @@ type ProxyAccessLogSetting struct {
 	Format ProxyAccessLogFormat `json:"format"`
 	// Sinks defines the sinks of accesslog.
 	// +kubebuilder:validation:MinItems=1
-	Sinks []ProxyAccessLoggingSink `json:"sinks"`
+	Sinks []ProxyAccessLogSink `json:"sinks"`
 }
 
 type ProxyAccessLogFormatType string
 
 const (
-	// ProxyAccessLoggingFormatTypeText defines the text accesslog format.
-	ProxyAccessLoggingFormatTypeText ProxyAccessLogFormatType = "Text"
-	// ProxyAccessLoggingFormatTypeJSON defines the JSON accesslog format.
-	ProxyAccessLoggingFormatTypeJSON ProxyAccessLogFormatType = "JSON"
+	// ProxyAccessLogFormatTypeText defines the text accesslog format.
+	ProxyAccessLogFormatTypeText ProxyAccessLogFormatType = "Text"
+	// ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.
+	ProxyAccessLogFormatTypeJSON ProxyAccessLogFormatType = "JSON"
 	// TODO: support format type "mix" in the future.
 )
 
@@ -83,7 +83,7 @@ const (
 	ProxyAccessLogSinkTypeOpenTelemetry ProxyAccessLogSinkType = "OpenTelemetry"
 )
 
-type ProxyAccessLoggingSink struct {
+type ProxyAccessLogSink struct {
 	// Type defines the type of accesslog sink.
 	// +kubebuilder:validation:Enum=File;OpenTelemetry
 	Type ProxyAccessLogSinkType `json:"type,omitempty"`

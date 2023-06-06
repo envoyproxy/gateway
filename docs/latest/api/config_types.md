@@ -288,7 +288,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
+- [ProxyAccessLogSink](#proxyaccesslogsink)
 
 | Field | Description |
 | --- | --- |
@@ -459,7 +459,7 @@ _Appears in:_
 TODO: consider reuse ExtensionService?
 
 _Appears in:_
-- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
+- [ProxyAccessLogSink](#proxyaccesslogsink)
 
 | Field | Description |
 | --- | --- |
@@ -534,21 +534,10 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `format` _[ProxyAccessLogFormat](#proxyaccesslogformat)_ | Format defines the format of accesslog. |
-| `sinks` _[ProxyAccessLoggingSink](#proxyaccessloggingsink) array_ | Sinks defines the sinks of accesslog. |
+| `sinks` _[ProxyAccessLogSink](#proxyaccesslogsink) array_ | Sinks defines the sinks of accesslog. |
 
 
-## ProxyAccessLogSinkType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [ProxyAccessLoggingSink](#proxyaccessloggingsink)
-
-
-
-## ProxyAccessLoggingSink
+## ProxyAccessLogSink
 
 
 
@@ -562,6 +551,17 @@ _Appears in:_
 | `type` _[ProxyAccessLogSinkType](#proxyaccesslogsinktype)_ | Type defines the type of accesslog sink. |
 | `file` _[FileEnvoyProxyAccessLog](#fileenvoyproxyaccesslog)_ | File defines the file accesslog sink. |
 | `openTelemetry` _[OpenTelemetryEnvoyProxyAccessLog](#opentelemetryenvoyproxyaccesslog)_ | OpenTelemetry defines the OpenTelemetry accesslog sink. |
+
+
+## ProxyAccessLogSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [ProxyAccessLogSink](#proxyaccesslogsink)
+
 
 
 ## ProxyLogging
