@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -980,30 +981,45 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 		return nil, weight
 	}
 
-	var backendIps []string
-	switch KindDerefOr(backendRef.Kind, KindService) {
-	case KindServiceImport:
-		backendIps = resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
-	case KindService:
-		backendIps = []string{resources.GetService(backendNamespace, string(backendRef.Name)).Spec.ClusterIP}
+	var servicePort corev1.ServicePort
+	for _, port := range service.Spec.Ports {
+		if port.Port == int32(*backendRef.Port) {
+			servicePort = port
+			break
+		}
 	}
 
-	for _, ip := range backendIps {
-		var ep *ir.DestinationEndpoint
-		// Weights are not relevant for TCP and UDP Routes
-		if routeType == KindTCPRoute || routeType == KindUDPRoute {
-			ep = ir.NewDestEndpoint(
-				ip,
-				uint32(*backendRef.Port))
-		} else {
-			ep = ir.NewDestEndpointWithWeight(
-				ip,
-				uint32(*backendRef.Port),
-				weight)
+	endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
+
+	for _, endpointSlice := range endpointSlices {
+		for _, endpoint := range endpointSlice.Endpoints {
+			for _, endpointPort := range endpointSlice.Ports {
+				// Check if the endpoint port matches the service port
+				// and if endpoint is Ready
+				if *endpointPort.Name == servicePort.Name &&
+					*endpointPort.Protocol == servicePort.Protocol &&
+					*endpoint.Conditions.Ready {
+					for _, address := range endpoint.Addresses {
+						var dest *ir.RouteDestination
+						// Weights are not relevant for TCP and UDP Routes
+						if routeType == KindTCPRoute ||
+							routeType == KindUDPRoute {
+							dest = ir.NewRouteDest(
+								address,
+								uint32(servicePort.TargetPort.IntVal))
+						} else {
+							dest = ir.NewRouteDestWithWeight(
+								address,
+								uint32(servicePort.TargetPort.IntVal),
+								weight)
+						}
+						destinations = append(destinations, dest)
+					}
+				}
+			}
 		}
-		endpoints = append(endpoints, ep)
 	}
-	return endpoints, weight
+	return destinations, weight
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
