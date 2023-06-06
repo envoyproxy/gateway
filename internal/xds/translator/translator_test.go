@@ -141,6 +141,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "authn-ratelimit",
 		},
+		{
+			name: "accesslog",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -63,8 +63,10 @@ tcpRoutes:
               reason: InvalidBackend
               message: One and only one backend is supported
 xdsIR:
-  envoy-gateway-gateway-1: {}
-
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+        - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
