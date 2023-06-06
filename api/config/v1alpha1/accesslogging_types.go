@@ -5,32 +5,41 @@
 
 package v1alpha1
 
-type ProxyAccessLogging struct {
-	// Format defines the format of access logging.
-	Format ProxyAccessLoggingFormat `json:"format"`
-	// Sinks defines the sinks of access logging.
-	// +kubebuilder:validation:MinItems=1
-	Sinks []ProxyAccessLoggingSink `json:"sinks"`
+type ProxyAccessLog struct {
+	// Disable disables access logging for managed proxies if set to true.
+	Disable bool `json:"disable,omitempty"`
+	// Settings defines accesslog settings for managed proxies.
+	// If unspecified, will send default format to stdout.
+	// +optional
+	Settings []ProxyAccessLogSetting `json:"settings,omitempty"`
 }
 
-type ProxyAccessLoggingFormatType string
+type ProxyAccessLogSetting struct {
+	// Format defines the format of accesslog.
+	Format ProxyAccessLogFormat `json:"format"`
+	// Sinks defines the sinks of accesslog.
+	// +kubebuilder:validation:MinItems=1
+	Sinks []ProxyAccessLogSink `json:"sinks"`
+}
+
+type ProxyAccessLogFormatType string
 
 const (
-	// ProxyAccessLoggingFormatTypeText defines the text access logging format.
-	ProxyAccessLoggingFormatTypeText ProxyAccessLoggingFormatType = "Text"
-	// ProxyAccessLoggingFormatTypeJSON defines the JSON access logging format.
-	ProxyAccessLoggingFormatTypeJSON ProxyAccessLoggingFormatType = "JSON"
+	// ProxyAccessLogFormatTypeText defines the text accesslog format.
+	ProxyAccessLogFormatTypeText ProxyAccessLogFormatType = "Text"
+	// ProxyAccessLogFormatTypeJSON defines the JSON accesslog format.
+	ProxyAccessLogFormatTypeJSON ProxyAccessLogFormatType = "JSON"
 	// TODO: support format type "mix" in the future.
 )
 
-// ProxyAccessLoggingFormat defines the format of access logging.
+// ProxyAccessLogFormat defines the format of accesslog.
 // +union
-type ProxyAccessLoggingFormat struct {
-	// Type defines the type of access logging format.
+type ProxyAccessLogFormat struct {
+	// Type defines the type of accesslog format.
 	// +kubebuilder:validation:Enum=Text;JSON
 	// +unionDiscriminator
-	Type ProxyAccessLoggingFormatType `json:"type,omitempty"`
-	// Text defines the text access logging format, following Envoy access logging formatting,
+	Type ProxyAccessLogFormatType `json:"type,omitempty"`
+	// Text defines the text accesslog format, following Envoy accesslog formatting,
 	// empty value results in proxy's default access log format.
 	// It's required when the format type is "Text".
 	// Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format.
@@ -45,35 +54,35 @@ type ProxyAccessLoggingFormat struct {
 	JSON map[string]string `json:"json,omitempty"`
 }
 
-type ProxyAccessLoggingSinkType string
+type ProxyAccessLogSinkType string
 
 const (
-	// ProxyAccessLoggingSinkTypeFile defines the file access logging sink.
-	ProxyAccessLoggingSinkTypeFile ProxyAccessLoggingSinkType = "File"
-	// ProxyAccessLoggingSinkTypeOpenTelemetry defines the OpenTelemetry access logging sink.
-	ProxyAccessLoggingSinkTypeOpenTelemetry ProxyAccessLoggingSinkType = "OpenTelemetry"
+	// ProxyAccessLogSinkTypeFile defines the file accesslog sink.
+	ProxyAccessLogSinkTypeFile ProxyAccessLogSinkType = "File"
+	// ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.
+	ProxyAccessLogSinkTypeOpenTelemetry ProxyAccessLogSinkType = "OpenTelemetry"
 )
 
-type ProxyAccessLoggingSink struct {
-	// Type defines the type of access logging sink.
+type ProxyAccessLogSink struct {
+	// Type defines the type of accesslog sink.
 	// +kubebuilder:validation:Enum=File;OpenTelemetry
-	Type ProxyAccessLoggingSinkType `json:"type,omitempty"`
-	// File defines the file access logging sink.
+	Type ProxyAccessLogSinkType `json:"type,omitempty"`
+	// File defines the file accesslog sink.
 	// +optional
-	File *FileEnvoyProxyAccessLogging `json:"file,omitempty"`
-	// OpenTelemetry defines the OpenTelemetry access logging sink.
+	File *FileEnvoyProxyAccessLog `json:"file,omitempty"`
+	// OpenTelemetry defines the OpenTelemetry accesslog sink.
 	// +optional
-	OpenTelemetry *OpenTelemetryEnvoyProxyAccessLogging `json:"openTelemetry,omitempty"`
+	OpenTelemetry *OpenTelemetryEnvoyProxyAccessLog `json:"openTelemetry,omitempty"`
 }
 
-type FileEnvoyProxyAccessLogging struct {
+type FileEnvoyProxyAccessLog struct {
 	// Path defines the file path used to expose envoy access log(e.g. /dev/stdout).
-	// Empty value disables access logging.
+	// Empty value disables accesslog.
 	Path string `json:"path,omitempty"`
 }
 
 // TODO: consider reuse ExtensionService?
-type OpenTelemetryEnvoyProxyAccessLogging struct {
+type OpenTelemetryEnvoyProxyAccessLog struct {
 	// Host define the extension service hostname.
 	Host string `json:"host"`
 	// Port defines the port the extension service is exposed on.
@@ -87,5 +96,5 @@ type OpenTelemetryEnvoyProxyAccessLogging struct {
 	// +optional
 	Resources map[string]string `json:"resources,omitempty"`
 
-	// TODO: support more OpenTelemetry access logging options(e.g. TLS, auth etc.) in the future.
+	// TODO: support more OpenTelemetry accesslog options(e.g. TLS, auth etc.) in the future.
 }

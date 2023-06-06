@@ -471,17 +471,16 @@ func TestProcessHTTPRoutes(t *testing.T) {
 
 	for i := range testCases {
 		tc := testCases[i]
-
-		// Add objects referenced by test cases.
-		objs := []client.Object{gc, gw}
-
-		// Create the reconciler.
-		logger, err := log.NewLogger()
-		require.NoError(t, err)
-		ctx := context.Background()
-
 		// Run the test cases.
 		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{gc, gw}
+
+			// Create the reconciler.
+			logger, err := log.NewLogger()
+			require.NoError(t, err)
+			ctx := context.Background()
+
 			r := &gatewayAPIReconciler{
 				log:             logger,
 				classController: gcCtrlName,
@@ -512,7 +511,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			// Process the test case httproutes.
 			resourceTree := gatewayapi.NewResources()
 			resourceMap := newResourceMapping()
-			err := r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
+			err = r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.

@@ -18,3 +18,4 @@ Learn about the internal details of Envoy Gateway.
   design/bootstrap
   design/extending-envoy-gateway
   design/local-envoy-gateway
+  design/accesslog
