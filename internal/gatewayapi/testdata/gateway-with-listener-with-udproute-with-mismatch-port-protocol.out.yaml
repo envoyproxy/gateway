@@ -59,8 +59,10 @@ udpRoutes:
               reason: PortNotFound
               message: UDP Port 8080 not found on service default/service-1
 xdsIR:
-  envoy-gateway-gateway-1: {}
-
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+        - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

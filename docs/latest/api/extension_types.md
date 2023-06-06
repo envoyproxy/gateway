@@ -11,6 +11,8 @@ Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io A
 
 ### Resource Types
 - [AuthenticationFilter](#authenticationfilter)
+- [EnvoyPatchPolicy](#envoypatchpolicy)
+- [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [RateLimitFilter](#ratelimitfilter)
 
 
@@ -57,6 +59,96 @@ _Appears in:_
 
 
 
+## EnvoyJSONPatchConfig
+
+
+
+EnvoyJSONPatchConfig defines the configuration for patching a Envoy xDS Resource using JSONPatch semantic
+
+_Appears in:_
+- [EnvoyPatchPolicySpec](#envoypatchpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[EnvoyResourceType](#envoyresourcetype)_ | Type is the typed URL of the Envoy xDS Resource |
+| `name` _string_ | Name is the name of the resource |
+| `operation` _[JSONPatchOperation](#jsonpatchoperation)_ | Patch defines the JSON Patch Operation |
+
+
+## EnvoyPatchPolicy
+
+
+
+EnvoyPatchPolicy allows the user to modify the generated Envoy xDS resources by Envoy Gateway using this patch API
+
+_Appears in:_
+- [EnvoyPatchPolicyList](#envoypatchpolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `EnvoyPatchPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EnvoyPatchPolicySpec](#envoypatchpolicyspec)_ | Spec defines the desired state of EnvoyPatchPolicy. |
+
+
+## EnvoyPatchPolicyList
+
+
+
+EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `EnvoyPatchPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[EnvoyPatchPolicy](#envoypatchpolicy) array_ |  |
+
+
+## EnvoyPatchPolicySpec
+
+
+
+EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
+
+_Appears in:_
+- [EnvoyPatchPolicy](#envoypatchpolicy)
+
+| Field | Description |
+| --- | --- |
+| `type` _[EnvoyPatchType](#envoypatchtype)_ | Type decides the type of patch. Valid EnvoyPatchType values are "JSONPatch". |
+| `jsonPatches` _[EnvoyJSONPatchConfig](#envoyjsonpatchconfig) array_ | JSONPatch defines the JSONPatch configuration. |
+| `targetRef` _[PolicyTargetReference](#policytargetreference)_ | TargetRef is the name of the Gateway API resource this policy is being attached to. Currently only attaching to Gateway is supported This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway TargetRef |
+| `priority` _integer_ | Priority of the EnvoyPatchPolicy. If multiple EnvoyPatchPolicies are applied to the same TargetRef, they will be applied in the ascending order of the priority i.e. int32.min has the highest priority and int32.max has the lowest priority. Defaults to 0. |
+
+
+
+
+## EnvoyPatchType
+
+_Underlying type:_ `string`
+
+EnvoyPatchType specifies the types of Envoy patching mechanisms.
+
+_Appears in:_
+- [EnvoyPatchPolicySpec](#envoypatchpolicyspec)
+
+
+
+## EnvoyResourceType
+
+_Underlying type:_ `string`
+
+EnvoyResourceType specifies the type URL of the Envoy resource.
+
+_Appears in:_
+- [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
+
+
+
 ## GlobalRateLimit
 
 
@@ -96,6 +188,22 @@ HeaderMatchType specifies the semantics of how HTTP header values should be comp
 _Appears in:_
 - [HeaderMatch](#headermatch)
 
+
+
+## JSONPatchOperation
+
+
+
+JSONPatchOperation defines the JSON Patch Operation as defined in https://datatracker.ietf.org/doc/html/rfc6902
+
+_Appears in:_
+- [EnvoyJSONPatchConfig](#envoyjsonpatchconfig)
+
+| Field | Description |
+| --- | --- |
+| `op` _string_ | Op is the type of operation to perform |
+| `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
+| `value` _string_ | Value is the new value of the path location. |
 
 
 ## JwtAuthenticationFilterProvider

@@ -298,7 +298,7 @@ func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gatew
 }
 
 // findOwningGateway attempts finds a Gateway using "labels".
-func (r gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1b1.Gateway {
+func (r *gatewayAPIReconciler) findOwningGateway(ctx context.Context, labels map[string]string) *gwapiv1b1.Gateway {
 	gwName, ok := labels[gatewayapi.OwningGatewayNameLabel]
 	if !ok {
 		return nil

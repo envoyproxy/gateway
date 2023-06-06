@@ -12,7 +12,9 @@ import (
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/testing/protocmp"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/yaml"
 
@@ -115,13 +117,13 @@ func validateBootstrap(boostrapConfig *string) error {
 	}
 
 	// Ensure dynamic resources config is same
-	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
-	if userBootstrap.DynamicResources == nil || !reflect.DeepEqual(*userBootstrap.DynamicResources, *defaultBootstrap.DynamicResources) {
+	if userBootstrap.DynamicResources == nil ||
+		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform()) != "" {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
 	// Ensure layered runtime resources config is same
-	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
-	if userBootstrap.LayeredRuntime == nil || !reflect.DeepEqual(*userBootstrap.LayeredRuntime, *defaultBootstrap.LayeredRuntime) {
+	if userBootstrap.LayeredRuntime == nil ||
+		cmp.Diff(userBootstrap.LayeredRuntime, defaultBootstrap.LayeredRuntime, protocmp.Transform()) != "" {
 		return fmt.Errorf("layered_runtime cannot be modified")
 	}
 	// Ensure that the xds_cluster config is same

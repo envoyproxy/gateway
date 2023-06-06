@@ -64,8 +64,10 @@ tcpRoutes:
               reason: InvalidRule
               message: One and only one rule is supported
 xdsIR:
-  envoy-gateway-gateway-1: {}
-
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+        - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
