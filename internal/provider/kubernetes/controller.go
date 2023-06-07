@@ -256,6 +256,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				r.log.Error(err, "unable to update GatewayClass status")
 			}
 			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -1279,7 +1280,8 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	if len(epList.Items) == 0 {
-		return fmt.Errorf("no envoyproxies exist in namespace %s", r.namespace)
+		r.log.Info("no envoyproxies exist in", "namespace", r.namespace)
+		return nil
 	}
 
 	found := false
