@@ -53,6 +53,7 @@ func (c *Configuration) getProvider() {
 
 // CertProvider defines the provider of certificates.
 type CertProvider struct {
+	
 	// Type is the type of provider to use for managing certificates.
 	Type ProviderType `json:"type"`
 }
