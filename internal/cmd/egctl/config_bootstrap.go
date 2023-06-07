@@ -13,6 +13,7 @@ import (
 )
 
 func bootstrapConfigCmd() *cobra.Command {
+
 	configCmd := &cobra.Command{
 		Use:     "bootstrap <pod-name>",
 		Aliases: []string{"b"},
