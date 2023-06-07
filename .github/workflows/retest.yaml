@@ -36,7 +36,8 @@ jobs:
             const { owner, repo } = context.repo;
             const workflowId = 'build_and_test.yaml';
             const { number } = context.issue;
-            await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+            await octokit.actions.createWorkflowDispatch({
               owner,
               repo,
               workflow_id: workflowId,
