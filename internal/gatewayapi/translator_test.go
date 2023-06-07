@@ -20,9 +20,11 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -60,19 +62,81 @@ func TestTranslate(t *testing.T) {
 
 			// Add common test fixtures
 			for i := 1; i <= 3; i++ {
+				svcName := "service-" + strconv.Itoa(i)
+				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
-					&v1.Service{
+					&corev1.Service{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service-" + strconv.Itoa(i),
+							Name:      svcName,
 						},
-						Spec: v1.ServiceSpec{
-							ClusterIP: "7.7.7.7",
-							Ports: []v1.ServicePort{
-								{Port: 8080, Protocol: v1.ProtocolTCP},
-								{Port: 8443, Protocol: v1.ProtocolTCP},
-								{Port: 8163, Protocol: v1.ProtocolTCP},
-								{Port: 8162, Protocol: v1.ProtocolUDP},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "1.1.1.1",
+							Ports: []corev1.ServicePort{
+								{
+									Port:       8080,
+									TargetPort: intstr.IntOrString{IntVal: 8080},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Port:       8443,
+									TargetPort: intstr.IntOrString{IntVal: 8443},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Port:       8163,
+									TargetPort: intstr.IntOrString{IntVal: 8163},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Port:       8162,
+									TargetPort: intstr.IntOrString{IntVal: 8162},
+									Protocol:   corev1.ProtocolUDP,
+								},
+							},
+						},
+					},
+				)
+				resources.EndpointSlices = append(resources.EndpointSlices,
+					&discoveryv1.EndpointSlice{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      epSliceName,
+							Namespace: "default",
+							Labels: map[string]string{
+								discoveryv1.LabelServiceName: svcName,
+							},
+						},
+						AddressType: discoveryv1.AddressTypeIPv4,
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Name:     StringPtr("http"),
+								Port:     Int32Ptr(8080),
+								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							},
+							{
+								Name:     StringPtr("https"),
+								Port:     Int32Ptr(8443),
+								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							},
+							{
+								Name:     StringPtr("tcp"),
+								Port:     Int32Ptr(8163),
+								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							},
+							{
+								Name:     StringPtr("udp"),
+								Port:     Int32Ptr(8162),
+								Protocol: ProtocolPtr(corev1.ProtocolUDP),
+							},
+						},
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{
+									"7.7.7.7",
+								},
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: BoolPtr(true),
+								},
 							},
 						},
 					},
@@ -80,25 +144,58 @@ func TestTranslate(t *testing.T) {
 			}
 
 			resources.Services = append(resources.Services,
-				&v1.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
 					},
-					Spec: v1.ServiceSpec{
-						ClusterIP: "7.6.5.4",
-						Ports: []v1.ServicePort{
-							{Port: 8080, Protocol: v1.ProtocolTCP},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "2.2.2.2",
+						Ports: []corev1.ServicePort{
+							{
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mirror-service-endpointslice",
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "mirror-service",
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     StringPtr("http"),
+							Port:     Int32Ptr(8080),
+							Protocol: ProtocolPtr(corev1.ProtocolTCP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"7.6.5.4",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: BoolPtr(true),
+							},
 						},
 					},
 				},
 			)
 
-			resources.Namespaces = append(resources.Namespaces, &v1.Namespace{
+			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
-			}, &v1.Namespace{
+			}, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},
@@ -148,19 +245,81 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			// Add common test fixtures
 			for i := 1; i <= 3; i++ {
+				svcName := "service-" + strconv.Itoa(i)
+				epSliceName := "endpointslice-" + strconv.Itoa(i)
 				resources.Services = append(resources.Services,
-					&v1.Service{
+					&corev1.Service{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: "default",
-							Name:      "service-" + strconv.Itoa(i),
+							Name:      svcName,
 						},
-						Spec: v1.ServiceSpec{
-							ClusterIP: "7.7.7.7",
-							Ports: []v1.ServicePort{
-								{Port: 8080, Protocol: v1.ProtocolTCP},
-								{Port: 8443, Protocol: v1.ProtocolTCP},
-								{Port: 8163, Protocol: v1.ProtocolTCP},
-								{Port: 8162, Protocol: v1.ProtocolUDP},
+						Spec: corev1.ServiceSpec{
+							ClusterIP: "1.1.1.1",
+							Ports: []corev1.ServicePort{
+								{
+									Port:       8080,
+									TargetPort: intstr.IntOrString{IntVal: 8080},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Port:       8443,
+									TargetPort: intstr.IntOrString{IntVal: 8443},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Port:       8163,
+									TargetPort: intstr.IntOrString{IntVal: 8163},
+									Protocol:   corev1.ProtocolTCP,
+								},
+								{
+									Port:       8162,
+									TargetPort: intstr.IntOrString{IntVal: 8162},
+									Protocol:   corev1.ProtocolUDP,
+								},
+							},
+						},
+					},
+				)
+				resources.EndpointSlices = append(resources.EndpointSlices,
+					&discoveryv1.EndpointSlice{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      epSliceName,
+							Namespace: "default",
+							Labels: map[string]string{
+								discoveryv1.LabelServiceName: svcName,
+							},
+						},
+						AddressType: discoveryv1.AddressTypeIPv4,
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Name:     StringPtr("http"),
+								Port:     Int32Ptr(8080),
+								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							},
+							{
+								Name:     StringPtr("https"),
+								Port:     Int32Ptr(8443),
+								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							},
+							{
+								Name:     StringPtr("tcp"),
+								Port:     Int32Ptr(8163),
+								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							},
+							{
+								Name:     StringPtr("udp"),
+								Port:     Int32Ptr(8162),
+								Protocol: ProtocolPtr(corev1.ProtocolUDP),
+							},
+						},
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{
+									"7.7.7.7",
+								},
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: BoolPtr(true),
+								},
 							},
 						},
 					},
@@ -168,25 +327,58 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			}
 
 			resources.Services = append(resources.Services,
-				&v1.Service{
+				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
 						Name:      "mirror-service",
 					},
-					Spec: v1.ServiceSpec{
-						ClusterIP: "7.6.5.4",
-						Ports: []v1.ServicePort{
-							{Port: 8080, Protocol: v1.ProtocolTCP},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: "2.2.2.2",
+						Ports: []corev1.ServicePort{
+							{
+								Port:       8080,
+								TargetPort: intstr.IntOrString{IntVal: 8080},
+								Protocol:   corev1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			)
+			resources.EndpointSlices = append(resources.EndpointSlices,
+				&discoveryv1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mirror-service-endpointslice",
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "mirror-service",
+						},
+					},
+					AddressType: discoveryv1.AddressTypeIPv4,
+					Ports: []discoveryv1.EndpointPort{
+						{
+							Name:     StringPtr("http"),
+							Port:     Int32Ptr(8080),
+							Protocol: ProtocolPtr(corev1.ProtocolTCP),
+						},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses: []string{
+								"7.6.5.4",
+							},
+							Conditions: discoveryv1.EndpointConditions{
+								Ready: BoolPtr(true),
+							},
 						},
 					},
 				},
 			)
 
-			resources.Namespaces = append(resources.Namespaces, &v1.Namespace{
+			resources.Namespaces = append(resources.Namespaces, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "envoy-gateway",
 				},
-			}, &v1.Namespace{
+			}, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "default",
 				},

@@ -996,7 +996,7 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 			for _, endpointPort := range endpointSlice.Ports {
 				// Check if the endpoint port matches the service port
 				// and if endpoint is Ready
-				if *endpointPort.Name == servicePort.Name &&
+				if *endpointPort.Port == servicePort.Port &&
 					*endpointPort.Protocol == servicePort.Protocol &&
 					*endpoint.Conditions.Ready {
 					for _, address := range endpoint.Addresses {

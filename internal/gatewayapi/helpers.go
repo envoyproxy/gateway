@@ -61,6 +61,10 @@ func TLSModeTypePtr(mode v1beta1.TLSModeType) *v1beta1.TLSModeType {
 	return &mode
 }
 
+func BoolPtr(val bool) *bool {
+	return &val
+}
+
 func StringPtr(val string) *string {
 	return &val
 }
@@ -85,6 +89,10 @@ func PathMatchTypePtr(pType v1beta1.PathMatchType) *v1beta1.PathMatchType {
 
 func GatewayAddressTypePtr(addr v1beta1.AddressType) *v1beta1.AddressType {
 	return &addr
+}
+
+func ProtocolPtr(val v1.Protocol) *v1.Protocol {
+	return &val
 }
 
 func PathMatchTypeDerefOr(matchType *v1beta1.PathMatchType, defaultType v1beta1.PathMatchType) v1beta1.PathMatchType {
