@@ -41,7 +41,6 @@ func proxyCommand() *cobra.Command {
 		Aliases: []string{"proxy"},
 		Long:    "Retrieve information from envoy proxy.",
 	}
-	
 
 	c.AddCommand(allConfigCmd())
 	c.AddCommand(bootstrapConfigCmd())
