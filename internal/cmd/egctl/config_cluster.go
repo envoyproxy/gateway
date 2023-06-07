@@ -13,6 +13,7 @@ import (
 )
 
 func clusterConfigCmd() *cobra.Command {
+
 	configCmd := &cobra.Command{
 		Use:     "cluster <pod-name>",
 		Short:   "Retrieves cluster Envoy xDS resources from the specified pod",
