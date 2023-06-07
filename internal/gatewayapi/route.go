@@ -87,7 +87,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 }
 
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *Resources, xdsIR XdsIRMap) {
-	for _, parentRef := range httpRoute.parentRefs {
+	for _, parentRef := range httpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -119,8 +119,8 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
-		if parentRef.httpRoute != nil &&
-			len(parentRef.httpRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+		if parentRef.HTTPRoute != nil &&
+			len(parentRef.HTTPRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			parentRef.SetCondition(httpRoute,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionTrue,
@@ -297,7 +297,7 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 }
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
-	for _, parentRef := range grpcRoute.parentRefs {
+	for _, parentRef := range grpcRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -328,8 +328,8 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
-		if parentRef.grpcRoute != nil &&
-			len(parentRef.grpcRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+		if parentRef.GRPCRoute != nil &&
+			len(parentRef.GRPCRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			parentRef.SetCondition(grpcRoute,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionTrue,
@@ -480,7 +480,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
-		routeHostnames := route.GetHostnames()
+		routeHostnames := GetHostnames(route)
 		hosts := computeHosts(routeHostnames, listener.Hostname)
 		if len(hosts) == 0 {
 			continue
@@ -497,7 +497,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				irListener.StripAnyHostPort = true
 			}
 
-			if route.GetRouteType() == KindGRPCRoute {
+			if GetRouteType(route) == KindGRPCRoute {
 				irListener.IsHTTP2 = true
 			}
 		}
@@ -593,7 +593,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 }
 
 func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *Resources, xdsIR XdsIRMap) {
-	for _, parentRef := range tlsRoute.parentRefs {
+	for _, parentRef := range tlsRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -632,7 +632,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 		var hasHostnameIntersection bool
 		for _, listener := range parentRef.listeners {
-			hosts := computeHosts(tlsRoute.GetHostnames(), listener.Hostname)
+			hosts := computeHosts(GetHostnames(tlsRoute), listener.Hostname)
 			if len(hosts) == 0 {
 				continue
 			}
@@ -673,8 +673,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
-		if parentRef.tlsRoute != nil &&
-			len(parentRef.tlsRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+		if parentRef.TLSRoute != nil &&
+			len(parentRef.TLSRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			parentRef.SetCondition(tlsRoute,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionTrue,
@@ -715,7 +715,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 }
 
 func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *Resources, xdsIR XdsIRMap) {
-	for _, parentRef := range udpRoute.parentRefs {
+	for _, parentRef := range udpRoute.ParentRefs {
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -796,8 +796,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
-		if accepted && parentRef.udpRoute != nil &&
-			len(parentRef.udpRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+		if accepted && parentRef.UDPRoute != nil &&
+			len(parentRef.UDPRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			parentRef.SetCondition(udpRoute,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionTrue,
@@ -847,7 +847,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 }
 
 func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
-	for _, parentRef := range tcpRoute.parentRefs {
+	for _, parentRef := range tcpRoute.ParentRefs {
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -929,8 +929,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
-		if accepted && parentRef.tcpRoute != nil &&
-			len(parentRef.tcpRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
+		if accepted && parentRef.TCPRoute != nil &&
+			len(parentRef.TCPRoute.Status.Parents[parentRef.routeParentStatusIdx].Conditions) == 0 {
 			parentRef.SetCondition(tcpRoute,
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionTrue,
@@ -966,7 +966,7 @@ func (t *Translator) processRouteDestinations(backendRef v1beta1.BackendRef,
 	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 	service := resources.GetService(serviceNamespace, string(backendRef.Name))
 
-	routeType := route.GetRouteType()
+	routeType := GetRouteType(route)
 	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, routeType) {
 		return nil, weight
 	}
@@ -993,7 +993,7 @@ func (t *Translator) processRouteDestinations(backendRef v1beta1.BackendRef,
 func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteContext, gateways []*GatewayContext, resources *Resources) bool {
 	var relevantRoute bool
 
-	for _, parentRef := range routeContext.GetParentReferences() {
+	for _, parentRef := range GetParentReferences(routeContext) {
 		isRelevantParentRef, selectedListeners := GetReferencedListeners(parentRef, gateways)
 
 		// Parent ref is not to a Gateway that we control: skip it
@@ -1002,7 +1002,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		}
 		relevantRoute = true
 
-		parentRefCtx := routeContext.GetRouteParentContext(parentRef)
+		parentRefCtx := GetRouteParentContext(routeContext, parentRef)
 		// Reset conditions since they will be recomputed during translation
 		parentRefCtx.ResetConditions(routeContext)
 
@@ -1028,7 +1028,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 
 		var allowedListeners []*ListenerContext
 		for _, listener := range selectedListeners {
-			acceptedKind := routeContext.GetRouteType()
+			acceptedKind := GetRouteType(routeContext)
 			if listener.AllowsKind(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: acceptedKind}) &&
 				listener.AllowsNamespace(resources.GetNamespace(routeContext.GetNamespace())) {
 				allowedListeners = append(allowedListeners, listener)
