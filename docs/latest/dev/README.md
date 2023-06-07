@@ -67,7 +67,7 @@ __Note:__  Replace `IMAGE` with your registry's image name.
 #### Option 2: Use a Custom Image
 
 * Run `make kube-install-image` to build an image from the tip of your current branch and load it in the Kind cluster.
-* Run `make kube-deploy` to install Envoy Gateway into the Kind cluster using your custom image.
+* Run `IMAGE_PULL_POLICY=IfNotPresent make kube-deploy` to install Envoy Gateway into the Kind cluster using your custom image.
 
 ### Deploying Envoy Gateway in Kubernetes
 
