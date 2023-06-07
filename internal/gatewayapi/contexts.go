@@ -330,13 +330,13 @@ func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentRefere
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		fpr := forParentRef
+		tmpPR := forParentRef
 		if !isHTTPRoute {
-			fpr = DowngradeParentReference(fpr)
+			tmpPR = DowngradeParentReference(tmpPR)
 		}
 		rParentStatus := v1alpha2.RouteParentStatus{
 			ControllerName: v1alpha2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
-			ParentRef:      fpr,
+			ParentRef:      tmpPR,
 		}
 		statusParents.Set(reflect.Append(statusParents, reflect.ValueOf(rParentStatus)))
 		routeParentStatusIdx = statusParents.Len() - 1
