@@ -117,7 +117,10 @@ tlsRoutes:
         reason: ResolvedRefs 
         message: Resolved all the Object references for the Route
 xdsIR:
-  envoy-gateway-gateway-1: {}
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

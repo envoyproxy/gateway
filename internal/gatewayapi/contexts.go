@@ -159,7 +159,7 @@ type RouteContext interface {
 
 	// GetRouteType returns the Kind of the Route object, HTTPRoute,
 	// TLSRoute, TCPRoute, UDPRoute etc.
-	GetRouteType() string
+	GetRouteType() v1beta1.Kind
 
 	// GetRouteStatus returns the RouteStatus object associated with the Route.
 	GetRouteStatus() *v1beta1.RouteStatus
@@ -190,7 +190,7 @@ type HTTPRouteContext struct {
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (h *HTTPRouteContext) GetRouteType() string {
+func (h *HTTPRouteContext) GetRouteType() v1beta1.Kind {
 	return KindHTTPRoute
 }
 
@@ -267,7 +267,7 @@ type GRPCRouteContext struct {
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (g *GRPCRouteContext) GetRouteType() string {
+func (g *GRPCRouteContext) GetRouteType() v1beta1.Kind {
 	return KindGRPCRoute
 }
 
@@ -354,7 +354,7 @@ type TLSRouteContext struct {
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (t *TLSRouteContext) GetRouteType() string {
+func (t *TLSRouteContext) GetRouteType() v1beta1.Kind {
 	return KindTLSRoute
 }
 
@@ -445,7 +445,7 @@ type UDPRouteContext struct {
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (u *UDPRouteContext) GetRouteType() string {
+func (u *UDPRouteContext) GetRouteType() v1beta1.Kind {
 	return KindUDPRoute
 }
 
@@ -532,7 +532,7 @@ type TCPRouteContext struct {
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (t *TCPRouteContext) GetRouteType() string {
+func (t *TCPRouteContext) GetRouteType() v1beta1.Kind {
 	return KindTCPRoute
 }
 

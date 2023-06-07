@@ -14,6 +14,7 @@ import (
 	configv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -155,6 +156,17 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			if (*in)[i] != nil {
 				in, out := &(*in)[i], &(*out)[i]
 				*out = new(v1.Service)
+				(*in).DeepCopyInto(*out)
+			}
+		}
+	}
+	if in.EndpointSlices != nil {
+		in, out := &in.EndpointSlices, &out.EndpointSlices
+		*out = make([]*discoveryv1.EndpointSlice, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(discoveryv1.EndpointSlice)
 				(*in).DeepCopyInto(*out)
 			}
 		}

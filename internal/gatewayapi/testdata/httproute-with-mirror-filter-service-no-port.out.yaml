@@ -78,6 +78,9 @@ httpRoutes:
         message: A valid port number corresponding to a port on the Service must be specified
 xdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0

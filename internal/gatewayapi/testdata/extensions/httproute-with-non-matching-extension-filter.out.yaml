@@ -78,6 +78,9 @@ httpRoutes:
         message: "Reference default/example not found for filter type: Foo"
 xdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0

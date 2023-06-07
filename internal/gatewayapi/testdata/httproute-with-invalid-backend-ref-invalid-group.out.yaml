@@ -70,6 +70,9 @@ httpRoutes:
         message: Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported
 xdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0

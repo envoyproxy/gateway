@@ -12,6 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/fields"
@@ -246,6 +247,26 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 			resourceTree.Services = append(resourceTree.Services, service)
 			r.log.Info("added Service to resource tree", "namespace", serviceNamespaceName.Namespace,
 				"name", serviceNamespaceName.Name)
+
+			// Retrieve the EndpointSlices associated with the service
+			endpointSliceList := new(discoveryv1.EndpointSliceList)
+			opts := []client.ListOption{
+				client.MatchingLabels(map[string]string{
+					discoveryv1.LabelServiceName: serviceNamespaceName.Name,
+				}),
+				client.InNamespace(serviceNamespaceName.Namespace),
+			}
+			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+				r.log.Error(err, "failed to get EndpointSlices", "namespace", serviceNamespaceName.Namespace,
+					"service", serviceNamespaceName.Name)
+			} else {
+				for _, endpointSlice := range endpointSliceList.Items {
+					endpointSlice := endpointSlice
+					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+						"name", endpointSlice.Name)
+					resourceTree.EndpointSlices = append(resourceTree.EndpointSlices, &endpointSlice)
+				}
+			}
 		}
 	}
 
@@ -277,6 +298,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 				r.log.Error(err, "unable to update GatewayClass status")
 			}
 			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
+			return reconcile.Result{}, err
 		}
 	}
 
@@ -1326,6 +1348,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch EndpointSlice CRUDs and process affected *Route objects.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile)); err != nil {
+		return err
+	}
+
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
 	// resource address.
@@ -1454,7 +1484,8 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	if len(epList.Items) == 0 {
-		return fmt.Errorf("no envoyproxies exist in namespace %s", r.namespace)
+		r.log.Info("no envoyproxies exist in", "namespace", r.namespace)
+		return nil
 	}
 
 	found := false

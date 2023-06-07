@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -38,6 +39,7 @@ type Resources struct {
 	ReferenceGrants       []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty"`
 	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty"`
 	Services              []*v1.Service                  `json:"services,omitempty"`
+	EndpointSlices        []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty"`
 	Secrets               []*v1.Secret                   `json:"secrets,omitempty"`
 	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty"`
 	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty"`
@@ -52,6 +54,7 @@ func NewResources() *Resources {
 		GRPCRoutes:            []*v1alpha2.GRPCRoute{},
 		TLSRoutes:             []*v1alpha2.TLSRoute{},
 		Services:              []*v1.Service{},
+		EndpointSlices:        []*discoveryv1.EndpointSlice{},
 		Secrets:               []*v1.Secret{},
 		ReferenceGrants:       []*v1alpha2.ReferenceGrant{},
 		Namespaces:            []*v1.Namespace{},

@@ -43,17 +43,19 @@ type GlobalRateLimitSettings struct {
 func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
 	tCtx := new(types.ResourceVersionTable)
 
-	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP); err != nil {
+	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog); err != nil {
 		return nil, err
 	}
 
-	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP); err != nil {
+	if err := processTCPListenerXdsTranslation(tCtx, ir.TCP, ir.AccessLog); err != nil {
 		return nil, err
 	}
 
-	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP); err != nil {
+	if err := processUDPListenerXdsTranslation(tCtx, ir.UDP, ir.AccessLog); err != nil {
 		return nil, err
 	}
+
+	processClusterForAccessLog(tCtx, ir.AccessLog)
 
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
@@ -64,7 +66,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	return tCtx, nil
 }
 
-func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener) error {
+func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener, accesslog *ir.AccessLog) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
@@ -72,7 +74,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListener(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port)
+			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, accesslog)
 			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
 		} else if httpListener.TLS == nil {
 			// Find the route config associated with this listener that
@@ -91,7 +93,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		}
 
 		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener); err != nil {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accesslog); err != nil {
 				return err
 			}
 		}
@@ -211,7 +213,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 	return nil
 }
 
-func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener) error {
+func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog) error {
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
 		addXdsCluster(tCtx, addXdsClusterArgs{
@@ -231,18 +233,18 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListener(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port)
+			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, accesslog)
 			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Name); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Name, accesslog); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener) error {
+func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener, accesslog *ir.AccessLog) error {
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
 		addXdsCluster(tCtx, addXdsClusterArgs{
@@ -255,7 +257,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
-		xdsListener, err := buildXdsUDPListener(udpListener.Name, udpListener)
+		xdsListener, err := buildXdsUDPListener(udpListener.Name, udpListener, accesslog)
 		if err != nil {
 			return multierror.Append(err, errors.New("error building xds cluster"))
 		}

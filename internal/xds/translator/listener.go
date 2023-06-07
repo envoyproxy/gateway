@@ -12,7 +12,6 @@ import (
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
-	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -48,17 +47,11 @@ const (
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 )
 
-func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener {
-	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
+func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+	al := buildXdsAccessLog(accesslog, true)
 	return &listenerv3.Listener{
-		Name: name,
-		AccessLog: []*accesslog.AccessLog{
-			{
-				Name:       wellknown.FileAccessLog,
-				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
-				Filter:     listenerAccessLogFilter,
-			},
-		},
+		Name:                          name,
+		AccessLog:                     al,
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
@@ -74,16 +67,13 @@ func buildXdsTCPListener(name, address string, port uint32) *listenerv3.Listener
 	}
 }
 
-func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener) error {
+func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
 	routerAny, err := anypb.New(&router.Router{})
 	if err != nil {
 		return err
 	}
 
-	accesslogAny, err := anypb.New(stdoutFileAccessLog)
-	if err != nil {
-		return err
-	}
+	al := buildXdsAccessLog(accesslog, false)
 
 	// HTTP filter configuration
 	var statPrefix string
@@ -94,12 +84,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	mgr := &hcmv3.HttpConnectionManager{
-		AccessLog: []*accesslog.AccessLog{
-			{
-				Name:       wellknown.FileAccessLog,
-				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
-			},
-		},
+		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
 		StatPrefix: statPrefix,
 		RouteSpecifier: &hcmv3.HttpConnectionManager_Rds{
@@ -328,7 +313,7 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string) error {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string, accesslog *ir.AccessLog) error {
 	if irListener == nil {
 		return errors.New("tcp listener is nil")
 	}
@@ -344,18 +329,8 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		statPrefix = "terminate"
 	}
 
-	accesslogAny, err := anypb.New(stdoutFileAccessLog)
-	if err != nil {
-		return err
-	}
-
 	mgr := &tcpv3.TcpProxy{
-		AccessLog: []*accesslog.AccessLog{
-			{
-				Name:       wellknown.FileAccessLog,
-				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
-			},
-		},
+		AccessLog:  buildXdsAccessLog(accesslog, false),
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
 			Cluster: clusterName,
@@ -467,7 +442,7 @@ func buildXdsDownstreamTLSSecret(tlsConfig *ir.TLSListenerConfig) *tlsv3.Secret 
 	}
 }
 
-func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*listenerv3.Listener, error) {
+func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, accesslog *ir.AccessLog) (*listenerv3.Listener, error) {
 	if udpListener == nil {
 		return nil, errors.New("udp listener is nil")
 	}
@@ -481,15 +456,10 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 	if err != nil {
 		return nil, err
 	}
-	accesslogAny, _ := anypb.New(stdoutFileAccessLog)
+
 	udpProxy := &udpv3.UdpProxyConfig{
 		StatPrefix: statPrefix,
-		AccessLog: []*accesslog.AccessLog{
-			{
-				Name:       wellknown.FileAccessLog,
-				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
-			},
-		},
+		AccessLog:  buildXdsAccessLog(accesslog, false),
 		RouteSpecifier: &udpv3.UdpProxyConfig_Matcher{
 			Matcher: &matcher.Matcher{
 				OnNoMatch: &matcher.Matcher_OnMatch{
@@ -509,13 +479,8 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener) (*list
 	}
 
 	xdsListener := &listenerv3.Listener{
-		Name: udpListener.Name,
-		AccessLog: []*accesslog.AccessLog{
-			{
-				Name:       wellknown.FileAccessLog,
-				ConfigType: &accesslog.AccessLog_TypedConfig{TypedConfig: accesslogAny},
-			},
-		},
+		Name:      udpListener.Name,
+		AccessLog: buildXdsAccessLog(accesslog, true),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
 				SocketAddress: &corev3.SocketAddress{

@@ -18,17 +18,22 @@ gateways:
             certificateRefs:
               - name: tls-secret-ecdsa-1
               - name: tls-secret-ecdsa-2
+              - name: tls-secret-1
     status:
       listeners:
         - name: tls
           attachedRoutes: 0
           conditions:
             - lastTransitionTime: "2023-04-02T11:08:00Z"
-              message: "Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
-                be unique. Algorithm [ECDSA] conflicts with secret envoy-gateway/tls-secret-ecdsa-1"
-              reason: Invalid
+              message: "Secret envoy-gateway/tls-secret-ecdsa-2
+                public key algorithm must be unique, matched cerificate FQDN [foo.bar.com] has a conficting algorithm [ECDSA]."
+              reason: InvalidCertificateRef
               status: "False"
-              type: Programmed
+              type: ResolvedRefs
+            - type: Programmed
+              status: "False"
+              reason: Invalid
+              message: Listener is invalid, see other Conditions for details.
           supportedKinds:
             - group: gateway.networking.k8s.io
               kind: HTTPRoute
@@ -69,15 +74,18 @@ httpRoutes:
               status: "True"
               reason: ResolvedRefs 
               message: Resolved all the Object references for the Route
+xdsIR:
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+        - path: /dev/stdout
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
-      image: envoyproxy/envoy:translator-tests
-      listeners: [{}]
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-xdsIR:
-  envoy-gateway-gateway-1: {}
+      listeners:
+        - address: ""

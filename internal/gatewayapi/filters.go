@@ -858,20 +858,23 @@ func (t *Translator) processRequestMirrorFilter(
 		return
 	}
 
-	mirrorDest, _ := t.processRouteDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	mirrorDests, _ := t.processRouteDestinations(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
-	// If we're already mirroring requests to this backend then there is no need to configure it twice
-	for _, mirror := range filterContext.Mirrors {
-		if mirror != nil {
-			if mirror.Host == mirrorDest.Host &&
-				mirror.Port == mirrorDest.Port {
-				return
+	// Only add missing mirror destinations
+	for _, mirrorDest := range mirrorDests {
+		var found bool
+		for _, mirror := range filterContext.Mirrors {
+			if mirror != nil {
+				if mirror.Host == mirrorDest.Host && mirror.Port == mirrorDest.Port {
+					found = true
+				}
 			}
 		}
+
+		if !found {
+			filterContext.Mirrors = append(filterContext.Mirrors, mirrorDest)
+		}
 	}
-
-	filterContext.Mirrors = append(filterContext.Mirrors, mirrorDest)
-
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {

@@ -78,6 +78,9 @@ httpRoutes:
         message: "Unable to translate APIVersion for Extension Filter: kind: Foo, default/test"
 xdsIR:
   envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
     http:
     - name: envoy-gateway-gateway-1-http
       address: 0.0.0.0

@@ -125,12 +125,15 @@ install-ratelimit:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/redis/redis.yaml
 	kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
+	kubectl rollout status --watch --timeout=5m -n envoy-gateway-system deployment/envoy-gateway
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
 run-e2e:
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
+	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
 	kubectl apply -f test/config/gatewayclass.yaml

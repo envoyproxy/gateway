@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 
 	descpb "google.golang.org/protobuf/types/descriptorpb"
@@ -62,6 +63,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 		// Infra IR proxy ports must be unique.
 		var foundPorts []*protocolPort
+
+		gwXdsIR.AccessLog = processAccessLog(gwInfraIR.Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -238,4 +241,74 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			}
 		}
 	}
+}
+
+func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
+	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry.AccessLog == nil ||
+		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
+		// use the default access log
+		return &ir.AccessLog{
+			Text: []*ir.TextAccessLog{
+				{
+					Path: "/dev/stdout",
+				},
+			},
+		}
+	}
+
+	if envoyproxy.Spec.Telemetry.AccessLog.Disable {
+		return nil
+	}
+
+	irAccessLog := &ir.AccessLog{}
+	// translate the access log configuration to the IR
+	for _, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
+		for _, sink := range accessLog.Sinks {
+			switch sink.Type {
+			case configv1a1.ProxyAccessLogSinkTypeFile:
+				switch accessLog.Format.Type {
+				case configv1a1.ProxyAccessLogFormatTypeText:
+					al := &ir.TextAccessLog{
+						Format: accessLog.Format.Text,
+						Path:   sink.File.Path,
+					}
+					irAccessLog.Text = append(irAccessLog.Text, al)
+				case configv1a1.ProxyAccessLogFormatTypeJSON:
+					if len(accessLog.Format.JSON) == 0 {
+						// TODO: use a default JSON format if not specified?
+						continue
+					}
+
+					al := &ir.JSONAccessLog{
+						JSON: accessLog.Format.JSON,
+						Path: sink.File.Path,
+					}
+					irAccessLog.JSON = append(irAccessLog.JSON, al)
+				}
+			case configv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
+				if sink.OpenTelemetry == nil {
+					continue
+				}
+
+				al := &ir.OpenTelemetryAccessLog{
+					Attributes: accessLog.Format.JSON,
+					Port:       uint32(sink.OpenTelemetry.Port),
+					Host:       sink.OpenTelemetry.Host,
+					Resources:  sink.OpenTelemetry.Resources,
+				}
+
+				switch accessLog.Format.Type {
+				case configv1a1.ProxyAccessLogFormatTypeJSON:
+					al.Attributes = accessLog.Format.JSON
+				case configv1a1.ProxyAccessLogFormatTypeText:
+					al.Text = accessLog.Format.Text
+				}
+
+				irAccessLog.OpenTelemetry = append(irAccessLog.OpenTelemetry, al)
+			}
+		}
+	}
+
+	return irAccessLog
 }

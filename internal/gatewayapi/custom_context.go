@@ -25,7 +25,7 @@ type CustomGRPCRouteContext struct {
 	parentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (g *CustomGRPCRouteContext) GetRouteType() string {
+func (g *CustomGRPCRouteContext) GetRouteType() v1beta1.Kind {
 	return KindCustomGRPCRoute
 }
 

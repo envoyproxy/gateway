@@ -1,0 +1,18 @@
+- name: first-listener
+  responseHeadersToAdd:
+  - append: false
+    header:
+      key: x-request-id
+      value: '%REQ(X-REQUEST-ID)%'
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener
+    routes:
+    - directResponse:
+        body:
+          inlineString: 'Unknown custom filter type: UnsupportedType'
+        status: 500
+      match:
+        prefix: /
+      name: direct-route

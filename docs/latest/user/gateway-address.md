@@ -61,5 +61,7 @@ envoy-gateway                   ClusterIP      10.96.192.76    <none>        180
 envoy-gateway-metrics-service   ClusterIP      10.96.124.73    <none>        8443/TCP       15m
 ```
 
+__Note:__ If the `Gateway.Spec.Addresses` is explicitly set, it will be the only addresses that populates the Gateway status.
+
 [Addresses]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.GatewayAddress
 [External IPs]: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips

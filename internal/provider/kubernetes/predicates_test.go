@@ -165,6 +165,74 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	}
 }
 
+// TestValidateEndpointSliceForReconcile tests the validateEndpointSliceForReconcile
+// predicate function.
+func TestValidateEndpointSliceForReconcile(t *testing.T) {
+	sampleGateway := test.GetGateway(types.NamespacedName{Namespace: "default", Name: "scheduled-status-test"}, "test-gc")
+
+	testCases := []struct {
+		name          string
+		configs       []client.Object
+		endpointSlice client.Object
+		expect        bool
+	}{
+		{
+			name: "route service but no routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
+			expect:        false,
+		},
+		{
+			name: "http route service routes exist, but endpointslice is associated with another service",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "other-service"),
+			expect:        false,
+		},
+		{
+			name: "http route service routes exist",
+			configs: []client.Object{
+				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
+				sampleGateway,
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+			},
+			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
+			expect:        true,
+		},
+	}
+
+	// Create the reconciler.
+	logger, err := log.NewLogger()
+	require.NoError(t, err)
+	r := gatewayAPIReconciler{
+		classController: v1alpha1.GatewayControllerName,
+		log:             logger,
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		r.client = fakeclient.NewClientBuilder().
+			WithScheme(envoygateway.GetScheme()).
+			WithObjects(tc.configs...).
+			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
+			Build()
+		t.Run(tc.name, func(t *testing.T) {
+			res := r.validateEndpointSliceForReconcile(tc.endpointSlice)
+			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
 // TestValidateServiceForReconcile tests the validateServiceForReconcile
 // predicate function.
 func TestValidateServiceForReconcile(t *testing.T) {

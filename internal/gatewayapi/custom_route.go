@@ -103,22 +103,22 @@ func (t *Translator) processCustomGRPCRouteRules(grpcRoute *CustomGRPCRouteConte
 		// a unique Xds IR HTTPRoute per match.
 		var ruleRoutes = t.processCustomGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
 
-		for _, backendRef := range rule.BackendRefs {
-			destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
-			for _, route := range ruleRoutes {
-				// If the route already has a direct response or redirect configured, then it was from a filter so skip
-				// processing any destinations for this route.
-				if route.DirectResponse == nil && route.Redirect == nil {
-					if destination != nil {
-						route.Destinations = append(route.Destinations, destination)
-						route.BackendWeights.Valid += backendWeight
+		// for _, backendRef := range rule.BackendRefs {
+		// 	destination, backendWeight := t.processRouteDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
+		// 	for _, route := range ruleRoutes {
+		// 		// If the route already has a direct response or redirect configured, then it was from a filter so skip
+		// 		// processing any destinations for this route.
+		// 		if route.DirectResponse == nil && route.Redirect == nil {
+		// 			if destination != nil {
+		// 				route.Destinations = append(route.Destinations, destination)
+		// 				route.BackendWeights.Valid += backendWeight
 
-					} else {
-						route.BackendWeights.Invalid += backendWeight
-					}
-				}
-			}
-		}
+		// 			} else {
+		// 				route.BackendWeights.Invalid += backendWeight
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		// If the route has no valid backends then just use a direct response and don't fuss with weighted responses
 		for _, ruleRoute := range ruleRoutes {
