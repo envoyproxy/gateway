@@ -155,15 +155,6 @@ func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*v1.Secret) {
 // that can reference Gateway objects.
 type RouteContext interface {
 	client.Object
-
-	// GetRouteParentContext returns RouteParentContext by using the Route
-	// objects' ParentReference.
-	//GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext
-	//
-	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
-	// objects being implemented are of type v1beta1.
-	// GetHostnames returns the hosts targeted by the Route object.
-	//GetHostnames() []string
 }
 
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
