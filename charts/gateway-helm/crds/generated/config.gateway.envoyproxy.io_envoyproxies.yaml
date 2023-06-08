@@ -64,6 +64,7 @@ spec:
                       enum:
                       - debug
                       - info
+                      - warning
                       - error
                       type: string
                     default:

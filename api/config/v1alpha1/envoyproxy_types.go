@@ -150,7 +150,7 @@ const (
 
 // LogLevel defines a log level for system logs. This type is not implemented until
 // https://github.com/envoyproxy/gateway/issues/280 is fixed.
-// +kubebuilder:validation:Enum=debug;info;error
+// +kubebuilder:validation:Enum=debug;info;warning;error
 type LogLevel string
 
 const (
