@@ -28,14 +28,13 @@ type AuthenticationFilter struct {
 
 // ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 type ClaimToHeader struct {
-	// Type defines to extract the specified jwt claim value to a custom request header.
 
-	// Custom request headers.
+	// Header defines the name of the HTTP request header that the JWT Claim will be saved into.
 	Header string `json:"header"`
 
-	// The field name for the JWT Claim : it can be a nested claim of type
-	// (eg. "claim.nested.key", "sub") String separated with "." in case of nested claims.
-	// The nested claim name must use dot "." to separate the JSON name path.
+	// Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type
+	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
+	// to separate the JSON name path.
 	Claim string `json:"claim"`
 }
 

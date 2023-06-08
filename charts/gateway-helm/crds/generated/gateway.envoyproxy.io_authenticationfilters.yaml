@@ -63,14 +63,14 @@ spec:
                           JWT claims into HTTP headers
                         properties:
                           claim:
-                            description: 'The field name for the JWT Claim : it can
-                              be a nested claim of type (eg. "claim.nested.key", "sub")
-                              String separated with "." in case of nested claims.
-                              The nested claim name must use dot "." to separate the
-                              JSON name path.'
+                            description: 'Claim is the JWT Claim that should be saved
+                              into the header : it can be a nested claim of type (eg.
+                              "claim.nested.key", "sub"). The nested claim name must
+                              use dot "." to separate the JSON name path.'
                             type: string
                           header:
-                            description: Custom request headers.
+                            description: Header defines the name of the HTTP request
+                              header that the JWT Claim will be saved into.
                             type: string
                         required:
                         - claim

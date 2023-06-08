@@ -70,8 +70,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `header` _string_ | Custom request headers. |
-| `claim` _string_ | The field name for the JWT Claim : it can be a nested claim of type (eg. "claim.nested.key", "sub") String separated with "." in case of nested claims. The nested claim name must use dot "." to separate the JSON name path. |
+| `header` _string_ | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
+| `claim` _string_ | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type (eg. "claim.nested.key", "sub"). The nested claim name must use dot "." to separate the JSON name path. |
 
 
 ## EnvoyJSONPatchConfig
