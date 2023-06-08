@@ -210,6 +210,77 @@ spec:
       port: 3000
 ```
 
+### Rate limit based on JWT claims
+
+* Here is an example of rate limit implemented by the application developer that limits the total requests made
+to a specific route by matching on the jwt claim. In this case, requests with jwt claim information of `{"name":"John Doe"}`
+will be rate limited at 10 requests/hour.
+
+```yaml
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: AuthenticationFilter
+metadata:
+  name: jwt-example
+spec:
+  type: JWT
+  jwtProviders:
+  - name: example
+    remoteJWKS:
+      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+    claimToHeaders:
+    - claim: name
+      header: custom-request-header
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-specific-user
+spec:
+  type: Global
+  global:
+    rules:
+    - clientSelectors:
+      - headers:
+        - name: custom-request-header
+          value: John Doe
+      limit:
+        requests: 10
+        unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: example
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - "www.example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    filters:
+    - extensionRef:
+        group: gateway.envoyproxy.io
+        kind: AuthenticationFilter
+        name: jwt-example
+      type: ExtensionRef
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-specific-user
+    matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+```
+
+
 ## Multiple RateLimitFilters, rules and clientSelectors
 * Users can create multiple `RateLimitFilter`s and apply it to the same `HTTPRoute`. In such a case each
 `RateLimitFilter` will be applied to the route and matched (and limited) in a mutually exclusive way, independent of each other.
