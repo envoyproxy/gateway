@@ -53,7 +53,7 @@ spec:
               logging:
                 default:
                   level:
-                    system: warning
+                    system: warn
                 description: Logging defines logging parameters for managed proxies.
                 properties:
                   level:
@@ -64,14 +64,14 @@ spec:
                       enum:
                       - debug
                       - info
-                      - warning
+                      - warn
                       - error
                       type: string
                     default:
-                      system: warning
+                      system: warn
                     description: 'Level is a map of logging level per component, where
                       the component is the key and the log level is the value. If
-                      unspecified, defaults to "system: warning".'
+                      unspecified, defaults to "system: warn".'
                     type: object
                 type: object
               provider:

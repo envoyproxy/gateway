@@ -38,7 +38,7 @@ type EnvoyProxySpec struct {
 	Provider *EnvoyProxyProvider `json:"provider,omitempty"`
 
 	// Logging defines logging parameters for managed proxies.
-	// +kubebuilder:default={level: {system: warning}}
+	// +kubebuilder:default={level: {system: warn}}
 	Logging ProxyLogging `json:"logging,omitempty"`
 
 	// Telemetry defines telemetry parameters for managed proxies.
@@ -105,9 +105,9 @@ type EnvoyProxyKubernetesProvider struct {
 // ProxyLogging defines logging parameters for managed proxies.
 type ProxyLogging struct {
 	// Level is a map of logging level per component, where the component is the key
-	// and the log level is the value. If unspecified, defaults to "system: warning".
+	// and the log level is the value. If unspecified, defaults to "system: warn".
 	//
-	// +kubebuilder:default={system: warning}
+	// +kubebuilder:default={system: warn}
 	Level map[LogComponent]LogLevel `json:"level,omitempty"`
 }
 
@@ -150,7 +150,7 @@ const (
 
 // LogLevel defines a log level for system logs. This type is not implemented until
 // https://github.com/envoyproxy/gateway/issues/280 is fixed.
-// +kubebuilder:validation:Enum=debug;info;warning;error
+// +kubebuilder:validation:Enum=debug;info;warn;error
 type LogLevel string
 
 const (
@@ -160,8 +160,8 @@ const (
 	// LogLevelInfo defines the "Info" logging level.
 	LogLevelInfo LogLevel = "info"
 
-	// LogLevelWarning defines the "Warning" logging level.
-	LogLevelWarning LogLevel = "warning"
+	// LogLevelWarn defines the "Warn" logging level.
+	LogLevelWarn LogLevel = "warn"
 
 	// LogLevelError defines the "Error" logging level.
 	LogLevelError LogLevel = "error"
