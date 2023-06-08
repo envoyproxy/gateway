@@ -53,10 +53,8 @@ spec:
               logging:
                 default:
                   level:
-                    system: info
+                    system: warning
                 description: Logging defines logging parameters for managed proxies.
-                  If unspecified, default settings apply. This type is not implemented
-                  until https://github.com/envoyproxy/gateway/issues/280 is fixed.
                 properties:
                   level:
                     additionalProperties:
@@ -69,10 +67,10 @@ spec:
                       - error
                       type: string
                     default:
-                      system: info
+                      system: warning
                     description: 'Level is a map of logging level per component, where
                       the component is the key and the log level is the value. If
-                      unspecified, defaults to "System: Info".'
+                      unspecified, defaults to "system: warning".'
                     type: object
                 type: object
               provider:
