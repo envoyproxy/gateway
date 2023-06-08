@@ -12,8 +12,6 @@ import (
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	grpc_webv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_web/v3"
-	routerv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
@@ -26,6 +24,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
 )
 
 const (
@@ -38,6 +38,20 @@ const (
 	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/protocol.proto#envoy-v3-api-field-config-core-v3-http2protocoloptions-initial-connection-window-size
 	http2InitialConnectionWindowSize = 1048576 // 1 MiB
 )
+
+func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
+	return &corev3.Http2ProtocolOptions{
+		MaxConcurrentStreams: &wrappers.UInt32Value{
+			Value: http2MaxConcurrentStreamsLimit,
+		},
+		InitialStreamWindowSize: &wrappers.UInt32Value{
+			Value: http2InitialStreamWindowSize,
+		},
+		InitialConnectionWindowSize: &wrappers.UInt32Value{
+			Value: http2InitialConnectionWindowSize,
+		},
+	}
+}
 
 func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
 	al := buildXdsAccessLog(accesslog, true)
@@ -60,11 +74,6 @@ func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.Access
 }
 
 func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
-	routerAny, err := anypb.New(&routerv3.Router{})
-	if err != nil {
-		return err
-	}
-
 	al := buildXdsAccessLog(accesslog, false)
 
 	// HTTP filter configuration
@@ -87,11 +96,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		},
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress: &wrappers.BoolValue{Value: true},
-		// Use only router.
-		HttpFilters: []*hcmv3.HttpFilter{{
-			Name:       wellknown.Router,
-			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: routerAny},
-		}},
 		// normalize paths according to RFC 3986
 		NormalizePath: &wrapperspb.BoolValue{Value: true},
 		// merge adjacent slashes in the path
@@ -111,26 +115,12 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	if irListener.IsHTTP2 {
 		// Set codec to HTTP2
 		mgr.CodecType = hcmv3.HttpConnectionManager_HTTP2
-
-		// Enable grpc-web filter for HTTP2
-		grpcWebAny, err := anypb.New(&grpc_webv3.GrpcWeb{})
-		if err != nil {
-			return err
-		}
-
 		// Add HTTP2 protocol options
-		mgr.Http2ProtocolOptions = &corev3.Http2ProtocolOptions{
-			MaxConcurrentStreams:        wrapperspb.UInt32(http2MaxConcurrentStreamsLimit),
-			InitialStreamWindowSize:     wrapperspb.UInt32(http2InitialStreamWindowSize),
-			InitialConnectionWindowSize: wrapperspb.UInt32(http2InitialConnectionWindowSize),
-		}
+		mgr.Http2ProtocolOptions = http2ProtocolOptions()
 
-		grpcWebFilter := &hcmv3.HttpFilter{
-			Name:       wellknown.GRPCWeb,
-			ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: grpcWebAny},
-		}
-		// Ensure router is the last filter
-		mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcWebFilter}, mgr.HttpFilters...)
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
+		// always enable grpc stats filter
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
 	} else {
 		// Allow websocket upgrades for HTTP 1.1
 		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
@@ -150,7 +140,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		return err
 	}
 
-	mgrAny, err := anypb.New(mgr)
+	// Make sure the router filter is the last one.
+	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
+	mgrAny, err := protocov.ToAnyWithError(mgr)
 	if err != nil {
 		return err
 	}
