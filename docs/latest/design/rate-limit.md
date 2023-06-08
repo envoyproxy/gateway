@@ -227,9 +227,9 @@ spec:
   - name: example
     remoteJWKS:
       uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
-    jwtClaimToHeaders:
-    - claimName: name
-      headerName: custom-request-header
+    claimToHeaders:
+    - claim: name
+      header: custom-request-header
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter

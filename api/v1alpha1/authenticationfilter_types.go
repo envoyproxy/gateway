@@ -26,17 +26,17 @@ type AuthenticationFilter struct {
 	// Note: The status sub-resource has been excluded but may be added in the future.
 }
 
-// JWTClaimToHeader defines a combination of header name and claim name.
-type JWTClaimToHeader struct {
+// ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
+type ClaimToHeader struct {
 	// Type defines to extract the specified jwt claim value to a custom request header.
 
 	// Custom request headers.
-	HeaderName string `json:"headerName"`
+	Header string `json:"header"`
 
 	// The field name for the JWT Claim : it can be a nested claim of type
 	// (eg. "claim.nested.key", "sub") String separated with "." in case of nested claims.
 	// The nested claim name must use dot "." to separate the JSON name path.
-	ClaimName string `json:"claimName"`
+	Claim string `json:"claim"`
 }
 
 // AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
@@ -99,11 +99,11 @@ type JwtAuthenticationFilterProvider struct {
 	// HTTP/HTTPS endpoint.
 	RemoteJWKS RemoteJWKS `json:"remoteJWKS"`
 
-	// JWTClaimToHeaders is a list of values to extract the jwt claim value to the request header.
+	// ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers
 	// For examples, following config:
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
 	//
-	JWTClaimToHeaders []JWTClaimToHeader `json:"jwtClaimToHeaders,omitempty"`
+	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
 	// TODO: Add TBD JWT fields based on defined use cases.
 }
 

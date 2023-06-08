@@ -100,10 +100,10 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 							RemoteJWKS: egv1a1.RemoteJWKS{
 								URI: "https://test.local/jwt/public-key/jwks.json",
 							},
-							JWTClaimToHeaders: []egv1a1.JWTClaimToHeader{
+							ClaimToHeaders: []egv1a1.ClaimToHeader{
 								{
-									HeaderName: "test",
-									ClaimName:  "test",
+									Header: "test",
+									Claim:  "test",
 								},
 							},
 						},
@@ -337,10 +337,10 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 							RemoteJWKS: egv1a1.RemoteJWKS{
 								URI: "https://test.local/jwt/public-key/jwks.json",
 							},
-							JWTClaimToHeaders: []egv1a1.JWTClaimToHeader{
+							ClaimToHeaders: []egv1a1.ClaimToHeader{
 								{
-									HeaderName: "",
-									ClaimName:  "test",
+									Header: "",
+									Claim:  "test",
 								},
 							},
 						},
@@ -370,10 +370,10 @@ func TestValidateAuthenticationFilter(t *testing.T) {
 							RemoteJWKS: egv1a1.RemoteJWKS{
 								URI: "https://test.local/jwt/public-key/jwks.json",
 							},
-							JWTClaimToHeaders: []egv1a1.JWTClaimToHeader{
+							ClaimToHeaders: []egv1a1.ClaimToHeader{
 								{
-									HeaderName: "test",
-									ClaimName:  "",
+									Header: "test",
+									Claim:  "",
 								},
 							},
 						},
