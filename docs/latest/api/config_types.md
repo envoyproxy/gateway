@@ -575,7 +575,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "system: warn". |
+| `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
 
 
 ## ProxyTelemetry

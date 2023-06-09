@@ -38,7 +38,7 @@ type EnvoyProxySpec struct {
 	Provider *EnvoyProxyProvider `json:"provider,omitempty"`
 
 	// Logging defines logging parameters for managed proxies.
-	// +kubebuilder:default={level: {system: warn}}
+	// +kubebuilder:default={level: {default: warn}}
 	Logging ProxyLogging `json:"logging,omitempty"`
 
 	// Telemetry defines telemetry parameters for managed proxies.
@@ -105,9 +105,9 @@ type EnvoyProxyKubernetesProvider struct {
 // ProxyLogging defines logging parameters for managed proxies.
 type ProxyLogging struct {
 	// Level is a map of logging level per component, where the component is the key
-	// and the log level is the value. If unspecified, defaults to "system: warn".
+	// and the log level is the value. If unspecified, defaults to "default: warn".
 	//
-	// +kubebuilder:default={system: warn}
+	// +kubebuilder:default={default: warn}
 	Level map[LogComponent]LogLevel `json:"level,omitempty"`
 }
 
@@ -116,9 +116,9 @@ type ProxyLogging struct {
 type LogComponent string
 
 const (
-	// LogComponentSystem defines the "system"-wide logging component.
+	// LogComponentDefault defines the default logging component.
 	// See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l
-	LogComponentSystem LogComponent = "system"
+	LogComponentDefault LogComponent = "default"
 
 	// LogComponentUpstream defines defines the "upstream" logging component.
 	LogComponentUpstream LogComponent = "upstream"
