@@ -128,7 +128,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 
 	proxyLogging := infra.Config.Spec.Logging
 
-	logLevel := componentLogLevel(proxyLogging.Level, egcfgv1a1.LogComponentDefault, egcfgv1a1.LogLevelError)
+	logLevel := componentLogLevel(proxyLogging.Level, egcfgv1a1.LogComponentDefault, egcfgv1a1.LogLevelWarn)
 
 	args := []string{
 		fmt.Sprintf("--service-cluster %s", infra.Name),
