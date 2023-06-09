@@ -33,7 +33,8 @@ spec:
             - --service-cluster default
             - --service-node $(ENVOY_POD_NAME)
             - --config-yaml test bootstrap config
-            - --log-level warn
+            - --log-level error
+            - --component-log-level filter:info
           command:
             - envoy
           env:

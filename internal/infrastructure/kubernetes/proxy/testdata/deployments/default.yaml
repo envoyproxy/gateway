@@ -100,7 +100,7 @@ spec:
                     rtds_config:
                       ads: {}
                     name: runtime-0
-            - --log-level info
+            - --log-level warn
           command:
             - envoy
           env:

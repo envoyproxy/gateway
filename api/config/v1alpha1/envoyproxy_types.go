@@ -37,11 +37,8 @@ type EnvoyProxySpec struct {
 	// +optional
 	Provider *EnvoyProxyProvider `json:"provider,omitempty"`
 
-	// Logging defines logging parameters for managed proxies. If unspecified,
-	// default settings apply. This type is not implemented until
-	// https://github.com/envoyproxy/gateway/issues/280 is fixed.
-	//
-	// +kubebuilder:default={level: {system: info}}
+	// Logging defines logging parameters for managed proxies.
+	// +kubebuilder:default={level: {default: warn}}
 	Logging ProxyLogging `json:"logging,omitempty"`
 
 	// Telemetry defines telemetry parameters for managed proxies.
@@ -105,26 +102,23 @@ type EnvoyProxyKubernetesProvider struct {
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 }
 
-// ProxyLogging defines logging parameters for managed proxies. This type is not
-// implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+// ProxyLogging defines logging parameters for managed proxies.
 type ProxyLogging struct {
 	// Level is a map of logging level per component, where the component is the key
-	// and the log level is the value. If unspecified, defaults to "System: Info".
+	// and the log level is the value. If unspecified, defaults to "default: warn".
 	//
-	// +kubebuilder:default={system: info}
+	// +kubebuilder:default={default: warn}
 	Level map[LogComponent]LogLevel `json:"level,omitempty"`
 }
 
 // LogComponent defines a component that supports a configured logging level.
-// This type is not implemented until https://github.com/envoyproxy/gateway/issues/280
-// is fixed.
 // +kubebuilder:validation:Enum=system;upstream;http;connection;admin;client;filter;main;router;runtime
 type LogComponent string
 
 const (
-	// LogComponentSystem defines the "system"-wide logging component. When specified,
-	// all other logging components are ignored.
-	LogComponentSystem LogComponent = "system"
+	// LogComponentDefault defines the default logging component.
+	// See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l
+	LogComponentDefault LogComponent = "default"
 
 	// LogComponentUpstream defines the "upstream" logging component.
 	LogComponentUpstream LogComponent = "upstream"
