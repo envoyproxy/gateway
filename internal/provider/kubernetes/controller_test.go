@@ -318,7 +318,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger := logging.DefaultLogger("debug")
+		logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,
