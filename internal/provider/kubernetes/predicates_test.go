@@ -18,7 +18,7 @@ import (
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
 )
 
@@ -43,8 +43,8 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
@@ -83,8 +83,8 @@ func TestValidateGatewayForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
@@ -144,8 +144,8 @@ func TestValidateSecretForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
@@ -208,8 +208,8 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
@@ -348,8 +348,8 @@ func TestValidateServiceForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,
@@ -405,8 +405,8 @@ func TestValidateDeploymentForReconcile(t *testing.T) {
 	}
 
 	// Create the reconciler.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	r := gatewayAPIReconciler{
 		classController: v1alpha1.GatewayControllerName,
 		log:             logger,

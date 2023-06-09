@@ -15,6 +15,7 @@ import (
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
 	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
 	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
@@ -73,22 +74,25 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 		return nil, err
 	}
 
-	log := cfg.Logger
+	logger := cfg.Logger
 
 	// Read the config file.
 	if cfgPath == "" {
 		// Use default config parameters
-		log.Info("No config file provided, using default parameters")
+		logger.Info("No config file provided, using default parameters")
 	} else {
 		// Load the config file.
 		eg, err := config.Decode(cfgPath)
 		if err != nil {
-			log.Error(err, "failed to decode config file", "name", cfgPath)
+			logger.Error(err, "failed to decode config file", "name", cfgPath)
 			return nil, err
 		}
 		// Set defaults for unset fields
 		eg.SetEnvoyGatewayDefaults()
 		cfg.EnvoyGateway = eg
+		// update cfg logger
+		eg.Logging.SetEnvoyGatewayLoggingDefaults()
+		cfg.Logger = logging.NewLogger(eg.Logging)
 	}
 
 	if err := cfg.Validate(); err != nil {

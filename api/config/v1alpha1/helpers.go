@@ -14,16 +14,15 @@ import (
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
 func DefaultEnvoyGateway() *EnvoyGateway {
-	gw := DefaultGateway()
-	p := DefaultEnvoyGatewayProvider()
 	return &EnvoyGateway{
 		metav1.TypeMeta{
 			Kind:       KindEnvoyGateway,
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:  gw,
-			Provider: p,
+			Gateway:  DefaultGateway(),
+			Provider: DefaultEnvoyGatewayProvider(),
+			Logging:  DefaultEnvoyGatewayLogging(),
 		},
 	}
 }
@@ -42,12 +41,52 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
+	if e.Logging == nil {
+		e.Logging = DefaultEnvoyGatewayLogging()
+	}
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
 		ControllerName: GatewayControllerName,
+	}
+}
+
+// DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
+func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
+	return &EnvoyGatewayLogging{
+		Level: map[EnvoyGatewayLogComponent]LogLevel{
+			LogComponentGateway:          LogLevelDebug,
+			LogComponentGatewayApiRunner: LogLevelWarn,
+		},
+	}
+}
+
+// DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
+// default sets to "info", gateway-api sets to "warn".
+// When v1alpha1.LogComponentGateway specified, all other logging components are ignored except "gateway-api" which is set to "warn".
+func DefaultEnvoyGatewayLoggingLevel(component string, level LogLevel) LogLevel {
+	if string(LogComponentGatewayApiRunner) == component && level == LogLevelWarn {
+		return LogLevelWarn
+	}
+
+	if level != "" {
+		return level
+	}
+
+	return LogLevelInfo
+}
+
+// SetEnvoyGatewayLoggingDefaults sets default EnvoyGatewayLogging configuration parameters.
+func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
+	if logging != nil && len(logging.Level) != 0 {
+		switch {
+		case logging.Level[LogComponentGateway] == "":
+			logging.Level[LogComponentGateway] = LogLevelDebug
+		case logging.Level[LogComponentGatewayApiRunner] == "":
+			logging.Level[LogComponentGatewayApiRunner] = LogLevelWarn
+		}
 	}
 }
 

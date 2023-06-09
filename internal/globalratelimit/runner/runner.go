@@ -19,11 +19,11 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/test/v3"
 	"google.golang.org/grpc"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
-	"github.com/envoyproxy/gateway/internal/xds/cache"
 	"github.com/envoyproxy/gateway/internal/xds/translator"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -46,7 +46,7 @@ type Runner struct {
 }
 
 func (r *Runner) Name() string {
-	return "global-ratelimit"
+	return string(v1alpha1.LogComponentGlobalRateLimitRunner)
 }
 
 func New(cfg *Config) *Runner {
@@ -55,12 +55,12 @@ func New(cfg *Config) *Runner {
 
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server for ratelimit xDS Config.
 	r.grpc = grpc.NewServer()
 
-	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, cache.NewLogrWrapper(r.Logger))
+	r.cache = cachev3.NewSnapshotCache(false, cachev3.IDHash{}, r.Logger.Sugar())
 
 	// Register xDS Config server.
 	cb := &test.Callbacks{}

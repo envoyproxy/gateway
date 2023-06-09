@@ -14,3 +14,7 @@ data:
     kind: EnvoyGateway
     provider:
       type: {{ .Values.config.envoyGateway.provider.type | quote }}
+    logging:
+      level: 
+        default: info
+        gateway-api: warn

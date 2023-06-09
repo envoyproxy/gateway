@@ -24,8 +24,9 @@ import (
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cachev3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	serverv3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
-	"github.com/go-logr/logr"
+	"go.uber.org/zap"
 
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -55,7 +56,7 @@ type snapshotCache struct {
 	streamIDNodeInfo nodeInfoMap
 	snapshotVersion  int64
 	lastSnapshot     snapshotMap
-	log              *LogrWrapper
+	log              *zap.SugaredLogger
 	mu               sync.Mutex
 }
 
@@ -105,9 +106,9 @@ func (s *snapshotCache) newSnapshotVersion() string {
 // NewSnapshotCache gives you a fresh SnapshotCache.
 // It needs a logger that supports the go-control-plane
 // required interface (Debugf, Infof, Warnf, and Errorf).
-func NewSnapshotCache(ads bool, logger logr.Logger) SnapshotCacheWithCallbacks {
+func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallbacks {
 	// Set up the nasty wrapper hack.
-	wrappedLogger := NewLogrWrapper(logger)
+	wrappedLogger := logger.Sugar()
 	return &snapshotCache{
 		SnapshotCache:    cachev3.NewSnapshotCache(ads, &Hash, wrappedLogger),
 		log:              wrappedLogger,

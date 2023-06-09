@@ -30,6 +30,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `kind` _string_ | `EnvoyGateway`
 | `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
+| `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
@@ -105,6 +106,32 @@ _Appears in:_
 | `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 
 
+## EnvoyGatewayLogComponent
+
+_Underlying type:_ `string`
+
+EnvoyGatewayLogComponent defines a component that supports a configured logging level.
+
+_Appears in:_
+- [EnvoyGatewayLogging](#envoygatewaylogging)
+
+
+
+## EnvoyGatewayLogging
+
+
+
+EnvoyGatewayLogging defines logging for Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `level` _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ | Level is the logging level. If unspecified, defaults to "info". EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit. LogLevel options: debug/info/error/warn. |
+
+
 ## EnvoyGatewayProvider
 
 
@@ -150,6 +177,7 @@ _Appears in:_
 | --- | --- |
 | `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
+| `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
@@ -445,9 +473,10 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogLevel defines a log level for system logs. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs. This type is not implemented for EnvoyProxy until https://github.com/envoyproxy/gateway/issues/280 is fixed.
 
 _Appears in:_
+- [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
 
 

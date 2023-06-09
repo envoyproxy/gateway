@@ -10,11 +10,10 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/go-logr/logr"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/utils/env"
 )
 
@@ -39,20 +38,17 @@ type Server struct {
 	// DNSDomain is the dns domain used by k8s services. Defaults to "cluster.local".
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
-	Logger logr.Logger
+	Logger logging.Logger
 }
 
 // New returns a Server with default parameters.
 func New() (*Server, error) {
-	logger, err := log.NewLogger()
-	if err != nil {
-		return nil, err
-	}
 	return &Server{
 		EnvoyGateway: v1alpha1.DefaultEnvoyGateway(),
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
-		Logger:       logger,
+		// the default logger
+		Logger: logging.DefaultLogger(v1alpha1.LogLevelInfo),
 	}, nil
 }
 
@@ -73,6 +69,26 @@ func (s *Server) Validate() error {
 		return fmt.Errorf("unsupported provider %v", s.EnvoyGateway.Provider.Type)
 	case len(s.Namespace) == 0:
 		return errors.New("namespace is empty string")
+	case s.EnvoyGateway.Logging != nil && len(s.EnvoyGateway.Logging.Level) != 0:
+		level := s.EnvoyGateway.Logging.Level
+		for component, logLevel := range level {
+			switch component {
+			case v1alpha1.LogComponentGateway,
+				v1alpha1.LogComponentProviderRunner,
+				v1alpha1.LogComponentGatewayApiRunner,
+				v1alpha1.LogComponentXdsTranslatorRunner,
+				v1alpha1.LogComponentXdsServerRunner,
+				v1alpha1.LogComponentInfrastructureRunner,
+				v1alpha1.LogComponentGlobalRateLimitRunner:
+				switch logLevel {
+				case v1alpha1.LogLevelDebug, v1alpha1.LogLevelError, v1alpha1.LogLevelWarn, v1alpha1.LogLevelInfo:
+				default:
+					return errors.New("envoy gateway logging level invalid. valid options: info/debug/warn/error")
+				}
+			default:
+				return errors.New("envoy gateway logging components invalid. valid options: system/provider/gateway-api/xds-translator/xds-server/infrastructure")
+			}
+		}
 	case s.EnvoyGateway.RateLimit != nil:
 		if s.EnvoyGateway.RateLimit.Backend.Type != v1alpha1.RedisBackendType {
 			return fmt.Errorf("unsupported ratelimit backend %v", s.EnvoyGateway.RateLimit.Backend.Type)

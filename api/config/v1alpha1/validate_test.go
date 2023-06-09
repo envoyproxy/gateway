@@ -232,6 +232,82 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	}
 }
 
+func TestEnvoyGateway(t *testing.T) {
+	envoyGateway := DefaultEnvoyGateway()
+	assert.True(t, envoyGateway.Provider != nil)
+	assert.True(t, envoyGateway.Gateway != nil)
+	assert.True(t, envoyGateway.Logging != nil)
+	envoyGateway.SetEnvoyGatewayDefaults()
+	assert.Equal(t, envoyGateway.Logging, DefaultEnvoyGatewayLogging())
+
+	logging := DefaultEnvoyGatewayLogging()
+	assert.True(t, logging != nil)
+	assert.True(t, logging.Level[LogComponentGateway] == LogLevelDebug)
+
+	gatewayLogging := &EnvoyGatewayLogging{
+		Level: logging.Level,
+	}
+	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
+	assert.True(t, gatewayLogging != nil)
+	assert.True(t, gatewayLogging.Level[LogComponentGateway] == LogLevelDebug)
+	assert.True(t, gatewayLogging.Level[LogComponentGatewayApiRunner] == LogLevelWarn)
+}
+
+func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
+	type args struct {
+		component string
+		level     LogLevel
+	}
+	tests := []struct {
+		name string
+		args args
+		want LogLevel
+	}{
+		{
+			name: "test default info level for empty level",
+			args: args{component: "", level: ""},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default info level for empty level",
+			args: args{component: string(LogComponentGateway), level: ""},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default info level for info level",
+			args: args{component: string(LogComponentGateway), level: LogLevelInfo},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default error level for error level",
+			args: args{component: string(LogComponentGateway), level: LogLevelError},
+			want: LogLevelError,
+		},
+		{
+			name: "test gateway-api error level for error level",
+			args: args{component: string(LogComponentGatewayApiRunner), level: LogLevelError},
+			want: LogLevelError,
+		},
+		{
+			name: "test gateway-api info level for info level",
+			args: args{component: string(LogComponentGatewayApiRunner), level: LogLevelInfo},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default gateway-api warn level for info level",
+			args: args{component: string(LogComponentGatewayApiRunner), level: ""},
+			want: LogLevelInfo,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := DefaultEnvoyGatewayLoggingLevel(tt.args.component, tt.args.level); got != tt.want {
+				t.Errorf("defaultLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGateway := &EnvoyGateway{
 		TypeMeta:         metav1.TypeMeta{},

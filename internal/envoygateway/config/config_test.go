@@ -8,11 +8,11 @@ package config
 import (
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 var (
@@ -51,7 +51,7 @@ func TestValidate(t *testing.T) {
 			name: "unspecified envoy gateway",
 			cfg: &Server{
 				Namespace: "test-ns",
-				Logger:    logr.Logger{},
+				Logger:    logging.DefaultLogger(v1alpha1.LogLevelInfo),
 			},
 			expect: false,
 		},
@@ -390,6 +390,97 @@ func TestValidate(t *testing.T) {
 							Service: &v1alpha1.ExtensionService{
 								Host: "foo.extension",
 								Port: 8080,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: false,
+		},
+		{
+			name: "valid gateway logging level info",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						Logging: &v1alpha1.EnvoyGatewayLogging{
+							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
+								v1alpha1.LogComponentGateway: v1alpha1.LogLevelInfo,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "valid gateway logging level warn",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						Logging: &v1alpha1.EnvoyGatewayLogging{
+							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
+								v1alpha1.LogComponentGateway: v1alpha1.LogLevelWarn,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "valid gateway logging level error",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						Logging: &v1alpha1.EnvoyGatewayLogging{
+							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
+								v1alpha1.LogComponentGateway: v1alpha1.LogLevelError,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "valid gateway logging level debug",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						Logging: &v1alpha1.EnvoyGatewayLogging{
+							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
+								v1alpha1.LogComponentGateway:        v1alpha1.LogLevelDebug,
+								v1alpha1.LogComponentProviderRunner: v1alpha1.LogLevelDebug,
+							},
+						},
+					},
+				},
+				Namespace: "test-ns",
+			},
+			expect: true,
+		},
+		{
+			name: "invalid gateway logging level",
+			cfg: &Server{
+				EnvoyGateway: &v1alpha1.EnvoyGateway{
+					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+						Gateway:  v1alpha1.DefaultGateway(),
+						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+						Logging: &v1alpha1.EnvoyGatewayLogging{
+							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
+								v1alpha1.LogComponentGateway: "inffo",
 							},
 						},
 					},
