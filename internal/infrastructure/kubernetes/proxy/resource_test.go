@@ -8,8 +8,9 @@ package proxy
 import (
 	"testing"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/stretchr/testify/require"
+
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 func TestEnvoyPodSelector(t *testing.T) {
