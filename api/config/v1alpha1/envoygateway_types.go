@@ -45,7 +45,7 @@ type EnvoyGatewaySpec struct {
 	// Logging defines logging parameters for Envoy Gateway.
 	//
 	// +optional
-	// +kubebuilder:default={default: info, gateway-api: warn}
+	// +kubebuilder:default={default: info}
 	Logging *EnvoyGatewayLogging `json:"logging,omitempty"`
 
 	// RateLimit defines the configuration associated with the Rate Limit service
@@ -69,7 +69,7 @@ type EnvoyGatewayLogging struct {
 	// EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit.
 	// LogLevel options: debug/info/error/warn.
 	//
-	// +kubebuilder:default={default: info, gateway-api: warn}
+	// +kubebuilder:default={default: info}
 	Level map[EnvoyGatewayLogComponent]LogLevel `json:"level,omitempty"`
 }
 
@@ -78,9 +78,9 @@ type EnvoyGatewayLogging struct {
 type EnvoyGatewayLogComponent string
 
 const (
-	// LogComponentGateway defines the "default"-wide logging component. When specified,
+	// LogComponentGatewayDefault defines the "default"-wide logging component. When specified,
 	// all other logging components are ignored except "gateway-api".
-	LogComponentGateway EnvoyGatewayLogComponent = "default"
+	LogComponentGatewayDefault EnvoyGatewayLogComponent = "default"
 
 	// LogComponentProviderRunner defines the "provider" runner component.
 	LogComponentProviderRunner EnvoyGatewayLogComponent = "provider"

@@ -23,7 +23,7 @@ type Logger struct {
 }
 
 func NewLogger(logging *v1alpha1.EnvoyGatewayLogging) Logger {
-	logger := initZapLogger(logging.Level[v1alpha1.LogComponentGateway])
+	logger := initZapLogger(logging.Level[v1alpha1.LogComponentGatewayDefault])
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger),

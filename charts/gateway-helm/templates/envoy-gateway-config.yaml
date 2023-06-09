@@ -17,4 +17,3 @@ data:
     logging:
       level: 
         default: info
-        gateway-api: warn

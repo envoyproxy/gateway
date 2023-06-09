@@ -200,8 +200,7 @@ func TestDecode(t *testing.T) {
 					Gateway: v1alpha1.DefaultGateway(),
 					Logging: &v1alpha1.EnvoyGatewayLogging{
 						Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-							v1alpha1.LogComponentGateway:          v1alpha1.LogLevelInfo,
-							v1alpha1.LogComponentGatewayApiRunner: v1alpha1.LogLevelWarn,
+							v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelInfo,
 						},
 					},
 				},

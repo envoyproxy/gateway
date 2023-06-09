@@ -242,15 +242,14 @@ func TestEnvoyGateway(t *testing.T) {
 
 	logging := DefaultEnvoyGatewayLogging()
 	assert.True(t, logging != nil)
-	assert.True(t, logging.Level[LogComponentGateway] == LogLevelDebug)
+	assert.True(t, logging.Level[LogComponentGatewayDefault] == LogLevelInfo)
 
 	gatewayLogging := &EnvoyGatewayLogging{
 		Level: logging.Level,
 	}
 	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
 	assert.True(t, gatewayLogging != nil)
-	assert.True(t, gatewayLogging.Level[LogComponentGateway] == LogLevelDebug)
-	assert.True(t, gatewayLogging.Level[LogComponentGatewayApiRunner] == LogLevelWarn)
+	assert.True(t, gatewayLogging.Level[LogComponentGatewayDefault] == LogLevelInfo)
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
@@ -270,17 +269,17 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 		},
 		{
 			name: "test default info level for empty level",
-			args: args{component: string(LogComponentGateway), level: ""},
+			args: args{component: string(LogComponentGatewayDefault), level: ""},
 			want: LogLevelInfo,
 		},
 		{
 			name: "test default info level for info level",
-			args: args{component: string(LogComponentGateway), level: LogLevelInfo},
+			args: args{component: string(LogComponentGatewayDefault), level: LogLevelInfo},
 			want: LogLevelInfo,
 		},
 		{
 			name: "test default error level for error level",
-			args: args{component: string(LogComponentGateway), level: LogLevelError},
+			args: args{component: string(LogComponentGatewayDefault), level: LogLevelError},
 			want: LogLevelError,
 		},
 		{

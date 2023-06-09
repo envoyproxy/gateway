@@ -407,7 +407,7 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Logging: &v1alpha1.EnvoyGatewayLogging{
 							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-								v1alpha1.LogComponentGateway: v1alpha1.LogLevelInfo,
+								v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelInfo,
 							},
 						},
 					},
@@ -425,7 +425,7 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Logging: &v1alpha1.EnvoyGatewayLogging{
 							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-								v1alpha1.LogComponentGateway: v1alpha1.LogLevelWarn,
+								v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelWarn,
 							},
 						},
 					},
@@ -443,7 +443,7 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Logging: &v1alpha1.EnvoyGatewayLogging{
 							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-								v1alpha1.LogComponentGateway: v1alpha1.LogLevelError,
+								v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelError,
 							},
 						},
 					},
@@ -461,7 +461,7 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Logging: &v1alpha1.EnvoyGatewayLogging{
 							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-								v1alpha1.LogComponentGateway:        v1alpha1.LogLevelDebug,
+								v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelDebug,
 								v1alpha1.LogComponentProviderRunner: v1alpha1.LogLevelDebug,
 							},
 						},
@@ -480,7 +480,7 @@ func TestValidate(t *testing.T) {
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 						Logging: &v1alpha1.EnvoyGatewayLogging{
 							Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
-								v1alpha1.LogComponentGateway: "inffo",
+								v1alpha1.LogComponentGatewayDefault: "inffo",
 							},
 						},
 					},

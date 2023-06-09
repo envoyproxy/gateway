@@ -7,5 +7,4 @@ provider:
 logging:
   level:
     default: info
-    gateway-api: warn
   developmentMode: true

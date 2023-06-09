@@ -73,7 +73,7 @@ func (s *Server) Validate() error {
 		level := s.EnvoyGateway.Logging.Level
 		for component, logLevel := range level {
 			switch component {
-			case v1alpha1.LogComponentGateway,
+			case v1alpha1.LogComponentGatewayDefault,
 				v1alpha1.LogComponentProviderRunner,
 				v1alpha1.LogComponentGatewayApiRunner,
 				v1alpha1.LogComponentXdsTranslatorRunner,
