@@ -32,4 +32,5 @@ helm-release: helm-generate
 	helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
 
 helm-generate:
+	helm version
 	ImageRepository=${IMAGE} ImageTag=${TAG} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
