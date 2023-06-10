@@ -107,7 +107,7 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
-run-e2e:
+run-e2e: prepare-e2e
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
@@ -115,6 +115,15 @@ run-e2e:
 	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
+
+.PHONY: prepare-e2e
+prepare-e2e:
+	@$(LOG_TARGET)
+	kubectl create ns monitoring || true
+	kubectl apply -f examples/fluent-bit/fluent-bit.yaml -n monitoring
+	kubectl apply -f examples/loki/loki.yaml -n monitoring
+	kubectl wait --timeout=5m -n monitoring deployment/fluent-bit --for=condition=Available
+	kubectl wait --timeout=5m -n monitoring statefulset/loki --for=condition=Available
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
