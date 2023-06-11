@@ -122,8 +122,8 @@ prepare-e2e:
 	kubectl create ns monitoring || true
 	kubectl apply -f examples/fluent-bit/fluent-bit.yaml -n monitoring
 	kubectl apply -f examples/loki/loki.yaml -n monitoring
-	kubectl wait --timeout=5m -n monitoring deployment/fluent-bit --for=condition=Available
-	kubectl wait --timeout=5m -n monitoring statefulset/loki --for=condition=Available
+	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
+	kubectl rollout status statefulset loki -n monitoring --timeout 5m
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.

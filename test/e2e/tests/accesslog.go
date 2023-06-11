@@ -11,14 +11,17 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -53,12 +56,12 @@ var AccessLogTest = suite.ConformanceTest{
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (bool, error) {
 					// query log count from loki
-					count, err := QueryLogCountFromLoki(t, types.NamespacedName{
+					count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
 					})
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
-						return false, err
+						return false, nil
 					}
 
 					if count != 1 {
@@ -74,14 +77,27 @@ var AccessLogTest = suite.ConformanceTest{
 	},
 }
 
-func QueryLogCountFromLoki(t *testing.T, nn types.NamespacedName) (int, error) {
-	params := url.Values{}
-	params.Add("namespace", nn.Namespace)
-	params.Add("container", "envoy")
-	if nn.Name != "" {
-		params.Add("pod", nn.Name)
+func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedName) (int, error) {
+
+	svc := corev1.Service{}
+	if err := c.Get(context.Background(), types.NamespacedName{
+		Namespace: "monitoring",
+		Name:      "loki",
+	}, &svc); err != nil {
+		return -1, err
 	}
-	lokiQueryURL := "http://loki.monitoring:3100/loki/api/v1/query_range?" + params.Encode()
+	lokiHost := ""
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.IP != "" {
+			lokiHost = ing.IP
+			break
+		}
+	}
+
+	q := fmt.Sprintf("{namespace=\"%s\",container=\"%s\"}", nn.Namespace, "envoy}")
+	params := url.Values{}
+	params.Add("query", q)
+	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
 		return -1, err
@@ -98,6 +114,9 @@ func QueryLogCountFromLoki(t *testing.T, nn types.NamespacedName) (int, error) {
 		return -1, err
 	}
 
+	if len(lokiResponse.Data.Result) == 0 {
+		return 0, nil
+	}
 	return len(lokiResponse.Data.Result[0].Values), nil
 }
 

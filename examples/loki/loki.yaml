@@ -147,7 +147,7 @@ metadata:
     app.kubernetes.io/version: "2.7.3"
     app.kubernetes.io/managed-by: Helm
 spec:
-  type: ClusterIP
+  type: LoadBalancer
   ports:
     - name: http-metrics
       port: 3100
