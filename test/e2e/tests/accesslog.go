@@ -77,8 +77,9 @@ var AccessLogTest = suite.ConformanceTest{
 	},
 }
 
+// QueryLogCountFromLoki queries log count from loki
+// TODO: move to utils package if needed
 func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedName) (int, error) {
-
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Namespace: "monitoring",
