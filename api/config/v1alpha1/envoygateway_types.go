@@ -79,7 +79,7 @@ type EnvoyGatewayLogComponent string
 
 const (
 	// LogComponentGatewayDefault defines the "default"-wide logging component. When specified,
-	// all other logging components are ignored except "gateway-api" which is set to "warn".
+	// all other logging components are ignored.
 	LogComponentGatewayDefault EnvoyGatewayLogComponent = "default"
 
 	// LogComponentProviderRunner defines the "provider" runner component.

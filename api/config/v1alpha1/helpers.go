@@ -63,12 +63,8 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 }
 
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
-// When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored except "gateway-api" which is set to "warn".
-func DefaultEnvoyGatewayLoggingLevel(component string, level LogLevel) LogLevel {
-	if string(LogComponentGatewayApiRunner) == component && level == LogLevelWarn {
-		return LogLevelWarn
-	}
-
+// When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
+func DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
 	if level != "" {
 		return level
 	}

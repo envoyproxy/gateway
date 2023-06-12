@@ -50,7 +50,7 @@ func DefaultLogger(level v1alpha1.LogLevel) Logger {
 // more information).
 func (l Logger) WithName(name string) Logger {
 	logLevel := l.logging.Level[v1alpha1.EnvoyGatewayLogComponent(name)]
-	logger := initZapLogger(v1alpha1.DefaultEnvoyGatewayLoggingLevel(name, logLevel))
+	logger := initZapLogger(logLevel)
 
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
@@ -89,7 +89,7 @@ func (l Logger) Sugar() *zap.SugaredLogger {
 }
 
 func initZapLogger(level v1alpha1.LogLevel) *zap.Logger {
-	parseLevel, _ := zapcore.ParseLevel(string(level))
+	parseLevel, _ := zapcore.ParseLevel(string(v1alpha1.DefaultEnvoyGatewayLoggingLevel(level)))
 	core := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig()), zapcore.AddSync(os.Stdout), zap.NewAtomicLevelAt(parseLevel))
 
 	return zap.New(core, zap.AddCaller())
