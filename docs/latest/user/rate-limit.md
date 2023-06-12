@@ -645,7 +645,9 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 ```shell
 TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test1.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
 ```
+
 ### Rate limit by carrying `TOKEN`
+
 ```shell
 for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "Authorization: Bearer $TOKEN" http://${GATEWAY_HOST}/foo ; sleep 1; done
 ```
@@ -683,8 +685,11 @@ x-envoy-ratelimited: true
 date: Mon, 12 Jun 2023 12:00:28 GMT
 server: envoy
 transfer-encoding: chunked
+
 ```
+
 ### No Rate Limit by carrying `TOKEN1`
+
 ```shell
 for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "Authorization: Bearer $TOKEN1" http://${GATEWAY_HOST}/foo ; sleep 1; done
 ```
