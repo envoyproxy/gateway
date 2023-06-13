@@ -23,6 +23,7 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			Gateway:  DefaultGateway(),
 			Provider: DefaultEnvoyGatewayProvider(),
 			Logging:  DefaultEnvoyGatewayLogging(),
+			Admin:    DefaultEnvoyGatewayAdmin(),
 		},
 	}
 }
@@ -44,6 +45,22 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Logging == nil {
 		e.Logging = DefaultEnvoyGatewayLogging()
 	}
+	if e.Admin == nil {
+		e.Admin = DefaultEnvoyGatewayAdmin()
+	}
+}
+
+// GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
+func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+	if e.Admin != nil {
+		if e.Admin.Address == nil {
+			e.Admin.Address = DefaultEnvoyGatewayAdminAddress()
+		}
+		return e.Admin
+	}
+	e.Admin = DefaultEnvoyGatewayAdmin()
+
+	return e.Admin
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.
@@ -275,4 +292,20 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	return r.Kubernetes
+}
+
+// DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.
+func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+	return &EnvoyGatewayAdmin{
+		Debug:   false,
+		Address: DefaultEnvoyGatewayAdminAddress(),
+	}
+}
+
+// DefaultEnvoyGatewayAdminAddress returns a new EnvoyGatewayAdminAddress with default configuration parameters.
+func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
+	return &EnvoyGatewayAdminAddress{
+		Port: GatewayAdminPort,
+		Host: GatewayAdminHost,
+	}
 }

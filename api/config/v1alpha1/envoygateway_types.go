@@ -15,6 +15,10 @@ const (
 	KindEnvoyGateway = "EnvoyGateway"
 	// GatewayControllerName is the name of the GatewayClass controller.
 	GatewayControllerName = "gateway.envoyproxy.io/gatewayclass-controller"
+	// GatewayAdminPort is the port which envoy gateway admin server is listening on.
+	GatewayAdminPort = 19000
+	// GatewayAdminHost is the host of envoy gateway admin server.
+	GatewayAdminHost = "127.0.0.1"
 )
 
 // +kubebuilder:object:root=true
@@ -47,6 +51,12 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	// +kubebuilder:default={default: info}
 	Logging *EnvoyGatewayLogging `json:"logging,omitempty"`
+	// Admin defines the desired admin related abilities.
+	// If unspecified, the Admin is used with default configuration
+	// parameters.
+	//
+	// +optional
+	Admin *EnvoyGatewayAdmin `json:"admin,omitempty"`
 
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
@@ -355,6 +365,35 @@ type ExtensionTLS struct {
 	//
 	// +kubebuilder:validation:Required
 	CertificateRef gwapiv1b1.SecretObjectReference `json:"certificateRef"`
+}
+
+// EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
+type EnvoyGatewayAdmin struct {
+
+	// Address defines the address of Envoy Gateway Admin Server.
+	//
+	// +optional
+	Address *EnvoyGatewayAdminAddress `json:"address,omitempty"`
+
+	// Debug defines if enable the /debug endpoint of Envoy Gateway.
+	//
+	// +optional
+	Debug bool `json:"debug,omitempty"`
+}
+
+// EnvoyGatewayAdminAddress defines the Envoy Gateway Admin Address configuration.
+type EnvoyGatewayAdminAddress struct {
+	// Port defines the port the admin server is exposed on.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default=19000
+	Port int `json:"port,omitempty"`
+	// Host defines the admin server hostname.
+	//
+	// +optional
+	// +kubebuilder:default="127.0.0.1"
+	Host string `json:"host,omitempty"`
 }
 
 func init() {
