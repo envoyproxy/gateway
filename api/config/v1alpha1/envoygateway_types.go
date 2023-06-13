@@ -42,6 +42,12 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Provider *EnvoyGatewayProvider `json:"provider,omitempty"`
 
+	// Logging defines logging parameters for Envoy Gateway.
+	//
+	// +optional
+	// +kubebuilder:default={default: info}
+	Logging *EnvoyGatewayLogging `json:"logging,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -56,6 +62,44 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Extension *Extension `json:"extension,omitempty"`
 }
+
+// EnvoyGatewayLogging defines logging for Envoy Gateway.
+type EnvoyGatewayLogging struct {
+	// Level is the logging level. If unspecified, defaults to "info".
+	// EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit.
+	// LogLevel options: debug/info/error/warn.
+	//
+	// +kubebuilder:default={default: info}
+	Level map[EnvoyGatewayLogComponent]LogLevel `json:"level,omitempty"`
+}
+
+// EnvoyGatewayLogComponent defines a component that supports a configured logging level.
+// +kubebuilder:validation:Enum=default;provider;gateway-api;xds-translator;xds-server;infrastructure;global-ratelimit
+type EnvoyGatewayLogComponent string
+
+const (
+	// LogComponentGatewayDefault defines the "default"-wide logging component. When specified,
+	// all other logging components are ignored.
+	LogComponentGatewayDefault EnvoyGatewayLogComponent = "default"
+
+	// LogComponentProviderRunner defines the "provider" runner component.
+	LogComponentProviderRunner EnvoyGatewayLogComponent = "provider"
+
+	// LogComponentGatewayApiRunner defines the "gateway-api" runner component.
+	LogComponentGatewayApiRunner EnvoyGatewayLogComponent = "gateway-api"
+
+	// LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.
+	LogComponentXdsTranslatorRunner EnvoyGatewayLogComponent = "xds-translator"
+
+	// LogComponentXdsServerRunner defines the "xds-server" runner component.
+	LogComponentXdsServerRunner EnvoyGatewayLogComponent = "xds-server"
+
+	// LogComponentInfrastructureRunner defines the "infrastructure" runner component.
+	LogComponentInfrastructureRunner EnvoyGatewayLogComponent = "infrastructure"
+
+	// LogComponentGlobalRateLimitRunner defines the "global-ratelimit" runner component.
+	LogComponentGlobalRateLimitRunner EnvoyGatewayLogComponent = "global-ratelimit"
+)
 
 // Gateway defines the desired Gateway API configuration of Envoy Gateway.
 type Gateway struct {

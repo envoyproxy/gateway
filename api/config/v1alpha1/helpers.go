@@ -14,16 +14,15 @@ import (
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
 func DefaultEnvoyGateway() *EnvoyGateway {
-	gw := DefaultGateway()
-	p := DefaultEnvoyGatewayProvider()
 	return &EnvoyGateway{
 		metav1.TypeMeta{
 			Kind:       KindEnvoyGateway,
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:  gw,
-			Provider: p,
+			Gateway:  DefaultGateway(),
+			Provider: DefaultEnvoyGatewayProvider(),
+			Logging:  DefaultEnvoyGatewayLogging(),
 		},
 	}
 }
@@ -42,12 +41,41 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
+	if e.Logging == nil {
+		e.Logging = DefaultEnvoyGatewayLogging()
+	}
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
 		ControllerName: GatewayControllerName,
+	}
+}
+
+// DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
+func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
+	return &EnvoyGatewayLogging{
+		Level: map[EnvoyGatewayLogComponent]LogLevel{
+			LogComponentGatewayDefault: LogLevelInfo,
+		},
+	}
+}
+
+// DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
+// When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
+func DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
+	if level != "" {
+		return level
+	}
+
+	return LogLevelInfo
+}
+
+// SetEnvoyGatewayLoggingDefaults sets default EnvoyGatewayLogging configuration parameters.
+func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
+	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
+		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
 }
 
