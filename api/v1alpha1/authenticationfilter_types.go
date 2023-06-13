@@ -55,6 +55,11 @@ type AuthenticationFilterSpec struct {
 	// +kubebuilder:validation:MaxItems=4
 	// +optional
 	JwtProviders []JwtAuthenticationFilterProvider `json:"jwtProviders,omitempty"`
+
+	// OIDCProvider defines the OpenID Connect (OIDC) authentication provider type.
+	//
+	// +optional
+	OIDCProvider OIDCAuthenticationFilterProvider `json:"oidcProvider,omitempty"`
 }
 
 // AuthenticationFilterType is a type of authentication provider.
@@ -65,6 +70,10 @@ const (
 	// JwtAuthenticationFilterProviderType is a provider that uses JSON Web Token (JWT)
 	// for authenticating requests..
 	JwtAuthenticationFilterProviderType AuthenticationFilterType = "JWT"
+
+	// OIDCAuthenticationFilterProviderType is a provider that uses OpenID Connect (OIDC)
+	// for authenticating requests.
+	OIDCAuthenticationFilterProviderType AuthenticationFilterType = "OIDC"
 )
 
 // JwtAuthenticationFilterProvider defines the JSON Web Token (JWT) authentication provider type
@@ -117,6 +126,58 @@ type RemoteJWKS struct {
 	URI string `json:"uri"`
 
 	// TODO: Add TBD remote JWKS fields based on defined use cases.
+}
+
+// OIDCAuthenticationFilterProvider defines the OpenID Connect (OIDC) authentication provider type
+type OIDCAuthenticationFilterProvider struct {
+	// The OIDC Provider configuration.
+	Provider OIDCProvider `json:"provider"`
+
+	// The OIDC client ID assigned to the filter to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID string `json:"clientId"`
+
+	// The name of the Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret string `json:"clientSecret"`
+}
+
+type OIDCProvider struct {
+	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Issuer string `json:"issuer"`
+
+	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +kubebuilder:validation:MaxLength=253
+	// +optional
+	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+
+	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +kubebuilder:validation:MaxLength=253
+	// +optional
+	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+
+	// The JSON JWKS response from the OIDC provider’s `jwks_uri` URI which can be found in the OIDC provider's
+	// [configuration response](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	// Note that this JSON value must be escaped when embedded in a json configmap
+	// (see [example](https://github.com/istio-ecosystem/authservice/blob/master/bookinfo-example/config/authservice-configmap-template.yaml)).
+	// Used during token verification.
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +optional
+	Jwks string `json:"jwks,omitempty"`
 }
 
 //+kubebuilder:object:root=true
