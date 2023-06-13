@@ -394,3 +394,34 @@ func TestEnvoyProxyProvider(t *testing.T) {
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyService != nil)
 	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, GetKubernetesServiceType(ServiceTypeLoadBalancer)))
 }
+
+func TestEnvoyGatewayAdmin(t *testing.T) {
+	// default envoygateway config admin should not be nil
+	eg := DefaultEnvoyGateway()
+	assert.True(t, eg.Admin != nil)
+
+	// get default admin config from envoygateway
+	// values should be set in default
+	egAdmin := eg.GetEnvoyGatewayAdmin()
+	assert.True(t, egAdmin != nil)
+	assert.True(t, egAdmin.Debug == false)
+	assert.True(t, egAdmin.Address.Port == GatewayAdminPort)
+	assert.True(t, egAdmin.Address.Host == GatewayAdminHost)
+
+	// override the admin config
+	// values should be updated
+	eg.Admin.Debug = true
+	eg.Admin.Address = nil
+	assert.True(t, eg.Admin.Debug == true)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == GatewayAdminPort)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == GatewayAdminHost)
+
+	// set eg defaults when admin is nil
+	// the admin should not be nil
+	eg.Admin = nil
+	eg.SetEnvoyGatewayDefaults()
+	assert.True(t, eg.Admin != nil)
+	assert.True(t, eg.Admin.Debug == false)
+	assert.True(t, eg.Admin.Address.Port == GatewayAdminPort)
+	assert.True(t, eg.Admin.Address.Host == GatewayAdminHost)
+}

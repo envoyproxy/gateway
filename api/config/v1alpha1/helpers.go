@@ -23,6 +23,7 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			Gateway:  DefaultGateway(),
 			Provider: DefaultEnvoyGatewayProvider(),
 			Logging:  DefaultEnvoyGatewayLogging(),
+			Admin:    DefaultEnvoyGatewayAdmin(),
 		},
 	}
 }
@@ -43,6 +44,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 	if e.Logging == nil {
 		e.Logging = DefaultEnvoyGatewayLogging()
+	}
+	if e.Admin == nil {
+		e.Admin = DefaultEnvoyGatewayAdmin()
 	}
 }
 
