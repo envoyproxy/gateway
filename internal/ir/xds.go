@@ -134,8 +134,6 @@ type HTTPListener struct {
 	Routes []*HTTPRoute
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
 	IsHTTP2 bool
-	// StripAnyHostPort strips off the port section from the Host/Authority header which have this string format - host:port.
-	StripAnyHostPort bool
 }
 
 // Validate the fields within the HTTPListener structure

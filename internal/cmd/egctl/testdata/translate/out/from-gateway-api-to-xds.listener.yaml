@@ -42,19 +42,18 @@ xds:
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                mergeSlashes: true
-                normalizePath: true
-                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                 rds:
                   configSource:
                     ads: {}
                     resourceApiVersion: V3
                   routeConfigName: default-eg-http
                 statPrefix: http
-                stripAnyHostPort: true
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
+                normalizePath: true
+                mergeSlashes: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
           name: default-eg-http
           perConnectionBufferLimitBytes: 32768
     - activeState:
@@ -110,17 +109,16 @@ xds:
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                mergeSlashes: true
-                normalizePath: true
-                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                 rds:
                   configSource:
                     ads: {}
                     resourceApiVersion: V3
                   routeConfigName: default-eg-grpc
                 statPrefix: http
-                stripAnyHostPort: true
                 useRemoteAddress: true
+                normalizePath: true
+                mergeSlashes: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
           name: default-eg-grpc
           perConnectionBufferLimitBytes: 32768
     - activeState:
