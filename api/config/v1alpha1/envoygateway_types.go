@@ -16,7 +16,7 @@ const (
 	// GatewayControllerName is the name of the GatewayClass controller.
 	GatewayControllerName = "gateway.envoyproxy.io/gatewayclass-controller"
 	// GatewayAdminPort is the port which envoy gateway admin server is listening on.
-	GatewayAdminPort = 8899
+	GatewayAdminPort = 19000
 	// GatewayAdminHost is the host of envoy gateway admin server.
 	GatewayAdminHost = "127.0.0.1"
 )
@@ -387,7 +387,7 @@ type EnvoyGatewayAdminAddress struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=8899
+	// +kubebuilder:default=19000
 	Port int `json:"port,omitempty"`
 	// Host defines the admin server hostname.
 	//
