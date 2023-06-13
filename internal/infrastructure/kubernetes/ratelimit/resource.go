@@ -29,11 +29,11 @@ const (
 	// RedisTLSClientCertEnvVar is the redis tls client cert.
 	RedisTLSClientCertEnvVar = "REDIS_TLS_CLIENT_CERT"
 	// RedisTLSClientCertFilename is the reds tls client cert file.
-	RedisTLSClientCertFilename = "/certs/tls.crt"
+	RedisTLSClientCertFilename = "/redis-certs/tls.crt"
 	// RedisTLSClientKeyEnvVar is the redis tls client key.
 	RedisTLSClientKeyEnvVar = "REDIS_TLS_CLIENT_KEY"
 	// RedisTLSClientKeyFilename is the redis client key file.
-	RedisTLSClientKeyFilename = "/certs/tls.key"
+	RedisTLSClientKeyFilename = "/redis-certs/tls.key"
 	// RuntimeRootEnvVar is the runtime root.
 	RuntimeRootEnvVar = "RUNTIME_ROOT"
 	// RuntimeSubdirectoryEnvVar is the runtime subdirectory.
@@ -42,6 +42,20 @@ const (
 	RuntimeIgnoreDotfilesEnvVar = "RUNTIME_IGNOREDOTFILES"
 	// RuntimeWatchRootEnvVar is the runtime watch root.
 	RuntimeWatchRootEnvVar = "RUNTIME_WATCH_ROOT"
+	// GRPCServerUseTLSEnvVar is tls enable option for grpc server.
+	GRPCServerUseTLSEnvVar = "GRPC_SERVER_USE_TLS"
+	// GRPCServerTLSCertEnvVar is the grpc server tls cert.
+	GRPCServerTLSCertEnvVar = "GRPC_SERVER_TLS_CERT"
+	// GRPCServerTLSClientCertFilename is the GRPC tls cert file.
+	GRPCServerTLSCertFilename = "/certs/tls.crt"
+	// GRPCServerTLSKeyEnvVarEnvVar is the grpc server tls key.
+	GRPCServerTLSKeyEnvVarEnvVar = "GRPC_SERVER_TLS_KEY"
+	// GRPCServerTLSKeyFilename is the grpc server key file.
+	GRPCServerTLSKeyFilename = "/certs/tls.key"
+	// GRPCServerTLSCACertEnvVar is the grpc server tls ca cert.
+	GRPCServerTLSCACertEnvVar = "GRPC_SERVER_TLS_CA_CERT"
+	// GRPCServerTLSKeyFilename is the grpc server tls ca cert file.
+	GRPCServerTLSCACertFilename = "/certs/ca.crt"
 	// LogLevelEnvVar is the log level.
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
@@ -113,10 +127,16 @@ func expectedContainerVolumeMounts(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 	var volumeMounts []corev1.VolumeMount
 
 	// mount the cert
+	volumeMounts = append(volumeMounts, corev1.VolumeMount{
+		Name:      "certs",
+		MountPath: "/certs",
+		ReadOnly:  true,
+	})
+
 	if rateLimit.Backend.Redis.TLS != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "certs",
-			MountPath: "/certs",
+			Name:      "redis-certs",
+			MountPath: "/redis-certs",
 			ReadOnly:  true,
 		})
 	}
@@ -130,7 +150,7 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployme
 
 	if rateLimit.Backend.Redis.TLS != nil && rateLimit.Backend.Redis.TLS.CertificateRef != nil {
 		volumes = append(volumes, corev1.Volume{
-			Name: "certs",
+			Name: "redis-certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
@@ -138,6 +158,15 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployme
 			},
 		})
 	}
+
+	volumes = append(volumes, corev1.Volume{
+		Name: "certs",
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: "envoy-rate-limit",
+			},
+		},
+	})
 
 	return resource.ExpectedDeploymentVolumes(rateLimitDeployment.Pod, volumes)
 }
@@ -188,6 +217,22 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 		{
 			Name:  ConfigGrpcXdsNodeID,
 			Value: InfraName,
+		},
+		{
+			Name:  GRPCServerUseTLSEnvVar,
+			Value: "true",
+		},
+		{
+			Name:  GRPCServerTLSCertEnvVar,
+			Value: GRPCServerTLSCertFilename,
+		},
+		{
+			Name:  GRPCServerTLSKeyEnvVarEnvVar,
+			Value: GRPCServerTLSKeyFilename,
+		},
+		{
+			Name:  GRPCServerTLSCACertEnvVar,
+			Value: GRPCServerTLSCACertFilename,
 		},
 	}
 

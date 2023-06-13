@@ -62,6 +62,15 @@ func CertsToSecret(namespace string, certs *crypto.Certificates) []corev1.Secret
 				corev1.TLSCertKey:       certs.EnvoyCertificate,
 				corev1.TLSPrivateKeyKey: certs.EnvoyPrivateKey,
 			}),
+		newSecret(
+			corev1.SecretTypeTLS,
+			"envoy-rate-limit",
+			namespace,
+			map[string][]byte{
+				caCertificateKey:        certs.CACertificate,
+				corev1.TLSCertKey:       certs.EnvoyRateLimitCertificate,
+				corev1.TLSPrivateKeyKey: certs.EnvoyRateLimitPrivateKey,
+			}),
 	}
 }
 

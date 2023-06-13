@@ -70,11 +70,13 @@ const (
 // Certificates contains a set of Certificates as []byte each holding
 // the CA Cert along with Envoy Gateway & Envoy certificates.
 type Certificates struct {
-	CACertificate           []byte
-	EnvoyGatewayCertificate []byte
-	EnvoyGatewayPrivateKey  []byte
-	EnvoyCertificate        []byte
-	EnvoyPrivateKey         []byte
+	CACertificate             []byte
+	EnvoyGatewayCertificate   []byte
+	EnvoyGatewayPrivateKey    []byte
+	EnvoyCertificate          []byte
+	EnvoyPrivateKey           []byte
+	EnvoyRateLimitCertificate []byte
+	EnvoyRateLimitPrivateKey  []byte
 }
 
 // certificateRequest defines a certificate request.
@@ -138,12 +140,27 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 			return nil, err
 		}
 
+		envoyRateLimitCertReq := &certificateRequest{
+			caCertPEM:  caCertPEM,
+			caKeyPEM:   caKeyPEM,
+			expiry:     expiry,
+			commonName: DefaultEnvoyDNSPrefix,
+			altNames:   envoyDNSNames,
+		}
+
+		envoyRateLimitCert, envoyRateLimitKey, err := newCert(envoyRateLimitCertReq)
+		if err != nil {
+			return nil, err
+		}
+
 		return &Certificates{
-			CACertificate:           caCertPEM,
-			EnvoyGatewayCertificate: egCert,
-			EnvoyGatewayPrivateKey:  egKey,
-			EnvoyCertificate:        envoyCert,
-			EnvoyPrivateKey:         envoyKey,
+			CACertificate:             caCertPEM,
+			EnvoyGatewayCertificate:   egCert,
+			EnvoyGatewayPrivateKey:    egKey,
+			EnvoyCertificate:          envoyCert,
+			EnvoyPrivateKey:           envoyKey,
+			EnvoyRateLimitCertificate: envoyRateLimitCert,
+			EnvoyRateLimitPrivateKey:  envoyRateLimitKey,
 		}, nil
 	default:
 		// Envoy Gateway, e.g. self-signed CA, is the only supported certificate provider.

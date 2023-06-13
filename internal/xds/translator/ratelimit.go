@@ -16,6 +16,7 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	ratelimitfilterv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ratelimit/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
@@ -25,6 +26,13 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
+)
+
+const (
+	// rateLimitClientTLSCertFilename is the ratelimit tls cert file.
+	rateLimitClientTLSCertFilename = "/certs/tls.crt"
+	// rateLimitClientTLSKeyFilename is the ratelimit key file.
+	rateLimitClientTLSKeyFilename = "/certs/tls.key"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -291,6 +299,37 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 	return pbDescriptors
 }
 
+// buildRateLimitTLSocket builds the TLS socket for the rate limit service.
+func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
+	tlsCtx := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificates: []*tlsv3.TlsCertificate{},
+		},
+	}
+
+	tlsCert := &tlsv3.TlsCertificate{
+		CertificateChain: &corev3.DataSource{
+			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCertFilename},
+		},
+		PrivateKey: &corev3.DataSource{
+			Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSKeyFilename},
+		},
+	}
+	tlsCtx.CommonTlsContext.TlsCertificates = append(tlsCtx.CommonTlsContext.TlsCertificates, tlsCert)
+
+	tlsCtxAny, err := anypb.New(tlsCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketTls,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: tlsCtxAny,
+		},
+	}, nil
+}
+
 func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTable, irListener *ir.HTTPListener) error {
 	// Return early if rate limits don't exist.
 	if !t.isRateLimitPresent(irListener) {
@@ -301,10 +340,16 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		// Create cluster if it does not exist
 		host, port := t.getRateLimitServiceGrpcHostPort()
 		routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
+
+		tSocket, err := buildRateLimitTLSocket()
+		if err != nil {
+			return err
+		}
+
 		addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
 			destinations: routeDestinations,
-			tSocket:      nil,
+			tSocket:      tSocket,
 			protocol:     HTTP2,
 			endpoint:     DefaultEndpointType,
 		})

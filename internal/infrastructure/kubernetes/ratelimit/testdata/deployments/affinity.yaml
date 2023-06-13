@@ -50,6 +50,14 @@ spec:
           value: envoy-gateway:18001
         - name: CONFIG_GRPC_XDS_NODE_ID
           value: envoy-ratelimit
+        - name: GRPC_SERVER_USE_TLS
+          value: "true"
+        - name: GRPC_SERVER_TLS_CERT
+          value: "/certs/tls.crt"
+        - name: GRPC_SERVER_TLS_KEY
+          value: "/certs/tls.key"
+        - name: GRPC_SERVER_TLS_CA_CERT
+          value: "/certs/ca.crt"
         image: custom-image
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
@@ -68,6 +76,10 @@ spec:
             memory: 1Gi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+          readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -84,3 +96,7 @@ spec:
                 values:
                 - router-node
       terminationGracePeriodSeconds: 300
+      volumes:
+      - name: certs
+        secret:
+          secretName: envoy-rate-limit
