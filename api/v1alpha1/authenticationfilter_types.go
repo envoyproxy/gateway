@@ -42,7 +42,7 @@ type ClaimToHeader struct {
 // +union
 type AuthenticationFilterSpec struct {
 	// Type defines the type of authentication provider to use. Supported provider types
-	// are "JWT".
+	// are "JWT" and "OIDC".
 	//
 	// +unionDiscriminator
 	Type AuthenticationFilterType `json:"type"`
@@ -63,7 +63,7 @@ type AuthenticationFilterSpec struct {
 }
 
 // AuthenticationFilterType is a type of authentication provider.
-// +kubebuilder:validation:Enum=JWT
+// +kubebuilder:validation:Enum=JWT;OIDC
 type AuthenticationFilterType string
 
 const (
@@ -135,24 +135,15 @@ type OIDCAuthenticationFilterProvider struct {
 
 	// The OIDC client ID assigned to the filter to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	ClientID string `json:"clientId"`
 
 	// The name of the Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	ClientSecret string `json:"clientSecret"`
 }
 
 type OIDCProvider struct {
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	Issuer string `json:"issuer"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
