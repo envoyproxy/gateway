@@ -585,7 +585,7 @@ spec:
       uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
     claimToHeaders:
     - claim: name
-      header: custom-request-header
+      header: x-claim-name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
@@ -597,7 +597,7 @@ spec:
     rules:
     - clientSelectors:
       - headers:
-        - name: custom-request-header
+        - name: x-claim-name
           value: John Doe
       limit:
         requests: 3
@@ -643,7 +643,7 @@ TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/
 ```
 
 ```shell
-TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test1.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
+TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 ### Rate limit by carrying `TOKEN`
