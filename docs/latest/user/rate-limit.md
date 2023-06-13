@@ -567,6 +567,168 @@ transfer-encoding: chunked
 
 ```
 
+## Rate Limit Jwt Claims
+
+Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the value of the Jwt claims carried.
+
+```shell
+cat <<EOF | kubectl apply -f -
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: AuthenticationFilter
+metadata:
+  name: jwt-example
+spec:
+  type: JWT
+  jwtProviders:
+  - name: example
+    remoteJWKS:
+      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+    claimToHeaders:
+    - claim: name
+      header: x-claim-name
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: RateLimitFilter
+metadata:
+  name: ratelimit-specific-user
+spec:
+  type: Global
+  global:
+    rules:
+    - clientSelectors:
+      - headers:
+        - name: x-claim-name
+          value: John Doe
+      limit:
+        requests: 3
+        unit: Hour
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: example
+spec:
+  parentRefs:
+  - name: eg
+  hostnames:
+  - ratelimit.example
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: backend
+      port: 3000
+      weight: 1
+    filters:
+    - extensionRef:
+        group: gateway.envoyproxy.io
+        kind: AuthenticationFilter
+        name: jwt-example
+      type: ExtensionRef
+    - type: ExtensionRef
+      extensionRef:
+        group: gateway.envoyproxy.io
+        kind: RateLimitFilter
+        name: ratelimit-specific-user
+    matches:
+    - path:
+        type: PathPrefix
+        value: /foo
+```
+
+Get the JWT used for testing request authentication:
+
+```shell
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+```
+
+```shell
+TOKEN1=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/with-different-claim.jwt -s) && echo "$TOKEN1" | cut -d '.' -f2 - | base64 --decode -
+```
+
+### Rate limit by carrying `TOKEN`
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "Authorization: Bearer $TOKEN" http://${GATEWAY_HOST}/foo ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:00:25 GMT
+content-length: 561
+x-envoy-upstream-service-time: 0
+server: envoy
+
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:00:26 GMT
+content-length: 561
+x-envoy-upstream-service-time: 0
+server: envoy
+
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:00:27 GMT
+content-length: 561
+x-envoy-upstream-service-time: 0
+server: envoy
+
+
+HTTP/1.1 429 Too Many Requests
+x-envoy-ratelimited: true
+date: Mon, 12 Jun 2023 12:00:28 GMT
+server: envoy
+transfer-encoding: chunked
+
+```
+
+### No Rate Limit by carrying `TOKEN1`
+
+```shell
+for i in {1..4}; do curl -I --header "Host: ratelimit.example" --header "Authorization: Bearer $TOKEN1" http://${GATEWAY_HOST}/foo ; sleep 1; done
+```
+
+```console
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:02:34 GMT
+content-length: 556
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:02:35 GMT
+content-length: 556
+x-envoy-upstream-service-time: 0
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:02:36 GMT
+content-length: 556
+x-envoy-upstream-service-time: 1
+server: envoy
+
+HTTP/1.1 200 OK
+content-type: application/json
+x-content-type-options: nosniff
+date: Mon, 12 Jun 2023 12:02:37 GMT
+content-length: 556
+x-envoy-upstream-service-time: 0
+server: envoy
+
+```
+
 ### (Optional) Editing Kubernetes Resources settings for the Rate Limit Service
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and provides the initial rate
