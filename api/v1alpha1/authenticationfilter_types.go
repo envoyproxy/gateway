@@ -140,7 +140,7 @@ type OIDCAuthenticationFilterProvider struct {
 
 	// The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	ClientSecret *gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 }
 
 type OIDCProvider struct {
@@ -150,14 +150,12 @@ type OIDCProvider struct {
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
-	// +kubebuilder:validation:MaxLength=253
 	// +optional
 	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
-	// +kubebuilder:validation:MaxLength=253
 	// +optional
 	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
 
