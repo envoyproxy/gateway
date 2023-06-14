@@ -8,6 +8,8 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 WAIT_TIMEOUT ?= 15m
 
+FLUENT_BIT_CHART_VERSION ?= 0.30.4
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -107,7 +109,7 @@ install-ratelimit:
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
 
 .PHONY: run-e2e
-run-e2e:
+run-e2e: prepare-e2e
 	@$(LOG_TARGET)
 	kubectl wait --timeout=5m -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
 	kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-ratelimit --for=condition=Available
@@ -115,6 +117,28 @@ run-e2e:
 	kubectl wait --timeout=5m -n gateway-system job/gateway-api-admission --for=condition=Complete
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
+
+.PHONY: prepare-e2e
+prepare-e2e: prepare-helm-repo install-fluent-bit install-loki
+	@$(LOG_TARGET)
+	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
+	kubectl rollout status statefulset loki -n monitoring --timeout 5m
+
+.PHONY: prepare-helm-repo
+prepare-helm-repo:
+	@$(LOG_TARGET)
+	helm repo add fluent https://fluent.github.io/helm-charts
+	helm repo update
+
+.PHONY: install-fluent-bit
+install-fluent-bit:
+	@$(LOG_TARGET)
+	helm upgrade --install fluent-bit fluent/fluent-bit -f examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version $(FLUENT_BIT_CHART_VERSION)
+
+.PHONY: install-loki
+install-loki:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/loki/loki.yaml -n monitoring
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
