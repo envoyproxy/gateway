@@ -28,15 +28,15 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, AccessLogTest)
+	ConformanceTests = append(ConformanceTests, FileAccessLogTest)
 }
 
-var AccessLogTest = suite.ConformanceTest{
-	ShortName:   "AccessLog",
-	Description: "Make sure access log is working",
+var FileAccessLogTest = suite.ConformanceTest{
+	ShortName:   "FileAccessLog",
+	Description: "Make sure file access log is working",
 	Manifests:   []string{"testdata/accesslog.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("default accesslog", func(t *testing.T) {
+		t.Run("default", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-infra-backend-v1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
