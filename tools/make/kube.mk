@@ -117,13 +117,26 @@ run-e2e: prepare-e2e
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
 
 .PHONY: prepare-e2e
-prepare-e2e:
+prepare-e2e: prepare-helm-repo install-fluent-bit install-loki
 	@$(LOG_TARGET)
-	kubectl create ns monitoring || true
-	kubectl apply -f examples/fluent-bit/fluent-bit.yaml -n monitoring
-	kubectl apply -f examples/loki/loki.yaml -n monitoring
 	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
 	kubectl rollout status statefulset loki -n monitoring --timeout 5m
+
+.PHONY: prepare-helm-repo
+prepare-helm-repo:
+	@$(LOG_TARGET)
+	helm repo add fluent https://fluent.github.io/helm-charts
+	helm repo update
+
+.PHONY: install-fluent-bit
+install-fluent-bit:
+	@$(LOG_TARGET)
+	helm upgrade --install fluent-bit fluent/fluent-bit -f examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version 4.8.0
+
+.PHONY: install-loki
+install-loki:
+	@$(LOG_TARGET)
+	kubectl apply -f examples/loki/loki.yaml -n monitoring
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.
