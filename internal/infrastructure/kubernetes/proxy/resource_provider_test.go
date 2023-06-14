@@ -78,6 +78,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -115,6 +116,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -156,6 +158,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -188,6 +191,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",

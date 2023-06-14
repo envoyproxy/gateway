@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+)
 
 const (
 	// DefaultDeploymentReplicas is the default number of deployment replicas.
@@ -48,6 +51,11 @@ type KubernetesDeploymentSpec struct {
 	//
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// The deployment strategy to use to replace existing pods with new ones.
+	// +optional
+	// +patchStrategy=retainKeys
+	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty" patchStrategy:"retainKeys"`
 
 	// Pod defines the desired annotations and securityContext of container.
 	//
