@@ -8,6 +8,8 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 
 WAIT_TIMEOUT ?= 15m
 
+FLUENT_BIT_CHART_VERSION ?= 0.30.4
+
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
 KUBE_PROVIDER_DIR := $(ROOT_DIR)/internal/provider/kubernetes/config
@@ -131,7 +133,7 @@ prepare-helm-repo:
 .PHONY: install-fluent-bit
 install-fluent-bit:
 	@$(LOG_TARGET)
-	helm upgrade --install fluent-bit fluent/fluent-bit -f examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version 4.8.0
+	helm upgrade --install fluent-bit fluent/fluent-bit -f examples/fluent-bit/helm-values.yaml -n monitoring --create-namespace --version $(FLUENT_BIT_CHART_VERSION)
 
 .PHONY: install-loki
 install-loki:
