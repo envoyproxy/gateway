@@ -118,6 +118,7 @@ spec:
                   clientId:
                     description: The OIDC client ID assigned to the filter to be used
                       in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                    minLength: 1
                     type: string
                   clientSecret:
                     description: The Kubernetes secret which contains the OIDC client
@@ -168,6 +169,7 @@ spec:
                         type: string
                       issuer:
                         description: The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
+                        minLength: 1
                         type: string
                       jwks:
                         description: The JSON JWKS response from the OIDC provider’s

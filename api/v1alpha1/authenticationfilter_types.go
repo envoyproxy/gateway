@@ -60,7 +60,7 @@ type AuthenticationFilterSpec struct {
 	// OIDCProvider defines the OpenID Connect (OIDC) authentication provider type.
 	//
 	// +optional
-	OIDCProvider OIDCAuthenticationFilterProvider `json:"oidcProvider,omitempty"`
+	OIDCProvider *OIDCAuthenticationFilterProvider `json:"oidcProvider,omitempty"`
 }
 
 // AuthenticationFilterType is a type of authentication provider.
@@ -136,15 +136,21 @@ type OIDCAuthenticationFilterProvider struct {
 
 	// The OIDC client ID assigned to the filter to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:MinLength=1
 	ClientID string `json:"clientId"`
 
 	// The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 }
 
 type OIDCProvider struct {
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
+	//
+	// +kubebuilder:validation:MinLength=1
 	Issuer string `json:"issuer"`
 
 	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
