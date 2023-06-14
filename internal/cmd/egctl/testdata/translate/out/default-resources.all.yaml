@@ -88,7 +88,7 @@ gatewayClass:
       namespace: envoy-gateway-system
   status:
     conditions:
-    - lastTransitionTime: "2023-05-03T18:41:22Z"
+    - lastTransitionTime: "2023-04-23T13:09:06Z"
       message: Valid GatewayClass
       reason: Accepted
       status: "True"
@@ -131,12 +131,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -147,12 +147,12 @@ gateways:
         kind: TCPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -163,12 +163,12 @@ gateways:
         kind: UDPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -179,12 +179,12 @@ gateways:
         kind: TLSRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -195,12 +195,12 @@ gateways:
         kind: HTTPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -234,12 +234,12 @@ grpcRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -272,12 +272,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -304,12 +304,12 @@ tcpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -337,12 +337,12 @@ tlsRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -370,12 +370,12 @@ udpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-05-03T18:41:22Z"
+      - lastTransitionTime: "2023-04-23T13:09:06Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -645,19 +645,18 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                  mergeSlashes: true
-                  normalizePath: true
-                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                   rds:
                     configSource:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default-eg-http
                   statPrefix: http
-                  stripAnyHostPort: true
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
+                  normalizePath: true
+                  mergeSlashes: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
             name: default-eg-http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -713,17 +712,16 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
-                  mergeSlashes: true
-                  normalizePath: true
-                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                   rds:
                     configSource:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default-eg-grpc
                   statPrefix: http
-                  stripAnyHostPort: true
                   useRemoteAddress: true
+                  normalizePath: true
+                  mergeSlashes: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
             name: default-eg-grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -888,3 +886,4 @@ xds:
               name: default-backend-rule-0-match-0-www.grpc-example.com
               route:
                 cluster: default-backend-rule-0-match-0-www.grpc-example.com
+
