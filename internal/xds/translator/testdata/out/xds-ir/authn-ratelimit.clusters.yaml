@@ -67,6 +67,9 @@
             filename: /certs/tls.crt
           privateKey:
             filename: /certs/tls.key
+        validationContext:
+          trustedCa:
+            filename: /certs/ca.crt
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
