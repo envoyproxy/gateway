@@ -46,16 +46,24 @@ const (
 	GRPCServerUseTLSEnvVar = "GRPC_SERVER_USE_TLS"
 	// GRPCServerTLSCertEnvVar is the grpc server tls cert.
 	GRPCServerTLSCertEnvVar = "GRPC_SERVER_TLS_CERT"
-	// GRPCServerTLSClientCertFilename is the GRPC tls cert file.
-	GRPCServerTLSCertFilename = "/certs/tls.crt"
+	// GRPCTLSCertFilename is the GRPC tls cert file.
+	GRPCTLSCertFilename = "/certs/tls.crt"
 	// GRPCServerTLSKeyEnvVarEnvVar is the grpc server tls key.
 	GRPCServerTLSKeyEnvVarEnvVar = "GRPC_SERVER_TLS_KEY"
-	// GRPCServerTLSKeyFilename is the grpc server key file.
-	GRPCServerTLSKeyFilename = "/certs/tls.key"
+	// GRPCTLSKeyFilename is the grpc server key file.
+	GRPCTLSKeyFilename = "/certs/tls.key"
 	// GRPCServerTLSCACertEnvVar is the grpc server tls ca cert.
 	GRPCServerTLSCACertEnvVar = "GRPC_SERVER_TLS_CA_CERT"
-	// GRPCServerTLSKeyFilename is the grpc server tls ca cert file.
-	GRPCServerTLSCACertFilename = "/certs/ca.crt"
+	// GRPCTLSCACertFilename is the grpc server tls ca cert file.
+	GRPCTLSCACertFilename = "/certs/ca.crt"
+	// ConfigGRPCXDSServerUseTLSEnvVar is tls enable option for grpc xds server.
+	ConfigGRPCXDSServerUseTLSEnvVar = "CONFIG_GRPC_XDS_SERVER_USE_TLS"
+	// ConfigGRPCXDSClientTLSCertEnvVar is the grpc xds client tls cert.
+	ConfigGRPCXDSClientTLSCertEnvVar = "CONFIG_GRPC_XDS_CLIENT_TLS_CERT"
+	// ConfigGRPCXDSClientTLSKeyEnvVar is the grpc xds client tls key.
+	ConfigGRPCXDSClientTLSKeyEnvVar = "CONFIG_GRPC_XDS_CLIENT_TLS_KEY"
+	// ConfigGRPCXDSServerTLSCACertEnvVar is the grpc xds server tls ca cert.
+	ConfigGRPCXDSServerTLSCACertEnvVar = "CONFIG_GRPC_XDS_SERVER_TLS_CACERT"
 	// LogLevelEnvVar is the log level.
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
@@ -224,15 +232,31 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 		},
 		{
 			Name:  GRPCServerTLSCertEnvVar,
-			Value: GRPCServerTLSCertFilename,
+			Value: GRPCTLSCertFilename,
 		},
 		{
 			Name:  GRPCServerTLSKeyEnvVarEnvVar,
-			Value: GRPCServerTLSKeyFilename,
+			Value: GRPCTLSKeyFilename,
 		},
 		{
 			Name:  GRPCServerTLSCACertEnvVar,
-			Value: GRPCServerTLSCACertFilename,
+			Value: GRPCTLSCACertFilename,
+		},
+		{
+			Name:  ConfigGRPCXDSServerUseTLSEnvVar,
+			Value: "true",
+		},
+		{
+			Name:  ConfigGRPCXDSClientTLSCertEnvVar,
+			Value: GRPCTLSCertFilename,
+		},
+		{
+			Name:  ConfigGRPCXDSClientTLSKeyEnvVar,
+			Value: GRPCTLSKeyFilename,
+		},
+		{
+			Name:  ConfigGRPCXDSServerTLSCACertEnvVar,
+			Value: GRPCTLSCACertFilename,
 		},
 	}
 
