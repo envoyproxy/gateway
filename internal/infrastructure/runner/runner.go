@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -26,7 +27,7 @@ type Runner struct {
 }
 
 func (r *Runner) Name() string {
-	return "infrastructure"
+	return string(v1alpha1.LogComponentInfrastructureRunner)
 }
 
 func New(cfg *Config) *Runner {
@@ -36,7 +37,7 @@ func New(cfg *Config) *Runner {
 // Start starts the infrastructure runner
 func (r *Runner) Start(ctx context.Context) error {
 	var err error
-	r.Logger = r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")

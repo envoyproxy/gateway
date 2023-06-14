@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/envoyproxy/gateway/internal/crypto"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
 )
 
@@ -60,7 +60,7 @@ func certGen() error {
 }
 
 // outputCerts outputs the provided certs to a secret in namespace ns.
-func outputCerts(ctx context.Context, log logr.Logger, cli client.Client, certs *crypto.Certificates, ns string) error {
+func outputCerts(ctx context.Context, log logging.Logger, cli client.Client, certs *crypto.Certificates, ns string) error {
 	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(ns, certs))
 	if err != nil {
 		return fmt.Errorf("failed to create or update secrets: %v", err)

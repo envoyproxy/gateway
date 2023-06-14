@@ -14,16 +14,16 @@ import (
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
 func DefaultEnvoyGateway() *EnvoyGateway {
-	gw := DefaultGateway()
-	p := DefaultEnvoyGatewayProvider()
 	return &EnvoyGateway{
 		metav1.TypeMeta{
 			Kind:       KindEnvoyGateway,
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:  gw,
-			Provider: p,
+			Gateway:  DefaultGateway(),
+			Provider: DefaultEnvoyGatewayProvider(),
+			Logging:  DefaultEnvoyGatewayLogging(),
+			Admin:    DefaultEnvoyGatewayAdmin(),
 		},
 	}
 }
@@ -42,12 +42,57 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
+	if e.Logging == nil {
+		e.Logging = DefaultEnvoyGatewayLogging()
+	}
+	if e.Admin == nil {
+		e.Admin = DefaultEnvoyGatewayAdmin()
+	}
+}
+
+// GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
+func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+	if e.Admin != nil {
+		if e.Admin.Address == nil {
+			e.Admin.Address = DefaultEnvoyGatewayAdminAddress()
+		}
+		return e.Admin
+	}
+	e.Admin = DefaultEnvoyGatewayAdmin()
+
+	return e.Admin
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
 		ControllerName: GatewayControllerName,
+	}
+}
+
+// DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
+func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
+	return &EnvoyGatewayLogging{
+		Level: map[EnvoyGatewayLogComponent]LogLevel{
+			LogComponentGatewayDefault: LogLevelInfo,
+		},
+	}
+}
+
+// DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
+// When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
+func DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
+	if level != "" {
+		return level
+	}
+
+	return LogLevelInfo
+}
+
+// SetEnvoyGatewayLoggingDefaults sets default EnvoyGatewayLogging configuration parameters.
+func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
+	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
+		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
 }
 
@@ -247,4 +292,20 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 	}
 
 	return r.Kubernetes
+}
+
+// DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.
+func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+	return &EnvoyGatewayAdmin{
+		Debug:   false,
+		Address: DefaultEnvoyGatewayAdminAddress(),
+	}
+}
+
+// DefaultEnvoyGatewayAdminAddress returns a new EnvoyGatewayAdminAddress with default configuration parameters.
+func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
+	return &EnvoyGatewayAdminAddress{
+		Port: GatewayAdminPort,
+		Host: GatewayAdminHost,
+	}
 }

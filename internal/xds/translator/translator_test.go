@@ -43,9 +43,6 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route",
 		},
 		{
-			name: "http-route-with-stripped-host-port",
-		},
-		{
 			name: "http-route-regex",
 		},
 		{

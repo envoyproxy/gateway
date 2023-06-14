@@ -29,7 +29,6 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         statPrefix: http
-        stripAnyHostPort: true
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true

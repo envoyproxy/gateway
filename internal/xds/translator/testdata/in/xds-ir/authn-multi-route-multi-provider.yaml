@@ -17,6 +17,9 @@ http:
           - foo.com
           remoteJWKS:
             uri: https://localhost/jwt/public-key/jwks.json
+          claimToHeaders:
+          - header: one-route-example-key1
+            claim: claim.neteased.key
         - name: example2
           issuer: https://www.two.example.com
           audiences:
@@ -24,6 +27,11 @@ http:
           - two.foo.com
           remoteJWKS:
             uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+          claimToHeaders:
+          - header: one-route-example2-key1
+            claim: claim.neteased.key
+          - header: one-route-example2-key2
+            claim: name
     destinations:
     - host: "1.2.3.4"
       port: 50000
@@ -39,6 +47,9 @@ http:
           - foo.com
           remoteJWKS:
             uri: https://localhost/jwt/public-key/jwks.json
+          claimToHeaders:
+          - header: second-route-example-key1
+            claim: claim.neteased.key
         - name: example2
           issuer: https://www.two.example.com
           audiences:

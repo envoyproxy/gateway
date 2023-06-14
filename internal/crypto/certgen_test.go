@@ -89,6 +89,17 @@ func TestGeneratedValidKubeCerts(t *testing.T) {
 	envoyCert, _, err := newCert(envoyCertReq)
 	require.NoErrorf(t, err, "Failed to generate Envoy cert")
 
+	envoyRateLimitCertReq := &certificateRequest{
+		caCertPEM:  caCert,
+		caKeyPEM:   caKey,
+		expiry:     expiry,
+		commonName: "envoy",
+		altNames:   kubeServiceNames("envoy", "envoy-gateway-system", "cluster.local"),
+	}
+
+	envoyRateLimitCert, _, err := newCert(envoyRateLimitCertReq)
+	require.NoErrorf(t, err, "Failed to generate Envoy Rate Limit Client cert")
+
 	tests := []struct {
 		name    string
 		cert    []byte
@@ -102,6 +113,11 @@ func TestGeneratedValidKubeCerts(t *testing.T) {
 		{
 			name:    "envoy cert",
 			cert:    envoyCert,
+			dnsName: "envoy",
+		},
+		{
+			name:    "envoy rate limit client cert",
+			cert:    envoyRateLimitCert,
 			dnsName: "envoy",
 		},
 	}

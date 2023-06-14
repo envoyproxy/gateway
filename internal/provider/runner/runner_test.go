@@ -14,13 +14,12 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
 func TestStart(t *testing.T) {
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
 
 	testCases := []struct {
 		name   string

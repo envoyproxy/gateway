@@ -62,10 +62,11 @@ func TestDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		caseName  string
-		infra     *ir.Infra
-		deploy    *egcfgv1a1.KubernetesDeploymentSpec
-		bootstrap *string
+		caseName     string
+		infra        *ir.Infra
+		deploy       *egcfgv1a1.KubernetesDeploymentSpec
+		proxyLogging map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
+		bootstrap    *string
 	}{
 		{
 			caseName: "default",
@@ -233,7 +234,16 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
-		// TODO: add test cases for custom ProxyLogging
+		{
+			caseName: "component-level",
+			infra:    newTestInfra(),
+			deploy:   nil,
+			proxyLogging: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelError,
+				egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelInfo,
+			},
+			bootstrap: pointer.String(`test bootstrap config`),
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -244,6 +254,12 @@ func TestDeployment(t *testing.T) {
 
 			if tc.bootstrap != nil && *tc.bootstrap != "" {
 				tc.infra.Proxy.Config.Spec.Bootstrap = tc.bootstrap
+			}
+
+			if len(tc.proxyLogging) > 0 {
+				tc.infra.Proxy.Config.Spec.Logging = egcfgv1a1.ProxyLogging{
+					Level: tc.proxyLogging,
+				}
 			}
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())

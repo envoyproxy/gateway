@@ -14,8 +14,8 @@ const (
 	KindEnvoyProxy = "EnvoyProxy"
 )
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // EnvoyProxy is the schema for the envoyproxies API.
 type EnvoyProxy struct {
@@ -37,11 +37,8 @@ type EnvoyProxySpec struct {
 	// +optional
 	Provider *EnvoyProxyProvider `json:"provider,omitempty"`
 
-	// Logging defines logging parameters for managed proxies. If unspecified,
-	// default settings apply. This type is not implemented until
-	// https://github.com/envoyproxy/gateway/issues/280 is fixed.
-	//
-	// +kubebuilder:default={level: {system: info}}
+	// Logging defines logging parameters for managed proxies.
+	// +kubebuilder:default={level: {default: warn}}
 	Logging ProxyLogging `json:"logging,omitempty"`
 
 	// Telemetry defines telemetry parameters for managed proxies.
@@ -105,69 +102,50 @@ type EnvoyProxyKubernetesProvider struct {
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 }
 
-// ProxyLogging defines logging parameters for managed proxies. This type is not
-// implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+// ProxyLogging defines logging parameters for managed proxies.
 type ProxyLogging struct {
 	// Level is a map of logging level per component, where the component is the key
-	// and the log level is the value. If unspecified, defaults to "System: Info".
+	// and the log level is the value. If unspecified, defaults to "default: warn".
 	//
-	// +kubebuilder:default={system: info}
+	// +kubebuilder:default={default: warn}
 	Level map[LogComponent]LogLevel `json:"level,omitempty"`
 }
 
 // LogComponent defines a component that supports a configured logging level.
-// This type is not implemented until https://github.com/envoyproxy/gateway/issues/280
-// is fixed.
 // +kubebuilder:validation:Enum=system;upstream;http;connection;admin;client;filter;main;router;runtime
 type LogComponent string
 
 const (
-	// LogComponentSystem defines the "system"-wide logging component. When specified,
-	// all other logging components are ignored.
-	LogComponentSystem LogComponent = "system"
+	// LogComponentDefault defines the default logging component.
+	// See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l
+	LogComponentDefault LogComponent = "default"
 
-	// LogComponentUpstream defines defines the "upstream" logging component.
+	// LogComponentUpstream defines the "upstream" logging component.
 	LogComponentUpstream LogComponent = "upstream"
 
-	// LogComponentHTTP defines defines the "http" logging component.
+	// LogComponentHTTP defines the "http" logging component.
 	LogComponentHTTP LogComponent = "http"
 
-	// LogComponentConnection defines defines the "connection" logging component.
+	// LogComponentConnection defines the "connection" logging component.
 	LogComponentConnection LogComponent = "connection"
 
-	// LogComponentAdmin defines defines the "admin" logging component.
+	// LogComponentAdmin defines the "admin" logging component.
 	LogComponentAdmin LogComponent = "admin"
 
-	// LogComponentClient defines defines the "client" logging component.
+	// LogComponentClient defines the "client" logging component.
 	LogComponentClient LogComponent = "client"
 
-	// LogComponentFilter defines defines the "filter" logging component.
+	// LogComponentFilter defines the "filter" logging component.
 	LogComponentFilter LogComponent = "filter"
 
-	// LogComponentMain defines defines the "main" logging component.
+	// LogComponentMain defines the "main" logging component.
 	LogComponentMain LogComponent = "main"
 
-	// LogComponentRouter defines defines the "router" logging component.
+	// LogComponentRouter defines the "router" logging component.
 	LogComponentRouter LogComponent = "router"
 
-	// LogComponentRuntime defines defines the "runtime" logging component.
+	// LogComponentRuntime defines the "runtime" logging component.
 	LogComponentRuntime LogComponent = "runtime"
-)
-
-// LogLevel defines a log level for system logs. This type is not implemented until
-// https://github.com/envoyproxy/gateway/issues/280 is fixed.
-// +kubebuilder:validation:Enum=debug;info;error
-type LogLevel string
-
-const (
-	// LogLevelDebug defines the "debug" logging level.
-	LogLevelDebug LogLevel = "debug"
-
-	// LogLevelInfo defines the "Info" logging level.
-	LogLevelInfo LogLevel = "info"
-
-	// LogLevelError defines the "Error" logging level.
-	LogLevelError LogLevel = "error"
 )
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
@@ -177,7 +155,7 @@ type EnvoyProxyStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file.
 }
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 
 // EnvoyProxyList contains a list of EnvoyProxy
 type EnvoyProxyList struct {

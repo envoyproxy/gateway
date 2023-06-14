@@ -20,11 +20,12 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	cfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
 
@@ -477,8 +478,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			objs := []client.Object{gc, gw}
 
 			// Create the reconciler.
-			logger, err := log.NewLogger()
-			require.NoError(t, err)
+			logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 			ctx := context.Background()
 
 			r := &gatewayAPIReconciler{
@@ -511,7 +512,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 			// Process the test case httproutes.
 			resourceTree := gatewayapi.NewResources()
 			resourceMap := newResourceMapping()
-			err = r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
+			err := r.processHTTPRoutes(ctx, gwNsName, resourceMap, resourceTree)
 			if tc.expected {
 				require.NoError(t, err)
 				// Ensure the resource tree and map are as expected.

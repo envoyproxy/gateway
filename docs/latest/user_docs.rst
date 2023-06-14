@@ -25,3 +25,4 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/customize-envoyproxy
   user/deployment-mode
   user/gateway-address
+  user/gatewayapi-support

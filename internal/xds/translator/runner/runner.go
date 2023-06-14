@@ -8,6 +8,7 @@ package runner
 import (
 	"context"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
@@ -32,12 +33,12 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return "xds-translator"
+	return string(v1alpha1.LogComponentXdsTranslatorRunner)
 }
 
 // Start starts the xds-translator runner
 func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
 	return nil

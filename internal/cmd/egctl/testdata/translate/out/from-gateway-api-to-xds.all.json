@@ -459,7 +459,6 @@
                             "routeConfigName": "default-eg-http"
                           },
                           "statPrefix": "http",
-                          "stripAnyHostPort": true,
                           "upgradeConfigs": [
                             {
                               "upgradeType": "websocket"
@@ -555,6 +554,14 @@
 								}
 							},
                             {
+                              "name": "envoy.filters.http.grpc_stats",
+                              "typedConfig": {
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig",
+                                "emitFilterState": true,
+                                "statsForAllMethods": true
+                              }
+                            },
+                            {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
@@ -572,7 +579,6 @@
                             "routeConfigName": "default-eg-grpc"
                           },
                           "statPrefix": "http",
-                          "stripAnyHostPort": true,
                           "useRemoteAddress": true
                         }
                       }

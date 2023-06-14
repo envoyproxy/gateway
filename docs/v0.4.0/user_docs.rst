@@ -23,3 +23,4 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/egctl
   user/customize-envoyproxy
   user/deployment-mode
+  user/gatewayapi-support

@@ -187,6 +187,31 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "gateway-logging.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: &v1alpha1.EnvoyGatewayProvider{
+						Type: v1alpha1.ProviderTypeKubernetes,
+					},
+					Gateway: v1alpha1.DefaultGateway(),
+					Logging: &v1alpha1.EnvoyGatewayLogging{
+						Level: map[v1alpha1.EnvoyGatewayLogComponent]v1alpha1.LogLevel{
+							v1alpha1.LogComponentGatewayDefault: v1alpha1.LogLevelInfo,
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
+			in:     inPath + "invalid-gateway-logging.yaml",
+			expect: false,
+		},
+		{
 			in:     inPath + "no-api-version.yaml",
 			expect: false,
 		},

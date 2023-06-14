@@ -34,7 +34,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:                 envoygateway.GetScheme(),
-		Logger:                 svr.Logger,
+		Logger:                 svr.Logger.Logger,
 		LeaderElection:         false,
 		HealthProbeBindAddress: ":8081",
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",

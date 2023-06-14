@@ -20,6 +20,9 @@ http:
           - foo.com
           remoteJWKS:
             uri: https://localhost/jwt/public-key/jwks.json
+          claimToHeaders:
+          - header: first-route-key
+            claim: claim.neteased.key
     destinations:
     - host: "1.2.3.4"
       port: 50000
