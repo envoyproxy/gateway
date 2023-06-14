@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "eg.fullname" . }}-metrics-reader
+  namespace: '{{ .Release.Namespace }}'
+  labels:
+  {{- include "eg.labels" . | nindent 4 }}
+rules:
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
