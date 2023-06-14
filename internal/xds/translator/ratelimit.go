@@ -33,6 +33,8 @@ const (
 	rateLimitClientTLSCertFilename = "/certs/tls.crt"
 	// rateLimitClientTLSKeyFilename is the ratelimit key file.
 	rateLimitClientTLSKeyFilename = "/certs/tls.key"
+	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
+	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -304,6 +306,13 @@ func buildRateLimitTLSocket() (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.UpstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
 			TlsCertificates: []*tlsv3.TlsCertificate{},
+			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
+				ValidationContext: &tlsv3.CertificateValidationContext{
+					TrustedCa: &corev3.DataSource{
+						Specifier: &corev3.DataSource_Filename{Filename: rateLimitClientTLSCACertFilename},
+					},
+				},
+			},
 		},
 	}
 
