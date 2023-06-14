@@ -34,10 +34,6 @@ func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec 
 	return serviceSpec
 }
 
-func ExpectedDeploymentStrategy() {
-
-}
-
 // CompareSvc compare entire Svc.Spec but ignored the ports[*].nodePort, ClusterIP and ClusterIPs in case user have modified for some scene.
 func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
