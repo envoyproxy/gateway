@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -32,6 +31,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/status"
@@ -63,7 +63,7 @@ const (
 
 type gatewayAPIReconciler struct {
 	client          client.Client
-	log             logr.Logger
+	log             logging.Logger
 	statusUpdater   status.Updater
 	classController gwapiv1b1.GatewayController
 	store           *kubernetesProviderStore

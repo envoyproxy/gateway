@@ -31,12 +31,12 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return "provider"
+	return string(v1alpha1.LogComponentProviderRunner)
 }
 
 // Start the provider runner
 func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	if r.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		r.Logger.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
 		cfg, err := ctrl.GetConfig()

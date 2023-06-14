@@ -100,6 +100,15 @@ func ValidateJwtProviders(providers []egv1a1.JwtAuthenticationFilterProvider) er
 				}
 			}
 		}
+
+		for _, claimToHeader := range provider.ClaimToHeaders {
+			switch {
+			case len(claimToHeader.Header) == 0:
+				errs = append(errs, fmt.Errorf("header must be set for claimToHeader provider: %s", claimToHeader.Header))
+			case len(claimToHeader.Claim) == 0:
+				errs = append(errs, fmt.Errorf("claim must be set for claimToHeader provider: %s", claimToHeader.Claim))
+			}
+		}
 	}
 
 	return utilerrors.NewAggregate(errs)

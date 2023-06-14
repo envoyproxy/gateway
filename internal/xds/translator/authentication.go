@@ -120,11 +120,17 @@ func buildJwtAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					},
 				}
 
+				claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
+				for _, claimToHeader := range irProvider.ClaimToHeaders {
+					claimToHeader := &jwtauthnv3.JwtClaimToHeader{HeaderName: claimToHeader.Header, ClaimName: claimToHeader.Claim}
+					claimToHeaders = append(claimToHeaders, claimToHeader)
+				}
 				jwtProvider := &jwtauthnv3.JwtProvider{
 					Issuer:              irProvider.Issuer,
 					Audiences:           irProvider.Audiences,
 					JwksSourceSpecifier: remote,
 					PayloadInMetadata:   irProvider.Issuer,
+					ClaimToHeaders:      claimToHeaders,
 				}
 
 				providerKey := fmt.Sprintf("%s-%s", route.Name, irProvider.Name)

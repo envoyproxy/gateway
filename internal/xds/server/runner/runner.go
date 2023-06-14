@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
@@ -63,12 +64,12 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return "xds-server"
+	return string(v1alpha1.LogComponentXdsServerRunner)
 }
 
 // Start starts the xds-server runner
 func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,

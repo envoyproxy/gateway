@@ -214,7 +214,6 @@ xdsIR:
       port: 10080
       hostnames:
       - "*"
-      stripAnyHostPort: true
       routes:
       - name: envoy-gateway-httproute-2-rule-0-match-0-example.com
         pathMatch:

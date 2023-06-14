@@ -126,7 +126,6 @@ xdsIR:
       port: 10080
       hostnames:
       - "*"
-      stripAnyHostPort: true
       routes:
       - name: default-httproute-1-rule-0-match-0-*
         pathMatch:

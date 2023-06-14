@@ -17,6 +17,9 @@
               first-route-www.test.com-example:
                 audiences:
                 - foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: one-route-example-key1
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
@@ -29,6 +32,11 @@
                 audiences:
                 - one.foo.com
                 - two.foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: one-route-example2-key1
+                - claimName: name
+                  headerName: one-route-example2-key2
                 issuer: https://www.two.example.com
                 payloadInMetadata: https://www.two.example.com
                 remoteJwks:
@@ -40,6 +48,9 @@
               second-route-www.test.com-example:
                 audiences:
                 - foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: second-route-example-key1
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:

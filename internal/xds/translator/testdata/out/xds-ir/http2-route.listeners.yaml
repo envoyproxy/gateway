@@ -14,9 +14,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.grpc_web
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
         - name: envoy.filters.http.health_check
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
@@ -24,6 +21,14 @@
             - exactMatch: /status
               name: :path
             passThroughMode: false
+        - name: envoy.filters.http.grpc_web
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+        - name: envoy.filters.http.grpc_stats
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
+            emitFilterState: true
+            statsForAllMethods: true
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

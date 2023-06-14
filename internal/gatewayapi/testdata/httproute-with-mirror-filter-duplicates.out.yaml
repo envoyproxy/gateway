@@ -94,7 +94,6 @@ xdsIR:
       port: 10080
       hostnames:
       - "*.envoyproxy.io"
-      stripAnyHostPort: true
       routes:
       - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
         pathMatch:

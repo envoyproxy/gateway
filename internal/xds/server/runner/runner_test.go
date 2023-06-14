@@ -22,8 +22,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
-	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
@@ -105,8 +106,8 @@ func TestTLSConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start a dummy server.
-	logger, err := log.NewLogger()
-	require.NoError(t, err)
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 	cfg := &Config{
 		Server: config.Server{
 			Logger: logger,
@@ -197,7 +198,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	r := New(&Config{
 		Server: *cfg,
 	})
-	r.Logger = r.Logger.WithValues("runner", r.Name())
+	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	// Don't crash in this function
 	r.serveXdsServer(context.Background())
 }
