@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -137,9 +138,9 @@ type OIDCAuthenticationFilterProvider struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	ClientID string `json:"clientId"`
 
-	// The name of the Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
+	// The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	ClientSecret string `json:"clientSecret"`
+	ClientSecret *gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 }
 
 type OIDCProvider struct {

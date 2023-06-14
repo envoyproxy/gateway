@@ -253,7 +253,7 @@ _Appears in:_
 | --- | --- |
 | `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
 | `clientId` _string_ | The OIDC client ID assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
-| `clientSecret` _string_ | The name of the Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
+| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 
 
 ## OIDCProvider
