@@ -60,6 +60,14 @@ spec:
           value: "/certs/tls.key"
         - name: GRPC_SERVER_TLS_CA_CERT
           value: "/certs/ca.crt"
+        - name: CONFIG_GRPC_XDS_SERVER_USE_TLS
+          value: "true"
+        - name: CONFIG_GRPC_XDS_CLIENT_TLS_CERT
+          value: "/certs/tls.crt"
+        - name: CONFIG_GRPC_XDS_CLIENT_TLS_KEY
+          value: "/certs/tls.key"
+        - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
+          value: "/certs/ca.crt"
         - name: env_a
           value: env_a_value
         - name: env_b
