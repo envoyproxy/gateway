@@ -7,6 +7,8 @@ provider:
   kubernetes:
     rateLimitDeployment:
       replicas: 1
+      strategy:
+        type: RollingUpdate
       container:
         env:
         - name: env_a
