@@ -38,10 +38,17 @@ xds:
                     path: /dev/stdout
                 commonHttpProtocolOptions:
                   headersWithUnderscoresAction: REJECT_REQUEST
+                http2ProtocolOptions:
+                  initialConnectionWindowSize: 1048576
+                  initialStreamWindowSize: 65536
+                  maxConcurrentStreams: 100
                 httpFilters:
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                mergeSlashes: true
+                normalizePath: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                 rds:
                   configSource:
                     ads: {}
@@ -51,9 +58,6 @@ xds:
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
-                normalizePath: true
-                mergeSlashes: true
-                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
           name: default-eg-http
           perConnectionBufferLimitBytes: 32768
     - activeState:
@@ -109,6 +113,9 @@ xds:
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                mergeSlashes: true
+                normalizePath: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                 rds:
                   configSource:
                     ads: {}
@@ -116,9 +123,6 @@ xds:
                   routeConfigName: default-eg-grpc
                 statPrefix: http
                 useRemoteAddress: true
-                normalizePath: true
-                mergeSlashes: true
-                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
           name: default-eg-grpc
           perConnectionBufferLimitBytes: 32768
     - activeState:
