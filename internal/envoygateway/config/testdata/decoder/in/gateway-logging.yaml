@@ -7,4 +7,3 @@ provider:
 logging:
   level:
     default: info
-  developmentMode: true
