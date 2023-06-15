@@ -82,9 +82,13 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 
 // DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
 // When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
-func DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
+func (logging *EnvoyGatewayLogging) DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
 	if level != "" {
 		return level
+	}
+
+	if logging.Level[LogComponentGatewayDefault] != "" {
+		return logging.Level[LogComponentGatewayDefault]
 	}
 
 	return LogLevelInfo
