@@ -77,7 +77,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.gc).Build()
-			err := r.addFinalizer(ctx, tc.gc)
+			err := r.addGcFinalizer(ctx, tc.gc)
 			require.NoError(t, err)
 			key := types.NamespacedName{Name: tc.gc.Name}
 			err = r.client.Get(ctx, key, tc.gc)
@@ -87,6 +87,75 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 	}
 }
 
+func TestAddEnvoyProxyFinalizer(t *testing.T) {
+	testCases := []struct {
+		name   string
+		ep     *egcfgv1a1.EnvoyProxy
+		expect []string
+	}{
+		{
+			name: "gatewayclass with no finalizers",
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+				},
+			},
+			expect: []string{gatewayClassFinalizer},
+		},
+	}
+	// Create the reconciler.
+	r := new(gatewayAPIReconciler)
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.ep).Build()
+			err := r.addEpFinalizer(ctx, tc.ep)
+			require.NoError(t, err)
+			key := types.NamespacedName{Name: tc.ep.Name}
+			err = r.client.Get(ctx, key, tc.ep)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, tc.ep.Finalizers)
+		})
+	}
+}
+
+func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
+	testCases := []struct {
+		name   string
+		ep     *egcfgv1a1.EnvoyProxy
+		expect []string
+	}{
+		{
+			name: "envoyproxy with existing envoyproxy finalizer",
+			ep: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test",
+					Finalizers: []string{gatewayClassFinalizer},
+				},
+			},
+			expect: nil,
+		},
+	}
+
+	// Create the reconciler.
+	r := new(gatewayAPIReconciler)
+	ctx := context.Background()
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.ep).Build()
+			err := r.removeEpFinalizer(ctx, tc.ep)
+			require.NoError(t, err)
+			key := types.NamespacedName{Name: tc.ep.Name}
+			err = r.client.Get(ctx, key, tc.ep)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, tc.ep.Finalizers)
+		})
+	}
+}
 func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -141,7 +210,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			r.client = fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).WithObjects(tc.gc).Build()
-			err := r.removeFinalizer(ctx, tc.gc)
+			err := r.removeGcFinalizer(ctx, tc.gc)
 			require.NoError(t, err)
 			key := types.NamespacedName{Name: tc.gc.Name}
 			err = r.client.Get(ctx, key, tc.gc)

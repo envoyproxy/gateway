@@ -317,16 +317,29 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Update finalizer on the gateway class based on the resource tree.
 	if len(resourceTree.Gateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
-
+		if refsEnvoyProxy(acceptedGC) {
+			if err := r.removeEpFinalizer(ctx, resourceTree.EnvoyProxy); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
+					resourceTree.EnvoyProxy.Name))
+				return reconcile.Result{}, err
+			}
+		}
 		// If needed, remove the finalizer from the accepted GatewayClass.
-		if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
+		if err := r.removeGcFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
 				acceptedGC.Name))
 			return reconcile.Result{}, err
 		}
 	} else {
+		if refsEnvoyProxy(acceptedGC) {
+			if err := r.addEpFinalizer(ctx, resourceTree.EnvoyProxy); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed adding finalizer to envoy proxy %s",
+					resourceTree.EnvoyProxy.Name))
+				return reconcile.Result{}, err
+			}
+		}
 		// finalize the accepted GatewayClass.
-		if err := r.addFinalizer(ctx, acceptedGC); err != nil {
+		if err := r.addGcFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
 				acceptedGC.Name))
 			return reconcile.Result{}, err
@@ -957,8 +970,8 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 	return secretReferences
 }
 
-// removeFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
-func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
+// removeGcFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
+func (r *gatewayAPIReconciler) removeGcFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
 	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
 		gc.Finalizers = slice.RemoveString(gc.Finalizers, gatewayClassFinalizer)
@@ -969,13 +982,37 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, gc *gwapiv1b
 	return nil
 }
 
-// addFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
-func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
+// addGcFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
+func (r *gatewayAPIReconciler) addGcFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
 	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
 		base := client.MergeFrom(gc.DeepCopy())
 		gc.Finalizers = append(gc.Finalizers, gatewayClassFinalizer)
 		if err := r.client.Patch(ctx, gc, base); err != nil {
 			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
+		}
+	}
+	return nil
+}
+
+// removeEpFinalizer removes the Envoy Proxy finalizer from the provided ep, if it exists.
+func (r *gatewayAPIReconciler) removeEpFinalizer(ctx context.Context, ep *egcfgv1a1.EnvoyProxy) error {
+	if slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
+		base := client.MergeFrom(ep.DeepCopy())
+		ep.Finalizers = slice.RemoveString(ep.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Patch(ctx, ep, base); err != nil {
+			return fmt.Errorf("failed to remove finalizer from Envoy Proxy %s: %w", ep.Name, err)
+		}
+	}
+	return nil
+}
+
+// addEpFinalizer adds the Envoy Proxy finalizer to the provided ep, if it doesn't exist.
+func (r *gatewayAPIReconciler) addEpFinalizer(ctx context.Context, ep *egcfgv1a1.EnvoyProxy) error {
+	if !slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
+		base := client.MergeFrom(ep.DeepCopy())
+		ep.Finalizers = append(ep.Finalizers, gatewayClassFinalizer)
+		if err := r.client.Patch(ctx, ep, base); err != nil {
+			return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", ep.Name, err)
 		}
 	}
 	return nil
