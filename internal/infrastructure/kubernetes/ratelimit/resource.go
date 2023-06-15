@@ -28,7 +28,7 @@ const (
 	RedisTLS = "REDIS_TLS"
 	// RedisTLSClientCertEnvVar is the redis tls client cert.
 	RedisTLSClientCertEnvVar = "REDIS_TLS_CLIENT_CERT"
-	// RedisTLSClientCertFilename is the reds tls client cert file.
+	// RedisTLSClientCertFilename is the redis tls client cert file.
 	RedisTLSClientCertFilename = "/redis-certs/tls.crt"
 	// RedisTLSClientKeyEnvVar is the redis tls client key.
 	RedisTLSClientKeyEnvVar = "REDIS_TLS_CLIENT_KEY"
