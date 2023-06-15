@@ -136,6 +136,7 @@ func TestDecode(t *testing.T) {
 						Kubernetes: &v1alpha1.EnvoyGatewayKubernetesProvider{
 							RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
 								Replicas: v1alpha1.DefaultKubernetesDeploymentReplicas(),
+								Strategy: v1alpha1.DefaultKubernetesDeploymentStrategy(),
 								Container: &v1alpha1.KubernetesContainerSpec{
 									Env: []corev1.EnvVar{
 										{

@@ -73,6 +73,7 @@ envoyProxy:
               ads: {}
             name: runtime-0
     logging: {}
+    telemetry: {}
   status: {}
 gatewayClass:
   metadata:
@@ -88,7 +89,7 @@ gatewayClass:
       namespace: envoy-gateway-system
   status:
     conditions:
-    - lastTransitionTime: "2023-04-23T13:09:06Z"
+    - lastTransitionTime: "2023-06-14T22:53:49Z"
       message: Valid GatewayClass
       reason: Accepted
       status: "True"
@@ -131,12 +132,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -147,12 +148,12 @@ gateways:
         kind: TCPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -163,12 +164,12 @@ gateways:
         kind: UDPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -179,12 +180,12 @@ gateways:
         kind: TLSRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -195,12 +196,12 @@ gateways:
         kind: HTTPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -234,12 +235,12 @@ grpcRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -272,12 +273,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -304,12 +305,12 @@ tcpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -337,12 +338,12 @@ tlsRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -370,12 +371,12 @@ udpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-04-23T13:09:06Z"
+      - lastTransitionTime: "2023-06-14T22:53:49Z"
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -466,7 +467,7 @@ xds:
             - endpoint:
                 address:
                   socketAddress:
-                    address: 127.0.0.1
+                    address: 1.1.1.1
                     portValue: 8000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
@@ -479,7 +480,7 @@ xds:
             - endpoint:
                 address:
                   socketAddress:
-                    address: 127.0.0.1
+                    address: 1.1.1.1
                     portValue: 9000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
@@ -530,10 +531,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-backend-rule-0-match-0-www.example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-backend-rule-0-match-0-www.example.com
           name: default-backend-rule-0-match-0-www.example.com
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -545,10 +546,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
           name: default-backend-rule-0-match-0-www.grpc-example.com
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -565,10 +566,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-eg-tls-passthrough-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-eg-tls-passthrough-backend
           name: default-eg-tls-passthrough-backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -580,10 +581,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-eg-tcp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-eg-tcp-backend
           name: default-eg-tcp-backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -595,10 +596,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-eg-udp-backend 
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-eg-udp-backend
           name: default-eg-udp-backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -641,10 +642,17 @@ xds:
                       path: /dev/stdout
                   commonHttpProtocolOptions:
                     headersWithUnderscoresAction: REJECT_REQUEST
+                  http2ProtocolOptions:
+                    initialConnectionWindowSize: 1048576
+                    initialStreamWindowSize: 65536
+                    maxConcurrentStreams: 100
                   httpFilters:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  mergeSlashes: true
+                  normalizePath: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                   rds:
                     configSource:
                       ads: {}
@@ -654,9 +662,6 @@ xds:
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
-                  normalizePath: true
-                  mergeSlashes: true
-                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
             name: default-eg-http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -712,6 +717,9 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  mergeSlashes: true
+                  normalizePath: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                   rds:
                     configSource:
                       ads: {}
@@ -719,9 +727,6 @@ xds:
                     routeConfigName: default-eg-grpc
                   statPrefix: http
                   useRemoteAddress: true
-                  normalizePath: true
-                  mergeSlashes: true
-                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
             name: default-eg-grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -886,4 +891,3 @@ xds:
               name: default-backend-rule-0-match-0-www.grpc-example.com
               route:
                 cluster: default-backend-rule-0-match-0-www.grpc-example.com
-
