@@ -23,8 +23,10 @@ xds:
             transportApiVersion: V3
           cdsConfig:
             ads: {}
+            resourceApiVersion: V3
           ldsConfig:
             ads: {}
+            resourceApiVersion: V3
         layeredRuntime:
           layers:
           - name: runtime-0
@@ -32,6 +34,7 @@ xds:
               name: runtime-0
               rtdsConfig:
                 ads: {}
+                resourceApiVersion: V3
         staticResources:
           clusters:
           - connectTimeout: 10s

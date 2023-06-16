@@ -36,10 +36,12 @@
                 "transportApiVersion": "V3"
               },
               "cdsConfig": {
-                "ads": {}
+                "ads": {},
+                "resourceApiVersion": "V3"
               },
               "ldsConfig": {
-                "ads": {}
+                "ads": {},
+                "resourceApiVersion": "V3"
               }
             },
             "layeredRuntime": {
@@ -49,7 +51,8 @@
                   "rtdsLayer": {
                     "name": "runtime-0",
                     "rtdsConfig": {
-                      "ads": {}
+                      "ads": {},
+                      "resourceApiVersion": "V3"
                     }
                   }
                 }
