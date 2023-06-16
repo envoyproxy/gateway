@@ -54,8 +54,7 @@ type KubernetesDeploymentSpec struct {
 
 	// The deployment strategy to use to replace existing pods with new ones.
 	// +optional
-	// +patchStrategy=retainKeys
-	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty" patchStrategy:"retainKeys"`
+	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired annotations and securityContext of container.
 	//
