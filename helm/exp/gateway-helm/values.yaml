@@ -3,7 +3,7 @@ deployment:
     imagePullSecret: artifactory-reader
     image:
       repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
-      tag: latest
+      tag: b25b21e@sha256:9eb95d081296c1dfb72b5e172ad9682885781fe1edc6400430001cc66f5e0f49
     imagePullPolicy: Always
     resources:
       limits:
