@@ -20,6 +20,7 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, RateLimitTest)
+	ConformanceTests = append(ConformanceTests, RateLimitBasedJwtClaimsTest)
 }
 
 var RateLimitTest = suite.ConformanceTest{
@@ -65,6 +66,99 @@ var RateLimitTest = suite.ConformanceTest{
 				t.Errorf("fail to get expected response at first three request: %v", err)
 			}
 			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, expectLimitReq, expectLimitResp); err != nil {
+				t.Errorf("fail to get expected response at last fourth request: %v", err)
+			}
+		})
+	},
+}
+
+var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
+	ShortName:   "RateLimitBasedJwtClaims",
+	Description: "Limit based jwt claims",
+	Manifests:   []string{"testdata/ratelimit-based-jwt-claims.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
+		t.Run("ratelimit based on jwt claims", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-ratelimit-based-jwt-claims", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/foo",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			expectLimitResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/foo",
+				},
+				Response: http.Response{
+					StatusCode: 429,
+				},
+				Namespace: ns,
+			}
+
+			// Just to construct the request that carries a jwt token that can be limited
+			TokenHeader := make(map[string]string)
+			JwtOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    "/foo",
+					Headers: TokenHeader,
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			JwtOkResp.Request.Headers["Authorization"] = "Bearer " + "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.NHVaYe26MbtOYhSKkoKYdFVomg4i8ZJd8_-RU8VNbftc4TSMb4bXP3l3YlNWACwyXPGffz5aXHc6lty1Y2t4SWRqGteragsVdZufDn5BlnJl9pdR_kdVFUsra2rWKEofkZeIC4yWytE58sMIihvo9H1ScmmVwBcQP6XETqYd0aSHp1gOa9RdUPDvoXQ5oqygTqVtxaDr6wUFKrKItgBMzWIdNZ6y7O9E0DhEPTbE9rfBo6KTFsHAZnMg4k68CDp2woYIaXbmYTWcvbzIuHO7_37GT79XdIwkm95QJ7hYC9RiwrV7mesbY4PAahERJawntho0my942XheVLmGwLMBkQ"
+
+			JwtReq := http.MakeRequest(t, &JwtOkResp, gwAddr, "HTTP", "http")
+
+			// Just to construct the request that carries a jwt token that can not be limited
+			DifTokenHeader := make(map[string]string)
+			difJwtOkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path:    "/foo",
+					Headers: DifTokenHeader,
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			difJwtOkResp.Request.Headers["Authorization"] = "Bearer " + "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlRvbSIsImFkbWluIjp0cnVlLCJpYXQiOjE1MTYyMzkwMjJ9.kyzDDSo7XpweSPU1lxoI9IHzhTBrRNlnmcW9lmCbloZELShg-8isBx4AFoM4unXZTHpS_Y24y0gmd4nDQxgUE-CgjVSnGCb0Xhy3WO1gm9iChoKDyyQ3kHp98EmKxTyxKG2X9GyKcDFNBDjH12OBD7TcJUaBEvLf6Jw1SG2A7FakUPWeK04DQ916-ROylzI6qKyaZ0OpfYIbijvyAQxlQRxxs2XHlAkLdJhfVcUqJBwsFTbwHYARC-WNgd2_etAk1GWdwwZ_NoTmRzZAMryrYJpHY9KPlbnZ93Ye3o9h2viBQ_XRb7JBkWnAGYO4_KswpJWE_7ROUVj8iOJo2jfY6w"
+
+			difJwtReq := http.MakeRequest(t, &difJwtOkResp, gwAddr, "HTTP", "http")
+
+			// make sure the gateway is available
+			OkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/bar",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			// keep sending requests till get 200 first to make sure the gateway is available
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+
+			// Carrying different jwt claims will not be limited
+			if err := GotExactNExpectedResponse(t, 4, suite.RoundTripper, difJwtReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at first four request: %v", err)
+			}
+
+			// should just send exactly 4 requests, and expect 429
+			if err := GotExactNExpectedResponse(t, 3, suite.RoundTripper, JwtReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at three request: %v", err)
+			}
+			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, JwtReq, expectLimitResp); err != nil {
 				t.Errorf("fail to get expected response at last fourth request: %v", err)
 			}
 		})
