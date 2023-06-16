@@ -68,7 +68,7 @@ var AccessLogTest = suite.ConformanceTest{
 						Namespace: ns,
 					})
 
-					if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
+					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
 						}, map[string]string{
@@ -104,7 +104,7 @@ var AccessLogTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true,
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
 					// query log count from loki
 					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
@@ -127,7 +127,7 @@ var AccessLogTest = suite.ConformanceTest{
 						Namespace: ns,
 					})
 
-					if err := wait.PollUntilContextTimeout(ctx, time.Second, time.Minute, true, func(_ context.Context) (bool, error) {
+					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 10*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
 						}, map[string]string{
