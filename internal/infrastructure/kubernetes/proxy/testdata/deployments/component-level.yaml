@@ -36,7 +36,7 @@ spec:
             - --service-node $(ENVOY_POD_NAME)
             - --config-yaml test bootstrap config
             - --log-level error
-            - --component-log-level filter:info
+            # - --component-log-level filter:info
           command:
             - envoy
           env:

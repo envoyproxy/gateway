@@ -6,9 +6,13 @@
 package egctl
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
+	"flag"
 	"fmt"
+
 	"io"
 	"os"
 	"path/filepath"
@@ -21,6 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+)
+
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 func TestTranslate(t *testing.T) {
@@ -182,6 +190,8 @@ func TestTranslate(t *testing.T) {
 		},
 	}
 
+	flag.Parse()
+
 	for _, tc := range testCases {
 		tc := tc
 
@@ -237,12 +247,19 @@ func TestTranslate(t *testing.T) {
 			got := &TranslationResult{}
 			mustUnmarshal(t, out, got)
 			var fn string
+
 			if tc.output == jsonOutput {
 				fn = tc.name + "." + resourceType + ".json"
+				out, err = json.MarshalIndent(got, "", "  ")
+				require.NoError(t, err)
 			} else {
 				fn = tc.name + "." + resourceType + ".yaml"
+				out, err = yaml.Marshal(got)
+				require.NoError(t, err)
 			}
-
+			if *overrideTestData {
+				overrideTestDataOutFile(t, string(out), fn)
+			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
@@ -258,6 +275,18 @@ func requireTestDataOutFile(t *testing.T, name ...string) []byte {
 	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return content
+}
+
+func overrideTestDataOutFile(t *testing.T, data string, name ...string) {
+	t.Helper()
+	elems := append([]string{"testdata", "translate", "out"}, name...)
+	file, err := os.OpenFile(filepath.Join(elems...), os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	defer file.Close()
+	write := bufio.NewWriter(file)
+	_, err = write.WriteString(data)
+	require.NoError(t, err)
+	write.Flush()
 }
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {

@@ -1,4 +1,5 @@
-- name: extension-listener
+- ignorePortInHostMatching: true
+  name: extension-listener
   responseHeadersToAdd:
   - append: false
     header:

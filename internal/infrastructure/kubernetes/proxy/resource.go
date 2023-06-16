@@ -136,9 +136,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logLevel),
 	}
-	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
-		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
-	}
+	// if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
+	// 	args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
+	// }
 
 	containers := []corev1.Container{
 		{

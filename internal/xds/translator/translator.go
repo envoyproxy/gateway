@@ -101,12 +101,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		// Create a route config if we have not found one yet
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
-				Name: httpListener.Name,
-				// response_headers_to_add:
-				// 	- append: false
-				// 		header:
-				// 		key: x-request-id
-				// 		value: "%REQ(X-REQUEST-ID)%"
 				ResponseHeadersToAdd: []*corev3.HeaderValueOption{
 					{
 						Header: &corev3.HeaderValue{
@@ -118,6 +112,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 						},
 					},
 				},
+				IgnorePortInHostMatching: true,
+				Name:                     httpListener.Name,
 			}
 			tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg)
 		}

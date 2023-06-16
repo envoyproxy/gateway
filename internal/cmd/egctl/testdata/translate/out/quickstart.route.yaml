@@ -4,6 +4,7 @@ xds:
     dynamicRouteConfigs:
     - routeConfig:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
         name: envoy-gateway-system-eg-http
         responseHeadersToAdd:
         - header:
@@ -24,3 +25,4 @@ xds:
             name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
             route:
               cluster: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+

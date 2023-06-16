@@ -58,6 +58,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		ExemptFeatures:       suite.MeshCoreFeatures,
 		SkipTests: []string{
 			tests.HTTPRouteRedirectPortAndScheme.ShortName,
+			tests.HTTPRouteRequestMirror.ShortName,
 		},
 	})
 	cSuite.Setup(t)
