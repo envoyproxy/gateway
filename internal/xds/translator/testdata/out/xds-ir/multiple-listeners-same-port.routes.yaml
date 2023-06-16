@@ -1,4 +1,5 @@
-- name: first-listener
+- ignorePortInHostMatching: true
+  name: first-listener
   virtualHosts:
   - domains:
     - foo.com
@@ -9,7 +10,8 @@
       name: first-route
       route:
         cluster: first-route
-- name: second-listener
+- ignorePortInHostMatching: true
+  name: second-listener
   virtualHosts:
   - domains:
     - foo.net
@@ -20,7 +22,8 @@
       name: second-route
       route:
         cluster: second-route
-- name: third-listener
+- ignorePortInHostMatching: true
+  name: third-listener
   virtualHosts:
   - domains:
     - example.com
