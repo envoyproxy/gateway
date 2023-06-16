@@ -48,9 +48,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT" and "OIDC". |
+| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT". |
 | `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
-| `oidcProvider` _[OIDCAuthenticationFilterProvider](#oidcauthenticationfilterprovider)_ | OIDCProvider defines the OpenID Connect (OIDC) authentication provider type. |
 
 
 ## AuthenticationFilterType
@@ -373,6 +372,7 @@ _Appears in:_
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## PrintOptions
 =======
 ## OIDCAuthenticationFilterProvider
@@ -420,6 +420,8 @@ _Appears in:_
 >>>>>>> 5727533 (api: oidc authentication filter type (#1513))
 
 
+=======
+>>>>>>> 64d48a9 (Revert "api: oidc authentication filter type (#1513)" (#1535))
 ## RateLimitFilter
 
 
