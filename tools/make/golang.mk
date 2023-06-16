@@ -39,9 +39,16 @@ go.build: $(addprefix go.build., $(addprefix $(PLATFORM)., $(BINS)))
 .PHONY: go.build.multiarch
 go.build.multiarch: $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix $(p)., $(BINS))))
 
+
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
 	go test ./...
+
+.PHONY: go.testdata.complete
+go.testdata.complete: ## Override test ouputdata
+	go test -timeout 30s -run ^TestTranslateXds github.com/envoyproxy/gateway/internal/xds/translator --override-testdata=true
+	go test -timeout 30s -run ^TestTranslate github.com/envoyproxy/gateway/internal/cmd/egctl --override-testdata=true
+
 
 .PHONY: go.test.coverage
 go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in GitHub Actions
@@ -93,3 +100,7 @@ format: go.mod.lint
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
 clean: go.clean
+
+.PHONY: testdata
+testdata: ## Override the testdata with new configurations.
+testdata: go.testdata.complete

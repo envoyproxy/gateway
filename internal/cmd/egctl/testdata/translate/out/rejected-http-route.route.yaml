@@ -7,7 +7,7 @@ gatewayClass:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
   status:
     conditions:
-    - lastTransitionTime: "2023-04-11T20:16:24Z"
+    - lastTransitionTime: "2023-06-16T03:19:39Z"
       message: Valid GatewayClass
       reason: Accepted
       status: "True"
@@ -27,7 +27,7 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2023-04-11T20:16:24Z"
+      - lastTransitionTime: "2023-06-16T03:19:39Z"
         message: Listener must have TLS set when protocol is TLS.
         reason: Invalid
         status: "False"
@@ -60,12 +60,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-04-11T20:16:24Z"
+      - lastTransitionTime: "2023-06-16T03:19:39Z"
         message: There are no ready listeners for this parent ref
         reason: NoReadyListeners
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2023-04-11T20:16:24Z"
+      - lastTransitionTime: "2023-06-16T03:19:39Z"
         message: Service envoy-gateway-system/backend not found
         reason: BackendNotFound
         status: "False"
@@ -73,3 +73,4 @@ httpRoutes:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: eg
+

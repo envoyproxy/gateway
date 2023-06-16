@@ -9,10 +9,10 @@ xds:
         connectTimeout: 10s
         dnsLookupFamily: V4_ONLY
         edsClusterConfig:
-          serviceName: default-backend-rule-0-match-0-www.example.com 
           edsConfig:
             ads: {}
             resourceApiVersion: V3
+          serviceName: default-backend-rule-0-match-0-www.example.com
         name: default-backend-rule-0-match-0-www.example.com
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
@@ -24,10 +24,10 @@ xds:
         connectTimeout: 10s
         dnsLookupFamily: V4_ONLY
         edsClusterConfig:
-          serviceName: default-backend-rule-0-match-0-www.grpc-example.com
           edsConfig:
             ads: {}
             resourceApiVersion: V3
+          serviceName: default-backend-rule-0-match-0-www.grpc-example.com
         name: default-backend-rule-0-match-0-www.grpc-example.com
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
@@ -44,10 +44,10 @@ xds:
         connectTimeout: 10s
         dnsLookupFamily: V4_ONLY
         edsClusterConfig:
-          serviceName: default-eg-tls-passthrough-backend
           edsConfig:
             ads: {}
             resourceApiVersion: V3
+          serviceName: default-eg-tls-passthrough-backend
         name: default-eg-tls-passthrough-backend
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
@@ -59,10 +59,10 @@ xds:
         connectTimeout: 10s
         dnsLookupFamily: V4_ONLY
         edsClusterConfig:
-          serviceName: default-eg-tcp-backend
           edsConfig:
             ads: {}
             resourceApiVersion: V3
+          serviceName: default-eg-tcp-backend
         name: default-eg-tcp-backend
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
@@ -74,11 +74,12 @@ xds:
         connectTimeout: 10s
         dnsLookupFamily: V4_ONLY
         edsClusterConfig:
-          serviceName: default-eg-udp-backend
           edsConfig:
             ads: {}
             resourceApiVersion: V3
+          serviceName: default-eg-udp-backend
         name: default-eg-udp-backend
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
+
