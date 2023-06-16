@@ -144,10 +144,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-backend-rule-0-match-0-www.example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-backend-rule-0-match-0-www.example.com
           name: default-backend-rule-0-match-0-www.example.com
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -159,10 +159,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
           name: default-backend-rule-0-match-0-www.grpc-example.com
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -179,10 +179,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-eg-tls-passthrough-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-eg-tls-passthrough-backend
           name: default-eg-tls-passthrough-backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -194,10 +194,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-eg-tcp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-eg-tcp-backend
           name: default-eg-tcp-backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -209,10 +209,10 @@ xds:
           connectTimeout: 10s
           dnsLookupFamily: V4_ONLY
           edsClusterConfig:
-            serviceName: default-eg-udp-backend
             edsConfig:
               ads: {}
               resourceApiVersion: V3
+            serviceName: default-eg-udp-backend
           name: default-eg-udp-backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
@@ -255,6 +255,10 @@ xds:
                       path: /dev/stdout
                   commonHttpProtocolOptions:
                     headersWithUnderscoresAction: REJECT_REQUEST
+                  http2ProtocolOptions:
+                    initialConnectionWindowSize: 1048576
+                    initialStreamWindowSize: 65536
+                    maxConcurrentStreams: 100
                   httpFilters:
                   - name: envoy.filters.http.health_check
                     typedConfig:
@@ -267,6 +271,9 @@ xds:
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  mergeSlashes: true
+                  normalizePath: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                   rds:
                     configSource:
                       ads: {}
@@ -276,9 +283,6 @@ xds:
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
-                  normalizePath: true
-                  mergeSlashes: true
-                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
             name: default-eg-http
             perConnectionBufferLimitBytes: 32768
       - activeState:
@@ -320,7 +324,7 @@ xds:
                   http2ProtocolOptions:
                     initialConnectionWindowSize: 1048576
                     initialStreamWindowSize: 65536
-                    maxConcurrentStreams: 100    
+                    maxConcurrentStreams: 100
                   httpFilters:
                   - name: envoy.filters.http.health_check
                     typedConfig:
@@ -337,7 +341,9 @@ xds:
                       statsForAllMethods: true
                   - name: envoy.filters.http.router
                     typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router   
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  mergeSlashes: true
+                  normalizePath: true
                   pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
                   rds:
                     configSource:
@@ -346,8 +352,6 @@ xds:
                     routeConfigName: default-eg-grpc
                   statPrefix: http
                   useRemoteAddress: true
-                  normalizePath: true
-                  mergeSlashes: true
             name: default-eg-grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:

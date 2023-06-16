@@ -103,6 +103,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 				RouteConfigName: irListener.Name,
 			},
 		},
+		// Add HTTP2 protocol options
+		// Set it by default to also support HTTP1.1 to HTTP2 Upgrades
+		Http2ProtocolOptions: http2ProtocolOptions(),
 		// https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/headers#x-forwarded-for
 		UseRemoteAddress: &wrappers.BoolValue{Value: true},
 		// normalize paths according to RFC 3986
@@ -401,6 +404,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
 	tlsCtx := &tlsv3.DownstreamTlsContext{
 		CommonTlsContext: &tlsv3.CommonTlsContext{
+			AlpnProtocols:                  []string{"h2", "http/1.1"},
 			TlsCertificateSdsSecretConfigs: []*tlsv3.SdsSecretConfig{},
 		},
 	}

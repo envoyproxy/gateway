@@ -9,6 +9,10 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.health_check
           typedConfig:
@@ -42,6 +46,10 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.health_check
           typedConfig:
@@ -70,6 +78,9 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
           tlsCertificateSdsSecretConfigs:
           - name: first-listener
             sdsConfig:
@@ -84,6 +95,10 @@
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.health_check
           typedConfig:
@@ -112,6 +127,9 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
         commonTlsContext:
+          alpnProtocols:
+          - h2
+          - http/1.1
           tlsCertificateSdsSecretConfigs:
           - name: second-listener
             sdsConfig:
