@@ -372,13 +372,6 @@ _Appears in:_
 | `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-## PrintOptions
-=======
-=======
->>>>>>> 5727533 (api: oidc authentication filter type (#1513))
 ## OIDCAuthenticationFilterProvider
 
 
@@ -396,29 +389,12 @@ _Appears in:_
 
 
 ## OIDCProvider
-<<<<<<< HEAD
->>>>>>> 5727533 (api: oidc authentication filter type (#1513))
-=======
->>>>>>> 5727533 (api: oidc authentication filter type (#1513))
 
 
 
 
 
 _Appears in:_
-<<<<<<< HEAD
-<<<<<<< HEAD
-- [GrpcJSONTranscoderFilterSpec](#grpcjsontranscoderfilterspec)
-
-| Field | Description |
-| --- | --- |
-| `add_whitespace` _boolean_ | AddWhitespace is a flag that indicates whether the filter should add whitespace to the JSON response. |
-| `always_print_primitive_fields` _boolean_ | AlwaysPrintPrimitiveFields is a flag that indicates whether the filter should always print primitive fields in the JSON response. |
-| `always_print_enums_as_ints` _boolean_ | AlwaysPrintEnumsAsInts is a flag that indicates whether the filter should always print enums as ints in the JSON response. |
-| `preserve_proto_field_names` _boolean_ | PreserveProtoFieldNames is a flag that indicates whether the filter should preserve proto field names in the JSON response. |
-=======
-=======
->>>>>>> 5727533 (api: oidc authentication filter type (#1513))
 - [OIDCAuthenticationFilterProvider](#oidcauthenticationfilterprovider)
 
 | Field | Description |
@@ -427,16 +403,25 @@ _Appears in:_
 | `authorizationEndpoint` _string_ | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `tokenEndpoint` _string_ | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 | `jwks` _string_ | The JSON JWKS response from the OIDC provider’s `jwks_uri` URI which can be found in the OIDC provider's [configuration response](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). Note that this JSON value must be escaped when embedded in a json configmap (see [example](https://github.com/istio-ecosystem/authservice/blob/master/bookinfo-example/config/authservice-configmap-template.yaml)). Used during token verification. If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
-<<<<<<< HEAD
->>>>>>> 5727533 (api: oidc authentication filter type (#1513))
 
 
-=======
->>>>>>> 64d48a9 (Revert "api: oidc authentication filter type (#1513)" (#1535))
-=======
+## PrintOptions
 
 
->>>>>>> 5727533 (api: oidc authentication filter type (#1513))
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilterSpec](#grpcjsontranscoderfilterspec)
+
+| Field | Description |
+| --- | --- |
+| `add_whitespace` _boolean_ | AddWhitespace is a flag that indicates whether the filter should add whitespace to the JSON response. |
+| `always_print_primitive_fields` _boolean_ | AlwaysPrintPrimitiveFields is a flag that indicates whether the filter should always print primitive fields in the JSON response. |
+| `always_print_enums_as_ints` _boolean_ | AlwaysPrintEnumsAsInts is a flag that indicates whether the filter should always print enums as ints in the JSON response. |
+| `preserve_proto_field_names` _boolean_ | PreserveProtoFieldNames is a flag that indicates whether the filter should preserve proto field names in the JSON response. |
+
+
 ## RateLimitFilter
 
 
