@@ -14,3 +14,8 @@ data:
     kind: EnvoyGateway
     provider:
       type: {{ .Values.config.envoyGateway.provider.type | quote }}
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: redis.redis-system.svc.cluster.local:6379
