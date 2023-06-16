@@ -29,11 +29,11 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, AccessLogTest)
+	ConformanceTests = append(ConformanceTests, FileAccessLogTest, OpenTelemetryTest)
 }
 
-var AccessLogTest = suite.ConformanceTest{
-	ShortName:   "AccessLog",
+var FileAccessLogTest = suite.ConformanceTest{
+	ShortName:   "FileAccessLog",
 	Description: "Make sure file access log is working",
 	Manifests:   []string{"testdata/accesslog.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
@@ -42,6 +42,41 @@ var AccessLogTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-infra-backend-v1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			})
+
+			// let's wait for the log to be sent to stdout
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					// query log count from loki
+					count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
+						Namespace: "envoy-gateway-system",
+					}, map[string]string{
+						"namespace": "envoy-gateway-system",
+						"job":       "fluentbit",
+						"container": "envoy",
+					})
+					if err != nil {
+						t.Logf("failed to get log count from loki: %v", err)
+						return false, nil
+					}
+
+					if count > 0 {
+						return true, nil
+					}
+					return false, nil
+				}); err != nil {
+				t.Errorf("failed to wait log flush to loki: %v", err)
+			}
 
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
@@ -68,6 +103,8 @@ var AccessLogTest = suite.ConformanceTest{
 						Namespace: ns,
 					})
 
+					// it will take some time for fluent-bit to collect the log and send to loki
+					// let's wait for a while
 					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
@@ -98,6 +135,14 @@ var AccessLogTest = suite.ConformanceTest{
 			}
 		})
 
+	},
+}
+
+var OpenTelemetryTest = suite.ConformanceTest{
+	ShortName:   "OpenTelemetryAccessLog",
+	Description: "Make sure OpenTelemetry access log is working",
+	Manifests:   []string{"testdata/accesslog.yaml"},
+	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("OTel", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-infra-backend-v1", Namespace: ns}
