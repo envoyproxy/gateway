@@ -210,7 +210,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 grpcRoutes:
-- metadata:
+- kind: GRPCRoute
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: default
@@ -249,7 +250,8 @@ grpcRoutes:
         name: eg
         sectionName: grpc
 httpRoutes:
-- metadata:
+- kind: HTTPRoute
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: default
@@ -286,7 +288,8 @@ httpRoutes:
       parentRef:
         name: eg
 tcpRoutes:
-- metadata:
+- kind: TCPRoute
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: default
@@ -319,7 +322,8 @@ tcpRoutes:
         name: eg
         sectionName: tcp
 tlsRoutes:
-- metadata:
+- kind: TLSRoute
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: default
@@ -352,7 +356,8 @@ tlsRoutes:
         name: eg
         sectionName: tls-passthrough
 udpRoutes:
-- metadata:
+- kind: UDPRoute
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: default

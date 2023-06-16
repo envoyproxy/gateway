@@ -214,27 +214,22 @@ type TCPRouteContext struct {
 
 // GetRouteType returns the Kind of the Route object, HTTPRoute,
 // TLSRoute, TCPRoute, UDPRoute etc.
-//
-// This function use the typename of RouteContext and its return is
-// corresponding to the const defined in translator, like KindHTTPRoute,
-// KindGRPCRoute, KindTLSRoute, KindTCPRoute, KindUDPRoute
 func GetRouteType(route RouteContext) v1beta1.Kind {
-	rv := reflect.ValueOf(route)
-	rt := rv.Type().String()
-	return v1beta1.Kind(strings.TrimSuffix(rt, "Context")[strings.LastIndex(rt, ".")+1:])
+	rv := reflect.ValueOf(route).Elem()
+	return v1beta1.Kind(rv.FieldByName("Kind").String())
 }
 
 // TODO: [v1alpha2-v1beta1] This should not be required once all Route
 // objects being implemented are of type v1beta1.
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
-	rv := reflect.ValueOf(route)
-	rt := rv.Type().String()
+	rv := reflect.ValueOf(route).Elem()
+	rt := rv.FieldByName("Kind").String()
 	if strings.Contains(rt, "TCP") || strings.Contains(rt, "UDP") {
 		return nil
 	}
 
-	h := rv.Elem().FieldByName("Spec").FieldByName("Hostnames")
+	h := rv.FieldByName("Spec").FieldByName("Hostnames")
 	hostnames := make([]string, h.Len())
 	for i := 0; i < len(hostnames); i++ {
 		hostnames[i] = h.Index(i).String()
@@ -246,9 +241,9 @@ func GetHostnames(route RouteContext) []string {
 // objects being implemented are of type v1beta1.
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []v1beta1.ParentReference {
-	rv := reflect.ValueOf(route)
-	rt := rv.Type().String()
-	pr := rv.Elem().FieldByName("Spec").FieldByName("ParentRefs")
+	rv := reflect.ValueOf(route).Elem()
+	rt := rv.FieldByName("Kind").String()
+	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
 	if strings.Contains(rt, "HTTP") || strings.Contains(rt, "GRPC") {
 		return pr.Interface().([]v1beta1.ParentReference)
 	}
