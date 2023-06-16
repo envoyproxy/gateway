@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,58 +29,137 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, FileAccessLogTest)
+	ConformanceTests = append(ConformanceTests, AccessLogTest)
 }
 
-var FileAccessLogTest = suite.ConformanceTest{
-	ShortName:   "FileAccessLog",
+var AccessLogTest = suite.ConformanceTest{
+	ShortName:   "AccessLog",
 	Description: "Make sure file access log is working",
 	Manifests:   []string{"testdata/accesslog.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("default", func(t *testing.T) {
+		t.Run("Stdout", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
 			routeNN := types.NamespacedName{Name: "http-infra-backend-v1", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
-			expectOkResp := httputils.ExpectedResponse{
-				Request: httputils.Request{
-					Path: "/",
-				},
-				Response: httputils.Response{
-					StatusCode: 200,
-				},
-				Namespace: ns,
-			}
-			_ = httputils.MakeRequest(t, &expectOkResp, gwAddr, "HTTP", "http")
-
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
-				func(_ context.Context) (bool, error) {
+				func(ctx context.Context) (bool, error) {
 					// query log count from loki
-					count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
+					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
+					}, map[string]string{
+						"namespace": "envoy-gateway-system",
+						"job":       "fluentbit",
+						"container": "envoy",
 					})
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
 					}
 
-					if count != 1 {
-						return true, nil
+					httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+						Request: httputils.Request{
+							Path: "/",
+						},
+						Response: httputils.Response{
+							StatusCode: 200,
+						},
+						Namespace: ns,
+					})
+
+					if err := wait.PollUntilContextTimeout(ctx, time.Second, 10*time.Second, true, func(_ context.Context) (bool, error) {
+						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
+							Namespace: "envoy-gateway-system",
+						}, map[string]string{
+							"namespace": "envoy-gateway-system",
+							"job":       "fluentbit",
+							"container": "envoy",
+						})
+						if err != nil {
+							t.Logf("failed to get log count from loki: %v", err)
+							return false, nil
+						}
+
+						delta := count - preCount
+						if delta == 1 {
+							return true, nil
+						}
+
+						t.Logf("preCount=%d, count=%d", preCount, count)
+						return false, nil
+					}); err != nil {
+						return false, nil
 					}
 
-					return false, nil
+					return true, nil
 				}); err != nil {
 				t.Errorf("failed to get log count from loki: %v", err)
 			}
+		})
 
+		t.Run("OTel", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "http-infra-backend-v1", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			if err := wait.PollUntilContextTimeout(context.TODO(), 3*time.Second, time.Minute, true,
+				func(ctx context.Context) (bool, error) {
+					// query log count from loki
+					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
+						Namespace: "envoy-gateway-system",
+					}, map[string]string{
+						"exporter": "OTLP",
+					})
+					if err != nil {
+						t.Logf("failed to get log count from loki: %v", err)
+						return false, nil
+					}
+
+					httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+						Request: httputils.Request{
+							Path: "/",
+						},
+						Response: httputils.Response{
+							StatusCode: 200,
+						},
+						Namespace: ns,
+					})
+
+					if err := wait.PollUntilContextTimeout(ctx, time.Second, time.Minute, true, func(_ context.Context) (bool, error) {
+						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
+							Namespace: "envoy-gateway-system",
+						}, map[string]string{
+							"exporter": "OTLP",
+						})
+						if err != nil {
+							t.Logf("failed to get log count from loki: %v", err)
+							return false, nil
+						}
+
+						delta := count - preCount
+						if delta == 1 {
+							return true, nil
+						}
+
+						t.Logf("preCount=%d, count=%d", preCount, count)
+						return false, nil
+					}); err != nil {
+						return false, nil
+					}
+
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to get log count from loki: %v", err)
+			}
 		})
 	},
 }
 
 // QueryLogCountFromLoki queries log count from loki
 // TODO: move to utils package if needed
-func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedName) (int, error) {
+func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedName, keyValues map[string]string) (int, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Namespace: "monitoring",
@@ -95,15 +175,21 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedNam
 		}
 	}
 
-	q := fmt.Sprintf("{namespace=\"%s\",container=\"%s\"}", nn.Namespace, "envoy}")
+	qParams := make([]string, 0, len(keyValues))
+	for k, v := range keyValues {
+		qParams = append(qParams, fmt.Sprintf("%s=\"%s\"", k, v))
+	}
+
+	q := "{" + strings.Join(qParams, ",") + "}"
 	params := url.Values{}
 	params.Add("query", q)
+	params.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query logs from last 10 minutes
 	lokiQueryURL := fmt.Sprintf("http://%s:3100/loki/api/v1/query_range?%s", lokiHost, params.Encode())
 	res, err := http.DefaultClient.Get(lokiQueryURL)
 	if err != nil {
 		return -1, err
 	}
-	t.Logf("get response from loki: %v", res)
+	t.Logf("get response from loki, query=%s, status=%s", q, res.Status)
 
 	b, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -118,7 +204,13 @@ func QueryLogCountFromLoki(t *testing.T, c client.Client, nn types.NamespacedNam
 	if len(lokiResponse.Data.Result) == 0 {
 		return 0, nil
 	}
-	return len(lokiResponse.Data.Result[0].Values), nil
+
+	total := 0
+	for _, res := range lokiResponse.Data.Result {
+		total += len(res.Values)
+	}
+	t.Logf("get response from loki, query=%s, total=%d", q, total)
+	return total, nil
 }
 
 type LokiQueryResponse struct {
