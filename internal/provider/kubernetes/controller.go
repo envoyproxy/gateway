@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -38,7 +39,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 	"github.com/envoyproxy/gateway/internal/status"
-	"github.com/envoyproxy/gateway/internal/utils/slice"
 )
 
 const (
@@ -167,7 +167,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			// The gatewayclass was marked for deletion and the finalizer removed,
 			// so clean-up dependents.
 			if !gwClass.DeletionTimestamp.IsZero() &&
-				!slice.ContainsString(gwClass.Finalizers, gatewayClassFinalizer) {
+				!controllerutil.ContainsFinalizer(&gwClass, gatewayClassFinalizer) {
 				r.log.Info("gatewayclass marked for deletion")
 				cc.removeMatch(&gwClass)
 
@@ -318,28 +318,28 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if len(resourceTree.Gateways) == 0 {
 		r.log.Info("No gateways found for accepted gatewayclass")
 		if refsEnvoyProxy(acceptedGC) {
-			if err := r.removeEpFinalizer(ctx, resourceTree.EnvoyProxy); err != nil {
+			if err := r.removeFinalizer(ctx, resourceTree.EnvoyProxy); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
 					resourceTree.EnvoyProxy.Name))
 				return reconcile.Result{}, err
 			}
 		}
 		// If needed, remove the finalizer from the accepted GatewayClass.
-		if err := r.removeGcFinalizer(ctx, acceptedGC); err != nil {
+		if err := r.removeFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed to remove finalizer from gatewayclass %s",
 				acceptedGC.Name))
 			return reconcile.Result{}, err
 		}
 	} else {
 		if refsEnvoyProxy(acceptedGC) {
-			if err := r.addEpFinalizer(ctx, resourceTree.EnvoyProxy); err != nil {
+			if err := r.addFinalizer(ctx, resourceTree.EnvoyProxy); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed adding finalizer to envoy proxy %s",
 					resourceTree.EnvoyProxy.Name))
 				return reconcile.Result{}, err
 			}
 		}
 		// finalize the accepted GatewayClass.
-		if err := r.addGcFinalizer(ctx, acceptedGC); err != nil {
+		if err := r.addFinalizer(ctx, acceptedGC); err != nil {
 			r.log.Error(err, fmt.Sprintf("failed adding finalizer to gatewayclass %s",
 				acceptedGC.Name))
 			return reconcile.Result{}, err
@@ -970,51 +970,55 @@ func secretGatewayIndexFunc(rawObj client.Object) []string {
 	return secretReferences
 }
 
-// removeGcFinalizer removes the gatewayclass finalizer from the provided gc, if it exists.
-func (r *gatewayAPIReconciler) removeGcFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
-	if slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
-		base := client.MergeFrom(gc.DeepCopy())
-		gc.Finalizers = slice.RemoveString(gc.Finalizers, gatewayClassFinalizer)
-		if err := r.client.Patch(ctx, gc, base); err != nil {
-			return fmt.Errorf("failed to remove finalizer from gatewayclass %s: %w", gc.Name, err)
+// addGcFinalizer adds the gatewayclass or envoyproxy finalizer to the provided object, if it doesn't exist.
+func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, obj client.Object) error {
+	switch objType := obj.(type) {
+	case *gwapiv1b1.GatewayClass:
+		if !controllerutil.ContainsFinalizer(objType, gatewayClassFinalizer) {
+			base := client.MergeFrom(objType.DeepCopy())
+			controllerutil.AddFinalizer(objType, gatewayClassFinalizer)
+			if err := r.client.Patch(ctx, objType, base); err != nil {
+				return fmt.Errorf("failed to add finalizer to Gateway Class %s: %w", objType.Name, err)
+			}
 		}
+		return nil
+	case *egcfgv1a1.EnvoyProxy:
+		if !controllerutil.ContainsFinalizer(objType, gatewayClassFinalizer) {
+			base := client.MergeFrom(objType.DeepCopy())
+			controllerutil.AddFinalizer(objType, gatewayClassFinalizer)
+			if err := r.client.Patch(ctx, objType, base); err != nil {
+				return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", objType.Name, err)
+			}
+		}
+		return nil
 	}
+
 	return nil
 }
 
-// addGcFinalizer adds the gatewayclass finalizer to the provided gc, if it doesn't exist.
-func (r *gatewayAPIReconciler) addGcFinalizer(ctx context.Context, gc *gwapiv1b1.GatewayClass) error {
-	if !slice.ContainsString(gc.Finalizers, gatewayClassFinalizer) {
-		base := client.MergeFrom(gc.DeepCopy())
-		gc.Finalizers = append(gc.Finalizers, gatewayClassFinalizer)
-		if err := r.client.Patch(ctx, gc, base); err != nil {
-			return fmt.Errorf("failed to add finalizer to gatewayclass %s: %w", gc.Name, err)
+// removeFinalizer removes the gatewayclass or envoyproxy finalizer from the provided object, if it exists.
+func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.Object) error {
+	switch objType := obj.(type) {
+	case *gwapiv1b1.GatewayClass:
+		if controllerutil.ContainsFinalizer(objType, gatewayClassFinalizer) {
+			base := client.MergeFrom(objType.DeepCopy())
+			controllerutil.RemoveFinalizer(objType, gatewayClassFinalizer)
+			if err := r.client.Patch(ctx, objType, base); err != nil {
+				return fmt.Errorf("failed to add finalizer to Gateway Class %s: %w", objType.Name, err)
+			}
 		}
+		return nil
+	case *egcfgv1a1.EnvoyProxy:
+		if controllerutil.ContainsFinalizer(objType, gatewayClassFinalizer) {
+			base := client.MergeFrom(objType.DeepCopy())
+			controllerutil.RemoveFinalizer(objType, gatewayClassFinalizer)
+			if err := r.client.Patch(ctx, objType, base); err != nil {
+				return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", objType.Name, err)
+			}
+		}
+		return nil
 	}
-	return nil
-}
 
-// removeEpFinalizer removes the Envoy Proxy finalizer from the provided ep, if it exists.
-func (r *gatewayAPIReconciler) removeEpFinalizer(ctx context.Context, ep *egcfgv1a1.EnvoyProxy) error {
-	if slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
-		base := client.MergeFrom(ep.DeepCopy())
-		ep.Finalizers = slice.RemoveString(ep.Finalizers, gatewayClassFinalizer)
-		if err := r.client.Patch(ctx, ep, base); err != nil {
-			return fmt.Errorf("failed to remove finalizer from Envoy Proxy %s: %w", ep.Name, err)
-		}
-	}
-	return nil
-}
-
-// addEpFinalizer adds the Envoy Proxy finalizer to the provided ep, if it doesn't exist.
-func (r *gatewayAPIReconciler) addEpFinalizer(ctx context.Context, ep *egcfgv1a1.EnvoyProxy) error {
-	if !slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
-		base := client.MergeFrom(ep.DeepCopy())
-		ep.Finalizers = append(ep.Finalizers, gatewayClassFinalizer)
-		if err := r.client.Patch(ctx, ep, base); err != nil {
-			return fmt.Errorf("failed to add finalizer to Envoy Proxy %s: %w", ep.Name, err)
-		}
-	}
 	return nil
 }
 
