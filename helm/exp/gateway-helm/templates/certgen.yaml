@@ -7,7 +7,7 @@ metadata:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
     "helm.sh/hook": pre-install
-    argocd.argoproj.io/hook: Skip
+   
 spec:
   backoffLimit: 1
   completions: 1
