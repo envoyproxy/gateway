@@ -191,10 +191,8 @@ spec:
         set_node_on_first_message_only: true
       lds_config:
         ads: {}
-        resource_api_version: V3
       cds_config:
         ads: {}
-        resource_api_version: V3
     static_resources:
       clusters:
       - connect_timeout: 10s
@@ -239,7 +237,6 @@ spec:
         rtds_layer:
           rtds_config:
             ads: {}
-            resource_api_version: V3
           name: runtime-0
 EOF
 ```
