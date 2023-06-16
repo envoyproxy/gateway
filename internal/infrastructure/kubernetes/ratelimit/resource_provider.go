@@ -112,6 +112,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: r.rateLimitDeployment.Replicas,
+			Strategy: *r.rateLimitDeployment.Strategy,
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

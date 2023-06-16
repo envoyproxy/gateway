@@ -30,8 +30,41 @@ EnvoyGateway is the schema for the envoygateways API.
 | `kind` _string_ | `EnvoyGateway`
 | `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
+| `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
+| `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
+
+
+## EnvoyGatewayAdmin
+
+
+
+EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `address` _[EnvoyGatewayAdminAddress](#envoygatewayadminaddress)_ | Address defines the address of Envoy Gateway Admin Server. |
+| `debug` _boolean_ | Debug defines if enable the /debug endpoint of Envoy Gateway. |
+
+
+## EnvoyGatewayAdminAddress
+
+
+
+EnvoyGatewayAdminAddress defines the Envoy Gateway Admin Address configuration.
+
+_Appears in:_
+- [EnvoyGatewayAdmin](#envoygatewayadmin)
+
+| Field | Description |
+| --- | --- |
+| `port` _integer_ | Port defines the port the admin server is exposed on. |
+| `host` _string_ | Host defines the admin server hostname. |
 
 
 ## EnvoyGatewayCustomProvider
@@ -105,6 +138,32 @@ _Appears in:_
 | `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 
 
+## EnvoyGatewayLogComponent
+
+_Underlying type:_ `string`
+
+EnvoyGatewayLogComponent defines a component that supports a configured logging level.
+
+_Appears in:_
+- [EnvoyGatewayLogging](#envoygatewaylogging)
+
+
+
+## EnvoyGatewayLogging
+
+
+
+EnvoyGatewayLogging defines logging for Envoy Gateway.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `level` _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ | Level is the logging level. If unspecified, defaults to "info". EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit. LogLevel options: debug/info/error/warn. |
+
+
 ## EnvoyGatewayProvider
 
 
@@ -150,6 +209,8 @@ _Appears in:_
 | --- | --- |
 | `gateway` _[Gateway](#gateway)_ | Gateway defines desired Gateway API specific configuration. If unset, default configuration parameters will apply. |
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
+| `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
+| `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
 
@@ -212,7 +273,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `provider` _[EnvoyProxyProvider](#envoyproxyprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
-| `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. If unspecified, default settings apply. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed. |
+| `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. |
 | `telemetry` _[ProxyTelemetry](#proxytelemetry)_ | Telemetry defines telemetry parameters for managed proxies. |
 | `bootstrap` _string_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 
@@ -379,6 +440,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
+| `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired annotations and securityContext of container. |
 | `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the resources and securityContext of container. |
 
@@ -434,7 +496,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogComponent defines a component that supports a configured logging level. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+LogComponent defines a component that supports a configured logging level.
 
 _Appears in:_
 - [ProxyLogging](#proxylogging)
@@ -445,9 +507,10 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogLevel defines a log level for system logs. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs. This type is not implemented for EnvoyProxy until https://github.com/envoyproxy/gateway/issues/280 is fixed.
 
 _Appears in:_
+- [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
 
 
@@ -568,14 +631,14 @@ _Appears in:_
 
 
 
-ProxyLogging defines logging parameters for managed proxies. This type is not implemented until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+ProxyLogging defines logging parameters for managed proxies.
 
 _Appears in:_
 - [EnvoyProxySpec](#envoyproxyspec)
 
 | Field | Description |
 | --- | --- |
-| `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "System: Info". |
+| `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
 
 
 ## ProxyTelemetry

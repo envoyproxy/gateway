@@ -145,7 +145,7 @@ metadata:
     app: backend
     service: backend
 spec:
-  clusterIP: "127.0.0.1"
+  clusterIP: "1.1.1.1"
   type: ClusterIP
   ports:
     - name: http
@@ -154,3 +154,21 @@ spec:
       targetPort: 9000
   selector:
     app: backend
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: endpointslice-providedBackend
+  namespace: default
+  labels:
+    kubernetes.io/service-name: providedBackend 
+addressType: IPv4
+ports:
+  - name: http
+    protocol: TCP
+    port: 9000
+endpoints:
+  - addresses:
+      - "127.0.0.1"
+    conditions:
+      ready: true

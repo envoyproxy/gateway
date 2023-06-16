@@ -104,7 +104,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		// Create a route config if we have not found one yet
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
-				Name: httpListener.Name,
+				IgnorePortInHostMatching: true,
+				Name:                     httpListener.Name,
 			}
 			tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg)
 		}

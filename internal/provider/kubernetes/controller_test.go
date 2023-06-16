@@ -17,11 +17,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
-	"github.com/envoyproxy/gateway/internal/log"
+	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 func TestAddGatewayClassFinalizer(t *testing.T) {
@@ -317,8 +318,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger, err := log.NewLogger()
-		require.NoError(t, err)
+		logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,
@@ -451,8 +451,8 @@ func TestProcessParamsRef(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger, err := log.NewLogger()
-		require.NoError(t, err)
+		logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,

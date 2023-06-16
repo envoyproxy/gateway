@@ -5,7 +5,10 @@
 
 package v1alpha1
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	appv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+)
 
 const (
 	// DefaultDeploymentReplicas is the default number of deployment replicas.
@@ -48,6 +51,10 @@ type KubernetesDeploymentSpec struct {
 	//
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// The deployment strategy to use to replace existing pods with new ones.
+	// +optional
+	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
 
 	// Pod defines the desired annotations and securityContext of container.
 	//
@@ -161,6 +168,26 @@ type KubernetesServiceSpec struct {
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
+
+// LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
+// This type is not implemented for EnvoyProxy until
+// https://github.com/envoyproxy/gateway/issues/280 is fixed.
+// +kubebuilder:validation:Enum=debug;info;error;warn
+type LogLevel string
+
+const (
+	// LogLevelDebug defines the "debug" logging level.
+	LogLevelDebug LogLevel = "debug"
+
+	// LogLevelInfo defines the "Info" logging level.
+	LogLevelInfo LogLevel = "info"
+
+	// LogLevelWarn defines the "Warn" logging level.
+	LogLevelWarn LogLevel = "warn"
+
+	// LogLevelError defines the "Error" logging level.
+	LogLevelError LogLevel = "error"
+)
 
 // XDSTranslatorHook defines the types of hooks that an Envoy Gateway extension may support
 // for the xds-translator

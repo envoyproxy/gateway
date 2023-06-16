@@ -16,6 +16,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
+
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -143,6 +144,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -174,6 +176,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -215,6 +218,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -247,6 +251,7 @@ func TestDeployment(t *testing.T) {
 			rateLimit: rateLimit,
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -296,6 +301,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -349,6 +355,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
@@ -410,6 +417,7 @@ func TestDeployment(t *testing.T) {
 			},
 			deploy: &egcfgv1a1.KubernetesDeploymentSpec{
 				Replicas: pointer.Int32(2),
+				Strategy: egcfgv1a1.DefaultKubernetesDeploymentStrategy(),
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",

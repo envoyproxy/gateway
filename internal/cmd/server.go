@@ -6,7 +6,14 @@
 package cmd
 
 import (
+	"fmt"
+	"net"
+	"net/http"
+	"net/http/pprof"
+	"time"
+
 	"github.com/davecgh/go-spew/spew"
+
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -15,6 +22,7 @@ import (
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
 	ratelimitrunner "github.com/envoyproxy/gateway/internal/globalratelimit/runner"
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
+	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
 	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
@@ -73,22 +81,25 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 		return nil, err
 	}
 
-	log := cfg.Logger
+	logger := cfg.Logger
 
 	// Read the config file.
 	if cfgPath == "" {
 		// Use default config parameters
-		log.Info("No config file provided, using default parameters")
+		logger.Info("No config file provided, using default parameters")
 	} else {
 		// Load the config file.
 		eg, err := config.Decode(cfgPath)
 		if err != nil {
-			log.Error(err, "failed to decode config file", "name", cfgPath)
+			logger.Error(err, "failed to decode config file", "name", cfgPath)
 			return nil, err
 		}
 		// Set defaults for unset fields
 		eg.SetEnvoyGatewayDefaults()
 		cfg.EnvoyGateway = eg
+		// update cfg logger
+		eg.Logging.SetEnvoyGatewayLoggingDefaults()
+		cfg.Logger = logging.NewLogger(eg.Logging)
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -186,6 +197,9 @@ func setupRunners(cfg *config.Server) error {
 		}
 	}
 
+	// Start the admin server
+	go setupAdminServer(cfg)
+
 	// Wait until done
 	<-ctx.Done()
 	// Close messages
@@ -202,4 +216,34 @@ func setupRunners(cfg *config.Server) error {
 	}
 
 	return nil
+}
+
+func setupAdminServer(cfg *config.Server) {
+	adminHandlers := http.NewServeMux()
+
+	address := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Address
+
+	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Debug {
+		// Serve pprof endpoints to aid in live debugging.
+		adminHandlers.HandleFunc("/debug/pprof/", pprof.Index)
+		adminHandlers.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		adminHandlers.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		adminHandlers.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		adminHandlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	}
+
+	adminServer := &http.Server{
+		Handler:           adminHandlers,
+		Addr:              net.JoinHostPort(address.Host, fmt.Sprint(address.Port)),
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       15 * time.Second,
+	}
+
+	// Listen And Serve Admin Server.
+	if err := adminServer.ListenAndServe(); err != nil {
+		cfg.Logger.Error(err, "start debug server failed")
+	}
+
 }

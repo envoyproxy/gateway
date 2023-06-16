@@ -232,6 +232,82 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	}
 }
 
+func TestEnvoyGateway(t *testing.T) {
+	envoyGateway := DefaultEnvoyGateway()
+	assert.True(t, envoyGateway.Provider != nil)
+	assert.True(t, envoyGateway.Gateway != nil)
+	assert.True(t, envoyGateway.Logging != nil)
+	envoyGateway.SetEnvoyGatewayDefaults()
+	assert.Equal(t, envoyGateway.Logging, DefaultEnvoyGatewayLogging())
+
+	logging := DefaultEnvoyGatewayLogging()
+	assert.True(t, logging != nil)
+	assert.True(t, logging.Level[LogComponentGatewayDefault] == LogLevelInfo)
+
+	gatewayLogging := &EnvoyGatewayLogging{
+		Level: logging.Level,
+	}
+	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
+	assert.True(t, gatewayLogging != nil)
+	assert.True(t, gatewayLogging.Level[LogComponentGatewayDefault] == LogLevelInfo)
+}
+
+func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
+	type args struct {
+		component string
+		level     LogLevel
+	}
+	tests := []struct {
+		name string
+		args args
+		want LogLevel
+	}{
+		{
+			name: "test default info level for empty level",
+			args: args{component: "", level: ""},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default info level for empty level",
+			args: args{component: string(LogComponentGatewayDefault), level: ""},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default info level for info level",
+			args: args{component: string(LogComponentGatewayDefault), level: LogLevelInfo},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default error level for error level",
+			args: args{component: string(LogComponentGatewayDefault), level: LogLevelError},
+			want: LogLevelError,
+		},
+		{
+			name: "test gateway-api error level for error level",
+			args: args{component: string(LogComponentGatewayApiRunner), level: LogLevelError},
+			want: LogLevelError,
+		},
+		{
+			name: "test gateway-api info level for info level",
+			args: args{component: string(LogComponentGatewayApiRunner), level: LogLevelInfo},
+			want: LogLevelInfo,
+		},
+		{
+			name: "test default gateway-api warn level for info level",
+			args: args{component: string(LogComponentGatewayApiRunner), level: ""},
+			want: LogLevelInfo,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logging := &EnvoyGatewayLogging{}
+			if got := logging.DefaultEnvoyGatewayLoggingLevel(tt.args.level); got != tt.want {
+				t.Errorf("defaultLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestEnvoyGatewayProvider(t *testing.T) {
 	envoyGateway := &EnvoyGateway{
 		TypeMeta:         metav1.TypeMeta{},
@@ -318,4 +394,35 @@ func TestEnvoyProxyProvider(t *testing.T) {
 
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyService != nil)
 	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, GetKubernetesServiceType(ServiceTypeLoadBalancer)))
+}
+
+func TestEnvoyGatewayAdmin(t *testing.T) {
+	// default envoygateway config admin should not be nil
+	eg := DefaultEnvoyGateway()
+	assert.True(t, eg.Admin != nil)
+
+	// get default admin config from envoygateway
+	// values should be set in default
+	egAdmin := eg.GetEnvoyGatewayAdmin()
+	assert.True(t, egAdmin != nil)
+	assert.True(t, egAdmin.Debug == false)
+	assert.True(t, egAdmin.Address.Port == GatewayAdminPort)
+	assert.True(t, egAdmin.Address.Host == GatewayAdminHost)
+
+	// override the admin config
+	// values should be updated
+	eg.Admin.Debug = true
+	eg.Admin.Address = nil
+	assert.True(t, eg.Admin.Debug == true)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == GatewayAdminPort)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == GatewayAdminHost)
+
+	// set eg defaults when admin is nil
+	// the admin should not be nil
+	eg.Admin = nil
+	eg.SetEnvoyGatewayDefaults()
+	assert.True(t, eg.Admin != nil)
+	assert.True(t, eg.Admin.Debug == false)
+	assert.True(t, eg.Admin.Address.Port == GatewayAdminPort)
+	assert.True(t, eg.Admin.Address.Host == GatewayAdminHost)
 }

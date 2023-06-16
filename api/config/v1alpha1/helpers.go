@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,16 +15,16 @@ import (
 
 // DefaultEnvoyGateway returns a new EnvoyGateway with default configuration parameters.
 func DefaultEnvoyGateway() *EnvoyGateway {
-	gw := DefaultGateway()
-	p := DefaultEnvoyGatewayProvider()
 	return &EnvoyGateway{
 		metav1.TypeMeta{
 			Kind:       KindEnvoyGateway,
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:  gw,
-			Provider: p,
+			Gateway:  DefaultGateway(),
+			Provider: DefaultEnvoyGatewayProvider(),
+			Logging:  DefaultEnvoyGatewayLogging(),
+			Admin:    DefaultEnvoyGatewayAdmin(),
 		},
 	}
 }
@@ -42,12 +43,61 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Gateway == nil {
 		e.Gateway = DefaultGateway()
 	}
+	if e.Logging == nil {
+		e.Logging = DefaultEnvoyGatewayLogging()
+	}
+	if e.Admin == nil {
+		e.Admin = DefaultEnvoyGatewayAdmin()
+	}
+}
+
+// GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
+func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+	if e.Admin != nil {
+		if e.Admin.Address == nil {
+			e.Admin.Address = DefaultEnvoyGatewayAdminAddress()
+		}
+		return e.Admin
+	}
+	e.Admin = DefaultEnvoyGatewayAdmin()
+
+	return e.Admin
 }
 
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
 		ControllerName: GatewayControllerName,
+	}
+}
+
+// DefaultEnvoyGatewayLogging returns a new EnvoyGatewayLogging with default configuration parameters.
+func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
+	return &EnvoyGatewayLogging{
+		Level: map[EnvoyGatewayLogComponent]LogLevel{
+			LogComponentGatewayDefault: LogLevelInfo,
+		},
+	}
+}
+
+// DefaultEnvoyGatewayLoggingLevel returns a new EnvoyGatewayLogging with default configuration parameters.
+// When v1alpha1.LogComponentGatewayDefault specified, all other logging components are ignored.
+func (logging *EnvoyGatewayLogging) DefaultEnvoyGatewayLoggingLevel(level LogLevel) LogLevel {
+	if level != "" {
+		return level
+	}
+
+	if logging.Level[LogComponentGatewayDefault] != "" {
+		return logging.Level[LogComponentGatewayDefault]
+	}
+
+	return LogLevelInfo
+}
+
+// SetEnvoyGatewayLoggingDefaults sets default EnvoyGatewayLogging configuration parameters.
+func (logging *EnvoyGatewayLogging) SetEnvoyGatewayLoggingDefaults() {
+	if logging != nil && logging.Level != nil && logging.Level[LogComponentGatewayDefault] == "" {
+		logging.Level[LogComponentGatewayDefault] = LogLevelInfo
 	}
 }
 
@@ -107,6 +157,13 @@ func DefaultKubernetesDeploymentReplicas() *int32 {
 	return &repl
 }
 
+// DefaultKubernetesDeploymentStrategy returns the default deployment strategy settings.
+func DefaultKubernetesDeploymentStrategy() *appv1.DeploymentStrategy {
+	return &appv1.DeploymentStrategy{
+		Type: appv1.RollingUpdateDeploymentStrategyType,
+	}
+}
+
 // DefaultKubernetesContainerImage returns the default envoyproxy image.
 func DefaultKubernetesContainerImage(image string) *string {
 	return pointer.String(image)
@@ -116,6 +173,7 @@ func DefaultKubernetesContainerImage(image string) *string {
 func DefaultKubernetesDeployment(image string) *KubernetesDeploymentSpec {
 	return &KubernetesDeploymentSpec{
 		Replicas:  DefaultKubernetesDeploymentReplicas(),
+		Strategy:  DefaultKubernetesDeploymentStrategy(),
 		Pod:       DefaultKubernetesPod(),
 		Container: DefaultKubernetesContainer(image),
 	}
@@ -178,25 +236,7 @@ func (r *EnvoyProxyProvider) GetEnvoyProxyKubeProvider() *EnvoyProxyKubernetesPr
 		r.Kubernetes.EnvoyDeployment = DefaultKubernetesDeployment(DefaultEnvoyProxyImage)
 	}
 
-	if r.Kubernetes.EnvoyDeployment.Replicas == nil {
-		r.Kubernetes.EnvoyDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
-	}
-
-	if r.Kubernetes.EnvoyDeployment.Pod == nil {
-		r.Kubernetes.EnvoyDeployment.Pod = DefaultKubernetesPod()
-	}
-
-	if r.Kubernetes.EnvoyDeployment.Container == nil {
-		r.Kubernetes.EnvoyDeployment.Container = DefaultKubernetesContainer(DefaultEnvoyProxyImage)
-	}
-
-	if r.Kubernetes.EnvoyDeployment.Container.Resources == nil {
-		r.Kubernetes.EnvoyDeployment.Container.Resources = DefaultResourceRequirements()
-	}
-
-	if r.Kubernetes.EnvoyDeployment.Container.Image == nil {
-		r.Kubernetes.EnvoyDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultEnvoyProxyImage)
-	}
+	r.Kubernetes.EnvoyDeployment.defaultKubernetesDeploymentSpec(DefaultEnvoyProxyImage)
 
 	if r.Kubernetes.EnvoyService == nil {
 		r.Kubernetes.EnvoyService = DefaultKubernetesService()
@@ -226,25 +266,50 @@ func (r *EnvoyGatewayProvider) GetEnvoyGatewayKubeProvider() *EnvoyGatewayKubern
 		r.Kubernetes.RateLimitDeployment = DefaultKubernetesDeployment(DefaultRateLimitImage)
 	}
 
-	if r.Kubernetes.RateLimitDeployment.Replicas == nil {
-		r.Kubernetes.RateLimitDeployment.Replicas = DefaultKubernetesDeploymentReplicas()
-	}
-
-	if r.Kubernetes.RateLimitDeployment.Pod == nil {
-		r.Kubernetes.RateLimitDeployment.Pod = DefaultKubernetesPod()
-	}
-
-	if r.Kubernetes.RateLimitDeployment.Container == nil {
-		r.Kubernetes.RateLimitDeployment.Container = DefaultKubernetesContainer(DefaultRateLimitImage)
-	}
-
-	if r.Kubernetes.RateLimitDeployment.Container.Resources == nil {
-		r.Kubernetes.RateLimitDeployment.Container.Resources = DefaultResourceRequirements()
-	}
-
-	if r.Kubernetes.RateLimitDeployment.Container.Image == nil {
-		r.Kubernetes.RateLimitDeployment.Container.Image = DefaultKubernetesContainerImage(DefaultRateLimitImage)
-	}
+	r.Kubernetes.RateLimitDeployment.defaultKubernetesDeploymentSpec(DefaultRateLimitImage)
 
 	return r.Kubernetes
+}
+
+// defaultKubernetesDeploymentSpec fill a default KubernetesDeploymentSpec if unspecified.
+func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(image string) {
+	if deployment.Replicas == nil {
+		deployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	}
+
+	if deployment.Strategy == nil {
+		deployment.Strategy = DefaultKubernetesDeploymentStrategy()
+	}
+
+	if deployment.Pod == nil {
+		deployment.Pod = DefaultKubernetesPod()
+	}
+
+	if deployment.Container == nil {
+		deployment.Container = DefaultKubernetesContainer(image)
+	}
+
+	if deployment.Container.Resources == nil {
+		deployment.Container.Resources = DefaultResourceRequirements()
+	}
+
+	if deployment.Container.Image == nil {
+		deployment.Container.Image = DefaultKubernetesContainerImage(image)
+	}
+}
+
+// DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.
+func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
+	return &EnvoyGatewayAdmin{
+		Debug:   false,
+		Address: DefaultEnvoyGatewayAdminAddress(),
+	}
+}
+
+// DefaultEnvoyGatewayAdminAddress returns a new EnvoyGatewayAdminAddress with default configuration parameters.
+func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
+	return &EnvoyGatewayAdminAddress{
+		Port: GatewayAdminPort,
+		Host: GatewayAdminHost,
+	}
 }

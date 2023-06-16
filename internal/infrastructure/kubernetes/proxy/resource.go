@@ -7,6 +7,8 @@ package proxy
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -124,20 +126,27 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
+	proxyLogging := infra.Config.Spec.Logging
+
+	logLevel := componentLogLevel(proxyLogging.Level, egcfgv1a1.LogComponentDefault, egcfgv1a1.LogLevelWarn)
+
+	args := []string{
+		fmt.Sprintf("--service-cluster %s", infra.Name),
+		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
+		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
+		fmt.Sprintf("--log-level %s", logLevel),
+	}
+	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
+		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
+	}
+
 	containers := []corev1.Container{
 		{
-			Name:            envoyContainerName,
-			Image:           *deploymentConfig.Container.Image,
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command: []string{
-				"envoy",
-			},
-			Args: []string{
-				fmt.Sprintf("--service-cluster %s", infra.Name),
-				fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
-				fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-				"--log-level info",
-			},
+			Name:                     envoyContainerName,
+			Image:                    *deploymentConfig.Container.Image,
+			ImagePullPolicy:          corev1.PullIfNotPresent,
+			Command:                  []string{"envoy"},
+			Args:                     args,
 			Env:                      expectedProxyContainerEnv(deploymentConfig),
 			Resources:                *deploymentConfig.Container.Resources,
 			SecurityContext:          deploymentConfig.Container.SecurityContext,
@@ -149,6 +158,30 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	}
 
 	return containers, nil
+}
+
+func componentLogLevel(levels map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel, component egcfgv1a1.LogComponent, defaultLevel egcfgv1a1.LogLevel) egcfgv1a1.LogLevel {
+	if level, ok := levels[component]; ok {
+		return level
+	}
+
+	return defaultLevel
+}
+
+func componentLogLevelArgs(levels map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel) string {
+	var args []string
+
+	for component, level := range levels {
+		if component == egcfgv1a1.LogComponentDefault {
+			// Skip default component
+			continue
+		}
+		args = append(args, fmt.Sprintf("%s:%s", component, level))
+	}
+
+	sort.Strings(args)
+
+	return strings.Join(args, ",")
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.

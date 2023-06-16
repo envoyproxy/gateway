@@ -6,7 +6,10 @@
 package translator
 
 import (
+	"bufio"
 	"embed"
+	"flag"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,6 +33,10 @@ var (
 	inFiles embed.FS
 )
 
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
+)
+
 func TestTranslateXds(t *testing.T) {
 	testCases := []struct {
 		name           string
@@ -41,9 +48,6 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "http-route",
-		},
-		{
-			name: "http-route-with-stripped-host-port",
 		},
 		{
 			name: "http-route-regex",
@@ -166,12 +170,21 @@ func TestTranslateXds(t *testing.T) {
 			routes := tCtx.XdsResources[resourcev3.RouteType]
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+			if *overrideTestData {
+				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, listeners), "xds-ir", tc.name+".listeners.yaml")
+				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, routes), "xds-ir", tc.name+".routes.yaml")
+				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, clusters), "xds-ir", tc.name+".clusters.yaml")
+				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, endpoints), "xds-ir", tc.name+".endpoints.yaml")
+			}
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 			if tc.requireSecrets {
 				secrets := tCtx.XdsResources[resourcev3.SecretType]
+				if *overrideTestData {
+					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, secrets), "xds-ir", tc.name+".secrets.yaml")
+				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 			}
 		})
@@ -210,6 +223,9 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, "ratelimit-config", tc.name+".yaml")
 			out := BuildRateLimitServiceConfig(in)
+			if *overrideTestData {
+				overrideTestDataOutFile(t, requireYamlRootToYAMLString(t, out), "ratelimit-config", tc.name+".yaml")
+			}
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", tc.name+".yaml"), requireYamlRootToYAMLString(t, out))
 		})
 	}
@@ -297,12 +313,21 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				routes := tCtx.XdsResources[resourcev3.RouteType]
 				clusters := tCtx.XdsResources[resourcev3.ClusterType]
 				endpoints := tCtx.XdsResources[resourcev3.EndpointType]
+				if *overrideTestData {
+					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, listeners), "extension-xds-ir", tc.name+".listeners.yaml")
+					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, routes), "extension-xds-ir", tc.name+".routes.yaml")
+					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, clusters), "extension-xds-ir", tc.name+".clusters.yaml")
+					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, endpoints), "extension-xds-ir", tc.name+".endpoints.yaml")
+				}
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".clusters.yaml"), requireResourcesToYAMLString(t, clusters))
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".endpoints.yaml"), requireResourcesToYAMLString(t, endpoints))
 				if tc.requireSecrets {
 					secrets := tCtx.XdsResources[resourcev3.SecretType]
+					if *overrideTestData {
+						overrideTestDataOutFile(t, requireResourcesToYAMLString(t, secrets), "extension-xds-ir", tc.name+".secrets.yaml")
+					}
 					require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 				}
 			}
@@ -338,6 +363,18 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	content, err := outFiles.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return string(content)
+}
+
+func overrideTestDataOutFile(t *testing.T, data string, name ...string) {
+	t.Helper()
+	elems := append([]string{"testdata", "out"}, name...)
+	file, err := os.OpenFile(filepath.Join(elems...), os.O_WRONLY, 0666)
+	require.NoError(t, err)
+	defer file.Close()
+	write := bufio.NewWriter(file)
+	_, err = write.WriteString(data)
+	require.NoError(t, err)
+	write.Flush()
 }
 
 func requireYamlRootToYAMLString(t *testing.T, pbRoot *ratelimitv3.RateLimitConfig) string {

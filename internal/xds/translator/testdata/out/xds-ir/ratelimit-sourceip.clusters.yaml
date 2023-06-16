@@ -57,6 +57,19 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
+  transportSocket:
+    name: envoy.transport_sockets.tls
+    typedConfig:
+      '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+      commonTlsContext:
+        tlsCertificates:
+        - certificateChain:
+            filename: /certs/tls.crt
+          privateKey:
+            filename: /certs/tls.key
+        validationContext:
+          trustedCa:
+            filename: /certs/ca.crt
   type: STRICT_DNS
   typedExtensionProtocolOptions:
     envoy.extensions.upstreams.http.v3.HttpProtocolOptions:

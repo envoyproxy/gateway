@@ -1,4 +1,5 @@
-- name: first-listener
+- ignorePortInHostMatching: true
+  name: first-listener
   virtualHosts:
   - domains:
     - '*'

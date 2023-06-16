@@ -31,6 +31,10 @@
             path: /dev/stdout
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
         httpFilters:
         - name: envoy.filters.http.jwt_authn
           typedConfig:
@@ -39,6 +43,9 @@
               first-route-example:
                 audiences:
                 - foo.com
+                claimToHeaders:
+                - claimName: claim.neteased.key
+                  headerName: first-route-key
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:

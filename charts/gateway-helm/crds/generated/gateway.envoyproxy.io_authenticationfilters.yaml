@@ -53,6 +53,30 @@ spec:
                         type: string
                       maxItems: 8
                       type: array
+                    claimToHeaders:
+                      description: 'ClaimToHeaders is a list of JWT claims that must
+                        be extracted into HTTP request headers For examples, following
+                        config: The claim must be of type; string, int, double, bool.
+                        Array type claims are not supported'
+                      items:
+                        description: ClaimToHeader defines a configuration to convert
+                          JWT claims into HTTP headers
+                        properties:
+                          claim:
+                            description: 'Claim is the JWT Claim that should be saved
+                              into the header : it can be a nested claim of type (eg.
+                              "claim.nested.key", "sub"). The nested claim name must
+                              use dot "." to separate the JSON name path.'
+                            type: string
+                          header:
+                            description: Header defines the name of the HTTP request
+                              header that the JWT Claim will be saved into.
+                            type: string
+                        required:
+                        - claim
+                        - header
+                        type: object
+                      type: array
                     issuer:
                       description: Issuer is the principal that issued the JWT and
                         takes the form of a URL or email address. For additional details,

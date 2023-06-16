@@ -38,6 +38,10 @@ xds:
                     path: /dev/stdout
                 commonHttpProtocolOptions:
                   headersWithUnderscoresAction: REJECT_REQUEST
+                http2ProtocolOptions:
+                  initialConnectionWindowSize: 1048576
+                  initialStreamWindowSize: 65536
+                  maxConcurrentStreams: 100
                 httpFilters:
                 - name: envoy.filters.http.router
                   typedConfig:
@@ -51,7 +55,6 @@ xds:
                     resourceApiVersion: V3
                   routeConfigName: default-eg-http
                 statPrefix: http
-                stripAnyHostPort: true
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
@@ -102,6 +105,11 @@ xds:
                 - name: envoy.filters.http.grpc_web
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+                - name: envoy.filters.http.grpc_stats
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
+                    emitFilterState: true
+                    statsForAllMethods: true
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -114,7 +122,6 @@ xds:
                     resourceApiVersion: V3
                   routeConfigName: default-eg-grpc
                 statPrefix: http
-                stripAnyHostPort: true
                 useRemoteAddress: true
           name: default-eg-grpc
           perConnectionBufferLimitBytes: 32768
@@ -244,3 +251,4 @@ xds:
                       cluster: default-eg-udp-backend
               statPrefix: service
           name: default-eg-udp-backend
+
