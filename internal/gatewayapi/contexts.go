@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"reflect"
-	"strings"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -224,15 +223,15 @@ func GetRouteType(route RouteContext) v1beta1.Kind {
 // GetHostnames returns the hosts targeted by the Route object.
 func GetHostnames(route RouteContext) []string {
 	rv := reflect.ValueOf(route).Elem()
-	rt := rv.FieldByName("Kind").String()
-	if strings.Contains(rt, "TCP") || strings.Contains(rt, "UDP") {
+	kind := rv.FieldByName("Kind").String()
+	if kind == KindTCPRoute || kind == KindUDPRoute {
 		return nil
 	}
 
-	h := rv.FieldByName("Spec").FieldByName("Hostnames")
-	hostnames := make([]string, h.Len())
+	hs := rv.FieldByName("Spec").FieldByName("Hostnames")
+	hostnames := make([]string, hs.Len())
 	for i := 0; i < len(hostnames); i++ {
-		hostnames[i] = h.Index(i).String()
+		hostnames[i] = hs.Index(i).String()
 	}
 	return hostnames
 }
@@ -242,9 +241,9 @@ func GetHostnames(route RouteContext) []string {
 // GetParentReferences returns the ParentReference of the Route object.
 func GetParentReferences(route RouteContext) []v1beta1.ParentReference {
 	rv := reflect.ValueOf(route).Elem()
-	rt := rv.FieldByName("Kind").String()
+	kind := rv.FieldByName("Kind").String()
 	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
-	if strings.Contains(rt, "HTTP") || strings.Contains(rt, "GRPC") {
+	if kind == KindHTTPRoute || kind == KindGRPCRoute {
 		return pr.Interface().([]v1beta1.ParentReference)
 	}
 
@@ -279,7 +278,7 @@ func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentRefere
 	}
 
 	isHTTPRoute := false
-	if strings.Contains(rv.Type().String(), "HTTP") {
+	if rv.FieldByName("Kind").String() == KindHTTPRoute {
 		isHTTPRoute = true
 	}
 
