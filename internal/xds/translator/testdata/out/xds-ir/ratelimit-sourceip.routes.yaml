@@ -39,7 +39,7 @@
       route:
         cluster: fourth-route
         rateLimits:
-          - actions:
-              - maskedRemoteAddress:
-                  v4PrefixMaskLen: 16
-              - remoteAddress:
+        - actions:
+          - maskedRemoteAddress:
+              v4PrefixMaskLen: 16
+          - remoteAddress:

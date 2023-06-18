@@ -51,15 +51,15 @@ http:
     rateLimit:
       global:
         rules:
-          - cidrMatch:
-              cidr: 192.168.0.0/16
-              maskLen: 16
-            limit:
-              requests: 5
-              unit: second
-            distinct: true
+        - cidrMatch:
+            cidr: 192.168.0.0/16
+            maskLen: 16
+          limit:
+            requests: 5
+            unit: second
+          distinct: true
     pathMatch:
       exact: "distinct"
     destinations:
-      - host: "1.2.3.4"
-        port: 50000
+    - host: "1.2.3.4"
+      port: 50000
