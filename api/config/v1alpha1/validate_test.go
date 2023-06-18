@@ -426,3 +426,92 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	assert.True(t, eg.Admin.Address.Port == GatewayAdminPort)
 	assert.True(t, eg.Admin.Address.Host == GatewayAdminHost)
 }
+
+func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
+	cases := []struct {
+		logging   ProxyLogging
+		component LogComponent
+		expected  LogLevel
+	}{
+		{
+			logging: ProxyLogging{
+				Level: map[LogComponent]LogLevel{
+					LogComponentDefault: LogLevelInfo,
+				},
+			},
+			expected: LogLevelInfo,
+		},
+		{
+			logging: ProxyLogging{
+				Level: map[LogComponent]LogLevel{
+					LogComponentDefault: LogLevelInfo,
+				},
+			},
+			expected: LogLevelInfo,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := tc.logging.DefaultEnvoyProxyLoggingLevel()
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
+	cases := []struct {
+		logging  ProxyLogging
+		expected string
+	}{
+		{
+			logging:  ProxyLogging{},
+			expected: "",
+		},
+		{
+			logging: ProxyLogging{
+				Level: map[LogComponent]LogLevel{
+					LogComponentDefault: LogLevelInfo,
+				},
+			},
+			expected: "",
+		},
+		{
+			logging: ProxyLogging{
+				Level: map[LogComponent]LogLevel{
+					LogComponentDefault: LogLevelInfo,
+					LogComponentAdmin:   LogLevelWarn,
+				},
+			},
+			expected: "admin:warn",
+		},
+		{
+			logging: ProxyLogging{
+				Level: map[LogComponent]LogLevel{
+					LogComponentDefault: LogLevelInfo,
+					LogComponentAdmin:   LogLevelWarn,
+					LogComponentFilter:  LogLevelDebug,
+				},
+			},
+			expected: "admin:warn,filter:debug",
+		},
+		{
+			logging: ProxyLogging{
+				Level: map[LogComponent]LogLevel{
+					LogComponentDefault: LogLevelInfo,
+					LogComponentAdmin:   LogLevelWarn,
+					LogComponentFilter:  LogLevelDebug,
+					LogComponentClient:  "",
+				},
+			},
+			expected: "admin:warn,filter:debug",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := tc.logging.GetEnvoyProxyComponentLevel()
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}

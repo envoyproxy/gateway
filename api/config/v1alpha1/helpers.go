@@ -6,6 +6,10 @@
 package v1alpha1
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -149,6 +153,37 @@ func DefaultEnvoyProxyKubeProvider() *EnvoyProxyKubernetesProvider {
 		EnvoyDeployment: DefaultKubernetesDeployment(DefaultEnvoyProxyImage),
 		EnvoyService:    DefaultKubernetesService(),
 	}
+}
+
+// DefaultEnvoyProxyLoggingLevel returns envoy proxy  v1alpha1.LogComponentGatewayDefault log level.
+// If unspecified, defaults to "warn". When specified, all other logging components are ignored.
+func (logging *ProxyLogging) DefaultEnvoyProxyLoggingLevel() LogLevel {
+	if logging.Level[LogComponentDefault] != "" {
+		return logging.Level[LogComponentDefault]
+	}
+
+	return LogLevelWarn
+}
+
+// GetEnvoyProxyComponentLevel returns envoy proxy component log level args.
+// xref: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-component-log-level
+func (logging *ProxyLogging) GetEnvoyProxyComponentLevel() string {
+	var args []string
+
+	for component, level := range logging.Level {
+		if component == LogComponentDefault {
+			// Skip default component
+			continue
+		}
+
+		if level != "" {
+			args = append(args, fmt.Sprintf("%s:%s", component, level))
+		}
+	}
+
+	sort.Strings(args)
+
+	return strings.Join(args, ",")
 }
 
 // DefaultKubernetesDeploymentReplicas returns the default replica settings.
