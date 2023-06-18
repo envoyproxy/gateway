@@ -14,6 +14,24 @@ data:
     kind: EnvoyGateway
     provider:
       type: {{ .Values.config.envoyGateway.provider.type | quote }}
+      kubernetes:
+        rateLimitDeployment:
+          replicas: 1
+          container:
+            image: envoyproxy/ratelimit:master
+            resources:
+              requests:
+                cpu: 200m
+                memory: 512Mi
+            securityContext:
+              runAsUser: 2000
+              allowPrivilegeEscalation: false
+          pod:
+            securityContext:
+              runAsUser: 1000
+              runAsGroup: 3000
+              fsGroup: 2000
+              fsGroupChangePolicy: "OnRootMismatch"
     rateLimit:
       backend:
         type: Redis
