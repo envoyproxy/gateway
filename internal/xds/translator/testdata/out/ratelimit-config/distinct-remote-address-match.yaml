@@ -1,0 +1,17 @@
+domain: first-listener
+descriptors:
+  - key: masked_remote_address
+    value: 192.168.0.0/16
+    descriptors:
+      - key: remote_address
+        rate_limit:
+          requests_per_unit: 5
+          unit: SECOND
+          unlimited: false
+          name: ""
+          replaces: []
+        descriptors: []
+        shadow_mode: false
+        detailed_metric: false
+    shadow_mode: false
+    detailed_metric: false
