@@ -5,7 +5,7 @@ deployment:
       # repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
       # tag: latest
       repository: docker.io/envoyproxy/gateway-dev
-      tag: 64d48a9@sha256:602fa6ce126b3f7fb065cda157b3d97607dc18d7531f0606d41ebe01a27874c7
+      tag: 7f8a491@sha256:6bd63cba7afe59e5188390f8cc5a537c4264c6969eebc1aadb69fd39ee900d9f
     imagePullPolicy: Always
     resources:
       limits:
