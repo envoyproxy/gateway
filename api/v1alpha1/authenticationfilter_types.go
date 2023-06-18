@@ -7,6 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -117,6 +118,59 @@ type RemoteJWKS struct {
 	URI string `json:"uri"`
 
 	// TODO: Add TBD remote JWKS fields based on defined use cases.
+}
+
+// OIDCAuthenticationFilterProvider defines the OpenID Connect (OIDC) authentication provider type
+type OIDCAuthenticationFilterProvider struct {
+	// The OIDC Provider configuration.
+	Provider OIDCProvider `json:"provider"`
+
+	// The OIDC client ID assigned to the filter to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:MinLength=1
+	ClientID string `json:"clientId"`
+
+	// The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:Required
+	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+
+	// The redirect URI passed to the authorization endpoint in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// +kubebuilder:validation:MinLength=1
+	RedirectURI string `json:"redirectUri"`
+}
+
+type OIDCProvider struct {
+	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
+	//
+	// +kubebuilder:validation:MinLength=1
+	Issuer string `json:"issuer"`
+
+	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +optional
+	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+
+	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +optional
+	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+
+	// The JSON JWKS response from the OIDC provider’s `jwks_uri` URI which can be found in the OIDC provider's
+	// [configuration response](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	// Note that this JSON value must be escaped when embedded in a json configmap
+	// (see [example](https://github.com/istio-ecosystem/authservice/blob/master/bookinfo-example/config/authservice-configmap-template.yaml)).
+	// Used during token verification.
+	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+	//
+	// +optional
+	Jwks string `json:"jwks,omitempty"`
 }
 
 //+kubebuilder:object:root=true
