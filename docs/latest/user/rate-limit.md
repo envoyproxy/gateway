@@ -486,6 +486,10 @@ transfer-encoding: chunked
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on their
  IP address (also reflected in the  `X-Forwarded-For` header).
 
+Note: EG supports two kinds of rate limit for the IP address: exact and distinct.
+* exact means that all IP addresses within the specified Source IP CIDR share the same rate limit bucket.
+* distinct means that each IP address within the specified Source IP CIDR has its own rate limit bucket.
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -497,7 +501,9 @@ spec:
   global:
     rules:
     - clientSelectors:
-      - sourceIP: 0.0.0.0/0
+      - sourceCIDR: 
+          value: 0.0.0.0/0
+          type: distinct
       limit:
         requests: 3
         unit: Hour
