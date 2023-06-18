@@ -53,6 +53,30 @@ spec:
                         type: string
                       maxItems: 8
                       type: array
+                    claimToHeaders:
+                      description: 'ClaimToHeaders is a list of JWT claims that must
+                        be extracted into HTTP request headers For examples, following
+                        config: The claim must be of type; string, int, double, bool.
+                        Array type claims are not supported'
+                      items:
+                        description: ClaimToHeader defines a configuration to convert
+                          JWT claims into HTTP headers
+                        properties:
+                          claim:
+                            description: 'Claim is the JWT Claim that should be saved
+                              into the header : it can be a nested claim of type (eg.
+                              "claim.nested.key", "sub"). The nested claim name must
+                              use dot "." to separate the JSON name path.'
+                            type: string
+                          header:
+                            description: Header defines the name of the HTTP request
+                              header that the JWT Claim will be saved into.
+                            type: string
+                        required:
+                        - claim
+                        - header
+                        type: object
+                      type: array
                     issuer:
                       description: Issuer is the principal that issued the JWT and
                         takes the form of a URL or email address. For additional details,
@@ -87,11 +111,95 @@ spec:
                   type: object
                 maxItems: 4
                 type: array
+              oidcProvider:
+                description: OIDCProvider defines the OpenID Connect (OIDC) authentication
+                  provider type.
+                properties:
+                  clientId:
+                    description: The OIDC client ID assigned to the filter to be used
+                      in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                    minLength: 1
+                    type: string
+                  clientSecret:
+                    description: The Kubernetes secret which contains the OIDC client
+                      secret assigned to the filter to be used in the [Authentication
+                      Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                    properties:
+                      group:
+                        default: ""
+                        description: Group is the group of the referent. For example,
+                          "gateway.networking.k8s.io". When unspecified or empty string,
+                          core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: "Namespace is the namespace of the backend. When
+                          unspecified, the local namespace is inferred. \n Note that
+                          when a namespace is specified, a ReferenceGrant object is
+                          required in the referent namespace to allow that namespace's
+                          owner to accept the reference. See the ReferenceGrant documentation
+                          for details. \n Support: Core"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  provider:
+                    description: The OIDC Provider configuration.
+                    properties:
+                      authorizationEndpoint:
+                        description: The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
+                          If not provided, EG will try to discover it from the provider's
+                          [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+                        type: string
+                      issuer:
+                        description: The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
+                        minLength: 1
+                        type: string
+                      jwks:
+                        description: The JSON JWKS response from the OIDC provider’s
+                          `jwks_uri` URI which can be found in the OIDC provider's
+                          [configuration response](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+                          Note that this JSON value must be escaped when embedded
+                          in a json configmap (see [example](https://github.com/istio-ecosystem/authservice/blob/master/bookinfo-example/config/authservice-configmap-template.yaml)).
+                          Used during token verification. If not provided, EG will
+                          try to discover it from the provider's [Well-Known Configuration
+                          Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+                        type: string
+                      tokenEndpoint:
+                        description: The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
+                          If not provided, EG will try to discover it from the provider's
+                          [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
+                        type: string
+                    required:
+                    - issuer
+                    type: object
+                required:
+                - clientId
+                - clientSecret
+                - provider
+                type: object
               type:
                 description: Type defines the type of authentication provider to use.
-                  Supported provider types are "JWT".
+                  Supported provider types are "JWT" and "OIDC".
                 enum:
                 - JWT
+                - OIDC
                 type: string
             required:
             - type
