@@ -159,6 +159,23 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			}
 		}
 
+		// To be able to rate limit each individual IP, we need to use a nested descriptors structure in the configuration
+		// of the rate limit server:
+		// * the outer layer is a masked_remote_address descriptor that catches all the source IPs inside a specified CIDR.
+		// * the inner layer is a remote_address descriptor that sets the limit for individual IP.
+		//
+		// An example of rate limit server configuration looks like this:
+		//
+		//	descriptors:
+		//	  - key: masked_remote_address //catch all the source IPs inside a CIDR
+		//	    value: 192.168.0.0/16
+		//	    descriptors:
+		//	      - key: remote_address //set limit for individual IP
+		//	        rate_limit:
+		//	          unit: second
+		//	          requests_per_unit: 100
+		//
+		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		if rule.CIDRMatch != nil {
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
@@ -292,6 +309,27 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			cur = pbDesc
 		}
 
+		// EG supports two kinds of rate limit descriptors for the source IP: exact and distinct.
+		// * exact means that all IP Addresses within the specified Source IP CIDR share the same rate limit bucket.
+		// * distinct means that each IP Address within the specified Source IP CIDR has its own rate limit bucket.
+		//
+		// To be able to rate limit each individual IP, we need to use a nested descriptors structure in the configuration
+		// of the rate limit server:
+		// * the outer layer is a masked_remote_address descriptor that catches all the source IPs inside a specified CIDR.
+		// * the inner layer is a remote_address descriptor that sets the limit for individual IP.
+		//
+		// An example of rate limit server configuration looks like this:
+		//
+		//	descriptors:
+		//	  - key: masked_remote_address //catch all the source IPs inside a CIDR
+		//	    value: 192.168.0.0/16
+		//	    descriptors:
+		//	      - key: remote_address //set limit for individual IP
+		//	        rate_limit:
+		//	          unit: second
+		//	          requests_per_unit: 100
+		//
+		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		if rule.CIDRMatch != nil {
 			// MaskedRemoteAddress case
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
@@ -301,7 +339,17 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 				RequestsPerUnit: uint32(rule.Limit.Requests),
 				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 			}
-			pbDesc.RateLimit = &rateLimit
+
+			if rule.CIDRMatch.Distinct {
+				pbDesc.Descriptors = []*rlsconfv3.RateLimitDescriptor{
+					{
+						Key:       "remote_address",
+						RateLimit: &rateLimit,
+					},
+				}
+			} else {
+				pbDesc.RateLimit = &rateLimit
+			}
 			head = pbDesc
 			cur = head
 		}
