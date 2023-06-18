@@ -107,7 +107,10 @@ spec:
                                 description: SourceCIDR is the client IP Address range
                                   to match on.
                                 properties:
-                                  address:
+                                  type:
+                                    default: Exact
+                                    type: string
+                                  value:
                                     description: Value is the IP CIDR that represents
                                       the range of Source IP Addresses of the client.
                                       These could also be the intermediate addresses
@@ -118,11 +121,8 @@ spec:
                                     maxLength: 256
                                     minLength: 1
                                     type: string
-                                  type:
-                                    default: Exact
-                                    type: string
                                 required:
-                                - address
+                                - value
                                 type: object
                               sourceIP:
                                 description: 'Deprecated: Use SourceCIDR instead.'

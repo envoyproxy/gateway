@@ -129,7 +129,7 @@ type SourceMatch struct {
 	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	Value string `json:"address"`
+	Value string `json:"value"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.
