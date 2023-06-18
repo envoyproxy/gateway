@@ -54,10 +54,10 @@ http:
         - cidrMatch:
             cidr: 192.168.0.0/16
             maskLen: 16
+            distinct: true
           limit:
             requests: 5
             unit: second
-          distinct: true
     pathMatch:
       exact: "distinct"
     destinations:

@@ -42,4 +42,4 @@
         - actions:
           - maskedRemoteAddress:
               v4PrefixMaskLen: 16
-          - remoteAddress:
+          - remoteAddress: {}
