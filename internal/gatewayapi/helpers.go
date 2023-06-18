@@ -267,6 +267,9 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
 			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
 			return nil
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
+			return nil
 		}
 
 		for _, gk := range extGKs {

@@ -109,6 +109,16 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		resourceMap.corsFilters[utils.NamespacedName(&filter)] = &filter
 	}
 
+	rateLimitFilters, err := r.getRateLimitFilters(ctx)
+	if err != nil {
+		return err
+	}
+
+	for i := range rateLimitFilters {
+		filter := rateLimitFilters[i]
+		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -171,21 +181,48 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 
 				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
-					if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef && string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+
+					switch string(filter.ExtensionRef.Kind) {
+					case egv1a1.KindAuthenticationFilter:
 						key := types.NamespacedName{
 							Namespace: grpcRoute.Namespace,
 							Name:      string(filter.ExtensionRef.Name),
 						}
 
-						filter, ok := resourceMap.authenFilters[key]
-
+						authFilter, ok := resourceMap.authenFilters[key]
 						if !ok {
 							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
 							continue
 						}
-						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
 
+					case egv1a1.KindRateLimitFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+
+						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
+						if !ok {
+							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
+							continue
+						}
+
+						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
+
+					default:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						extRefFilter, ok := resourceMap.extensionRefFilters[key]
+						if !ok {
+							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
+							continue
+						}
+						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
 					}
+
 				}
 			}
 		}

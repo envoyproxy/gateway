@@ -8,6 +8,7 @@ package translator
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
@@ -159,6 +160,30 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}
 	}
 
+	if irListener.StripAnyHostPort {
+		mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{
+			StripAnyHostPort: true,
+		}
+	}
+
+	if irListener.IsHTTP2 {
+		mgr.CodecType = hcmv3.HttpConnectionManager_AUTO
+
+		// Add HTTP2 protocol options
+		mgr.Http2ProtocolOptions = http2ProtocolOptions()
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
+		// always enable grpc stats filter
+		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
+	} else {
+		// Allow websocket upgrades for HTTP 1.1
+		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
+		mgr.UpgradeConfigs = []*hcmv3.HttpConnectionManager_UpgradeConfig{
+			{
+				UpgradeType: "websocket",
+			},
+		}
+	}
+
 	// TODO: Make this a generic interface for all API Gateway features.
 	//       https://github.com/envoyproxy/gateway/issues/882
 	t.patchHCMWithRateLimit(mgr, irListener)
@@ -192,6 +217,8 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 				},
 			})
 
+			fmt.Println(grpcJSONTranscoderAny)
+
 			if err != nil {
 				// if there is an error, we should ignore this filter and log
 				log.Printf("error while adding GrpcJSONTranscoderFilter: %v", err)
@@ -204,38 +231,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 				mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
 			}
 		}
-	}
-	if irListener.StripAnyHostPort {
-		mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{
-			StripAnyHostPort: true,
-		}
-	}
-
-	if irListener.IsHTTP2 {
-		mgr.CodecType = hcmv3.HttpConnectionManager_AUTO
-
-		// Add HTTP2 protocol options
-		mgr.Http2ProtocolOptions = http2ProtocolOptions()
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
-		// always enable grpc stats filter
-		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
-	} else {
-		// Allow websocket upgrades for HTTP 1.1
-		// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Protocol_upgrade_mechanism
-		mgr.UpgradeConfigs = []*hcmv3.HttpConnectionManager_UpgradeConfig{
-			{
-				UpgradeType: "websocket",
-			},
-		}
-	}
-
-	// TODO: Make this a generic interface for all API Gateway features.
-	//       https://github.com/envoyproxy/gateway/issues/882
-	t.patchHCMWithRateLimit(mgr, irListener)
-
-	// Add the jwt authn filter, if needed.
-	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
-		return err
 	}
 
 	// Make sure the router filter is the last one.
