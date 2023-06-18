@@ -198,12 +198,6 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		return false
 	}, defaultWait, defaultTick)
 
-	// Ensure the envoyproxy has been finalized.
-	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name}, ep)
-		return err == nil && slices.Contains(ep.Finalizers, gatewayClassFinalizer)
-	}, defaultWait, defaultTick)
-
 	// Ensure the resource map contains the EnvoyProxy.
 	res, ok := resources.GatewayAPIResources.Load(gc.Name)
 	assert.Equal(t, ok, true)

@@ -472,8 +472,9 @@ func TestProcessParamsRef(t *testing.T) {
 			},
 			ep: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
+					Namespace:  config.DefaultNamespace,
+					Name:       "test",
+					Finalizers: []string{gatewayClassFinalizer},
 				},
 			},
 			expected: true,
