@@ -5,8 +5,7 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
-  annotations:
-    "helm.sh/hook": pre-install
+  
     
 spec:
   backoffLimit: 1
