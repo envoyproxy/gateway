@@ -14,3 +14,10 @@ data:
     kind: EnvoyGateway
     provider:
       type: {{ .Values.config.envoyGateway.provider.type | quote }}
+    rateLimit:
+      backend:
+        type: {{ .Values.config.envoyGateway.rateLimit.backend.type | quote }}
+        redis:
+          url: {{ .Values.config.envoyGateway.rateLimit.backend.redis.url
+            | quote }}
+
