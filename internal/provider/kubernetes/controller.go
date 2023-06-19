@@ -979,7 +979,7 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, obj client.Obje
 		return nil
 	}
 
-	return nil
+	return fmt.Errorf("%s is not supported for finalizer processing", obj.GetObjectKind().GroupVersionKind().Kind)
 }
 
 // removeFinalizer removes the gatewayclass or envoyproxy finalizer from the provided object, if it exists.
@@ -1005,7 +1005,7 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.O
 		return nil
 	}
 
-	return nil
+	return fmt.Errorf("%s is not supported for finalizer processing", obj.GetObjectKind().GroupVersionKind().Kind)
 }
 
 // subscribeAndUpdateStatus subscribes to gateway API object status updates and
@@ -1465,18 +1465,16 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	for i := range epList.Items {
 		ep := epList.Items[i]
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
-
-		if !gc.DeletionTimestamp.IsZero() {
-			if err := r.removeFinalizer(ctx, &ep); err != nil {
-				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
-					ep.Name))
-				return err
-			}
-			return nil
-		}
-
 		if classRefsEnvoyProxy(gc, &ep) {
 			found = true
+			if !gc.DeletionTimestamp.IsZero() {
+				if err := r.removeFinalizer(ctx, &ep); err != nil {
+					r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
+						ep.Name))
+					return err
+				}
+				return nil
+			}
 			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
 				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
 				continue
