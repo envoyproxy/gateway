@@ -122,7 +122,7 @@ func writeOthers(outputDir string, resources kube.ResourceList) error {
 
 	for _, r := range crds {
 		out, _ := yaml.Marshal(r.Object)
-		n := path.Join(outputDir, fmt.Sprintf("%s.yaml", r.Name))
+		n := path.Join(outputDir, fmt.Sprintf("%s_%s.yaml", r.Name, r.Mapping.GroupVersionKind.Kind))
 		if err := os.WriteFile(n, out, 0o755); err != nil {
 			return err
 		}

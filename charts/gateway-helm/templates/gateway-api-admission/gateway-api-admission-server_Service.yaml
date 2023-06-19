@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    name: gateway-api-webhook-server
+  name: gateway-api-admission-server
+  namespace: gateway-system
+spec:
+  ports:
+  - name: https-webhook
+    port: 443
+    targetPort: 8443
+  selector:
+    name: gateway-api-admission-server
+  type: ClusterIP

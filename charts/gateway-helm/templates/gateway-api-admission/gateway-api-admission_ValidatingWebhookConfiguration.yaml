@@ -1,0 +1,29 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: gateway-api-admission
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: gateway-api-admission-server
+      namespace: gateway-system
+      path: /validate
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validate.gateway.networking.k8s.io
+  rules:
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1alpha2
+    - v1beta1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - gatewayclasses
+    - httproutes
+  sideEffects: None
