@@ -13,6 +13,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Ignore the following modules as they are updated by k8s.io/kubectl
+      - dependency-name: "k8s.io/api"
+      - dependency-name: "k8s.io/apimachinery"
+      - dependency-name: "k8s.io/client-go"
   - package-ecosystem: pip
     directory: /tools/src/codespell
     schedule:
