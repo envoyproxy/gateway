@@ -18,11 +18,12 @@ tools/kustomize          = $(tools.bindir)/kustomize
 tools/kind               = $(tools.bindir)/kind
 tools/setup-envtest      = $(tools.bindir)/setup-envtest
 tools/crd-ref-docs = $(tools.bindir)/crd-ref-docs
+tools/gtwapi-manifests = $(tools.bindir)/gtwapi-manifests
 tools/buf                = $(tools.bindir)/buf
 tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
 tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
-	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
+	cd $(<D) && GOOS= GOARCH= go build --tags pin -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 
 
 # `pip install`-able things

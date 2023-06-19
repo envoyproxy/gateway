@@ -4,8 +4,6 @@ ENVTEST_K8S_VERSION ?= 1.24.1
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
 
-GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
-
 WAIT_TIMEOUT ?= 15m
 
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
@@ -34,11 +32,10 @@ manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookC
 	rm charts/gateway-helm/templates/generated/rbac/role.yaml
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
-generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
+generate-gwapi-manifests: $(tools/gtwapi-manifests) ## Generate GWAPI manifests and make it consistent with the go mod version.
 	@$(LOG_TARGET)
 	@mkdir -p $(OUTPUT_DIR)/
-	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
-	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+	GATEWAY_API_VERSION=${GATEWAY_API_VERSION} $(tools/gtwapi-manifests)
 
 .PHONY: kube-generate
 kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
