@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: gateway-api-admission-server
+  name: gateway-api-admission-server
+  namespace: gateway-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: gateway-api-admission-server
+  template:
+    metadata:
+      labels:
+        name: gateway-api-admission-server
+      name: gateway-api-admission-server
+    spec:
+      containers:
+      - args:
+        - -logtostderr
+        - --tlsCertFile=/etc/certs/cert
+        - --tlsKeyFile=/etc/certs/key
+        - -v=10
+        - 2>&1
+        image: registry.k8s.io/gateway-api/admission-server:v0.7.1
+        imagePullPolicy: Always
+        name: webhook
+        ports:
+        - containerPort: 8443
+          name: webhook
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        securityContext:
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - mountPath: /etc/certs
+          name: webhook-certs
+          readOnly: true
+      volumes:
+      - name: webhook-certs
+        secret:
+          secretName: gateway-api-admission
