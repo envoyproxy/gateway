@@ -39,6 +39,11 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: master.engine-dev-replication-group.wccceb.use1.cache.amazonaws.com:6379
 envoyGatewayMetricsService:
   ports:
   - name: https
