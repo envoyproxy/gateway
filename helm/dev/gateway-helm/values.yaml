@@ -44,7 +44,7 @@ config:
         type: Redis
         redis:
           url: master.engine-dev-replication-group.wccceb.use1.cache.amazonaws.com:6379
-          tls: true
+          
 envoyGatewayMetricsService:
   ports:
   - name: https
