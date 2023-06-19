@@ -43,7 +43,7 @@ config:
       backend:
         type: Redis
         redis:
-          url: master.engine-dev-replication-group.wccceb.use1.cache.amazonaws.com:6379
+          url: engine-dev-replication-unauthenticated.wccceb.ng.0001.use1.cache.amazonaws.com:6379
           
 envoyGatewayMetricsService:
   ports:
