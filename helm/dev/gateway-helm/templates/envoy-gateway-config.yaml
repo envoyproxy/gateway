@@ -20,4 +20,5 @@ data:
         redis:
           url: {{ .Values.config.envoyGateway.rateLimit.backend.redis.url
             | quote }}
-
+          tls: {{ .Values.config.envoyGateway.rateLimit.backend.redis.tls
+            | quote }}
