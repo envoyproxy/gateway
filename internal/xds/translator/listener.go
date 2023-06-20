@@ -204,7 +204,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 
 			grpcJSONTranscoderAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
 				AutoMapping:       filter.AutoMapping,
-				ConvertGrpcStatus: true,
+				ConvertGrpcStatus: false,
 				Services:          filter.Services,
 				PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
 					AddWhitespace:              filter.PrintOptions.AddWhitespace,
