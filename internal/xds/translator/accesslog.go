@@ -171,6 +171,12 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 	return accessLogs
 }
 
+// read more here: https://opentelemetry.io/docs/specs/otel/resource/semantic_conventions/k8s/
+const (
+	k8sNamespaceNameKey = "k8s.namespace.name"
+	k8sPodNameKey       = "k8s.pod.name"
+)
+
 func convertToKeyValueList(attributes map[string]string, additionalLabels bool) *otlpcommonv1.KeyValueList {
 	maxLen := len(attributes)
 	if additionalLabels {
@@ -185,12 +191,12 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	// so we set these on attributes that read from the environment.
 	if additionalLabels {
 		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   "k8s.namespace.name",
+			Key:   k8sNamespaceNameKey,
 			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%"}},
 		})
 
 		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
-			Key:   "k8s.pod.name",
+			Key:   k8sPodNameKey,
 			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAME)%"}},
 		})
 	}
