@@ -60,7 +60,7 @@ const (
 	// ProxyAccessLogSinkTypeFile defines the file accesslog sink.
 	ProxyAccessLogSinkTypeFile ProxyAccessLogSinkType = "File"
 	// ProxyAccessLogSinkTypeOpenTelemetry defines the OpenTelemetry accesslog sink.
-	// EnvoyGateway always sends `k8s.namespace.name` and `k8s.pod.name` as atrributes.
+	// EnvoyGateway always sends `k8s.namespace.name` and `k8s.pod.name` as attributes.
 	ProxyAccessLogSinkTypeOpenTelemetry ProxyAccessLogSinkType = "OpenTelemetry"
 )
 
