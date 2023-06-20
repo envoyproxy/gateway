@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -39,6 +40,10 @@ const (
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
+	// envoyReadinessPath is the path of the envoy admin server to check readiness
+	envoyReadinessPath = "/ready"
+	// envoyReadinessPort is the port of the envoy admin server to check readiness
+	envoyReadinessPort = 19000
 )
 
 var (
@@ -154,6 +159,14 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path: envoyReadinessPath,
+						Port: intstr.IntOrString{Type: intstr.Int, IntVal: envoyReadinessPort},
+					},
+				},
+			},
 		},
 	}
 
