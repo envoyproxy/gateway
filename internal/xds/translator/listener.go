@@ -8,7 +8,6 @@ package translator
 import (
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"log"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
@@ -17,7 +16,11 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
+
+	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 
 	health_check "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -204,7 +207,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 
 			grpcJSONTranscoderAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
 				AutoMapping:       filter.AutoMapping,
-				ConvertGrpcStatus: false,
+				ConvertGrpcStatus: true,
 				Services:          filter.Services,
 				PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
 					AddWhitespace:              filter.PrintOptions.AddWhitespace,
@@ -216,8 +219,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 					ProtoDescriptorBin: bytt,
 				},
 			})
-
-			fmt.Println(grpcJSONTranscoderAny)
 
 			if err != nil {
 				// if there is an error, we should ignore this filter and log
@@ -232,6 +233,18 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			}
 		}
 	}
+
+	luaFilter := &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.lua",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: &any.Any{
+				TypeUrl: "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+				Value:   getLuaFilterConfig(),
+			},
+		},
+	}
+
+	mgr.HttpFilters = append(mgr.HttpFilters, luaFilter)
 
 	// Make sure the router filter is the last one.
 	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
@@ -510,4 +523,37 @@ func makeConfigSource() *corev3.ConfigSource {
 		Ads: &corev3.AggregatedConfigSource{},
 	}
 	return source
+}
+
+func getLuaFilterConfig() []byte {
+	// add log info to lua filter when traffic is redirected
+	luaConfig := &luav3.Lua{
+		InlineCode: `
+			function envoy_on_request(request_handle)
+				-- Accessing request headers
+				local headers = request_handle:headers()
+				local method = headers:get(":method")
+				local path = headers:get(":path")
+			
+				-- Log request details to console
+				print("Request: method=" .. method .. ", path=" .. path)
+			end
+			
+			function envoy_on_response(response_handle)
+				-- Accessing response headers
+				local headers = response_handle:headers()
+				local status_code = headers:get(":status")
+			
+				-- Log response details to console
+				print("Response: status=" .. status_code)
+			end
+        `,
+	}
+
+	luaConfigAny, err := ptypes.MarshalAny(luaConfig)
+	if err != nil {
+		log.Fatal("Failed to marshal Lua filter config: ", err)
+	}
+
+	return luaConfigAny.Value
 }
