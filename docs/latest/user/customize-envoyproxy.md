@@ -1,7 +1,7 @@
 # Customize EnvoyProxy
 
-Envoy Gateway provides a [EnvoyProxy][] CRD that can be linked to the ParametersRef
-in GatewayClass y cluster admins to customize the managed EnvoyProxy Deployment and
+Envoy Gateway provides an [EnvoyProxy][] CRD that can be linked to the ParametersRef
+in GatewayClass, allowing cluster admins to customize the managed EnvoyProxy Deployment and
 Service. To learn more about GatewayClass and ParametersRef, please refer to [Gateway API documentation][].
 
 ## Installation
