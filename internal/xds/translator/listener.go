@@ -214,6 +214,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 					AlwaysPrintEnumsAsInts:     filter.PrintOptions.AlwaysPrintEnumsAsInts,
 					PreserveProtoFieldNames:    filter.PrintOptions.PreserveProtoFieldNames,
 				},
+				IgnoreUnknownQueryParameters: true,
 				DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
 					ProtoDescriptorBin: bytt,
 				},
