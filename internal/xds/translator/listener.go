@@ -16,6 +16,9 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
+	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
 
 	health_check "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
@@ -229,6 +232,18 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			}
 		}
 	}
+
+	luaFilterConfigHandlerErrors := &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.lua",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: &any.Any{
+				TypeUrl: "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+				Value:   getLuaFilterConfigHandlerErrors(),
+			},
+		},
+	}
+
+	mgr.HttpFilters = append([]*hcmv3.HttpFilter{luaFilterConfigHandlerErrors}, mgr.HttpFilters...)
 
 	// Make sure the router filter is the last one.
 	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
@@ -509,35 +524,53 @@ func makeConfigSource() *corev3.ConfigSource {
 	return source
 }
 
-// func getLuaFilterConfig() []byte {
-// 	// add log info to lua filter when traffic is redirected
-// 	luaConfig := &luav3.Lua{
-// 		InlineCode: `
-// 			function envoy_on_request(request_handle)
-// 				-- Accessing request headers
-// 				local headers = request_handle:headers()
-// 				local method = headers:get(":method")
-// 				local path = headers:get(":path")
+func getLuaFilterConfigHandlerErrors() []byte {
+	// add log info to lua filter when traffic is redirected
+	luaConfig := &luav3.Lua{
+		InlineCode: `
+		function envoy_on_response(response_handle)
+			-- Get status and error message information
+			local grpc_message = response_handle:headers():get("grpc-message")
+			local grpc_status = response_handle:headers():get("grpc-status")
+			local status_code = tonumber(response_handle:headers():get(":status"))
 
-// 				-- Log request details to console
-// 				print("Request: method=" .. method .. ", path=" .. path)
-// 			end
+			-- Only handle status codes greater than 300
+			if status_code < 300 then
+				return
+			end
 
-// 			function envoy_on_response(response_handle)
-// 				-- Accessing response headers
-// 				local headers = response_handle:headers()
-// 				local status_code = headers:get(":status")
+			-- Check if the response has a body
+			local body_handle = response_handle:body()
+			if not body_handle then
+				response_handle:logWarn("No response body to modify.")
+				return
+			end
 
-// 				-- Log response details to console
-// 				print("Response: status=" .. status_code)
-// 			end
-//         `,
-// 	}
+			response_handle:logWarn("1111111")
 
-// 	luaConfigAny, err := ptypes.MarshalAny(luaConfig)
-// 	if err != nil {
-// 		log.Fatal("Failed to marshal Lua filter config: ", err)
-// 	}
+			local body_size = body_handle:length()
+			local body_bytes = body_handle:getBytes(0, body_size)
+			response_handle:logWarn("222222")
 
-// 	return luaConfigAny.Value
-// }
+			-- Convert body_bytes to string
+			local raw_json_text = tostring(body_bytes)
+			response_handle:logWarn("raw_json_text: " .. raw_json_text)
+			response_handle:logWarn("33333")
+
+			local modified_json_text = string.gsub(raw_json_text, '"code":%s*%d+', '"code": ' .. status_code)
+
+			local content_length = body_handle:setBytes(modified_json_text)
+
+			-- Modify the response header
+			response_handle:headers():replace("content-length", content_length)
+		end
+        `,
+	}
+
+	luaConfigAny, err := ptypes.MarshalAny(luaConfig)
+	if err != nil {
+		log.Fatal("Failed to marshal Lua filter config: ", err)
+	}
+
+	return luaConfigAny.Value
+}
