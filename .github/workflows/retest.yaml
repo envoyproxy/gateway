@@ -28,8 +28,9 @@ jobs:
       - name: Rerun Action
         if: steps.check_comment.outputs.result == 'true'
         uses: actions/github-script@v6
-        with:
+        env:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+        with:
           script: |
             const { Octokit } = require("@octokit/core");
             const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
