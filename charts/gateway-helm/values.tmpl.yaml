@@ -3,7 +3,7 @@ deployment:
     imagePullSecret: artifactory-reader
     image:
       repository: ${ImageRepository}
-      tag: ${ImageTag}
+      tag: '${ImageTag}'
     imagePullPolicy: Always
     resources:
       limits:

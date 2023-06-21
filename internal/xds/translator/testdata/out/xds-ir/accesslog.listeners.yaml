@@ -33,6 +33,17 @@
     name: envoy.access_loggers.open_telemetry
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
+      attributes:
+        values:
+        - key: k8s.namespace.name
+          value:
+            stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+        - key: k8s.pod.name
+          value:
+            stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+        - key: response_code
+          value:
+            stringValue: '%RESPONSE_CODE%'
       body:
         stringValue: |
           [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
@@ -80,6 +91,17 @@
         - name: envoy.access_loggers.open_telemetry
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.access_loggers.open_telemetry.v3.OpenTelemetryAccessLogConfig
+            attributes:
+              values:
+              - key: k8s.namespace.name
+                value:
+                  stringValue: '%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%'
+              - key: k8s.pod.name
+                value:
+                  stringValue: '%ENVIRONMENT(ENVOY_POD_NAME)%'
+              - key: response_code
+                value:
+                  stringValue: '%RESPONSE_CODE%'
             body:
               stringValue: |
                 [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"

@@ -54,17 +54,18 @@ var FileAccessLogTest = suite.ConformanceTest{
 				Namespace: ns,
 			})
 
+			labels := map[string]string{
+				"job":                "fluentbit",
+				"k8s_namespace_name": "envoy-gateway-system",
+				"k8s_container_name": "envoy",
+			}
 			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
 					// query log count from loki
 					count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, map[string]string{
-						"namespace": "envoy-gateway-system",
-						"job":       "fluentbit",
-						"container": "envoy",
-					})
+					}, labels)
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -83,11 +84,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					// query log count from loki
 					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, map[string]string{
-						"namespace": "envoy-gateway-system",
-						"job":       "fluentbit",
-						"container": "envoy",
-					})
+					}, labels)
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -108,11 +105,7 @@ var FileAccessLogTest = suite.ConformanceTest{
 					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 15*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
-						}, map[string]string{
-							"namespace": "envoy-gateway-system",
-							"job":       "fluentbit",
-							"container": "envoy",
-						})
+						}, labels)
 						if err != nil {
 							t.Logf("failed to get log count from loki: %v", err)
 							return false, nil
@@ -134,7 +127,6 @@ var FileAccessLogTest = suite.ConformanceTest{
 				t.Errorf("failed to get log count from loki: %v", err)
 			}
 		})
-
 	},
 }
 
@@ -149,14 +141,16 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+			labels := map[string]string{
+				"k8s_namespace_name": "envoy-gateway-system",
+				"exporter":           "OTLP",
+			}
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
 					// query log count from loki
 					preCount, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 						Namespace: "envoy-gateway-system",
-					}, map[string]string{
-						"exporter": "OTLP",
-					})
+					}, labels)
 					if err != nil {
 						t.Logf("failed to get log count from loki: %v", err)
 						return false, nil
@@ -175,9 +169,7 @@ var OpenTelemetryTest = suite.ConformanceTest{
 					if err := wait.PollUntilContextTimeout(ctx, 500*time.Millisecond, 10*time.Second, true, func(_ context.Context) (bool, error) {
 						count, err := QueryLogCountFromLoki(t, suite.Client, types.NamespacedName{
 							Namespace: "envoy-gateway-system",
-						}, map[string]string{
-							"exporter": "OTLP",
-						})
+						}, labels)
 						if err != nil {
 							t.Logf("failed to get log count from loki: %v", err)
 							return false, nil

@@ -38,3 +38,13 @@
           - genericKey:
               descriptorKey: third-route-key-rule-0-match--1
               descriptorValue: third-route-value-rule-0-match--1
+    - match:
+        path: distinct
+      name: fourth-route
+      route:
+        cluster: fourth-route
+        rateLimits:
+        - actions:
+          - maskedRemoteAddress:
+              v4PrefixMaskLen: 16
+          - remoteAddress: {}
