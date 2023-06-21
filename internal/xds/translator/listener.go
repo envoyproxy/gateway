@@ -16,10 +16,7 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/wrappers"
-
-	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 
 	health_check "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
 	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
@@ -29,7 +26,6 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 
 	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -502,45 +498,45 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	return xdsListener, nil
 }
 
-// Point to xds cluster.
-func makeConfigSource() *corev3.ConfigSource {
-	source := &corev3.ConfigSource{}
-	source.ResourceApiVersion = resource.DefaultAPIVersion
-	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
-		Ads: &corev3.AggregatedConfigSource{},
-	}
-	return source
-}
+// // Point to xds cluster.
+// func makeConfigSource() *corev3.ConfigSource {
+// 	source := &corev3.ConfigSource{}
+// 	source.ResourceApiVersion = resource.DefaultAPIVersion
+// 	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
+// 		Ads: &corev3.AggregatedConfigSource{},
+// 	}
+// 	return source
+// }
 
-func getLuaFilterConfig() []byte {
-	// add log info to lua filter when traffic is redirected
-	luaConfig := &luav3.Lua{
-		InlineCode: `
-			function envoy_on_request(request_handle)
-				-- Accessing request headers
-				local headers = request_handle:headers()
-				local method = headers:get(":method")
-				local path = headers:get(":path")
-			
-				-- Log request details to console
-				print("Request: method=" .. method .. ", path=" .. path)
-			end
-			
-			function envoy_on_response(response_handle)
-				-- Accessing response headers
-				local headers = response_handle:headers()
-				local status_code = headers:get(":status")
-			
-				-- Log response details to console
-				print("Response: status=" .. status_code)
-			end
-        `,
-	}
+// func getLuaFilterConfig() []byte {
+// 	// add log info to lua filter when traffic is redirected
+// 	luaConfig := &luav3.Lua{
+// 		InlineCode: `
+// 			function envoy_on_request(request_handle)
+// 				-- Accessing request headers
+// 				local headers = request_handle:headers()
+// 				local method = headers:get(":method")
+// 				local path = headers:get(":path")
 
-	luaConfigAny, err := ptypes.MarshalAny(luaConfig)
-	if err != nil {
-		log.Fatal("Failed to marshal Lua filter config: ", err)
-	}
+// 				-- Log request details to console
+// 				print("Request: method=" .. method .. ", path=" .. path)
+// 			end
 
-	return luaConfigAny.Value
-}
+// 			function envoy_on_response(response_handle)
+// 				-- Accessing response headers
+// 				local headers = response_handle:headers()
+// 				local status_code = headers:get(":status")
+
+// 				-- Log response details to console
+// 				print("Response: status=" .. status_code)
+// 			end
+//         `,
+// 	}
+
+// 	luaConfigAny, err := ptypes.MarshalAny(luaConfig)
+// 	if err != nil {
+// 		log.Fatal("Failed to marshal Lua filter config: ", err)
+// 	}
+
+// 	return luaConfigAny.Value
+// }
