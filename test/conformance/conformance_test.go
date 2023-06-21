@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -29,6 +30,9 @@ func TestGatewayAPIConformance(t *testing.T) {
 	require.NoError(t, err)
 
 	client, err := client.New(cfg, client.Options{})
+	require.NoError(t, err)
+
+	clientset, err := kubernetes.NewForConfig(cfg)
 	require.NoError(t, err)
 
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
@@ -53,12 +57,12 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Client:               client,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,
+		Clientset:            clientset,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
 		ExemptFeatures:       suite.MeshCoreFeatures,
 		SkipTests: []string{
 			tests.HTTPRouteRedirectPortAndScheme.ShortName,
-			tests.HTTPRouteRequestMirror.ShortName,
 		},
 	})
 	cSuite.Setup(t)

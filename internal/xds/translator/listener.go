@@ -17,7 +17,6 @@ import (
 	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
 	"github.com/golang/protobuf/ptypes/wrappers"
 
 	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
@@ -233,18 +232,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 			}
 		}
 	}
-
-	luaFilter := &hcmv3.HttpFilter{
-		Name: "envoy.filters.http.lua",
-		ConfigType: &hcmv3.HttpFilter_TypedConfig{
-			TypedConfig: &any.Any{
-				TypeUrl: "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
-				Value:   getLuaFilterConfig(),
-			},
-		},
-	}
-
-	mgr.HttpFilters = append(mgr.HttpFilters, luaFilter)
 
 	// Make sure the router filter is the last one.
 	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)

@@ -1,0 +1,36 @@
+fullnameOverride: otel-collector
+mode: deployment
+config:
+  exporters:
+    logging: {}
+    loki:
+      endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
+  extensions:
+    # The health_check extension is mandatory for this chart.
+    # Without the health_check extension the collector will fail the readiness and liveliness probes.
+    # The health_check extension can be modified, but should never be removed.
+    health_check: {}
+  processors:
+    attributes:
+      actions:
+        - action: insert
+          key: loki.attribute.labels
+          value: pod, namespace
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+  service:
+    extensions:
+      - health_check
+    pipelines:
+      logs:
+        exporters:
+          - loki
+        processors:
+          - attributes
+        receivers:
+          - otlp

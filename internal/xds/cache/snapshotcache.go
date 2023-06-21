@@ -122,7 +122,7 @@ func NewSnapshotCache(ads bool, logger logging.Logger) SnapshotCacheWithCallback
 func (s *snapshotCache) getNodeIDs(irKey string) []string {
 	var nodeIDs []string
 	for _, node := range s.streamIDNodeInfo {
-		if node.Cluster == irKey {
+		if node != nil && node.Cluster == irKey {
 			nodeIDs = append(nodeIDs, node.Id)
 		}
 	}
