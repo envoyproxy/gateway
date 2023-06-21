@@ -197,10 +197,9 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 				}
 
 				al := &ir.OpenTelemetryAccessLog{
-					Attributes: accessLog.Format.JSON,
-					Port:       uint32(sink.OpenTelemetry.Port),
-					Host:       sink.OpenTelemetry.Host,
-					Resources:  sink.OpenTelemetry.Resources,
+					Port:      uint32(sink.OpenTelemetry.Port),
+					Host:      sink.OpenTelemetry.Host,
+					Resources: sink.OpenTelemetry.Resources,
 				}
 
 				switch accessLog.Format.Type {
