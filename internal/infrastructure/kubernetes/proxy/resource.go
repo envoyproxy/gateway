@@ -40,10 +40,6 @@ const (
 	envoyNsEnvVar = "ENVOY_GATEWAY_NAMESPACE"
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
-	// envoyReadinessPath is the path of the envoy admin server to check readiness
-	envoyReadinessPath = "/ready"
-	// envoyReadinessPort is the port of the envoy admin server to check readiness
-	envoyReadinessPort = 19000
 )
 
 var (
@@ -162,8 +158,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path: envoyReadinessPath,
-						Port: intstr.IntOrString{Type: intstr.Int, IntVal: envoyReadinessPort},
+						Path: bootstrap.EnvoyReadinessPath,
+						Port: intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
 					},
 				},
 			},

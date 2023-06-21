@@ -20,7 +20,7 @@ const (
 	// It defaults to the Envoy Gateway Kubernetes service.
 	envoyGatewayXdsServerHost = "envoy-gateway"
 	// envoyAdminAddress is the listening address of the envoy admin interface.
-	envoyAdminAddress = "0.0.0.0"
+	envoyAdminAddress = "127.0.0.1"
 	// envoyAdminPort is the port used to expose admin interface.
 	envoyAdminPort = 19000
 	// envoyAdminAccessLogPath is the path used to expose admin access log.
@@ -28,6 +28,10 @@ const (
 
 	// DefaultXdsServerPort is the default listening port of the xds-server.
 	DefaultXdsServerPort = 18000
+
+	envoyReadinessAddress = "0.0.0.0"
+	EnvoyReadinessPort    = 19001
+	EnvoyReadinessPath    = "/ready"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -49,6 +53,8 @@ type bootstrapParameters struct {
 	XdsServer xdsServerParameters
 	// AdminServer defines the configuration of the Envoy admin interface.
 	AdminServer adminServerParameters
+	// ReadyServer defines the configuration for health check ready listener
+	ReadyServer readyServerParameters
 }
 
 type xdsServerParameters struct {
@@ -65,6 +71,15 @@ type adminServerParameters struct {
 	Port int32
 	// AccessLogPath is the path of the Envoy admin access log.
 	AccessLogPath string
+}
+
+type readyServerParameters struct {
+	// Address is the address of the Envoy readiness probe
+	Address string
+	// Port is the port of envoy readiness probe
+	Port int32
+	// ReadinessPath is the path for the envoy readiness probe
+	ReadinessPath string
 }
 
 // render the stringified bootstrap config in yaml format.
@@ -91,6 +106,11 @@ func GetRenderedBootstrapConfig() (string, error) {
 				Address:       envoyAdminAddress,
 				Port:          envoyAdminPort,
 				AccessLogPath: envoyAdminAccessLogPath,
+			},
+			ReadyServer: readyServerParameters{
+				Address:       envoyReadinessAddress,
+				Port:          EnvoyReadinessPort,
+				ReadinessPath: EnvoyReadinessPath,
 			},
 		},
 	}
