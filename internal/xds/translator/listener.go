@@ -26,6 +26,7 @@ import (
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 
 	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -498,15 +499,15 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 	return xdsListener, nil
 }
 
-// // Point to xds cluster.
-// func makeConfigSource() *corev3.ConfigSource {
-// 	source := &corev3.ConfigSource{}
-// 	source.ResourceApiVersion = resource.DefaultAPIVersion
-// 	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
-// 		Ads: &corev3.AggregatedConfigSource{},
-// 	}
-// 	return source
-// }
+// Point to xds cluster.
+func makeConfigSource() *corev3.ConfigSource {
+	source := &corev3.ConfigSource{}
+	source.ResourceApiVersion = resource.DefaultAPIVersion
+	source.ConfigSourceSpecifier = &corev3.ConfigSource_Ads{
+		Ads: &corev3.AggregatedConfigSource{},
+	}
+	return source
+}
 
 // func getLuaFilterConfig() []byte {
 // 	// add log info to lua filter when traffic is redirected
