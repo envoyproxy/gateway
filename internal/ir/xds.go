@@ -741,6 +741,9 @@ type CIDRMatch struct {
 	CIDR    string
 	IPv6    bool
 	MaskLen int
+	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
+	// and uses a separate rate limit bucket/counter.
+	Distinct bool
 }
 
 func (r *RateLimitRule) IsMatchSet() bool {

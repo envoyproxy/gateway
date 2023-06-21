@@ -8,7 +8,9 @@ spec:
   global:
     rules:
       - clientSelectors:
-          - sourceIP: 0.0.0.0/0
+          - sourceCIDR:
+              value: 0.0.0.0/0
+              type: distinct
         limit:
           requests: 3
           unit: Hour

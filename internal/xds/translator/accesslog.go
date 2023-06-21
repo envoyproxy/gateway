@@ -134,7 +134,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				},
 				TransportApiVersion: cfgcore.ApiVersion_V3,
 			},
-			ResourceAttributes: convertToKeyValueList(otel.Resources),
+			ResourceAttributes: convertToKeyValueList(otel.Resources, false),
 		}
 
 		format := EnvoyTextLogFormat
@@ -150,7 +150,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 			}
 		}
 
-		al.Attributes = convertToKeyValueList(otel.Attributes)
+		al.Attributes = convertToKeyValueList(otel.Attributes, true)
 
 		accesslogAny, _ := anypb.New(al)
 		accessLogs = append(accessLogs, &accesslog.AccessLog{
@@ -171,13 +171,39 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 	return accessLogs
 }
 
-func convertToKeyValueList(attributes map[string]string) *otlpcommonv1.KeyValueList {
-	if len(attributes) == 0 {
-		return nil
+// read more here: https://opentelemetry.io/docs/specs/otel/resource/semantic_conventions/k8s/
+const (
+	k8sNamespaceNameKey = "k8s.namespace.name"
+	k8sPodNameKey       = "k8s.pod.name"
+)
+
+func convertToKeyValueList(attributes map[string]string, additionalLabels bool) *otlpcommonv1.KeyValueList {
+	maxLen := len(attributes)
+	if additionalLabels {
+		maxLen += 2
+	}
+	keyValueList := &otlpcommonv1.KeyValueList{
+		Values: make([]*otlpcommonv1.KeyValue, 0, maxLen),
 	}
 
-	keyValueList := &otlpcommonv1.KeyValueList{
-		Values: make([]*otlpcommonv1.KeyValue, 0, len(attributes)),
+	// always set the k8s namespace and pod name for better UX
+	// EG cannot know the client namespace and pod name,
+	// so we set these on attributes that read from the environment.
+	if additionalLabels {
+		// TODO: check the provider type and set the appropriate attributes
+		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
+			Key:   k8sNamespaceNameKey,
+			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_GATEWAY_NAMESPACE)%"}},
+		})
+
+		keyValueList.Values = append(keyValueList.Values, &otlpcommonv1.KeyValue{
+			Key:   k8sPodNameKey,
+			Value: &otlpcommonv1.AnyValue{Value: &otlpcommonv1.AnyValue_StringValue{StringValue: "%ENVIRONMENT(ENVOY_POD_NAME)%"}},
+		})
+	}
+
+	if len(attributes) == 0 {
+		return keyValueList
 	}
 
 	// sort keys to ensure consistent ordering

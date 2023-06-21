@@ -42,9 +42,7 @@ config:
     [FILTER]
         Name grep
         Match kube.*
-        Logical_Op and
-        Regex $kubernetes['namespace_name'] envoy-gateway-system
-        Regex $kubernetes['container_name'] envoy
+        Regex $kubernetes['container_name'] ^envoy$
 
     [FILTER]
         Name parser
@@ -57,7 +55,7 @@ config:
   outputs: |
     [OUTPUT]
         Name                   loki
-        Match                  *
+        Match                  kube.*
         Host                   loki.monitoring.svc.cluster.local
         Port                   3100
-        Labels                 job=fluentbit, app=$kubernetes['labels']['app'], namespace=$kubernetes['namespace_name'], pod=$kubernetes['pod_name'], container=$kubernetes['container_name']
+        Labels                 job=fluentbit, app=$kubernetes['labels']['app'], k8s_namespace_name=$kubernetes['namespace_name'], k8s_pod_name=$kubernetes['pod_name'], k8s_container_name=$kubernetes['container_name']
