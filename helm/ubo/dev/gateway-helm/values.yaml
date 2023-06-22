@@ -1,0 +1,56 @@
+deployment:
+  envoyGateway:
+    imagePullSecret: artifactory-reader
+    image:
+      repository: geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev
+      tag: latest
+    imagePullPolicy: Always
+    resources:
+      limits:
+        cpu: 500m
+        memory: 256Mi
+      requests:
+        cpu: 500m
+        memory: 256Mi
+  kubeRbacProxy:
+    image:
+      repository: gcr.io/kubebuilder/kube-rbac-proxy
+      tag: v0.11.0
+    resources:
+      limits:
+        cpu: 50m
+        memory: 56Mi
+      requests:
+        cpu: 50m
+        memory: 56Mi
+  ports:
+  - name: grpc
+    port: 18000
+    targetPort: 18000
+  - name: ratelimit
+    port: 18001
+    targetPort: 18001
+  replicas: 3
+rootNamespace: envoy-gateway-system
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+    rateLimit:
+      backend:
+        type: Redis
+        redis:
+          url: engine-dev-replication-unauthenticated.wccceb.ng.0001.use1.cache.amazonaws.com:6379
+          
+envoyGatewayMetricsService:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+
+createNamespace: false
+
+kubernetesClusterDomain: cluster.local
