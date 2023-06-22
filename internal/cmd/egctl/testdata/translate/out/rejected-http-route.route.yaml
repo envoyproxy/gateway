@@ -39,7 +39,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
 httpRoutes:
-- metadata:
+- kind: "HTTPRoute"
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
