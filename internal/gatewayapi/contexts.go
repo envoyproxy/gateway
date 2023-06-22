@@ -156,27 +156,6 @@ func (l *ListenerContext) SetTLSSecrets(tlsSecrets []*v1.Secret) {
 // that can reference Gateway objects.
 type RouteContext interface {
 	client.Object
-
-	// GetRouteType returns the Kind of the Route object, HTTPRoute,
-	// TLSRoute, TCPRoute, UDPRoute etc.
-	GetRouteType() v1beta1.Kind
-
-	// GetRouteStatus returns the RouteStatus object associated with the Route.
-	GetRouteStatus() *v1beta1.RouteStatus
-
-	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
-	// objects being implemented are of type v1beta1.
-	// GetParentReferences returns the ParentReference of the Route object.
-	GetParentReferences() []v1beta1.ParentReference
-
-	// GetRouteParentContext returns RouteParentContext by using the Route
-	// objects' ParentReference.
-	GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext
-
-	// TODO: [v1alpha2-v1beta1] This should not be required once all Route
-	// objects being implemented are of type v1beta1.
-	// GetHostnames returns the hosts targeted by the Route object.
-	GetHostnames() []string
 }
 
 // HTTPRouteContext wraps an HTTPRoute and provides helper methods for
@@ -187,73 +166,7 @@ type HTTPRouteContext struct {
 
 	*v1beta1.HTTPRoute
 
-	parentRefs map[v1beta1.ParentReference]*RouteParentContext
-}
-
-func (h *HTTPRouteContext) GetRouteType() v1beta1.Kind {
-	return KindHTTPRoute
-}
-
-func (h *HTTPRouteContext) GetHostnames() []string {
-	hostnames := make([]string, len(h.Spec.Hostnames))
-	for idx, s := range h.Spec.Hostnames {
-		hostnames[idx] = string(s)
-	}
-	return hostnames
-}
-
-func (h *HTTPRouteContext) GetParentReferences() []v1beta1.ParentReference {
-	return h.Spec.ParentRefs
-}
-
-func (h *HTTPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &h.Status.RouteStatus
-}
-
-func (h *HTTPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
-	if h.parentRefs == nil {
-		h.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
-	}
-
-	if ctx := h.parentRefs[forParentRef]; ctx != nil {
-		return ctx
-	}
-
-	var parentRef *v1beta1.ParentReference
-	for i, p := range h.Spec.ParentRefs {
-		if reflect.DeepEqual(p, forParentRef) {
-			parentRef = &h.Spec.ParentRefs[i]
-			break
-		}
-	}
-	if parentRef == nil {
-		panic("parentRef not found")
-	}
-
-	routeParentStatusIdx := -1
-	for i := range h.Status.Parents {
-		if reflect.DeepEqual(h.Status.Parents[i].ParentRef, forParentRef) {
-			routeParentStatusIdx = i
-			break
-		}
-	}
-	if routeParentStatusIdx == -1 {
-		rParentStatus := v1beta1.RouteParentStatus{
-			ControllerName: v1beta1.GatewayController(h.GatewayControllerName),
-			ParentRef:      forParentRef,
-		}
-		h.Status.Parents = append(h.Status.Parents, rParentStatus)
-		routeParentStatusIdx = len(h.Status.Parents) - 1
-	}
-
-	ctx := &RouteParentContext{
-		ParentReference: parentRef,
-
-		httpRoute:            h.HTTPRoute,
-		routeParentStatusIdx: routeParentStatusIdx,
-	}
-	h.parentRefs[forParentRef] = ctx
-	return ctx
+	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
 // GRPCRouteContext wraps a GRPCRoute and provides helper methods for
@@ -264,83 +177,7 @@ type GRPCRouteContext struct {
 
 	*v1alpha2.GRPCRoute
 
-	parentRefs map[v1beta1.ParentReference]*RouteParentContext
-}
-
-func (g *GRPCRouteContext) GetRouteType() v1beta1.Kind {
-	return KindGRPCRoute
-}
-
-func (g *GRPCRouteContext) GetHostnames() []string {
-	hostnames := make([]string, len(g.Spec.Hostnames))
-	for idx, s := range g.Spec.Hostnames {
-		hostnames[idx] = string(s)
-	}
-	return hostnames
-}
-
-func (g *GRPCRouteContext) GetParentReferences() []v1beta1.ParentReference {
-	return g.Spec.ParentRefs
-}
-
-func (g *GRPCRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &g.Status.RouteStatus
-}
-
-func (g *GRPCRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
-	if g.parentRefs == nil {
-		g.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
-	}
-
-	if ctx := g.parentRefs[forParentRef]; ctx != nil {
-		return ctx
-	}
-
-	var parentRef *v1beta1.ParentReference
-	for i, p := range g.Spec.ParentRefs {
-		p := UpgradeParentReference(p)
-		if reflect.DeepEqual(p, forParentRef) {
-			upgraded := UpgradeParentReference(g.Spec.ParentRefs[i])
-			parentRef = &upgraded
-			break
-		}
-	}
-	if parentRef == nil {
-		panic("parentRef not found")
-	}
-
-	routeParentStatusIdx := -1
-	for i := range g.Status.Parents {
-		p := UpgradeParentReference(g.Status.Parents[i].ParentRef)
-		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
-		if forParentRef.Namespace == nil {
-			forParentRef.Namespace = &defaultNamespace
-		}
-		if p.Namespace == nil {
-			p.Namespace = &defaultNamespace
-		}
-		if reflect.DeepEqual(p, forParentRef) {
-			routeParentStatusIdx = i
-			break
-		}
-	}
-	if routeParentStatusIdx == -1 {
-		rParentStatus := v1alpha2.RouteParentStatus{
-			ControllerName: v1alpha2.GatewayController(g.GatewayControllerName),
-			ParentRef:      DowngradeParentReference(forParentRef),
-		}
-		g.Status.Parents = append(g.Status.Parents, rParentStatus)
-		routeParentStatusIdx = len(g.Status.Parents) - 1
-	}
-
-	ctx := &RouteParentContext{
-		ParentReference: parentRef,
-
-		grpcRoute:            g.GRPCRoute,
-		routeParentStatusIdx: routeParentStatusIdx,
-	}
-	g.parentRefs[forParentRef] = ctx
-	return ctx
+	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
 // TLSRouteContext wraps a TLSRoute and provides helper methods for
@@ -351,87 +188,7 @@ type TLSRouteContext struct {
 
 	*v1alpha2.TLSRoute
 
-	parentRefs map[v1beta1.ParentReference]*RouteParentContext
-}
-
-func (t *TLSRouteContext) GetRouteType() v1beta1.Kind {
-	return KindTLSRoute
-}
-
-func (t *TLSRouteContext) GetHostnames() []string {
-	hostnames := make([]string, len(t.Spec.Hostnames))
-	for idx, s := range t.Spec.Hostnames {
-		hostnames[idx] = string(s)
-	}
-	return hostnames
-}
-
-func (t *TLSRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &t.Status.RouteStatus
-}
-
-func (t *TLSRouteContext) GetParentReferences() []v1beta1.ParentReference {
-	parentReferences := make([]v1beta1.ParentReference, len(t.Spec.ParentRefs))
-	for idx, p := range t.Spec.ParentRefs {
-		parentReferences[idx] = UpgradeParentReference(p)
-	}
-	return parentReferences
-}
-
-func (t *TLSRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
-	if t.parentRefs == nil {
-		t.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
-	}
-
-	if ctx := t.parentRefs[forParentRef]; ctx != nil {
-		return ctx
-	}
-
-	var parentRef *v1beta1.ParentReference
-	for i, p := range t.Spec.ParentRefs {
-		p := UpgradeParentReference(p)
-		if reflect.DeepEqual(p, forParentRef) {
-			upgraded := UpgradeParentReference(t.Spec.ParentRefs[i])
-			parentRef = &upgraded
-			break
-		}
-	}
-	if parentRef == nil {
-		panic("parentRef not found")
-	}
-
-	routeParentStatusIdx := -1
-	for i := range t.Status.Parents {
-		p := UpgradeParentReference(t.Status.Parents[i].ParentRef)
-		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
-		if forParentRef.Namespace == nil {
-			forParentRef.Namespace = &defaultNamespace
-		}
-		if p.Namespace == nil {
-			p.Namespace = &defaultNamespace
-		}
-		if reflect.DeepEqual(p, forParentRef) {
-			routeParentStatusIdx = i
-			break
-		}
-	}
-	if routeParentStatusIdx == -1 {
-		rParentStatus := v1alpha2.RouteParentStatus{
-			ControllerName: v1alpha2.GatewayController(t.GatewayControllerName),
-			ParentRef:      DowngradeParentReference(forParentRef),
-		}
-		t.Status.Parents = append(t.Status.Parents, rParentStatus)
-		routeParentStatusIdx = len(t.Status.Parents) - 1
-	}
-
-	ctx := &RouteParentContext{
-		ParentReference: parentRef,
-
-		tlsRoute:             t.TLSRoute,
-		routeParentStatusIdx: routeParentStatusIdx,
-	}
-	t.parentRefs[forParentRef] = ctx
-	return ctx
+	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
 // UDPRouteContext wraps a UDPRoute and provides helper methods for
@@ -442,83 +199,7 @@ type UDPRouteContext struct {
 
 	*v1alpha2.UDPRoute
 
-	parentRefs map[v1beta1.ParentReference]*RouteParentContext
-}
-
-func (u *UDPRouteContext) GetRouteType() v1beta1.Kind {
-	return KindUDPRoute
-}
-
-func (u *UDPRouteContext) GetParentReferences() []v1beta1.ParentReference {
-	parentReferences := make([]v1beta1.ParentReference, len(u.Spec.ParentRefs))
-	for idx, p := range u.Spec.ParentRefs {
-		parentReferences[idx] = UpgradeParentReference(p)
-	}
-	return parentReferences
-}
-
-func (u *UDPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &u.Status.RouteStatus
-}
-
-func (u *UDPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
-	if u.parentRefs == nil {
-		u.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
-	}
-
-	if ctx := u.parentRefs[forParentRef]; ctx != nil {
-		return ctx
-	}
-
-	var parentRef *v1beta1.ParentReference
-	for i, p := range u.Spec.ParentRefs {
-		p := UpgradeParentReference(p)
-		if reflect.DeepEqual(p, forParentRef) {
-			upgraded := UpgradeParentReference(u.Spec.ParentRefs[i])
-			parentRef = &upgraded
-			break
-		}
-	}
-	if parentRef == nil {
-		panic("parentRef not found")
-	}
-
-	routeParentStatusIdx := -1
-	for i := range u.Status.Parents {
-		p := UpgradeParentReference(u.Status.Parents[i].ParentRef)
-		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
-		if forParentRef.Namespace == nil {
-			forParentRef.Namespace = &defaultNamespace
-		}
-		if p.Namespace == nil {
-			p.Namespace = &defaultNamespace
-		}
-		if reflect.DeepEqual(p, forParentRef) {
-			routeParentStatusIdx = i
-			break
-		}
-	}
-	if routeParentStatusIdx == -1 {
-		rParentStatus := v1alpha2.RouteParentStatus{
-			ControllerName: v1alpha2.GatewayController(u.GatewayControllerName),
-			ParentRef:      DowngradeParentReference(forParentRef),
-		}
-		u.Status.Parents = append(u.Status.Parents, rParentStatus)
-		routeParentStatusIdx = len(u.Status.Parents) - 1
-	}
-
-	ctx := &RouteParentContext{
-		ParentReference: parentRef,
-
-		udpRoute:             u.UDPRoute,
-		routeParentStatusIdx: routeParentStatusIdx,
-	}
-	u.parentRefs[forParentRef] = ctx
-	return ctx
-}
-
-func (u *UDPRouteContext) GetHostnames() []string {
-	return nil
+	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
 // TCPRouteContext wraps a TCPRoute and provides helper methods for
@@ -529,40 +210,95 @@ type TCPRouteContext struct {
 
 	*v1alpha2.TCPRoute
 
-	parentRefs map[v1beta1.ParentReference]*RouteParentContext
+	ParentRefs map[v1beta1.ParentReference]*RouteParentContext
 }
 
-func (t *TCPRouteContext) GetRouteType() v1beta1.Kind {
-	return KindTCPRoute
+// GetRouteType returns the Kind of the Route object, HTTPRoute,
+// TLSRoute, TCPRoute, UDPRoute etc.
+func GetRouteType(route RouteContext) v1beta1.Kind {
+	rv := reflect.ValueOf(route).Elem()
+	return v1beta1.Kind(rv.FieldByName("Kind").String())
 }
 
-func (t *TCPRouteContext) GetParentReferences() []v1beta1.ParentReference {
-	parentReferences := make([]v1beta1.ParentReference, len(t.Spec.ParentRefs))
-	for idx, p := range t.Spec.ParentRefs {
-		parentReferences[idx] = UpgradeParentReference(p)
+// TODO: [v1alpha2-v1beta1] This should not be required once all Route
+// objects being implemented are of type v1beta1.
+// GetHostnames returns the hosts targeted by the Route object.
+func GetHostnames(route RouteContext) []string {
+	rv := reflect.ValueOf(route).Elem()
+	kind := rv.FieldByName("Kind").String()
+	if kind == KindTCPRoute || kind == KindUDPRoute {
+		return nil
+	}
+
+	hs := rv.FieldByName("Spec").FieldByName("Hostnames")
+	hostnames := make([]string, hs.Len())
+	for i := 0; i < len(hostnames); i++ {
+		hostnames[i] = hs.Index(i).String()
+	}
+	return hostnames
+}
+
+// TODO: [v1alpha2-v1beta1] This should not be required once all Route
+// objects being implemented are of type v1beta1.
+// GetParentReferences returns the ParentReference of the Route object.
+func GetParentReferences(route RouteContext) []v1beta1.ParentReference {
+	rv := reflect.ValueOf(route).Elem()
+	kind := rv.FieldByName("Kind").String()
+	pr := rv.FieldByName("Spec").FieldByName("ParentRefs")
+	if kind == KindHTTPRoute || kind == KindGRPCRoute {
+		return pr.Interface().([]v1beta1.ParentReference)
+	}
+
+	parentReferences := make([]v1beta1.ParentReference, pr.Len())
+	for i := 0; i < len(parentReferences); i++ {
+		p := pr.Index(i).Interface().(v1beta1.ParentReference)
+		parentReferences[i] = UpgradeParentReference(p)
 	}
 	return parentReferences
 }
 
-func (t *TCPRouteContext) GetRouteStatus() *v1beta1.RouteStatus {
-	return &t.Status.RouteStatus
+// GetRouteStatus returns the RouteStatus object associated with the Route.
+func GetRouteStatus(route RouteContext) *v1beta1.RouteStatus {
+	rv := reflect.ValueOf(route).Elem()
+	rs := rv.FieldByName("Status").FieldByName("RouteStatus").Interface().(v1beta1.RouteStatus)
+	return &rs
 }
 
-func (t *TCPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentReference) *RouteParentContext {
-	if t.parentRefs == nil {
-		t.parentRefs = make(map[v1beta1.ParentReference]*RouteParentContext)
+// GetRouteParentContext returns RouteParentContext by using the Route
+// objects' ParentReference.
+func GetRouteParentContext(route RouteContext, forParentRef v1beta1.ParentReference) *RouteParentContext {
+	rv := reflect.ValueOf(route).Elem()
+	pr := rv.FieldByName("ParentRefs")
+	if pr.IsNil() {
+		mm := reflect.MakeMap(reflect.TypeOf(map[v1beta1.ParentReference]*RouteParentContext{}))
+		pr.Set(mm)
 	}
 
-	if ctx := t.parentRefs[forParentRef]; ctx != nil {
+	if p := pr.MapIndex(reflect.ValueOf(forParentRef)); p.IsValid() && !p.IsZero() {
+		ctx := p.Interface().(*RouteParentContext)
 		return ctx
 	}
 
+	isHTTPRoute := false
+	if rv.FieldByName("Kind").String() == KindHTTPRoute {
+		isHTTPRoute = true
+	}
+
 	var parentRef *v1beta1.ParentReference
-	for i, p := range t.Spec.ParentRefs {
-		p := UpgradeParentReference(p)
-		if reflect.DeepEqual(p, forParentRef) {
-			upgraded := UpgradeParentReference(t.Spec.ParentRefs[i])
-			parentRef = &upgraded
+	specParentRefs := rv.FieldByName("Spec").FieldByName("ParentRefs")
+	for i := 0; i < specParentRefs.Len(); i++ {
+		p := specParentRefs.Index(i).Interface().(v1beta1.ParentReference)
+		up := p
+		if !isHTTPRoute {
+			up = UpgradeParentReference(p)
+		}
+		if reflect.DeepEqual(up, forParentRef) {
+			if isHTTPRoute {
+				parentRef = &p
+			} else {
+				upgraded := UpgradeParentReference(p)
+				parentRef = &upgraded
+			}
 			break
 		}
 	}
@@ -571,14 +307,18 @@ func (t *TCPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 	}
 
 	routeParentStatusIdx := -1
-	for i := range t.Status.Parents {
-		p := UpgradeParentReference(t.Status.Parents[i].ParentRef)
-		defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
-		if forParentRef.Namespace == nil {
-			forParentRef.Namespace = &defaultNamespace
-		}
-		if p.Namespace == nil {
-			p.Namespace = &defaultNamespace
+	statusParents := rv.FieldByName("Status").FieldByName("Parents")
+	for i := 0; i < statusParents.Len(); i++ {
+		p := statusParents.Index(i).FieldByName("ParentRef").Interface().(v1beta1.ParentReference)
+		if !isHTTPRoute {
+			p = UpgradeParentReference(p)
+			defaultNamespace := v1beta1.Namespace(metav1.NamespaceDefault)
+			if forParentRef.Namespace == nil {
+				forParentRef.Namespace = &defaultNamespace
+			}
+			if p.Namespace == nil {
+				p.Namespace = &defaultNamespace
+			}
 		}
 		if reflect.DeepEqual(p, forParentRef) {
 			routeParentStatusIdx = i
@@ -586,26 +326,26 @@ func (t *TCPRouteContext) GetRouteParentContext(forParentRef v1beta1.ParentRefer
 		}
 	}
 	if routeParentStatusIdx == -1 {
-		rParentStatus := v1alpha2.RouteParentStatus{
-			ControllerName: v1alpha2.GatewayController(t.GatewayControllerName),
-			ParentRef:      DowngradeParentReference(forParentRef),
+		tmpPR := forParentRef
+		if !isHTTPRoute {
+			tmpPR = DowngradeParentReference(tmpPR)
 		}
-		t.Status.Parents = append(t.Status.Parents, rParentStatus)
-		routeParentStatusIdx = len(t.Status.Parents) - 1
+		rParentStatus := v1alpha2.RouteParentStatus{
+			ControllerName: v1alpha2.GatewayController(rv.FieldByName("GatewayControllerName").String()),
+			ParentRef:      tmpPR,
+		}
+		statusParents.Set(reflect.Append(statusParents, reflect.ValueOf(rParentStatus)))
+		routeParentStatusIdx = statusParents.Len() - 1
 	}
 
 	ctx := &RouteParentContext{
-		ParentReference: parentRef,
-
-		tcpRoute:             t.TCPRoute,
+		ParentReference:      parentRef,
 		routeParentStatusIdx: routeParentStatusIdx,
 	}
-	t.parentRefs[forParentRef] = ctx
+	rctx := reflect.ValueOf(ctx)
+	rctx.Elem().FieldByName(string(GetRouteType(route))).Set(rv.Field(1))
+	pr.SetMapIndex(reflect.ValueOf(forParentRef), rctx)
 	return ctx
-}
-
-func (t *TCPRouteContext) GetHostnames() []string {
-	return nil
 }
 
 // RouteParentContext wraps a ParentReference and provides helper methods for
@@ -616,12 +356,12 @@ type RouteParentContext struct {
 
 	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
 	// a single field pointing to *v1beta1.RouteStatus.
-	httpRoute       *v1beta1.HTTPRoute
-	grpcRoute       *v1alpha2.GRPCRoute
 	customgrpcRoute *v1alpha2.CustomGRPCRoute
-	tlsRoute        *v1alpha2.TLSRoute
-	tcpRoute        *v1alpha2.TCPRoute
-	udpRoute        *v1alpha2.UDPRoute
+	HTTPRoute       *v1beta1.HTTPRoute
+	GRPCRoute       *v1alpha2.GRPCRoute
+	TLSRoute        *v1alpha2.TLSRoute
+	TCPRoute        *v1alpha2.TCPRoute
+	UDPRoute        *v1alpha2.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext
@@ -642,7 +382,7 @@ func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1be
 	}
 
 	idx := -1
-	routeStatus := route.GetRouteStatus()
+	routeStatus := GetRouteStatus(route)
 	for i, existing := range routeStatus.Parents[r.routeParentStatusIdx].Conditions {
 		if existing.Type == cond.Type {
 			// return early if the condition is unchanged
@@ -665,13 +405,13 @@ func (r *RouteParentContext) SetCondition(route RouteContext, conditionType v1be
 }
 
 func (r *RouteParentContext) ResetConditions(route RouteContext) {
-	routeStatus := route.GetRouteStatus()
+	routeStatus := GetRouteStatus(route)
 	routeStatus.Parents[r.routeParentStatusIdx].Conditions = make([]metav1.Condition, 0)
 }
 
 func (r *RouteParentContext) HasCondition(route RouteContext, condType v1beta1.RouteConditionType, status metav1.ConditionStatus) bool {
 	var conditions []metav1.Condition
-	routeStatus := route.GetRouteStatus()
+	routeStatus := GetRouteStatus(route)
 	conditions = routeStatus.Parents[r.routeParentStatusIdx].Conditions
 	for _, c := range conditions {
 		if c.Type == string(condType) && c.Status == status {

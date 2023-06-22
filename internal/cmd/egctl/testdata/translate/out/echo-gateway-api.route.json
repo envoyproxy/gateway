@@ -79,6 +79,7 @@
   ],
   "httpRoutes": [
     {
+      "kind": "HTTPRoute",
       "metadata": {
         "name": "backend",
         "namespace": "envoy-gateway-system",

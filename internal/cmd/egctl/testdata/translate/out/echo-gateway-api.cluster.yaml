@@ -46,7 +46,8 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: CustomGRPCRoute
 httpRoutes:
-- metadata:
+- kind: HTTPRoute
+  metadata:
     creationTimestamp: null
     name: backend
     namespace: envoy-gateway-system
