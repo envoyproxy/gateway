@@ -47,7 +47,7 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 ### Running Linters
 
 * Run `make lint` to make sure your code passes all the linter checks.
-__Note:__ The `golangci-lint` configuration resides [here](tools/linter/golangci-lint/.golangci.yml).
+__Note:__ The `golangci-lint` configuration resides [here](../../../tools/linter/golangci-lint/.golangci.yml).
 
 ### Building and Pushing the Image
 
