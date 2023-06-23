@@ -1,7 +1,7 @@
 ##@ Protobufs
 
 .PHONY: protos
-protos: $(tools/buf) ## Compile all protobufs
+protos: $(tools/protoc-gen-go) $(tools/protoc-gen-go-grpc) $(tools/buf) ## Compile all protobufs
 	$(tools/buf) generate
 
 .PHONY: buf-mod-update
