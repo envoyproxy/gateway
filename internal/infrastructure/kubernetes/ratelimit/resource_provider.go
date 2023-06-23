@@ -54,8 +54,11 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	labels := rateLimitLabels()
+	if r.rateLimitDeployment.ServiceType == nil {
+		r.rateLimitDeployment.ServiceType = egcfgv1a1.DefaultKubernetesServiceType()
+	}
 
-	serviceSpec := resource.ExpectedServiceSpec(egcfgv1a1.DefaultKubernetesServiceType())
+	serviceSpec := resource.ExpectedServiceSpec(egcfgv1a1.GetKubernetesServiceType(*r.rateLimitDeployment.ServiceType))
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 
