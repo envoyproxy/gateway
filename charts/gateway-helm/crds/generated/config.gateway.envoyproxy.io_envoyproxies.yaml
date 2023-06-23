@@ -3713,6 +3713,14 @@ spec:
                               to 1.
                             format: int32
                             type: integer
+                          serviceType:
+                            description: ServiceType defines the type of the rate
+                              limit service.
+                            enum:
+                            - ClusterIP
+                            - LoadBalancer
+                            - NodePort
+                            type: string
                           strategy:
                             description: The deployment strategy to use to replace
                               existing pods with new ones.
