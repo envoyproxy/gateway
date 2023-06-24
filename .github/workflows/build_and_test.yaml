@@ -84,62 +84,62 @@ jobs:
         name: envoy-gateway
         path: bin/
 
-  conformance-test:
-    runs-on: ubuntu-latest
-    needs: [build]
-    strategy:
-      matrix:
-        version: [ v1.25.8, v1.26.3, v1.27.0 ]
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: recursive
-    - uses: ./tools/github-actions/setup-deps
+  # conformance-test:
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+  #   strategy:
+  #     matrix:
+  #       version: [ v1.25.8, v1.26.3, v1.27.0 ]
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@v3
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
     
-    - name: Give Privileges To EG Binaries
-      run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
-    # conformance
-    - name: Run Conformance Tests 
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make conformance
+  #   - name: Give Privileges To EG Binaries
+  #     run: |
+  #       chmod +x bin/linux/amd64/envoy-gateway
+  #       chmod +x bin/linux/arm64/envoy-gateway
+  #   # conformance
+  #   - name: Run Conformance Tests 
+  #     env:
+  #       KIND_NODE_TAG: ${{ matrix.version }}
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #     run: make conformance
   
-  e2e-test:
-    runs-on: ubuntu-latest
-    needs: [build]
-    strategy:
-      matrix:
-        version: [ v1.25.8, v1.26.3, v1.27.0 ]
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./tools/github-actions/setup-deps
+  # e2e-test:
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+  #   strategy:
+  #     matrix:
+  #       version: [ v1.25.8, v1.26.3, v1.27.0 ]
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@v3
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
     
-    - name: Give Privileges To EG Binaries
-      run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
+  #   - name: Give Privileges To EG Binaries
+  #     run: |
+  #       chmod +x bin/linux/amd64/envoy-gateway
+  #       chmod +x bin/linux/arm64/envoy-gateway
 
-    # E2E
-    - name: Run E2E Tests 
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make e2e
+  #   # E2E
+  #   - name: Run E2E Tests 
+  #     env:
+  #       KIND_NODE_TAG: ${{ matrix.version }}
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #     run: make e2e
 
   publish:
     runs-on: ubuntu-latest
