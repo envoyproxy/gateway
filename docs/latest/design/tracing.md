@@ -1,10 +1,30 @@
-// Copyright Envoy Gateway Authors
-// SPDX-License-Identifier: Apache-2.0
-// The full text of the Apache license is available in the LICENSE file at
-// the root of the repo.
+# Observability: Accesslog
 
-package v1alpha1
+## Overview
 
+Envoy supports extensible tracing to different sinks, Zipkin, OpenTelemetry etc. Overview of Envoy tracing can be found [here](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/observability/tracing).
+
+Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels) for implementors such as Envoy Gateway to expose features. Since tracing is not covered by `Core` or `Extended` APIs, EG should provide an easy to config tracing per `EnvoyProxy`.
+
+Only OpenTelemetry sink can be configured currently, you can use [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) to export to other tracing backends.
+
+## Goals
+
+- Support send tracing to `OpenTelemetry` backend
+- Support configurable sampling rate
+- Support propagate tag from `Literal`, `Environment` and `Request Header`
+
+## Non-Goals
+
+- Support other tracing backend, e.g. `Zipkin`, `Jaeger`
+
+## Use-Cases
+
+- Configure accesslog for a `EnvoyProxy` to `File`
+
+### ProxyAccessLog API Type
+
+```golang mdox-exec="sed '1,7d' api/config/v1alpha1/tracing_types.go"
 type ProxyTracing struct {
 	// RandomSamplingPercentage controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
@@ -86,3 +106,38 @@ type RequestHeaderCustomTag struct {
 	// +optional
 	DefaultValue *string `json:"defaultValue,omitempty"`
 }
+```
+
+### Example
+
+1. The following is an example to config tracing.
+
+```yaml mdox-exec="sed '1,12d' examples/kubernetes/tracing/default.yaml"
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: tracing
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    randomSampling: 100  # sample 100% of requests
+    tracing:
+      provider:
+        host: otel-collector.monitoring.svc.cluster.local
+        port: 4317
+      customTags:
+        key1: # This is an example of using a literal as a tag value
+          type: Literal
+          literal:
+            value: "val1"
+        env1: # This is an example of using an environment variable as a tag value
+          type: Environment
+          environment:
+            name: ENV1
+            defaultValue: "-"
+        header1: # This is an example of using a header value as a tag value
+          type: Header
+          header:
+            name: X-Header-1
+            defaultValue: "-"
+```
