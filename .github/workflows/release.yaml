@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
+        with:
+          ubmodules: recursive
       - name: Extract Release Tag and Commit SHA
         id: vars
         shell: bash
@@ -18,20 +19,23 @@ jobs:
           echo "release_tag=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
-      - name: Login to DockerHub
+      - name: Docker login
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          registry: ${{ secrets.ARTIFACTORY_FQDN }}
+          username: ${{ secrets.ARTIFACTORY_DEV_ACC }}
+          password: ${{ secrets.ARTIFACTORY_DEV_PWD }}
+          ecr: "false"
       - name: Retag and push existing gateway-dev image
         run: |
-          skopeo copy --all docker://docker.io/envoyproxy/gateway-dev:${{ env.sha_short }} docker://docker.io/envoyproxy/gateway:${{ env.release_tag }}
+          skopeo copy --all geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev:${{ env.sha_short }} geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway:${{ env.release_tag }}
 
       - name: Generate Release Artifacts
         run: make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
+
       - name: Build and Push EG Release Helm Chart
-        run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=${{ env.release_tag }} IMAGE=docker.io/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
+        run: OCI_REGISTRY=oci://geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway CHART_VERSION=${{ env.release_tag }} IMAGE=geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@v1
