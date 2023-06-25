@@ -92,7 +92,7 @@ Gateway API [conformance homepage][] to learn more about the tests. If Envoy Gat
 
 #### On a Linux Host
 
-* Run `TAG=latest make conformance` to create a Kind cluster, install Envoy Gateway using the latest [gateway-dev][]
+* Run `IMAGE_PULL_POLICY=IfNotPresent TAG=latest make conformance` to create a Kind cluster, install Envoy Gateway using the latest [gateway-dev][]
   image, and run Gateway API conformance tests.
 
 #### On a Mac Host
@@ -104,7 +104,7 @@ workarounds to run conformance tests:
   `TAG=latest make kube-deploy run-conformance`. This will install Envoy Gateway using the latest [gateway-dev][] image
   to the Kubernetes cluster using the current kubectl context and run the conformance tests. Use `make kube-undeploy` to
   uninstall Envoy Gateway.
-* Install and run [Docker Mac Net Connect][mac_connect] and then run `TAG=latest make conformance`.
+* Install and run [Docker Mac Net Connect][mac_connect] and then run `IMAGE_PULL_POLICY=IfNotPresent TAG=latest make conformance`.
 
 __Note:__  Preface commands with `IMAGE` or replace `TAG` to use a different Envoy Gateway image or tag. If `TAG`
 is unspecified, the short SHA of your current branch is used.
