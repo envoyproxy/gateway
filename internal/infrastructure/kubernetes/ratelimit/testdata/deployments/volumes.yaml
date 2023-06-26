@@ -117,6 +117,10 @@ spec:
       - name: redis-certs
         secret:
           secretName: ratelimit-cert-origin
+          defaultMode: 420
       - name: certs
         secret:
           secretName: custom-cert
+          defaultMode: 420
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

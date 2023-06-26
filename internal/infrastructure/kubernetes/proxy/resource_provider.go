@@ -203,6 +203,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Volumes:                       expectedDeploymentVolumes(r.infra.Name, deploymentConfig),
 				},
 			},
+			RevisionHistoryLimit:    pointer.Int32(10),
+			ProgressDeadlineSeconds: pointer.Int32(600),
 		},
 	}
 

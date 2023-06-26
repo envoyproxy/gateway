@@ -217,7 +217,8 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "envoy",
+					SecretName:  "envoy",
+					DefaultMode: pointer.Int32(int32(420)),
 				},
 			},
 		},

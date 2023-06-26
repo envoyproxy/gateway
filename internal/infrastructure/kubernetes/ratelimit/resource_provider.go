@@ -133,6 +133,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
 				},
 			},
+			RevisionHistoryLimit:    pointer.Int32(10),
+			ProgressDeadlineSeconds: pointer.Int32(600),
 		},
 	}
 

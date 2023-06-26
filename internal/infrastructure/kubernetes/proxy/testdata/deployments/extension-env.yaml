@@ -194,6 +194,7 @@ spec:
         - name: certs
           secret:
             secretName: envoy
+            defaultMode: 420
         - configMap:
             defaultMode: 420
             items:
@@ -204,3 +205,5 @@ spec:
             name: envoy-default-64656661
             optional: false
           name: sds
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

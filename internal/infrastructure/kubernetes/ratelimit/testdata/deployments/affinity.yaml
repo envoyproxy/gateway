@@ -110,3 +110,6 @@ spec:
       - name: certs
         secret:
           secretName: envoy-rate-limit
+          defaultMode: 420
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

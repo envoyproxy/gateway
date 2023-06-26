@@ -73,6 +73,9 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
+		deployment.Spec.Template.Spec.DeprecatedServiceAccount = current.Spec.Template.Spec.DeprecatedServiceAccount
+		deployment.Spec.Template.Spec.SecurityContext = current.Spec.Template.Spec.SecurityContext
+		deployment.Spec.Replicas = current.Spec.Replicas
 		return !reflect.DeepEqual(deployment.Spec, current.Spec)
 	})
 }
