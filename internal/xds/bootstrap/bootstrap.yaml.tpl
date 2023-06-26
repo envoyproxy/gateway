@@ -23,6 +23,33 @@ dynamic_resources:
     ads: {}
     resource_api_version: V3
 static_resources:
+  listeners:
+  - name: envoy-gateway-proxy-ready-{{ .ReadyServer.Address }}-{{ .ReadyServer.Port }}
+    address:
+      socket_address:
+        address: {{ .ReadyServer.Address }}
+        port_value: {{ .ReadyServer.Port }}
+        protocol: TCP
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: eg-ready-http
+          route_config:
+            name: local_route
+          http_filters:
+          - name: envoy.filters.http.health_check
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+              pass_through_mode: false
+              headers:
+              - name: ":path"
+                string_match:
+                  exact: {{ .ReadyServer.ReadinessPath }}
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
   - connect_timeout: 10s
     load_assignment:
