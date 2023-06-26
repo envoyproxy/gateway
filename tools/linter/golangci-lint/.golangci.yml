@@ -3,6 +3,7 @@ run:
 
 linters:
   enable:
+    - stylecheck
     - bodyclose
     - depguard
     - exportloopref
