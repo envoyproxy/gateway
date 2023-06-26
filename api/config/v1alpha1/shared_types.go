@@ -66,10 +66,6 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Container *KubernetesContainerSpec `json:"container,omitempty"`
 
-	// ServiceType defines the type of the rate limit service.
-	//
-	// +optional
-	ServiceType *ServiceType `json:"serviceType,omitempty"`
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 

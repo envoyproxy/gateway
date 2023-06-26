@@ -211,7 +211,7 @@ func DefaultKubernetesService() *KubernetesServiceSpec {
 
 // DefaultKubernetesServiceType returns a new KubernetesServiceType with default settings.
 func DefaultKubernetesServiceType() *ServiceType {
-	return GetKubernetesServiceType(ServiceTypeLoadBalancer)
+	return GetKubernetesServiceType(ServiceTypeClusterIP)
 }
 
 // GetKubernetesServiceType returns the KubernetesServiceType pointer.
