@@ -65,7 +65,7 @@
                   "address": {
                     "socketAddress": {
                       "address": "0.0.0.0",
-                      "portValue": 19001,
+                      "portValue": 19001
                     }
                   },
                   "filterChains": [
