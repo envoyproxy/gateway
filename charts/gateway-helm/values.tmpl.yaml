@@ -2,7 +2,7 @@ deployment:
   envoyGateway:
     image:
       repository: ${ImageRepository}
-      tag: ${ImageTag}
+      tag: '${ImageTag}'
     imagePullPolicy: Always
     resources:
       limits:

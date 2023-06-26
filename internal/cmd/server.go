@@ -57,9 +57,11 @@ func server() error {
 		return err
 	}
 
-	config := spew.NewDefaultConfig()
-	config.DisableMethods = true
-	config.Dump(cfg)
+	if cfg.EnvoyGateway.Admin.Debug {
+		spewConfig := spew.NewDefaultConfig()
+		spewConfig.DisableMethods = true
+		spewConfig.Dump(cfg)
+	}
 
 	if err := setupRunners(cfg); err != nil {
 		return err

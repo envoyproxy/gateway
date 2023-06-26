@@ -641,6 +641,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		case gatewayapi.KindTCPRoute:
 			typedSpec := spec.Interface()
 			tcpRoute := &v1alpha2.TCPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: gatewayapi.KindTCPRoute,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -651,6 +654,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		case gatewayapi.KindUDPRoute:
 			typedSpec := spec.Interface()
 			udpRoute := &v1alpha2.UDPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: gatewayapi.KindUDPRoute,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -661,6 +667,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		case gatewayapi.KindTLSRoute:
 			typedSpec := spec.Interface()
 			tlsRoute := &v1alpha2.TLSRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: gatewayapi.KindTLSRoute,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -671,6 +680,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		case gatewayapi.KindHTTPRoute:
 			typedSpec := spec.Interface()
 			httpRoute := &v1beta1.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: gatewayapi.KindHTTPRoute,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
@@ -681,6 +693,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		case gatewayapi.KindGRPCRoute:
 			typedSpec := spec.Interface()
 			grpcRoute := &v1alpha2.GRPCRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: gatewayapi.KindGRPCRoute,
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,

@@ -63,6 +63,10 @@ spec:
             requests:
               cpu: 100m
               memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 19001
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
