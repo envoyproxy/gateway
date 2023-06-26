@@ -21,6 +21,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 )
@@ -52,6 +53,10 @@ type client struct {
 
 func NewCLIClient(clientConfig clientcmd.ClientConfig) (CLIClient, error) {
 	return newClientInternal(clientConfig)
+}
+
+func GetProtobufConfigOrDie() *rest.Config {
+	return setRestDefaults(ctrl.GetConfigOrDie())
 }
 
 func newClientInternal(clientConfig clientcmd.ClientConfig) (*client, error) {
@@ -91,7 +96,7 @@ func setRestDefaults(config *rest.Config) *rest.Config {
 		}
 	}
 	if len(config.ContentType) == 0 {
-		config.ContentType = runtime.ContentTypeJSON
+		config.ContentType = runtime.ContentTypeProtobuf
 	}
 	if config.NegotiatedSerializer == nil {
 		// This codec factory ensures the resources are not converted. Therefore, resources
