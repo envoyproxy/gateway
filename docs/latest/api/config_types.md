@@ -443,7 +443,6 @@ _Appears in:_
 | `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired annotations and securityContext of container. |
 | `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the resources and securityContext of container. |
-| `serviceType` _[ServiceType](#servicetype)_ | ServiceType defines the type of the rate limit service. |
 
 
 ## KubernetesPodSpec
@@ -744,7 +743,6 @@ _Underlying type:_ `string`
 ServiceType string describes ingress methods for a service
 
 _Appears in:_
-- [KubernetesDeploymentSpec](#kubernetesdeploymentspec)
 - [KubernetesServiceSpec](#kubernetesservicespec)
 
 
