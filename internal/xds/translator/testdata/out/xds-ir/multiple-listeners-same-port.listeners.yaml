@@ -24,10 +24,10 @@
               = tonumber(response_handle:headers():get(\":status\"))\n\n\t\t\t-- Only
               handle status codes greater than 300\n\t\t\tif status_code < 300 then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tif
               status_code == 429 then\n\t\t\t\tlocal body_handle = response_handle:body(true)\n\t\t\t\tlocal
-              content_length = body_handle:setBytes(\"{\\r\\n    code: 429,\\r\\n
-              \   message: \\\"Your IP or access token has reached its rate limiting
-              threshold. Please contact your GeoComply Account Manager if this problem
-              persists.\\\",\\r\\n    details: []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
+              content_length = body_handle:setBytes(\"{\\r\\n    \\\"code\\\": 429,\\r\\n
+              \   \\\"message\\\": \\\"Your IP or access token has reached its rate
+              limiting threshold. Please contact your GeoComply Account Manager if
+              this problem persists.\\\",\\r\\n    \\\"details\\\": []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
               \"application/json\")\n\t\t\t\tresponse_handle:headers():replace(\"content-length\",
               content_length)\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\t-- Check if the
               response has a body\n\t\t\tlocal body_handle = response_handle:body()\n\t\t\tif
@@ -88,10 +88,10 @@
               = tonumber(response_handle:headers():get(\":status\"))\n\n\t\t\t-- Only
               handle status codes greater than 300\n\t\t\tif status_code < 300 then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tif
               status_code == 429 then\n\t\t\t\tlocal body_handle = response_handle:body(true)\n\t\t\t\tlocal
-              content_length = body_handle:setBytes(\"{\\r\\n    code: 429,\\r\\n
-              \   message: \\\"Your IP or access token has reached its rate limiting
-              threshold. Please contact your GeoComply Account Manager if this problem
-              persists.\\\",\\r\\n    details: []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
+              content_length = body_handle:setBytes(\"{\\r\\n    \\\"code\\\": 429,\\r\\n
+              \   \\\"message\\\": \\\"Your IP or access token has reached its rate
+              limiting threshold. Please contact your GeoComply Account Manager if
+              this problem persists.\\\",\\r\\n    \\\"details\\\": []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
               \"application/json\")\n\t\t\t\tresponse_handle:headers():replace(\"content-length\",
               content_length)\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\t-- Check if the
               response has a body\n\t\t\tlocal body_handle = response_handle:body()\n\t\t\tif
@@ -164,10 +164,10 @@
               = tonumber(response_handle:headers():get(\":status\"))\n\n\t\t\t-- Only
               handle status codes greater than 300\n\t\t\tif status_code < 300 then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tif
               status_code == 429 then\n\t\t\t\tlocal body_handle = response_handle:body(true)\n\t\t\t\tlocal
-              content_length = body_handle:setBytes(\"{\\r\\n    code: 429,\\r\\n
-              \   message: \\\"Your IP or access token has reached its rate limiting
-              threshold. Please contact your GeoComply Account Manager if this problem
-              persists.\\\",\\r\\n    details: []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
+              content_length = body_handle:setBytes(\"{\\r\\n    \\\"code\\\": 429,\\r\\n
+              \   \\\"message\\\": \\\"Your IP or access token has reached its rate
+              limiting threshold. Please contact your GeoComply Account Manager if
+              this problem persists.\\\",\\r\\n    \\\"details\\\": []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
               \"application/json\")\n\t\t\t\tresponse_handle:headers():replace(\"content-length\",
               content_length)\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\t-- Check if the
               response has a body\n\t\t\tlocal body_handle = response_handle:body()\n\t\t\tif

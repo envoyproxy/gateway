@@ -542,7 +542,7 @@ func getLuaFilterConfigHandlerErrors() []byte {
 
 			if status_code == 429 then
 				local body_handle = response_handle:body(true)
-				local content_length = body_handle:setBytes("{\r\n    code: 429,\r\n    message: \"Your IP or access token has reached its rate limiting threshold. Please contact your GeoComply Account Manager if this problem persists.\",\r\n    details: []\r\n}")
+				local content_length = body_handle:setBytes("{\r\n    \"code\": 429,\r\n    \"message\": \"Your IP or access token has reached its rate limiting threshold. Please contact your GeoComply Account Manager if this problem persists.\",\r\n    \"details\": []\r\n}")
 				response_handle:headers():replace("content-type", "application/json")
 				response_handle:headers():replace("content-length", content_length)
 				return
