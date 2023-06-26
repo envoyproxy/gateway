@@ -51,7 +51,7 @@ rules:
   new-line-at-end-of-file: enable
   new-lines:
     type: unix
-  trailing-spaces: disable
+  trailing-spaces: enable
   truthy:
     check-keys: false   # GitHub Actions uses "on:" as a key
     level: warning
