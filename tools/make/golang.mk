@@ -42,7 +42,7 @@ go.build.multiarch: $(foreach p,$(PLATFORMS),$(addprefix go.build., $(addprefix 
 
 .PHONY: go.test.unit
 go.test.unit: ## Run go unit tests
-	go test ./...
+	go test -race ./...
 
 .PHONY: go.testdata.complete
 go.testdata.complete: ## Override test ouputdata
