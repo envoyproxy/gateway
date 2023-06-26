@@ -77,3 +77,18 @@ func TestNodeDetailsAddressStore(t *testing.T) {
 		})
 	}
 }
+
+func TestRace(t *testing.T) {
+	s := newProviderStore()
+
+	go func() {
+		for {
+			s.addNode(&corev1.Node{
+				ObjectMeta: v1.ObjectMeta{Name: "node1"},
+				Status:     corev1.NodeStatus{Addresses: []corev1.NodeAddress{{}}},
+			})
+		}
+	}()
+
+	_ = s.listNodeAddresses()
+}
