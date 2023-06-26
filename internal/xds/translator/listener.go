@@ -540,6 +540,14 @@ func getLuaFilterConfigHandlerErrors() []byte {
 				return
 			end
 
+			if status_code == 429 then
+				local body_handle = response_handle:body(true)
+				local content_length = body_handle:setBytes("{\r\n    code: 429,\r\n    message: \"Your IP or access token has reached its rate limiting threshold. Please contact your GeoComply Account Manager if this problem persists.\",\r\n    details: []\r\n}")
+				response_handle:headers():replace("content-type", "application/json")
+				response_handle:headers():replace("content-length", content_length)
+				return
+			end
+
 			-- Check if the response has a body
 			local body_handle = response_handle:body()
 			if not body_handle then
@@ -547,16 +555,12 @@ func getLuaFilterConfigHandlerErrors() []byte {
 				return
 			end
 
-			response_handle:logWarn("1111111")
-
 			local body_size = body_handle:length()
 			local body_bytes = body_handle:getBytes(0, body_size)
-			response_handle:logWarn("222222")
 
 			-- Convert body_bytes to string
 			local raw_json_text = tostring(body_bytes)
 			response_handle:logWarn("raw_json_text: " .. raw_json_text)
-			response_handle:logWarn("33333")
 
 			local modified_json_text = string.gsub(raw_json_text, '"code":%s*%d+', '"code": ' .. status_code)
 
