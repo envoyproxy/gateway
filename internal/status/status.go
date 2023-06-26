@@ -91,6 +91,8 @@ func (u *UpdateHandler) apply(update Update) {
 			return nil
 		}
 
+		newObj.SetUID(obj.GetUID())
+
 		return u.client.Status().Update(context.Background(), newObj)
 	}); err != nil {
 		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,

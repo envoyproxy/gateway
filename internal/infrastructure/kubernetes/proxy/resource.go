@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -136,9 +137,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logLevel),
 	}
-	// if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
-	// 	args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
-	// }
+	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
+		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
+	}
 
 	containers := []corev1.Container{
 		{
@@ -154,6 +155,14 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path: bootstrap.EnvoyReadinessPath,
+						Port: intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+					},
+				},
+			},
 		},
 	}
 

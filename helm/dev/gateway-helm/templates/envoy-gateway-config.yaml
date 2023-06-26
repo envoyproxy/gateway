@@ -14,6 +14,9 @@ data:
     kind: EnvoyGateway
     provider:
       type: {{ .Values.config.envoyGateway.provider.type | quote }}
+    logging:
+      level:
+        default: info
     rateLimit:
       backend:
         type: {{ .Values.config.envoyGateway.rateLimit.backend.type | quote }}

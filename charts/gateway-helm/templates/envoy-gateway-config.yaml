@@ -15,6 +15,6 @@ data:
     provider:
       type: {{ .Values.config.envoyGateway.provider.type | quote }}
     logging:
-      level: 
+      level:
         default: info
     
