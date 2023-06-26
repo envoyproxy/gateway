@@ -163,7 +163,7 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployme
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName:  string(rateLimit.Backend.Redis.TLS.CertificateRef.Name),
-					DefaultMode: pointer.Int32(int32(420)),
+					DefaultMode: pointer.Int32(420),
 				},
 			},
 		})
@@ -174,7 +174,7 @@ func expectedDeploymentVolumes(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployme
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "envoy-rate-limit",
-				DefaultMode: pointer.Int32(int32(420)),
+				DefaultMode: pointer.Int32(420),
 			},
 		},
 	})
