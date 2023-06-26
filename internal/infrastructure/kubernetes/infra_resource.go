@@ -54,7 +54,7 @@ func (i *Infra) createOrUpdateConfigMap(ctx context.Context, r ResourceRender) e
 	}
 
 	return i.Client.CreateOrUpdate(ctx, key, current, cm, func() bool {
-		return !reflect.DeepEqual(cm.Data, current.Data)
+		return !reflect.DeepEqual(cm.Data, current.Data) || !reflect.DeepEqual(cm.BinaryData, current.BinaryData)
 	})
 }
 

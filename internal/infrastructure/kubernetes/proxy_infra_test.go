@@ -7,8 +7,10 @@ package kubernetes
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -28,6 +30,18 @@ import (
 func newTestInfra(t *testing.T) *Infra {
 	cli := fakeclient.NewClientBuilder().WithScheme(envoygateway.GetScheme()).Build()
 	return newTestInfraWithClient(t, cli)
+}
+
+func TestCmpBytes(t *testing.T) {
+	m1 := map[string][]byte{}
+	m1["a"] = []byte("aaa")
+	m2 := map[string][]byte{}
+	m2["a"] = []byte("aaa")
+
+	assert.True(t, reflect.DeepEqual(m1, m2))
+	assert.False(t, reflect.DeepEqual(nil, m2))
+	assert.False(t, reflect.DeepEqual(m1, nil))
+	assert.True(t, reflect.DeepEqual(nil, nil))
 }
 
 func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
