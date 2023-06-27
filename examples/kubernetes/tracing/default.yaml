@@ -17,7 +17,7 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   telemetry:
-    randomSampling: 100  # sample 100% of requests
+    samplingRate: 100  # sample 100% of requests
     tracing:
       provider:
         host: otel-collector.monitoring.svc.cluster.local

@@ -3991,11 +3991,11 @@ spec:
                         required:
                         - host
                         type: object
-                      randomSamplingPercentage:
-                        description: RandomSamplingPercentage controls the rate at
-                          which traffic will be selected for tracing if no prior sampling
-                          decision has been made. Defaults to 0, valid values [0-100].
-                          100 indicates 100% sampling.
+                      samplingRate:
+                        description: SamplingRate controls the rate at which traffic
+                          will be selected for tracing if no prior sampling decision
+                          has been made. Defaults to 0, valid values [0-100]. 100
+                          indicates 100% sampling.
                         format: int32
                         maximum: 100
                         minimum: 0

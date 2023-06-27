@@ -724,7 +724,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `randomSamplingPercentage` _integer_ | RandomSamplingPercentage controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 0, valid values [0-100]. 100 indicates 100% sampling. |
+| `samplingRate` _integer_ | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 0, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` _object (keys:string, values:[CustomTag](#customtag))_ | CustomTags defines the custom tags to add to each span. If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` _[TracingProvider](#tracingprovider)_ | Provider defines the tracing provider. Only OpenTelemetry is supported currently. |
 
