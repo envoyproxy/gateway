@@ -2,14 +2,14 @@ apiVersion: config.gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: example
-  namespace: default 
+  namespace: default
 spec:
   provider:
     type: Kubernetes
     kubernetes:
       envoyService:
         annotations:
-          custom1: svc-annotation1 
+          custom1: svc-annotation1
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
@@ -21,7 +21,7 @@ spec:
     group: config.gateway.envoyproxy.io
     kind: EnvoyProxy
     name: example
-    namespace: default 
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway

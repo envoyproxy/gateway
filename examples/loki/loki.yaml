@@ -84,7 +84,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 data:
   runtime-config.yaml: |
-    
+
     {}
 ---
 # Source: loki/templates/service-memberlist.yaml

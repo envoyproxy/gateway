@@ -20,7 +20,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute              
+        kind: GRPCRoute
       attachedRoutes: 1
       conditions:
       - type: Programmed
@@ -48,7 +48,7 @@ grpcRoutes:
         requestHeaderModifier:
           add:
           - name: my-header
-            value: foo                 
+            value: foo
       backendRefs:
       - name: service-1
         port: 8080
@@ -79,11 +79,11 @@ xdsIR:
       port: 10080
       hostnames:
       - "*"
-      isHTTP2: true  
+      isHTTP2: true
       routes:
       - name: default-grpcroute-1-rule-0-match--1-*
         addRequestHeaders:
-        - name: "my-header"       
+        - name: "my-header"
           value: "foo"
           append: true
         destinations:

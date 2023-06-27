@@ -20,7 +20,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute        
+        kind: GRPCRoute
       attachedRoutes: 0
       conditions:
       - type: Programmed
@@ -59,9 +59,9 @@ httpRoutes:
         status: "False"
         reason: NotAllowedByListeners
         message: No listeners included by this parent ref allowed this attachment.
-      - type: ResolvedRefs 
+      - type: ResolvedRefs
         status: "True"
-        reason: ResolvedRefs 
+        reason: ResolvedRefs
         message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:

@@ -161,7 +161,7 @@ metadata:
   name: endpointslice-providedBackend
   namespace: default
   labels:
-    kubernetes.io/service-name: providedBackend 
+    kubernetes.io/service-name: providedBackend
 addressType: IPv4
 ports:
   - name: http
