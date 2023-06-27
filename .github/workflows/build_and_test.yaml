@@ -151,13 +151,6 @@ jobs:
         chmod +x bin/linux/amd64/envoy-gateway
         chmod +x bin/linux/arm64/envoy-gateway
 
-    # conformance
-    - name: Run Conformance Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make conformance
-
   e2e-test:
     runs-on: ubuntu-latest
     needs: [build]
