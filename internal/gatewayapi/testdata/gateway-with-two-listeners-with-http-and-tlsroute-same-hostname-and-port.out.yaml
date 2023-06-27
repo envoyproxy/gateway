@@ -30,7 +30,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute        
+        kind: GRPCRoute
       conditions:
       - type: Conflicted
         status: "True"
@@ -81,9 +81,9 @@ httpRoutes:
         status: "False"
         reason: NoReadyListeners
         message: There are no ready listeners for this parent ref
-      - type: ResolvedRefs 
+      - type: ResolvedRefs
         status: "True"
-        reason: ResolvedRefs 
+        reason: ResolvedRefs
         message: Resolved all the Object references for the Route
 tlsRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -110,9 +110,9 @@ tlsRoutes:
         status: "False"
         reason: NoReadyListeners
         message: There are no ready listeners for this parent ref
-      - type: ResolvedRefs 
+      - type: ResolvedRefs
         status: "True"
-        reason: ResolvedRefs 
+        reason: ResolvedRefs
         message: Resolved all the Object references for the Route
 xdsIR:
   envoy-gateway-gateway-1:

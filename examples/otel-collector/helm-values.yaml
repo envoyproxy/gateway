@@ -17,7 +17,7 @@ config:
           key: loki.attribute.labels
           # k8s.pod.name is OpenTelemetry format for Kubernetes Pod name,
           # Loki will convert this to k8s_pod_name label.
-          value: k8s.pod.name, k8s.namespace.name 
+          value: k8s.pod.name, k8s.namespace.name
   receivers:
     otlp:
       protocols:

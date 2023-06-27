@@ -28,7 +28,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute        
+        kind: GRPCRoute
       AttachedRoutes: 2
       conditions:
       - type: Programmed
@@ -44,7 +44,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute        
+        kind: GRPCRoute
       AttachedRoutes: 2
       conditions:
       - type: Programmed

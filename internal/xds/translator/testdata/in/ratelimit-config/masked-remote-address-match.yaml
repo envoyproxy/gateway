@@ -19,4 +19,4 @@ routes:
     exact: "foo/bar"
   destinations:
   - host: "1.2.3.4"
-    port: 50000    
+    port: 50000

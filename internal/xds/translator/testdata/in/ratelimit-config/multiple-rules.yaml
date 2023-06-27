@@ -18,10 +18,10 @@ routes:
         - name: "x-user-id"
           exact: "two"
         limit:
-          requests: 10 
-          unit: second         
+          requests: 10
+          unit: second
   pathMatch:
     exact: "foo/bar"
   destinations:
   - host: "1.2.3.4"
-    port: 50000    
+    port: 50000
