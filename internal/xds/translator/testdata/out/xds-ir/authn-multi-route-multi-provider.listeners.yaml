@@ -22,24 +22,17 @@
               response_handle:headers():get(\"grpc-message\")\n\t\t\tlocal grpc_status
               = response_handle:headers():get(\"grpc-status\")\n\t\t\tlocal status_code
               = tonumber(response_handle:headers():get(\":status\"))\n\n\t\t\t-- Only
-              handle status codes greater than 300\n\t\t\tif status_code < 300 then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tif
-              status_code == 429 then\n\t\t\t\tlocal body_handle = response_handle:body(true)\n\t\t\t\tlocal
-              content_length = body_handle:setBytes(\"{\\r\\n    code: 429,\\r\\n
-              \   message: \\\"Your IP or access token has reached its rate limiting
-              threshold. Please contact your GeoComply Account Manager if this problem
-              persists.\\\",\\r\\n    details: []\\r\\n}\")\n\t\t\t\tresponse_handle:headers():replace(\"content-type\",
-              \"application/json\")\n\t\t\t\tresponse_handle:headers():replace(\"content-length\",
-              content_length)\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\t-- Check if the
-              response has a body\n\t\t\tlocal body_handle = response_handle:body()\n\t\t\tif
+              handle status codes greater than 300\n\t\t\tif status_code < 300 then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\t--
+              Check if the response has a body\n\t\t\tlocal body_handle = response_handle:body()\n\t\t\tif
               not body_handle then\n\t\t\t\tresponse_handle:logWarn(\"No response
-              body to modify.\")\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tlocal body_size
-              = body_handle:length()\n\t\t\tlocal body_bytes = body_handle:getBytes(0,
-              body_size)\n\n\t\t\t-- Convert body_bytes to string\n\t\t\tlocal raw_json_text
-              = tostring(body_bytes)\n\t\t\tresponse_handle:logWarn(\"raw_json_text:
-              \" .. raw_json_text)\n\n\t\t\tlocal modified_json_text = string.gsub(raw_json_text,
-              '\"code\":%s*%d+', '\"code\": ' .. status_code)\n\n\t\t\tlocal content_length
-              = body_handle:setBytes(modified_json_text)\n\n\t\t\t-- Modify the response
-              header\n\t\t\tresponse_handle:headers():replace(\"content-length\",
+              body to modify.\")\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tresponse_handle:logWarn(\"1111111\")\n\n\t\t\tlocal
+              body_size = body_handle:length()\n\t\t\tlocal body_bytes = body_handle:getBytes(0,
+              body_size)\n\t\t\tresponse_handle:logWarn(\"222222\")\n\n\t\t\t-- Convert
+              body_bytes to string\n\t\t\tlocal raw_json_text = tostring(body_bytes)\n\t\t\tresponse_handle:logWarn(\"raw_json_text:
+              \" .. raw_json_text)\n\t\t\tresponse_handle:logWarn(\"33333\")\n\n\t\t\tlocal
+              modified_json_text = string.gsub(raw_json_text, '\"code\":%s*%d+', '\"code\":
+              ' .. status_code)\n\n\t\t\tlocal content_length = body_handle:setBytes(modified_json_text)\n\n\t\t\t--
+              Modify the response header\n\t\t\tresponse_handle:headers():replace(\"content-length\",
               content_length)\n\t\tend\n        "
         - name: envoy.filters.http.jwt_authn
           typedConfig:
