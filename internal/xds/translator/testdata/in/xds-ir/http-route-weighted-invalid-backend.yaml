@@ -5,10 +5,10 @@ http:
   hostnames:
   - "*"
   routes:
-  - name: "first-route" 
+  - name: "first-route"
     destinations:
     - host: "1.2.3.4"
       port: 50000
-    backendWeights: 
+    backendWeights:
       invalid: 1
       valid: 1

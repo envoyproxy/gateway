@@ -100,7 +100,7 @@ xdsIR:
             - cidrMatch:
                 cidr: "192.168.0.0/16"
                 maskLen: 16
-              headerMatches: []              
+              headerMatches: []
               limit:
                 requests: 10
                 unit: Hour

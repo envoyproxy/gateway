@@ -66,16 +66,16 @@ kind: GRPCRoute
 metadata:
   name: yages
   labels:
-    example: grpc-routing        
+    example: grpc-routing
 spec:
   parentRefs:
-    - name: example-gateway 
+    - name: example-gateway
   hostnames:
     - "grpc-example.com"
   rules:
     - backendRefs:
         - group: ""
           kind: Service
-          name: yages 
+          name: yages
           port: 9000
           weight: 1

@@ -22,6 +22,10 @@ jobs:
             console.log(`Contains Trigger: ${containsTrigger}`);
             return containsTrigger;
       
+
+      - name: Install @octokit/core
+        run: npm install @octokit/core@^3
+
       - name: Rerun Action
         if: steps.check_comment.outputs.result == 'true'
         uses: actions/github-script@v5

@@ -82,7 +82,7 @@ xdsIR:
       - name: default-httproute-1-rule-0-match-0-*
         pathMatch:
           exact: "/exact"
-        backendWeights: 
+        backendWeights:
           invalid: 1
         directResponse:
           statusCode: 500

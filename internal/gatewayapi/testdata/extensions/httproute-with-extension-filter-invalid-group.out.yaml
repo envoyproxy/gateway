@@ -59,7 +59,7 @@ httpRoutes:
         extensionRef:
           group: foo.example.io
           kind: Foo
-          name: test 
+          name: test
   status:
     parents:
     - parentRef:

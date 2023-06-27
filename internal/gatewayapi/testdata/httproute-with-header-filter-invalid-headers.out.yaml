@@ -57,7 +57,7 @@ httpRoutes:
       filters:
       - type: RequestHeaderModifier
         requestHeaderModifier:
-          set: 
+          set:
           - name: "example:1"
             value: "some-value"
           - name: "good-header"

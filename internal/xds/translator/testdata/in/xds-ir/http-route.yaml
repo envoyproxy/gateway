@@ -10,9 +10,9 @@ http:
     - name: user
       stringMatch:
       exact: "jason"
-    - name: test 
+    - name: test
       stringMatch:
-      suffix: "end"     
+      suffix: "end"
     queryParamMatches:
     - name: "debug"
       exact: "yes"

@@ -57,7 +57,7 @@ httpRoutes:
       filters:
       - type: ResponseHeaderModifier
         responseHeaderModifier:
-          set: 
+          set:
           - name: ""
             value: "some-value"
           add:

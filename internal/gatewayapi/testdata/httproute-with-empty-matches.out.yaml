@@ -80,7 +80,7 @@ xdsIR:
         destinations:
         - host: 7.7.7.7
           port: 8080
-          weight: 1          
+          weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

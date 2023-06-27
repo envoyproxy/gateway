@@ -85,7 +85,7 @@ xdsIR:
       - name: default-httproute-1-rule-0-match-0-*
         pathMatch:
           exact: "/exact"
-        backendWeights: 
+        backendWeights:
           invalid: 2  # The weighted clusters for invalid backend refs aren't part of the IR
           valid: 1
         destinations:

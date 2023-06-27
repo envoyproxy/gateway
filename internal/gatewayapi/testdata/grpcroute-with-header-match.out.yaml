@@ -49,7 +49,7 @@ grpcRoutes:
       - headers:
         - type: Exact
           name: magic
-          value: foo            
+          value: foo
       backendRefs:
       - name: service-1
         port: 8080
@@ -80,11 +80,11 @@ xdsIR:
       port: 10080
       hostnames:
       - "*"
-      isHTTP2: true  
+      isHTTP2: true
       routes:
       - name: default-grpcroute-1-rule-0-match-0-*
         headerMatches:
-        - name: "magic"       
+        - name: "magic"
           exact: "foo"
         destinations:
         - host: 7.7.7.7

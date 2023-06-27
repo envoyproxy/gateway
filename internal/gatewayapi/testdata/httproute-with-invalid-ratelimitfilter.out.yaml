@@ -59,7 +59,7 @@ httpRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: RateLimitFilter
-          name: test 
+          name: test
   status:
     parents:
     - parentRef:

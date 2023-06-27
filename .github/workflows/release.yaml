@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     # Sequence of patterns matched against refs/tags
-    tags:        
+    tags:
       - "v*.*.*"
 jobs:
   release:

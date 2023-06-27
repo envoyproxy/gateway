@@ -18,7 +18,7 @@ jobs:
       run: make generate-manifests IMAGE=envoyproxy/gateway-dev TAG=latest OUTPUT_DIR=release-artifacts
 
     - name: Build egctl latest multiarch binaries
-      run: | 
+      run: |
         make build-multiarch BINS="egctl"
         tar -zcvf egctl_latest_linux_amd64.tar.gz bin/linux/amd64/
         tar -zcvf egctl_latest_linux_arm64.tar.gz bin/linux/arm64/
@@ -64,7 +64,7 @@ jobs:
           egctl_latest_darwin_arm64.tar.gz
         body: |
           This is the "latest" release of **Envoy Gateway**, which contains the most recent commits from the main branch.
-          
+
           This release **might not be stable**.
 
           It is only intended for developers wishing to try out the latest features in Envoy Gateway, some of which may not be fully implemented.
@@ -76,7 +76,7 @@ jobs:
           ```
 
     # Check if latest release and tag are created properly,
-    # if not, the workflow needs to report an error, 
+    # if not, the workflow needs to report an error,
     # let maintainers be aware of it and rerun it manually.
     # After Recreate the Latest Release and Tag, we need to sleep some time to wait
     # new tag and release are created before checking it.
