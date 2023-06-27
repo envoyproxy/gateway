@@ -8,9 +8,8 @@ metadata:
   name: envoy-ratelimit
   namespace: envoy-gateway-system
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   sessionAffinity: None
-  ExternalTrafficPolicy: Local
   ports:
     - name: http
       port: 8081
