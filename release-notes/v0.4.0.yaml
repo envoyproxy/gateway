@@ -24,7 +24,7 @@ changes:
       Envoy Proxy Pod and Container SecurityContext is now Configurable
       Added Custom Envoy Gateway Extensions Framework
       Added Support for Service Method Match in GRPCRoute
-      Fixed a Bug in the Extension Hooks for xDS Virtual Hosts and Routes 
+      Fixed a Bug in the Extension Hooks for xDS Virtual Hosts and Routes
 
   - area: ci-tooling-testing
     change: |

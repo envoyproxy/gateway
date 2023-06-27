@@ -22,7 +22,7 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-      attachedRoutes: 0 
+      attachedRoutes: 0
       conditions:
       - type: Programmed
         status: "True"
@@ -57,7 +57,7 @@ httpRoutes:
         extensionRef:
           group: foo.example.io
           kind: Unsupported
-          name: test 
+          name: test
   status:
     parents:
     - parentRef:
