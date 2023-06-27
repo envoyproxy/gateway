@@ -158,10 +158,14 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path: bootstrap.EnvoyReadinessPath,
-						Port: intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
 					},
 				},
+				TimeoutSeconds:   1,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
 			},
 		},
 	}
