@@ -141,6 +141,17 @@ var OpenTelemetryTest = suite.ConformanceTest{
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
 
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			})
+
 			labels := map[string]string{
 				"k8s_namespace_name": "envoy-gateway-system",
 				"exporter":           "OTLP",

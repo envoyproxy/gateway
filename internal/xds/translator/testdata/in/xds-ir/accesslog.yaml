@@ -28,7 +28,7 @@ http:
   hostnames:
   - "*"
   routes:
-  - name: "direct-route" 
+  - name: "direct-route"
     destinations:
     - host: "1.2.3.4"
       port: 50000
