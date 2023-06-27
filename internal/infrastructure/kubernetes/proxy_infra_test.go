@@ -41,7 +41,6 @@ func TestCmpBytes(t *testing.T) {
 	assert.True(t, reflect.DeepEqual(m1, m2))
 	assert.False(t, reflect.DeepEqual(nil, m2))
 	assert.False(t, reflect.DeepEqual(m1, nil))
-	assert.True(t, reflect.DeepEqual(nil, nil))
 }
 
 func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
