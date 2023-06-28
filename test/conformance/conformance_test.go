@@ -46,9 +46,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
 		ExemptFeatures:       suite.MeshCoreFeatures,
-		SkipTests: []string{
-			tests.HTTPRouteRedirectPortAndScheme.ShortName,
-		},
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)

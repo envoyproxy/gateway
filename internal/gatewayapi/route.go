@@ -509,6 +509,24 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 
 			for _, routeRoute := range routeRoutes {
+				// If the redirect port is not set, the final redirect port must be derived.
+				if routeRoute.Redirect != nil && routeRoute.Redirect.Port == nil {
+					redirectPort := uint32(listener.Port)
+					// If redirect scheme is not-empty, the redirect post must be the
+					// well-known port associated with the redirect scheme.
+					if scheme := routeRoute.Redirect.Scheme; scheme != nil {
+						switch *scheme {
+						case "http":
+							redirectPort = 80
+						case "https":
+							redirectPort = 443
+						}
+					}
+					// If the redirect scheme does not have a well-known port, or
+					// if the redirect scheme is empty, the redirect port must be the Gateway Listener port.
+					routeRoute.Redirect.Port = &redirectPort
+				}
+
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
 					PathMatch:             routeRoute.PathMatch,
