@@ -97,6 +97,7 @@ xdsIR:
         redirect:
           scheme: https
           statusCode: 301
+          port: 443
           path:
             fullReplace: /redirected
 infraIR:

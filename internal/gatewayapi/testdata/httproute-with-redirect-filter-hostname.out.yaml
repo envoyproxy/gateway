@@ -95,6 +95,7 @@ xdsIR:
         redirect:
           scheme: https
           statusCode: 301
+          port: 443
           hostname: "redirected.com"
 infraIR:
   envoy-gateway-gateway-1:
