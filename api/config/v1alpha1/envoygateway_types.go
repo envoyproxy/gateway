@@ -95,8 +95,8 @@ const (
 	// LogComponentProviderRunner defines the "provider" runner component.
 	LogComponentProviderRunner EnvoyGatewayLogComponent = "provider"
 
-	// LogComponentGatewayApiRunner defines the "gateway-api" runner component.
-	LogComponentGatewayApiRunner EnvoyGatewayLogComponent = "gateway-api"
+	// LogComponentGatewayAPIRunner defines the "gateway-api" runner component.
+	LogComponentGatewayAPIRunner EnvoyGatewayLogComponent = "gateway-api"
 
 	// LogComponentXdsTranslatorRunner defines the "xds-translator" runner component.
 	LogComponentXdsTranslatorRunner EnvoyGatewayLogComponent = "xds-translator"
