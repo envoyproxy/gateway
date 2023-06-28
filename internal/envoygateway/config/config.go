@@ -75,7 +75,7 @@ func (s *Server) Validate() error {
 			switch component {
 			case v1alpha1.LogComponentGatewayDefault,
 				v1alpha1.LogComponentProviderRunner,
-				v1alpha1.LogComponentGatewayApiRunner,
+				v1alpha1.LogComponentGatewayAPIRunner,
 				v1alpha1.LogComponentXdsTranslatorRunner,
 				v1alpha1.LogComponentXdsServerRunner,
 				v1alpha1.LogComponentInfrastructureRunner,

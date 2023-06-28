@@ -284,17 +284,17 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 		},
 		{
 			name: "test gateway-api error level for error level",
-			args: args{component: string(LogComponentGatewayApiRunner), level: LogLevelError},
+			args: args{component: string(LogComponentGatewayAPIRunner), level: LogLevelError},
 			want: LogLevelError,
 		},
 		{
 			name: "test gateway-api info level for info level",
-			args: args{component: string(LogComponentGatewayApiRunner), level: LogLevelInfo},
+			args: args{component: string(LogComponentGatewayAPIRunner), level: LogLevelInfo},
 			want: LogLevelInfo,
 		},
 		{
 			name: "test default gateway-api warn level for info level",
-			args: args{component: string(LogComponentGatewayApiRunner), level: ""},
+			args: args{component: string(LogComponentGatewayAPIRunner), level: ""},
 			want: LogLevelInfo,
 		},
 	}
