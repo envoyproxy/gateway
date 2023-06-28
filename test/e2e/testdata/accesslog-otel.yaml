@@ -1,0 +1,16 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: accesslog-otel
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+    - name: same-namespace
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /otel
+      backendRefs:
+        - name: infra-backend-v2
+          port: 8080
