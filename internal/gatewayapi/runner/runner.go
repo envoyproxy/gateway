@@ -37,7 +37,7 @@ func New(cfg *Config) *Runner {
 }
 
 func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentGatewayApiRunner)
+	return string(v1alpha1.LogComponentGatewayAPIRunner)
 }
 
 // Start starts the gateway-api translator runner

@@ -7,7 +7,6 @@ package types
 
 import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/proto"
 )
@@ -78,7 +77,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 // AddOrReplaceXdsResource will update an existing resource of rType according to matchFunc or add as a new resource
 // if none satisfy the match criteria. It will only update the first match it finds, regardless
 // if multiple resources satisfy the match criteria.
-func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resource.Type, resource types.Resource, matchFunc func(existing types.Resource, new types.Resource) bool) {
+func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resourcev3.Type, resource types.Resource, matchFunc func(existing types.Resource, new types.Resource) bool) {
 	if t.XdsResources == nil || t.XdsResources[rType] == nil {
 		t.AddXdsResource(rType, resource)
 		return
