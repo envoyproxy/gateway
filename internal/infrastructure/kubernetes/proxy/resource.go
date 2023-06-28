@@ -164,6 +164,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 					},
 				},
 				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
 				SuccessThreshold: 1,
 				FailureThreshold: 3,
 			},

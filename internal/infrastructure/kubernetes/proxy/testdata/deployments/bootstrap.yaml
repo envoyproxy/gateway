@@ -69,6 +69,7 @@ spec:
               port: 19001
               scheme: HTTP
             timeoutSeconds: 1
+            periodSeconds: 10
             successThreshold: 1
             failureThreshold: 3
           terminationMessagePath: /dev/termination-log

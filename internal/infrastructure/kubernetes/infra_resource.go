@@ -77,8 +77,10 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		deployment.Spec.Template.Spec.DeprecatedServiceAccount = current.Spec.Template.Spec.DeprecatedServiceAccount
 		// applied to k8s the "SecurityContext" will fill it with default settings.
 		deployment.Spec.Template.Spec.SecurityContext = current.Spec.Template.Spec.SecurityContext
-		// adapter the hpa updating.
-		deployment.Spec.Replicas = current.Spec.Replicas
+		// adapter the hpa updating and envoyproxy updating.
+		if *deployment.Spec.Replicas < *current.Spec.Replicas {
+			deployment.Spec.Replicas = current.Spec.Replicas
+		}
 		return !reflect.DeepEqual(deployment.Spec, current.Spec)
 	})
 }
