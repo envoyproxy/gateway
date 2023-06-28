@@ -4,7 +4,7 @@
 
 include tools/make/env.mk
 
-DOCKER := DOCKER_BUILDKIT=1 docker
+DOCKER := docker
 DOCKER_SUPPORTED_API_VERSION ?= 1.32
 
 # Determine image files by looking into build/docker/*/Dockerfile
@@ -43,9 +43,9 @@ image.build.%: image.verify go.build.linux_$(GOARCH).%
 	$(eval COMMAND := $(word 1,$(subst ., ,$*)))
 	$(eval IMAGES := $(COMMAND))
 	@$(call log, "Building image $(IMAGES):$(TAG) in linux/$(GOARCH)")
-	$(eval BUILD_SUFFIX := --pull -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
+	$(eval BUILD_SUFFIX := --pull --load -t $(IMAGE):$(TAG) -f $(ROOT_DIR)/tools/docker/$(IMAGES)/Dockerfile bin)
 	@$(call log, "Creating image tag $(REGISTRY)/$(IMAGES):$(TAG) in linux/$(GOARCH)")
-	$(DOCKER) build --platform linux/$(GOARCH) $(BUILD_SUFFIX)
+	$(DOCKER) buildx build --platform linux/$(GOARCH) $(BUILD_SUFFIX)
 
 .PHONY: image.push
 image.push: $(addprefix image.push., $(IMAGES))
