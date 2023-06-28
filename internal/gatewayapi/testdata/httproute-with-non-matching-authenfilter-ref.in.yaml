@@ -39,7 +39,7 @@ httpRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: AuthenticationFilter
-          name: test 
+          name: test
 authenticationFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: AuthenticationFilter

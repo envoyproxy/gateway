@@ -37,7 +37,7 @@ httpRoutes:
       filters:
       - type: ResponseHeaderModifier
         responseHeaderModifier:
-          set: 
+          set:
           - name: "example-header-1"
             value: ""
           add:

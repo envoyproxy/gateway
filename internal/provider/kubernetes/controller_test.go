@@ -17,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -318,7 +317,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+		logger := logging.DefaultLogger(egcfgv1a1.LogLevelInfo)
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,
@@ -451,7 +450,7 @@ func TestProcessParamsRef(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+		logger := logging.DefaultLogger(egcfgv1a1.LogLevelInfo)
 
 		r := &gatewayAPIReconciler{
 			log:             logger,
