@@ -28,7 +28,7 @@ changes:
       Added Support for HTTPRoute URLRewrite Filter
       Added Support for HTTPRoute RequestMirror Filter
       Added Support for HTTPRoute ResponseHeaderModifier Filter
-      Added Support for Request Authentication 
+      Added Support for Request Authentication
       Added Support for Global Rate Limiting
       Added Support for Routes ReferenceGrant
       Added Support for Namespace Server Config Type
@@ -69,9 +69,9 @@ changes:
     change: |
       Refactored Kubernetes Provider to Single Reconciler
       Upgraded Kube Provider Test Data Manifests to v0.6.1
-      Removed Duplicate Settings from Bootstrap Config 
+      Removed Duplicate Settings from Bootstrap Config
       Updated Certgen to Use EG Namespace Env
-      Added EnvoyProxy to Translator and Kube Infra Manager 
+      Added EnvoyProxy to Translator and Kube Infra Manager
       Upgraded Envoyproxy Image to envoy-dev latest in Main
       Removed EG Logs Private Key
 

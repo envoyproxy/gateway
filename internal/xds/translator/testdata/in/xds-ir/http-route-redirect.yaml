@@ -6,7 +6,7 @@ http:
   hostnames:
   - "*"
   routes:
-  - name: "redirect-route" 
+  - name: "redirect-route"
     destinations:
     - host: "1.2.3.4"
       port: 50000

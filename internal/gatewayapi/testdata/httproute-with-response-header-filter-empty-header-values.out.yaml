@@ -21,7 +21,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute        
+        kind: GRPCRoute
       attachedRoutes: 1
       conditions:
       - type: Programmed
@@ -55,7 +55,7 @@ httpRoutes:
       filters:
       - type: ResponseHeaderModifier
         responseHeaderModifier:
-          set: 
+          set:
           - name: "example-header-1"
             value: ""
           add:

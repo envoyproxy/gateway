@@ -4,7 +4,7 @@ http:
   port: 10080
   hostnames:
   - "*"
-  isHTTP2: true  
+  isHTTP2: true
   routes:
   - name: "first-route"
     pathMatch:

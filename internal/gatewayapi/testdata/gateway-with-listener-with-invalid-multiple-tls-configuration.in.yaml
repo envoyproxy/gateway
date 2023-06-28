@@ -19,7 +19,7 @@ gateways:
               - name: tls-secret-ecdsa-1
               - name: tls-secret-ecdsa-2
               - name: tls-secret-1
-              
+
 secrets:
   - apiVersion: v1
     kind: Secret

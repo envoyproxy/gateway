@@ -21,7 +21,7 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: TLSRoute
-      attachedRoutes: 2 
+      attachedRoutes: 2
       conditions:
       - type: Programmed
         status: "True"
@@ -119,7 +119,7 @@ xdsIR:
       destinations:
       - host: 7.7.7.7
         port: 8080
-        weight: 1       
+        weight: 1
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
