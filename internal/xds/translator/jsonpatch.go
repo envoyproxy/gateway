@@ -112,34 +112,67 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 			errs = multierror.Append(errs, err)
 			continue
 		}
+
 		my, _ := yaml.JSONToYAML(modifiedJSON)
 		fmt.Println(string(my))
+
 		// Unmarshal back to typed resource
+		// Use a temp staging variable that can be marshalled
+		// into and validated before saving it into the xds output resource
 		switch p.Type {
 		case string(resourcev3.ListenerType):
-			if err = protojson.Unmarshal(modifiedJSON, listener); err != nil {
+			temp := listenerv3.Listener{}
+			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
 			}
+			if err = temp.Validate(); err != nil {
+				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			*listener = temp
 		case string(resourcev3.RouteType):
-			if err = protojson.Unmarshal(modifiedJSON, routeConfig); err != nil {
+			temp := routev3.RouteConfiguration{}
+			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
 			}
+			if err = temp.Validate(); err != nil {
+				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
+
+			*routeConfig = temp
 		case string(resourcev3.ClusterType):
-			if err = protojson.Unmarshal(modifiedJSON, cluster); err != nil {
+			temp := clusterv3.Cluster{}
+			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
 			}
+			if err = temp.Validate(); err != nil {
+				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			*cluster = temp
 		case string(resourcev3.EndpointType):
-			if err = protojson.Unmarshal(modifiedJSON, endpoint); err != nil {
+			temp := endpointv3.ClusterLoadAssignment{}
+			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
 			}
+			if err = temp.Validate(); err != nil {
+				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			*endpoint = temp
 		}
 	}
 	return errs
