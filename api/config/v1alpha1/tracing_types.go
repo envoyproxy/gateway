@@ -8,9 +8,10 @@ package v1alpha1
 type ProxyTracing struct {
 	// SamplingRate controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
-	// Defaults to 0, valid values [0-100]. 100 indicates 100% sampling.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
@@ -21,7 +22,18 @@ type ProxyTracing struct {
 	Provider TracingProvider `json:"provider"`
 }
 
+type TracingProviderType string
+
+const (
+	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+)
+
 type TracingProvider struct {
+	// Type defines the tracing provider type.
+	// EG currently only supports OpenTelemetry.
+	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:default=OpenTelemetry
+	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
 	Host string `json:"host"`
 	// Port defines the port the provider service is exposed on.

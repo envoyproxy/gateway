@@ -724,7 +724,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `samplingRate` _integer_ | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 0, valid values [0-100]. 100 indicates 100% sampling. |
+| `samplingRate` _integer_ | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
 | `customTags` _object (keys:string, values:[CustomTag](#customtag))_ | CustomTags defines the custom tags to add to each span. If provider is kubernetes, pod name and namespace are added by default. |
 | `provider` _[TracingProvider](#tracingprovider)_ | Provider defines the tracing provider. Only OpenTelemetry is supported currently. |
 
@@ -847,8 +847,20 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
+| `type` _[TracingProviderType](#tracingprovidertype)_ | Type defines the tracing provider type. EG currently only supports OpenTelemetry. |
 | `host` _string_ | Host define the provider service hostname. |
 | `port` _integer_ | Port defines the port the provider service is exposed on. |
+
+
+## TracingProviderType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
+
 
 
 ## XDSTranslatorHook

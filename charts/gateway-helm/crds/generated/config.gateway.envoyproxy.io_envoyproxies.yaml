@@ -3988,13 +3988,22 @@ spec:
                             format: int32
                             minimum: 0
                             type: integer
+                          type:
+                            default: OpenTelemetry
+                            description: Type defines the tracing provider type. EG
+                              currently only supports OpenTelemetry.
+                            enum:
+                            - OpenTelemetry
+                            type: string
                         required:
                         - host
+                        - type
                         type: object
                       samplingRate:
+                        default: 100
                         description: SamplingRate controls the rate at which traffic
                           will be selected for tracing if no prior sampling decision
-                          has been made. Defaults to 0, valid values [0-100]. 100
+                          has been made. Defaults to 100, valid values [0-100]. 100
                           indicates 100% sampling.
                         format: int32
                         maximum: 100
