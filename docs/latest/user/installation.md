@@ -39,15 +39,17 @@ consideration when debugging.
 
 ## Open Ports
 
+These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 
-| Envoy Gateway           |  Port       |
-|:----------------------: | :---------: |
-| Xds EnvoyProxy Server   | 18000       |
-| Xds RateLimit Server    | 18001       |
-| Admin Server            | 19000       |
+| Envoy Gateway          | Address   |  Port  |
+|:----------------------:|:---------:|:------:|
+| Xds EnvoyProxy Server  | 0.0.0.0   | 18000  |
+| Xds RateLimit Server   | 0.0.0.0   | 18001  |
+| Admin Server           | 127.0.0.1 | 19000  |
+               
 
 
-| Envoy Proxy          | Port    |
-|:-----------------:   | :-----: |
-| Admin Server         | 19000   |
-| Heath Check Listener | 19001   |
+| Envoy Proxy         | Address     | Port    |
+|:-----------------:  |:-----------:| :-----: |
+| Admin Server        | 127.0.0.1   | 19000   |
+| Heath Check Listener| 0.0.0.0     | 19001   |
