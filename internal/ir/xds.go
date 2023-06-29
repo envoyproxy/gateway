@@ -54,6 +54,9 @@ type Xds struct {
 	TCP []*TCPListener
 	// UDP Listeners exposed by the gateway.
 	UDP []*UDPListener
+	// JSONPatches are the JSON Patches that
+	// are to be applied to generaed Xds linked to the gateway.
+	JSONPatches []*JSONPatchConfig
 }
 
 // Validate the fields within the Xds structure.
@@ -791,4 +794,29 @@ type OpenTelemetryAccessLog struct {
 	Host       string            `json:"host"`
 	Port       uint32            `json:"port"`
 	Resources  map[string]string `json:"resources"`
+}
+
+// JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
+// using JSONPatch semantics
+// +k8s:deepcopy-gen=true
+type JSONPatchConfig struct {
+	// Type is the typed URL of the Envoy xDS Resource
+	Type string `json:"type"`
+	// Name is the name of the resource
+	Name string `json:"name"`
+	// Patch defines the JSON Patch Operation
+	Operation JSONPatchOperation `json:"operation"`
+}
+
+// JSONPatchOperation defines the JSON Patch Operation as defined in
+// https://datatracker.ietf.org/doc/html/rfc6902
+// +k8s:deepcopy-gen=true
+type JSONPatchOperation struct {
+	// Op is the type of operation to perform
+	Op string `json:"op"`
+	// Path is the location of the target document/field where the operation will be performed
+	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
+	Path string `json:"path"`
+	// Value is the new value of the path location.
+	Value string `json:"value"`
 }
