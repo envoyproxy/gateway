@@ -570,7 +570,6 @@
                               }
                             }
                           ],
-                          "codecType": "HTTP2",
                           "commonHttpProtocolOptions": {
                             "headersWithUnderscoresAction": "REJECT_REQUEST"
                           },
