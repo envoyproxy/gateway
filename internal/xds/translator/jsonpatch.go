@@ -38,6 +38,83 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 		m := protojson.MarshalOptions{
 			UseProtoNames: true,
 		}
+
+		// If Path is "" and op is "add", unmarshal and add the patch as a complete
+		// resource
+		if p.Operation.Op == "add" && p.Operation.Path == "" {
+			// Convert patch to JSON
+			// The patch library expects an array so convert it into one
+			y, err := yaml.Marshal(p.Operation.Value)
+			if err != nil {
+				err := fmt.Errorf("unable to marshal patch %+v, err: %v", p.Operation.Value, err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			jsonBytes, err := yaml.YAMLToJSON(y)
+			if err != nil {
+				err := fmt.Errorf("unable to convert patch to json %s, err: %v", string(y), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
+			switch p.Type {
+			case string(resourcev3.ListenerType):
+				temp := &listenerv3.Listener{}
+				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				if err = temp.Validate(); err != nil {
+					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+
+				tCtx.AddXdsResource(resourcev3.ListenerType, temp)
+			case string(resourcev3.RouteType):
+				temp := &routev3.RouteConfiguration{}
+				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				if err = temp.Validate(); err != nil {
+					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				tCtx.AddXdsResource(resourcev3.RouteType, temp)
+			case string(resourcev3.ClusterType):
+				temp := &clusterv3.Cluster{}
+				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				if err = temp.Validate(); err != nil {
+					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				tCtx.AddXdsResource(resourcev3.ClusterType, temp)
+			case string(resourcev3.EndpointType):
+				temp := &endpointv3.ClusterLoadAssignment{}
+				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				if err = temp.Validate(); err != nil {
+					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+				tCtx.AddXdsResource(resourcev3.EndpointType, temp)
+			}
+
+			// Skip further processing
+			continue
+		}
 		// Find the resource to patch and convert it to JSON
 		switch p.Type {
 		case string(resourcev3.ListenerType):
