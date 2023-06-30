@@ -40,6 +40,11 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
 		MetricsBindAddress:     ":8080",
 	}
+
+	if (svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) && (len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
+		mgrOpts.Cache.Namespaces = svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces
+	}
+
 	mgr, err := ctrl.NewManager(cfg, mgrOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create manager: %w", err)
