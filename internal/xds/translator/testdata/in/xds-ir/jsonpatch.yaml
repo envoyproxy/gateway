@@ -16,6 +16,14 @@ jsonPatches:
             envoy_grpc:
               cluster_name: rate-limit-cluster
           transport_api_version: V3
+- type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+  name: "first-listener"
+  operation:
+    op: add
+    path: "/virtual_hosts/0/rate_limits"
+    value:
+      - actions:
+        - remote_address: {}
 http:
 - name: "first-listener"
   address: "0.0.0.0"

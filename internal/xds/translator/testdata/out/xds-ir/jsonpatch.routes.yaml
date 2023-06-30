@@ -4,6 +4,9 @@
   - domains:
     - '*'
     name: first-listener
+    rateLimits:
+    - actions:
+      - remoteAddress: {}
     routes:
     - match:
         headers:
