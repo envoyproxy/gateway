@@ -41,7 +41,10 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		MetricsBindAddress:     ":8080",
 	}
 
-	if (svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) && (len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
+	if svr.EnvoyGateway.Provider != nil &&
+		svr.EnvoyGateway.Provider.Kubernetes != nil &&
+		(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
+		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
 		mgrOpts.Cache.Namespaces = svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces
 	}
 
