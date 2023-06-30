@@ -8,8 +8,10 @@ package resource
 import (
 	"testing"
 
+	appv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -433,6 +435,104 @@ func TestExpectedContainerVolumeMounts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, ExpectedContainerVolumeMounts(tt.args.container, tt.args.volumeMounts), "ExpectedContainerVolumeMounts(%v, %v)", tt.args.container, tt.args.volumeMounts)
+		})
+	}
+}
+
+func TestCompareDeployment(t *testing.T) {
+	type args struct {
+		current    *appv1.Deployment
+		deployment *appv1.Deployment
+	}
+	tests := []struct {
+		name     string
+		args     args
+		notEqual bool
+	}{
+		{
+			name: "not eq DeprecatedServiceAccount",
+			args: args{
+				current: &appv1.Deployment{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: appv1.DeploymentSpec{
+						Replicas: pointer.Int32(2),
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{},
+							Spec: corev1.PodSpec{
+								DeprecatedServiceAccount: "a",
+							},
+						},
+					},
+					Status: appv1.DeploymentStatus{},
+				},
+				deployment: &appv1.Deployment{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: appv1.DeploymentSpec{
+						Replicas: pointer.Int32(1),
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{},
+							Spec: corev1.PodSpec{
+								DeprecatedServiceAccount: "b",
+							},
+						},
+					},
+					Status: appv1.DeploymentStatus{},
+				},
+			},
+			notEqual: true,
+		},
+		{
+			name: "not eq SecurityContext",
+			args: args{
+				current: &appv1.Deployment{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: appv1.DeploymentSpec{
+						Replicas: pointer.Int32(2),
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{},
+							Spec: corev1.PodSpec{
+								DeprecatedServiceAccount: "a",
+								SecurityContext: &corev1.PodSecurityContext{
+									SELinuxOptions:      nil,
+									WindowsOptions:      nil,
+									RunAsUser:           nil,
+									RunAsGroup:          nil,
+									RunAsNonRoot:        nil,
+									SupplementalGroups:  nil,
+									FSGroup:             nil,
+									Sysctls:             nil,
+									FSGroupChangePolicy: nil,
+									SeccompProfile:      nil,
+								},
+							},
+						},
+					},
+					Status: appv1.DeploymentStatus{},
+				},
+				deployment: &appv1.Deployment{
+					TypeMeta:   metav1.TypeMeta{},
+					ObjectMeta: metav1.ObjectMeta{},
+					Spec: appv1.DeploymentSpec{
+						Replicas: pointer.Int32(1),
+						Template: corev1.PodTemplateSpec{
+							ObjectMeta: metav1.ObjectMeta{},
+							Spec: corev1.PodSpec{
+								DeprecatedServiceAccount: "b",
+							},
+						},
+					},
+					Status: appv1.DeploymentStatus{},
+				},
+			},
+			notEqual: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.notEqual, CompareDeployment(tt.args.current, tt.args.deployment), "CompareDeployment(%v, %v)", tt.args.current, tt.args.deployment)
 		})
 	}
 }

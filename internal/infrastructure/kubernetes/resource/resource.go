@@ -48,14 +48,17 @@ func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 func CompareDeployment(current, deployment *appv1.Deployment) bool {
 	// applied to k8s the "DeprecatedServiceAccount" will fill it.
 	deployment.Spec.Template.Spec.DeprecatedServiceAccount = current.Spec.Template.Spec.DeprecatedServiceAccount
+
 	// applied to k8s the "SecurityContext" will fill it with default settings.
 	if deployment.Spec.Template.Spec.SecurityContext == nil {
 		deployment.Spec.Template.Spec.SecurityContext = current.Spec.Template.Spec.SecurityContext
 	}
+
 	// adapter the hpa updating and envoyproxy updating.
 	if *deployment.Spec.Replicas < *current.Spec.Replicas {
 		deployment.Spec.Replicas = current.Spec.Replicas
 	}
+
 	return reflect.DeepEqual(deployment.Spec, current.Spec)
 }
 
