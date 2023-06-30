@@ -3,8 +3,8 @@ jsonPatches:
   name: "first-listener"
   operation:
     op: "add"
-    path: "/default_filter_chain/filters/0/typed_config/http_filters/0"  
-    value: | 
+    path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
+    value: |
       name: "envoy.filters.http.ratelimit"
       typed_config:
         "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"

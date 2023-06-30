@@ -1,7 +1,13 @@
+// Copyright Envoy Gateway Authors
+// SPDX-License-Identifier: Apache-2.0
+// The full text of the Apache license is available in the LICENSE file at
+// the root of the repo.
+
 package translator
 
 import (
 	"fmt"
+
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -18,9 +24,9 @@ import (
 )
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
-func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSONPatchConfig) error {
+func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSONPatchConfig) error {
 	var errs error
-	for _, p := range JSONPatches {
+	for _, p := range jsonPatches {
 		var (
 			listener     *listenerv3.Listener
 			routeConfig  *routev3.RouteConfiguration
@@ -95,6 +101,11 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 			continue
 		}
 		jsonBytes, err := yaml.YAMLToJSON(y)
+		if err != nil {
+			err := fmt.Errorf("unable to convert patch to json %s, err: %v", string(y), err)
+			errs = multierror.Append(errs, err)
+			continue
+		}
 
 		patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
 		if err != nil {
@@ -121,8 +132,8 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 		// into and validated before saving it into the xds output resource
 		switch p.Type {
 		case string(resourcev3.ListenerType):
-			temp := listenerv3.Listener{}
-			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
+			temp := &listenerv3.Listener{}
+			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
@@ -132,10 +143,14 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			*listener = temp
+			if err = deepCopyPtr(temp, listener); err != nil {
+				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
 		case string(resourcev3.RouteType):
-			temp := routev3.RouteConfiguration{}
-			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
+			temp := &routev3.RouteConfiguration{}
+			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
@@ -145,11 +160,14 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-
-			*routeConfig = temp
+			if err = deepCopyPtr(temp, routeConfig); err != nil {
+				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
 		case string(resourcev3.ClusterType):
-			temp := clusterv3.Cluster{}
-			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
+			temp := &clusterv3.Cluster{}
+			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
@@ -159,10 +177,14 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			*cluster = temp
+			if err = deepCopyPtr(temp, cluster); err != nil {
+				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
 		case string(resourcev3.EndpointType):
-			temp := endpointv3.ClusterLoadAssignment{}
-			if err = protojson.Unmarshal(modifiedJSON, &temp); err != nil {
+			temp := &endpointv3.ClusterLoadAssignment{}
+			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
 				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
 				continue
@@ -172,7 +194,11 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, JSONPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			*endpoint = temp
+			if err = deepCopyPtr(temp, endpoint); err != nil {
+				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+				errs = multierror.Append(errs, err)
+				continue
+			}
 		}
 	}
 	return errs
