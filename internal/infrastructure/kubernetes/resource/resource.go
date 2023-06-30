@@ -6,8 +6,11 @@
 package resource
 
 import (
+	"reflect"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	appv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -39,6 +42,21 @@ func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 	return cmp.Equal(currentSvc.Spec, originalSvc.Spec,
 		cmpopts.IgnoreFields(corev1.ServicePort{}, "NodePort"),
 		cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs"))
+}
+
+// CompareDeployment compare the current from the k8s and deployment from the resource_provider.
+func CompareDeployment(current, deployment *appv1.Deployment) bool {
+	// applied to k8s the "DeprecatedServiceAccount" will fill it.
+	deployment.Spec.Template.Spec.DeprecatedServiceAccount = current.Spec.Template.Spec.DeprecatedServiceAccount
+	// applied to k8s the "SecurityContext" will fill it with default settings.
+	if deployment.Spec.Template.Spec.SecurityContext == nil {
+		deployment.Spec.Template.Spec.SecurityContext = current.Spec.Template.Spec.SecurityContext
+	}
+	// adapter the hpa updating and envoyproxy updating.
+	if *deployment.Spec.Replicas < *current.Spec.Replicas {
+		deployment.Spec.Replicas = current.Spec.Replicas
+	}
+	return reflect.DeepEqual(deployment.Spec, current.Spec)
 }
 
 // ExpectedProxyContainerEnv returns expected container envs.
