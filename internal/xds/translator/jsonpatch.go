@@ -124,9 +124,6 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 			continue
 		}
 
-		//my, _ := yaml.JSONToYAML(modifiedJSON)
-		fmt.Println(string(modifiedJSON))
-
 		// Unmarshal back to typed resource
 		// Use a temp staging variable that can be marshalled
 		// into and validated before saving it into the xds output resource
