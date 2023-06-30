@@ -6,5 +6,5 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
-    loadBalancingWeight: 50 
+    loadBalancingWeight: 50
     locality: {}

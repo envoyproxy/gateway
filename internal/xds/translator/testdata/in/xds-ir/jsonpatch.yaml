@@ -22,9 +22,9 @@ jsonPatches:
     op: "add"
     path: "/virtual_hosts/0/rate_limits"
     value:
-      - actions:
-        - remote_address: {}
-- type: "type.googleapis.com/envoy.config.cluster.v3.Cluster" 
+    - actions:
+      - remote_address: {}
+- type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
   name: rate-limit-cluster
   operation:
     op: add
@@ -38,12 +38,12 @@ jsonPatches:
       load_assignment:
         cluster_name: rate-limit-cluster
         endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address:
-                      address: ratelimit.svc.cluster.local
-                      port_value: 8081
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: ratelimit.svc.cluster.local
+                  port_value: 8081
 - type: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
   name: "first-route"
   operation:
