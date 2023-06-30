@@ -7,7 +7,6 @@
     - name: envoy.filters.network.http_connection_manager
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-        codecType: HTTP2
         commonHttpProtocolOptions:
           headersWithUnderscoresAction: REJECT_REQUEST
         http2ProtocolOptions:
