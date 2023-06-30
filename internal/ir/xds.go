@@ -818,5 +818,5 @@ type JSONPatchOperation struct {
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
 	// Value is the new value of the path location.
-	Value string `json:"value"`
+	Value interface{} `json:"value"`
 }

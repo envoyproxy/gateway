@@ -10,14 +10,7 @@
         - name: user
           stringMatch:
             exact: jason
-        - name: test
-          stringMatch:
-            suffix: end
         prefix: /
-        queryParameters:
-        - name: debug
-          stringMatch:
-            exact: "yes"
       name: first-route
       route:
         cluster: first-route

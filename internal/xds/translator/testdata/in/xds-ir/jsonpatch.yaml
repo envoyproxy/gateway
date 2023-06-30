@@ -4,7 +4,7 @@ jsonPatches:
   operation:
     op: "add"
     path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
-    value: |
+    value:
       name: "envoy.filters.http.ratelimit"
       typed_config:
         "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
@@ -15,7 +15,7 @@ jsonPatches:
           grpc_service:
             envoy_grpc:
               cluster_name: rate-limit-cluster
-          transport_api_version: V3'
+          transport_api_version: V3
 http:
 - name: "first-listener"
   address: "0.0.0.0"
