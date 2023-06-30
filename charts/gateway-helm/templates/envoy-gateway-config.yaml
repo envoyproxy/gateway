@@ -8,20 +8,5 @@ metadata:
 data:
   envoy-gateway.yaml: |
     apiVersion: config.gateway.envoyproxy.io/v1alpha1
-    gateway:
-      controllerName: {{ .Values.config.envoyGateway.gateway.controllerName
-        | quote }}
     kind: EnvoyGateway
-    provider:
-      {{- toYaml .Values.config.envoyGateway.provider | nindent 6 }}
-    {{- if .Values.config.envoyGateway.rateLimit }}
-    rateLimit:
-      {{- toYaml .Values.config.envoyGateway.rateLimit | nindent 6 }}
-    {{- end }}
-    {{- if .Values.config.envoyGateway.extension }}
-    extension:
-      {{- toYaml .Values.config.envoyGateway.extension | nindent 6 }}
-    {{- end }}
-    logging:
-      level:
-        default: info
+    {{- toYaml .Values.config.envoyGateway | nindent 4 }}
