@@ -13,7 +13,15 @@ data:
         | quote }}
     kind: EnvoyGateway
     provider:
-      type: {{ .Values.config.envoyGateway.provider.type | quote }}
+      {{- toYaml .Values.config.envoyGateway.provider | nindent 6 }}
+    {{- if .Values.config.envoyGateway.rateLimit }}
+    rateLimit:
+      {{- toYaml .Values.config.envoyGateway.rateLimit | nindent 6 }}
+    {{- end }}
+    {{- if .Values.config.envoyGateway.extension }}
+    extension:
+      {{- toYaml .Values.config.envoyGateway.extension | nindent 6 }}
+    {{- end }}
     logging:
       level:
         default: info
