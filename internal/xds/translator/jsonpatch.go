@@ -26,6 +26,10 @@ import (
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
 func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSONPatchConfig) error {
 	var errs error
+	m := protojson.MarshalOptions{
+		UseProtoNames: true,
+	}
+
 	for _, p := range jsonPatches {
 		var (
 			listener     *listenerv3.Listener
@@ -35,9 +39,6 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 			resourceJSON []byte
 			err          error
 		)
-		m := protojson.MarshalOptions{
-			UseProtoNames: true,
-		}
 
 		// If Path is "" and op is "add", unmarshal and add the patch as a complete
 		// resource
