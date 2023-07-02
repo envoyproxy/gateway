@@ -38,6 +38,10 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+    logging:
+      level:
+        default: info
+
 envoyGatewayMetricsService:
   ports:
     - name: https
