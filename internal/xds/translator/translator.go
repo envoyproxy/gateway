@@ -80,7 +80,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		var xdsRouteCfg *routev3.RouteConfiguration
 
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListenerByAddress(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
+		xdsListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, accesslog)
 			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
@@ -222,7 +222,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListenerByAddress(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
+		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, accesslog)
 			tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener)
@@ -258,8 +258,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 }
 
-// findXdsListenerByAddress finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
-func findXdsListenerByAddress(tCtx *types.ResourceVersionTable, address string, port uint32,
+// findXdsListenerByHostPort finds a xds listener with the same address, port and protocol, and returns nil if there is no match.
+func findXdsListenerByHostPort(tCtx *types.ResourceVersionTable, address string, port uint32,
 	protocol corev3.SocketAddress_Protocol) *listenerv3.Listener {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.ListenerType] == nil {
 		return nil

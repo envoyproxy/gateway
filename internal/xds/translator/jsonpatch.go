@@ -23,6 +23,11 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+const (
+	AddOperation = "add"
+	EmptyPath    = ""
+)
+
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
 func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSONPatchConfig) error {
 	var errs error
@@ -42,7 +47,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 
 		// If Path is "" and op is "add", unmarshal and add the patch as a complete
 		// resource
-		if p.Operation.Op == "add" && p.Operation.Path == "" {
+		if p.Operation.Op == AddOperation && p.Operation.Path == EmptyPath {
 			// Convert patch to JSON
 			// The patch library expects an array so convert it into one
 			y, err := yaml.Marshal(p.Operation.Value)
