@@ -32,7 +32,9 @@ func (i *Infra) createOrUpdateServiceAccount(ctx context.Context, r ResourceRend
 	}
 
 	return i.Client.CreateOrUpdate(ctx, key, current, sa, func() bool {
-		return true
+		// the service account never changed, does not need to update
+		// fixes https://github.com/envoyproxy/gateway/issues/1604
+		return false
 	})
 }
 
