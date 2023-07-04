@@ -173,6 +173,7 @@ spec:
             httpGet:
               path: /ready
               port: 19001
+            initialDelaySeconds: 30
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           securityContext:
