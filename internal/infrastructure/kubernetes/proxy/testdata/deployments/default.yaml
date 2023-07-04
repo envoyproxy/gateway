@@ -164,7 +164,8 @@ spec:
             httpGet:
               path: /ready
               port: 19001
-            initialDelaySeconds: 30
+            initialDelaySeconds: 50
+            successThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
