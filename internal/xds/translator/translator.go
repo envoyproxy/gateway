@@ -16,6 +16,7 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -46,7 +47,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 
 	tCtx := new(types.ResourceVersionTable)
 
-	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog); err != nil {
+	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog, ir.Tracing); err != nil {
 		return nil, err
 	}
 
@@ -59,6 +60,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	}
 
 	processClusterForAccessLog(tCtx, ir.AccessLog)
+	processClusterForTracing(tCtx, ir.Tracing)
 
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
@@ -69,7 +71,8 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	return tCtx, nil
 }
 
-func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener, accesslog *ir.AccessLog) error {
+func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener,
+	accesslog *ir.AccessLog, tracing *egcfgv1a1.ProxyTracing) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
@@ -96,7 +99,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		}
 
 		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accesslog); err != nil {
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accesslog, tracing); err != nil {
 				return err
 			}
 		}
