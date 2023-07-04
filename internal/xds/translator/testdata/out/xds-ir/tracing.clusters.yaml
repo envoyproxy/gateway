@@ -17,17 +17,17 @@
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   loadAssignment:
-    clusterName: accesslog|otel-collector.default.svc.cluster.local|4317
+    clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
     endpoints:
     - lbEndpoints:
       - endpoint:
           address:
             socketAddress:
-              address: otel-collector.default.svc.cluster.local
+              address: otel-collector.monitoring.svc.cluster.local
               portValue: 4317
       loadBalancingWeight: 1
       locality: {}
-  name: accesslog|otel-collector.default.svc.cluster.local|4317
+  name: tracing|otel-collector.monitoring.svc.cluster.local|4317
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

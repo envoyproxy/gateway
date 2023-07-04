@@ -50,7 +50,7 @@
               grpcService:
                 envoyGrpc:
                   authority: otel-collector.monitoring.svc.cluster.local
-                  clusterName: otel-collector.monitoring.svc.cluster.local:4317
+                  clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
           randomSampling:
             value: 90
         upgradeConfigs:

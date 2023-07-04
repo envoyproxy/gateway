@@ -30,7 +30,7 @@ func buildHCMTracing(tracing *egcfgv1a1.ProxyTracing) (*hcm.HttpConnectionManage
 		GrpcService: &corev3.GrpcService{
 			TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
 				EnvoyGrpc: &corev3.GrpcService_EnvoyGrpc{
-					ClusterName: "envoy.tracers.opentelemetry", // TODO: MAKE THIS RIGHT
+					ClusterName: buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port)),
 					Authority:   tracing.Provider.Host,
 				},
 			},
