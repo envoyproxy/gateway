@@ -239,6 +239,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
 	}
 	for _, policy := range envoyPatchPolicies.Items {
+		policy := policy
 		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 	}
 
