@@ -94,15 +94,20 @@ const (
 	ClusterLoadAssignmentEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
 )
 
+// JSONPatchOperationType specifies the JSON Patch operations that can be performed.
+// +kubebuilder:validation:Enum=add;remove;replace;move;copy;test
+type JSONPatchOperationType string
+
 // JSONPatchOperation defines the JSON Patch Operation as defined in
 // https://datatracker.ietf.org/doc/html/rfc6902
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
-	Op string `json:"op"`
+	Op JSONPatchOperationType `json:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
 	// Value is the new value of the path location.
+	// +kubebuilder:validation:MinLength=1
 	Value string `json:"value"`
 }
 
