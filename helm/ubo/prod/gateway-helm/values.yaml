@@ -60,10 +60,10 @@ config:
         type: Redis
         redis:
           url: master.ubo-pro-replication.n9qlyo.use1.cache.amazonaws.com:6379
-          tls:
-            certificateRef:
-              name: ratelimit-cert
-              namespace: envoy-gateway-system
+          # tls:
+          #   certificateRef:
+          #     name: ratelimit-cert
+          #     namespace: envoy-gateway-system
           
 envoyGatewayMetricsService:
   ports:
