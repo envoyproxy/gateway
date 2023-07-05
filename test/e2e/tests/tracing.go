@@ -65,9 +65,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(ctx context.Context) (bool, error) {
-					count, err := QueryTraceFromTempo(t, suite.Client, types.NamespacedName{
-						Namespace: "envoy-gateway-system",
-					}, tags)
+					count, err := QueryTraceFromTempo(t, suite.Client, tags)
 					if err != nil {
 						t.Logf("failed to get trace count from tempo: %v", err)
 						return false, nil
@@ -86,7 +84,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 
 // QueryTraceFromTempo queries span count from tempo
 // TODO: move to utils package if needed
-func QueryTraceFromTempo(t *testing.T, c client.Client, nn types.NamespacedName, tags map[string]string) (int, error) {
+func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) (int, error) {
 	svc := corev1.Service{}
 	if err := c.Get(context.Background(), types.NamespacedName{
 		Namespace: "monitoring",
@@ -102,10 +100,10 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, nn types.NamespacedName,
 		}
 	}
 
-	// tagsQueryParam, err := createTagsQueryParam(tags)
-	// if err != nil {
-	// 	return -1, err
-	// }
+	tagsQueryParam, err := createTagsQueryParam(tags)
+	if err != nil {
+		return -1, err
+	}
 
 	tempoURL := url.URL{
 		Scheme: "http",
@@ -115,7 +113,7 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, nn types.NamespacedName,
 	query := tempoURL.Query()
 	query.Add("start", fmt.Sprintf("%d", time.Now().Add(-10*time.Minute).Unix())) // query traces from last 10 minutes
 	query.Add("end", fmt.Sprintf("%d", time.Now().Unix()))
-	//query.Add("tags", tagsQueryParam)
+	query.Add("tags", tagsQueryParam)
 	tempoURL.RawQuery = query.Encode()
 
 	req, err := http.NewRequest("GET", tempoURL.String(), nil)
