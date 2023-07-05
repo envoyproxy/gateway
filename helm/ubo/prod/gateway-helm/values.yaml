@@ -64,7 +64,7 @@ config:
           url: master.ubo-pro-replication.n9qlyo.use1.cache.amazonaws.com:6379
           tls:
             certificateRef:
-              name: ratelimit-cert
+              name: envoy-rate-limit
               namespace: envoy-gateway-system
           
 envoyGatewayMetricsService:
