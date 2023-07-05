@@ -162,7 +162,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 						Port: intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
 					},
 				},
-				InitialDelaySeconds: 50,
+				InitialDelaySeconds: 180,
 				SuccessThreshold:    3,
 			},
 		},
