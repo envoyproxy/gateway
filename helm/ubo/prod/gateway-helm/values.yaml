@@ -41,20 +41,20 @@ config:
     logging:
       level:
         default: info
-    rateLimitDeployment:
-      replicas: 3
-      container:
-        image: envoyproxy/ratelimit:master
-        env:
-          - name: REDIS_PERSECOND_URL
-            value: replica.ubo-pro-replication.n9qlyo.use1.cache.amazonaws.com:6379
-        resources:
-          requests:
-            cpu: 250m
-            memory: 512Mi
-        securityContext:
-          runAsUser: 2000
-          allowPrivilegeEscalation: false
+    # rateLimitDeployment:
+    #   replicas: 3
+    #   container:
+    #     image: envoyproxy/ratelimit:master
+    #     env:
+    #       - name: REDIS_PERSECOND_URL
+    #         value: replica.ubo-pro-replication.n9qlyo.use1.cache.amazonaws.com:6379
+    #     resources:
+    #       requests:
+    #         cpu: 250m
+    #         memory: 512Mi
+    #     securityContext:
+    #       runAsUser: 2000
+    #       allowPrivilegeEscalation: false
     rateLimit:
       backend:
         type: Redis
