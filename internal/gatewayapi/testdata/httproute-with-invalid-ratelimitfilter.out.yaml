@@ -69,11 +69,11 @@ httpRoutes:
       - type: Accepted
         status: "False"
         reason: UnsupportedValue
-        message: "Unable to translate RateLimitFilter: default/test"
+        message: "Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: default/test"
       - type: ResolvedRefs
         status: "False"
         reason: BackendNotFound
-        message: "Unable to translate RateLimitFilter: default/test"
+        message: "Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: default/test"
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
