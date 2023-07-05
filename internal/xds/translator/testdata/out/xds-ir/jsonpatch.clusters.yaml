@@ -1,0 +1,26 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route
+  name: first-route
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- connectTimeout: 10s
+  http2ProtocolOptions: {}
+  loadAssignment:
+    clusterName: rate-limit-cluster
+    endpoints:
+    - lbEndpoints:
+      - endpoint:
+          address:
+            socketAddress:
+              address: ratelimit.svc.cluster.local
+              portValue: 8081
+  name: rate-limit-cluster
+  type: STRICT_DNS
