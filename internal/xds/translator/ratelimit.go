@@ -52,7 +52,7 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 		}
 	}
 
-	rateLimitFilter := buildRateLimitFilter(irListener)
+	rateLimitFilter := t.buildRateLimitFilter(irListener)
 	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
@@ -72,7 +72,12 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+	xRateLimitHeadersRFCVersion := 0
+	if t.GlobalRateLimit.XRateLimitHeadersRFCVersion == "draft_verison_03" {
+		xRateLimitHeadersRFCVersion = 1
+	}
+
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: getRateLimitDomain(irListener),
 		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
@@ -85,6 +90,7 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
+		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRFCVersion),
 	}
 
 	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)

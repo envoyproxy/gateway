@@ -66,7 +66,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				// Set the rate limit service URL if global rate limiting is enabled.
 				if r.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
-						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+						ServiceURL:                  ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+						XRateLimitHeadersRFCVersion: string(r.EnvoyGateway.RateLimit.XRateLimitHeadersRFCVersion),
 					}
 				}
 
