@@ -14,6 +14,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
@@ -49,6 +50,9 @@ var (
 type Xds struct {
 	// AccessLog configuration for the gateway.
 	AccessLog *AccessLog
+	// Tracing configuration for the gateway.
+	// EG currently supports only OpenTelemetry tracing, so use ProxyTracing directly.
+	Tracing *egcfgv1a1.ProxyTracing
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener
 	// TCP Listeners exposed by the gateway.

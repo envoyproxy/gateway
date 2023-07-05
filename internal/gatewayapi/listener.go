@@ -48,6 +48,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		var foundPorts []*protocolPort
 
 		gwXdsIR.AccessLog = processAccessLog(gwInfraIR.Proxy.Config)
+		gwXdsIR.Tracing = processTracing(gwInfraIR.Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -215,4 +216,12 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 	}
 
 	return irAccessLog
+}
+
+func processTracing(envoyproxy *configv1a1.EnvoyProxy) *configv1a1.ProxyTracing {
+	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Tracing == nil {
+		return nil
+	}
+
+	return envoyproxy.Spec.Telemetry.Tracing
 }

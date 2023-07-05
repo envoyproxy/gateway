@@ -927,6 +927,11 @@ func (in *Xds) DeepCopyInto(out *Xds) {
 		*out = new(AccessLog)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Tracing != nil {
+		in, out := &in.Tracing, &out.Tracing
+		*out = new(v1alpha1.ProxyTracing)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = make([]*HTTPListener, len(*in))
