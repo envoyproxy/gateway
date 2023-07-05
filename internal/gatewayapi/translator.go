@@ -120,6 +120,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
 
+	// Process EnvoyPatchPolicies
+	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
+
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
 
