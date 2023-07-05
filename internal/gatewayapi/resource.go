@@ -45,6 +45,7 @@ type Resources struct {
 	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty"`
 	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty"`
 	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty"`
+	EnvoyPatchPolicies    []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -65,6 +66,7 @@ func NewResources() *Resources {
 		CorsFilters:               []*egv1a1.CorsFilter{},
 		GrpcJSONTranscoderFilters: []*egv1a1.GrpcJSONTranscoderFilter{},
 		ExtensionRefFilters:       []unstructured.Unstructured{},
+		EnvoyPatchPolicies:        []*egv1a1.EnvoyPatchPolicy{},
 	}
 }
 

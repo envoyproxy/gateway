@@ -47,6 +47,7 @@ rules:
   - authenticationfilters
   - corsfilters
   - grpcjsontranscoderfilters
+  - envoypatchpolicies
   - ratelimitfilters
   verbs:
   - get

@@ -275,6 +275,16 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 		resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, referenceGrant)
 	}
 
+	// Add all EnvoyPatchPolicies
+	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+	}
+	for _, policy := range envoyPatchPolicies.Items {
+		policy := policy
+		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+	}
+
 	// For this particular Gateway, and all associated objects, check whether the
 	// namespace exists. Add to the resourceTree.
 	for ns := range resourceMap.allAssociatedNamespaces {
@@ -1417,6 +1427,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		source.Kind(mgr.GetCache(), &egv1a1.RateLimitFilter{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)); err != nil {
+		return err
+	}
+
+	// Watch EnvoyPatchPolicy CRUDs
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
+		&handler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 

@@ -12,6 +12,7 @@ package kubernetes
 // RBAC for Envoy Gateway custom resources.
 // +kubebuilder:rbac:groups="config.gateway.envoyproxy.io",resources=envoyproxies,verbs=get;list;watch;update
 // +kubebuilder:rbac:groups="gateway.envoyproxy.io",resources=authenticationfilters;corsfilters;grpcjsontranscoderfilters;ratelimitfilters,verbs=get;list;watch;update
+// +kubebuilder:rbac:groups="gateway.envoyproxy.io",resources=authenticationfilters;ratelimitfilters;envoypatchpolicies,verbs=get;list;watch;update
 
 // RBAC for watched resources of Gateway API controllers.
 // +kubebuilder:rbac:groups="",resources=secrets;services;namespaces;nodes,verbs=get;list;watch
