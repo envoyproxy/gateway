@@ -8,7 +8,7 @@ metadata:
   annotations:
     "helm.sh/hook": pre-install
     argocd.argoproj.io/hook: Skip
-    argocd.argoproj.io/hook: Sync
+    # argocd.argoproj.io/hook: Sync
 spec:
   backoffLimit: 1
   completions: 1
