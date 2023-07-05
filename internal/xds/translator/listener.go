@@ -110,9 +110,6 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	if irListener.IsHTTP2 {
-		// Set codec to HTTP2
-		mgr.CodecType = hcmv3.HttpConnectionManager_HTTP2
-
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
