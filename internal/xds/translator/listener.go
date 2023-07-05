@@ -543,20 +543,14 @@ func getLuaFilterConfigHandlerErrors() []byte {
 			-- Check if the response has a body
 			local body_handle = response_handle:body()
 			if not body_handle then
-				response_handle:logWarn("No response body to modify.")
 				return
 			end
 
-			response_handle:logWarn("1111111")
-
 			local body_size = body_handle:length()
 			local body_bytes = body_handle:getBytes(0, body_size)
-			response_handle:logWarn("222222")
 
 			-- Convert body_bytes to string
 			local raw_json_text = tostring(body_bytes)
-			response_handle:logWarn("raw_json_text: " .. raw_json_text)
-			response_handle:logWarn("33333")
 
 			local modified_json_text = string.gsub(raw_json_text, '"code":%s*%d+', '"code": ' .. status_code)
 
