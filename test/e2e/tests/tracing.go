@@ -137,9 +137,9 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 		return -1, err
 	}
 
-	total := len(tempoResponse.Traces)
-	t.Logf("get response from tempo, url=%s, total=%d", tempoURL.String(), total)
-	return len(tempoResponse.Traces), nil
+	total := int(tempoResponse.Metrics.InspectedTraces)
+	t.Logf("get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
+	return total, nil
 }
 
 // copy from https://github.com/grafana/tempo/blob/c0127c78c368319433c7c67ca8967adbfed2259e/cmd/tempo-query/tempo/plugin.go#L361
