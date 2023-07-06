@@ -120,6 +120,19 @@ type Gateway struct {
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
+
+	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
+	// implemented by Envoy Gateway
+	//
+	// +optional
+	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+}
+
+// ExtensionAPISettings defines the settings specific to Gateway API Extensions.
+type ExtensionAPISettings struct {
+	// EnableEnvoyPatchPolicy enables Envoy Gateway to
+	// reconcile and implement the EnvoyPatchPolicy resources.
+	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.

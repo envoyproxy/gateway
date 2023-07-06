@@ -340,6 +340,20 @@ _Appears in:_
 | `service` _[ExtensionService](#extensionservice)_ | Service defines the configuration of the extension service that the Envoy Gateway Control Plane will call through extension hooks. |
 
 
+## ExtensionAPISettings
+
+
+
+ExtensionAPISettings defines the settings specific to Gateway API Extensions.
+
+_Appears in:_
+- [Gateway](#gateway)
+
+| Field | Description |
+| --- | --- |
+| `enableEnvoyPatchPolicy` _boolean_ | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
+
+
 ## ExtensionHooks
 
 
@@ -412,6 +426,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `controllerName` _string_ | ControllerName defines the name of the Gateway API controller. If unspecified, defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following for additional details: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass |
+| `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
 
 
 ## GroupVersionKind

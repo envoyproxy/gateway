@@ -63,6 +63,7 @@ type gatewayAPIReconciler struct {
 	classController gwapiv1b1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
+	envoyGateway    *egcfgv1a1.EnvoyGateway
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -90,6 +91,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		resources:       resources,
 		extGVKs:         extGVKs,
 		store:           newProviderStore(),
+		envoyGateway:    cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -1226,11 +1228,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch EnvoyPatchPolicy CRUDs
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
-		&handler.EnqueueRequestForObject{}); err != nil {
-		return err
+	// Watch EnvoyPatchPolicy if enabled in config
+	if r.envoyGateway.Gateway.ExtensionAPIs != nil && r.envoyGateway.Gateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		// Watch EnvoyPatchPolicy CRUDs
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
+			&handler.EnqueueRequestForObject{}); err != nil {
+			return err
+		}
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")
