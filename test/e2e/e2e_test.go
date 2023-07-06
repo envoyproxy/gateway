@@ -46,12 +46,6 @@ func TestE2E(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &Manifests,
-		SkipTests: []string{
-			"RateLimit",
-			"RateLimitBasedJwtClaims",
-			"OpenTelemetryAccessLog",
-			"FileAccessLog",
-		},
 	})
 
 	cSuite.Setup(t)

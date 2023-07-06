@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/go-logfmt/logfmt"
-	"github.com/gogo/protobuf/jsonpb"
+	"github.com/gogo/protobuf/jsonpb" // nolint: depguard // tempopb use gogo/protobuf
 	"github.com/grafana/tempo/pkg/tempopb"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
