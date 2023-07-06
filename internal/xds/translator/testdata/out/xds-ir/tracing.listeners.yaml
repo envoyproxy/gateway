@@ -1,0 +1,60 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        statPrefix: http
+        tracing:
+          clientSampling:
+            value: 100
+          customTags:
+          - environment:
+              defaultValue: '-'
+              name: env1
+            tag: env1
+          - literal:
+              value: value1
+            tag: literal1
+          - requestHeader:
+              defaultValue: '-'
+              name: X-Request-Id
+            tag: req1
+          overallSampling:
+            value: 100
+          provider:
+            name: envoy.tracers.opentelemetry
+            typedConfig:
+              '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.monitoring.svc.cluster.local
+                  clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+          randomSampling:
+            value: 90
+        upgradeConfigs:
+        - upgradeType: websocket
+        useRemoteAddress: true
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

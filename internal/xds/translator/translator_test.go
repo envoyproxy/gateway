@@ -148,6 +148,12 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "accesslog",
 		},
+		{
+			name: "tracing",
+		},
+		{
+			name: "jsonpatch",
+		},
 	}
 
 	for _, tc := range testCases {
