@@ -74,7 +74,7 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 
 func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 	xRateLimitHeadersRFCVersion := 0
-	if t.GlobalRateLimit.XRateLimitHeadersRFCVersion == "draft_verison_03" {
+	if t.GlobalRateLimit.XRateLimitHeadersRFCVersion == "draft_version_03" {
 		xRateLimitHeadersRFCVersion = 1
 	}
 

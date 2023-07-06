@@ -742,6 +742,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
+| `xRateLimitHeadersRFCVersion` _[XRateLimitHeadersRFCVersion](#xratelimitheadersrfcversion)_ | XRateLimitHeadersRFCVersion defines the version of the standard to use for X-RateLimit headers. Supported XRateLimitHeadersRFCVersion are "draft_version_03". Other XRateLimitHeadersRFCVersion(not "draft_version_03") will not use X-RateLimit headers. |
 
 
 ## RateLimitDatabaseBackend
@@ -887,5 +888,16 @@ _Appears in:_
 | --- | --- |
 | `pre` _[XDSTranslatorHook](#xdstranslatorhook) array_ |  |
 | `post` _[XDSTranslatorHook](#xdstranslatorhook) array_ |  |
+
+
+## XRateLimitHeadersRFCVersion
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [RateLimit](#ratelimit)
+
 
 

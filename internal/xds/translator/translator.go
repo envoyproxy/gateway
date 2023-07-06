@@ -39,7 +39,7 @@ type GlobalRateLimitSettings struct {
 	// rate limit service.
 	ServiceURL string
 	// XRateLimitHeadersRFCVersion is the version of the standard to use for X-RateLimit headers.
-	// Currently only supports rfc_draft_verison_03
+	// Currently only supports rfc_draft_version_03
 	XRateLimitHeadersRFCVersion string
 }
 
