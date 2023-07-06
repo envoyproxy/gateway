@@ -8,12 +8,12 @@ package gatewayapi
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestProcessTracing(t *testing.T) {
