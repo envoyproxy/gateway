@@ -68,7 +68,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: [gen-check, lint, license-check, coverage-test]
+    needs: [gen-check, license-check]
     steps:
     - uses: actions/checkout@v3
       with:

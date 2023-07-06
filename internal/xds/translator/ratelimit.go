@@ -74,7 +74,10 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 
 func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
-		Domain: getRateLimitDomain(irListener),
+		Domain:                         getRateLimitDomain(irListener),
+		RequestType:                    "external",
+		FailureModeDeny:                true,
+		RateLimitedAsResourceExhausted: true,
 		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
 			GrpcService: &corev3.GrpcService{
 				TargetSpecifier: &corev3.GrpcService_EnvoyGrpc_{
