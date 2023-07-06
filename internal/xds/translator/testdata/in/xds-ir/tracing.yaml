@@ -1,5 +1,6 @@
-name: "accesslog"
+name: "tracing"
 tracing:
+  serviceName: "fake-name.fake-ns"
   samplingRate: 90
   customTags:
     "literal1":
