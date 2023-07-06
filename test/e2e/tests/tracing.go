@@ -137,6 +137,8 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 		return -1, err
 	}
 
+	// TODO: looks like there's some unmarshal issue with gogo/protobuf,
+	// but it's fine for now cause we only need the total count.
 	total := int(tempoResponse.Metrics.InspectedTraces)
 	t.Logf("get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
 	return total, nil
