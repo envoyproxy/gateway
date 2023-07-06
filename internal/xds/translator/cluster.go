@@ -57,9 +57,19 @@ func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol
 			},
 		}
 	} else {
-		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(1 * time.Second)
-		cluster.RespectDnsTtl = false
+		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
+		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
+			ServiceName: clusterName,
+			EdsConfig: &corev3.ConfigSource{
+				ResourceApiVersion: resource.DefaultAPIVersion,
+				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
+					Ads: &corev3.AggregatedConfigSource{},
+				},
+			},
+		}
+		// cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
+		// cluster.DnsRefreshRate = durationpb.New(1 * time.Second)
+		// cluster.RespectDnsTtl = false
 	}
 
 	if protocol == HTTP2 {
