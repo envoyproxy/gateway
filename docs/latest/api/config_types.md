@@ -894,7 +894,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-
+XRateLimitHeadersRFCVersion specifies the types of X-RateLimit headers to be used by the ratelimit.
 
 _Appears in:_
 - [RateLimit](#ratelimit)

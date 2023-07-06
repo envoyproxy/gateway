@@ -36,6 +36,13 @@ const (
 	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
 	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
+const (
+	// X-RateLimit headers disabled.
+	Off = "off"
+
+	// Use `draft RFC Version 03 <https://tools.ietf.org/id/draft-polli-ratelimit-headers-03.html>`
+	RfcVersion = "draft_version_03"
+)
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
@@ -74,7 +81,7 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 
 func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 	xRateLimitHeadersRFCVersion := 0
-	if t.GlobalRateLimit.XRateLimitHeadersRFCVersion == "draft_version_03" {
+	if t.GlobalRateLimit.XRateLimitHeadersRFCVersion == RfcVersion {
 		xRateLimitHeadersRFCVersion = 1
 	}
 
