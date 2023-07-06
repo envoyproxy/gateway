@@ -58,8 +58,8 @@ func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol
 		}
 	} else {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_STRICT_DNS}
-		cluster.DnsRefreshRate = durationpb.New(30 * time.Second)
-		cluster.RespectDnsTtl = true
+		cluster.DnsRefreshRate = durationpb.New(1 * time.Second)
+		cluster.RespectDnsTtl = false
 	}
 
 	if protocol == HTTP2 {
