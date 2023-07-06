@@ -45,11 +45,6 @@ config:
       replicas: 3
       container:
         image: envoyproxy/ratelimit:master
-        env:
-          - name: REDIS_PERSECOND_URL
-            value: replica.ubo-pro-replication.n9qlyo.use1.cache.amazonaws.com:6379
-          - name: REDIS_PERSECOND
-            value: true
         resources:
           requests:
             cpu: 250m
