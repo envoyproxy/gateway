@@ -58,7 +58,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			tags := map[string]string{
-				"component":          "envoy",
+				"component":          "proxy",
 				"k8s.cluster.name":   "envoy-gateway",
 				"k8s.namespace.name": "envoy-gateway-system",
 			}
