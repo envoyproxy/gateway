@@ -107,6 +107,7 @@ data:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     rateLimit:
+      xRateLimitHeadersRFCVersion: draft_version_03
       backend:
         type: Redis
         redis:
@@ -640,6 +641,7 @@ spec:
     - path:
         type: PathPrefix
         value: /foo
+EOF
 ```
 
 Get the JWT used for testing request authentication:
