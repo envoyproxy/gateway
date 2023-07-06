@@ -11,6 +11,7 @@ WAIT_TIMEOUT ?= 15m
 
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
 OTEL_COLLECTOR_CHART_VERSION ?= 0.60.0
+TEMPO_CHART_VERSION ?= 1.3.1
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -143,16 +144,18 @@ run-e2e: prepare-e2e
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
 
 .PHONY: prepare-e2e
-prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-otel-collector
+prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector
 	@$(LOG_TARGET)
 	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
 	kubectl rollout status statefulset loki -n monitoring --timeout 5m
+	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
 	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
 
 .PHONY: prepare-helm-repo
 prepare-helm-repo:
 	@$(LOG_TARGET)
 	helm repo add fluent https://fluent.github.io/helm-charts
+	helm repo add grafana https://grafana.github.io/helm-charts
 	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm repo update
 
@@ -165,6 +168,11 @@ install-fluent-bit:
 install-loki:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/loki/loki.yaml -n monitoring
+
+.PHONY: install-tempo
+install-tempo:
+	@$(LOG_TARGET)
+	helm upgrade --install tempo grafana/tempo -f examples/tempo/helm-values.yaml -n monitoring --create-namespace --version $(TEMPO_CHART_VERSION)
 
 .PHONY: install-otel-collector
 install-otel-collector:
