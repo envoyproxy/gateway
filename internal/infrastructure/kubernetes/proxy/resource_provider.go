@@ -170,6 +170,17 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		annotations = deploymentConfig.Pod.Annotations
 	}
 
+	// Get custom and selector labels for pod
+	var podLabels map[string]string
+	if deploymentConfig.Pod.Labels != nil {
+		podLabels = deploymentConfig.Pod.Labels
+		for matchKey, matchValue := range selector.MatchLabels {
+			podLabels[matchKey] = matchValue
+		}
+	} else {
+		podLabels = selector.MatchLabels
+	}
+
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
@@ -186,7 +197,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 			Selector: selector,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      selector.MatchLabels,
+					Labels:      podLabels,
 					Annotations: annotations,
 				},
 				Spec: corev1.PodSpec{
