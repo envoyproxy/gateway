@@ -36,6 +36,18 @@ const (
 	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
 	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
 )
+const (
+	// Use `draft RFC Version 03 <https://tools.ietf.org/id/draft-polli-ratelimit-headers-03.html>` by default,
+	// where 3 headers will be added:
+	// * ``X-RateLimit-Limit`` - indicates the request-quota associated to the
+	//   client in the current time-window followed by the description of the
+	//   quota policy. The value is returned by the maximum tokens of the token bucket.
+	// * ``X-RateLimit-Remaining`` - indicates the remaining requests in the
+	//   current time-window. The value is returned by the remaining tokens in the token bucket.
+	// * ``X-RateLimit-Reset`` - indicates the number of seconds until reset of
+	//   the current time-window. The value is returned by the remaining fill interval of the token bucket.
+	xRateLimitHeadersRfcVersion = 1
+)
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
 // if applicable and it does not already exist.
@@ -85,6 +97,7 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
+		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
 	}
 
 	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
