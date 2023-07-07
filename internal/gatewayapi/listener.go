@@ -9,10 +9,12 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -224,7 +226,7 @@ func processTracing(gw *v1beta1.Gateway, envoyproxy *configv1a1.EnvoyProxy) *ir.
 	}
 
 	return &ir.Tracing{
-		ServiceName:  gw.Name + "." + gw.Namespace,
+		ServiceName:  naming.ServiceName(types.NamespacedName{Name: gw.Name, Namespace: gw.Namespace}),
 		ProxyTracing: *envoyproxy.Spec.Telemetry.Tracing,
 	}
 }

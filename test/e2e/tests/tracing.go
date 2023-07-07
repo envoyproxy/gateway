@@ -28,6 +28,8 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
 
 func init() {
@@ -59,7 +61,7 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 
 			tags := map[string]string{
 				"component":    "proxy",
-				"service.name": gwNN.Name + "." + gwNN.Namespace,
+				"service.name": naming.ServiceName(gwNN),
 			}
 			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
