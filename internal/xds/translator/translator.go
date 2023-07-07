@@ -38,9 +38,6 @@ type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
 	ServiceURL string
-	// XRateLimitHeadersRFCVersion is the version of the standard to use for X-RateLimit headers.
-	// Currently only supports rfc_draft_version_03
-	XRateLimitHeadersRFCVersion string
 }
 
 // Translate translates the XDS IR into xDS resources

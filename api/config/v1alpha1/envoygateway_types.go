@@ -258,33 +258,7 @@ type RateLimit struct {
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
 	Backend RateLimitDatabaseBackend `json:"backend"`
-
-	// XRateLimitHeadersRFCVersion defines the version of the standard to use for X-RateLimit headers.
-	// Supported XRateLimitHeadersRFCVersion are "draft_version_03".
-	// Other XRateLimitHeadersRFCVersion(not "draft_version_03") will not use X-RateLimit headers.
-	XRateLimitHeadersRFCVersion XRateLimitHeadersRFCVersion `json:"xRateLimitHeadersRFCVersion"`
 }
-
-// XRateLimitHeadersRFCVersion specifies the types of X-RateLimit headers
-// to be used by the ratelimit.
-// +kubebuilder:validation:Enum=draft_version_03
-type XRateLimitHeadersRFCVersion string
-
-const (
-	// X-RateLimit headers disabled.
-	Off XRateLimitHeadersRFCVersion = "off"
-
-	// Use `draft RFC Version 03 <https://tools.ietf.org/id/draft-polli-ratelimit-headers-03.html>`_ where 3 headers will be added:
-	//
-	// * ``X-RateLimit-Limit`` - indicates the request-quota associated to the
-	//   client in the current time-window followed by the description of the
-	//   quota policy. The value is returned by the maximum tokens of the token bucket.
-	// * ``X-RateLimit-Remaining`` - indicates the remaining requests in the
-	//   current time-window. The value is returned by the remaining tokens in the token bucket.
-	// * ``X-RateLimit-Reset`` - indicates the number of seconds until reset of
-	//   the current time-window. The value is returned by the remaining fill interval of the token bucket.
-	RfcVersion XRateLimitHeadersRFCVersion = "draft_version_03"
-)
 
 // RateLimitDatabaseBackend defines the configuration associated with
 // the database backend used by the rate limit service.

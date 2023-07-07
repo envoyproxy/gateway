@@ -107,7 +107,6 @@ data:
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     rateLimit:
-      xRateLimitHeadersRFCVersion: draft_version_03
       backend:
         type: Redis
         redis:
