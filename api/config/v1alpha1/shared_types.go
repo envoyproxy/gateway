@@ -77,8 +77,8 @@ type KubernetesPodSpec struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
-	// Labels are the labels that should be tagged to the pods.
-	// By default, no pod labels are tagged.
+	// Labels are the additional labels that should be tagged to the pods.
+	// By default, no additional pod labels are tagged.
 	//
 	// +optional
 	Labels map[string]string `json:"labels,omitempty"`

@@ -1569,9 +1569,9 @@ spec:
                               labels:
                                 additionalProperties:
                                   type: string
-                                description: Labels are the labels that should be
-                                  tagged to the pods. By default, no pod labels are
-                                  tagged.
+                                description: Labels are the additional labels that
+                                  should be tagged to the pods. By default, no additional
+                                  pod labels are tagged.
                                 type: object
                               securityContext:
                                 description: 'SecurityContext holds pod-level security
