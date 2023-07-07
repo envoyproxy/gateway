@@ -201,3 +201,14 @@ const (
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
 	XDSTranslation  XDSTranslatorHook = "Translation"
 )
+
+type BackendService struct {
+	// Host define the service hostname.
+	Host string `json:"host"`
+	// Port defines the port the service is exposed on.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int32 `json:"port,omitempty"`
+}
