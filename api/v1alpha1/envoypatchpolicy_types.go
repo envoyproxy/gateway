@@ -6,7 +6,6 @@
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -108,7 +107,8 @@ type JSONPatchOperation struct {
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
 	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value"`
+	// +kubebuilder:validation:MinLength=1
+	Value string `json:"value"`
 }
 
 // EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy

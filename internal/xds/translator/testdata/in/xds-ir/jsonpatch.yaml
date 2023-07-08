@@ -4,7 +4,7 @@ jsonPatches:
   operation:
     op: "add"
     path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
-    value:
+    value: |
       name: "envoy.filters.http.ratelimit"
       typed_config:
         "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
@@ -21,15 +21,15 @@ jsonPatches:
   operation:
     op: "add"
     path: "/virtual_hosts/0/rate_limits"
-    value:
-    - actions:
-      - remote_address: {}
+    value: |
+      - actions:
+        - remote_address: {}
 - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
   name: rate-limit-cluster
   operation:
     op: add
     path: ""
-    value:
+    value: |
       name: rate-limit-cluster
       type: STRICT_DNS
       connect_timeout: 10s
