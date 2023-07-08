@@ -31,7 +31,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// to the Xds IR.
 	for _, gateway := range gateways {
 		// init IR per gateway
-		irKey := irStringKey(gateway.Gateway)
+		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
 		gwInfraIR.Proxy.Name = irKey
