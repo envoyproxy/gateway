@@ -82,12 +82,9 @@ func envoyLabels(extraLabels, customLabels map[string]string) map[string]string 
 	for k, v := range extraLabels {
 		labels[k] = v
 	}
-	if customLabels != nil {
-		for k, v := range customLabels {
-			labels[k] = v
-		}
+	for k, v := range customLabels {
+		labels[k] = v
 	}
-
 	return labels
 }
 
