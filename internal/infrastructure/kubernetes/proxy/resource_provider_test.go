@@ -84,7 +84,7 @@ func TestDeployment(t *testing.T) {
 						"prometheus.io/scrape": "true",
 					},
 					Labels: map[string]string{
-						"foo.bar": "eg",
+						"foo.bar": "custom-label",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: pointer.Int64(1000),
