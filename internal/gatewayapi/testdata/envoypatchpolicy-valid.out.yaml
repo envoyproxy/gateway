@@ -10,10 +10,9 @@ gateways:
     - name: http
       protocol: HTTP
       port: 80
-      hostname: "*.envoyproxy.io"
       allowedRoutes:
         namespaces:
-          from: All
+          from: Same
   status:
     listeners:
     - name: http
@@ -32,48 +31,6 @@ gateways:
         status: "True"
         reason: Accepted
         message: Listener has been successfully translated
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: HTTPRoute
-  metadata:
-    namespace: default
-    name: httproute-1
-  spec:
-    hostnames:
-    - gateway.envoyproxy.io
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
-      sectionName: http
-    rules:
-    - matches:
-      - path:
-          value: "/"
-      backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
-      - type: ExtensionRef
-        extensionRef:
-          group: gateway.envoyproxy.io
-          kind: RateLimitFilter
-          name: test
-  status:
-    parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-        sectionName: http
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "False"
-        reason: UnsupportedValue
-        message: "Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: default/test"
-      - type: ResolvedRefs
-        status: "False"
-        reason: BackendNotFound
-        message: "Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: default/test"
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
@@ -84,7 +41,20 @@ xdsIR:
       address: 0.0.0.0
       port: 10080
       hostnames:
-      - "*.envoyproxy.io"
+      - "*"
+    jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "envoy-gateway-gateway-1-http"
+      operation:
+        op: replace
+        path: "/ignore_global_conn_limit"
+        value: "true"
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "envoy-gateway-gateway-1-http"
+      operation:
+        op: replace
+        path: "/per_connection_buffer_limit_bytes"
+        value: "1024"
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
@@ -93,11 +63,10 @@ infraIR:
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
       name: envoy-gateway-gateway-1
-
       listeners:
       - address: ""
         ports:
         - name: http
           protocol: "HTTP"
-          containerPort: 10080
           servicePort: 80
+          containerPort: 10080

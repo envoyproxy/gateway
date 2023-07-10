@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"fmt"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -124,4 +125,11 @@ func buildTypedExtensionProtocolOptions() map[string]*anypb.Any {
 	}
 
 	return extensionOptions
+}
+
+// buildClusterName returns a cluster name for the given `host` and `port`.
+// The format is: <type>|<host>|<port>, where type is "accesslog" for access logs.
+// It's easy to distinguish when debugging.
+func buildClusterName(prefix string, host string, port uint32) string {
+	return fmt.Sprintf("%s|%s|%d", prefix, host, port)
 }

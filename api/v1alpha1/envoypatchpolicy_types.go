@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -94,16 +95,20 @@ const (
 	ClusterLoadAssignmentEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
 )
 
+// JSONPatchOperationType specifies the JSON Patch operations that can be performed.
+// +kubebuilder:validation:Enum=add;remove;replace;move;copy;test
+type JSONPatchOperationType string
+
 // JSONPatchOperation defines the JSON Patch Operation as defined in
 // https://datatracker.ietf.org/doc/html/rfc6902
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
-	Op string `json:"op"`
+	Op JSONPatchOperationType `json:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
 	// Value is the new value of the path location.
-	Value string `json:"value"`
+	Value apiextensionsv1.JSON `json:"value"`
 }
 
 // EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy

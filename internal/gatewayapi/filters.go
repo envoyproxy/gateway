@@ -732,7 +732,7 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
 							default:
 								// set negative status condition.
-								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
+								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: %s/%s", filterNs,
 									extFilter.Name)
 								t.processUnresolvedHTTPFilter(errMsg, filterContext)
 								return

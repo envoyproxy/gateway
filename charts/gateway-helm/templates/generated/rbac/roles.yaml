@@ -45,6 +45,7 @@ rules:
   - gateway.envoyproxy.io
   resources:
   - authenticationfilters
+  - envoypatchpolicies
   - ratelimitfilters
   verbs:
   - get

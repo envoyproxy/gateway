@@ -14,16 +14,6 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.ratelimit
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: first-listener
-            enableXRatelimitHeaders: DRAFT_VERSION_03
-            rateLimitService:
-              grpcService:
-                envoyGrpc:
-                  clusterName: ratelimit_cluster
-              transportApiVersion: V3
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -36,6 +26,33 @@
             resourceApiVersion: V3
           routeConfigName: first-listener
         statPrefix: http
+        tracing:
+          clientSampling:
+            value: 100
+          customTags:
+          - environment:
+              defaultValue: '-'
+              name: env1
+            tag: env1
+          - literal:
+              value: value1
+            tag: literal1
+          - requestHeader:
+              defaultValue: '-'
+              name: X-Request-Id
+            tag: req1
+          overallSampling:
+            value: 100
+          provider:
+            name: envoy.tracers.opentelemetry
+            typedConfig:
+              '@type': type.googleapis.com/envoy.config.trace.v3.OpenTelemetryConfig
+              grpcService:
+                envoyGrpc:
+                  authority: otel-collector.monitoring.svc.cluster.local
+                  clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+          randomSampling:
+            value: 90
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true

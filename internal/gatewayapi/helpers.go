@@ -385,8 +385,8 @@ type crossNamespaceTo struct {
 	name      string
 }
 
-func irStringKey(gateway *v1beta1.Gateway) string {
-	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
+func irStringKey(gatewayNs, gatewayName string) string {
+	return fmt.Sprintf("%s-%s", gatewayNs, gatewayName)
 }
 
 func irHTTPListenerName(listener *ListenerContext) string {

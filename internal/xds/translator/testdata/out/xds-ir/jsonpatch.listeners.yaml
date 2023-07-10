@@ -14,34 +14,17 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
-        - name: envoy.filters.http.jwt_authn
-          typedConfig:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
-            providers:
-              first-route-example:
-                audiences:
-                - foo.com
-                issuer: https://www.example.com
-                payloadInMetadata: https://www.example.com
-                remoteJwks:
-                  cacheDuration: 300s
-                  httpUri:
-                    cluster: "192_168_1_250_443"
-                    timeout: 5s
-                    uri: https://192.168.1.250/jwt/public-key/jwks.json
-            requirementMap:
-              first-route:
-                providerName: first-route-example
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-            domain: first-listener
-            enableXRatelimitHeaders: DRAFT_VERSION_03
+            domain: eg-ratelimit
+            failureModeDeny: true
             rateLimitService:
               grpcService:
                 envoyGrpc:
-                  clusterName: ratelimit_cluster
+                  clusterName: rate-limit-cluster
               transportApiVersion: V3
+            timeout: 1s
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
