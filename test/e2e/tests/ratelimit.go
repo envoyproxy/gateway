@@ -159,11 +159,6 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			// keep sending requests till get 200 first to make sure the gateway is available
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
-			// Carrying different jwt claims will not be limited
-			if err := GotExactNExpectedResponse(t, 4, suite.RoundTripper, difJwtReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response at first four request: %v", err)
-			}
-
 			// should just send exactly 4 requests, and expect 429
 
 			// keep sending requests till get 200 first, that will cost one 200
@@ -175,6 +170,11 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 			}
 			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, JwtReq, expectLimitResp); err != nil {
 				t.Errorf("fail to get expected response at last fourth request: %v", err)
+			}
+
+			// Carrying different jwt claims will not be limited
+			if err := GotExactNExpectedResponse(t, 4, suite.RoundTripper, difJwtReq, expectOkResp); err != nil {
+				t.Errorf("fail to get expected response at first four request: %v", err)
 			}
 		})
 	},
