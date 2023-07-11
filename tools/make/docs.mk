@@ -4,7 +4,7 @@ RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean $(tools/sphinx-build) docs-api ## Generate Envoy Gateway Docs Sources
+docs: docs.clean $(tools/sphinx-build) docs-api helm-readme-gen ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
 	mkdir -p $(DOCS_OUTPUT_DIR)
 	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
@@ -35,6 +35,11 @@ docs.clean:
 
 .PHONY: docs-api
 docs-api: docs-api-gen docs-api-headings
+
+.PHONY: helm-readme-gen
+helm-readme-gen:
+	@$(LOG_TARGET)
+	tools/hack/helm-readme-gen.sh
 
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/crd-ref-docs)
