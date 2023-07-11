@@ -77,12 +77,9 @@ func EnvoyAppLabelSelector() []string {
 }
 
 // envoyLabels returns the labels, including extraLabels, used for Envoy resources.
-func envoyLabels(extraLabels, customLabels map[string]string) map[string]string {
+func envoyLabels(extraLabels map[string]string) map[string]string {
 	labels := EnvoyAppLabel()
 	for k, v := range extraLabels {
-		labels[k] = v
-	}
-	for k, v := range customLabels {
 		labels[k] = v
 	}
 	return labels

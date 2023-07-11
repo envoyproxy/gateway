@@ -7,6 +7,7 @@ package proxy
 
 import (
 	"fmt"
+	"golang.org/x/exp/maps"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +42,7 @@ func (r *ResourceRender) Name() string {
 // ServiceAccount returns the expected proxy serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels, nil)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -80,7 +81,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the labels based on the owning gatewayclass name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels, nil)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -119,7 +120,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 // ConfigMap returns the expected ConfigMap based on the provided infra.
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels, nil)
+	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
 	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
@@ -157,12 +158,14 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Set the labels based on the owning gateway name.
-	dpLabels := envoyLabels(r.infra.GetProxyMetadata().Labels, nil)
+	labels := r.infra.GetProxyMetadata().Labels
+	dpLabels := envoyLabels(labels)
 	if len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
-	podLabels := envoyLabels(r.infra.GetProxyMetadata().Labels, deploymentConfig.Pod.Labels)
+	maps.Copy(labels, deploymentConfig.Pod.Labels)
+	podLabels := envoyLabels(labels)
 	selector := resource.GetSelector(podLabels)
 
 	// Get annotations
