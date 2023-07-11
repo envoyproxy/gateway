@@ -74,6 +74,12 @@ jobs:
           helm install eg oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n envoy-gateway-system --create-namespace
           ```
 
+          Try latest version of `egctl` with:
+
+          ```shell
+          curl -Ls https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash
+          ```
+
     # Check if latest release and tag are created properly,
     # if not, the workflow needs to report an error,
     # let maintainers be aware of it and rerun it manually.
