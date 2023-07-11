@@ -10,13 +10,13 @@ import (
 	"fmt"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	clicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes"
 	"github.com/envoyproxy/gateway/internal/ir"
+	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 var _ Manager = (*kubernetes.Infra)(nil)
@@ -37,7 +37,7 @@ type Manager interface {
 func NewManager(cfg *config.Server) (Manager, error) {
 	var mgr Manager
 	if cfg.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
-		cli, err := client.New(clicfg.GetConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
+		cli, err := client.New(kube.GetProtobufConfigOrDie(), client.Options{Scheme: envoygateway.GetScheme()})
 		if err != nil {
 			return nil, err
 		}
