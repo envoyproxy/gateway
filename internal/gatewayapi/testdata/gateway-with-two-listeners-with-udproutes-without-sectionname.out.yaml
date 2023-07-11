@@ -1,147 +1,156 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: udp1
+      port: 161
+      protocol: UDP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: udp2
+      port: 162
+      protocol: UDP
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: udp1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: udp2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: UDPRoute
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
       listeners:
-        - name: udp1
+      - address: ""
+        ports:
+        - containerPort: 10161
+          name: udp1
           protocol: UDP
-          port: 161
-          allowedRoutes:
-            namespaces:
-              from: All
-        - name: udp2
+          servicePort: 161
+        - containerPort: 10162
+          name: udp2
           protocol: UDP
-          port: 162
-          allowedRoutes:
-            namespaces:
-              from: All
-    status:
-      listeners:
-        - name: udp1
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: UDPRoute
-          AttachedRoutes: 1
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Sending translated listener configuration to the data plane
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
-        - name: udp2
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: UDPRoute
-          AttachedRoutes: 1
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Sending translated listener configuration to the data plane
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
+          servicePort: 162
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
 udpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: UDPRoute
-    metadata:
-      namespace: default
-      name: udproute-1
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-      rules:
-        - backendRefs:
-            - name: service-1
-              port: 8162
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Route is accepted
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: UDPRoute
-    metadata:
-      namespace: default
-      name: udproute-2
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-      rules:
-        - backendRefs:
-            - name: service-2
-              port: 8162
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "False"
-              reason: UnsupportedValue
-              message: Multiple routes on the same UDP listener
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    creationTimestamp: null
+    name: udproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8162
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: UDPRoute
+  metadata:
+    creationTimestamp: null
+    name: udproute-2
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-2
+        port: 8162
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Multiple routes on the same UDP listener
+        reason: UnsupportedValue
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-        - path: /dev/stdout
+      - path: /dev/stdout
     udp:
-      - name: "envoy-gateway-gateway-1-udp1-udproute-1"
-        address: "0.0.0.0"
-        port: 10161
-        destinations:
-          - host: "7.7.7.7"
-            port: 8162
-      - name: "envoy-gateway-gateway-1-udp2-udproute-1"
-        address: "0.0.0.0"
-        port: 10162
-        destinations:
-          - host: "7.7.7.7"
-            port: 8162
-
-infraIR:
-  envoy-gateway-gateway-1:
-    proxy:
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
-
-      listeners:
-        - address: ""
-          ports:
-            - name: udp1
-              protocol: "UDP"
-              servicePort: 161
-              containerPort: 10161
-            - name: udp2
-              protocol: "UDP"
-              servicePort: 162
-              containerPort: 10162
+    - address: 0.0.0.0
+      destinations:
+      - host: 7.7.7.7
+        port: 8162
+      name: envoy-gateway-gateway-1-udp1-udproute-1
+      port: 10161
+    - address: 0.0.0.0
+      destinations:
+      - host: 7.7.7.7
+        port: 8162
+      name: envoy-gateway-gateway-1-udp2-udproute-1
+      port: 10162

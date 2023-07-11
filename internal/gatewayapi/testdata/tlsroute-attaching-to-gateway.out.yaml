@@ -1,96 +1,101 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
-      listeners:
-        - name: tls
-          protocol: TLS
-          hostname: foo.com
-          port: 90
-          tls:
-            mode: Passthrough
-          allowedRoutes:
-            namespaces:
-              from: All
-    status:
-      listeners:
-        - name: tls
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: TLSRoute
-          attachedRoutes: 1
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Sending translated listener configuration to the data plane
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
-tlsRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TLSRoute
-    metadata:
-      namespace: default
-      name: tlsroute-1
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-      rules:
-        - backendRefs:
-            - name: service-1
-              port: 8080
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Route is accepted
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
-xdsIR:
-  envoy-gateway-gateway-1:
-    accessLog:
-      text:
-        - path: /dev/stdout
-    tcp:
-      - name: envoy-gateway-gateway-1-tls-tlsroute-1
-        address: 0.0.0.0
-        port: 10090
-        tls:
-          passthrough:
-            snis:
-              - "foo.com"
-        destinations:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.com
+      name: tls
+      port: 90
+      protocol: TLS
+      tls:
+        mode: Passthrough
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
+      listeners:
+      - address: ""
+        ports:
+        - containerPort: 10090
+          name: tls
+          protocol: TLS
+          servicePort: 90
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
-
-      listeners:
-        - address: ""
-          ports:
-            - name: tls
-              protocol: "TLS"
-              servicePort: 90
-              containerPort: 10090
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    creationTimestamp: null
+    name: tlsroute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+xdsIR:
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    tcp:
+    - address: 0.0.0.0
+      destinations:
+      - host: 7.7.7.7
+        port: 8080
+        weight: 1
+      name: envoy-gateway-gateway-1-tls-tlsroute-1
+      port: 10090
+      tls:
+        passthrough:
+          snis:
+          - foo.com

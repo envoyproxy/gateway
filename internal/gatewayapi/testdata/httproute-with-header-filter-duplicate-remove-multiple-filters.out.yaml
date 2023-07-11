@@ -2,122 +2,134 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: gateway-1
+    namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      hostname: "*.envoyproxy.io"
-      allowedRoutes:
+    - allowedRoutes:
         namespaces:
           from: All
+      hostname: '*.envoyproxy.io'
+      name: http
+      port: 80
+      protocol: HTTP
   status:
     listeners:
-    - name: http
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-      attachedRoutes: 1
-      conditions:
-      - type: Programmed
-        status: "True"
-        reason: Programmed
-        message: Sending translated listener configuration to the data plane
-      - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Listener has been successfully translated
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: default
+    creationTimestamp: null
     name: httproute-1
+    namespace: default
   spec:
     hostnames:
     - gateway.envoyproxy.io
     parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
+    - name: gateway-1
+      namespace: envoy-gateway
       sectionName: http
     rules:
-    - matches:
-      - path:
-          value: "/"
-      backendRefs:
+    - backendRefs:
       - name: service-1
         port: 8080
       filters:
-      - type: RequestHeaderModifier
-        requestHeaderModifier:
+      - requestHeaderModifier:
           remove:
-          - "rem-header-1"
-          - "rem-header-2"
-      - type: RequestHeaderModifier
-        requestHeaderModifier:
+          - rem-header-1
+          - rem-header-2
+        type: RequestHeaderModifier
+      - requestHeaderModifier:
           remove:
-          - "rem-header-1"
-          - "rem-header-3"
+          - rem-header-1
+          - rem-header-3
+        type: RequestHeaderModifier
+      matches:
+      - path:
+          value: /
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-        sectionName: http
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
         message: Route is accepted
-      - type: ResolvedRefs
+        reason: Accepted
         status: "True"
-        reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: "2022-04-11T16:34:39Z"
         message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      listeners:
+      - address: ""
+        ports:
+        - containerPort: 10080
+          name: http
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
     http:
-    - name: envoy-gateway-gateway-1-http
-      address: 0.0.0.0
-      port: 10080
+    - address: 0.0.0.0
       hostnames:
-      - "*.envoyproxy.io"
+      - '*.envoyproxy.io'
+      isHTTP2: false
+      name: envoy-gateway-gateway-1-http
+      port: 10080
       routes:
-      - name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
-        pathMatch:
-          prefix: "/"
-        headerMatches:
-        - name: ":authority"
-          exact: gateway.envoyproxy.io
+      - backendWeights:
+          invalid: 0
+          valid: 0
         destinations:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        headerMatches:
+        - distinct: false
+          exact: gateway.envoyproxy.io
+          name: :authority
+        name: default-httproute-1-rule-0-match-0-gateway.envoyproxy.io
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
         removeRequestHeaders:
-        - "rem-header-1"
-        - "rem-header-2"
-        - "rem-header-3"
-infraIR:
-  envoy-gateway-gateway-1:
-    proxy:
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
-
-      listeners:
-      - address: ""
-        ports:
-        - name: http
-          protocol: "HTTP"
-          containerPort: 10080
-          servicePort: 80
+        - rem-header-1
+        - rem-header-2
+        - rem-header-3

@@ -82,4 +82,3 @@ xds:
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
-
