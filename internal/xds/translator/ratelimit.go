@@ -98,6 +98,7 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
 		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
+		FailureModeDeny:         true,
 	}
 
 	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
