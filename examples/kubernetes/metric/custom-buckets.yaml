@@ -1,0 +1,31 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: config.gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: prometheus
+    namespace: envoy-gateway-system
+---
+apiVersion: config.gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: prometheus
+  namespace: envoy-gateway-system
+spec:
+  telemetry:
+    metric:
+      prometheus:
+        enable: true
+      histogramBucketSettings:
+        - regex: downstream.*
+          bueckts:
+            - 0.5
+            - 1
+            - 5
+            - 10
+            - 100
+            - 1000
