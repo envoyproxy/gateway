@@ -3910,6 +3910,73 @@ spec:
                           type: object
                         type: array
                     type: object
+                  metrics:
+                    description: Metrics defines metrics configuration for managed
+                      proxies.
+                    properties:
+                      histogramBucketSettings:
+                        description: HistogramBucketSettings defines rules for setting
+                          the histogram buckets. Default buckets are used if not set.
+                          See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
+                        items:
+                          properties:
+                            buckets:
+                              description: Buckets defines the buckets for the histogram.
+                              items:
+                                type: number
+                              minItems: 1
+                              type: array
+                            regex:
+                              description: Regex defines the regex for the stats name.
+                                This use RE2 engine.
+                              minLength: 1
+                              pattern: ^/.*$
+                              type: string
+                          required:
+                          - buckets
+                          - regex
+                          type: object
+                        type: array
+                      prometheus:
+                        description: Prometheus defines the configuration for Admin
+                          endpoint `/stats/prometheus`.
+                        type: object
+                      sinks:
+                        description: Sinks defines the metric sinks where metrics
+                          are sent to.
+                        items:
+                          properties:
+                            openTelemetry:
+                              description: OpenTelemetry defines the configuration
+                                for OpenTelemetry sink. It's required if the sink
+                                type is OpenTelemetry.
+                              properties:
+                                host:
+                                  description: Host define the service hostname.
+                                  type: string
+                                port:
+                                  default: 4317
+                                  description: Port defines the port the service is
+                                    exposed on.
+                                  format: int32
+                                  maximum: 65535
+                                  minimum: 0
+                                  type: integer
+                              required:
+                              - host
+                              type: object
+                            type:
+                              default: OpenTelemetry
+                              description: Type defines the metric sink type. EG currently
+                                only supports OpenTelemetry.
+                              enum:
+                              - OpenTelemetry
+                              type: string
+                          required:
+                          - type
+                          type: object
+                        type: array
+                    type: object
                   tracing:
                     description: Tracing defines tracing configuration for managed
                       proxies. If unspecified, will not send tracing data.

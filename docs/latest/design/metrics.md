@@ -28,7 +28,7 @@ Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for conf
 ### ProxyMetric API Type
 
 ```golang mdox-exec="sed '1,7d' api/config/v1alpha1/metric_types.go"
-type ProxyMetric struct {
+type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
@@ -56,19 +56,20 @@ type MetricSink struct {
 }
 
 type OpenTelemetrySink struct {
-	// Backend defines the backend to send OpenTelemetry metrics to.
-	// +kubebuilder:default={port: 3417}
-	Backend BackendService `json:"backend"`
+	// Host define the service hostname.
+	Host string `json:"host"`
+	// Port defines the port the service is exposed on.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=4317
+	Port int32 `json:"port,omitempty"`
 
 	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
 }
 
 type PrometheusProvider struct {
-	// Enable defines whether to enable the Prometheus endpoint.
-	// Prometheus' annotations will be added to pod if enabled.
-	Enable bool `json:"enable,omitempty"`
-
-	// TODO: add support for customizing scrape path, e.g. rewrite `/stats/prometheus` to `/metrics`?
 }
 
 type HistogramBucketSetting struct {
@@ -79,7 +80,7 @@ type HistogramBucketSetting struct {
 	Regex string `json:"regex"`
 	// Buckets defines the buckets for the histogram.
 	// +kubebuilder:validation:MinItems=1
-	Buckets []float64 `json:"buckets"`
+	Buckets []float32 `json:"buckets"`
 }
 ```
 
@@ -96,8 +97,7 @@ metadata:
 spec:
   telemetry:
     metric:
-      prometheus:
-        enable: true
+      prometheus: {}
 ```
 
 1. The following is an example to send metric via Open Telemetry sink.
@@ -114,9 +114,8 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            backend:
-              host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
 ```
 
 The following is an example to custom histogram bucket for metrics with prefix `downstream`.
@@ -134,7 +133,7 @@ spec:
         enable: true
       histogramBucketSettings:
         - regex: downstream.*
-          bueckts:
+          buckets:
             - 0.5
             - 1
             - 5

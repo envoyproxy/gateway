@@ -18,5 +18,4 @@ metadata:
 spec:
   telemetry:
     metric:
-      prometheus:
-        enable: true
+      prometheus: {}

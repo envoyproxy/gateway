@@ -21,6 +21,5 @@ spec:
       sinks:
         - type: OpenTelemetry
           openTelemetry:
-            backend:
-              host: otel-collector.monitoring.svc.cluster.local
-              port: 4317
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317

@@ -430,6 +430,21 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
+## HistogramBucketSetting
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `regex` _string_ | Regex defines the regex for the stats name. This use RE2 engine. |
+| `buckets` _float array_ | Buckets defines the buckets for the histogram. |
+
+
 ## InfrastructureProviderType
 
 _Underlying type:_ `string`
@@ -572,6 +587,32 @@ _Appears in:_
 
 
 
+## MetricSink
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
+| `openTelemetry` _[OpenTelemetrySink](#opentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
+
+
+## MetricSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [MetricSink](#metricsink)
+
+
+
 ## OpenTelemetryEnvoyProxyAccessLog
 
 
@@ -586,6 +627,32 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
+## OpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [MetricSink](#metricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the service hostname. |
+| `port` _integer_ | Port defines the port the service is exposed on. |
+
+
+## PrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
 
 
 ## ProviderType
@@ -698,6 +765,22 @@ _Appears in:_
 | `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
 
 
+## ProxyMetrics
+
+
+
+
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
+| `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `histogramBucketSettings` _[HistogramBucketSetting](#histogrambucketsetting) array_ | HistogramBucketSettings defines rules for setting the histogram buckets. Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings. |
+
+
 ## ProxyTelemetry
 
 
@@ -711,6 +794,7 @@ _Appears in:_
 | --- | --- |
 | `accessLog` _[ProxyAccessLog](#proxyaccesslog)_ | AccessLogs defines accesslog parameters for managed proxies. If unspecified, will send default format to stdout. |
 | `tracing` _[ProxyTracing](#proxytracing)_ | Tracing defines tracing configuration for managed proxies. If unspecified, will not send tracing data. |
+| `metrics` _[ProxyMetrics](#proxymetrics)_ | Metrics defines metrics configuration for managed proxies. |
 
 
 ## ProxyTracing

@@ -22,7 +22,7 @@ spec:
         enable: true
       histogramBucketSettings:
         - regex: downstream.*
-          bueckts:
+          buckets:
             - 0.5
             - 1
             - 5
