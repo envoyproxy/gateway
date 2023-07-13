@@ -1,0 +1,74 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+  status:
+    listeners:
+    - name: http
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
+      attachedRoutes: 0
+      conditions:
+      - type: Programmed
+        status: "True"
+        reason: Programmed
+        message: Sending translated listener configuration to the data plane
+      - type: Accepted
+        status: "True"
+        reason: Accepted
+        message: Listener has been successfully translated
+xdsIR:
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - name: envoy-gateway-gateway-1-http
+      address: 0.0.0.0
+      port: 10080
+      hostnames:
+      - "*"
+    jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "envoy-gateway-gateway-1-http"
+      operation:
+        op: replace
+        path: "/ignore_global_conn_limit"
+        value: "true"
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "envoy-gateway-gateway-1-http"
+      operation:
+        op: replace
+        path: "/per_connection_buffer_limit_bytes"
+        value: "1024"
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+      name: envoy-gateway-gateway-1
+      listeners:
+      - address: ""
+        ports:
+        - name: http
+          protocol: "HTTP"
+          servicePort: 80
+          containerPort: 10080

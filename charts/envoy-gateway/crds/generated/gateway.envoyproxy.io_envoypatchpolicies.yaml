@@ -65,8 +65,7 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
-                          minLength: 1
-                          type: string
+                          x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
                       - path

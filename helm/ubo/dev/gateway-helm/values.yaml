@@ -31,6 +31,11 @@ deployment:
     port: 18001
     targetPort: 18001
   replicas: 3
+
+  pod:
+    annotations: {}
+    labels: {}
+    
 rootNamespace: envoy-gateway-system
 config:
   envoyGateway:

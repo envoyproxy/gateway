@@ -8,17 +8,5 @@ metadata:
 data:
   envoy-gateway.yaml: |
     apiVersion: config.gateway.envoyproxy.io/v1alpha1
-    gateway:
-      controllerName: {{ .Values.config.envoyGateway.gateway.controllerName
-        | quote }}
     kind: EnvoyGateway
-    provider:
-      type: {{ .Values.config.envoyGateway.provider.type | quote }}
-    rateLimit:
-      backend:
-        type: {{ .Values.config.envoyGateway.rateLimit.backend.type | quote }}
-        redis:
-          url: {{ .Values.config.envoyGateway.rateLimit.backend.redis.url
-            | quote }}
-          tls: {{ .Values.config.envoyGateway.rateLimit.backend.redis.tls
-            | quote }}
+    {{- toYaml .Values.config.envoyGateway | nindent 4 }}
