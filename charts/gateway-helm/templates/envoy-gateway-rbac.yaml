@@ -1,12 +1,125 @@
+{{ $allNamespaces := "*" }}
+{{ $watchedNamespaces := list $allNamespaces }}
+{{ if $kubens := .Values.config.envoyGateway.provider.kubernetes }}
+{{ $watchedNamespaces = $kubens.watch.namespaces }}
+{{ end }}
+
+{{ range $_, $ns := $watchedNamespaces }}
+{{ if ne $ns $allNamespaces }}
+---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: Role
 metadata:
-  name: {{ include "eg.fullname" . }}-envoy-gateway-rolebinding
+  creationTimestamp: null
+  name: {{ include "eg.fullname" $ }}-{{ $ns }}-envoy-gateway-role
+  namespace: {{ $ns | quote }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - nodes
+  - secrets
+  - services
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - config.gateway.envoyproxy.io
+  resources:
+  - envoyproxies
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.envoyproxy.io
+  resources:
+  - authenticationfilters
+  - envoypatchpolicies
+  - ratelimitfilters
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  - gateways
+  - grpcroutes
+  - httproutes
+  - referencegrants
+  - referencepolicies
+  - tcproutes
+  - tlsroutes
+  - udproutes
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses/status
+  - gateways/status
+  - grpcroutes/status
+  - httproutes/status
+  - tcproutes/status
+  - tlsroutes/status
+  - udproutes/status
+  verbs:
+  - update
+{{ end }}
+{{ end }}
+
+{{ range $_, $ns := $watchedNamespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+{{- if eq $ns $allNamespaces}}
+kind: ClusterRoleBinding
+{{- else }}
+kind: RoleBinding
+{{- end }}
+metadata:
+  {{- if eq $ns $allNamespaces }}
+  name: {{ include "eg.fullname" $ }}-envoy-gateway-rolebinding
+  {{- else }}
+  name: {{ include "eg.fullname" $ }}-{{ $ns }}-envoy-gateway-rolebinding
+  namespace: {{ $ns | quote }}
+  {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
+  {{- if eq $ns $allNamespaces }}
   kind: ClusterRole
-  name: {{ include "eg.fullname" . }}-envoy-gateway-role
+  name: {{ include "eg.fullname" $ }}-envoy-gateway-role
+  {{- else }}
+  kind: Role
+  name: {{ include "eg.fullname" $ }}-{{ $ns }}-envoy-gateway-role
+  {{- end }}
 subjects:
 - kind: ServiceAccount
   name: 'envoy-gateway'
-  namespace: '{{ .Release.Namespace }}'
+  namespace: '{{ $.Release.Namespace }}'
+{{ end }}
