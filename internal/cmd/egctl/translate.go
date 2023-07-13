@@ -357,8 +357,8 @@ func printOutput(w io.Writer, result TranslationResult, output string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(w, string(out))
-	return nil
+	_, ret := fmt.Fprintln(w, string(out))
+	return ret
 }
 
 // constructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
@@ -584,9 +584,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
 		if namespace == "" {
-			// When kubectl apply a resource in yaml which doesn't have a namespace,
+			// When kubectl applies a resource in yaml which doesn't have a namespace,
 			// the current namespace is applied. Here we do the same thing before translating
-			// the GatewayAPI resource. Otherwise the resource can't pass the namespace validation
+			// the GatewayAPI resource. Otherwise, the resource can't pass the namespace validation
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
@@ -722,6 +722,11 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 			resources.Services = append(resources.Services, service)
 		}
+	}
+
+	// Require the essential resources, like GatewayClass and Gateways
+	if resources.GatewayClass == nil || len(resources.Gateways) == 0 {
+		return nil, fmt.Errorf("missing `GatewayClass` or `Gateways` resources")
 	}
 
 	if useDefaultNamespace {
