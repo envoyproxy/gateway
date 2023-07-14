@@ -22,9 +22,16 @@ spec:
     {{- include "eg.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.deployment.pod.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         control-plane: envoy-gateway
       {{- include "eg.selectorLabels" . | nindent 8 }}
+      {{- with .Values.deployment.pod.labels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       containers:
       - args:
