@@ -30,14 +30,14 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
           be unique, matched cerificate FQDN [foo.bar.com] has a conficting algorithm
           [ECDSA].
         reason: InvalidCertificateRef
         status: "False"
         type: ResolvedRefs
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
         reason: Invalid
         status: "False"
@@ -69,12 +69,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: There are no ready listeners for this parent ref
         reason: NoReadyListeners
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

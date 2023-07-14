@@ -19,12 +19,12 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -65,13 +65,13 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: 'Unable to translate RateLimitFilter. Either the header.Type is not
           valid or the header is missing a value: default/test'
         reason: UnsupportedValue
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: 'Unable to translate RateLimitFilter. Either the header.Type is not
           valid or the header is missing a value: default/test'
         reason: BackendNotFound

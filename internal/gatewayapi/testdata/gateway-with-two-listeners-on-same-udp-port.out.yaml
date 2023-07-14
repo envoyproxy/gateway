@@ -24,12 +24,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -40,12 +40,12 @@ gateways:
         kind: UDPRoute
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Only one UDP listener is allowed in a given port
         reason: ProtocolConflict
         status: "True"
         type: Conflicted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener is invalid, see other Conditions for details.
         reason: Invalid
         status: "False"
@@ -87,12 +87,12 @@ udpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

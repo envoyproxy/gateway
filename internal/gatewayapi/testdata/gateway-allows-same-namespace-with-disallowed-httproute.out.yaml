@@ -18,12 +18,12 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -55,12 +55,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: No listeners included by this parent ref allowed this attachment.
         reason: NotAllowedByListeners
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

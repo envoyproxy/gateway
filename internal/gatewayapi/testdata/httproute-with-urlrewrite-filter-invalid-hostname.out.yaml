@@ -19,12 +19,12 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -66,7 +66,7 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: 'hostname "-rewrite.com" is invalid: [a lowercase RFC 1123 subdomain
           must consist of lower case alphanumeric characters, ''-'' or ''.'', and
           must start and end with an alphanumeric character (e.g. ''example.com'',
@@ -74,7 +74,7 @@ httpRoutes:
         reason: UnsupportedValue
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

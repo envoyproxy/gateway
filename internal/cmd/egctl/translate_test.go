@@ -241,7 +241,7 @@ func TestTranslate(t *testing.T) {
 			got := &TranslationResult{}
 			mustUnmarshal(t, out, got)
 			var fn string
-			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Date(2022, time.April, 11, 16, 34, 39, 0, time.UTC))))
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
 			if tc.output == jsonOutput {
 				fn = tc.name + "." + resourceType + ".json"

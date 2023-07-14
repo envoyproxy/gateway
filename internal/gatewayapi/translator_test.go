@@ -105,7 +105,7 @@ func TestTranslate(t *testing.T) {
 			})
 
 			got := translator.Translate(resources)
-			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Date(2022, time.April, 11, 16, 34, 39, 0, time.UTC))))
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)
@@ -194,7 +194,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			})
 
 			got := translator.Translate(resources)
-			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Date(2022, time.April, 11, 16, 34, 39, 0, time.UTC))))
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
 			out, err := yaml.Marshal(got)

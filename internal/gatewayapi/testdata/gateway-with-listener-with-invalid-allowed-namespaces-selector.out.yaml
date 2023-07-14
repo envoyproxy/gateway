@@ -24,7 +24,7 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: 'The allowedRoutes.namespaces.selector could not be parsed: values:
           Invalid value: []string{"bar"}: values set must be empty for exists and
           does not exist.'
@@ -58,12 +58,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: There are no ready listeners for this parent ref
         reason: NoReadyListeners
         status: "False"
         type: Accepted
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"

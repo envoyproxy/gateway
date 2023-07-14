@@ -19,7 +19,7 @@ gateways:
     listeners:
     - attachedRoutes: 0
       conditions:
-      - lastTransitionTime: "2022-04-11T16:34:39Z"
+      - lastTransitionTime: null
         message: Listener must not have hostname set when protocol is TCP.
         reason: Invalid
         status: "False"
