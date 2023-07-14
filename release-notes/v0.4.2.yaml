@@ -1,0 +1,64 @@
+date: April 24, 2023
+
+changes:
+  - area: documentation
+    change: |
+      Added Docs for Installing and Using egctl
+
+  - area: installation
+    change: |
+      Added Helm Installation Support
+      Added Support for Ratelimiting Based On IP Subnet
+      Added Gateway API Support Doc
+      Added Namespace Resource to Helm Templates
+      Updated Installation Yaml to Use the envoy-gateway-system Namespace
+
+  - area: api
+    change: |
+      Upgraded to Gateway API v0.6.2
+      Added Support for Custom Envoy Proxy Bootstrap Config
+      Added Support for Configuring the Envoy Proxy Image and Service
+      Added Support for Configuring Annotations, Resources, and Securitycontext Settings on Ratelimit Infra and Envoy Proxy
+      Added Support for Using Multiple Certificates on a Single Fully Qualified Domain Name
+      Gateway Status Address is now Populated for ClusterIP type Envoy Services
+      Envoy Proxy Pod and Container SecurityContext is now Configurable
+      Added Custom Envoy Gateway Extensions Framework
+      Added Support for Service Method Match in GRPCRoute
+      Fixed a Bug in the Extension Hooks for xDS Virtual Hosts and Routes
+
+  - area: ci-tooling-testing
+    change: |
+      Fixed CI Flakes During Helm Install
+      Added Test To Ensure Static xDS Cluster Has Same Field Values as Dynamic Cluster
+      Added egctl to Build and Test CI Workflow
+      Code Coverage Thresholds are now Enforced by CI
+      Fixed latest-release-check CI Job Failures
+      Added Auto Release Tooling for Charts
+
+  - area: conformance
+    change: |
+      Enabled GatewayWithAttachedRoutes Test
+      Enabled Enable HTTPRouteInvalidParentRefNotMatchingSectionName Test
+      Enabled Enable HTTPRouteDisallowedKind Test
+      Re-Enabled Gateway/HTTPRouteObservedGenerationBump Test
+
+  - area: translator
+    change: |
+      Added Support for Dynamic GatewayControllerName in Route Status
+
+  - area: providers
+    change: |
+      Update GatewayClass Status Based on EnvoyProxy Config Validation
+
+  - area: xds
+    change: |
+      Added EDS Support
+      Fixed PathSeparatedPrefix and Optimized Logic for Prefixes Ending With Trailing Slash
+      Updated Deprecated RegexMatcher
+      Refactored Authn and Ratelimit Features to Reuse buildXdsCluster
+
+  - area: cli
+    change: |
+      Added egctl CLI Tool
+      Added egctl Support for Dry Runs of Gateway API Config
+      Added egctl Support for Dumping Envoy Proxy xDS Resources
