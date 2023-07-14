@@ -8,6 +8,7 @@ package proxy
 import (
 	"fmt"
 
+	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,12 +158,15 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	// Set the labels based on the owning gateway name.
-	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	labels := r.infra.GetProxyMetadata().Labels
+	dpLabels := envoyLabels(labels)
+	if len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
-	selector := resource.GetSelector(labels)
+	maps.Copy(labels, deploymentConfig.Pod.Labels)
+	podLabels := envoyLabels(labels)
+	selector := resource.GetSelector(podLabels)
 
 	// Get annotations
 	var annotations map[string]string
@@ -178,7 +182,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
 			Name:      ExpectedResourceHashedName(r.infra.Name),
-			Labels:    labels,
+			Labels:    dpLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: deploymentConfig.Replicas,
