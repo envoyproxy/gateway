@@ -30,6 +30,9 @@ deployment:
       port: 18001
       targetPort: 18001
   replicas: 1
+  pod:
+    annotations: {}
+    labels: {}
 
 config:
   envoyGateway:
