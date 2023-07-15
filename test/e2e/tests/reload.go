@@ -44,6 +44,9 @@ var ReloadTest = suite.ConformanceTest{
 
 			// Step 3: Retrieve the `/config_dump` output from the Envoy Proxy admin interface
 				newConfigDump, err := getConfigDump(cSuite.Config, cSuite.Client, namespace) 
+				if err != nil {
+					log.Fatal(err)
+				}
 
 			// Step 4: Compare the obtained `/config_dump` output with the initial configuration
 			    assert.Equal(t, initialConfig, newConfigDump, "Configuration mismatch after reload")
@@ -72,6 +75,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	err = c.List(context.TODO(), podList, listOptions)
 	if err != nil {
 		log.Fatal(err)
+		return nil, err
 	}
 
 	podName := podList.Items[0].Name
