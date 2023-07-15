@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -41,10 +42,15 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		MetricsBindAddress:     ":8080",
 	}
 
-	if svr.EnvoyGateway.Provider != nil &&
+	// TODO: implment config validatoin on the watch mode config
+	typ := svr.EnvoyGateway.Provider.Type
+
+	byNamespace := (typ == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
+		svr.EnvoyGateway.Provider != nil &&
 		svr.EnvoyGateway.Provider.Kubernetes != nil &&
 		(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
-		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
+		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0)
+	if byNamespace {
 		mgrOpts.Cache.Namespaces = svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces
 	}
 

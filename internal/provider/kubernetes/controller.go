@@ -101,8 +101,13 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	// Subscribe to status updates
 	r.subscribeAndUpdateStatus(ctx)
 
+	var ls []string
+	byNamespaceSelector := cfg.EnvoyGateway.Provider.Type == egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors
+	if byNamespaceSelector && len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0 {
+		ls = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
+	}
 	// Watch resources
-	if err := r.watchResources(ctx, mgr, c); err != nil {
+	if err := r.watchResources(ctx, mgr, c, ls); err != nil {
 		return err
 	}
 	return nil
@@ -1068,30 +1073,42 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 }
 
 // watchResources watches gateway api resources.
-func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
+func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller, ls []string) error {
 	// Only enqueue GatewayClass objects that match this Envoy Gateway's controller name.
+	gcPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.hasMatchingController)}
+	if len(ls) != 0 {
+		gcPredicates = append(gcPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.GatewayClass{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.hasMatchingController),
+		gcPredicates...,
 	); err != nil {
 		return err
 	}
 
 	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
+	epPredicates := []predicate.Predicate{predicate.ResourceVersionChangedPredicate{}}
+	if len(ls) != 0 {
+		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egcfgv1a1.EnvoyProxy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueManagedClass),
-		predicate.ResourceVersionChangedPredicate{},
+		epPredicates...,
 	); err != nil {
 		return err
 	}
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
+	gPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateGatewayForReconcile)}
+	if len(ls) != 0 {
+		gPredicates = append(gPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.Gateway{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
+		gPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1100,9 +1117,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
+	httprPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		httprPredicates = append(httprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.HTTPRoute{}),
 		&handler.EnqueueRequestForObject{},
+		httprPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1111,9 +1133,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
+	grpcrPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		grpcrPredicates = append(grpcrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.GRPCRoute{}),
 		&handler.EnqueueRequestForObject{},
+		grpcrPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1122,9 +1149,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
+	tlsrPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		tlsrPredicates = append(tlsrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{}),
 		&handler.EnqueueRequestForObject{},
+		tlsrPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1133,9 +1165,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch UDPRoute CRUDs and process affected Gateways.
+	udprPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		udprPredicates = append(udprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{}),
 		&handler.EnqueueRequestForObject{},
+		udprPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1144,9 +1181,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch TCPRoute CRUDs and process affected Gateways.
+	tcprPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		tcprPredicates = append(tcprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{}),
 		&handler.EnqueueRequestForObject{},
+		tcprPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1155,45 +1197,68 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Service CRUDs and process affected *Route objects.
+	servicePredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateServiceForReconcile)}
+	if len(ls) != 0 {
+		servicePredicates = append(servicePredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Service{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateServiceForReconcile)); err != nil {
+		servicePredicates...,
+	); err != nil {
 		return err
 	}
 
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
+	esPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile)}
+	if len(ls) != 0 {
+		esPredicates = append(esPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile)); err != nil {
+		esPredicates...,
+	); err != nil {
 		return err
 	}
 
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
+	nPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.handleNode)}
+	if len(ls) != 0 {
+		nPredicates = append(nPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	// resource address.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Node{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.handleNode),
+		nPredicates...,
 	); err != nil {
 		return err
 	}
 
 	// Watch Secret CRUDs and process affected Gateways.
+	secretPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateSecretForReconcile)}
+	if len(ls) != 0 {
+		secretPredicates = append(secretPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Secret{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+		secretPredicates...,
 	); err != nil {
 		return err
 	}
 
 	// Watch ReferenceGrant CRUDs and process affected Gateways.
+	rgPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		rgPredicates = append(rgPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.ReferenceGrant{}),
 		&handler.EnqueueRequestForObject{},
+		rgPredicates...,
 	); err != nil {
 		return err
 	}
@@ -1202,45 +1267,71 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
+	dPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateDeploymentForReconcile)}
+	if len(ls) != 0 {
+		dPredicates = append(dPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &appsv1.Deployment{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
+		dPredicates...,
 	); err != nil {
 		return err
 	}
 
 	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
+	afPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)}
+	if len(ls) != 0 {
+		afPredicates = append(afPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egv1a1.AuthenticationFilter{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)); err != nil {
+		afPredicates...,
+	); err != nil {
 		return err
 	}
 
+	rfPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)}
+	if len(ls) != 0 {
+		rfPredicates = append(rfPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egv1a1.RateLimitFilter{}),
 		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)); err != nil {
+		rfPredicates...,
+	); err != nil {
 		return err
 	}
 
 	// Watch EnvoyPatchPolicy CRUDs
+	eppPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		eppPredicates = append(eppPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
-		&handler.EnqueueRequestForObject{}); err != nil {
+		&handler.EnqueueRequestForObject{},
+		eppPredicates...,
+	); err != nil {
 		return err
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
+	uPredicates := []predicate.Predicate{}
+	if len(ls) != 0 {
+		uPredicates = append(uPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
+	}
 	for _, gvk := range r.extGVKs {
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
 		if err := c.Watch(source.Kind(mgr.GetCache(), u),
-			&handler.EnqueueRequestForObject{}); err != nil {
+			&handler.EnqueueRequestForObject{},
+			uPredicates...,
+		); err != nil {
 			return err
 		}
 		r.log.Info("Watching additional resource", "resource", gvk.String())

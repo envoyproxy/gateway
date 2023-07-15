@@ -42,6 +42,48 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 	return false
 }
 
+// hasMatchingNamespaceLabels returns true if the namespace of provided object has
+// the provided labels or false otherwise.
+func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(client.Object) bool {
+	return func(obj client.Object) bool {
+		nsString := obj.GetNamespace()
+		ns := &corev1.Namespace{}
+		if err := r.client.Get(
+			context.Background(),
+			client.ObjectKey{
+				Namespace: "", // Namespace object should have empty Namesapce
+				Name:      nsString,
+			},
+			ns,
+		); err != nil {
+			// Question: what's the common practice to handle error in predicate?
+			r.log.Error(err, "fail to get Namespace", "namespace", nsString)
+			return false
+		}
+
+		if len(ns.Labels) < len(labels) {
+			return false
+		}
+		for l := range ns.Labels {
+			if !contains(labels, l) {
+				return false
+			}
+		}
+
+		return true
+	}
+}
+
+func contains(s []string, i string) bool {
+	for _, v := range s {
+		if v == i {
+			return true
+		}
+	}
+
+	return false
+}
+
 // validateGatewayForReconcile returns true if the provided object is a Gateway
 // using a GatewayClass matching the configured gatewayclass controller name.
 func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bool {
