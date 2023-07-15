@@ -46,6 +46,7 @@ func TestE2E(t *testing.T) {
 		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &Manifests,
+		Config:               cfg
 	})
 
 	cSuite.Setup(t)
