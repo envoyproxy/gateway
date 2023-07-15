@@ -37,9 +37,10 @@ docs.clean:
 docs-api: docs-api-gen docs-api-headings
 
 .PHONY: helm-readme-gen
-helm-readme-gen:
+helm-readme-gen: $(tools/helm-docs)
 	@$(LOG_TARGET)
-	tools/hack/helm-readme-gen.sh
+	$(tools/helm-docs) charts/gateway-helm/ -f values.tmpl.yaml -o api.md
+	mv charts/gateway-helm/api.md docs/latest/helm/api.md
 
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/crd-ref-docs)
