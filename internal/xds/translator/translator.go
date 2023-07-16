@@ -368,7 +368,7 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 	return nil
 }
 
-func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) error {
+func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) {
 	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpoint)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.destinations)
 	// Use EDS for static endpoints
@@ -377,12 +377,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) err
 	} else {
 		xdsCluster.LoadAssignment = xdsEndpoints
 	}
-	if err := xdsCluster.Validate(); err != nil {
-		return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsCluster, err)
-	} else {
-		tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
-	}
-	return nil
+	tCtx.AddXdsResource(resourcev3.ClusterType, xdsCluster)
 }
 
 type addXdsClusterArgs struct {
