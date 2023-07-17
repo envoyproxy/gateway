@@ -197,6 +197,39 @@ func TestTranslateXds(t *testing.T) {
 	}
 }
 
+func TestTranslateXdsNegative(t *testing.T) {
+	testCases := []struct {
+		name           string
+		dnsDomain      string
+		requireSecrets bool
+	}{
+		{
+			name: "http-route-invalid",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			dnsDomain := tc.dnsDomain
+			if dnsDomain == "" {
+				dnsDomain = "cluster.local"
+			}
+			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
+				},
+			}
+
+			tCtx, err := tr.Translate(ir)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "validation failed for xds resource")
+			require.Nil(t, tCtx)
+		})
+	}
+}
+
 func TestTranslateRateLimitConfig(t *testing.T) {
 	testCases := []struct {
 		name string
