@@ -51,7 +51,7 @@ func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(
 		if err := r.client.Get(
 			context.Background(),
 			client.ObjectKey{
-				Namespace: "", // Namespace object should have empty Namesapce
+				Namespace: "", // Namespace object should have empty Namespace
 				Name:      nsString,
 			},
 			ns,

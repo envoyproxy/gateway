@@ -42,7 +42,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		MetricsBindAddress:     ":8080",
 	}
 
-	// TODO: implment config validatoin on the watch mode config
+	// TODO: implement config validation on the watch mode config
 	typ := svr.EnvoyGateway.Provider.Type
 
 	byNamespace := (typ == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
