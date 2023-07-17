@@ -7,8 +7,9 @@ package v1alpha1
 
 import (
 	"encoding/json"
-	"sigs.k8s.io/yaml"
 	"strings"
+
+	"sigs.k8s.io/yaml"
 )
 
 // MarshalJSON overrides the default MarshalJSON logic
@@ -45,7 +46,46 @@ func (j *JSONPatchOperation) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON overrides the default UnmarshalJSON logic
 func (j *JSONPatchOperation) UnmarshalJSON(jsonBytes []byte) error {
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(jsonBytes, &jsonData); err != nil {
+		return err
+	}
+	value := jsonData["value"]
+	jsonValue, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
 
+	// convert json to yaml because yaml is more readable
+	yamlValue, err := yaml.JSONToYAML(jsonValue)
+	if err != nil {
+		return err
+	}
+
+	jsonData["value"] = ""
+	operationBytes, err := json.Marshal(jsonData)
+	if err != nil {
+		return err
+	}
+
+	// use an anonymous struct to avoid infinite recursive call to JSONPatchOperation.UnmarshalJSON
+	tmp := struct {
+		Op    JSONPatchOperationType `json:"op"`
+		Path  string                 `json:"path"`
+		Value string                 `json:"value"`
+	}{
+		Op:    j.Op,
+		Path:  j.Path,
+		Value: "",
+	}
+	if err := json.Unmarshal(operationBytes, &tmp); err != nil {
+		return err
+	}
+
+	j.Op = tmp.Op
+	j.Path = tmp.Path
+	j.Value = string(yamlValue)
+	return nil
 }
 
 func isYAML(data string) bool {

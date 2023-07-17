@@ -11,7 +11,6 @@ import (
 
 	"github.com/tetratelabs/multierror"
 
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -823,5 +822,5 @@ type JSONPatchOperation struct {
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
 	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value"`
+	Value string `json:"value"`
 }
