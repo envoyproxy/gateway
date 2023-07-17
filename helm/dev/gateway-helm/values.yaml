@@ -31,6 +31,15 @@ deployment:
     port: 18001
     targetPort: 18001
   replicas: 1
+
+  pod:
+    annotations: {}
+    labels:
+      cluster: engine-dev-cluster
+      team: engine
+      env: dev
+      product: idp-api-gateway
+
 rootNamespace: envoy-gateway-system
 config:
   envoyGateway:
