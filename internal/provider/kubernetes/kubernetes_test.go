@@ -1676,6 +1676,7 @@ func TestNamespacedProvider(t *testing.T) {
 	// config to watch a subset of namespaces
 	svr.EnvoyGateway.Provider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
 		Watch: &egcfgv1a1.KubernetesWatchMode{
+			Type:       egcfgv1a1.KubernetesWatchModeTypeNamespaces,
 			Namespaces: []string{"ns1", "ns2"},
 		},
 	}
@@ -1722,5 +1723,4 @@ func TestNamespacedProvider(t *testing.T) {
 		cancel()
 		require.NoError(t, testEnv.Stop())
 	}()
-
 }

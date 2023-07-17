@@ -102,8 +102,12 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	r.subscribeAndUpdateStatus(ctx)
 
 	var ls []string
-	byNamespaceSelector := cfg.EnvoyGateway.Provider.Type == egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors
-	if byNamespaceSelector && len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0 {
+	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
+		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
+		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
+		cfg.EnvoyGateway.Provider.Type == egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
+		len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0
+	if byNamespaceSelector {
 		ls = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
 	}
 	// Watch resources

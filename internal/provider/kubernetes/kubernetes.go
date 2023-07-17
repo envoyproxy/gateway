@@ -43,13 +43,13 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	}
 
 	// TODO: implement config validation on the watch mode config
-	typ := svr.EnvoyGateway.Provider.Type
 
-	byNamespace := (typ == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
+	byNamespace :=
 		svr.EnvoyGateway.Provider != nil &&
-		svr.EnvoyGateway.Provider.Kubernetes != nil &&
-		(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
-		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0)
+			svr.EnvoyGateway.Provider.Kubernetes != nil &&
+			(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
+			(svr.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
+			(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0)
 	if byNamespace {
 		mgrOpts.Cache.Namespaces = svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces
 	}
