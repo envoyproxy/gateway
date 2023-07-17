@@ -809,7 +809,7 @@ type JSONPatchConfig struct {
 	// Name is the name of the resource
 	Name string `json:"name"`
 	// Patch defines the JSON Patch Operation
-	Operation JSONPatchOperation `json:"operation"`
+	Operation *JSONPatchOperation `json:"operation"`
 }
 
 // JSONPatchOperation defines the JSON Patch Operation as defined in

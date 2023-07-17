@@ -45,7 +45,9 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 
 		// Save the patch
 		for _, patch := range policy.Spec.JSONPatches {
-			irPatch := ir.JSONPatchConfig{}
+			irPatch := ir.JSONPatchConfig{
+				Operation: &ir.JSONPatchOperation{},
+			}
 			irPatch.Type = string(patch.Type)
 			irPatch.Name = patch.Name
 			irPatch.Operation.Op = string(patch.Operation.Op)

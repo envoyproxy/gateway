@@ -52,9 +52,48 @@ xdsIR:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
       name: "envoy-gateway-gateway-1-http"
       operation:
-        op: replace
-        path: "/per_connection_buffer_limit_bytes"
-        value: "1024"
+        op: add
+        path: "/filterChains/0/filters/0/typedConfig/httpFilters/0"
+        value:
+          name: envoy.filters.http.oauth2
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2Config
+            auth_scopes:
+            - openid
+            auth_type: BASIC_AUTH
+            authorization_endpoint: https://accounts.google.com/o/oauth2/v2/auth
+            credentials:
+              client_id: 250344188863-lddmgbasbdom9qpt1mr0rkln62281s6d.apps.googleusercontent.com
+              hmac_secret:
+                name: authn_policy1_hmac
+                sds_config:
+                  api_config_source:
+                    api_type: GRPC
+                    grpc_services:
+                    - envoy_grpc:
+                        cluster_name: teg_sds_cluster
+                    transport_api_version: V3
+              token_secret:
+                name: default/client-secret
+                sds_config:
+                  api_config_source:
+                    api_type: GRPC
+                    grpc_services:
+                    - envoy_grpc:
+                        cluster_name: teg_sds_cluster
+                    transport_api_version: V3
+            forward_bearer_token: true
+            redirect_path_matcher:
+              path:
+                exact: "/oauth2/callback"
+            redirect_uri: https://foo.example.com/oauth2/callback
+            signout_path:
+              path:
+                exact: "/signout"
+            token_endpoint:
+              cluster: accounts.google.com_authn_policy1_authn_server
+              timeout: 10s
+              uri: https://oauth2.googleapis.com/token
 infraIR:
   envoy-gateway-gateway-1:
     proxy:

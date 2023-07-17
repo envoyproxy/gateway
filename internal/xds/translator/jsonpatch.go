@@ -49,19 +49,16 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 		// resource
 		if p.Operation.Op == AddOperation && p.Operation.Path == EmptyPath {
 			// Convert patch to JSON
-			// The patch library expects an array so convert it into one
-			y, err := yaml.Marshal(p.Operation.Value)
-			if err != nil {
-				err := fmt.Errorf("unable to marshal patch %+v, err: %v", p.Operation.Value, err)
-				errs = multierror.Append(errs, err)
-				continue
+			jsonBytes := []byte(p.Operation.Value)
+			if isYAML(p.Operation.Value) {
+				jsonBytes, err = yaml.YAMLToJSON([]byte(p.Operation.Value))
+				if err != nil {
+					err := fmt.Errorf("unable to convert patch to json %s, err: %v", p.Operation.Value, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
 			}
-			jsonBytes, err := yaml.YAMLToJSON(y)
-			if err != nil {
-				err := fmt.Errorf("unable to convert patch to json %s, err: %v", string(y), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
+
 			switch p.Type {
 			case string(resourcev3.ListenerType):
 				temp := &listenerv3.Listener{}
@@ -177,7 +174,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 
 		// Convert patch to JSON
 		// The patch library expects an array so convert it into one
-		y, err := yaml.Marshal([]ir.JSONPatchOperation{p.Operation})
+		y, err := yaml.Marshal([]*ir.JSONPatchOperation{p.Operation})
 		if err != nil {
 			err := fmt.Errorf("unable to marshal patch %+v, err: %v", p.Operation, err)
 			errs = multierror.Append(errs, err)
@@ -282,4 +279,10 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 		}
 	}
 	return errs
+}
+
+func isYAML(data string) bool {
+	var yamlData interface{}
+	err := yaml.Unmarshal([]byte(data), &yamlData)
+	return err == nil
 }
