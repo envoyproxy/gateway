@@ -50,6 +50,13 @@ spec:
                       properties:
                         op:
                           description: Op is the type of operation to perform
+                          enum:
+                          - add
+                          - remove
+                          - replace
+                          - move
+                          - copy
+                          - test
                           type: string
                         path:
                           description: Path is the location of the target document/field
@@ -58,7 +65,7 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
-                          type: string
+                          x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
                       - path

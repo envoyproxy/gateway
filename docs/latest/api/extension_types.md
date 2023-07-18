@@ -216,9 +216,20 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `op` _string_ | Op is the type of operation to perform |
+| `op` _[JSONPatchOperationType](#jsonpatchoperationtype)_ | Op is the type of operation to perform |
 | `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` _string_ | Value is the new value of the path location. |
+| `value` _[JSON](#json)_ | Value is the new value of the path location. |
+
+
+## JSONPatchOperationType
+
+_Underlying type:_ `string`
+
+JSONPatchOperationType specifies the JSON Patch operations that can be performed.
+
+_Appears in:_
+- [JSONPatchOperation](#jsonpatchoperation)
+
 
 
 ## JwtAuthenticationFilterProvider

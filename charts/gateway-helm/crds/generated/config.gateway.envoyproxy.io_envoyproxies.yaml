@@ -1566,6 +1566,13 @@ spec:
                                   should be appended to the pods. By default, no pod
                                   annotations are appended.
                                 type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                description: Labels are the additional labels that
+                                  should be tagged to the pods. By default, no additional
+                                  pod labels are tagged.
+                                type: object
                               securityContext:
                                 description: 'SecurityContext holds pod-level security
                                   attributes and common container settings. Optional:
@@ -3909,6 +3916,108 @@ spec:
                           - sinks
                           type: object
                         type: array
+                    type: object
+                  tracing:
+                    description: Tracing defines tracing configuration for managed
+                      proxies. If unspecified, will not send tracing data.
+                    properties:
+                      customTags:
+                        additionalProperties:
+                          properties:
+                            environment:
+                              description: Environment adds value from environment
+                                variable to each span. It's required when the type
+                                is "Environment".
+                              properties:
+                                defaultValue:
+                                  description: DefaultValue defines the default value
+                                    to use if the environment variable is not set.
+                                  type: string
+                                name:
+                                  description: Name defines the name of the environment
+                                    variable which to extract the value from.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            literal:
+                              description: Literal adds hard-coded value to each span.
+                                It's required when the type is "Literal".
+                              properties:
+                                value:
+                                  description: Value defines the hard-coded value
+                                    to add to each span.
+                                  type: string
+                              required:
+                              - value
+                              type: object
+                            requestHeader:
+                              description: RequestHeader adds value from request header
+                                to each span. It's required when the type is "RequestHeader".
+                              properties:
+                                defaultValue:
+                                  description: DefaultValue defines the default value
+                                    to use if the request header is not set.
+                                  type: string
+                                name:
+                                  description: Name defines the name of the request
+                                    header which to extract the value from.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type:
+                              default: Literal
+                              description: Type defines the type of custom tag.
+                              enum:
+                              - Literal
+                              - Environment
+                              - RequestHeader
+                              type: string
+                          required:
+                          - type
+                          type: object
+                        description: CustomTags defines the custom tags to add to
+                          each span. If provider is kubernetes, pod name and namespace
+                          are added by default.
+                        type: object
+                      provider:
+                        description: Provider defines the tracing provider. Only OpenTelemetry
+                          is supported currently.
+                        properties:
+                          host:
+                            description: Host define the provider service hostname.
+                            type: string
+                          port:
+                            default: 4317
+                            description: Port defines the port the provider service
+                              is exposed on.
+                            format: int32
+                            minimum: 0
+                            type: integer
+                          type:
+                            default: OpenTelemetry
+                            description: Type defines the tracing provider type. EG
+                              currently only supports OpenTelemetry.
+                            enum:
+                            - OpenTelemetry
+                            type: string
+                        required:
+                        - host
+                        - type
+                        type: object
+                      samplingRate:
+                        default: 100
+                        description: SamplingRate controls the rate at which traffic
+                          will be selected for tracing if no prior sampling decision
+                          has been made. Defaults to 100, valid values [0-100]. 100
+                          indicates 100% sampling.
+                        format: int32
+                        maximum: 100
+                        minimum: 0
+                        type: integer
+                    required:
+                    - provider
                     type: object
                 type: object
             type: object

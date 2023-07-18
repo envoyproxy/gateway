@@ -16,6 +16,49 @@ API group.
 
 
 
+## CustomTag
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+
+| Field | Description |
+| --- | --- |
+| `type` _[CustomTagType](#customtagtype)_ | Type defines the type of custom tag. |
+| `literal` _[LiteralCustomTag](#literalcustomtag)_ | Literal adds hard-coded value to each span. It's required when the type is "Literal". |
+| `environment` _[EnvironmentCustomTag](#environmentcustomtag)_ | Environment adds value from environment variable to each span. It's required when the type is "Environment". |
+| `requestHeader` _[RequestHeaderCustomTag](#requestheadercustomtag)_ | RequestHeader adds value from request header to each span. It's required when the type is "RequestHeader". |
+
+
+## CustomTagType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+
+
+## EnvironmentCustomTag
+
+
+
+EnvironmentCustomTag adds value from environment variable to each span.
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name defines the name of the environment variable which to extract the value from. |
+| `defaultValue` _string_ | DefaultValue defines the default value to use if the environment variable is not set. |
+
+
 ## EnvoyGateway
 
 
@@ -457,6 +500,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations are the annotations that should be appended to the pods. By default, no pod annotations are appended. |
+| `labels` _object (keys:string, values:string)_ | Labels are the additional labels that should be tagged to the pods. By default, no additional pod labels are tagged. |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
@@ -490,6 +534,20 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+
+
+## LiteralCustomTag
+
+
+
+LiteralCustomTag adds hard-coded value to each span.
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Description |
+| --- | --- |
+| `value` _string_ | Value defines the hard-coded value to add to each span. |
 
 
 ## LogComponent
@@ -653,6 +711,23 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `accessLog` _[ProxyAccessLog](#proxyaccesslog)_ | AccessLogs defines accesslog parameters for managed proxies. If unspecified, will send default format to stdout. |
+| `tracing` _[ProxyTracing](#proxytracing)_ | Tracing defines tracing configuration for managed proxies. If unspecified, will not send tracing data. |
+
+
+## ProxyTracing
+
+
+
+
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `samplingRate` _integer_ | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `customTags` _object (keys:string, values:[CustomTag](#customtag))_ | CustomTags defines the custom tags to add to each span. If provider is kubernetes, pod name and namespace are added by default. |
+| `provider` _[TracingProvider](#tracingprovider)_ | Provider defines the tracing provider. Only OpenTelemetry is supported currently. |
 
 
 ## RateLimit
@@ -725,6 +800,21 @@ _Appears in:_
 | `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
 
 
+## RequestHeaderCustomTag
+
+
+
+RequestHeaderCustomTag adds value from request header to each span.
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name defines the name of the request header which to extract the value from. |
+| `defaultValue` _string_ | DefaultValue defines the default value to use if the request header is not set. |
+
+
 ## ResourceProviderType
 
 _Underlying type:_ `string`
@@ -744,6 +834,33 @@ ServiceType string describes ingress methods for a service
 
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
+
+
+
+## TracingProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+
+| Field | Description |
+| --- | --- |
+| `type` _[TracingProviderType](#tracingprovidertype)_ | Type defines the tracing provider type. EG currently only supports OpenTelemetry. |
+| `host` _string_ | Host define the provider service hostname. |
+| `port` _integer_ | Port defines the port the provider service is exposed on. |
+
+
+## TracingProviderType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
 
 
 

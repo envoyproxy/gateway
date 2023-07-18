@@ -640,6 +640,7 @@ spec:
     - path:
         type: PathPrefix
         value: /foo
+EOF
 ```
 
 Get the JWT used for testing request authentication:
