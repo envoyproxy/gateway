@@ -67,10 +67,16 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	RateLimit *RateLimit `json:"rateLimit,omitempty"`
 
-	// Extension defines an extension to register for the Envoy Gateway Control Plane.
+	// ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.
 	//
 	// +optional
-	Extension *Extension `json:"extension,omitempty"`
+	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
+
+	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
+	// implemented by Envoy Gateway
+	//
+	// +optional
+	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
@@ -120,12 +126,6 @@ type Gateway struct {
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
-
-	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
-	// implemented by Envoy Gateway
-	//
-	// +optional
-	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 }
 
 // ExtensionAPISettings defines the settings specific to Gateway API Extensions.
@@ -317,9 +317,9 @@ type RateLimitRedisSettings struct {
 	TLS *RedisTLSSettings `json:"tls,omitempty"`
 }
 
-// Extension defines the configuration for registering an extension to
+// ExtensionManager defines the configuration for registering an extension manager to
 // the Envoy Gateway control plane.
-type Extension struct {
+type ExtensionManager struct {
 	// Resources defines the set of K8s resources the extension will handle.
 	//
 	// +optional
