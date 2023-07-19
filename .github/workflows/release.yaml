@@ -22,6 +22,7 @@ jobs:
           echo "release_tag=$(echo ${GITHUB_REF##*/})" >> $GITHUB_ENV
           echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
+
       - name: Docker login
         uses: docker/login-action@v2
         with:
@@ -31,9 +32,8 @@ jobs:
           ecr: "false"
       - name: Retag and push existing gateway-dev image
         run: |
-          docker pull ${{ secrets.REGISTRY }}/gateway-dev:${{ env.sha_short }}
-          docker tag ${{ secrets.REGISTRY }}/gateway-dev:${{ env.sha_short }} ${{ secrets.REGISTRY }}/gateway-dev:${{ env.release_tag }}
-          docker push ${{ secrets.REGISTRY }}/gateway-dev:${{ env.release_tag }}
+          make image.release RELEASE_TAG=${{ env.release_tag }} SHA_SHORT=${{ env.sha_short }}
+         
       - name: Generate Release Artifacts
         run: make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
