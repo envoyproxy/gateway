@@ -10,9 +10,6 @@ type ProxyMetrics struct {
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
-	// HistogramBucketSettings defines rules for setting the histogram buckets.
-	// Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
-	HistogramBucketSettings []HistogramBucketSetting `json:"histogramBucketSettings,omitempty"`
 }
 
 type MetricSinkType string
@@ -47,15 +44,4 @@ type OpenTelemetrySink struct {
 }
 
 type PrometheusProvider struct {
-}
-
-type HistogramBucketSetting struct {
-	// Regex defines the regex for the stats name.
-	// This use RE2 engine.
-	// +kubebuilder:validation:Pattern=^/.*$
-	// +kubebuilder:validation:MinLength=1
-	Regex string `json:"regex"`
-	// Buckets defines the buckets for the histogram.
-	// +kubebuilder:validation:MinItems=1
-	Buckets []float32 `json:"buckets"`
 }

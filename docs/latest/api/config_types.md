@@ -430,21 +430,6 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
-## HistogramBucketSetting
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `regex` _string_ | Regex defines the regex for the stats name. This use RE2 engine. |
-| `buckets` _float array_ | Buckets defines the buckets for the histogram. |
-
-
 ## InfrastructureProviderType
 
 _Underlying type:_ `string`
@@ -778,7 +763,6 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `histogramBucketSettings` _[HistogramBucketSetting](#histogrambucketsetting) array_ | HistogramBucketSettings defines rules for setting the histogram buckets. Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings. |
 
 
 ## ProxyTelemetry

@@ -3914,29 +3914,6 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
-                      histogramBucketSettings:
-                        description: HistogramBucketSettings defines rules for setting
-                          the histogram buckets. Default buckets are used if not set.
-                          See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
-                        items:
-                          properties:
-                            buckets:
-                              description: Buckets defines the buckets for the histogram.
-                              items:
-                                type: number
-                              minItems: 1
-                              type: array
-                            regex:
-                              description: Regex defines the regex for the stats name.
-                                This use RE2 engine.
-                              minLength: 1
-                              pattern: ^/.*$
-                              type: string
-                          required:
-                          - buckets
-                          - regex
-                          type: object
-                        type: array
                       prometheus:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
