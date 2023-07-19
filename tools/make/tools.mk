@@ -21,6 +21,7 @@ tools/crd-ref-docs = $(tools.bindir)/crd-ref-docs
 tools/buf                = $(tools.bindir)/buf
 tools/protoc-gen-go      = $(tools.bindir)/protoc-gen-go
 tools/protoc-gen-go-grpc = $(tools.bindir)/protoc-gen-go-grpc
+tools/helm-docs          = $(tools.bindir)/helm-docs
 $(tools.bindir)/%: $(tools.srcdir)/%/pin.go $(tools.srcdir)/%/go.mod
 	cd $(<D) && GOOS= GOARCH= go build -o $(abspath $@) $$(sed -En 's,^import "(.*)".*,\1,p' pin.go)
 
