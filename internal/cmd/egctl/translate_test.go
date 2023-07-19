@@ -6,7 +6,6 @@
 package egctl
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -22,6 +22,9 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/internal/utils/field"
+	"github.com/envoyproxy/gateway/internal/utils/file"
 )
 
 var (
@@ -238,6 +241,7 @@ func TestTranslate(t *testing.T) {
 			got := &TranslationResult{}
 			mustUnmarshal(t, out, got)
 			var fn string
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
 
 			if tc.output == jsonOutput {
 				fn = tc.name + "." + resourceType + ".json"
@@ -249,7 +253,7 @@ func TestTranslate(t *testing.T) {
 				require.NoError(t, err)
 			}
 			if *overrideTestData {
-				overrideTestDataOutFile(t, string(out), fn)
+				require.NoError(t, file.Write(string(out), filepath.Join("testdata", "translate", "out", fn)))
 			}
 			want := &TranslationResult{}
 			mustUnmarshal(t, requireTestDataOutFile(t, fn), want)
@@ -266,18 +270,6 @@ func requireTestDataOutFile(t *testing.T, name ...string) []byte {
 	content, err := os.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return content
-}
-
-func overrideTestDataOutFile(t *testing.T, data string, name ...string) {
-	t.Helper()
-	elems := append([]string{"testdata", "translate", "out"}, name...)
-	file, err := os.OpenFile(filepath.Join(elems...), os.O_WRONLY, 0666)
-	require.NoError(t, err)
-	defer file.Close()
-	write := bufio.NewWriter(file)
-	_, err = write.WriteString(data)
-	require.NoError(t, err)
-	write.Flush()
 }
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {

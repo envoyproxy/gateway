@@ -49,19 +49,19 @@ var (
 // +k8s:deepcopy-gen=true
 type Xds struct {
 	// AccessLog configuration for the gateway.
-	AccessLog *AccessLog
+	AccessLog *AccessLog `json:"accessLog,omitempty" yaml:"accessLog,omitempty"`
 	// Tracing configuration for the gateway.
 	// EG currently supports only OpenTelemetry tracing, so use ProxyTracing directly.
-	Tracing *egcfgv1a1.ProxyTracing
+	Tracing *egcfgv1a1.ProxyTracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
 	// HTTP listeners exposed by the gateway.
-	HTTP []*HTTPListener
+	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
-	TCP []*TCPListener
+	TCP []*TCPListener `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// UDP Listeners exposed by the gateway.
-	UDP []*UDPListener
+	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
 	// JSONPatches are the JSON Patches that
 	// are to be applied to generaed Xds linked to the gateway.
-	JSONPatches []*JSONPatchConfig
+	JSONPatches []*JSONPatchConfig `json:"jsonPatches,omitempty" yaml:"jsonPatches,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -126,22 +126,22 @@ func (x Xds) Printable() *Xds {
 // +k8s:deepcopy-gen=true
 type HTTPListener struct {
 	// Name of the HttpListener
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
-	Address string
+	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
-	Port uint32
+	Port uint32 `json:"port" yaml:"port"`
 	// Hostnames (Host/Authority header value) with which the service can be expected to be accessed by clients.
 	// This field is required. Wildcard hosts are supported in the suffix or prefix form.
 	// Refer to https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#config-route-v3-virtualhost
 	// for more info.
-	Hostnames []string
+	Hostnames []string `json:"hostnames" yaml:"hostnames"`
 	// Tls certificate info. If omitted, the gateway will expose a plain text HTTP server.
-	TLS []*TLSListenerConfig
+	TLS []*TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
-	Routes []*HTTPRoute
+	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
-	IsHTTP2 bool
+	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -178,11 +178,11 @@ func (h HTTPListener) Validate() error {
 // +k8s:deepcopy-gen=true
 type TLSListenerConfig struct {
 	// Name of the Secret object.
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// ServerCertificate of the server.
-	ServerCertificate []byte
+	ServerCertificate []byte `json:"serverCertificate,omitempty" yaml:"serverCertificate,omitempty"`
 	// PrivateKey for the server.
-	PrivateKey []byte
+	PrivateKey []byte `json:"privateKey,omitempty" yaml:"privateKey,omitempty"`
 }
 
 // Validate the fields within the TLSListenerConfig structure
@@ -199,48 +199,48 @@ func (t TLSListenerConfig) Validate() error {
 
 // BackendWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
 type BackendWeights struct {
-	Valid   uint32
-	Invalid uint32
+	Valid   uint32 `json:"valid" yaml:"valid"`
+	Invalid uint32 `json:"invalid" yaml:"invalid"`
 }
 
 // HTTPRoute holds the route information associated with the HTTP Route
 // +k8s:deepcopy-gen=true
 type HTTPRoute struct {
 	// Name of the HTTPRoute
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// PathMatch defines the match conditions on the path.
-	PathMatch *StringMatch
+	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
 	// HeaderMatches define the match conditions on the request headers for this route.
-	HeaderMatches []*StringMatch
+	HeaderMatches []*StringMatch `json:"headerMatches,omitempty" yaml:"headerMatches,omitempty"`
 	// QueryParamMatches define the match conditions on the query parameters.
-	QueryParamMatches []*StringMatch
+	QueryParamMatches []*StringMatch `json:"queryParamMatches,omitempty" yaml:"queryParamMatches,omitempty"`
 	// DestinationWeights stores the weights of valid and invalid backends for the route so that 500 error responses can be returned in the same proportions
-	BackendWeights BackendWeights
+	BackendWeights BackendWeights `json:"backendWeights" yaml:"backendWeights"`
 	// AddRequestHeaders defines header/value sets to be added to the headers of requests.
-	AddRequestHeaders []AddHeader
+	AddRequestHeaders []AddHeader `json:"addRequestHeaders,omitempty" yaml:"addRequestHeaders,omitempty"`
 	// RemoveRequestHeaders defines a list of headers to be removed from requests.
-	RemoveRequestHeaders []string
+	RemoveRequestHeaders []string `json:"removeRequestHeaders,omitempty" yaml:"removeRequestHeaders,omitempty"`
 	// AddResponseHeaders defines header/value sets to be added to the headers of response.
-	AddResponseHeaders []AddHeader
+	AddResponseHeaders []AddHeader `json:"addResponseHeaders,omitempty" yaml:"addResponseHeaders,omitempty"`
 	// RemoveResponseHeaders defines a list of headers to be removed from response.
-	RemoveResponseHeaders []string
+	RemoveResponseHeaders []string `json:"removeResponseHeaders,omitempty" yaml:"removeResponseHeaders,omitempty"`
 	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect.
-	DirectResponse *DirectResponse
+	DirectResponse *DirectResponse `json:"directResponse,omitempty" yaml:"directResponse,omitempty"`
 	// Redirections to be returned for this route. Takes precedence over Destinations.
-	Redirect *Redirect
+	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destinations that requests to this HTTPRoute will be mirrored to
-	Mirrors []*RouteDestination
+	Mirrors []*RouteDestination `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
 	// Destinations associated with this matched route.
-	Destinations []*RouteDestination
+	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
 	// Rewrite to be changed for this route.
-	URLRewrite *URLRewrite
+	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
-	RateLimit *RateLimit
+	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
-	RequestAuthentication *RequestAuthentication
+	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
-	ExtensionRefs []*UnstructuredRef
+	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -249,7 +249,7 @@ type HTTPRoute struct {
 //
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
-	Object *unstructured.Unstructured
+	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
 }
 
 // RequestAuthentication defines the schema for authenticating HTTP requests.
@@ -260,7 +260,7 @@ type UnstructuredRef struct {
 // +k8s:deepcopy-gen=true
 type RequestAuthentication struct {
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JwtRequestAuthentication
+	JWT *JwtRequestAuthentication `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 }
 
 // JwtRequestAuthentication defines the schema for authenticating HTTP requests using
@@ -269,7 +269,7 @@ type RequestAuthentication struct {
 // +k8s:deepcopy-gen=true
 type JwtRequestAuthentication struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	Providers []egv1a1.JwtAuthenticationFilterProvider
+	Providers []egv1a1.JwtAuthenticationFilterProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -398,12 +398,12 @@ func (j *JwtRequestAuthentication) Validate() error {
 // +kubebuilder:object:generate=true
 type RouteDestination struct {
 	// Host refers to the FQDN or IP address of the backend service.
-	Host string
+	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
-	Port uint32
+	Port uint32 `json:"port" yaml:"port"`
 	// Weight associated with this destination.
 	// Note: Weight is not used in TCP/UDP route.
-	Weight *uint32
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -439,9 +439,9 @@ func NewRouteDestWithWeight(host string, port uint32, weight uint32) *RouteDesti
 // AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
-	Name   string
-	Value  string
-	Append bool
+	Name   string `json:"name" yaml:"name"`
+	Value  string `json:"value" yaml:"value"`
+	Append bool   `json:"append" yaml:"append"`
 }
 
 // Validate the fields within the AddHeader structure
@@ -459,9 +459,9 @@ func (h AddHeader) Validate() error {
 type DirectResponse struct {
 	// Body configures the body of the direct response. Currently only a string response
 	// is supported, but in the future a config.core.v3.DataSource may replace it.
-	Body *string
+	Body *string `json:"body,omitempty" yaml:"body,omitempty"`
 	// StatusCode will be used for the direct response's status code.
-	StatusCode uint32
+	StatusCode uint32 `json:"statusCode" yaml:"statusCode"`
 }
 
 // Validate the fields within the DirectResponse structure
@@ -478,9 +478,9 @@ func (r DirectResponse) Validate() error {
 // +k8s:deepcopy-gen=true
 type URLRewrite struct {
 	// Path contains config for rewriting the path of the request.
-	Path *HTTPPathModifier
+	Path *HTTPPathModifier `json:"path,omitempty" yaml:"path,omitempty"`
 	// Hostname configures the replacement of the request's hostname.
-	Hostname *string
+	Hostname *string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
 }
 
 // Validate the fields within the URLRewrite structure
@@ -500,15 +500,15 @@ func (r URLRewrite) Validate() error {
 // +k8s:deepcopy-gen=true
 type Redirect struct {
 	// Scheme configures the replacement of the request's scheme.
-	Scheme *string
+	Scheme *string `json:"scheme" yaml:"scheme"`
 	// Hostname configures the replacement of the request's hostname.
-	Hostname *string
+	Hostname *string `json:"hostname" yaml:"hostname"`
 	// Path contains config for rewriting the path of the request.
-	Path *HTTPPathModifier
+	Path *HTTPPathModifier `json:"path" yaml:"path"`
 	// Port configures the replacement of the request's port.
-	Port *uint32
+	Port *uint32 `json:"port" yaml:"port"`
 	// Status code configures the redirection response's status code.
-	StatusCode *int32
+	StatusCode *int32 `json:"statusCode" yaml:"statusCode"`
 }
 
 // Validate the fields within the Redirect structure
@@ -540,9 +540,9 @@ func (r Redirect) Validate() error {
 // +k8s:deepcopy-gen=true
 type HTTPPathModifier struct {
 	// FullReplace provides a string to replace the full path of the request.
-	FullReplace *string
+	FullReplace *string `json:"fullReplace" yaml:"fullReplace"`
 	// PrefixMatchReplace provides a string to replace the matched prefix of the request.
-	PrefixMatchReplace *string
+	PrefixMatchReplace *string `json:"prefixMatchReplace" yaml:"prefixMatchReplace"`
 }
 
 // Validate the fields within the HTTPPathModifier structure
@@ -565,18 +565,18 @@ func (r HTTPPathModifier) Validate() error {
 // +k8s:deepcopy-gen=true
 type StringMatch struct {
 	// Name of the field to match on.
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Exact match condition.
-	Exact *string
+	Exact *string `json:"exact,omitempty" yaml:"exact,omitempty"`
 	// Prefix match condition.
-	Prefix *string
+	Prefix *string `json:"prefix,omitempty" yaml:"prefix,omitempty"`
 	// Suffix match condition.
-	Suffix *string
+	Suffix *string `json:"suffix,omitempty" yaml:"suffix,omitempty"`
 	// SafeRegex match condition.
-	SafeRegex *string
+	SafeRegex *string `json:"safeRegex,omitempty" yaml:"safeRegex,omitempty"`
 	// Distinct match condition.
 	// Used to match any and all possible unique values encountered within the Name field.
-	Distinct bool
+	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
 // Validate the fields within the StringMatch structure
@@ -613,15 +613,15 @@ func (s StringMatch) Validate() error {
 // +k8s:deepcopy-gen=true
 type TCPListener struct {
 	// Name of the TCPListener
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
-	Address string
+	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
-	Port uint32
+	Port uint32 `json:"port" yaml:"port"`
 	// TLS holds information for configuring TLS on a listener
-	TLS *TLS
+	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.
-	Destinations []*RouteDestination
+	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -629,9 +629,9 @@ type TCPListener struct {
 type TLS struct {
 	// TLS information required for TLS Passthrough, If provided, incoming
 	// connections' server names are inspected and routed to backends accordingly.
-	Passthrough *TLSInspectorConfig
+	Passthrough *TLSInspectorConfig `json:"passthrough,omitempty" yaml:"passthrough,omitempty"`
 	// TLS information required for TLS Termination
-	Terminate []*TLSListenerConfig
+	Terminate []*TLSListenerConfig `json:"terminate,omitempty" yaml:"terminate,omitempty"`
 }
 
 // Validate the fields within the TCPListener structure
@@ -676,7 +676,7 @@ type TLSInspectorConfig struct {
 	// Wildcard hosts are supported in the prefix form. Partial wildcards are not
 	// supported, and values like *w.example.com are invalid.
 	// SNIs are used only in case of TLS Passthrough.
-	SNIs []string
+	SNIs []string `json:"snis,omitempty" yaml:"snis,omitempty"`
 }
 
 func (t TLSInspectorConfig) Validate() error {
@@ -691,13 +691,13 @@ func (t TLSInspectorConfig) Validate() error {
 // +k8s:deepcopy-gen=true
 type UDPListener struct {
 	// Name of the UDPListener
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Address that the listener should listen on.
-	Address string
+	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
-	Port uint32
+	Port uint32 `json:"port" yaml:"port"`
 	// Destinations associated with UDP traffic to the service.
-	Destinations []*RouteDestination
+	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -724,34 +724,34 @@ func (h UDPListener) Validate() error {
 // +k8s:deepcopy-gen=true
 type RateLimit struct {
 	// Global rate limit settings.
-	Global *GlobalRateLimit
+	Global *GlobalRateLimit `json:"global,omitempty" yaml:"global,omitempty"`
 }
 
 // GlobalRateLimit holds the global rate limiting configuration.
 // +k8s:deepcopy-gen=true
 type GlobalRateLimit struct {
 	// Rules for rate limiting.
-	Rules []*RateLimitRule
+	Rules []*RateLimitRule `json:"rules,omitempty" yaml:"rules,omitempty"`
 }
 
 // RateLimitRule holds the match and limit configuration for ratelimiting.
 // +k8s:deepcopy-gen=true
 type RateLimitRule struct {
 	// HeaderMatches define the match conditions on the request headers for this route.
-	HeaderMatches []*StringMatch
+	HeaderMatches []*StringMatch `json:"headerMatches" yaml:"headerMatches"`
 	// CIDRMatch define the match conditions on the source IP's CIDR for this route.
-	CIDRMatch *CIDRMatch
+	CIDRMatch *CIDRMatch `json:"cidrMatch,omitempty" yaml:"cidrMatch,omitempty"`
 	// Limit holds the rate limit values.
-	Limit *RateLimitValue
+	Limit *RateLimitValue `json:"limit,omitempty" yaml:"limit,omitempty"`
 }
 
 type CIDRMatch struct {
-	CIDR    string
-	IPv6    bool
-	MaskLen int
+	CIDR    string `json:"cidr" yaml:"cidr"`
+	IPv6    bool   `json:"ipv6" yaml:"ipv6"`
+	MaskLen int    `json:"maskLen" yaml:"maskLen"`
 	// Distinct means that each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	Distinct bool
+	Distinct bool `json:"distinct" yaml:"distinct"`
 }
 
 func (r *RateLimitRule) IsMatchSet() bool {
@@ -764,41 +764,41 @@ type RateLimitUnit egv1a1.RateLimitUnit
 // +k8s:deepcopy-gen=true
 type RateLimitValue struct {
 	// Requests are the number of requests that need to be rate limited.
-	Requests uint
+	Requests uint `json:"requests" yaml:"requests"`
 	// Unit of rate limiting.
-	Unit RateLimitUnit
+	Unit RateLimitUnit `json:"unit" yaml:"unit"`
 }
 
 // AccessLog holds the access logging configuration.
 // +k8s:deepcopy-gen=true
 type AccessLog struct {
-	Text          []*TextAccessLog          `json:"text,omitempty"`
-	JSON          []*JSONAccessLog          `json:"json,omitempty"`
-	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty"`
+	Text          []*TextAccessLog          `json:"text,omitempty" yaml:"text,omitempty"`
+	JSON          []*JSONAccessLog          `json:"json,omitempty" yaml:"json,omitempty"`
+	OpenTelemetry []*OpenTelemetryAccessLog `json:"openTelemetry,omitempty" yaml:"openTelemetry,omitempty"`
 }
 
 // TextAccessLog holds the configuration for text access logging.
 // +k8s:deepcopy-gen=true
 type TextAccessLog struct {
-	Format *string
-	Path   string
+	Format *string `json:"format,omitempty" yaml:"format,omitempty"`
+	Path   string  `json:"path" yaml:"path"`
 }
 
 // JSONAccessLog holds the configuration for JSON access logging.
 // +k8s:deepcopy-gen=true
 type JSONAccessLog struct {
-	JSON map[string]string `json:"json"`
-	Path string            `json:"path"`
+	JSON map[string]string `json:"json,omitempty" yaml:"json,omitempty"`
+	Path string            `json:"path" yaml:"path"`
 }
 
 // OpenTelemetryAccessLog holds the configuration for OpenTelemetry access logging.
 // +k8s:deepcopy-gen=true
 type OpenTelemetryAccessLog struct {
-	Text       *string           `json:"text"`
-	Attributes map[string]string `json:"attributes"`
-	Host       string            `json:"host"`
-	Port       uint32            `json:"port"`
-	Resources  map[string]string `json:"resources"`
+	Text       *string           `json:"text,omitempty" yaml:"text,omitempty"`
+	Attributes map[string]string `json:"attributes,omitempty" yaml:"attributes,omitempty"`
+	Host       string            `json:"host" yaml:"host"`
+	Port       uint32            `json:"port" yaml:"port"`
+	Resources  map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
@@ -806,11 +806,11 @@ type OpenTelemetryAccessLog struct {
 // +k8s:deepcopy-gen=true
 type JSONPatchConfig struct {
 	// Type is the typed URL of the Envoy xDS Resource
-	Type string `json:"type"`
+	Type string `json:"type" yaml:"type"`
 	// Name is the name of the resource
-	Name string `json:"name"`
+	Name string `json:"name" yaml:"name"`
 	// Patch defines the JSON Patch Operation
-	Operation JSONPatchOperation `json:"operation"`
+	Operation JSONPatchOperation `json:"operation" yaml:"operation"`
 }
 
 // JSONPatchOperation defines the JSON Patch Operation as defined in
@@ -818,10 +818,10 @@ type JSONPatchConfig struct {
 // +k8s:deepcopy-gen=true
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
-	Op string `json:"op"`
+	Op string `json:"op" yaml:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
-	Path string `json:"path"`
+	Path string `json:"path" yaml:"path"`
 	// Value is the new value of the path location.
-	Value apiextensionsv1.JSON `json:"value"`
+	Value apiextensionsv1.JSON `json:"value" yaml:"value"`
 }
