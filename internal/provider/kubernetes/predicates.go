@@ -56,7 +56,6 @@ func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(
 			},
 			ns,
 		); err != nil {
-			// Question: what's the common practice to handle error in predicate?
 			r.log.Error(err, "fail to get Namespace", "namespace", nsString)
 			return false
 		}
