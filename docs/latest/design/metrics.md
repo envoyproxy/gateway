@@ -23,7 +23,8 @@ Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for conf
 
 - Enable prometheus metric
 - Push metrics via Open Telemetry Sink
-- Customize histogram buckets of target metric
+- TODO: Customize histogram buckets of target metric
+- TODO: Support stats matcher
 
 ### ProxyMetric API Type
 
@@ -33,9 +34,6 @@ type ProxyMetrics struct {
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
-	// HistogramBucketSettings defines rules for setting the histogram buckets.
-	// Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
-	HistogramBucketSettings []HistogramBucketSetting `json:"histogramBucketSettings,omitempty"`
 }
 
 type MetricSinkType string
@@ -71,17 +69,6 @@ type OpenTelemetrySink struct {
 
 type PrometheusProvider struct {
 }
-
-type HistogramBucketSetting struct {
-	// Regex defines the regex for the stats name.
-	// This use RE2 engine.
-	// +kubebuilder:validation:Pattern=^/.*$
-	// +kubebuilder:validation:MinLength=1
-	Regex string `json:"regex"`
-	// Buckets defines the buckets for the histogram.
-	// +kubebuilder:validation:MinItems=1
-	Buckets []float32 `json:"buckets"`
-}
 ```
 
 ### Example
@@ -116,28 +103,4 @@ spec:
           openTelemetry:
             host: otel-collector.monitoring.svc.cluster.local
             port: 4317
-```
-
-The following is an example to custom histogram bucket for metrics with prefix `downstream`.
-
-```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/custom-buckets.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
-kind: EnvoyProxy
-metadata:
-  name: prometheus
-  namespace: envoy-gateway-system
-spec:
-  telemetry:
-    metric:
-      prometheus:
-        enable: true
-      histogramBucketSettings:
-        - regex: downstream.*
-          buckets:
-            - 0.5
-            - 1
-            - 5
-            - 10
-            - 100
-            - 1000
 ```
