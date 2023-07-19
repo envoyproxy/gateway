@@ -1566,6 +1566,13 @@ spec:
                                   should be appended to the pods. By default, no pod
                                   annotations are appended.
                                 type: object
+                              labels:
+                                additionalProperties:
+                                  type: string
+                                description: Labels are the additional labels that
+                                  should be tagged to the pods. By default, no additional
+                                  pod labels are tagged.
+                                type: object
                               securityContext:
                                 description: 'SecurityContext holds pod-level security
                                   attributes and common container settings. Optional:

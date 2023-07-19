@@ -13,7 +13,7 @@
         {
           "type": "Accepted",
           "status": "True",
-          "lastTransitionTime": "2023-06-16T03:19:39Z",
+          "lastTransitionTime": null,
           "reason": "Accepted",
           "message": "Valid GatewayClass"
         }
@@ -56,14 +56,14 @@
               {
                 "type": "Programmed",
                 "status": "True",
-                "lastTransitionTime": "2023-06-16T03:19:39Z",
+                "lastTransitionTime": null,
                 "reason": "Programmed",
                 "message": "Sending translated listener configuration to the data plane"
               },
               {
                 "type": "Accepted",
                 "status": "True",
-                "lastTransitionTime": "2023-06-16T03:19:39Z",
+                "lastTransitionTime": null,
                 "reason": "Accepted",
                 "message": "Listener has been successfully translated"
               }
@@ -123,14 +123,14 @@
               {
                 "type": "Accepted",
                 "status": "True",
-                "lastTransitionTime": "2023-06-16T03:19:39Z",
+                "lastTransitionTime": null,
                 "reason": "Accepted",
                 "message": "Route is accepted"
               },
               {
                 "type": "ResolvedRefs",
                 "status": "True",
-                "lastTransitionTime": "2023-06-16T03:19:39Z",
+                "lastTransitionTime": null,
                 "reason": "ResolvedRefs",
                 "message": "Resolved all the Object references for the Route"
               }

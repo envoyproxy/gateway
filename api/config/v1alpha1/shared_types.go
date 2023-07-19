@@ -77,6 +77,12 @@ type KubernetesPodSpec struct {
 	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 
+	// Labels are the additional labels that should be tagged to the pods.
+	// By default, no additional pod labels are tagged.
+	//
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+
 	// SecurityContext holds pod-level security attributes and common container settings.
 	// Optional: Defaults to empty.  See type description for default values of each field.
 	//
