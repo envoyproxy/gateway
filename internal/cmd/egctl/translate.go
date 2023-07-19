@@ -357,8 +357,8 @@ func printOutput(w io.Writer, result TranslationResult, output string) error {
 	if err != nil {
 		return err
 	}
-	_, ret := fmt.Fprintln(w, string(out))
-	return ret
+	_, err = fmt.Fprintln(w, string(out))
+	return err
 }
 
 // constructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
@@ -813,6 +813,10 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 }
 
 func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
+	if resources.GatewayClass == nil {
+		return fmt.Errorf("the GatewayClass resource is required")
+	}
+
 	defaultEnvoyProxyName := "default-envoy-proxy"
 	namespace := resources.GatewayClass.Namespace
 	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()

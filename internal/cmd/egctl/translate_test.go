@@ -185,6 +185,12 @@ func TestTranslate(t *testing.T) {
 			output: yamlOutput,
 			expect: true,
 		},
+		{
+			name:   "no-gateway-resources",
+			from:   "gateway-api",
+			to:     "xds",
+			expect: false,
+		},
 	}
 
 	flag.Parse()
