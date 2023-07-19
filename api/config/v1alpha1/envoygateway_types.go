@@ -171,13 +171,16 @@ const (
 	KubernetesWatchModeTypeNamespaceSelectors = "namespaceSelectors"
 )
 
+// KubernetesWatchModeType defines the type of KubernetesWatchMode
+type KubernetesWatchModeType string
+
 // KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
 type KubernetesWatchMode struct {
 	// Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and
 	// KubernetesWatchModeTypeNamespaceSelectors are currently supported
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
-	Type string
+	Type KubernetesWatchModeType
 
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
