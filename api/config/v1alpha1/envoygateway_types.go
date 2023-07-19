@@ -164,11 +164,11 @@ type EnvoyGatewayKubernetesProvider struct {
 
 const (
 	// KubernetesWatchModeTypeNamespaces indicates that the namespace watch mode is used.
-	KubernetesWatchModeTypeNamespaces = "namespace"
+	KubernetesWatchModeTypeNamespaces = "Namespaces"
 
 	// KubernetesWatchModeTypeNamespaceSelectors indicates that namespaceSelectors watch
 	// mode is used.
-	KubernetesWatchModeTypeNamespaceSelectors = "namespaceSelectors"
+	KubernetesWatchModeTypeNamespaceSelectors = "NamespaceSelectors"
 )
 
 // KubernetesWatchModeType defines the type of KubernetesWatchMode
