@@ -5,6 +5,8 @@ on:
     # Sequence of patterns matched against refs/tags
     tags:
       - "v*.*.*"
+env:
+  REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -28,14 +30,15 @@ jobs:
           ecr: "false"
       - name: Retag and push existing gateway-dev image
         run: |
-          docker pull geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev:${{ env.sha_short }}
-          docker tag geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev:${{ env.sha_short }} geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev:${{ env.release_tag }}
-          docker push geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway-dev:${{ env.release_tag }}
+          docker pull ${{ secrets.REGISTRY }}/gateway-dev:${{ env.sha_short }}
+          docker tag ${{ secrets.REGISTRY }}/gateway-dev:${{ env.sha_short }} ${{ secrets.REGISTRY }}/gateway-dev:${{ env.release_tag }}
+          docker push ${{ secrets.REGISTRY }}/gateway-dev:${{ env.release_tag }}
       - name: Generate Release Artifacts
         run: make generate-artifacts IMAGE=envoyproxy/gateway TAG=${{ env.release_tag }} OUTPUT_DIR=release-artifacts
 
       - name: Build and Push EG Release Helm Chart
-        run: OCI_REGISTRY=oci://geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway CHART_VERSION=${{ env.release_tag }} IMAGE=geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway TAG=${{ env.release_tag }} make helm-package helm-push
+      
+        run: OCI_REGISTRY=${{ secrets.OCI_REGISTRY }} CHART_VERSION=${{ env.release_tag }} IMAGE=${{ secrets.REGISTRY }}/gateway TAG=${{ env.release_tag }} make helm-package helm-push
 
       - name: Upload Release Manifests
         uses: softprops/action-gh-release@v1
