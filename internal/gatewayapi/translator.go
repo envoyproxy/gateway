@@ -72,8 +72,8 @@ type Translator struct {
 
 type TranslateResult struct {
 	Resources
-	XdsIR   XdsIRMap
-	InfraIR InfraIRMap
+	XdsIR   XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
+	InfraIR InfraIRMap `json:"infraIR" yaml:"infraIR"`
 }
 
 func newTranslateResult(gateways []*GatewayContext,

@@ -1,77 +1,83 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
-      listeners:
-        - name: tls
-          protocol: TLS
-          hostname: foo.com
-          tls:
-            mode: Passthrough
-            certificateRefs:
-              - name: tls-secret-1
-          port: 90
-          allowedRoutes:
-            namespaces:
-              from: All
-    status:
-      listeners:
-        - name: tls
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: TLSRoute
-          attachedRoutes: 0
-          conditions:
-            - type: Programmed
-              status: "False"
-              reason: Invalid
-              message: Listener must not have TLS certificate refs set for TLS mode Passthrough.
-tlsRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1alpha2
-    kind: TLSRoute
-    metadata:
-      namespace: default
-      name: tlsroute-1
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-      rules:
-        - backendRefs:
-            - name: service-1
-              port: 8080
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "False"
-              reason: NoReadyListeners
-              message: There are no ready listeners for this parent ref
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
-xdsIR:
-  envoy-gateway-gateway-1:
-    accessLog:
-      text:
-        - path: /dev/stdout
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.com
+      name: tls
+      port: 90
+      protocol: TLS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-1
+        mode: Passthrough
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Listener must not have TLS certificate refs set for TLS mode Passthrough.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
 infraIR:
   envoy-gateway-gateway-1:
     proxy:
+      listeners:
+      - address: ""
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
       name: envoy-gateway-gateway-1
-
-      listeners:
-        - address: ""
+tlsRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: TLSRoute
+  metadata:
+    creationTimestamp: null
+    name: tlsroute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+xdsIR:
+  envoy-gateway-gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout

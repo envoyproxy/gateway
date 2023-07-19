@@ -26,23 +26,23 @@ type InfraIRMap map[string]*ir.Infra
 type Resources struct {
 	// This field is only used for marshalling/unmarshalling purposes and is not used by
 	// the translator
-	GatewayClass          *v1beta1.GatewayClass          `json:"gatewayClass,omitempty"`
-	Gateways              []*v1beta1.Gateway             `json:"gateways,omitempty"`
-	HTTPRoutes            []*v1beta1.HTTPRoute           `json:"httpRoutes,omitempty"`
-	GRPCRoutes            []*v1alpha2.GRPCRoute          `json:"grpcRoutes,omitempty"`
-	TLSRoutes             []*v1alpha2.TLSRoute           `json:"tlsRoutes,omitempty"`
-	TCPRoutes             []*v1alpha2.TCPRoute           `json:"tcpRoutes,omitempty"`
-	UDPRoutes             []*v1alpha2.UDPRoute           `json:"udpRoutes,omitempty"`
-	ReferenceGrants       []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty"`
-	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty"`
-	Services              []*v1.Service                  `json:"services,omitempty"`
-	EndpointSlices        []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty"`
-	Secrets               []*v1.Secret                   `json:"secrets,omitempty"`
-	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty"`
-	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty"`
-	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty"`
-	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty"`
-	EnvoyPatchPolicies    []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty"`
+	GatewayClass          *v1beta1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
+	Gateways              []*v1beta1.Gateway             `json:"gateways,omitempty" yaml:"gateways,omitempty"`
+	HTTPRoutes            []*v1beta1.HTTPRoute           `json:"httpRoutes,omitempty" yaml:"httpRoutes,omitempty"`
+	GRPCRoutes            []*v1alpha2.GRPCRoute          `json:"grpcRoutes,omitempty" yaml:"grpcRoutes,omitempty"`
+	TLSRoutes             []*v1alpha2.TLSRoute           `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
+	TCPRoutes             []*v1alpha2.TCPRoute           `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
+	UDPRoutes             []*v1alpha2.UDPRoute           `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
+	ReferenceGrants       []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
+	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
+	Services              []*v1.Service                  `json:"services,omitempty" yaml:"services,omitempty"`
+	EndpointSlices        []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
+	Secrets               []*v1.Secret                   `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty" yaml:"authenticationFilters,omitempty"`
+	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty" yaml:"rateLimitFilters,omitempty"`
+	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
+	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
+	EnvoyPatchPolicies    []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 }
 
 func NewResources() *Resources {

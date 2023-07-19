@@ -20,4 +20,3 @@ xds:
             name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
             route:
               cluster: envoy-gateway-system-backend-rule-0-match-0-www.example.com
-
