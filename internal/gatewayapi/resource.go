@@ -24,6 +24,9 @@ type InfraIRMap map[string]*ir.Infra
 // resources that the translators needs as inputs.
 // +k8s:deepcopy-gen=true
 type Resources struct {
+	CustomGRPCRoutes          []*v1alpha2.CustomGRPCRoute
+	CorsFilters               []*egv1a1.CorsFilter
+	GrpcJSONTranscoderFilters []*egv1a1.GrpcJSONTranscoderFilter
 	// This field is only used for marshalling/unmarshalling purposes and is not used by
 	// the translator
 	GatewayClass          *v1beta1.GatewayClass          `json:"gatewayClass,omitempty" yaml:"gatewayClass,omitempty"`
@@ -58,8 +61,12 @@ func NewResources() *Resources {
 		Namespaces:            []*v1.Namespace{},
 		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
-		ExtensionRefFilters:   []unstructured.Unstructured{},
-		EnvoyPatchPolicies:    []*egv1a1.EnvoyPatchPolicy{},
+
+		CustomGRPCRoutes:          []*v1alpha2.CustomGRPCRoute{},
+		CorsFilters:               []*egv1a1.CorsFilter{},
+		GrpcJSONTranscoderFilters: []*egv1a1.GrpcJSONTranscoderFilter{},
+		ExtensionRefFilters:       []unstructured.Unstructured{},
+		EnvoyPatchPolicies:        []*egv1a1.EnvoyPatchPolicy{},
 	}
 }
 

@@ -43,7 +43,7 @@ spec:
                     path: /dev/null
                 address:
                   socket_address:
-                    address: 127.0.0.1
+                    address: 0.0.0.0
                     port_value: 19000
               dynamic_resources:
                 ads_config:
@@ -164,6 +164,8 @@ spec:
             httpGet:
               path: /ready
               port: 19001
+            initialDelaySeconds: 180
+            successThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:

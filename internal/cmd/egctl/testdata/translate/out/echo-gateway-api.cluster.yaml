@@ -1,3 +1,6 @@
+CorsFilters: null
+CustomGRPCRoutes: null
+GrpcJSONTranscoderFilters: null
 gatewayClass:
   metadata:
     creationTimestamp: null
@@ -43,6 +46,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
 httpRoutes:
 - kind: HTTPRoute
   metadata:

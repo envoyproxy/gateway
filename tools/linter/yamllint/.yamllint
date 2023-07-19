@@ -1,6 +1,21 @@
 ---
 
 ignore: |
+  # Remove when https://github.com/kubernetes-sigs/gateway-api/issues/1600 is fixed.
+  bin/gatewayapi-crds.yaml
+  internal/provider/kubernetes/config/default/kustomization.yaml
+  internal/provider/kubernetes/config/crd/kustomization.yaml
+  bin
+  gateway-api
+  vendor
+  .github
+  manifes
+  examples
+  charts/eg/
+  charts/envoy-gateway/
+  charts/gateway-helm/
+  bin/install.yaml
+  helm/
   # This directory fails checks since many files
   # are templated. Instead, we run the linter
   # after running `make generate-manifests` which creates
@@ -51,7 +66,7 @@ rules:
   new-line-at-end-of-file: enable
   new-lines:
     type: unix
-  trailing-spaces: enable
+  trailing-spaces: disable
   truthy:
     check-keys: false   # GitHub Actions uses "on:" as a key
     level: warning

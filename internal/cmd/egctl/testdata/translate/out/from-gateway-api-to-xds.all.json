@@ -487,6 +487,19 @@
                           },
                           "httpFilters": [
                             {
+                              "name": "envoy.filters.http.health_check",
+                              "typedConfig": {
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck",
+                                "headers": [
+                                  {
+                                    "exactMatch": "/status",
+                                    "name": ":path"
+                                  }
+                                ],
+                                "passThroughMode": false
+                              }
+                            },
+                            {
                               "name": "envoy.filters.http.router",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
@@ -583,6 +596,19 @@
                               "name": "envoy.filters.http.grpc_web",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb"
+                              }
+                            },
+                            {
+                              "name": "envoy.filters.http.health_check",
+                              "typedConfig": {
+                                "@type": "type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck",
+                                "headers": [
+                                  {
+                                    "exactMatch": "/status",
+                                    "name": ":path"
+                                  }
+                                ],
+                                "passThroughMode": false
                               }
                             },
                             {
@@ -842,6 +868,15 @@
                 "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
                 "ignorePortInHostMatching": true,
                 "name": "default-eg-http",
+                "responseHeadersToAdd": [
+                  {
+                    "header": {
+                      "key": "x-request-id",
+                      "value": "%REQ(X-REQUEST-ID)%"
+                    },
+                    "append": false
+                  }
+                ],
                 "virtualHosts": [
                   {
                     "domains": [
@@ -876,6 +911,15 @@
                 "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
                 "ignorePortInHostMatching": true,
                 "name": "default-eg-grpc",
+                "responseHeadersToAdd": [
+                  {
+                    "header": {
+                      "key": "x-request-id",
+                      "value": "%REQ(X-REQUEST-ID)%"
+                    },
+                    "append": false
+                  }
+                ],
                 "virtualHosts": [
                   {
                     "domains": [

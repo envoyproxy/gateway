@@ -7,6 +7,7 @@ package runner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -66,6 +67,7 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 			} else {
 				// Manage the proxy infra.
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
+					fmt.Println(err)
 					r.Logger.Error(err, "failed to create new infra")
 				}
 			}

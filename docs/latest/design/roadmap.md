@@ -40,7 +40,7 @@ contributing to the project.
 - Rate Limiting [Issue #670][670].
 - Authentication [Issue #336][336].
 
-### [v0.4.0][v0.4.0]: Customizing Envoy Gateway
+### [v0.4.0][v0.4.0]: More Advanced Features through Extension Mechanisms
 
 - Extending Envoy Gateway control plane [Issue #20][20]
 - Helm based installation for Envoy Gateway [Issue #650][650]
@@ -67,9 +67,7 @@ contributing to the project.
 [v0.5.0]: https://github.com/envoyproxy/gateway/milestone/13
 [v0.6.0]: https://github.com/envoyproxy/gateway/milestone/15
 [17]: https://github.com/envoyproxy/gateway/issues/17
-[20]: https://github.com/envoyproxy/gateway/issues/20
 [24]: https://github.com/envoyproxy/gateway/issues/24
-[31]: https://github.com/envoyproxy/gateway/issues/31
 [60]: https://github.com/envoyproxy/gateway/issues/60
 [63]: https://github.com/envoyproxy/gateway/issues/63
 [64]: https://github.com/envoyproxy/gateway/issues/64
@@ -77,12 +75,9 @@ contributing to the project.
 [336]: https://github.com/envoyproxy/gateway/issues/336
 [641]: https://github.com/envoyproxy/gateway/issues/641
 [642]: https://github.com/envoyproxy/gateway/issues/642
-[648]: https://github.com/envoyproxy/gateway/issues/648
-[650]: https://github.com/envoyproxy/gateway/issues/650
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
 [675]: https://github.com/envoyproxy/gateway/issues/675
-[701]: https://github.com/envoyproxy/gateway/issues/701
 [707]: https://github.com/envoyproxy/gateway/issues/707
 [1160]: https://github.com/envoyproxy/gateway/issues/1160
 [1365]: https://github.com/envoyproxy/gateway/issues/1365

@@ -1,3 +1,6 @@
+CorsFilters: null
+CustomGRPCRoutes: null
+GrpcJSONTranscoderFilters: null
 envoyProxy:
   metadata:
     creationTimestamp: null

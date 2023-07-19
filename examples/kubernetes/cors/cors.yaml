@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: CorsFilter
+metadata:
+  name: corsfilter
+spec:
+  type: "Global"
+  corsPolicy:
+    allowOrigins:
+      - prefix: "*"
+    allowMethods:
+      - POST
+      - GET
+      - OPTIONS
+      - PUT
+      - DELETE
+    maxAge: 1800000

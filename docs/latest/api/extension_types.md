@@ -11,8 +11,12 @@ Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io A
 
 ### Resource Types
 - [AuthenticationFilter](#authenticationfilter)
+- [CorsFilter](#corsfilter)
+- [CorsFilterList](#corsfilterlist)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
+- [GrpcJSONTranscoderFilter](#grpcjsontranscoderfilter)
+- [GrpcJSONTranscoderFilterList](#grpcjsontranscoderfilterlist)
 - [RateLimitFilter](#ratelimitfilter)
 
 
@@ -44,8 +48,9 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT". |
+| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT" and "OIDC". |
 | `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
+| `oidcProvider` _[OIDCAuthenticationFilterProvider](#oidcauthenticationfilterprovider)_ | OIDCProvider defines the OpenID Connect (OIDC) authentication provider type. |
 
 
 ## AuthenticationFilterType
@@ -72,6 +77,84 @@ _Appears in:_
 | --- | --- |
 | `header` _string_ | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
 | `claim` _string_ | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type (eg. "claim.nested.key", "sub"). The nested claim name must use dot "." to separate the JSON name path. |
+
+
+## CorsFilter
+
+
+
+
+
+_Appears in:_
+- [CorsFilterList](#corsfilterlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `CorsFilter`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CorsFilterSpec](#corsfilterspec)_ | Spec defines the desired state of the CorsFilter type. |
+
+
+## CorsFilterList
+
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `CorsFilterList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[CorsFilter](#corsfilter) array_ |  |
+
+
+## CorsFilterSpec
+
+
+
+
+
+_Appears in:_
+- [CorsFilter](#corsfilter)
+
+| Field | Description |
+| --- | --- |
+| `type` _[CorsType](#corstype)_ | Type decides the scope for the RateLimits. Valid CorsFilterType values are "Global". |
+| `corsPolicy` _[CorsPolicy](#corspolicy)_ | Global defines global cors configuration. |
+
+
+## CorsPolicy
+
+
+
+
+
+_Appears in:_
+- [CorsFilterSpec](#corsfilterspec)
+
+| Field | Description |
+| --- | --- |
+| `allowOrigins` _[StringMatch](#stringmatch) array_ |  |
+| `allowMethods` _string array_ |  |
+| `allowHeaders` _string array_ |  |
+| `exposeHeaders` _string array_ |  |
+| `maxAge` _integer_ |  |
+| `allowCredentials` _boolean_ |  |
+
+
+## CorsType
+
+_Underlying type:_ `string`
+
+CorsType specifies the types of Cors.
+
+_Appears in:_
+- [CorsFilterSpec](#corsfilterspec)
+
 
 
 ## EnvoyJSONPatchConfig
@@ -178,6 +261,56 @@ _Appears in:_
 | `rules` _[RateLimitRule](#ratelimitrule) array_ | Rules are a list of RateLimit selectors and limits. Each rule and its associated limit is applied in a mutually exclusive way i.e. if multiple rules get selected, each of their associated limits get applied, so a single traffic request might increase the rate limit counters for multiple rules if selected. |
 
 
+## GrpcJSONTranscoderFilter
+
+
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilterList](#grpcjsontranscoderfilterlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `GrpcJSONTranscoderFilter`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[GrpcJSONTranscoderFilterSpec](#grpcjsontranscoderfilterspec)_ | Spec defines the desired state of the GrpcJSONTranscoderFilter type. |
+
+
+## GrpcJSONTranscoderFilterList
+
+
+
+
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `GrpcJSONTranscoderFilterList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[GrpcJSONTranscoderFilter](#grpcjsontranscoderfilter) array_ |  |
+
+
+## GrpcJSONTranscoderFilterSpec
+
+
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilter](#grpcjsontranscoderfilter)
+
+| Field | Description |
+| --- | --- |
+| `proto_descriptor_bin` _string_ | ProtoDescriptorBin is the base64 encoded binary representation of the proto descriptor. |
+| `services` _string array_ |  |
+| `auto_mapping` _boolean_ | AutoMapping is a flag that indicates whether the filter should automatically map the incoming request to the appropriate method in the proto descriptor. |
+| `print_options` _[PrintOptions](#printoptions)_ | PrintOptions is a set of options that controls how the filter generates the JSON response. |
+
+
 ## HeaderMatch
 
 
@@ -248,6 +381,56 @@ _Appears in:_
 | `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
 | `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+
+
+## OIDCAuthenticationFilterProvider
+
+
+
+OIDCAuthenticationFilterProvider defines the OpenID Connect (OIDC) authentication provider type
+
+_Appears in:_
+- [AuthenticationFilterSpec](#authenticationfilterspec)
+
+| Field | Description |
+| --- | --- |
+| `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
+| `clientId` _string_ | The OIDC client ID assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
+| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
+
+
+## OIDCProvider
+
+
+
+
+
+_Appears in:_
+- [OIDCAuthenticationFilterProvider](#oidcauthenticationfilterprovider)
+
+| Field | Description |
+| --- | --- |
+| `issuer` _string_ | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery). |
+| `authorizationEndpoint` _string_ | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+| `tokenEndpoint` _string_ | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+| `jwks` _string_ | The JSON JWKS response from the OIDC provider’s `jwks_uri` URI which can be found in the OIDC provider's [configuration response](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). Note that this JSON value must be escaped when embedded in a json configmap (see [example](https://github.com/istio-ecosystem/authservice/blob/master/bookinfo-example/config/authservice-configmap-template.yaml)). Used during token verification. If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+
+
+## PrintOptions
+
+
+
+
+
+_Appears in:_
+- [GrpcJSONTranscoderFilterSpec](#grpcjsontranscoderfilterspec)
+
+| Field | Description |
+| --- | --- |
+| `add_whitespace` _boolean_ | AddWhitespace is a flag that indicates whether the filter should add whitespace to the JSON response. |
+| `always_print_primitive_fields` _boolean_ | AlwaysPrintPrimitiveFields is a flag that indicates whether the filter should always print primitive fields in the JSON response. |
+| `always_print_enums_as_ints` _boolean_ | AlwaysPrintEnumsAsInts is a flag that indicates whether the filter should always print enums as ints in the JSON response. |
+| `preserve_proto_field_names` _boolean_ | PreserveProtoFieldNames is a flag that indicates whether the filter should preserve proto field names in the JSON response. |
 
 
 ## RateLimitFilter
@@ -387,5 +570,21 @@ _Underlying type:_ `string`
 _Appears in:_
 - [SourceMatch](#sourcematch)
 
+
+
+## StringMatch
+
+
+
+
+
+_Appears in:_
+- [CorsPolicy](#corspolicy)
+
+| Field | Description |
+| --- | --- |
+| `exact` _string_ |  |
+| `prefix` _string_ |  |
+| `regex` _string_ |  |
 
 

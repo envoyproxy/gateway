@@ -33,6 +33,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
+      imagePullSecrets:
+        - name: artifactory-reader
       containers:
       - args:
         - server

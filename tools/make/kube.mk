@@ -2,9 +2,10 @@
 ENVTEST_K8S_VERSION ?= 1.24.1
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
-GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
+GATEWAY_API_VERSION ?= v0.1.2
 
-GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+GATEWAY_RELEASE_URL ?= https://github.com/GeoComply/gateway-api/releases/download/${GATEWAY_API_VERSION}/experimental-install.yaml
+CONFORMANCE_UNIQUE_PORTS ?= true
 
 WAIT_TIMEOUT ?= 15m
 
@@ -30,6 +31,16 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
+	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./api/..." output:crd:artifacts:config=charts/envoy-gateway/crds/generated output:rbac:artifacts:config=charts/envoy-gateway/templates/generated/rbac output:webhook:artifacts:config=charts/envoy-gateway/templates/generated/webhook
+
+.PHONY: generate-gwapi-manifests
+generate-gwapi-manifests:
+generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
+	@$(LOG_TARGET)
+	@mkdir -p $(OUTPUT_DIR)/
+	curl -sLo $(OUTPUT_DIR)/gatewayapi-crds.yaml ${GATEWAY_RELEASE_URL}
+	mv $(OUTPUT_DIR)/gatewayapi-crds.yaml charts/gateway-helm/crds/gatewayapi-crds.yaml
+
 	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:rbac:artifacts:config=charts/gateway-helm/templates/generated/rbac output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
 	cat charts/gateway-helm/templates/generated/rbac/role.yaml | sed "s;envoy-gateway-role;{{ include \"eg.fullname\" . }}-envoy-gateway-role;g" > charts/gateway-helm/templates/generated/rbac/roles.yaml
 	rm charts/gateway-helm/templates/generated/rbac/role.yaml
@@ -58,12 +69,22 @@ ifndef ignore-not-found
   ignore-not-found = true
 endif
 
-IMAGE_PULL_POLICY ?= Always
+IMAGE_PULL_POLICY ?= IfNotPresent
 
 .PHONY: kube-deploy
 kube-deploy: manifests helm-generate ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
 	@$(LOG_TARGET)
 	helm install eg charts/gateway-helm --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace --debug --timeout='$(WAIT_TIMEOUT)' --wait --wait-for-jobs
+
+.PHONY: kube-upgradedeploy
+kube-upgradedeploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	@$(LOG_TARGET)
+	helm upgrade eg charts/envoy-gateway --set deployment.envoyGateway.image.repository=$(IMAGE) --set deployment.envoyGateway.image.tag=$(TAG) --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
+
+.PHONY: custom-kube-deploy
+custom-kube-deploy: manifests ## Install Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
+	@$(LOG_TARGET)
+	helm install eg charts/envoy-gateway --set deployment.envoyGateway.image.repository=docker.io/envoyproxy/gateway-dev --set deployment.envoyGateway.image.tag=latest --set deployment.envoyGateway.imagePullPolicy=$(IMAGE_PULL_POLICY) -n envoy-gateway-system --create-namespace
 
 .PHONY: kube-undeploy
 kube-undeploy: manifests ## Uninstall the Envoy Gateway into the Kubernetes cluster specified in ~/.kube/config.
@@ -98,6 +119,8 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 .PHONY: conformance
 conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+.PHONY: custom-conformance
+custom-conformance: create-cluster kube-install-image custom-kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
 

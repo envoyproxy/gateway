@@ -2,9 +2,9 @@
 #
 # All make targets related to helmß are defined in this file.
 
+OCI_REGISTRY ?= ""
 include tools/make/env.mk
 
-OCI_REGISTRY ?= oci://docker.io/envoyproxy
 CHART_NAME ?= gateway-helm
 CHART_VERSION ?= ${RELEASE_VERSION}
 

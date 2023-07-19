@@ -1,3 +1,6 @@
+CorsFilters: null
+CustomGRPCRoutes: null
+GrpcJSONTranscoderFilters: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -22,7 +25,8 @@ gateways:
     - attachedRoutes: 0
       conditions:
       - lastTransitionTime: null
-        message: FooRoute is not supported, kind must be one of [HTTPRoute GRPCRoute]
+        message: FooRoute is not supported, kind must be one of [HTTPRoute GRPCRoute
+          CustomGRPCRoute]
         reason: InvalidRouteKinds
         status: "False"
         type: ResolvedRefs

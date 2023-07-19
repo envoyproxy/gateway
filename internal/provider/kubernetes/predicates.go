@@ -243,6 +243,28 @@ func (r *gatewayAPIReconciler) httpRoutesForAuthenticationFilter(obj client.Obje
 	return len(httpRouteList.Items) != 0
 }
 
+// customGRPCRoutesForCorsFilter tries finding CustomGRPCRoute referents of the provided
+// CorsFilter and returns true if any exist.
+func (r *gatewayAPIReconciler) customGRPCRoutesForCorsFilter(obj client.Object) bool {
+	ctx := context.Background()
+	filter, ok := obj.(*egv1a1.CorsFilter)
+
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	// Check if the CorsFilter belongs to a managed CustomGRPCRoute.
+	customGRPCRouteList := &gwapiv1a2.CustomGRPCRouteList{}
+	if err := r.client.List(ctx, customGRPCRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(corsFilterCustomGRPCRouteIndex, utils.NamespacedName(filter).String()),
+	}); err != nil {
+		r.log.Error(err, "unable to find associated CustomGRPCRoutes")
+		return false
+	}
+	return len(customGRPCRouteList.Items) != 0
+}
+
 // httpRoutesForRateLimitFilter tries finding HTTPRoute referents of the provided
 // RateLimitFilter and returns true if any exist.
 func (r *gatewayAPIReconciler) httpRoutesForRateLimitFilter(obj client.Object) bool {

@@ -36,6 +36,8 @@ const (
 	// wellKnownPortShift is the constant added to the well known port (1-1023)
 	// to convert it into an ephemeral port.
 	wellKnownPortShift = 10000
+
+	KindCustomGRPCRoute = "CustomGRPCRoute"
 )
 
 var _ TranslatorManager = (*Translator)(nil)
@@ -64,6 +66,9 @@ type Translator struct {
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
 
+	// GlobalCorsEnabled is true when global
+	// cors global has been configured by the admin.
+	GlobalCorsEnabled bool
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
@@ -79,10 +84,12 @@ type TranslateResult struct {
 func newTranslateResult(gateways []*GatewayContext,
 	httpRoutes []*HTTPRouteContext,
 	grpcRoutes []*GRPCRouteContext,
+	customgrpcRoutes []*CustomGRPCRouteContext,
 	tlsRoutes []*TLSRouteContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
+
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
 		InfraIR: infraIR,
@@ -96,6 +103,9 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 	for _, grpcRoute := range grpcRoutes {
 		translateResult.GRPCRoutes = append(translateResult.GRPCRoutes, grpcRoute.GRPCRoute)
+	}
+	for _, customgrpcRoute := range customgrpcRoutes {
+		translateResult.CustomGRPCRoutes = append(translateResult.CustomGRPCRoutes, customgrpcRoute.CustomGRPCRoute)
 	}
 	for _, tlsRoute := range tlsRoutes {
 		translateResult.TLSRoutes = append(translateResult.TLSRoutes, tlsRoute.TLSRoute)
@@ -132,6 +142,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant GRPCRoutes.
 	grpcRoutes := t.ProcessGRPCRoutes(resources.GRPCRoutes, gateways, resources, xdsIR)
 
+	// Process all relevant GRPCRoutes.
+	customgrpcRoutes := t.ProcessCustomGRPCRoutes(resources.CustomGRPCRoutes, gateways, resources, xdsIR)
+
 	// Process all relevant TLSRoutes.
 	tlsRoutes := t.ProcessTLSRoutes(resources.TLSRoutes, gateways, resources, xdsIR)
 
@@ -144,7 +157,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, customgrpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

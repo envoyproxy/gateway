@@ -803,6 +803,6 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/global_rate_limiting
 [RateLimitFilter]: https://gateway.envoyproxy.io/latest/api/extension_types.html#ratelimitfilter
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway
+[EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/config/v1alpha1/envoygateway_types.go
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter

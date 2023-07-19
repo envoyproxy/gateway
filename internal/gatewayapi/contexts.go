@@ -101,7 +101,9 @@ func (l *ListenerContext) AttachedRoutes() int32 {
 func (l *ListenerContext) AllowsKind(kind v1beta1.RouteGroupKind) bool {
 	for _, allowed := range l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds {
 		if GroupDerefOr(allowed.Group, "") == GroupDerefOr(kind.Group, "") &&
-			allowed.Kind == kind.Kind {
+			// (allowed.Kind == kind.Kind || (string(kind.Kind) == KindGRPCRoute && string(allowed.Kind) == KindHTTPRoute) || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
+			// (allowed.Kind == kind.Kind || (string(kind.Kind) == KindCustomGRPCRoute && string(allowed.Kind) == KindHTTPRoute)) {
+			(allowed.Kind == kind.Kind) {
 			return true
 		}
 	}
@@ -354,11 +356,12 @@ type RouteParentContext struct {
 
 	// TODO: [v1alpha2-v1beta1] This can probably be replaced with
 	// a single field pointing to *v1beta1.RouteStatus.
-	HTTPRoute *v1beta1.HTTPRoute
-	GRPCRoute *v1alpha2.GRPCRoute
-	TLSRoute  *v1alpha2.TLSRoute
-	TCPRoute  *v1alpha2.TCPRoute
-	UDPRoute  *v1alpha2.UDPRoute
+	customgrpcRoute *v1alpha2.CustomGRPCRoute
+	HTTPRoute       *v1beta1.HTTPRoute
+	GRPCRoute       *v1alpha2.GRPCRoute
+	TLSRoute        *v1alpha2.TLSRoute
+	TCPRoute        *v1alpha2.TCPRoute
+	UDPRoute        *v1alpha2.UDPRoute
 
 	routeParentStatusIdx int
 	listeners            []*ListenerContext

@@ -6,20 +6,31 @@
 package translator
 
 import (
+	"encoding/base64"
 	"errors"
+	"log"
 
 	xdscore "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	tls_inspectorv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
+	v31 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
+	luav3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/any"
+	"github.com/golang/protobuf/ptypes/wrappers"
+
+	health_check "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/health_check/v3"
+	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+
+	grpc_json_transcoder "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/grpc_json_transcoder/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/ptypes/wrappers"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
@@ -90,6 +101,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	} else {
 		statPrefix = "http"
 	}
+
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -117,7 +129,58 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		Tracing: hcmTracing,
 	}
 
+	healthCheck := &health_check.HealthCheck{
+		PassThroughMode: &wrappers.BoolValue{Value: false},
+		Headers: []*v31.HeaderMatcher{
+			{
+				Name: ":path",
+				HeaderMatchSpecifier: &v31.HeaderMatcher_ExactMatch{
+					ExactMatch: "/status",
+				},
+			},
+		},
+	}
+
+	healthCheckAny, err := anypb.New(healthCheck)
+	if err != nil {
+		return err
+	}
+
+	healthChecFilter := &hcmv3.HttpFilter{
+		Name:       wellknown.HealthCheck,
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: healthCheckAny},
+	}
+
+	mgr.HttpFilters = append([]*hcmv3.HttpFilter{healthChecFilter}, mgr.HttpFilters...)
+
+	for _, route := range irListener.Routes {
+		if route.CorsPolicy != nil || irListener.CorsPolicy != nil {
+			corsAny, err := anypb.New(&cors.Cors{})
+
+			if err != nil {
+				return err
+			}
+
+			corsFilter := &hcmv3.HttpFilter{
+				Name:       wellknown.CORS,
+				ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: corsAny},
+			}
+			mgr.HttpFilters = append([]*hcmv3.HttpFilter{corsFilter}, mgr.HttpFilters...)
+			break
+		}
+	}
+
+	if irListener.StripAnyHostPort {
+		mgr.StripPortMode = &hcmv3.HttpConnectionManager_StripAnyHostPort{
+			StripAnyHostPort: true,
+		}
+	}
+
 	if irListener.IsHTTP2 {
+		mgr.CodecType = hcmv3.HttpConnectionManager_AUTO
+
+		// Add HTTP2 protocol options
+		mgr.Http2ProtocolOptions = http2ProtocolOptions()
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)
@@ -139,6 +202,57 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
 		return err
 	}
+
+	// add GrpcJSONTranscoderFilter to httpFilters
+	if irListener.GrpcJSONTranscoderFilters != nil || len(irListener.GrpcJSONTranscoderFilters) > 0 {
+		for _, filter := range irListener.GrpcJSONTranscoderFilters {
+			bytt, err := base64.StdEncoding.DecodeString(filter.ProtoDescriptorBin)
+
+			if err != nil {
+				return err
+			}
+
+			grpcJSONTranscoderAny, err := anypb.New(&grpc_json_transcoder.GrpcJsonTranscoder{
+				AutoMapping:       filter.AutoMapping,
+				ConvertGrpcStatus: true,
+				Services:          filter.Services,
+				PrintOptions: &grpc_json_transcoder.GrpcJsonTranscoder_PrintOptions{
+					AddWhitespace:              filter.PrintOptions.AddWhitespace,
+					AlwaysPrintPrimitiveFields: filter.PrintOptions.AlwaysPrintPrimitiveFields,
+					AlwaysPrintEnumsAsInts:     filter.PrintOptions.AlwaysPrintEnumsAsInts,
+					PreserveProtoFieldNames:    filter.PrintOptions.PreserveProtoFieldNames,
+				},
+				IgnoreUnknownQueryParameters: true,
+				DescriptorSet: &grpc_json_transcoder.GrpcJsonTranscoder_ProtoDescriptorBin{
+					ProtoDescriptorBin: bytt,
+				},
+			})
+
+			if err != nil {
+				// if there is an error, we should ignore this filter and log
+				log.Printf("error while adding GrpcJSONTranscoderFilter: %v", err)
+				return err
+			} else {
+				grpcJSONTranscoderFilter := &hcmv3.HttpFilter{
+					Name:       wellknown.GRPCJSONTranscoder,
+					ConfigType: &hcmv3.HttpFilter_TypedConfig{TypedConfig: grpcJSONTranscoderAny},
+				}
+				mgr.HttpFilters = append([]*hcmv3.HttpFilter{grpcJSONTranscoderFilter}, mgr.HttpFilters...)
+			}
+		}
+	}
+
+	luaFilterConfigHandlerErrors := &hcmv3.HttpFilter{
+		Name: "envoy.filters.http.lua",
+		ConfigType: &hcmv3.HttpFilter_TypedConfig{
+			TypedConfig: &any.Any{
+				TypeUrl: "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+				Value:   getLuaFilterConfigHandlerErrors(),
+			},
+		},
+	}
+
+	mgr.HttpFilters = append([]*hcmv3.HttpFilter{luaFilterConfigHandlerErrors}, mgr.HttpFilters...)
 
 	// Make sure the router filter is the last one.
 	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
@@ -283,7 +397,7 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 		}
 	}
 
-	tlsInspector := &tls_inspectorv3.TlsInspector{}
+	tlsInspector := &tls_inspector.TlsInspector{}
 	tlsInspectorAny, err := anypb.New(tlsInspector)
 	if err != nil {
 		return err
@@ -417,4 +531,49 @@ func makeConfigSource() *corev3.ConfigSource {
 		Ads: &corev3.AggregatedConfigSource{},
 	}
 	return source
+}
+
+func getLuaFilterConfigHandlerErrors() []byte {
+	// add log info to lua filter when traffic is redirected
+	luaConfig := &luav3.Lua{
+		InlineCode: `
+		function envoy_on_response(response_handle)
+			-- Get status and error message information
+			local grpc_message = response_handle:headers():get("grpc-message")
+			local grpc_status = response_handle:headers():get("grpc-status")
+			local status_code = tonumber(response_handle:headers():get(":status"))
+
+			-- Only handle status codes greater than 300
+			if status_code < 300 then
+				return
+			end
+
+			-- Check if the response has a body
+			local body_handle = response_handle:body()
+			if not body_handle then
+				return
+			end
+
+			local body_size = body_handle:length()
+			local body_bytes = body_handle:getBytes(0, body_size)
+
+			-- Convert body_bytes to string
+			local raw_json_text = tostring(body_bytes)
+
+			local modified_json_text = string.gsub(raw_json_text, '"code":%s*%d+', '"code": ' .. status_code)
+
+			local content_length = body_handle:setBytes(modified_json_text)
+
+			-- Modify the response header
+			response_handle:headers():replace("content-length", content_length)
+		end
+        `,
+	}
+
+	luaConfigAny, err := ptypes.MarshalAny(luaConfig)
+	if err != nil {
+		log.Fatal("Failed to marshal Lua filter config: ", err)
+	}
+
+	return luaConfigAny.Value
 }

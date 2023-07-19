@@ -6,6 +6,11 @@ xds:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
         ignorePortInHostMatching: true
         name: default-eg-http
+        responseHeadersToAdd:
+        - header:
+            key: x-request-id
+            value: "%REQ(X-REQUEST-ID)%"
+          append: false
         virtualHosts:
         - domains:
           - '*'
@@ -24,6 +29,11 @@ xds:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
         ignorePortInHostMatching: true
         name: default-eg-grpc
+        responseHeadersToAdd:
+        - header:
+            key: x-request-id
+            value: "%REQ(X-REQUEST-ID)%"
+          append: false
         virtualHosts:
         - domains:
           - '*'

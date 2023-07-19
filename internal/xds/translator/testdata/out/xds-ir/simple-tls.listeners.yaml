@@ -14,6 +14,31 @@
           initialStreamWindowSize: 65536
           maxConcurrentStreams: 100
         httpFilters:
+        - name: envoy.filters.http.lua
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inlineCode: "\n\t\tfunction envoy_on_response(response_handle)\n\t\t\t--
+              Get status and error message information\n\t\t\tlocal grpc_message =
+              response_handle:headers():get(\"grpc-message\")\n\t\t\tlocal grpc_status
+              = response_handle:headers():get(\"grpc-status\")\n\t\t\tlocal status_code
+              = tonumber(response_handle:headers():get(\":status\"))\n\n\t\t\t-- Only
+              handle status codes greater than 300\n\t\t\tif status_code < 300 then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\t--
+              Check if the response has a body\n\t\t\tlocal body_handle = response_handle:body()\n\t\t\tif
+              not body_handle then\n\t\t\t\treturn\n\t\t\tend\n\n\t\t\tlocal body_size
+              = body_handle:length()\n\t\t\tlocal body_bytes = body_handle:getBytes(0,
+              body_size)\n\n\t\t\t-- Convert body_bytes to string\n\t\t\tlocal raw_json_text
+              = tostring(body_bytes)\n\n\t\t\tlocal modified_json_text = string.gsub(raw_json_text,
+              '\"code\":%s*%d+', '\"code\": ' .. status_code)\n\n\t\t\tlocal content_length
+              = body_handle:setBytes(modified_json_text)\n\n\t\t\t-- Modify the response
+              header\n\t\t\tresponse_handle:headers():replace(\"content-length\",
+              content_length)\n\t\tend\n        "
+        - name: envoy.filters.http.health_check
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+            headers:
+            - exactMatch: /status
+              name: :path
+            passThroughMode: false
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

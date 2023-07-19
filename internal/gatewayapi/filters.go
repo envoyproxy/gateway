@@ -60,6 +60,7 @@ type HTTPFilterIR struct {
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
 
+	CorsPolicy    *ir.CorsPolicy
 	ExtensionRefs []*ir.UnstructuredRef
 }
 
@@ -136,6 +137,8 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case v1alpha2.GRPCRouteFilterRequestMirror:
 			t.processRequestMirrorFilter(filter.RequestMirror, httpFiltersContext, resources)
+		case v1alpha2.GRPCRouteFilterExtensionRef:
+			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}
@@ -661,6 +664,40 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 	}
 
 	filterNs := filterContext.Route.GetNamespace()
+
+	// Set the filter context and return early if a matching CorsFilter is found.
+
+	if string(extFilter.Kind) == egv1a1.KindCorsFilter {
+		for _, corsFilter := range resources.CorsFilters {
+			if corsFilter.Namespace == filterNs &&
+				corsFilter.Name == string(extFilter.Name) {
+				allowOrigins := make([]*ir.StringMatch, 0)
+				for _, allowOrigin := range corsFilter.Spec.CorsPolicy.AllowOrigins {
+					switch {
+					case allowOrigin.Exact != nil:
+						m := &ir.StringMatch{Exact: allowOrigin.Exact}
+						allowOrigins = append(allowOrigins, m)
+					case allowOrigin.Prefix != nil:
+						m := &ir.StringMatch{Prefix: allowOrigin.Prefix}
+						allowOrigins = append(allowOrigins, m)
+					default:
+						return
+					}
+				}
+				filterContext.HTTPFilterIR.CorsPolicy = &ir.CorsPolicy{
+					AllowOrigins:     allowOrigins,
+					AllowMethods:     corsFilter.Spec.CorsPolicy.AllowMethods,
+					AllowHeaders:     corsFilter.Spec.CorsPolicy.AllowHeaders,
+					ExposeHeaders:    corsFilter.Spec.CorsPolicy.ExposeHeaders,
+					MaxAge:           corsFilter.Spec.CorsPolicy.MaxAge,
+					AllowCredentials: corsFilter.Spec.CorsPolicy.AllowCredentials,
+				}
+				return
+			}
+
+		}
+	}
+
 	// Set the filter context and return early if a matching AuthenticationFilter is found.
 	if string(extFilter.Kind) == egv1a1.KindAuthenticationFilter {
 		for _, authenFilter := range resources.AuthenticationFilters {

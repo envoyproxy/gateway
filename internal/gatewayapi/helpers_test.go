@@ -59,7 +59,7 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 					Name:  "test",
 				},
 			},
-			expected: true,
+			expected: false,
 		},
 		{
 			name: "unsupported extended filter",

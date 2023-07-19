@@ -17,7 +17,7 @@ type Update[K comparable, V any] watchable.Update[K, V]
 // updates.
 //
 // This is better than simply iterating over snapshot.Updates because
-// it handles the case where the watchable.Map already contains
+// it handles the case where the the watchable.Map already contains
 // entries before .Subscribe is called.
 func HandleSubscription[K comparable, V any](
 	subscription <-chan watchable.Snapshot[K, V],

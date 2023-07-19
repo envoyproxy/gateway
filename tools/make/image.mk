@@ -23,6 +23,13 @@ ifeq (${IMAGES},)
   $(error Could not determine IMAGES, set ROOT_DIR or run in source dir)
 endif
 
+.PHONY: image.release
+image.release: ## Build docker images for release. See Option PLATFORM and BINS.
+	@$(LOG_TARGET) 
+	$(DOCKER) pull $(REGISTRY)/gateway-dev:$(SHA_SHORT)
+	$(DOCKER) tag $(REGISTRY)/gateway-dev:$(SHA_SHORT) $(REGISTRY)/gateway-dev:$(RELEASE_TAG)
+	$(DOCKER) push $(REGISTRY)/gateway-dev:$(RELEASE_TAG)
+
 .PHONY: image.verify
 image.verify:
 	@$(LOG_TARGET)

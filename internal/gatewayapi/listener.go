@@ -6,13 +6,19 @@
 package gatewayapi
 
 import (
+	"encoding/base64"
 	"fmt"
 
+	"google.golang.org/protobuf/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+
+	descpb "google.golang.org/protobuf/types/descriptorpb"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -29,6 +35,17 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
+
+	var corsGlobal *egv1a1.CorsPolicy
+	if t.GlobalCorsEnabled {
+		for _, corsFilter := range resources.CorsFilters {
+			if corsFilter.Spec.Type == egv1a1.GlobalCorsType {
+				corsGlobal = &corsFilter.Spec.CorsPolicy
+				break
+			}
+		}
+	}
+
 	for _, gateway := range gateways {
 		// init IR per gateway
 		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
@@ -67,7 +84,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
 				}
 			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
-				t.validateAllowedRoutes(listener, KindHTTPRoute, KindGRPCRoute)
+				t.validateAllowedRoutes(listener, KindHTTPRoute, KindGRPCRoute, KindCustomGRPCRoute)
 			case v1beta1.TCPProtocolType:
 				t.validateAllowedRoutes(listener, KindTCPRoute)
 			case v1beta1.UDPProtocolType:
@@ -116,6 +133,84 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
+				if t.GlobalCorsEnabled {
+					allowOrigins := make([]*ir.StringMatch, 0)
+					for _, allowOrigin := range corsGlobal.AllowOrigins {
+						switch {
+						case allowOrigin.Exact != nil:
+							m := &ir.StringMatch{Exact: allowOrigin.Exact}
+							allowOrigins = append(allowOrigins, m)
+						case allowOrigin.Prefix != nil:
+							m := &ir.StringMatch{Prefix: allowOrigin.Prefix}
+							allowOrigins = append(allowOrigins, m)
+						default:
+							return
+						}
+
+					}
+
+					irListener.CorsPolicy = &ir.CorsPolicy{
+						AllowOrigins:     allowOrigins,
+						AllowCredentials: corsGlobal.AllowCredentials,
+						AllowHeaders:     corsGlobal.AllowHeaders,
+						AllowMethods:     corsGlobal.AllowMethods,
+						ExposeHeaders:    corsGlobal.ExposeHeaders,
+						MaxAge:           corsGlobal.MaxAge,
+					}
+				}
+
+				if resources.GrpcJSONTranscoderFilters != nil {
+					for _, grpcJSONTranscoderFilter := range resources.GrpcJSONTranscoderFilters {
+						// loop grpcJSONTranscoderFilter.Spec.Services for check
+						servicesValid := true
+						for _, service := range grpcJSONTranscoderFilter.Spec.Services {
+							protoDescBytes, err := base64.StdEncoding.DecodeString(grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin)
+							if err != nil {
+								continue
+							}
+
+							serviceName := service
+
+							// Parse the ProtoDescriptorBin bytes
+							fdSet := &descpb.FileDescriptorSet{}
+							if err := proto.Unmarshal(protoDescBytes, fdSet); err != nil {
+								continue
+							}
+
+							// Loop through the parsed services and compare their names to the expected service name
+							found := false
+							for _, fd := range fdSet.GetFile() {
+								for _, svc := range fd.GetService() {
+									if serviceName == fmt.Sprintf("%s.%s", fd.GetPackage(), svc.GetName()) {
+										found = true
+										break
+									}
+								}
+							}
+
+							if !found {
+								servicesValid = false
+								break
+							}
+						}
+
+						if servicesValid {
+							grpcJSONTranscoderFilterAdd := &ir.GrpcJSONTranscoderFilter{
+								ProtoDescriptorBin: grpcJSONTranscoderFilter.Spec.ProtoDescriptorBin,
+								Services:           grpcJSONTranscoderFilter.Spec.Services,
+								AutoMapping:        grpcJSONTranscoderFilter.Spec.AutoMapping,
+								PrintOptions: &ir.PrintOptions{
+									AddWhitespace:              grpcJSONTranscoderFilter.Spec.PrintOptions.AddWhitespace,
+									AlwaysPrintPrimitiveFields: grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintPrimitiveFields,
+									AlwaysPrintEnumsAsInts:     grpcJSONTranscoderFilter.Spec.PrintOptions.AlwaysPrintEnumsAsInts,
+									PreserveProtoFieldNames:    grpcJSONTranscoderFilter.Spec.PrintOptions.PreserveProtoFieldNames,
+								},
+							}
+							irListener.GrpcJSONTranscoderFilters = append(irListener.GrpcJSONTranscoderFilters, grpcJSONTranscoderFilterAdd)
+						}
+					}
+				}
+
 				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
 			}
 

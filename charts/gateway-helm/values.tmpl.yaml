@@ -1,5 +1,6 @@
 deployment:
   envoyGateway:
+    imagePullSecret: artifactory-reader
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'

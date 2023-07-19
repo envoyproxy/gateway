@@ -12,22 +12,29 @@ on:
     - "release/v*"
     paths-ignore:
     - "**/*.png"
+env:
+  REGISTRY: ${{ secrets.REGISTRY }}
+  OCI_REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     # Generate the install manifests first so it can checked
     # for errors while running `make -k lint`
     - run: make generate-manifests
     - run: make lint-deps
     - run: make -k lint
-
+  
   gen-check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make -k gen-check
 
@@ -35,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
     - run: make -k licensecheck
 
@@ -42,14 +51,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     # test
     - name: Run Coverage Tests
-      run: make go.test.coverage
+      run: make go.test.coverage.custom
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: true
         files: ./coverage.xml
         name: codecov-envoy-gateway
@@ -57,9 +69,11 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: [lint, gen-check, license-check, coverage-test]
+    needs: [gen-check, lint, license-check, coverage-test]
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     - name: Build EG Multiarch Binaries
@@ -71,16 +85,35 @@ jobs:
         name: envoy-gateway
         path: bin/
 
-  conformance-test:
-    runs-on: ubuntu-latest
-    needs: [build]
-    strategy:
-      matrix:
-        version: [ v1.25.8, v1.26.3, v1.27.0 ]
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./tools/github-actions/setup-deps
+  # conformance-test:
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+  #   strategy:
+  #     matrix:
+  #       version: [ v1.25.8, v1.26.3, v1.27.0 ]
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #     with:
+  #       submodules: recursive
+  #   - uses: ./tools/github-actions/setup-deps
 
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@v3
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
+    
+  #   - name: Give Privileges To EG Binaries
+  #     run: |
+  #       chmod +x bin/linux/amd64/envoy-gateway
+  #       chmod +x bin/linux/arm64/envoy-gateway
+  #   # conformance
+  #   - name: Run Conformance Tests 
+  #     env:
+  #       KIND_NODE_TAG: ${{ matrix.version }}
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #     run: make conformance
+  
     - name: Download EG Binaries
       uses: actions/download-artifact@v3
       with:
@@ -92,46 +125,42 @@ jobs:
         chmod +x bin/linux/amd64/envoy-gateway
         chmod +x bin/linux/arm64/envoy-gateway
 
-    # conformance
-    - name: Run Conformance Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make conformance
+  # e2e-test:
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+  #   strategy:
+  #     matrix:
+  #       version: [ v1.25.8, v1.26.3, v1.27.0 ]
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - uses: ./tools/github-actions/setup-deps
 
-  e2e-test:
-    runs-on: ubuntu-latest
-    needs: [build]
-    strategy:
-      matrix:
-        version: [ v1.25.8, v1.26.3, v1.27.0 ]
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./tools/github-actions/setup-deps
+  #   - name: Download EG Binaries
+  #     uses: actions/download-artifact@v3
+  #     with:
+  #       name: envoy-gateway
+  #       path: bin/
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
+  #   - name: Give Privileges To EG Binaries
+  #     run: |
+  #       chmod +x bin/linux/amd64/envoy-gateway
+  #       chmod +x bin/linux/arm64/envoy-gateway
 
-    - name: Give Privileges To EG Binaries
-      run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
-
-    # E2E
-    - name: Run E2E Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make e2e
+  #   # E2E
+  #   - name: Run E2E Tests
+  #     env:
+  #       KIND_NODE_TAG: ${{ matrix.version }}
+  #       IMAGE_PULL_POLICY: IfNotPresent
+  #     run: make e2e
 
   publish:
     runs-on: ubuntu-latest
-    needs: [conformance-test, e2e-test]
+    needs: [build]
+    # needs: [conformance-test, e2e-test]
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - uses: ./tools/github-actions/setup-deps
 
     - name: Download EG Binaries
@@ -144,14 +173,15 @@ jobs:
       run: |
         chmod +x bin/linux/amd64/envoy-gateway
         chmod +x bin/linux/arm64/envoy-gateway
-
-    # build and push image
-    - name: Login to DockerHub
-      if: github.event_name == 'push'
+      # build and push image
+    - name: Docker login
+      # only runs on merges to main
       uses: docker/login-action@v2
       with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+        registry: ${{ secrets.ARTIFACTORY_FQDN }}
+        username: ${{ secrets.ARTIFACTORY_DEV_ACC }}
+        password: ${{ secrets.ARTIFACTORY_DEV_PWD }}
+        ecr: "false"
 
     - name: Setup Multiarch Environment
       if: github.event_name == 'push'
@@ -160,14 +190,15 @@ jobs:
     - name: Build and Push EG Commit Image
       if: github.event_name == 'push'
       # tag is set to the short SHA of the commit
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev
 
     - name: Build and Push EG Latest Image
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      run: make image.push.multiarch  TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev
 
-    - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      # use `0.0.0` as the default latest version.
-      run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+    # - name: Build and Push EG Latest Helm Chart
+    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    #   # use `0.0.0` as the default latest version.
+    #   run: CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+

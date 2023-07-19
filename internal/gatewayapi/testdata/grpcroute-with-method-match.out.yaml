@@ -1,3 +1,6 @@
+CorsFilters: null
+CustomGRPCRoutes: null
+GrpcJSONTranscoderFilters: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -34,6 +37,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
 grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
@@ -96,14 +101,18 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - '*'
       isHTTP2: true
       name: envoy-gateway-gateway-1-http
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -115,7 +124,8 @@ xdsIR:
           distinct: false
           name: ""
           safeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:

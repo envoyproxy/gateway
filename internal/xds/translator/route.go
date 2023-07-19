@@ -7,18 +7,71 @@ package translator
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
+func buildXdsCorsPolicy(corsPolicy *ir.CorsPolicy) *routev3.CorsPolicy {
+	if corsPolicy == nil {
+		return nil
+	}
+
+	out := routev3.CorsPolicy{}
+
+	if len(corsPolicy.AllowOrigins) > 0 {
+		out.AllowOriginStringMatch = []*matcherv3.StringMatcher{}
+		for _, origin := range corsPolicy.AllowOrigins {
+			switch {
+			case origin.Exact != nil:
+				out.AllowOriginStringMatch = append(out.AllowOriginStringMatch, &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Exact{
+						Exact: *origin.Exact,
+					},
+				})
+			case origin.Prefix != nil:
+				out.AllowOriginStringMatch = append(out.AllowOriginStringMatch, &matcherv3.StringMatcher{
+					MatchPattern: &matcherv3.StringMatcher_Prefix{
+						Prefix: *origin.Prefix,
+					},
+				})
+			}
+
+		}
+	}
+
+	out.EnabledSpecifier = &routev3.CorsPolicy_FilterEnabled{
+		FilterEnabled: &corev3.RuntimeFractionalPercent{
+			DefaultValue: &xdstype.FractionalPercent{
+				Numerator:   100,
+				Denominator: xdstype.FractionalPercent_HUNDRED,
+			},
+		},
+	}
+
+	out.AllowCredentials = &wrapperspb.BoolValue{Value: corsPolicy.AllowCredentials}
+	out.AllowHeaders = strings.Join(corsPolicy.AllowHeaders, ",")
+	out.AllowMethods = strings.Join(corsPolicy.AllowMethods, ",")
+	out.ExposeHeaders = strings.Join(corsPolicy.ExposeHeaders, ",")
+
+	if corsPolicy.MaxAge != 0 {
+		out.MaxAge = strconv.FormatInt(corsPolicy.MaxAge, 10)
+	}
+
+	return &out
+}
+
 func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *routev3.Route {
+
 	router := &routev3.Route{
 		Name:  httpRoute.Name,
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
@@ -60,10 +113,16 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
 			routeAction := buildXdsRouteAction(httpRoute.Name)
+
 			if len(httpRoute.Mirrors) > 0 {
 				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
 			}
+
 			router.Action = &routev3.Route_Route{Route: routeAction}
+		}
+
+		if httpRoute.CorsPolicy != nil {
+			router.Action.(*routev3.Route_Route).Route.Cors = buildXdsCorsPolicy(httpRoute.CorsPolicy)
 		}
 	}
 
@@ -321,3 +380,5 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 
 	return headerValueOptions
 }
+
+// buildXdsCorsPolicy builds a CorsPolicy from the given Cors object.

@@ -141,7 +141,14 @@ type HTTPListener struct {
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
-	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
+	// CorsPolicy defines the schema for CORS policy.
+	CorsPolicy *CorsPolicy
+	// GrpcJSONTranscoderFilters is a list of filters that will be applied to the listener.
+	// This is used to enable gRPC-JSON transcoding.
+	GrpcJSONTranscoderFilters []*GrpcJSONTranscoderFilter
+	// StripAnyHostPort strips off the port section from the Host/Authority header which have this string format - host:port.
+	StripAnyHostPort bool
+	IsHTTP2          bool `json:"isHTTP2" yaml:"isHTTP2"`
 }
 
 // Validate the fields within the HTTPListener structure
@@ -237,6 +244,8 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
+	// CorsPolicy defines the schema for CORS policy.
+	CorsPolicy *CorsPolicy
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
 	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
@@ -718,6 +727,39 @@ func (h UDPListener) Validate() error {
 		}
 	}
 	return errs
+}
+
+// GrpcJSONTranscoderFilter
+// +k8s:deepcopy-gen=true
+type GrpcJSONTranscoderFilter struct {
+	ProtoDescriptorBin string
+	Services           []string
+	AutoMapping        bool
+	PrintOptions       *PrintOptions
+}
+
+// +k8s:deepcopy-gen=true
+type PrintOptions struct {
+	AddWhitespace              bool
+	AlwaysPrintPrimitiveFields bool
+	AlwaysPrintEnumsAsInts     bool
+	PreserveProtoFieldNames    bool
+}
+
+// Cors
+// +k8s:deepcopy-gen=true
+type CorsPolicy struct {
+	AllowOrigins []*StringMatch
+
+	AllowMethods []string
+
+	AllowHeaders []string
+
+	ExposeHeaders []string
+
+	MaxAge int64
+
+	AllowCredentials bool
 }
 
 // RateLimit holds the rate limiting configuration.

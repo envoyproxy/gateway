@@ -16,6 +16,8 @@ spec:
       labels:
         app: certgen
     spec:
+      imagePullSecrets:
+        - name: artifactory-reader
       containers:
       - command:
         - envoy-gateway

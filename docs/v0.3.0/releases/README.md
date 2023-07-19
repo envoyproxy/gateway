@@ -34,7 +34,7 @@ In order to align with the Envoy Proxy [release schedule][], Envoy Gateway relea
 | Version |  Expected   |   Actual    | Difference | End of Life |
 |:-------:|:-----------:|:-----------:|:----------:|:-----------:|
 |  0.2.0  | 2022/10/22  | 2022/10/20  |   -2 day   |  2023/4/20  |
-|  0.3.0  | 2023/01/22  | 2023/02/09  |   +17 day  |  2023/08/09 |
+|  0.3.0  | 2023/01/22  |             |            |             |
 
 [v2.0.0 spec]: https://semver.org/spec/v2.0.0.html
 [release guide]: ../dev/releasing.md

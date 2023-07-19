@@ -1,4 +1,7 @@
 {
+  "CustomGRPCRoutes": null,
+  "CorsFilters": null,
+  "GrpcJSONTranscoderFilters": null,
   "xds": {
     "default-eg": {
       "@type": "type.googleapis.com/envoy.admin.v3.RoutesConfigDump",
@@ -8,6 +11,15 @@
             "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
             "ignorePortInHostMatching": true,
             "name": "default-eg-http",
+            "responseHeadersToAdd": [
+              {
+                "append": false,
+                "header": {
+                  "key": "x-request-id",
+                  "value": "%REQ(X-REQUEST-ID)%"
+                }
+              }
+            ],
             "virtualHosts": [
               {
                 "domains": [
@@ -47,6 +59,15 @@
             "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
             "ignorePortInHostMatching": true,
             "name": "default-eg2-http",
+            "responseHeadersToAdd": [
+              {
+                "append": false,
+                "header": {
+                  "key": "x-request-id",
+                  "value": "%REQ(X-REQUEST-ID)%"
+                }
+              }
+            ],
             "virtualHosts": [
               {
                 "domains": [

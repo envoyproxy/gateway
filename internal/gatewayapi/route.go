@@ -25,6 +25,7 @@ var (
 type RoutesTranslator interface {
 	ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*HTTPRouteContext
 	ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*GRPCRouteContext
+	ProcessCustomGRPCRoutes(customgrpcRoutes []*v1alpha2.CustomGRPCRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*CustomGRPCRouteContext
 	ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TLSRouteContext
 	ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*TCPRouteContext
 	ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways []*GatewayContext, resources *Resources, xdsIR XdsIRMap) []*UDPRouteContext
@@ -260,6 +261,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
 	// Add the redirect filter or direct response that were created earlier to all the irRoutes
+
 	if httpFiltersContext.RedirectResponse != nil {
 		irRoute.Redirect = httpFiltersContext.RedirectResponse
 	}
@@ -289,6 +291,9 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	}
 	if httpFiltersContext.RateLimit != nil {
 		irRoute.RateLimit = httpFiltersContext.RateLimit
+	}
+	if httpFiltersContext.CorsPolicy != nil {
+		irRoute.CorsPolicy = httpFiltersContext.CorsPolicy
 	}
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
@@ -525,6 +530,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
+					CorsPolicy:            routeRoute.CorsPolicy,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.

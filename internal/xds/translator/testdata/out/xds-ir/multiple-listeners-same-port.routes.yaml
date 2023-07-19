@@ -1,5 +1,10 @@
 - ignorePortInHostMatching: true
   name: first-listener
+  responseHeadersToAdd:
+  - append: false
+    header:
+      key: x-request-id
+      value: '%REQ(X-REQUEST-ID)%'
   virtualHosts:
   - domains:
     - foo.com
@@ -12,6 +17,11 @@
         cluster: first-route
 - ignorePortInHostMatching: true
   name: second-listener
+  responseHeadersToAdd:
+  - append: false
+    header:
+      key: x-request-id
+      value: '%REQ(X-REQUEST-ID)%'
   virtualHosts:
   - domains:
     - foo.net
@@ -24,6 +34,11 @@
         cluster: second-route
 - ignorePortInHostMatching: true
   name: third-listener
+  responseHeadersToAdd:
+  - append: false
+    header:
+      key: x-request-id
+      value: '%REQ(X-REQUEST-ID)%'
   virtualHosts:
   - domains:
     - example.com

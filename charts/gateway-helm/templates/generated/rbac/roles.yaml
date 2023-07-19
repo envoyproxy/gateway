@@ -45,6 +45,8 @@ rules:
   - gateway.envoyproxy.io
   resources:
   - authenticationfilters
+  - corsfilters
+  - grpcjsontranscoderfilters
   - envoypatchpolicies
   - ratelimitfilters
   verbs:
@@ -55,6 +57,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - customgrpcroutes
   - gatewayclasses
   - gateways
   - grpcroutes
@@ -73,6 +76,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
+  - customgrpcroutes/status
   - gatewayclasses/status
   - gateways/status
   - grpcroutes/status

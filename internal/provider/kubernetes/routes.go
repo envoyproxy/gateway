@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,6 +87,38 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
+
+	// An HTTPRoute may reference an AuthenticationFilter or RateLimitFilter,
+	// so add them to the resource map first (if they exist).
+	authenFilters, err := r.getAuthenticationFilters(ctx)
+	if err != nil {
+		return err
+	}
+
+	for i := range authenFilters {
+		filter := authenFilters[i]
+		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	corsFilter, err := r.getCorsFilter(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range corsFilter {
+		filter := corsFilter[i]
+		resourceMap.corsFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	rateLimitFilters, err := r.getRateLimitFilters(ctx)
+	if err != nil {
+		return err
+	}
+
+	for i := range rateLimitFilters {
+		filter := rateLimitFilters[i]
+		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -146,6 +179,51 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
 				}
+
+				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
+
+					switch string(filter.ExtensionRef.Kind) {
+					case egv1a1.KindAuthenticationFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+
+						authFilter, ok := resourceMap.authenFilters[key]
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+							continue
+						}
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
+
+					case egv1a1.KindRateLimitFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+
+						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
+						if !ok {
+							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
+							continue
+						}
+
+						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
+
+					default:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						extRefFilter, ok := resourceMap.extensionRefFilters[key]
+						if !ok {
+							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
+							continue
+						}
+						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+					}
+
+				}
 			}
 		}
 
@@ -154,6 +232,128 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		// It will be recomputed by the gateway-api layer
 		grpcRoute.Status = gwapiv1a2.GRPCRouteStatus{}
 		resourceTree.GRPCRoutes = append(resourceTree.GRPCRoutes, &grpcRoute)
+	}
+
+	return nil
+}
+
+// processCustomGRPCRoutes finds GRPCRoutes corresponding to a gatewayNamespaceName, further checks for
+// the backend references and pushes the GRPCRoutes to the resourceTree.
+func (r *gatewayAPIReconciler) processCustomGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
+	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+	customgrpcRouteList := &gwapiv1a2.CustomGRPCRouteList{}
+
+	// An HTTPRoute may reference an AuthenticationFilter or RateLimitFilter,
+	// so add them to the resource map first (if they exist).
+	authenFilters, err := r.getAuthenticationFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range authenFilters {
+		filter := authenFilters[i]
+		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	corsFilter, err := r.getCorsFilter(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range corsFilter {
+		filter := corsFilter[i]
+		resourceMap.corsFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	if err := r.client.List(ctx, customgrpcRouteList, &client.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(gatewayCustomGRPCRouteIndex, gatewayNamespaceName),
+	}); err != nil {
+		r.log.Error(err, "failed to list CustomGRPCRoutes")
+		return err
+	}
+
+	for _, customgrpcRoute := range customgrpcRouteList.Items {
+		customgrpcRoute := customgrpcRoute
+		r.log.Info("processing CustomGRPCRoute", "namespace", customgrpcRoute.Namespace, "name", customgrpcRoute.Name)
+
+		for _, rule := range customgrpcRoute.Spec.Rules {
+			for _, backendRef := range rule.BackendRefs {
+				backendRef := backendRef
+				if err := validateBackendRef(&backendRef.BackendRef); err != nil {
+					r.log.Error(err, "invalid backendRef")
+					continue
+				}
+
+				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, customgrpcRoute.Namespace)
+				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
+					Namespace: backendNamespace,
+					Name:      string(backendRef.Name),
+				}] = struct{}{}
+
+				if backendNamespace != customgrpcRoute.Namespace {
+					from := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindCustomGRPCRoute,
+						namespace: customgrpcRoute.Namespace,
+						name:      customgrpcRoute.Name,
+					}
+					to := ObjectKindNamespacedName{
+						kind:      gatewayapi.KindService,
+						namespace: backendNamespace,
+						name:      string(backendRef.Name),
+					}
+					refGrant, err := r.findReferenceGrant(ctx, from, to)
+					switch {
+					case err != nil:
+						r.log.Error(err, "failed to find ReferenceGrant")
+					case refGrant == nil:
+						r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+							"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+					default:
+						resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+						r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+							"name", refGrant.Name)
+					}
+				}
+			}
+
+			for i := range rule.Filters {
+				filter := rule.Filters[i]
+
+				if err := gatewayapi.ValidateCustomGRPCRouteFilter(&filter); err != nil {
+					r.log.Error(err, "bypassing filter rule", "index", i)
+					continue
+				}
+
+				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
+					if string(filter.ExtensionRef.Kind) == egv1a1.KindCorsFilter {
+						key := types.NamespacedName{
+							Namespace: customgrpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						filter, ok := resourceMap.corsFilters[key]
+						if !ok {
+							r.log.Error(err, "CorsFilter not found; bypassing rule", "index", i)
+							continue
+						}
+						resourceTree.CorsFilters = append(resourceTree.CorsFilters, filter)
+					} else if string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter {
+						key := types.NamespacedName{
+							// The AuthenticationFilter must be in the same namespace as the HTTPRoute.
+							Namespace: customgrpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+
+						filter, ok := resourceMap.authenFilters[key]
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+							continue
+						}
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, filter)
+					}
+				}
+			}
+		}
+
+		resourceMap.allAssociatedNamespaces[customgrpcRoute.Namespace] = struct{}{}
+		resourceTree.CustomGRPCRoutes = append(resourceTree.CustomGRPCRoutes, &customgrpcRoute)
 	}
 
 	return nil
@@ -481,4 +681,13 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	}
 
 	return nil
+}
+
+func (r *gatewayAPIReconciler) getCorsFilter(ctx context.Context) ([]egv1a1.CorsFilter, error) {
+	corsList := new(egv1a1.CorsFilterList)
+	if err := r.client.List(ctx, corsList); err != nil {
+		return nil, fmt.Errorf("failed to list CorsFilters: %v", err)
+	}
+
+	return corsList.Items, nil
 }

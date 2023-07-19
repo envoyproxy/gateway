@@ -1,3 +1,6 @@
+CorsFilters: null
+CustomGRPCRoutes: null
+GrpcJSONTranscoderFilters: null
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
@@ -84,6 +87,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -102,6 +107,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -120,6 +127,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -138,6 +147,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -156,6 +167,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -174,6 +187,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -192,6 +207,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -210,6 +227,8 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
+      - group: gateway.networking.k8s.io
+        kind: CustomGRPCRoute
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
@@ -266,14 +285,18 @@ xdsIR:
       text:
       - path: /dev/stdout
     http:
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - foo.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-1
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -285,14 +308,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - bar.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-2
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -304,14 +331,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - foo1.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-3
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -323,14 +354,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - bar1.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-4
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -342,14 +377,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - foo2.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-5
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -361,14 +400,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - bar2.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-6
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -380,14 +423,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - foo3.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-7
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:
@@ -399,14 +446,18 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-    - address: 0.0.0.0
+    - CorsPolicy: null
+      GrpcJSONTranscoderFilters: null
+      StripAnyHostPort: false
+      address: 0.0.0.0
       hostnames:
       - bar3.com
       isHTTP2: false
       name: envoy-gateway-gateway-1-http-8
       port: 10080
       routes:
-      - backendWeights:
+      - CorsPolicy: null
+        backendWeights:
           invalid: 0
           valid: 0
         destinations:

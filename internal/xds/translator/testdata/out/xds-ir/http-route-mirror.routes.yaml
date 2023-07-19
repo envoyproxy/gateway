@@ -1,5 +1,10 @@
 - ignorePortInHostMatching: true
   name: first-listener
+  responseHeadersToAdd:
+  - append: false
+    header:
+      key: x-request-id
+      value: '%REQ(X-REQUEST-ID)%'
   virtualHosts:
   - domains:
     - '*'

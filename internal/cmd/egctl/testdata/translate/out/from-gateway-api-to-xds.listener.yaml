@@ -43,6 +43,14 @@ xds:
                   initialStreamWindowSize: 65536
                   maxConcurrentStreams: 100
                 httpFilters:
+                - name: envoy.filters.http.health_check
+                  typedConfig:
+                    '@type': >-
+                      type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                    headers:
+                    - exactMatch: /status
+                      name: ':path'
+                    passThroughMode: false
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -89,11 +97,11 @@ xds:
                 - name: envoy.access_loggers.file
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    path: /dev/stdout 
                     logFormat:
                       textFormatSource:
                         inlineString: |
                           [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
-                    path: /dev/stdout
                 commonHttpProtocolOptions:
                   headersWithUnderscoresAction: REJECT_REQUEST
                 http2ProtocolOptions:
@@ -101,6 +109,14 @@ xds:
                   initialStreamWindowSize: 65536
                   maxConcurrentStreams: 100
                 httpFilters:
+                - name: envoy.filters.http.health_check
+                  typedConfig:
+                    '@type': >-
+                      type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                    headers:
+                    - exactMatch: /status
+                      name: ':path'
+                    passThroughMode: false
                 - name: envoy.filters.http.grpc_web
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb

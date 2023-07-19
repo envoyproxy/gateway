@@ -39,6 +39,21 @@ func TestGatewayAPIConformance(t *testing.T) {
 	require.NoError(t, v1beta1.AddToScheme(client.Scheme()))
 
 	cSuite := suite.New(suite.Options{
+		Client:                     client,
+		GatewayClassName:           *flags.GatewayClassName,
+		Debug:                      *flags.ShowDebug,
+		CleanupBaseResources:       *flags.CleanupBaseResources,
+		ValidUniqueListenerPorts:   validUniqueListenerPorts,
+		EnableAllSupportedFeatures: true,
+		SkipTests: []string{
+			// Remove once https://github.com/envoyproxy/gateway/issues/993 is fixed
+			tests.HTTPRouteRedirectPath.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/992 is fixed
+			tests.HTTPRouteRedirectHostAndStatus.ShortName,
+			// Remove once https://github.com/envoyproxy/gateway/issues/994 is fixed
+			tests.HTTPRouteRedirectScheme.ShortName,
+			tests.MeshBasic.ShortName,
+			tests.MeshTrafficSplit.ShortName,
 		Client:               client,
 		GatewayClassName:     *flags.GatewayClassName,
 		Debug:                *flags.ShowDebug,

@@ -289,6 +289,14 @@ xds:
                     initialStreamWindowSize: 65536
                     maxConcurrentStreams: 100
                   httpFilters:
+                  - name: envoy.filters.http.health_check
+                    typedConfig:
+                      '@type': >-
+                        type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      headers:
+                      - exactMatch: /status
+                        name: ':path'
+                      passThroughMode: false
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -347,9 +355,14 @@ xds:
                     initialStreamWindowSize: 65536
                     maxConcurrentStreams: 100
                   httpFilters:
-                  - name: envoy.filters.http.grpc_web
+                  - name: envoy.filters.http.health_check
                     typedConfig:
-                      '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
+                      '@type': >-
+                        type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      headers:
+                      - exactMatch: /status
+                        name: ':path'
+                      passThroughMode: false
                   - name: envoy.filters.http.grpc_stats
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.grpc_stats.v3.FilterConfig
@@ -502,6 +515,11 @@ xds:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
           name: default-eg-http
+          responseHeadersToAdd:
+          - header:
+              key: x-request-id
+              value: "%REQ(X-REQUEST-ID)%"
+            append: false
           virtualHosts:
           - domains:
             - '*'
@@ -520,6 +538,11 @@ xds:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
           name: default-eg-grpc
+          responseHeadersToAdd:
+          - header:
+              key: x-request-id
+              value: "%REQ(X-REQUEST-ID)%"
+            append: false
           virtualHosts:
           - domains:
             - '*'

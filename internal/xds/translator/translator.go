@@ -15,6 +15,7 @@ import (
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/tetratelabs/multierror"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -42,10 +43,6 @@ type GlobalRateLimitSettings struct {
 
 // Translate translates the XDS IR into xDS resources
 func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) {
-	if ir == nil {
-		return nil, errors.New("ir is nil")
-	}
-
 	tCtx := new(types.ResourceVersionTable)
 
 	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog, ir.Tracing); err != nil {
@@ -112,6 +109,17 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		// Create a route config if we have not found one yet
 		if xdsRouteCfg == nil {
 			xdsRouteCfg = &routev3.RouteConfiguration{
+				ResponseHeadersToAdd: []*corev3.HeaderValueOption{
+					{
+						Header: &corev3.HeaderValue{
+							Key:   "x-request-id",
+							Value: "%REQ(X-REQUEST-ID)%",
+						},
+						Append: &wrappers.BoolValue{
+							Value: false,
+						},
+					},
+				},
 				IgnorePortInHostMatching: true,
 				Name:                     httpListener.Name,
 			}
@@ -131,6 +139,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		vHost := &routev3.VirtualHost{
 			Name:    httpListener.Name,
 			Domains: httpListener.Hostnames,
+			Cors:    buildXdsCorsPolicy(httpListener.CorsPolicy),
 		}
 		protocol := DefaultProtocol
 		if httpListener.IsHTTP2 {
@@ -139,6 +148,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 		for _, httpRoute := range httpListener.Routes {
+
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 

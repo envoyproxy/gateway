@@ -54,6 +54,11 @@ const (
 	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
+
+	gatewayCustomGRPCRouteIndex    = "gatewayCustomGRPCRouteIndex"
+	serviceCustomGRPCRouteIndex    = "serviceCustomGRPCRouteIndex"
+	corsFilterCustomGRPCRouteIndex = "corsFilterCustomGRPCRouteIndex"
+	corsFilterIndex                = "corsFilterIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -121,6 +126,13 @@ type resourceMappings struct {
 	// rateLimitFilters is a map of RateLimitFilters, where the key is the
 	// namespaced name of the RateLimitFilter.
 	rateLimitFilters map[types.NamespacedName]*egv1a1.RateLimitFilter
+	// corsFilters is a map of CorsFilters, where the key is the
+	// namespaced name of the CorsFilter.
+	corsFilters map[types.NamespacedName]*egv1a1.CorsFilter
+
+	// GrpcJSONTranscoderFilters is a map of GrpcJSONTranscoderFilter, where the key is the
+	// namespaced name of the GrpcJSONTranscoderFilter.
+	grpcJSONTranscoderFilters map[types.NamespacedName]*egv1a1.GrpcJSONTranscoderFilter
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
@@ -129,12 +141,14 @@ type resourceMappings struct {
 
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
-		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
-		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
-		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
-		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
-		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
+		allAssociatedNamespaces:   map[string]struct{}{},
+		allAssociatedBackendRefs:  map[types.NamespacedName]struct{}{},
+		allAssociatedRefGrants:    map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
+		authenFilters:             map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
+		rateLimitFilters:          map[types.NamespacedName]*egv1a1.RateLimitFilter{},
+		corsFilters:               map[types.NamespacedName]*egv1a1.CorsFilter{},
+		grpcJSONTranscoderFilters: map[types.NamespacedName]*egv1a1.GrpcJSONTranscoderFilter{},
+		extensionRefFilters:       map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
 
@@ -145,6 +159,20 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
 		return reconcile.Result{}, fmt.Errorf("error listing gatewayclasses: %v", err)
 	}
+
+	// get all the corsfilter
+	var corsFilters egv1a1.CorsFilterList
+	if err := r.client.List(ctx, &corsFilters); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing corsfilters: %v", err)
+	}
+
+	// get all the grpcjsontranscoderfilter
+	var grpcJSONTranscoderFilters egv1a1.GrpcJSONTranscoderFilterList
+	if err := r.client.List(ctx, &grpcJSONTranscoderFilters); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing grpcjsontranscoderfilters: %v", err)
+	}
+
+	// TODO: add a check to see if the global cors is valid
 
 	var cc controlledClasses
 
@@ -186,6 +214,20 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Initialize resource types.
 	resourceTree := gatewayapi.NewResources()
 	resourceMap := newResourceMapping()
+
+	// add the global cors filter when corsFilters is not empty
+	if len(corsFilters.Items) > 0 {
+		for i := range corsFilters.Items {
+			resourceTree.CorsFilters = append(resourceTree.CorsFilters, &corsFilters.Items[i])
+		}
+	}
+
+	// add the grpcjsontranscoder filter when grpcJSONTranscoderFilters is not empty
+	if len(grpcJSONTranscoderFilters.Items) > 0 {
+		for i := range grpcJSONTranscoderFilters.Items {
+			resourceTree.GrpcJSONTranscoderFilters = append(resourceTree.GrpcJSONTranscoderFilters, &grpcJSONTranscoderFilters.Items[i])
+		}
+	}
 
 	if err := r.processGateways(ctx, acceptedGC, resourceMap, resourceTree); err != nil {
 		return reconcile.Result{}, err
@@ -497,6 +539,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 			return err
 		}
 
+		// Get CustomGRPCRoute objects and check if it exists.
+		if err := r.processCustomGRPCRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+			return err
+		}
+
 		// Get TCPRoute objects and check if it exists.
 		if err := r.processTCPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
 			return err
@@ -596,6 +643,28 @@ func rateLimitFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return filters
 }
 
+func corsFilterCustomGRPCRouteIndexFunc(rawObj client.Object) []string {
+	customgrpcproute := rawObj.(*gwapiv1a2.CustomGRPCRoute)
+	var filters []string
+	for _, rule := range customgrpcproute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+
+			if gatewayapi.IsCorsCustomGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateCustomGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: customgrpcproute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
+}
+
 func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
 	var gateways []string
@@ -649,8 +718,28 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	return nil
 }
 
+// addCustomGRPCRouteIndexers adds indexing on CustomGRPCRoute, for Service objects that are
+// referenced in CustomGRPCRoute objects via `.spec.rules.backendRefs`. This helps in
+// querying for CustomGRPCRoute that are affected by a particular Service CRUD.
+func addCustomGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.CustomGRPCRoute{}, gatewayCustomGRPCRouteIndex, gatewayCustomGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.CustomGRPCRoute{}, serviceCustomGRPCRouteIndex, serviceCustomGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.CustomGRPCRoute{}, corsFilterCustomGRPCRouteIndex, corsFilterCustomGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+
 	var gateways []string
 	for _, parent := range grpcroute.Spec.ParentRefs {
 		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
@@ -667,6 +756,27 @@ func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 	return gateways
 }
 
+func gatewayCustomGRPCRouteIndexFunc(rawObj client.Object) []string {
+	customgrpcroute := rawObj.(*gwapiv1a2.CustomGRPCRoute)
+
+	var gateways []string
+	for _, parent := range customgrpcroute.Spec.ParentRefs {
+		if parent.Kind == nil || string(*parent.Kind) == gatewayapi.KindGateway {
+
+			// If an explicit Gateway namespace is not provided, use the CustomGRPCRoute namespace to
+			// lookup the provided Gateway Name.
+			gateways = append(gateways,
+				types.NamespacedName{
+					Namespace: gatewayapi.NamespaceDerefOr(parent.Namespace, customgrpcroute.Namespace),
+					Name:      string(parent.Name),
+				}.String(),
+			)
+		}
+	}
+
+	return gateways
+}
+
 func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
 	var services []string
@@ -678,6 +788,26 @@ func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
 				services = append(services,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, grpcroute.Namespace),
+						Name:      string(backend.Name),
+					}.String(),
+				)
+			}
+		}
+	}
+	return services
+}
+
+func serviceCustomGRPCRouteIndexFunc(rawObj client.Object) []string {
+	customgrpcroute := rawObj.(*gwapiv1a2.CustomGRPCRoute)
+	var services []string
+	for _, rule := range customgrpcroute.Spec.Rules {
+		for _, backend := range rule.BackendRefs {
+			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
+				// If an explicit Service namespace is not provided, use the GRPCRoute namespace to
+				// lookup the provided Gateway Name.
+				services = append(services,
+					types.NamespacedName{
+						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, customgrpcroute.Namespace),
 						Name:      string(backend.Name),
 					}.String(),
 				)
@@ -982,6 +1112,34 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		r.log.Info("grpcRoute status subscriber shutting down")
 	}()
 
+	// CustomGRPCRoute object status updater
+	go func() {
+		message.HandleSubscription(r.resources.CustomGRPCRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.CustomGRPCRoute]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(gwapiv1a2.CustomGRPCRoute),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						h, ok := obj.(*gwapiv1a2.CustomGRPCRoute)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						hCopy := h.DeepCopy()
+						hCopy.Status.Parents = val.Status.Parents
+						return hCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("customgrpcRoute status subscriber shutting down")
+	}()
+
 	// TLSRoute object status updater
 	go func() {
 		message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
@@ -1099,6 +1257,33 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch GrpcJSONTranscoderFilter CRUDs and reconcile affected HttpFilter.
+	// if err := c.Watch(
+	// 	&source.Kind{Type: &egv1a1.GrpcJSONTranscoderFilter{}},
+	// 	&handler.EnqueueRequestForObject{},
+	// ); err != nil {
+	// 	return err
+	// }
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.GrpcJSONTranscoderFilter{}),
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return err
+	}
+
+	// Watch CorsFilter CRUDs and reconcile affected Routes.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.CorsFilter{}),
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return err
+	}
+
+	if err := addCorsFilterIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.HTTPRoute{}),
@@ -1118,6 +1303,17 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 	if err := addGRPCRouteIndexers(ctx, mgr); err != nil {
+		return err
+	}
+
+	// Watch CustomGRPCRoute CRUDs and process affected Gateways.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &gwapiv1a2.CustomGRPCRoute{}),
+		&handler.EnqueueRequestForObject{},
+	); err != nil {
+		return err
+	}
+	if err := addCustomGRPCRouteIndexers(ctx, mgr); err != nil {
 		return err
 	}
 
@@ -1215,6 +1411,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		source.Kind(mgr.GetCache(), &egv1a1.AuthenticationFilter{}),
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)); err != nil {
+		return err
+	}
+
+	// Watch CorsFilter CRUDs and enqueue associated CustomGRPCRoute objects.
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.CorsFilter{}),
+		&handler.EnqueueRequestForObject{},
+		predicate.NewPredicateFuncs(r.customGRPCRoutesForCorsFilter)); err != nil {
 		return err
 	}
 
@@ -1328,4 +1532,21 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	return nil
+}
+
+func addCorsFilterIndexers(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &egv1a1.CorsFilter{}, corsFilterIndex, corsFilterIndexFunc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func corsFilterIndexFunc(obj client.Object) []string {
+	cf, ok := obj.(*egv1a1.CorsFilter)
+	if !ok {
+		panic(fmt.Sprintf("unsupported object type %T", obj))
+	}
+
+	return []string{cf.Namespace + "/" + cf.Name}
 }

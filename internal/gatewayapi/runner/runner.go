@@ -57,11 +57,20 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				return
 			}
 
+			// check is cors enabled and type is Global
+			corsIsGlobal := false
+			for _, cors := range val.CorsFilters {
+				if cors.Spec.Type == "Global" {
+					corsIsGlobal = true
+				}
+			}
+
 			// Translate and publish IRs.
 			t := &gatewayapi.Translator{
 				GatewayControllerName:  r.Server.EnvoyGateway.Gateway.ControllerName,
 				GatewayClassName:       v1beta1.ObjectName(update.Key),
 				GlobalRateLimitEnabled: r.EnvoyGateway.RateLimit != nil,
+				GlobalCorsEnabled:      corsIsGlobal,
 			}
 
 			// If an extension is loaded, pass its supported groups/kinds to the translator
@@ -75,8 +84,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// Translate to IR
 			result := t.Translate(val)
 
-			yamlXdsIR, _ := yaml.Marshal(&result.XdsIR)
-			r.Logger.WithValues("output", "xds-ir").Info(string(yamlXdsIR))
 			yamlInfraIR, _ := yaml.Marshal(&result.InfraIR)
 			r.Logger.WithValues("output", "infra-ir").Info(string(yamlInfraIR))
 
@@ -126,7 +133,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(grpcRoute)
 				r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
 			}
-
+			for _, customgrpcRoute := range result.CustomGRPCRoutes {
+				key := utils.NamespacedName(customgrpcRoute)
+				r.ProviderResources.CustomGRPCRouteStatuses.Store(key, customgrpcRoute)
+			}
 			for _, tlsRoute := range result.TLSRoutes {
 				key := utils.NamespacedName(tlsRoute)
 				r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)

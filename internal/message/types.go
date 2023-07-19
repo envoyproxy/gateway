@@ -11,6 +11,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -22,12 +23,14 @@ type ProviderResources struct {
 	// a group of gateway API resources.
 	GatewayAPIResources watchable.Map[string, *gatewayapi.Resources]
 
-	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.GatewayStatus]
-	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]
-	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
-	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
-	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	CustomGRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.CustomGRPCRoute]
+	CorsFilterStatuses      watchable.Map[types.NamespacedName, *egv1a1.CorsFilter]
+	GatewayStatuses         watchable.Map[types.NamespacedName, *gwapiv1b1.GatewayStatus]
+	HTTPRouteStatuses       watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]
+	GRPCRouteStatuses       watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
+	TLSRouteStatuses        watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TCPRouteStatuses        watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	UDPRouteStatuses        watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
 }
 
 func (p *ProviderResources) GetResources() *gatewayapi.Resources {
@@ -53,6 +56,7 @@ func (p *ProviderResources) GetResourcesKey() string {
 func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
 	p.GatewayStatuses.Close()
+	p.CorsFilterStatuses.Close()
 	p.HTTPRouteStatuses.Close()
 	p.TLSRouteStatuses.Close()
 	p.TCPRouteStatuses.Close()

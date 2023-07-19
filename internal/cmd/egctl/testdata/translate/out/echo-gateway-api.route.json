@@ -1,4 +1,7 @@
 {
+  "CustomGRPCRoutes": null,
+  "CorsFilters": null,
+  "GrpcJSONTranscoderFilters": null,
   "gatewayClass": {
     "metadata": {
       "name": "eg",
@@ -49,6 +52,10 @@
               {
                 "group": "gateway.networking.k8s.io",
                 "kind": "GRPCRoute"
+              },
+              {
+                "group": "gateway.networking.k8s.io",
+                "kind": "CustomGRPCRoute"
               }
             ],
             "attachedRoutes": 1,
