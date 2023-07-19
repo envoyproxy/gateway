@@ -2,7 +2,7 @@
 #
 # All make targets related to helmß are defined in this file.
 
-OCI_REGISTRY ?= oci://geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy/gateway
+OCI_REGISTRY ?= ""
 include tools/make/env.mk
 
 CHART_NAME ?= gateway-helm

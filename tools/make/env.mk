@@ -6,7 +6,7 @@
 # Docker variables
 
 # REGISTRY is the image registry to use for build and push image targets.
-REGISTRY ?= geocomply.jfrog.io/apps-idp-gateway-docker-local/envoyproxy
+REGISTRY ?= ""
 # IMAGE_NAME is the name of EG image
 # Use gateway-dev in default when developing
 # Use gateway when releasing an image.
