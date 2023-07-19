@@ -197,8 +197,8 @@ jobs:
       # tag is set to `latest` when pushing to main branch
       run: make image.push.multiarch  TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE_NAME=envoyproxy/gateway-dev
 
-    - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      # use `0.0.0` as the default latest version.
-      run: CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+    # - name: Build and Push EG Latest Helm Chart
+    #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    #   # use `0.0.0` as the default latest version.
+    #   run: CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
 
