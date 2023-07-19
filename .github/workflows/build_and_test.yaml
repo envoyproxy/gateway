@@ -14,6 +14,7 @@ on:
     - "**/*.png"
 env:
   REGISTRY: ${{ secrets.REGISTRY }}
+  OCI_REGISTRY: ${{ secrets.REGISTRY }}
 jobs:
   lint:
     runs-on: ubuntu-latest

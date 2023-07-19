@@ -7,6 +7,7 @@ on:
       - "v*.*.*"
 env:
   REGISTRY: ${{ secrets.REGISTRY }}
+  OCI_REGISTRY: ${{ secrets.OCI_REGISTRY }}
 jobs:
   release:
     runs-on: ubuntu-latest
