@@ -205,6 +205,12 @@ func TestTranslateXdsNegative(t *testing.T) {
 		{
 			name: "http-route-invalid",
 		},
+		{
+			name: "tcp-route-invalid",
+		},
+		{
+			name: "udp-route-invalid",
+		},
 	}
 
 	for _, tc := range testCases {
