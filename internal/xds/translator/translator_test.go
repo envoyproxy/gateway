@@ -287,7 +287,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
-			ext := v1alpha1.Extension{
+			ext := v1alpha1.ExtensionManager{
 				Resources: []v1alpha1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",

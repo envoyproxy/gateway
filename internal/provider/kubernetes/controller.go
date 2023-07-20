@@ -75,8 +75,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 
 	// Gather additional resources to watch from registered extensions
 	var extGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.Extension != nil {
-		for _, rsrc := range cfg.EnvoyGateway.Extension.Resources {
+	if cfg.EnvoyGateway.ExtensionManager != nil {
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
@@ -1229,7 +1229,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch EnvoyPatchPolicy if enabled in config
-	if r.envoyGateway.Gateway.ExtensionAPIs != nil && r.envoyGateway.Gateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
