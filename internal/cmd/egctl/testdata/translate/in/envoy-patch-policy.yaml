@@ -9,7 +9,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
   name: eg
-  namespace: default  
+  namespace: default
 spec:
   gatewayClassName: eg
   listeners:
@@ -21,13 +21,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: backend
-  namespace: default  
+  namespace: default
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
-  namespace: default  
+  namespace: default
   labels:
     app: backend
     service: backend
@@ -43,7 +43,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
-  namespace: default  
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -108,50 +108,50 @@ spec:
     namespace: default
   type: JSONPatch
   jsonPatches:
-  - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-    # The listener name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
-    name: default-eg-http 
-    operation:
-      op: add
-      path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
-      value:
-        name: "envoy.filters.http.ratelimit"
-        typed_config:
-          "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
-          domain: "eag-ratelimit"
-          failure_mode_deny: true
-          timeout: 1s
-          rate_limit_service:
-            grpc_service:
-              envoy_grpc:
-                cluster_name: rate-limit-cluster
-            transport_api_version: V3
-  - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-    # The route name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
-    name: default-eg-http
-    operation:
-      op: add
-      path: "/virtual_hosts/0/rate_limits"
-      value:
-        - actions:
-          - remote_address: {}
-  - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
-    name: rate-limit-cluster
-    operation:
-      op: add
-      path: ""
-      value:
-        name: rate-limit-cluster
-        type: STRICT_DNS
-        connect_timeout: 10s
-        lb_policy: ROUND_ROBIN
-        http2_protocol_options: {}
-        load_assignment:
-          cluster_name: rate-limit-cluster
-          endpoints:
-          - lb_endpoints:
-            - endpoint:
-                address:
-                  socket_address:
-                    address: ratelimit.svc.cluster.local
-                    port_value: 8081
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      # The listener name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
+      name: default-eg-http
+      operation:
+        op: add
+        path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
+        value:
+          name: "envoy.filters.http.ratelimit"
+          typed_config:
+            "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
+            domain: "eag-ratelimit"
+            failure_mode_deny: true
+            timeout: 1s
+            rate_limit_service:
+              grpc_service:
+                envoy_grpc:
+                  cluster_name: rate-limit-cluster
+              transport_api_version: V3
+    - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
+      # The route name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
+      name: default-eg-http
+      operation:
+        op: add
+        path: "/virtual_hosts/0/rate_limits"
+        value:
+          - actions:
+              - remote_address: {}
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
+      name: rate-limit-cluster
+      operation:
+        op: add
+        path: ""
+        value:
+          name: rate-limit-cluster
+          type: STRICT_DNS
+          connect_timeout: 10s
+          lb_policy: ROUND_ROBIN
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: rate-limit-cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: ratelimit.svc.cluster.local
+                          port_value: 8081
