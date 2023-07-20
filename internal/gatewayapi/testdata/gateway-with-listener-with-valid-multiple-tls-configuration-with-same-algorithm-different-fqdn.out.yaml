@@ -79,7 +79,7 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: ""
@@ -92,9 +92,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -103,7 +103,7 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
-      name: envoy-gateway-gateway-1-tls
+      name: envoy-gateway/gateway-1/tls
       port: 10443
       routes:
       - backendWeights:
@@ -113,7 +113,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-*
+        name: default/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false
           name: ""

@@ -35,7 +35,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: ""
@@ -48,9 +48,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -59,7 +59,7 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http
+      name: envoy-gateway/gateway-1/http
       port: 10080
     jsonPatches:
     - name: envoy-gateway-gateway-1-http

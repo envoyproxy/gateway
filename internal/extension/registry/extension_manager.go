@@ -46,7 +46,7 @@ var _ extTypes.Manager = (*Manager)(nil)
 type Manager struct {
 	k8sClient          k8scli.Client
 	namespace          string
-	extension          v1alpha1.Extension
+	extension          v1alpha1.ExtensionManager
 	extensionConnCache *grpc.ClientConn
 }
 
@@ -57,14 +57,14 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 		return nil, err
 	}
 
-	var extension *v1alpha1.Extension
+	var extension *v1alpha1.ExtensionManager
 	if cfg.EnvoyGateway != nil {
-		extension = cfg.EnvoyGateway.Extension
+		extension = cfg.EnvoyGateway.ExtensionManager
 	}
 
 	// Setup an empty default in the case that no config was provided
 	if extension == nil {
-		extension = &v1alpha1.Extension{}
+		extension = &v1alpha1.ExtensionManager{}
 	}
 
 	return &Manager{
@@ -203,7 +203,7 @@ func parseCA(caSecret *corev1.Secret) (*x509.CertPool, error) {
 	return cp, nil
 }
 
-func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *v1alpha1.Extension, namespace string) ([]grpc.DialOption, error) {
+func setupGRPCOpts(ctx context.Context, client k8scli.Client, ext *v1alpha1.ExtensionManager, namespace string) ([]grpc.DialOption, error) {
 	// These two errors shouldn't happen since we check these conditions when loading the extension
 	if ext == nil {
 		return nil, errors.New("the registered extension's config is nil")

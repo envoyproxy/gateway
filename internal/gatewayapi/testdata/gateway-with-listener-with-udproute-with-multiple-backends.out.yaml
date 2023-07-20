@@ -33,7 +33,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: ""
@@ -46,7 +46,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 udpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: UDPRoute
@@ -84,7 +84,7 @@ udpRoutes:
         name: gateway-1
         namespace: envoy-gateway
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
