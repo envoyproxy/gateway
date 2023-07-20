@@ -246,7 +246,7 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: ""
@@ -259,9 +259,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -270,7 +270,7 @@ xdsIR:
       hostnames:
       - foo.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-1
+      name: envoy-gateway/gateway-1/http-1
       port: 10080
       routes:
       - backendWeights:
@@ -280,7 +280,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-foo.com
+        name: default/httproute-1/rule/0/match/0-foo.com
         pathMatch:
           distinct: false
           name: ""
@@ -289,7 +289,7 @@ xdsIR:
       hostnames:
       - bar.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-2
+      name: envoy-gateway/gateway-1/http-2
       port: 10080
       routes:
       - backendWeights:
@@ -299,7 +299,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-bar.com
+        name: default/httproute-1/rule/0/match/0-bar.com
         pathMatch:
           distinct: false
           name: ""
@@ -308,7 +308,7 @@ xdsIR:
       hostnames:
       - foo1.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-3
+      name: envoy-gateway/gateway-1/http-3
       port: 10080
       routes:
       - backendWeights:
@@ -318,7 +318,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-foo1.com
+        name: default/httproute-1/rule/0/match/0-foo1.com
         pathMatch:
           distinct: false
           name: ""
@@ -327,7 +327,7 @@ xdsIR:
       hostnames:
       - bar1.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-4
+      name: envoy-gateway/gateway-1/http-4
       port: 10080
       routes:
       - backendWeights:
@@ -337,7 +337,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-bar1.com
+        name: default/httproute-1/rule/0/match/0-bar1.com
         pathMatch:
           distinct: false
           name: ""
@@ -346,7 +346,7 @@ xdsIR:
       hostnames:
       - foo2.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-5
+      name: envoy-gateway/gateway-1/http-5
       port: 10080
       routes:
       - backendWeights:
@@ -356,7 +356,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-foo2.com
+        name: default/httproute-1/rule/0/match/0-foo2.com
         pathMatch:
           distinct: false
           name: ""
@@ -365,7 +365,7 @@ xdsIR:
       hostnames:
       - bar2.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-6
+      name: envoy-gateway/gateway-1/http-6
       port: 10080
       routes:
       - backendWeights:
@@ -375,7 +375,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-bar2.com
+        name: default/httproute-1/rule/0/match/0-bar2.com
         pathMatch:
           distinct: false
           name: ""
@@ -384,7 +384,7 @@ xdsIR:
       hostnames:
       - foo3.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-7
+      name: envoy-gateway/gateway-1/http-7
       port: 10080
       routes:
       - backendWeights:
@@ -394,7 +394,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-foo3.com
+        name: default/httproute-1/rule/0/match/0-foo3.com
         pathMatch:
           distinct: false
           name: ""
@@ -403,7 +403,7 @@ xdsIR:
       hostnames:
       - bar3.com
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http-8
+      name: envoy-gateway/gateway-1/http-8
       port: 10080
       routes:
       - backendWeights:
@@ -413,7 +413,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default-httproute-1-rule-0-match-0-bar3.com
+        name: default/httproute-1/rule/0/match/0-bar3.com
         pathMatch:
           distinct: false
           name: ""

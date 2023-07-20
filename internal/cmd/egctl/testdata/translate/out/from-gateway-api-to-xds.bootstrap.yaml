@@ -1,5 +1,5 @@
 xds:
-  default-eg:
+  default/eg:
     '@type': type.googleapis.com/envoy.admin.v3.BootstrapConfigDump
     bootstrap:
       admin:

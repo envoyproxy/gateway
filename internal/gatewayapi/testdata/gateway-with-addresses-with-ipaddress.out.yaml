@@ -37,7 +37,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       addresses:
       - 1.2.3.4
@@ -53,9 +53,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
