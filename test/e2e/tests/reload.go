@@ -9,12 +9,25 @@
 package tests
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
+	"os"
 	"testing"
+	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/conformance/utils/http"
-	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
-	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
+	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/portforward"
+	"k8s.io/client-go/transport/spdy"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 )
 
@@ -28,31 +41,36 @@ var ReloadTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/reload-route-order.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Envoy gatewa reload", func(t *testing.T) {
-		   // Step 1: Start with an initial configuration for the Envoy Proxy
-		   cSuite.Config.Host = "https://127.0.0.1:6443"
-		   var namespace string = "envoy-gateway-system"
+			// Step 1: Start with an initial configuration for the Envoy Proxy
+			suite.RestConfig.Host = "https://127.0.0.1:6443"
+			var namespace = "envoy-gateway-system"
 
-		    initialConfig := getConfigDump(cSuite.Config, cSuite.Client, namespace)  
-			numReloads =5
+			initialConfig, err := getConfigDump(suite.RestConfig, suite.Client, namespace)
+			if err != nil {
+				t.Fatal(err) // Fail the test and log the error
+			}
+			var numReloads = 5
 
-		   for i := 0; i < numReloads; i++ {
-			// Step 2: Restart or reload the Envoy Gateway
-				err := restartEnvoyGateway(cSuite.Client, namespace) 
+			for i := 0; i < numReloads; i++ {
+				// Step 2: Restart or reload the Envoy Gateway
+				err := restartEnvoyGateway(suite.Client, namespace)
 				if err != nil {
-					log.Fatal(err)
+					t.Fatal(err)
 				}
 
-			// Step 3: Retrieve the `/config_dump` output from the Envoy Proxy admin interface
-				newConfigDump, err := getConfigDump(cSuite.Config, cSuite.Client, namespace) 
+				// Step 3: Retrieve the `/config_dump` output from the Envoy Proxy admin interface
+				newConfigDump, err := getConfigDump(suite.RestConfig, suite.Client, namespace)
 				if err != nil {
-					log.Fatal(err)
+					t.Fatal(err)
 				}
 
-			// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-			    assert.Equal(t, initialConfig, newConfigDump, "Configuration mismatch after reload")
+				// Step 4: Compare the obtained `/config_dump` output with the initial configuration
+				assert.Equal(t, initialConfig, newConfigDump, "Configuration mismatch after reload")
 
-			// Step 5: Repeat the above steps for the desired number of reloads
-		}
+				// Step 5: Repeat the above steps for the desired number of reloads
+			}
+		})
+	},
 }
 
 func getConfigDump(config *rest.Config, c client.Client, namespace string) (responseMap map[string]interface{}, err error) {
@@ -90,7 +108,6 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	}
 
 	portForwardURL := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", namespace, podName)
-	//portForwardURL = fmt.Sprintf("%s%s", config.Host, portForwardURL)
 	portForwardURL = fmt.Sprintf("https://127.0.0.1:6443%s", portForwardURL)
 
 	serverURL, _ := url.Parse(portForwardURL)
@@ -132,20 +149,17 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	// Read the response body as a string
 	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
 	// Unmarshal the response body into a map[string]interface{}
-	//var responseMap map[string]interface{}
 	err = json.Unmarshal(responseBody, &responseMap)
 	if err != nil {
-		log.Fatal(err)
 		return nil, err
 	}
 
 	// Wait for termination signal
-	//<-stopCh
+	// <-stopCh
 
 	portForwarder.Close()
 	return responseMap, nil
@@ -179,7 +193,7 @@ func restartEnvoyGateway(c client.Client, namespace string) (err error) {
 	}
 
 	timeout := 3 * time.Minute //  set the timeout duration
-	startTime := time.Now()    // Store the sart time
+	startTime := time.Now()    // Store the start time
 	// Check if another pod with the same selector comes back up and running
 	for {
 		podList := &corev1.PodList{}
@@ -208,9 +222,8 @@ func restartEnvoyGateway(c client.Client, namespace string) (err error) {
 		// Check if the timeout duration has exceeded
 		if time.Since(startTime) >= timeout {
 			fmt.Println("Timeout exceeded. Pod did not come upt with the specified time.")
-			break
+			return errors.New("timeout in gateway restart")
 		}
 	}
 	return nil
 }
-
