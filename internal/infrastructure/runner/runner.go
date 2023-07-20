@@ -13,49 +13,53 @@ import (
 	"github.com/envoyproxy/gateway/internal/infrastructure"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/runner"
 )
 
-type Config struct {
-	config.Server
-	InfraIR *message.InfraIR
+func Register(resources Resources, globalConfig config.Server) {
+	runner.Manager().Register(New(resources, globalConfig), runner.RootParentRunner)
 }
 
-type Runner struct {
-	Config
+type infraRunner struct {
+	*runner.GenericRunner[Resources]
 	mgr infrastructure.Manager
 }
 
-func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentInfrastructureRunner)
+func New(resources Resources, globalConfig config.Server) *infraRunner {
+	return &infraRunner{GenericRunner: runner.New(string(v1alpha1.LogComponentInfrastructureRunner), resources, globalConfig)}
 }
 
-func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
+type Resources struct {
+	InfraIR *message.InfraIR
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) error {
-	var err error
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
+func (r *infraRunner) Start(ctx context.Context) (err error) {
+	r.Init(ctx)
+	r.mgr, err = infrastructure.NewManager(&r.Server)
 	if err != nil {
 		r.Logger.Error(err, "failed to create new manager")
 		return err
 	}
-	go r.subscribeToProxyInfraIR(ctx)
-
-	// Enable global ratelimit if it has been configured.
-	if r.EnvoyGateway.RateLimit != nil {
-		go r.enableRateLimitInfra(ctx)
-	}
+	go r.SubscribeAndTranslate(ctx)
 
 	r.Logger.Info("started")
 	return nil
 }
 
-func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
+// Start starts the infrastructure runner
+func (r *infraRunner) ShutDown(ctx context.Context) {
+	r.Resources.InfraIR.Close()
+}
+
+func (r *infraRunner) SubscribeAndTranslate(ctx context.Context) {
+	// Enable global ratelimit if it has been configured.
+	if r.EnvoyGateway.RateLimit != nil {
+		go r.manageRateLimitInfra(ctx)
+	}
+
 	// Subscribe to resources
-	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
+	message.HandleSubscription(r.Resources.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra]) {
 			val := update.Value
 
@@ -74,7 +78,7 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	r.Logger.Info("infra subscriber shutting down")
 }
 
-func (r *Runner) enableRateLimitInfra(ctx context.Context) {
+func (r *infraRunner) manageRateLimitInfra(ctx context.Context) {
 	if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
 		r.Logger.Error(err, "failed to create ratelimit infra")
 	}

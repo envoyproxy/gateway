@@ -15,46 +15,54 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes"
+	"github.com/envoyproxy/gateway/internal/runner"
 )
 
-type Config struct {
-	config.Server
+func Register(resources Resources, globalConfig config.Server) {
+	runner.Manager().Register(New(resources, globalConfig), runner.RootParentRunner)
+}
+
+type providerRunner struct {
+	*runner.GenericRunner[Resources]
+}
+
+type Resources struct {
 	ProviderResources *message.ProviderResources
 }
 
-type Runner struct {
-	Config
+func New(resources Resources, globalConfig config.Server) *providerRunner {
+	return &providerRunner{GenericRunner: runner.New(string(v1alpha1.LogComponentProviderRunner), resources, globalConfig)}
 }
 
-func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
-}
+// Start starts the provider runner.
+func (r *providerRunner) Start(ctx context.Context) error {
+	r.Init(ctx)
 
-func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentProviderRunner)
-}
-
-// Start the provider runner
-func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	if r.EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
+	if r.Config().EnvoyGateway.Provider.Type == v1alpha1.ProviderTypeKubernetes {
 		r.Logger.Info("Using provider", "type", v1alpha1.ProviderTypeKubernetes)
 		cfg, err := ctrl.GetConfig()
 		if err != nil {
 			return fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
-		p, err := kubernetes.New(cfg, &r.Config.Server, r.ProviderResources)
-		if err != nil {
-			return fmt.Errorf("failed to create provider %s: %w", v1alpha1.ProviderTypeKubernetes, err)
-		}
-		go func() {
-			err := p.Start(ctx)
-			if err != nil {
-				r.Logger.Error(err, "unable to start provider")
-			}
-		}()
-		return nil
+		kubernetes.Register(kubernetes.Resources{ProviderResources: r.Resources.ProviderResources, Cfg: cfg}, r.Server)
+	} else {
+		// Unsupported provider.
+		return fmt.Errorf("unsupported provider type %v", r.EnvoyGateway.Provider.Type)
 	}
-	// Unsupported provider.
-	return fmt.Errorf("unsupported provider type %v", r.EnvoyGateway.Provider.Type)
+
+	go r.SubscribeAndTranslate(ctx)
+
+	r.Logger.Info("started")
+	return nil
+}
+
+// SubscribeAndTranslate implements the generic runner logic
+func (r *providerRunner) SubscribeAndTranslate(ctx context.Context) {
+	if err := runner.Manager().Start(ctx, kubernetes.Runner); err != nil {
+		r.Logger.Error(err, "unable to start provider")
+	}
+}
+
+func (r *providerRunner) ShutDown(ctx context.Context) {
+	r.Resources.ProviderResources.Close()
 }

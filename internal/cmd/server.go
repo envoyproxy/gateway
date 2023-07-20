@@ -6,6 +6,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -25,6 +25,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
+	"github.com/envoyproxy/gateway/internal/runner"
 	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
 )
@@ -52,10 +53,39 @@ func getServerCommand() *cobra.Command {
 
 // server serves Envoy Gateway.
 func server() error {
+	ctx := ctrl.SetupSignalHandler()
 	cfg, err := getConfig()
 	if err != nil {
 		return err
 	}
+
+	if err := setupAdminServer(cfg); err != nil {
+		return err
+	}
+	if err := setupRunners(ctx, cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// setupRunners setups all the runners required for the Envoy Gateway to
+// fulfill its tasks.
+func setupRunners(ctx context.Context, cfg *config.Server) error {
+	if err := initRunnerManager(cfg); err != nil {
+		return err
+	}
+
+	if err := runner.Manager().Run(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// setupAdminServer setups the admin server of Envoy Gateway
+func setupAdminServer(cfg *config.Server) error {
+	logger := cfg.Logger.WithName("admin-server")
 
 	if cfg.EnvoyGateway.Admin.Debug {
 		spewConfig := spew.NewDefaultConfig()
@@ -63,8 +93,98 @@ func server() error {
 		spewConfig.Dump(cfg)
 	}
 
-	if err := setupRunners(cfg); err != nil {
+	adminHandlers := http.NewServeMux()
+	address := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Address
+
+	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Debug {
+		// Serve pprof endpoints to aid in live debugging.
+		adminHandlers.HandleFunc("/debug/pprof/", pprof.Index)
+		adminHandlers.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		adminHandlers.HandleFunc("/debug/pprof/trace", pprof.Trace)
+		adminHandlers.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		adminHandlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	}
+
+	adminServer := &http.Server{
+		Handler:           adminHandlers,
+		Addr:              net.JoinHostPort(address.Host, fmt.Sprint(address.Port)),
+		ReadTimeout:       5 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       15 * time.Second,
+	}
+
+	logger.Info("starting admin server")
+	// Listen And serve admin server.
+	go func() {
+		if err := adminServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error(err, "failed to start admin server")
+		}
+	}()
+
+	return nil
+}
+
+// initRunnerManager inits eg-manager and registers all
+// the root-runnners of eg.
+func initRunnerManager(cfg *config.Server) error {
+	runner.Manager().Init(*cfg)
+	// Setup the Extension Manager
+	extMgr, err := extensionregistry.NewManager(cfg)
+	if err != nil {
 		return err
+	}
+
+	pResources := new(message.ProviderResources)
+	// Start the Provider Service
+	// It fetches the resources from the configured provider type
+	// and publishes it
+	providerrunner.Register(providerrunner.Resources{
+		ProviderResources: pResources,
+	}, *cfg)
+
+	xdsIR := new(message.XdsIR)
+	infraIR := new(message.InfraIR)
+	// Start the GatewayAPI Translator Runner
+	// It subscribes to the provider resources, translates it to xDS IR
+	// and infra IR resources and publishes them.
+	gatewayapirunner.Register(gatewayapirunner.Resources{
+		ProviderResources: pResources,
+		XdsIR:             xdsIR,
+		InfraIR:           infraIR,
+		ExtensionManager:  extMgr,
+	}, *cfg)
+
+	xds := new(message.Xds)
+	// Start the Xds Translator Service
+	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
+	xdstranslatorrunner.Register(xdstranslatorrunner.Resources{
+		XdsIR:            xdsIR,
+		Xds:              xds,
+		ExtensionManager: extMgr,
+	}, *cfg)
+
+	// Start the Infra Manager Runner
+	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
+	// resources such as K8s deployment and services.
+	infrarunner.Register(infrarunner.Resources{
+		InfraIR: infraIR,
+	}, *cfg)
+
+	// Start the xDS Server
+	// It subscribes to the xds Resources and configures the remote Envoy Proxy
+	// via the xDS Protocol.
+	xdsserverrunner.Register(xdsserverrunner.Resources{
+		Xds: xds,
+	}, *cfg)
+
+	// Start the global rateLimit if it has been enabled through the config
+	if cfg.EnvoyGateway.RateLimit != nil {
+		// Start the Global RateLimit xDS Server
+		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
+		ratelimitrunner.Register(ratelimitrunner.Resources{
+			XdsIR: xdsIR,
+		}, *cfg)
 	}
 
 	return nil
@@ -108,144 +228,4 @@ func getConfigByPath(cfgPath string) (*config.Server, error) {
 		return nil, err
 	}
 	return cfg, nil
-}
-
-// setupRunners starts all the runners required for the Envoy Gateway to
-// fulfill its tasks.
-func setupRunners(cfg *config.Server) error {
-	// TODO - Setup a Config Manager
-	// https://github.com/envoyproxy/gateway/issues/43
-	ctx := ctrl.SetupSignalHandler()
-
-	// Setup the Extension Manager
-	extMgr, err := extensionregistry.NewManager(cfg)
-	if err != nil {
-		return err
-	}
-
-	pResources := new(message.ProviderResources)
-	// Start the Provider Service
-	// It fetches the resources from the configured provider type
-	// and publishes it
-	providerRunner := providerrunner.New(&providerrunner.Config{
-		Server:            *cfg,
-		ProviderResources: pResources,
-	})
-	if err := providerRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	xdsIR := new(message.XdsIR)
-	infraIR := new(message.InfraIR)
-	// Start the GatewayAPI Translator Runner
-	// It subscribes to the provider resources, translates it to xDS IR
-	// and infra IR resources and publishes them.
-	gwRunner := gatewayapirunner.New(&gatewayapirunner.Config{
-		Server:            *cfg,
-		ProviderResources: pResources,
-		XdsIR:             xdsIR,
-		InfraIR:           infraIR,
-		ExtensionManager:  extMgr,
-	})
-	if err := gwRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	xds := new(message.Xds)
-	// Start the Xds Translator Service
-	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
-	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server:           *cfg,
-		XdsIR:            xdsIR,
-		Xds:              xds,
-		ExtensionManager: extMgr,
-	})
-	if err := xdsTranslatorRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	// Start the Infra Manager Runner
-	// It subscribes to the infraIR, translates it into Envoy Proxy infrastructure
-	// resources such as K8s deployment and services.
-	infraRunner := infrarunner.New(&infrarunner.Config{
-		Server:  *cfg,
-		InfraIR: infraIR,
-	})
-	if err := infraRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	// Start the xDS Server
-	// It subscribes to the xds Resources and configures the remote Envoy Proxy
-	// via the xDS Protocol.
-	xdsServerRunner := xdsserverrunner.New(&xdsserverrunner.Config{
-		Server: *cfg,
-		Xds:    xds,
-	})
-	if err := xdsServerRunner.Start(ctx); err != nil {
-		return err
-	}
-
-	// Start the global rateLimit if it has been enabled through the config
-	if cfg.EnvoyGateway.RateLimit != nil {
-		// Start the Global RateLimit xDS Server
-		// It subscribes to the xds Resources and translates it to Envoy Ratelimit configuration.
-		rateLimitRunner := ratelimitrunner.New(&ratelimitrunner.Config{
-			Server: *cfg,
-			XdsIR:  xdsIR,
-		})
-		if err := rateLimitRunner.Start(ctx); err != nil {
-			return err
-		}
-	}
-
-	// Start the admin server
-	go setupAdminServer(cfg)
-
-	// Wait until done
-	<-ctx.Done()
-	// Close messages
-	pResources.Close()
-	xdsIR.Close()
-	infraIR.Close()
-	xds.Close()
-
-	cfg.Logger.Info("shutting down")
-
-	// Close connections to extension services
-	if mgr, ok := extMgr.(*extensionregistry.Manager); ok {
-		mgr.CleanupHookConns()
-	}
-
-	return nil
-}
-
-func setupAdminServer(cfg *config.Server) {
-	adminHandlers := http.NewServeMux()
-
-	address := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Address
-
-	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Debug {
-		// Serve pprof endpoints to aid in live debugging.
-		adminHandlers.HandleFunc("/debug/pprof/", pprof.Index)
-		adminHandlers.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		adminHandlers.HandleFunc("/debug/pprof/trace", pprof.Trace)
-		adminHandlers.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		adminHandlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	}
-
-	adminServer := &http.Server{
-		Handler:           adminHandlers,
-		Addr:              net.JoinHostPort(address.Host, fmt.Sprint(address.Port)),
-		ReadTimeout:       5 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       15 * time.Second,
-	}
-
-	// Listen And Serve Admin Server.
-	if err := adminServer.ListenAndServe(); err != nil {
-		cfg.Logger.Error(err, "start debug server failed")
-	}
-
 }

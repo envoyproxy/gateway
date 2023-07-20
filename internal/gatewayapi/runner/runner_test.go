@@ -28,13 +28,12 @@ func TestRunner(t *testing.T) {
 	infraIR := new(message.InfraIR)
 	cfg, err := config.New()
 	require.NoError(t, err)
-	r := New(&Config{
-		Server:            *cfg,
+	r := New(Resources{
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
 		ExtensionManager:  testutils.NewManager(egv1a1cfg.Extension{}),
-	})
+	}, *cfg)
 	ctx := context.Background()
 	// Start
 	err = r.Start(ctx)

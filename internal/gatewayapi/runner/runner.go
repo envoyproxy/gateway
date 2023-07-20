@@ -14,42 +14,35 @@ import (
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
+	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/runner"
 )
 
-type Config struct {
-	config.Server
+func Register(resources Resources, globalConfig config.Server) {
+	runner.Manager().Register(New(resources, globalConfig), runner.RootParentRunner)
+}
+
+func New(resources Resources, globalConfig config.Server) *gwapiRunner {
+	return &gwapiRunner{runner.New(string(v1alpha1.LogComponentGatewayAPIRunner), resources, globalConfig)}
+}
+
+type Resources struct {
 	ProviderResources *message.ProviderResources
 	XdsIR             *message.XdsIR
 	InfraIR           *message.InfraIR
 	ExtensionManager  extension.Manager
 }
 
-type Runner struct {
-	Config
+type gwapiRunner struct {
+	*runner.GenericRunner[Resources]
 }
 
-func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
-}
-
-func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentGatewayAPIRunner)
-}
-
-// Start starts the gateway-api translator runner
-func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
-	go r.subscribeAndTranslate(ctx)
-	r.Logger.Info("started")
-	return nil
-}
-
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	message.HandleSubscription(r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+func (r *gwapiRunner) SubscribeAndTranslate(ctx context.Context) {
+	message.HandleSubscription(r.Resources.ProviderResources.GatewayAPIResources.Subscribe(ctx),
 		func(update message.Update[string, *gatewayapi.Resources]) {
 			val := update.Value
 
@@ -82,7 +75,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 			var curKeys, newKeys []string
 			// Get current IR keys
-			for key := range r.InfraIR.LoadAll() {
+			for key := range r.Resources.InfraIR.LoadAll() {
 				curKeys = append(curKeys, key)
 			}
 
@@ -92,7 +85,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
 				} else {
-					r.InfraIR.Store(key, val)
+					r.Resources.InfraIR.Store(key, val)
 					newKeys = append(newKeys, key)
 				}
 			}
@@ -101,7 +94,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
 				} else {
-					r.XdsIR.Store(key, val)
+					r.Resources.XdsIR.Store(key, val)
 				}
 			}
 
@@ -109,39 +102,61 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			// There is a 1:1 mapping between infra and xds IR keys
 			delKeys := getIRKeysToDelete(curKeys, newKeys)
 			for _, key := range delKeys {
-				r.InfraIR.Delete(key)
-				r.XdsIR.Delete(key)
+				r.Resources.InfraIR.Delete(key)
+				r.Resources.XdsIR.Delete(key)
 			}
 
 			// Update Status
 			for _, gateway := range result.Gateways {
 				key := utils.NamespacedName(gateway)
-				r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
+				r.Resources.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
 			}
 			for _, httpRoute := range result.HTTPRoutes {
 				key := utils.NamespacedName(httpRoute)
-				r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
+				r.Resources.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
 			}
 			for _, grpcRoute := range result.GRPCRoutes {
 				key := utils.NamespacedName(grpcRoute)
-				r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
+				r.Resources.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
 			}
 
 			for _, tlsRoute := range result.TLSRoutes {
 				key := utils.NamespacedName(tlsRoute)
-				r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
+				r.Resources.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
 			}
 			for _, tcpRoute := range result.TCPRoutes {
 				key := utils.NamespacedName(tcpRoute)
-				r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
+				r.Resources.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
 			}
 			for _, udpRoute := range result.UDPRoutes {
 				key := utils.NamespacedName(udpRoute)
-				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
+				r.Resources.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 			}
 		},
 	)
 	r.Logger.Info("shutting down")
+}
+
+// Start starts the gateway-api translator runner
+func (r *gwapiRunner) Start(ctx context.Context) error {
+	r.Init(ctx)
+	go r.SubscribeAndTranslate(ctx)
+
+	r.Logger.Info("started")
+	return nil
+}
+
+// Start starts the gateway-api translator runner
+func (r *gwapiRunner) ShutDown(ctx context.Context) {
+	r.Resources.XdsIR.Close()
+	r.Resources.InfraIR.Close()
+	r.Resources.ProviderResources.Close()
+
+	// Close connections to extension services
+	if mgr, ok := r.Resources.ExtensionManager.(*extensionregistry.Manager); ok {
+		mgr.CleanupHookConns()
+	}
+
 }
 
 // getIRKeysToDelete returns the list of IR keys to delete

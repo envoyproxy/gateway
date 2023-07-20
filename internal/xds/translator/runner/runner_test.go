@@ -24,11 +24,10 @@ func TestRunner(t *testing.T) {
 	xds := new(message.Xds)
 	cfg, err := config.New()
 	require.NoError(t, err)
-	r := New(&Config{
-		Server: *cfg,
-		XdsIR:  xdsIR,
-		Xds:    xds,
-	})
+	r := New(Resources{
+		XdsIR: xdsIR,
+		Xds:   xds,
+	}, *cfg)
 
 	ctx := context.Background()
 	// Start

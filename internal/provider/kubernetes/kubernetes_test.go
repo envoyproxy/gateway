@@ -53,7 +53,7 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(Resources{Cfg: cliCfg, ProviderResources: resources}, *svr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -66,7 +66,7 @@ func TestProvider(t *testing.T) {
 		require.NoError(t, testEnv.Stop())
 	}()
 
-	testcases := map[string]func(context.Context, *testing.T, *Provider, *message.ProviderResources){
+	testcases := map[string]func(context.Context, *testing.T, *kubernetesRunner, *message.ProviderResources){
 		"gatewayclass controller name":         testGatewayClassController,
 		"gatewayclass accepted status":         testGatewayClassAcceptedStatus,
 		"gatewayclass with parameters ref":     testGatewayClassWithParamRef,
@@ -98,7 +98,7 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
-func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayClassController(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("test-gc-controllername", egcfgv1a1.GatewayControllerName)
@@ -114,7 +114,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 	assert.Equal(t, gc.ObjectMeta.Generation, int64(1))
 }
 
-func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("test-gc-accepted-status", egcfgv1a1.GatewayControllerName)
@@ -146,7 +146,7 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 	}, defaultWait, defaultTick)
 }
 
-func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	// Create the namespace for the test case.
@@ -201,7 +201,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
 }
 
-func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("gc-scheduled-status-test", egcfgv1a1.GatewayControllerName)
@@ -354,7 +354,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 }
 
 // Test that even when resources such as the Service/Deployment get hashed names (because of a gateway with a very long name)
-func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("envoy-gateway-class", egcfgv1a1.GatewayControllerName)
@@ -456,7 +456,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
 }
 
-func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testRateLimitFilter(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("ratelimit-test", egcfgv1a1.GatewayControllerName)
@@ -632,7 +632,7 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 	}
 }
 
-func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testAuthenFilter(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("authen-test", egcfgv1a1.GatewayControllerName)
@@ -808,7 +808,7 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 	}
 }
 
-func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testHTTPRoute(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("httproute-test", egcfgv1a1.GatewayControllerName)
@@ -1375,7 +1375,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	}
 }
 
-func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testTLSRoute(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("tlsroute-test", egcfgv1a1.GatewayControllerName)
@@ -1516,7 +1516,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 // testServiceCleanupForMultipleRoutes creates multiple Routes pointing to the
 // same backend Service, and checks whether the Service is properly removed
 // from the resource map after Route deletion.
-func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *kubernetesRunner, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("service-cleanup-test", egcfgv1a1.GatewayControllerName)
@@ -1681,7 +1681,7 @@ func TestNamespacedProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	provider, err := New(Resources{Cfg: cliCfg, ProviderResources: resources}, *svr)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {

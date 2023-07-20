@@ -108,12 +108,10 @@ func TestTLSConfig(t *testing.T) {
 	// Start a dummy server.
 	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
 
-	cfg := &Config{
-		Server: config.Server{
-			Logger: logger,
-		},
+	cfg := config.Server{
+		Logger: logger,
 	}
-	r := New(cfg)
+	r := New(Resources{}, cfg)
 	g := grpc.NewServer(grpc.Creds(credentials.NewTLS(r.tlsConfig(certFile, keyFile, caFile))))
 	if g == nil {
 		t.Error("failed to create server")
@@ -195,9 +193,7 @@ func TestServeXdsServerListenFailed(t *testing.T) {
 	defer l.Close()
 
 	cfg, _ := config.New()
-	r := New(&Config{
-		Server: *cfg,
-	})
+	r := New(Resources{}, *cfg)
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	// Don't crash in this function
 	r.serveXdsServer(context.Background())

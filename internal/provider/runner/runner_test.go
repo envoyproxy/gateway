@@ -23,12 +23,12 @@ func TestStart(t *testing.T) {
 
 	testCases := []struct {
 		name   string
-		cfg    *config.Server
+		cfg    config.Server
 		expect bool
 	}{
 		{
 			name: "file provider",
-			cfg: &config.Server{
+			cfg: config.Server{
 				EnvoyGateway: &v1alpha1.EnvoyGateway{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: v1alpha1.GroupVersion.String(),
@@ -49,15 +49,10 @@ func TestStart(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			runner := &Runner{
-				Config: Config{
-					Server:            *tc.cfg,
-					ProviderResources: new(message.ProviderResources),
-				},
-			}
+			provider := New(Resources{ProviderResources: new(message.ProviderResources)}, tc.cfg)
 			ctx, cancel := context.WithCancel(context.Background())
 			t.Cleanup(cancel)
-			err := runner.Start(ctx)
+			err := provider.Start(ctx)
 			if tc.expect {
 				require.NoError(t, err)
 			} else {

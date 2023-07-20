@@ -29,6 +29,7 @@ import (
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/runner"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	"github.com/envoyproxy/gateway/internal/xds/cache"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -48,55 +49,59 @@ const (
 	xdsTLSCaFilename = "/certs/ca.crt"
 )
 
-type Config struct {
-	config.Server
+func Register(resources Resources, globalConfig config.Server) {
+	runner.Manager().Register(New(resources, globalConfig), runner.RootParentRunner)
+}
+
+type xdsRunner struct {
+	*runner.GenericRunner[Resources]
+}
+
+func New(resources Resources, globalConfig config.Server) *xdsRunner {
+	return &xdsRunner{runner.New(string(v1alpha1.LogComponentXdsServerRunner), resources, globalConfig)}
+}
+
+type Resources struct {
 	Xds   *message.Xds
 	grpc  *grpc.Server
 	cache cache.SnapshotCacheWithCallbacks
 }
 
-type Runner struct {
-	Config
-}
-
-func New(cfg *Config) *Runner {
-	return &Runner{Config: *cfg}
-}
-
-func (r *Runner) Name() string {
-	return string(v1alpha1.LogComponentXdsServerRunner)
-}
-
 // Start starts the xds-server runner
-func (r *Runner) Start(ctx context.Context) error {
-	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
+func (r *xdsRunner) Start(ctx context.Context) error {
+	r.Init(ctx)
 
 	// Set up the gRPC server and register the xDS handler.
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
 	cfg := r.tlsConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
+	r.Resources.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
 
-	r.cache = cache.NewSnapshotCache(false, r.Logger)
-	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
+	r.Resources.cache = cache.NewSnapshotCache(false, r.Logger)
+	registerServer(serverv3.NewServer(ctx, r.Resources.cache, r.Resources.cache), r.Resources.grpc)
 
 	// Start and listen xDS gRPC Server.
 	go r.serveXdsServer(ctx)
 
 	// Start message Subscription.
-	go r.subscribeAndTranslate(ctx)
+	go r.SubscribeAndTranslate(ctx)
+
 	r.Logger.Info("started")
 	return nil
 }
 
-func (r *Runner) serveXdsServer(ctx context.Context) {
+func (r *xdsRunner) ShutDown(ctx context.Context) {
+	r.Resources.Xds.Close()
+}
+
+func (r *xdsRunner) serveXdsServer(ctx context.Context) {
 	addr := net.JoinHostPort(XdsServerAddress, strconv.Itoa(bootstrap.DefaultXdsServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		r.Logger.Error(err, "failed to listen on address", "address", addr)
 		return
 	}
-	err = r.grpc.Serve(l)
+	err = r.Resources.grpc.Serve(l)
 	if err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
@@ -107,7 +112,7 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 	// has long-lived hanging xDS requests. There's no
 	// mechanism to make those pending requests fail,
 	// so we forcibly terminate the TCP sessions.
-	r.grpc.Stop()
+	r.Resources.grpc.Stop()
 }
 
 // registerServer registers the given xDS protocol Server with the gRPC
@@ -123,22 +128,22 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 	runtimev3.RegisterRuntimeDiscoveryServiceServer(g, srv)
 }
 
-func (r *Runner) subscribeAndTranslate(ctx context.Context) {
+func (r *xdsRunner) SubscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(r.Xds.Subscribe(ctx),
+	message.HandleSubscription(r.Resources.Xds.Subscribe(ctx),
 		func(update message.Update[string, *xdstypes.ResourceVersionTable]) {
 			key := update.Key
 			val := update.Value
 
 			var err error
 			if update.Delete {
-				err = r.cache.GenerateNewSnapshot(key, nil)
+				err = r.Resources.cache.GenerateNewSnapshot(key, nil)
 			} else if val != nil && val.XdsResources != nil {
-				if r.cache == nil {
+				if r.Resources.cache == nil {
 					r.Logger.Error(err, "failed to init snapshot cache")
 				} else {
 					// Update snapshot cache
-					err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
+					err = r.Resources.cache.GenerateNewSnapshot(key, val.XdsResources)
 				}
 			}
 			if err != nil {
@@ -150,7 +155,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("subscriber shutting down")
 }
 
-func (r *Runner) tlsConfig(cert, key, ca string) *tls.Config {
+func (r *xdsRunner) tlsConfig(cert, key, ca string) *tls.Config {
 	loadConfig := func() (*tls.Config, error) {
 		cert, err := tls.LoadX509KeyPair(cert, key)
 		if err != nil {
