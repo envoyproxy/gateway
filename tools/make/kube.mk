@@ -30,9 +30,7 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:rbac:artifacts:config=charts/gateway-helm/templates/generated/rbac output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
-	cat charts/gateway-helm/templates/generated/rbac/role.yaml | sed "s;envoy-gateway-role;{{ include \"eg.fullname\" . }}-envoy-gateway-role;g" > charts/gateway-helm/templates/generated/rbac/roles.yaml
-	rm charts/gateway-helm/templates/generated/rbac/role.yaml
+	$(tools/controller-gen) crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
