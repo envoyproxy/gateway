@@ -231,7 +231,10 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				result.Resources = translateGatewayAPIToGatewayAPI(resources)
+				result.Resources, err = translateGatewayAPIToGatewayAPI(resources)
+				if err != nil {
+					return err
+				}
 			}
 			if outType == xdsType {
 				res, err := translateGatewayAPIToXds(dnsDomain, resourceType, resources)
@@ -251,7 +254,11 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi.Resources {
+func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
+	if resources.GatewayClass == nil {
+		return gatewayapi.Resources{}, fmt.Errorf("the GatewayClass resource is required")
+	}
+
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -274,10 +281,14 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi
 	}
 
 	gRes.GatewayClass = resources.GatewayClass
-	return gRes.Resources
+	return gRes.Resources, nil
 }
 
 func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+	if resources.GatewayClass == nil {
+		return nil, fmt.Errorf("the GatewayClass resource is required")
+	}
+
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -737,11 +748,6 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 			}
 			resources.AuthenticationFilters = append(resources.AuthenticationFilters, authenticationFilter)
 		}
-	}
-
-	// Require the essential resources, like GatewayClass and Gateways
-	if resources.GatewayClass == nil || len(resources.Gateways) == 0 {
-		return nil, fmt.Errorf("missing `GatewayClass` or `Gateways` resources")
 	}
 
 	if useDefaultNamespace {

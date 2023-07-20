@@ -257,9 +257,15 @@ func TestTranslate(t *testing.T) {
 			expect: true,
 		},
 		{
-			name:   "no-gateway-resources",
+			name:   "no-gateway-class-resources",
 			from:   "gateway-api",
 			to:     "xds",
+			expect: false,
+		},
+		{
+			name:   "no-gateway-class-resources",
+			from:   "gateway-api",
+			to:     "gateway-api",
 			expect: false,
 		},
 	}
