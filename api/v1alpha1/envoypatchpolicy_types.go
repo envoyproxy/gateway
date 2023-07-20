@@ -28,7 +28,7 @@ type EnvoyPatchPolicy struct {
 	Spec EnvoyPatchPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyPatchPolicy.
-	Status EnvoyPatchPolicyStatus `json:"status"`
+	Status EnvoyPatchPolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
