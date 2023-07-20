@@ -109,8 +109,8 @@ spec:
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-      # The listener name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
-      name: default-eg-http
+      # The listener name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
       operation:
         op: add
         path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
@@ -127,8 +127,8 @@ spec:
                   cluster_name: rate-limit-cluster
               transport_api_version: V3
     - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-      # The route name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
-      name: default-eg-http
+      # The route name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
       operation:
         op: add
         path: "/virtual_hosts/0/rate_limits"

@@ -1,5 +1,5 @@
 xds:
-  default-eg:
+  default/eg:
     configs:
     - '@type': type.googleapis.com/envoy.admin.v3.BootstrapConfigDump
       bootstrap:
@@ -181,23 +181,23 @@ xds:
                     configSource:
                       ads: {}
                       resourceApiVersion: V3
-                    routeConfigName: default-eg-http
+                    routeConfigName: default/eg/http
                   statPrefix: http
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
-            name: default-eg-http
+            name: default/eg/http
             perConnectionBufferLimitBytes: 32768
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
-          name: default-eg-http
+          name: default/eg/http
           virtualHosts:
           - domains:
             - '*'
-            name: default-eg-http
+            name: default/eg/http
             rateLimits:
             - actions:
               - remoteAddress: {}
