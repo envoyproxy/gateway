@@ -220,7 +220,7 @@ httpRoutes:
         name: gateway-1
         namespace: envoy-gateway
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: ""
@@ -233,9 +233,9 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -244,7 +244,7 @@ xdsIR:
       hostnames:
       - '*'
       isHTTP2: false
-      name: envoy-gateway-gateway-1-http
+      name: envoy-gateway/gateway-1/http
       port: 10080
       routes:
       - backendWeights:
@@ -258,7 +258,7 @@ xdsIR:
         - distinct: false
           exact: example.com
           name: :authority
-        name: envoy-gateway-httproute-2-rule-0-match-0-example.com
+        name: envoy-gateway/httproute-2/rule/0/match/0-example.com
         pathMatch:
           distinct: false
           name: ""
@@ -278,7 +278,7 @@ xdsIR:
         - distinct: false
           exact: example.com
           name: :authority
-        name: envoy-gateway-httproute-3-rule-0-match-0-example.com
+        name: envoy-gateway/httproute-3/rule/0/match/0-example.com
         pathMatch:
           distinct: false
           name: ""
@@ -297,7 +297,7 @@ xdsIR:
         - distinct: false
           exact: one
           name: version
-        name: envoy-gateway-httproute-4-rule-0-match-0-example.net
+        name: envoy-gateway/httproute-4/rule/0/match/0-example.net
         pathMatch:
           distinct: false
           name: ""
@@ -313,7 +313,7 @@ xdsIR:
         - distinct: false
           exact: example.net
           name: :authority
-        name: envoy-gateway-httproute-5-rule-0-match-0-example.net
+        name: envoy-gateway/httproute-5/rule/0/match/0-example.net
         pathMatch:
           distinct: false
           name: ""
@@ -325,7 +325,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: envoy-gateway-httproute-1-rule-0-match-0-*
+        name: envoy-gateway/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false
           name: ""
