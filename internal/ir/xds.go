@@ -227,7 +227,7 @@ type HTTPRoute struct {
 	// Direct responses to be returned for this route. Takes precedence over Destinations and Redirect.
 	DirectResponse *DirectResponse `json:"directResponse,omitempty" yaml:"directResponse,omitempty"`
 	// Redirections to be returned for this route. Takes precedence over Destinations.
-	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
+	RedirectResponse *RedirectResponse `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destinations that requests to this HTTPRoute will be mirrored to
 	Mirrors []*RouteDestination `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
 	// Destinations associated with this matched route.
@@ -301,8 +301,8 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	if h.Redirect != nil {
-		if err := h.Redirect.Validate(); err != nil {
+	if h.RedirectResponse != nil {
+		if err := h.RedirectResponse.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -496,9 +496,9 @@ func (r URLRewrite) Validate() error {
 	return errs
 }
 
-// Redirect holds the details for how and where to redirect a request
+// RedirectResponse holds the details for how and where to redirect a request
 // +k8s:deepcopy-gen=true
-type Redirect struct {
+type RedirectResponse struct {
 	// Scheme configures the replacement of the request's scheme.
 	Scheme *string `json:"scheme" yaml:"scheme"`
 	// Hostname configures the replacement of the request's hostname.
@@ -512,7 +512,7 @@ type Redirect struct {
 }
 
 // Validate the fields within the Redirect structure
-func (r Redirect) Validate() error {
+func (r RedirectResponse) Validate() error {
 	var errs error
 
 	if r.Scheme != nil {

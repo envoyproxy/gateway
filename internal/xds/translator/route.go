@@ -41,8 +41,8 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 	switch {
 	case httpRoute.DirectResponse != nil:
 		router.Action = &routev3.Route_DirectResponse{DirectResponse: buildXdsDirectResponseAction(httpRoute.DirectResponse)}
-	case httpRoute.Redirect != nil:
-		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
+	case httpRoute.RedirectResponse != nil:
+		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.RedirectResponse)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)
 		if len(httpRoute.Mirrors) > 0 {
@@ -210,7 +210,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 	}
 }
 
-func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
+func buildXdsRedirectAction(redirection *ir.RedirectResponse) *routev3.RedirectAction {
 	routeAction := &routev3.RedirectAction{}
 
 	if redirection.Scheme != nil {

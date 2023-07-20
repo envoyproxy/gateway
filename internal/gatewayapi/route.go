@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -149,7 +150,7 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
-				if route.DirectResponse == nil && route.Redirect == nil {
+				if route.DirectResponse == nil && route.RedirectResponse == nil {
 					if len(destinations) > 0 {
 						route.Destinations = append(route.Destinations, destinations...)
 						route.BackendWeights.Valid += backendWeight
@@ -259,41 +260,28 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 }
 
 func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, irRoute *ir.HTTPRoute) {
-	// Add the redirect filter or direct response that were created earlier to all the irRoutes
-	if httpFiltersContext.RedirectResponse != nil {
-		irRoute.Redirect = httpFiltersContext.RedirectResponse
+	filterV := reflect.ValueOf(httpFiltersContext.HTTPFilterIR)
+	filterT := reflect.TypeOf(httpFiltersContext.HTTPFilterIR)
+	for index := 0; index < filterV.Elem().NumField(); index++ {
+		if field := filterV.Elem().Field(index); field.Kind() == reflect.Pointer {
+			if !field.IsNil() {
+				fieldName := filterT.Elem().Field(index).Name
+				target := reflect.ValueOf(irRoute).Elem().FieldByName(fieldName)
+				if target.IsValid() {
+					target.Set(field)
+				}
+			}
+		}
+		if field := filterV.Elem().Field(index); field.Kind() == reflect.Slice {
+			if field.Len() != 0 {
+				fieldName := filterT.Elem().Field(index).Name
+				target := reflect.ValueOf(irRoute).Elem().FieldByName(fieldName)
+				if target.IsValid() {
+					target.Set(field)
+				}
+			}
+		}
 	}
-	if httpFiltersContext.DirectResponse != nil {
-		irRoute.DirectResponse = httpFiltersContext.DirectResponse
-	}
-	if httpFiltersContext.URLRewrite != nil {
-		irRoute.URLRewrite = httpFiltersContext.URLRewrite
-	}
-	if len(httpFiltersContext.AddRequestHeaders) > 0 {
-		irRoute.AddRequestHeaders = httpFiltersContext.AddRequestHeaders
-	}
-	if len(httpFiltersContext.RemoveRequestHeaders) > 0 {
-		irRoute.RemoveRequestHeaders = httpFiltersContext.RemoveRequestHeaders
-	}
-	if len(httpFiltersContext.AddResponseHeaders) > 0 {
-		irRoute.AddResponseHeaders = httpFiltersContext.AddResponseHeaders
-	}
-	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
-		irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
-	}
-	if len(httpFiltersContext.Mirrors) > 0 {
-		irRoute.Mirrors = httpFiltersContext.Mirrors
-	}
-	if httpFiltersContext.RequestAuthentication != nil {
-		irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
-	}
-	if httpFiltersContext.RateLimit != nil {
-		irRoute.RateLimit = httpFiltersContext.RateLimit
-	}
-	if len(httpFiltersContext.ExtensionRefs) > 0 {
-		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
-	}
-
 }
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
@@ -358,7 +346,7 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
-				if route.DirectResponse == nil && route.Redirect == nil {
+				if route.DirectResponse == nil && route.RedirectResponse == nil {
 					if len(destinations) > 0 {
 						route.Destinations = append(route.Destinations, destinations...)
 						route.BackendWeights.Valid += backendWeight
@@ -519,7 +507,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					AddResponseHeaders:    routeRoute.AddResponseHeaders,
 					RemoveResponseHeaders: routeRoute.RemoveResponseHeaders,
 					Destinations:          routeRoute.Destinations,
-					Redirect:              routeRoute.Redirect,
+					RedirectResponse:      routeRoute.RedirectResponse,
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,

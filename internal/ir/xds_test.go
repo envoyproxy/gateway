@@ -174,7 +174,7 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
-		Redirect: &Redirect{
+		RedirectResponse: &RedirectResponse{
 			Scheme:   ptrTo("https"),
 			Hostname: ptrTo("redirect.example.com"),
 			Path: &HTTPPathModifier{
@@ -201,7 +201,7 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
-		Redirect: &Redirect{
+		RedirectResponse: &RedirectResponse{
 			Scheme:     ptrTo("err"),
 			Hostname:   ptrTo("redirect.example.com"),
 			Path:       &HTTPPathModifier{},
@@ -214,7 +214,7 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
-		Redirect: &Redirect{
+		RedirectResponse: &RedirectResponse{
 			Scheme:   ptrTo("https"),
 			Hostname: ptrTo("redirect.example.com"),
 			Path: &HTTPPathModifier{

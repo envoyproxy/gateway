@@ -45,7 +45,7 @@ type HTTPFiltersContext struct {
 // HTTPFilterIR contains the ir processing results.
 type HTTPFilterIR struct {
 	DirectResponse   *ir.DirectResponse
-	RedirectResponse *ir.Redirect
+	RedirectResponse *ir.RedirectResponse
 
 	URLRewrite *ir.URLRewrite
 
@@ -264,7 +264,7 @@ func (t *Translator) processRedirectFilter(
 		return
 	}
 
-	redir := &ir.Redirect{}
+	redir := &ir.RedirectResponse{}
 	if redirect.Scheme != nil {
 		// Note that gateway API may support additional schemes in the future, but unknown values
 		// must result in an UnsupportedValue status
