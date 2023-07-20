@@ -1,131 +1,145 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
-      listeners:
-        - name: http-1
-          protocol: HTTP
-          port: 80
-          hostname: foo.com
-          allowedRoutes:
-            namespaces:
-              from: All
-        - name: http-2
-          protocol: HTTP
-          port: 80
-          hostname: bar.com
-          allowedRoutes:
-            namespaces:
-              from: All
-    status:
-      listeners:
-        - name: http-1
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute
-          attachedRoutes: 0
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Sending translated listener configuration to the data plane
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
-        - name: http-2
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute
-          attachedRoutes: 1
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Sending translated listener configuration to the data plane
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: foo.com
+      name: http-1
+      port: 80
+      protocol: HTTP
+    - allowedRoutes:
+        namespaces:
+          from: All
+      hostname: bar.com
+      name: http-2
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http-1
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http-2
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 httpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: HTTPRoute
-    metadata:
-      namespace: default
-      name: httproute-1
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-          sectionName: http-2
-      rules:
-        - matches:
-            - path:
-                value: "/"
-          backendRefs:
-            - name: service-1
-              port: 8080
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-            sectionName: http-2
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Route is accepted
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+      sectionName: http-2
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+        sectionName: http-2
+infraIR:
+  envoy-gateway-gateway-1:
+    proxy:
+      listeners:
+      - address: ""
+        ports:
+        - containerPort: 10080
+          name: http-1
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway-gateway-1
 xdsIR:
   envoy-gateway-gateway-1:
     accessLog:
       text:
-        - path: /dev/stdout
+      - path: /dev/stdout
     http:
-      - name: envoy-gateway-gateway-1-http-1
-        address: 0.0.0.0
-        port: 10080
-        hostnames:
-          - foo.com
-      - name: envoy-gateway-gateway-1-http-2
-        address: 0.0.0.0
-        port: 10080
-        hostnames:
-          - bar.com
-        routes:
-          - name: default-httproute-1-rule-0-match-0-bar.com
-            pathMatch:
-              prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
-infraIR:
-  envoy-gateway-gateway-1:
-    proxy:
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
-
-      listeners:
-        - address: ""
-          ports:
-            - name: http-1
-              protocol: "HTTP"
-              servicePort: 80
-              containerPort: 10080
+    - address: 0.0.0.0
+      hostnames:
+      - foo.com
+      isHTTP2: false
+      name: envoy-gateway-gateway-1-http-1
+      port: 10080
+    - address: 0.0.0.0
+      hostnames:
+      - bar.com
+      isHTTP2: false
+      name: envoy-gateway-gateway-1-http-2
+      port: 10080
+      routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        name: default-httproute-1-rule-0-match-0-bar.com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

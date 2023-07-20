@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -721,6 +722,20 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(v1.ServiceSpec),
 			}
 			resources.Services = append(resources.Services, service)
+		case egv1a1.KindAuthenticationFilter:
+			typedSpec := spec.Interface()
+			authenticationFilter := &egv1a1.AuthenticationFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindAuthenticationFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.AuthenticationFilterSpec),
+			}
+			resources.AuthenticationFilters = append(resources.AuthenticationFilters, authenticationFilter)
 		}
 	}
 
