@@ -82,7 +82,7 @@ httpRoutes:
       parentRef:
         name: eg
 xds:
-  envoy-gateway-system-eg:
+  envoy-gateway-system/eg:
     '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
     dynamicActiveClusters:
     - cluster:
@@ -95,8 +95,8 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: envoy-gateway-system-backend-rule-0-match-0-www.example.com
-        name: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+          serviceName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+        name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

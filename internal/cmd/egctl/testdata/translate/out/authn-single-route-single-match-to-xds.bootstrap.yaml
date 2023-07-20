@@ -1,5 +1,5 @@
 xds:
-  envoy-gateway-system-eg:
+  envoy-gateway-system/eg:
     '@type': type.googleapis.com/envoy.admin.v3.BootstrapConfigDump
     bootstrap:
       admin:
