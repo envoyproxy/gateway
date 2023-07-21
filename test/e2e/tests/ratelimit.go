@@ -183,7 +183,7 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 					Path: "/foo",
 				},
 				Response: http.Response{
-					StatusCode: 400,
+					StatusCode: 401,
 				},
 				Namespace: ns,
 			}
