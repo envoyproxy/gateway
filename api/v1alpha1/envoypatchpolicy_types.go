@@ -122,6 +122,34 @@ type EnvoyPatchPolicyStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+const (
+	// PolicyConditionProgrammed indicates whether the policy has been translated
+	// and ready to be programmed into the data plane.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Programmed"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "Invalid"
+	// * "ResourceNotFound"
+	//
+	PolicyConditionProgrammed gwapiv1a2.PolicyConditionType = "Programmed"
+
+	// PolicyReasonProgrammed is used with the "Programmed" condition when the policy
+	// is ready to be programmed into the data plane.
+	PolicyReasonProgrammed gwapiv1a2.PolicyConditionReason = "Programmed"
+
+	// PolicyReasonInvalid is used with the "Programmed" condition when the patch
+	// is syntactically or semantically invalid.
+	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
+
+	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// policy cannot find the resource type to patch to.
+	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
+)
+
 //+kubebuilder:object:root=true
 
 // EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.

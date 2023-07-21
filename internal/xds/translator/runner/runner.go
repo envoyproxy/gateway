@@ -8,6 +8,8 @@ package runner
 import (
 	"context"
 
+	ktypes "k8s.io/apimachinery/pkg/types"
+
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
@@ -19,9 +21,10 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR            *message.XdsIR
-	Xds              *message.Xds
-	ExtensionManager extension.Manager
+	XdsIR                    *message.XdsIR
+	Xds                      *message.Xds
+	EnvoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
+	ExtensionManager         extension.Manager
 }
 
 type Runner struct {
@@ -76,6 +79,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				} else {
 					// Publish
 					r.Xds.Store(key, result)
+				}
+
+				// Publish EnvoyPatchPolicyStatus
+				for _, e := range val.EnvoyPatchPolicies {
+					key := ktypes.NamespacedName{
+						Name:      e.Name,
+						Namespace: e.Namespace,
+					}
+					r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 				}
 			}
 		},
