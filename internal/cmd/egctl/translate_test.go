@@ -179,6 +179,14 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
+			name:         "envoy-patch-policy",
+			from:         "gateway-api",
+			to:           "xds",
+			output:       yamlOutput,
+			resourceType: string(AllEnvoyConfigType),
+			expect:       true,
+		},
+		{
 			name:      "default-resources",
 			from:      "gateway-api",
 			to:        "gateway-api,xds",

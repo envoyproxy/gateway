@@ -747,6 +747,20 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(egv1a1.AuthenticationFilterSpec),
 			}
 			resources.AuthenticationFilters = append(resources.AuthenticationFilters, authenticationFilter)
+		case egv1a1.KindEnvoyPatchPolicy:
+			typedSpec := spec.Interface()
+			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyPatchPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
+			}
+			resources.EnvoyPatchPolicies = append(resources.EnvoyPatchPolicies, envoyPatchPolicy)
 		}
 	}
 
