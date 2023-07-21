@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -45,22 +44,25 @@ var ReloadTest = suite.ConformanceTest{
 			suite.RestConfig.Host = "https://127.0.0.1:6443"
 			var namespace = "envoy-gateway-system"
 
-			initialConfig, err := getConfigDump(suite.RestConfig, suite.Client, namespace)
+			initialConfig, err := getConfigDump(t, suite.RestConfig, suite.Client, namespace)
 			if err != nil {
+				t.Log(err)
 				t.Fatal(err) // Fail the test and log the error
 			}
 			var numReloads = 5
 
 			for i := 0; i < numReloads; i++ {
 				// Step 2: Restart or reload the Envoy Gateway
-				err := restartEnvoyGateway(suite.Client, namespace)
+				err := restartEnvoyGateway(t, suite.Client, namespace)
 				if err != nil {
+					t.Log(err)
 					t.Fatal(err)
 				}
 
 				// Step 3: Retrieve the `/config_dump` output from the Envoy Proxy admin interface
-				newConfigDump, err := getConfigDump(suite.RestConfig, suite.Client, namespace)
+				newConfigDump, err := getConfigDump(t, suite.RestConfig, suite.Client, namespace)
 				if err != nil {
+					t.Log(err)
 					t.Fatal(err)
 				}
 
@@ -73,7 +75,7 @@ var ReloadTest = suite.ConformanceTest{
 	},
 }
 
-func getConfigDump(config *rest.Config, c client.Client, namespace string) (responseMap map[string]interface{}, err error) {
+func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseMap map[string]interface{}, err error) {
 	selectorLabels := map[string]string{
 		"gateway.envoyproxy.io/owning-gateway-name":      "all-namespaces",
 		"gateway.envoyproxy.io/owning-gateway-namespace": "gateway-conformance-infra",
@@ -92,7 +94,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	// List the pods using the ListOptions
 	err = c.List(context.TODO(), podList, listOptions)
 	if err != nil {
-		log.Fatal(err)
+		t.Log(err)
 		return nil, err
 	}
 
@@ -103,7 +105,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
-		log.Fatal(err)
+		t.Log(err)
 		return nil, err
 	}
 
@@ -120,7 +122,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	// Create a port forwarder
 	portForwarder, err := portforward.New(dialer, ports, stopCh, readyCh, os.Stdout, os.Stderr)
 	if err != nil {
-		log.Fatal(err)
+		t.Log(err)
 		return nil, err
 	}
 
@@ -128,7 +130,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	go func() {
 		err := portForwarder.ForwardPorts()
 		if err != nil {
-			log.Fatal(err)
+			t.Log(err)
 		}
 	}()
 
@@ -141,7 +143,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	// Perform an HTTP GET request to the forwarded port
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/config_dump", localPort))
 	if err != nil {
-		log.Fatal(err)
+		t.Log(err)
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -165,7 +167,7 @@ func getConfigDump(config *rest.Config, c client.Client, namespace string) (resp
 	return responseMap, nil
 }
 
-func restartEnvoyGateway(c client.Client, namespace string) (err error) {
+func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err error) {
 	// Get the pod with the selector '-selector=control-plane=envoy-gateway'
 	podList := &corev1.PodList{}
 	err = c.List(context.TODO(), podList, &client.ListOptions{
@@ -173,7 +175,7 @@ func restartEnvoyGateway(c client.Client, namespace string) (err error) {
 		LabelSelector: labels.SelectorFromSet(labels.Set{"control-plane": "envoy-gateway"}),
 	})
 	if err != nil {
-		log.Fatal(err)
+		t.Log(err)
 		return err
 	}
 	var previousGatewayPodName string
@@ -183,7 +185,7 @@ func restartEnvoyGateway(c client.Client, namespace string) (err error) {
 		previousGatewayPodName = pod.Name
 		err = c.Delete(context.TODO(), &pod)
 		if err != nil {
-			log.Fatal(err)
+			t.Log(err)
 			return err
 		}
 
@@ -202,7 +204,7 @@ func restartEnvoyGateway(c client.Client, namespace string) (err error) {
 			LabelSelector: labels.SelectorFromSet(labels.Set{"control-plane": "envoy-gateway"}),
 		})
 		if err != nil {
-			log.Fatal(err)
+			t.Log(err)
 			return err
 		}
 
