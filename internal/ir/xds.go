@@ -51,8 +51,7 @@ type Xds struct {
 	// AccessLog configuration for the gateway.
 	AccessLog *AccessLog `json:"accessLog,omitempty" yaml:"accessLog,omitempty"`
 	// Tracing configuration for the gateway.
-	// EG currently supports only OpenTelemetry tracing, so use ProxyTracing directly.
-	Tracing *egcfgv1a1.ProxyTracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
+	Tracing *Tracing `json:"tracing,omitempty" yaml:"tracing,omitempty"`
 	// HTTP listeners exposed by the gateway.
 	HTTP []*HTTPListener `json:"http,omitempty" yaml:"http,omitempty"`
 	// TCP Listeners exposed by the gateway.
@@ -824,4 +823,12 @@ type JSONPatchOperation struct {
 	Path string `json:"path" yaml:"path"`
 	// Value is the new value of the path location.
 	Value apiextensionsv1.JSON `json:"value" yaml:"value"`
+}
+
+// Tracing defines the configuration for tracing a Envoy xDS Resource
+// +k8s:deepcopy-gen=true
+type Tracing struct {
+	ServiceName string `json:"serviceName"`
+
+	egcfgv1a1.ProxyTracing
 }
