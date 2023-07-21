@@ -166,16 +166,32 @@ var RateLimitBasedJwtClaimsTest = suite.ConformanceTest{
 
 			// fire the rest request
 			if err := GotExactNExpectedResponse(t, 2, suite.RoundTripper, JwtReq, JwtOkResp); err != nil {
-				t.Errorf("fail to get expected response at three request: %v", err)
+				t.Errorf("failed to get expected response at third request: %v", err)
 			}
 			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, JwtReq, expectLimitResp); err != nil {
-				t.Errorf("fail to get expected response at last fourth request: %v", err)
+				t.Errorf("failed to get expected response at the fourth request: %v", err)
 			}
 
 			// Carrying different jwt claims will not be limited
 			if err := GotExactNExpectedResponse(t, 4, suite.RoundTripper, difJwtReq, expectOkResp); err != nil {
-				t.Errorf("fail to get expected response at first four request: %v", err)
+				t.Errorf("failed to get expected response for the request with a different jwt: %v", err)
 			}
+
+			// make sure the request with no token is rejected
+			noTokenResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/foo",
+				},
+				Response: http.Response{
+					StatusCode: 400,
+				},
+				Namespace: ns,
+			}
+			noTokenReq := http.MakeRequest(t, &noTokenResp, gwAddr, "HTTP", "http")
+			if err := GotExactNExpectedResponse(t, 1, suite.RoundTripper, noTokenReq, noTokenResp); err != nil {
+				t.Errorf("failed to get expected response: %v", err)
+			}
+
 		})
 	},
 }
