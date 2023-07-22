@@ -1,0 +1,50 @@
+xds:
+  envoy-gateway-system/eg:
+    '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+    dynamicActiveClusters:
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          serviceName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+        name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        type: EDS
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        dnsRefreshRate: 30s
+        loadAssignment:
+          clusterName: raw_githubusercontent_com_443
+          endpoints:
+          - lbEndpoints:
+            - endpoint:
+                address:
+                  socketAddress:
+                    address: raw.githubusercontent.com
+                    portValue: 443
+            loadBalancingWeight: 1
+            locality: {}
+        name: raw_githubusercontent_com_443
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        respectDnsTtl: true
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            commonTlsContext:
+              validationContext:
+                trustedCa:
+                  filename: /etc/ssl/certs/ca-certificates.crt
+        type: STRICT_DNS

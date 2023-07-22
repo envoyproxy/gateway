@@ -12,12 +12,15 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	kube "github.com/envoyproxy/gateway/internal/kubernetes"
+	"github.com/envoyproxy/gateway/internal/utils/file"
 	netutil "github.com/envoyproxy/gateway/internal/utils/net"
 )
 
@@ -106,6 +109,9 @@ func TestExtractAllConfigDump(t *testing.T) {
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			assert.NoError(t, err)
+			if *overrideTestData {
+				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
+			}
 			out, err := readOutputConfig(tc.expected)
 			assert.NoError(t, err)
 			if tc.output == "yaml" {
@@ -188,6 +194,9 @@ func TestExtractSubResourcesConfigDump(t *testing.T) {
 			aggregated := sampleAggregatedConfigDump(configDump)
 			got, err := marshalEnvoyProxyConfig(aggregated, tc.output)
 			assert.NoError(t, err)
+			if *overrideTestData {
+				require.NoError(t, file.Write(string(got), filepath.Join("testdata", "config", "out", tc.expected)))
+			}
 			out, err := readOutputConfig(tc.expected)
 			assert.NoError(t, err)
 			if tc.output == "yaml" {

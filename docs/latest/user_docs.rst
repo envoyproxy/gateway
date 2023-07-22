@@ -6,6 +6,7 @@ Learn how to deploy, use, and operate Envoy Gateway.
 .. toctree::
   :maxdepth: 1
 
+  user/installation
   user/quickstart
   user/http-routing
   user/http-redirect
@@ -16,6 +17,7 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/secure-gateways
   user/tls-cert-manager
   user/tls-passthrough
+  user/tls-termination
   user/tcp-routing
   user/udp-routing
   user/grpc-routing

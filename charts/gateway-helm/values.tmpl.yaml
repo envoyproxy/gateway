@@ -2,15 +2,15 @@ deployment:
   envoyGateway:
     image:
       repository: ${ImageRepository}
-      tag: ${ImageTag}
+      tag: '${ImageTag}'
     imagePullPolicy: Always
     resources:
       limits:
         cpu: 500m
-        memory: 128Mi
+        memory: 1024Mi
       requests:
-        cpu: 10m
-        memory: 64Mi
+        cpu: 100m
+        memory: 256Mi
   kubeRbacProxy:
     image:
       repository: gcr.io/kubebuilder/kube-rbac-proxy
@@ -30,6 +30,9 @@ deployment:
       port: 18001
       targetPort: 18001
   replicas: 1
+  pod:
+    annotations: {}
+    labels: {}
 
 config:
   envoyGateway:
@@ -37,6 +40,9 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
+    logging:
+      level:
+        default: info
 
 envoyGatewayMetricsService:
   ports:

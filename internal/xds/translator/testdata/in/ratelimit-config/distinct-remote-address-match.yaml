@@ -1,0 +1,23 @@
+name: "first-listener"
+address: "0.0.0.0"
+port: 10080
+hostnames:
+- "*"
+routes:
+- name: "first-route"
+  rateLimit:
+    global:
+      rules:
+      - cidrMatch:
+          cidr: "192.168.0.0/16"
+          ipv6: false
+          maskLen: 16
+        limit:
+          requests: 5
+          unit: second
+        distinct: true
+  pathMatch:
+    exact: "foo/bar"
+  destinations:
+  - host: "1.2.3.4"
+    port: 50000

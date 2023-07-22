@@ -16,6 +16,49 @@ API group.
 
 
 
+## CustomTag
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+
+| Field | Description |
+| --- | --- |
+| `type` _[CustomTagType](#customtagtype)_ | Type defines the type of custom tag. |
+| `literal` _[LiteralCustomTag](#literalcustomtag)_ | Literal adds hard-coded value to each span. It's required when the type is "Literal". |
+| `environment` _[EnvironmentCustomTag](#environmentcustomtag)_ | Environment adds value from environment variable to each span. It's required when the type is "Environment". |
+| `requestHeader` _[RequestHeaderCustomTag](#requestheadercustomtag)_ | RequestHeader adds value from request header to each span. It's required when the type is "RequestHeader". |
+
+
+## CustomTagType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+
+
+## EnvironmentCustomTag
+
+
+
+EnvironmentCustomTag adds value from environment variable to each span.
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name defines the name of the environment variable which to extract the value from. |
+| `defaultValue` _string_ | DefaultValue defines the default value to use if the environment variable is not set. |
+
+
 ## EnvoyGateway
 
 
@@ -33,7 +76,8 @@ EnvoyGateway is the schema for the envoygateways API.
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
-| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
+| `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
+| `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
 
 
 ## EnvoyGatewayAdmin
@@ -212,7 +256,8 @@ _Appears in:_
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
-| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
+| `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
+| `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
 
 
 ## EnvoyProxy
@@ -280,11 +325,40 @@ _Appears in:_
 
 
 
-## Extension
+## ExtensionAPISettings
 
 
 
-Extension defines the configuration for registering an extension to the Envoy Gateway control plane.
+ExtensionAPISettings defines the settings specific to Gateway API Extensions.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `enableEnvoyPatchPolicy` _boolean_ | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
+
+
+## ExtensionHooks
+
+
+
+ExtensionHooks defines extension hooks across all supported runners
+
+_Appears in:_
+- [ExtensionManager](#extensionmanager)
+
+| Field | Description |
+| --- | --- |
+| `xdsTranslator` _[XDSTranslatorHooks](#xdstranslatorhooks)_ | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
+
+
+## ExtensionManager
+
+
+
+ExtensionManager defines the configuration for registering an extension manager to the Envoy Gateway control plane.
 
 _Appears in:_
 - [EnvoyGateway](#envoygateway)
@@ -297,20 +371,6 @@ _Appears in:_
 | `service` _[ExtensionService](#extensionservice)_ | Service defines the configuration of the extension service that the Envoy Gateway Control Plane will call through extension hooks. |
 
 
-## ExtensionHooks
-
-
-
-ExtensionHooks defines extension hooks across all supported runners
-
-_Appears in:_
-- [Extension](#extension)
-
-| Field | Description |
-| --- | --- |
-| `xdsTranslator` _[XDSTranslatorHooks](#xdstranslatorhooks)_ | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
-
-
 ## ExtensionService
 
 
@@ -318,7 +378,7 @@ _Appears in:_
 ExtensionService defines the configuration for connecting to a registered extension service.
 
 _Appears in:_
-- [Extension](#extension)
+- [ExtensionManager](#extensionmanager)
 
 | Field | Description |
 | --- | --- |
@@ -378,7 +438,7 @@ _Appears in:_
 GroupVersionKind unambiguously identifies a Kind. It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
 
 _Appears in:_
-- [Extension](#extension)
+- [ExtensionManager](#extensionmanager)
 
 | Field | Description |
 | --- | --- |
@@ -457,6 +517,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations are the annotations that should be appended to the pods. By default, no pod annotations are appended. |
+| `labels` _object (keys:string, values:string)_ | Labels are the additional labels that should be tagged to the pods. By default, no additional pod labels are tagged. |
 | `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
@@ -492,6 +553,20 @@ _Appears in:_
 | `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
 
 
+## LiteralCustomTag
+
+
+
+LiteralCustomTag adds hard-coded value to each span.
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Description |
+| --- | --- |
+| `value` _string_ | Value defines the hard-coded value to add to each span. |
+
+
 ## LogComponent
 
 _Underlying type:_ `string`
@@ -515,6 +590,32 @@ _Appears in:_
 
 
 
+## MetricSink
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
+| `openTelemetry` _[OpenTelemetrySink](#opentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
+
+
+## MetricSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [MetricSink](#metricsink)
+
+
+
 ## OpenTelemetryEnvoyProxyAccessLog
 
 
@@ -529,6 +630,32 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
+## OpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [MetricSink](#metricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the service hostname. |
+| `port` _integer_ | Port defines the port the service is exposed on. |
+
+
+## PrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
 
 
 ## ProviderType
@@ -641,6 +768,21 @@ _Appears in:_
 | `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
 
 
+## ProxyMetrics
+
+
+
+
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
+| `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+
+
 ## ProxyTelemetry
 
 
@@ -653,6 +795,24 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `accessLog` _[ProxyAccessLog](#proxyaccesslog)_ | AccessLogs defines accesslog parameters for managed proxies. If unspecified, will send default format to stdout. |
+| `tracing` _[ProxyTracing](#proxytracing)_ | Tracing defines tracing configuration for managed proxies. If unspecified, will not send tracing data. |
+| `metrics` _[ProxyMetrics](#proxymetrics)_ | Metrics defines metrics configuration for managed proxies. |
+
+
+## ProxyTracing
+
+
+
+
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `samplingRate` _integer_ | SamplingRate controls the rate at which traffic will be selected for tracing if no prior sampling decision has been made. Defaults to 100, valid values [0-100]. 100 indicates 100% sampling. |
+| `customTags` _object (keys:string, values:[CustomTag](#customtag))_ | CustomTags defines the custom tags to add to each span. If provider is kubernetes, pod name and namespace are added by default. |
+| `provider` _[TracingProvider](#tracingprovider)_ | Provider defines the tracing provider. Only OpenTelemetry is supported currently. |
 
 
 ## RateLimit
@@ -725,6 +885,21 @@ _Appears in:_
 | `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
 
 
+## RequestHeaderCustomTag
+
+
+
+RequestHeaderCustomTag adds value from request header to each span.
+
+_Appears in:_
+- [CustomTag](#customtag)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name defines the name of the request header which to extract the value from. |
+| `defaultValue` _string_ | DefaultValue defines the default value to use if the request header is not set. |
+
+
 ## ResourceProviderType
 
 _Underlying type:_ `string`
@@ -744,6 +919,33 @@ ServiceType string describes ingress methods for a service
 
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
+
+
+
+## TracingProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyTracing](#proxytracing)
+
+| Field | Description |
+| --- | --- |
+| `type` _[TracingProviderType](#tracingprovidertype)_ | Type defines the tracing provider type. EG currently only supports OpenTelemetry. |
+| `host` _string_ | Host define the provider service hostname. |
+| `port` _integer_ | Port defines the port the provider service is exposed on. |
+
+
+## TracingProviderType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [TracingProvider](#tracingprovider)
 
 
 

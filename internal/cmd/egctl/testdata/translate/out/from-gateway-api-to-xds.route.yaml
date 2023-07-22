@@ -1,15 +1,15 @@
 xds:
-  default-eg:
+  default/eg:
     '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
     dynamicRouteConfigs:
     - routeConfig:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
         ignorePortInHostMatching: true
-        name: default-eg-http
+        name: default/eg/http
         virtualHosts:
         - domains:
           - '*'
-          name: default-eg-http
+          name: default/eg/http
           routes:
           - match:
               headers:
@@ -17,17 +17,17 @@ xds:
                 stringMatch:
                   exact: www.example.com
               prefix: /
-            name: default-backend-rule-0-match-0-www.example.com
+            name: default/backend/rule/0/match/0-www.example.com
             route:
-              cluster: default-backend-rule-0-match-0-www.example.com
+              cluster: default/backend/rule/0/match/0-www.example.com
     - routeConfig:
         '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
         ignorePortInHostMatching: true
-        name: default-eg-grpc
+        name: default/eg/grpc
         virtualHosts:
         - domains:
           - '*'
-          name: default-eg-grpc
+          name: default/eg/grpc
           routes:
           - match:
               headers:
@@ -35,7 +35,6 @@ xds:
                 stringMatch:
                   exact: www.grpc-example.com
               path: /com.example.Things/DoThing
-            name: default-backend-rule-0-match-0-www.grpc-example.com
+            name: default/backend/rule/0/match/0-www.grpc-example.com
             route:
-              cluster: default-backend-rule-0-match-0-www.grpc-example.com
-
+              cluster: default/backend/rule/0/match/0-www.grpc-example.com

@@ -216,9 +216,20 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `op` _string_ | Op is the type of operation to perform |
+| `op` _[JSONPatchOperationType](#jsonpatchoperationtype)_ | Op is the type of operation to perform |
 | `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` _string_ | Value is the new value of the path location. |
+| `value` _[JSON](#json)_ | Value is the new value of the path location. |
+
+
+## JSONPatchOperationType
+
+_Underlying type:_ `string`
+
+JSONPatchOperationType specifies the JSON Patch operations that can be performed.
+
+_Appears in:_
+- [JSONPatchOperation](#jsonpatchoperation)
+
 
 
 ## JwtAuthenticationFilterProvider
@@ -364,7 +375,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[SourceMatchType](#sourcematchtype)_ |  |
-| `address` _string_ | Value is the IP CIDR that represents the range of Source IP Addresses of the client. These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
+| `value` _string_ | Value is the IP CIDR that represents the range of Source IP Addresses of the client. These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
 
 
 ## SourceMatchType

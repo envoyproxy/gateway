@@ -44,9 +44,12 @@ __Note:__ The binaries get generated in the `bin/$OS/$ARCH` directory, for examp
 
 * Run `make test` to run the golang tests.
 
+* Run `make testdata` to generate the golden YAML testdata files.
+
 ### Running Linters
 
 * Run `make lint` to make sure your code passes all the linter checks.
+__Note:__ The `golangci-lint` configuration resides [here](https://github.com/envoyproxy/gateway/blob/main/tools/linter/golangci-lint/.golangci.yml).
 
 ### Building and Pushing the Image
 

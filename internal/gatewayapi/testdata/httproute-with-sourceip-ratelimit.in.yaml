@@ -50,7 +50,7 @@ rateLimitFilters:
     type: Global
     global:
       rules:
-      - clientSelectors: 
+      - clientSelectors:
         - sourceIP: 192.168.0.0/16
         limit:
           requests: 10

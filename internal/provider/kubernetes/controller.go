@@ -63,6 +63,7 @@ type gatewayAPIReconciler struct {
 	classController gwapiv1b1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
+	envoyGateway    *egcfgv1a1.EnvoyGateway
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -74,8 +75,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 
 	// Gather additional resources to watch from registered extensions
 	var extGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.Extension != nil {
-		for _, rsrc := range cfg.EnvoyGateway.Extension.Resources {
+	if cfg.EnvoyGateway.ExtensionManager != nil {
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
@@ -90,6 +91,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		resources:       resources,
 		extGVKs:         extGVKs,
 		store:           newProviderStore(),
+		envoyGateway:    cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -231,6 +233,16 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Add all ReferenceGrants to the resourceTree
 	for _, referenceGrant := range resourceMap.allAssociatedRefGrants {
 		resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, referenceGrant)
+	}
+
+	// Add all EnvoyPatchPolicies
+	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+	}
+	for _, policy := range envoyPatchPolicies.Items {
+		policy := policy
+		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the
@@ -1214,6 +1226,16 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		&handler.EnqueueRequestForObject{},
 		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)); err != nil {
 		return err
+	}
+
+	// Watch EnvoyPatchPolicy if enabled in config
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		// Watch EnvoyPatchPolicy CRUDs
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
+			&handler.EnqueueRequestForObject{}); err != nil {
+			return err
+		}
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")

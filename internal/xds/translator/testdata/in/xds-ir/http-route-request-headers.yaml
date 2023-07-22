@@ -6,7 +6,7 @@ http:
   hostnames:
   - "*"
   routes:
-  - name: "request-header-route" 
+  - name: "request-header-route"
     destinations:
     - host: "1.2.3.4"
       port: 50000

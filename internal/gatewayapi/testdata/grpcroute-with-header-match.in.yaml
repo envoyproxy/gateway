@@ -7,7 +7,7 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http 
+    - name: http
       protocol: HTTP
       port: 80
       allowedRoutes:
@@ -23,13 +23,13 @@ grpcRoutes:
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
-      sectionName: http 
+      sectionName: http
     rules:
     - matches:
       - headers:
         - type: Exact
           name: magic
-          value: foo                
+          value: foo
       backendRefs:
       - name: service-1
         port: 8080

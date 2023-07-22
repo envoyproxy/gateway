@@ -12,7 +12,7 @@ routes:
         - name: "x-user-id"
           exact: "one"
         - name: "x-user-id"
-          exact: "two"         
+          exact: "two"
         limit:
           requests: 5
           unit: second
@@ -20,4 +20,4 @@ routes:
     exact: "foo/bar"
   destinations:
   - host: "1.2.3.4"
-    port: 50000    
+    port: 50000
