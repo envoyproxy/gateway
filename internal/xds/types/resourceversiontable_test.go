@@ -381,6 +381,37 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 		},
 	}
+
+	invalidCluster := &clusterv3.Cluster{
+		Name: "test-cluster",
+		LoadAssignment: &endpointv3.ClusterLoadAssignment{
+			ClusterName: "test-cluster",
+			Endpoints: []*endpointv3.LocalityLbEndpoints{
+				{
+					LbEndpoints: []*endpointv3.LbEndpoint{
+						{
+							HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+								Endpoint: &endpointv3.Endpoint{
+									Address: &corev3.Address{
+										Address: &corev3.Address_SocketAddress{
+											SocketAddress: &corev3.SocketAddress{
+												Address: "",
+												PortSpecifier: &corev3.SocketAddress_PortValue{
+													PortValue: 5000,
+												},
+												Protocol: corev3.SocketAddress_TCP,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	testCases := []struct {
 		name       string
 		tableIn    *ResourceVersionTable
@@ -431,6 +462,28 @@ func TestInvalidAddXdsResource(t *testing.T) {
 					return false
 				}
 				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "inject-new-cluster",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ClusterType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.ClusterType,
+			resourceIn: invalidCluster,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldCluster := existing.(*clusterv3.Cluster)
+				newCluster := new.(*clusterv3.Cluster)
+				if newCluster == nil || oldCluster == nil {
+					return false
+				}
+				if oldCluster.Name == newCluster.Name {
 					return true
 				}
 				return false
