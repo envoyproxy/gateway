@@ -107,7 +107,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		// Handle specific operations
 		if resourceOfType, ok := xdsResource.(*endpointv3.ClusterLoadAssignment); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				//	return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)

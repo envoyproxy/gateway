@@ -70,11 +70,6 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				if err = temp.Validate(); err != nil {
-					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
-					continue
-				}
 
 				if err := tCtx.AddXdsResource(resourcev3.ListenerType, temp); err != nil {
 					return err
@@ -86,11 +81,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				if err = temp.Validate(); err != nil {
-					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
-					continue
-				}
+
 				if err := tCtx.AddXdsResource(resourcev3.RouteType, temp); err != nil {
 					return err
 				}
@@ -101,11 +92,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				if err = temp.Validate(); err != nil {
-					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
-					continue
-				}
+
 				if err := tCtx.AddXdsResource(resourcev3.ClusterType, temp); err != nil {
 					return err
 				}
@@ -116,11 +103,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				if err = temp.Validate(); err != nil {
-					err := fmt.Errorf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
-					continue
-				}
+
 				if err := tCtx.AddXdsResource(resourcev3.EndpointType, temp); err != nil {
 					return err
 				}
@@ -226,11 +209,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			if err = temp.Validate(); err != nil {
-				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
+
 			if err = deepCopyPtr(temp, listener); err != nil {
 				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
@@ -243,11 +222,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			if err = temp.Validate(); err != nil {
-				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
+
 			if err = deepCopyPtr(temp, routeConfig); err != nil {
 				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
@@ -260,11 +235,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			if err = temp.Validate(); err != nil {
-				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
+
 			if err = deepCopyPtr(temp, cluster); err != nil {
 				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)
@@ -277,11 +248,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 				errs = multierror.Append(errs, err)
 				continue
 			}
-			if err = temp.Validate(); err != nil {
-				err := fmt.Errorf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
+
 			if err = deepCopyPtr(temp, endpoint); err != nil {
 				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
 				errs = multierror.Append(errs, err)

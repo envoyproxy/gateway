@@ -120,12 +120,9 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				IgnorePortInHostMatching: true,
 				Name:                     httpListener.Name,
 			}
-			if err := xdsRouteCfg.Validate(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsRouteCfg, err)
-			} else {
-				if err := tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
-					return err
-				}
+
+			if err := tCtx.AddXdsResource(resourcev3.RouteType, xdsRouteCfg); err != nil {
+				return err
 			}
 		}
 
@@ -133,12 +130,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		if httpListener.TLS != nil {
 			for t := range httpListener.TLS {
 				secret := buildXdsDownstreamTLSSecret(httpListener.TLS[t])
-				if err := secret.Validate(); err != nil {
-					return fmt.Errorf("validation failed for xds resource %+v, err:%v", secret, err)
-				} else {
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						return err
-					}
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					return err
 				}
 			}
 		}
@@ -244,12 +237,8 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
 			for _, s := range tcpListener.TLS.Terminate {
 				secret := buildXdsDownstreamTLSSecret(s)
-				if err := secret.Validate(); err != nil {
-					return fmt.Errorf("validation failed for xds resource %+v, err:%v", secret, err)
-				} else {
-					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-						return err
-					}
+				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+					return err
 				}
 			}
 		}
@@ -257,12 +246,8 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, accesslog)
-			if err := xdsListener.Validate(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsListener, err)
-			} else {
-				if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
-					return err
-				}
+			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
+				return err
 			}
 		}
 
@@ -292,12 +277,8 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		if err != nil {
 			return multierror.Append(err, errors.New("error building xds cluster"))
 		}
-		if err := xdsListener; err != nil {
-			return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsListener, err)
-		} else {
-			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
-				return err
-			}
+		if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
+			return err
 		}
 	}
 	return nil
