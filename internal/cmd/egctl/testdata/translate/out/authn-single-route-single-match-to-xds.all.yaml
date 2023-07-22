@@ -1,0 +1,261 @@
+xds:
+  envoy-gateway-system/eg:
+    configs:
+    - '@type': type.googleapis.com/envoy.admin.v3.BootstrapConfigDump
+      bootstrap:
+        admin:
+          accessLog:
+          - name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/null
+          address:
+            socketAddress:
+              address: 127.0.0.1
+              portValue: 19000
+        dynamicResources:
+          adsConfig:
+            apiType: DELTA_GRPC
+            grpcServices:
+            - envoyGrpc:
+                clusterName: xds_cluster
+            setNodeOnFirstMessageOnly: true
+            transportApiVersion: V3
+          cdsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          ldsConfig:
+            ads: {}
+            resourceApiVersion: V3
+        layeredRuntime:
+          layers:
+          - name: runtime-0
+            rtdsLayer:
+              name: runtime-0
+              rtdsConfig:
+                ads: {}
+                resourceApiVersion: V3
+        staticResources:
+          clusters:
+          - connectTimeout: 10s
+            loadAssignment:
+              clusterName: xds_cluster
+              endpoints:
+              - lbEndpoints:
+                - endpoint:
+                    address:
+                      socketAddress:
+                        address: envoy-gateway
+                        portValue: 18000
+            name: xds_cluster
+            transportSocket:
+              name: envoy.transport_sockets.tls
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+                commonTlsContext:
+                  tlsCertificateSdsSecretConfigs:
+                  - name: xds_certificate
+                    sdsConfig:
+                      pathConfigSource:
+                        path: /sds/xds-certificate.json
+                      resourceApiVersion: V3
+                  tlsParams:
+                    tlsMaximumProtocolVersion: TLSv1_3
+                  validationContextSdsSecretConfig:
+                    name: xds_trusted_ca
+                    sdsConfig:
+                      pathConfigSource:
+                        path: /sds/xds-trusted-ca.json
+                      resourceApiVersion: V3
+            type: STRICT_DNS
+            typedExtensionProtocolOptions:
+              envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+                '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+                explicitHttpConfig:
+                  http2ProtocolOptions: {}
+          listeners:
+          - address:
+              socketAddress:
+                address: 0.0.0.0
+                portValue: 19001
+            filterChains:
+            - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  httpFilters:
+                  - name: envoy.filters.http.health_check
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      headers:
+                      - name: :path
+                        stringMatch:
+                          exact: /ready
+                      passThroughMode: false
+                  - name: envoy.filters.http.router
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  routeConfig:
+                    name: local_route
+                  statPrefix: eg-ready-http
+            name: envoy-gateway-proxy-ready-0.0.0.0-19001
+    - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
+      dynamicEndpointConfigs:
+      - endpointConfig:
+          '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+          clusterName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+          endpoints:
+          - lbEndpoints:
+            - endpoint:
+                address:
+                  socketAddress:
+                    portValue: 3000
+              loadBalancingWeight: 1
+            loadBalancingWeight: 1
+            locality: {}
+    - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+      dynamicActiveClusters:
+      - cluster:
+          '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          commonLbConfig:
+            localityWeightedLbConfig: {}
+          connectTimeout: 10s
+          dnsLookupFamily: V4_ONLY
+          edsClusterConfig:
+            edsConfig:
+              ads: {}
+              resourceApiVersion: V3
+            serviceName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+          name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+          outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
+          type: EDS
+      - cluster:
+          '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+          commonLbConfig:
+            localityWeightedLbConfig: {}
+          connectTimeout: 10s
+          dnsLookupFamily: V4_ONLY
+          dnsRefreshRate: 30s
+          loadAssignment:
+            clusterName: raw_githubusercontent_com_443
+            endpoints:
+            - lbEndpoints:
+              - endpoint:
+                  address:
+                    socketAddress:
+                      address: raw.githubusercontent.com
+                      portValue: 443
+              loadBalancingWeight: 1
+              locality: {}
+          name: raw_githubusercontent_com_443
+          outlierDetection: {}
+          perConnectionBufferLimitBytes: 32768
+          respectDnsTtl: true
+          transportSocket:
+            name: envoy.transport_sockets.tls
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+              commonTlsContext:
+                validationContext:
+                  trustedCa:
+                    filename: /etc/ssl/certs/ca-certificates.crt
+          type: STRICT_DNS
+    - '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
+      dynamicListeners:
+      - activeState:
+          listener:
+            '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+            accessLog:
+            - filter:
+                responseFlagFilter:
+                  flags:
+                  - NR
+              name: envoy.access_loggers.file
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                logFormat:
+                  textFormatSource:
+                    inlineString: |
+                      [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+                path: /dev/stdout
+            address:
+              socketAddress:
+                address: 0.0.0.0
+                portValue: 10080
+            defaultFilterChain:
+              filters:
+              - name: envoy.filters.network.http_connection_manager
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  accessLog:
+                  - name: envoy.access_loggers.file
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                      logFormat:
+                        textFormatSource:
+                          inlineString: |
+                            [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+                      path: /dev/stdout
+                  commonHttpProtocolOptions:
+                    headersWithUnderscoresAction: REJECT_REQUEST
+                  http2ProtocolOptions:
+                    initialConnectionWindowSize: 1048576
+                    initialStreamWindowSize: 65536
+                    maxConcurrentStreams: 100
+                  httpFilters:
+                  - name: envoy.filters.http.jwt_authn
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                      providers:
+                        envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
+                          remoteJwks:
+                            cacheDuration: 300s
+                            httpUri:
+                              cluster: raw_githubusercontent_com_443
+                              timeout: 5s
+                              uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+                      requirementMap:
+                        envoy-gateway-system/backend/rule/0/match/0-www.example.com:
+                          providerName: envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
+                  - name: envoy.filters.http.router
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  mergeSlashes: true
+                  normalizePath: true
+                  pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+                  rds:
+                    configSource:
+                      ads: {}
+                      resourceApiVersion: V3
+                    routeConfigName: envoy-gateway-system/eg/http
+                  statPrefix: http
+                  upgradeConfigs:
+                  - upgradeType: websocket
+                  useRemoteAddress: true
+            name: envoy-gateway-system/eg/http
+            perConnectionBufferLimitBytes: 32768
+    - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+      dynamicRouteConfigs:
+      - routeConfig:
+          '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+          ignorePortInHostMatching: true
+          name: envoy-gateway-system/eg/http
+          virtualHosts:
+          - domains:
+            - '*'
+            name: envoy-gateway-system/eg/http
+            routes:
+            - match:
+                headers:
+                - name: :authority
+                  stringMatch:
+                    exact: www.example.com
+                pathSeparatedPrefix: /foo
+              name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+              route:
+                cluster: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+              typedPerFilterConfig:
+                envoy.filters.http.jwt_authn:
+                  '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+                  requirementName: envoy-gateway-system/backend/rule/0/match/0-www.example.com

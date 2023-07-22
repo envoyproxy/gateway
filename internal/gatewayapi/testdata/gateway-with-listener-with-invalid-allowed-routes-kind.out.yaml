@@ -1,80 +1,85 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
-      listeners:
-        - name: http
-          protocol: HTTP
-          port: 80
-          allowedRoutes:
-            namespaces:
-              from: All
-            kinds:
-              - group: gateway.networking.k8s.io
-                kind: FooRoute
-    status:
-      listeners:
-        - name: http
-          attachedRoutes: 0
-          supportedKinds: []
-          conditions:
-            - type: ResolvedRefs
-              status: "False"
-              reason: InvalidRouteKinds
-              message: "FooRoute is not supported, kind must be one of [HTTPRoute GRPCRoute]"
-            - type: Programmed
-              status: "False"
-              reason: Invalid
-              message: Listener is invalid, see other Conditions for details.
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        kinds:
+        - group: gateway.networking.k8s.io
+          kind: FooRoute
+        namespaces:
+          from: All
+      name: http
+      port: 80
+      protocol: HTTP
+  status:
+    listeners:
+    - attachedRoutes: 0
+      conditions:
+      - lastTransitionTime: null
+        message: FooRoute is not supported, kind must be one of [HTTPRoute GRPCRoute]
+        reason: InvalidRouteKinds
+        status: "False"
+        type: ResolvedRefs
+      - lastTransitionTime: null
+        message: Listener is invalid, see other Conditions for details.
+        reason: Invalid
+        status: "False"
+        type: Programmed
+      name: http
+      supportedKinds: []
 httpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: HTTPRoute
-    metadata:
-      namespace: default
-      name: httproute-1
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-      rules:
-        - matches:
-            - path:
-                value: "/"
-          backendRefs:
-            - name: service-1
-              port: 8080
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "False"
-              reason: NoReadyListeners
-              message: There are no ready listeners for this parent ref
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
-xdsIR:
-  envoy-gateway-gateway-1:
-    accessLog:
-      text:
-        - path: /dev/stdout
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: There are no ready listeners for this parent ref
+        reason: NoReadyListeners
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - address: ""
       metadata:
         labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
-
-      listeners:
-        - address: ""
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout

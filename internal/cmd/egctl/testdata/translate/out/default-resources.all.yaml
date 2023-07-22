@@ -119,7 +119,7 @@ gatewayClass:
       namespace: envoy-gateway-system
   status:
     conditions:
-    - lastTransitionTime: "2023-06-16T03:19:39Z"
+    - lastTransitionTime: null
       message: Valid GatewayClass
       reason: Accepted
       status: "True"
@@ -162,12 +162,12 @@ gateways:
     listeners:
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -178,12 +178,12 @@ gateways:
         kind: TCPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -194,12 +194,12 @@ gateways:
         kind: UDPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -210,12 +210,12 @@ gateways:
         kind: TLSRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -226,12 +226,12 @@ gateways:
         kind: HTTPRoute
     - attachedRoutes: 1
       conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
         reason: Programmed
         status: "True"
         type: Programmed
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
@@ -266,12 +266,12 @@ grpcRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -305,12 +305,12 @@ httpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -338,12 +338,12 @@ tcpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -372,12 +372,12 @@ tlsRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -406,12 +406,12 @@ udpRoutes:
   status:
     parents:
     - conditions:
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Route is accepted
         reason: Accepted
         status: "True"
         type: Accepted
-      - lastTransitionTime: "2023-06-16T03:19:39Z"
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
         reason: ResolvedRefs
         status: "True"
@@ -421,7 +421,7 @@ udpRoutes:
         name: eg
         sectionName: udp
 xds:
-  default-eg:
+  default/eg:
     configs:
     - '@type': type.googleapis.com/envoy.admin.v3.BootstrapConfigDump
       bootstrap:
@@ -458,32 +458,6 @@ xds:
                 ads: {}
                 resourceApiVersion: V3
         staticResources:
-          listeners:
-          - name: envoy-gateway-proxy-ready-0.0.0.0-19001
-            address:
-              socketAddress:
-                address: 0.0.0.0
-                portValue: 19001
-            filterChains:
-            - filters:
-              - name: envoy.filters.network.http_connection_manager
-                typedConfig:
-                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                  statPrefix: eg-ready-http
-                  routeConfig:
-                    name: local_route
-                  httpFilters:
-                  - name: envoy.filters.http.health_check
-                    typedConfig:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
-                      passThroughMode: false
-                      headers:
-                      - name: ":path"
-                        stringMatch:
-                          exact: /ready
-                  - name: envoy.filters.http.router
-                    typedConfig:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
           clusters:
           - connectTimeout: 10s
             loadAssignment:
@@ -521,11 +495,37 @@ xds:
                 '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
                 explicitHttpConfig:
                   http2ProtocolOptions: {}
+          listeners:
+          - address:
+              socketAddress:
+                address: 0.0.0.0
+                portValue: 19001
+            filterChains:
+            - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typedConfig:
+                  '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  httpFilters:
+                  - name: envoy.filters.http.health_check
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                      headers:
+                      - name: :path
+                        stringMatch:
+                          exact: /ready
+                      passThroughMode: false
+                  - name: envoy.filters.http.router
+                    typedConfig:
+                      '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  routeConfig:
+                    name: local_route
+                  statPrefix: eg-ready-http
+            name: envoy-gateway-proxy-ready-0.0.0.0-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
       dynamicEndpointConfigs:
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default-backend-rule-0-match-0-www.example.com
+          clusterName: default/backend/rule/0/match/0-www.example.com
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -538,7 +538,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default-backend-rule-0-match-0-www.grpc-example.com
+          clusterName: default/backend/rule/0/match/0-www.grpc-example.com
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -551,7 +551,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default-eg-tls-passthrough-backend
+          clusterName: default/eg/tls-passthrough/backend
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -564,7 +564,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default-eg-tcp-backend
+          clusterName: default/eg/tcp/backend
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -576,7 +576,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default-eg-udp-backend
+          clusterName: default/eg/udp/backend
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -598,8 +598,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default-backend-rule-0-match-0-www.example.com
-          name: default-backend-rule-0-match-0-www.example.com
+            serviceName: default/backend/rule/0/match/0-www.example.com
+          name: default/backend/rule/0/match/0-www.example.com
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -613,8 +613,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default-backend-rule-0-match-0-www.grpc-example.com
-          name: default-backend-rule-0-match-0-www.grpc-example.com
+            serviceName: default/backend/rule/0/match/0-www.grpc-example.com
+          name: default/backend/rule/0/match/0-www.grpc-example.com
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -633,8 +633,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default-eg-tls-passthrough-backend
-          name: default-eg-tls-passthrough-backend
+            serviceName: default/eg/tls-passthrough/backend
+          name: default/eg/tls-passthrough/backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -648,8 +648,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default-eg-tcp-backend
-          name: default-eg-tcp-backend
+            serviceName: default/eg/tcp/backend
+          name: default/eg/tcp/backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -663,8 +663,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default-eg-udp-backend
-          name: default-eg-udp-backend
+            serviceName: default/eg/udp/backend
+          name: default/eg/udp/backend
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -721,12 +721,12 @@ xds:
                     configSource:
                       ads: {}
                       resourceApiVersion: V3
-                    routeConfigName: default-eg-http
+                    routeConfigName: default/eg/http
                   statPrefix: http
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
-            name: default-eg-http
+            name: default/eg/http
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -787,10 +787,10 @@ xds:
                     configSource:
                       ads: {}
                       resourceApiVersion: V3
-                    routeConfigName: default-eg-grpc
+                    routeConfigName: default/eg/grpc
                   statPrefix: http
                   useRemoteAddress: true
-            name: default-eg-grpc
+            name: default/eg/grpc
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -829,13 +829,13 @@ xds:
                           inlineString: |
                             [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
-                  cluster: default-eg-tls-passthrough-backend
+                  cluster: default/eg/tls-passthrough/backend
                   statPrefix: passthrough
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-            name: default-eg-tls-passthrough-backend
+            name: default/eg/tls-passthrough/backend
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -871,9 +871,9 @@ xds:
                           inlineString: |
                             [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
-                  cluster: default-eg-tcp-backend
+                  cluster: default/eg/tcp/backend
                   statPrefix: tcp
-            name: default-eg-tcp-backend
+            name: default/eg/tcp/backend
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -915,19 +915,19 @@ xds:
                       name: route
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
-                        cluster: default-eg-udp-backend
+                        cluster: default/eg/udp/backend
                 statPrefix: service
-            name: default-eg-udp-backend
+            name: default/eg/udp/backend
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
       dynamicRouteConfigs:
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
-          name: default-eg-http
+          name: default/eg/http
           virtualHosts:
           - domains:
             - '*'
-            name: default-eg-http
+            name: default/eg/http
             routes:
             - match:
                 headers:
@@ -935,17 +935,17 @@ xds:
                   stringMatch:
                     exact: www.example.com
                 prefix: /
-              name: default-backend-rule-0-match-0-www.example.com
+              name: default/backend/rule/0/match/0-www.example.com
               route:
-                cluster: default-backend-rule-0-match-0-www.example.com
+                cluster: default/backend/rule/0/match/0-www.example.com
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
-          name: default-eg-grpc
+          name: default/eg/grpc
           virtualHosts:
           - domains:
             - '*'
-            name: default-eg-grpc
+            name: default/eg/grpc
             routes:
             - match:
                 headers:
@@ -953,7 +953,6 @@ xds:
                   stringMatch:
                     exact: www.grpc-example.com
                 path: /com.example.Things/DoThing
-              name: default-backend-rule-0-match-0-www.grpc-example.com
+              name: default/backend/rule/0/match/0-www.grpc-example.com
               route:
-                cluster: default-backend-rule-0-match-0-www.grpc-example.com
-
+                cluster: default/backend/rule/0/match/0-www.grpc-example.com

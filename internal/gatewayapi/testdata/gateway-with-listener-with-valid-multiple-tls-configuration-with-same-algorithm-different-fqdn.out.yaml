@@ -1,111 +1,127 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: Gateway
-    metadata:
-      namespace: envoy-gateway
-      name: gateway-1
-    spec:
-      gatewayClassName: envoy-gateway-class
-      listeners:
-        - name: tls
-          protocol: HTTPS
-          port: 443
-          allowedRoutes:
-            namespaces:
-              from: All
-          tls:
-            mode: Terminate
-            certificateRefs:
-              - name: tls-secret-ecdsa-1
-              - name: tls-secret-ecdsa-2
-    status:
-      listeners:
-        - name: tls
-          supportedKinds:
-            - group: gateway.networking.k8s.io
-              kind: HTTPRoute
-            - group: gateway.networking.k8s.io
-              kind: GRPCRoute
-          attachedRoutes: 1
-          conditions:
-            - type: Programmed
-              status: "True"
-              reason: Programmed
-              message: Sending translated listener configuration to the data plane
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Listener has been successfully translated
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    creationTimestamp: null
+    name: gateway-1
+    namespace: envoy-gateway
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - allowedRoutes:
+        namespaces:
+          from: All
+      name: tls
+      port: 443
+      protocol: HTTPS
+      tls:
+        certificateRefs:
+        - group: null
+          kind: null
+          name: tls-secret-ecdsa-1
+        - group: null
+          kind: null
+          name: tls-secret-ecdsa-2
+        mode: Terminate
+  status:
+    listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: tls
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+      - group: gateway.networking.k8s.io
+        kind: GRPCRoute
 httpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
-    kind: HTTPRoute
-    metadata:
-      namespace: default
-      name: httproute-1
-    spec:
-      parentRefs:
-        - namespace: envoy-gateway
-          name: gateway-1
-      rules:
-        - matches:
-            - path:
-                value: "/"
-          backendRefs:
-            - name: service-1
-              port: 8080
-    status:
-      parents:
-        - parentRef:
-            namespace: envoy-gateway
-            name: gateway-1
-          controllerName: gateway.envoyproxy.io/gatewayclass-controller
-          conditions:
-            - type: Accepted
-              status: "True"
-              reason: Accepted
-              message: Route is accepted
-            - type: ResolvedRefs
-              status: "True"
-              reason: ResolvedRefs
-              message: Resolved all the Object references for the Route
-xdsIR:
-  envoy-gateway-gateway-1:
-    accessLog:
-      text:
-        - path: /dev/stdout
-    http:
-      - name: envoy-gateway-gateway-1-tls
-        address: 0.0.0.0
-        port: 10443
-        hostnames:
-          - "*"
-        tls:
-          - name: envoy-gateway-tls-secret-ecdsa-1
-            serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJHekNCd2dJSkFJL3gxc0NEL0lSa01Bb0dDQ3FHU000OUJBTUNNQll4RkRBU0JnTlZCQU1NQzJadmJ5NWkKWVhJdVkyOXRNQjRYRFRJek1ERXdOVEl4TlRNeU9Wb1hEVEkwTURFd05USXhOVE15T1Zvd0ZqRVVNQklHQTFVRQpBd3dMWm05dkxtSmhjaTVqYjIwd1dUQVRCZ2NxaGtqT1BRSUJCZ2dxaGtqT1BRTUJCd05DQUFRZmxXMnR6T3M4Cm82Nk5USVRmYUhucEc2UzI3Y2hkSldzallKdWJISkFtT2tYdS8rVGxLTXhGUzl4R2tHK09BQjAyR0ZQaHhQVzcKRnFaTFJoOEp0YlZkTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFEdlplU1pBZ1VWV2VpM3o0ZEhOTEd0aHpiaQoxRHZ0anRQekhYZ1R3WS92YmdJZ05KWStNcTRweFJnNit3eU04R1R4czVUV3k5Zml5RGhMUEU5QnhlbEsxSjQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
-            privateKey: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUxEbnZNM1RKM3NHYm9EeTF4T3dqSVppVFNWeWZXVWF5YVExcWdrdUdacEtvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFSDVWdHJjenJQS091alV5RTMyaDU2UnVrdHUzSVhTVnJJMkNibXh5UUpqcEY3di9rNVNqTQpSVXZjUnBCdmpnQWROaGhUNGNUMXV4YW1TMFlmQ2JXMVhRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
-          - name: envoy-gateway-tls-secret-ecdsa-2
-            serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJZakNCNlFJSkFNcDhYTGNsWGJ2NU1Bb0dDQ3FHU000OUJBTUNNQnN4R1RBWEJnTlZCQU1NRUhSbGMzUXUKWlhoaGJYQnNaUzVqYjIwd0hoY05Nak13TlRJMU1UUXhNRFF5V2hjTk1qUXdOVEkwTVRReE1EUXlXakFiTVJrdwpGd1lEVlFRRERCQjBaWE4wTG1WNFlXMXdiR1V1WTI5dE1IWXdFQVlIS29aSXpqMENBUVlGSzRFRUFDSURZZ0FFCmVNdEhDM2hJZXEyUXNka3RTaS9aTlIvTUtOYXZTbTNITm43dEdvZ2ZxYXFuOEFTZ0hJYTd5VVUrK1Bzb0RENmsKZisrQ2U3dXNkMG1RTzFTbmRZSVdqMlFMaUl6ME5aSDhCL1FyNGk3SjBJS3dzUWxVbnVuWnF2NUtZOVRMUWEwbgpNQW9HQ0NxR1NNNDlCQU1DQTJnQU1HVUNNUUNHVGpQa2hqZE1KcWUrVjFGRWpteUk2andEV0FDalhucFRuaXhVCnM2dUNKZjVNNUw1TmpGYmkydGplMGlES0UxVUNNQXdxSjZmOUs2bUhUd2JxVGkzTVNFMmQxODl6aUcyWVZCaUQKYmVXcHc0UjF5ZTdHRFJvVm9veG9ob2lERjdsNm13PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-            privateKey: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1JR2tBZ0VCQkRDUUE5VWo0SkR5c0Q0MlJIMGI2cjU5NTlXTmlXU2ZKZlMxK2RvTjk0TzZCUGdaQUJiUTI4eTIKUTZsM3pZdklLeFNnQndZRks0RUVBQ0toWkFOaUFBUjR5MGNMZUVoNnJaQ3gyUzFLTDlrMUg4d28xcTlLYmNjMgpmdTBhaUIrcHFxZndCS0FjaHJ2SlJUNzQreWdNUHFSLzc0Sjd1NngzU1pBN1ZLZDFnaGFQWkF1SWpQUTFrZndICjlDdmlMc25RZ3JDeENWU2U2ZG1xL2twajFNdEJyU2M9Ci0tLS0tRU5EIEVDIFBSSVZBVEUgS0VZLS0tLS0K
-        routes:
-          - name: default-httproute-1-rule-0-match-0-*
-            pathMatch:
-              prefix: "/"
-            destinations:
-              - host: 7.7.7.7
-                port: 8080
-                weight: 1
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: default
+  spec:
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - address: ""
+        ports:
+        - containerPort: 10443
+          name: tls
+          protocol: HTTPS
+          servicePort: 443
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
-      listeners:
-        - address: ""
-          ports:
-            - name: tls
-              protocol: "HTTPS"
-              servicePort: 443
-              containerPort: 10443
+      name: envoy-gateway/gateway-1
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/tls
+      port: 10443
+      routes:
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        name: default/httproute-1/rule/0/match/0-*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /
+      tls:
+      - name: envoy-gateway-tls-secret-ecdsa-1
+        privateKey: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUxEbnZNM1RKM3NHYm9EeTF4T3dqSVppVFNWeWZXVWF5YVExcWdrdUdacEtvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFSDVWdHJjenJQS091alV5RTMyaDU2UnVrdHUzSVhTVnJJMkNibXh5UUpqcEY3di9rNVNqTQpSVXZjUnBCdmpnQWROaGhUNGNUMXV4YW1TMFlmQ2JXMVhRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
+        serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJHekNCd2dJSkFJL3gxc0NEL0lSa01Bb0dDQ3FHU000OUJBTUNNQll4RkRBU0JnTlZCQU1NQzJadmJ5NWkKWVhJdVkyOXRNQjRYRFRJek1ERXdOVEl4TlRNeU9Wb1hEVEkwTURFd05USXhOVE15T1Zvd0ZqRVVNQklHQTFVRQpBd3dMWm05dkxtSmhjaTVqYjIwd1dUQVRCZ2NxaGtqT1BRSUJCZ2dxaGtqT1BRTUJCd05DQUFRZmxXMnR6T3M4Cm82Nk5USVRmYUhucEc2UzI3Y2hkSldzallKdWJISkFtT2tYdS8rVGxLTXhGUzl4R2tHK09BQjAyR0ZQaHhQVzcKRnFaTFJoOEp0YlZkTUFvR0NDcUdTTTQ5QkFNQ0EwZ0FNRVVDSVFEdlplU1pBZ1VWV2VpM3o0ZEhOTEd0aHpiaQoxRHZ0anRQekhYZ1R3WS92YmdJZ05KWStNcTRweFJnNit3eU04R1R4czVUV3k5Zml5RGhMUEU5QnhlbEsxSjQ9Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      - name: envoy-gateway-tls-secret-ecdsa-2
+        privateKey: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1JR2tBZ0VCQkRDUUE5VWo0SkR5c0Q0MlJIMGI2cjU5NTlXTmlXU2ZKZlMxK2RvTjk0TzZCUGdaQUJiUTI4eTIKUTZsM3pZdklLeFNnQndZRks0RUVBQ0toWkFOaUFBUjR5MGNMZUVoNnJaQ3gyUzFLTDlrMUg4d28xcTlLYmNjMgpmdTBhaUIrcHFxZndCS0FjaHJ2SlJUNzQreWdNUHFSLzc0Sjd1NngzU1pBN1ZLZDFnaGFQWkF1SWpQUTFrZndICjlDdmlMc25RZ3JDeENWU2U2ZG1xL2twajFNdEJyU2M9Ci0tLS0tRU5EIEVDIFBSSVZBVEUgS0VZLS0tLS0K
+        serverCertificate: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJZakNCNlFJSkFNcDhYTGNsWGJ2NU1Bb0dDQ3FHU000OUJBTUNNQnN4R1RBWEJnTlZCQU1NRUhSbGMzUXUKWlhoaGJYQnNaUzVqYjIwd0hoY05Nak13TlRJMU1UUXhNRFF5V2hjTk1qUXdOVEkwTVRReE1EUXlXakFiTVJrdwpGd1lEVlFRRERCQjBaWE4wTG1WNFlXMXdiR1V1WTI5dE1IWXdFQVlIS29aSXpqMENBUVlGSzRFRUFDSURZZ0FFCmVNdEhDM2hJZXEyUXNka3RTaS9aTlIvTUtOYXZTbTNITm43dEdvZ2ZxYXFuOEFTZ0hJYTd5VVUrK1Bzb0RENmsKZisrQ2U3dXNkMG1RTzFTbmRZSVdqMlFMaUl6ME5aSDhCL1FyNGk3SjBJS3dzUWxVbnVuWnF2NUtZOVRMUWEwbgpNQW9HQ0NxR1NNNDlCQU1DQTJnQU1HVUNNUUNHVGpQa2hqZE1KcWUrVjFGRWpteUk2andEV0FDalhucFRuaXhVCnM2dUNKZjVNNUw1TmpGYmkydGplMGlES0UxVUNNQXdxSjZmOUs2bUhUd2JxVGkzTVNFMmQxODl6aUcyWVZCaUQKYmVXcHc0UjF5ZTdHRFJvVm9veG9ob2lERjdsNm13PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
