@@ -104,7 +104,6 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 
 	case resourcev3.EndpointType:
 		// Handle specific operations
-		return nil
 
 	case resourcev3.ClusterType:
 		// Handle specific operations
