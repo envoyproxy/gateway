@@ -76,7 +76,9 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					continue
 				}
 
-				tCtx.AddXdsResource(resourcev3.ListenerType, temp)
+				if err := tCtx.AddXdsResource(resourcev3.ListenerType, temp); err != nil {
+					return err
+				}
 			case string(resourcev3.RouteType):
 				temp := &routev3.RouteConfiguration{}
 				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
@@ -89,7 +91,9 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				tCtx.AddXdsResource(resourcev3.RouteType, temp)
+				if err := tCtx.AddXdsResource(resourcev3.RouteType, temp); err != nil {
+					return err
+				}
 			case string(resourcev3.ClusterType):
 				temp := &clusterv3.Cluster{}
 				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
@@ -102,7 +106,9 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				tCtx.AddXdsResource(resourcev3.ClusterType, temp)
+				if err := tCtx.AddXdsResource(resourcev3.ClusterType, temp); err != nil {
+					return err
+				}
 			case string(resourcev3.EndpointType):
 				temp := &endpointv3.ClusterLoadAssignment{}
 				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
@@ -115,7 +121,9 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSON
 					errs = multierror.Append(errs, err)
 					continue
 				}
-				tCtx.AddXdsResource(resourcev3.EndpointType, temp)
+				if err := tCtx.AddXdsResource(resourcev3.EndpointType, temp); err != nil {
+					return err
+				}
 			}
 
 			// Skip further processing

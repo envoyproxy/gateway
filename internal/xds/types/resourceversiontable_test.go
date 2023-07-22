@@ -332,7 +332,8 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
+			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
+			require.NoError(t, err)
 			diff := cmp.Diff(tc.tableOut, tc.tableIn.DeepCopy(), protocmp.Transform())
 			require.Empty(t, diff)
 		})

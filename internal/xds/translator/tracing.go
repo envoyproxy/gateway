@@ -114,21 +114,24 @@ func buildHCMTracing(tracing *egcfgv1a1.ProxyTracing) (*hcm.HttpConnectionManage
 	}, nil
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *egcfgv1a1.ProxyTracing) {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *egcfgv1a1.ProxyTracing) error {
 	if tracing == nil {
-		return
+		return nil
 	}
 
 	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
 
 	if existingCluster := findXdsCluster(tCtx, clusterName); existingCluster == nil {
 		destinations := []*ir.RouteDestination{ir.NewRouteDest(tracing.Provider.Host, uint32(tracing.Provider.Port))}
-		addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
 			destinations: destinations,
 			tSocket:      nil,
 			protocol:     HTTP2,
 			endpoint:     DefaultEndpointType,
-		})
+		}); err != nil {
+			return err
+		}
 	}
+	return nil
 }
