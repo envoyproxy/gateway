@@ -31,23 +31,46 @@ Here is an example highlighting how a user can configure global ratelimiting usi
 
 ```
 apiVersion: gateway.networking.k8s.io/v1beta1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: Gateway
 metadata:
-  name: eg-gw
+  name: eg
   namespace: default
 spec:
-  gatewayClassName: eg-gc
+  gatewayClassName: eg
   listeners:
-    - name: example
-      protocol: HTTPS
-      port: 443
-      hostname: example.com
-      tls:
-        certificateRefs:
-          - kind: Secret
-            group: ""
-            name: example-cert
----            
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: backend
+  namespace: default
+spec:
+  parentRefs:
+    - name: eg
+  hostnames:
+    - "www.example.com"
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
@@ -55,19 +78,19 @@ metadata:
   namespace: default
 spec:
   targetRef:
-    group: gateway.networking.k8s.io/v1beta1
+    group: gateway.networking.k8s.io
     kind: Gateway
-    name: eg-gw
+    name: eg
     namespace: default
   type: JSONPatch
   jsonPatches:
     - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-      # The listener name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
-      name: default-eg-gw-example
+      # The listener name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
       operation:
         op: add
-        path: "/filter_chains/0/filters/0/http_filters/0"
-        value: |
+        path: "/default_filter_chain/filters/0/typed_config/http_filters/0"
+        value:
           name: "envoy.filters.http.ratelimit"
           typed_config:
             "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit"
@@ -80,20 +103,20 @@ spec:
                   cluster_name: rate-limit-cluster
               transport_api_version: V3
     - type: "type.googleapis.com/envoy.config.route.v3.RouteConfiguration"
-      # The route name is of the form <GatewayNamespace>-<GatewayName>-<GatewayListenerName>
-      name: default-eg-gw-example
+      # The route name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>
+      name: default/eg/http
       operation:
         op: add
         path: "/virtual_hosts/0/rate_limits"
-        value: |
+        value:
           - actions:
               - remote_address: {}
-    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster" 
+    - type: "type.googleapis.com/envoy.config.cluster.v3.Cluster"
       name: rate-limit-cluster
       operation:
         op: add
-        path: "/"
-        value: |
+        path: ""
+        value:
           name: rate-limit-cluster
           type: STRICT_DNS
           connect_timeout: 10s
@@ -107,7 +130,7 @@ spec:
                       address:
                         socket_address:
                           address: ratelimit.svc.cluster.local
-                          port_value: 8081        
+                          port_value: 8081
 ```
 
 

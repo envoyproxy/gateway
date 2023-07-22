@@ -21,7 +21,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-func buildHCMTracing(tracing *egcfgv1a1.ProxyTracing) (*hcm.HttpConnectionManager_Tracing, error) {
+func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, error) {
 	if tracing == nil {
 		return nil, nil
 	}
@@ -35,6 +35,7 @@ func buildHCMTracing(tracing *egcfgv1a1.ProxyTracing) (*hcm.HttpConnectionManage
 				},
 			},
 		},
+		ServiceName: tracing.ServiceName,
 	}
 
 	ocAny, err := protocov.ToAnyWithError(oc)

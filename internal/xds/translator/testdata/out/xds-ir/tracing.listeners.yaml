@@ -51,6 +51,7 @@
                 envoyGrpc:
                   authority: otel-collector.monitoring.svc.cluster.local
                   clusterName: tracing|otel-collector.monitoring.svc.cluster.local|4317
+              serviceName: fake-name.fake-ns
           randomSampling:
             value: 90
         upgradeConfigs:
