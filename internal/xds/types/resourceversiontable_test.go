@@ -12,6 +12,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -355,6 +356,31 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 		},
 	}
+	invalidRouteConfig := &routev3.RouteConfiguration{
+		Name: "test-route-config",
+		VirtualHosts: []*routev3.VirtualHost{
+			{
+				Name:    "", //missing name
+				Domains: []string{"test.example.com"},
+				Routes: []*routev3.Route{
+					{
+						Match: &routev3.RouteMatch{
+							PathSpecifier: &routev3.RouteMatch_Prefix{
+								Prefix: "/",
+							},
+						},
+						Action: &routev3.Route_Route{
+							Route: &routev3.RouteAction{
+								ClusterSpecifier: &routev3.RouteAction_Cluster{
+									Cluster: "test-cluster",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 	testCases := []struct {
 		name       string
 		tableIn    *ResourceVersionTable
@@ -388,6 +414,28 @@ func TestInvalidAddXdsResource(t *testing.T) {
 					resourcev3.ListenerType: []types.Resource{testListener},
 				},
 			},
+		},
+		{
+			name: "inject-new-route-config",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.RouteType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.RouteType,
+			resourceIn: invalidRouteConfig,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
 		},
 	}
 	for _, tc := range testCases {
