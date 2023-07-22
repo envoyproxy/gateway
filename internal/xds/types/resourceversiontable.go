@@ -8,7 +8,7 @@ package types
 import (
 	"fmt"
 
-	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -104,17 +104,17 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 
 	case resourcev3.EndpointType:
 		// Handle specific operations
-		if resourceOfType, ok := xdsResource.(*endpointv3.ClusterLoadAssignment); ok {
+		return nil
+
+	case resourcev3.ClusterType:
+		// Handle specific operations
+		if resourceOfType, ok := xdsResource.(*clusterv3.Cluster); ok {
 			if err := resourceOfType.ValidateAll(); err != nil {
-				//	return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
 			}
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
 		}
-
-	case resourcev3.ClusterType:
-		// Handle specific operations
-		return nil
 
 	case resourcev3.RateLimitConfigType:
 		// Handle specific operations
