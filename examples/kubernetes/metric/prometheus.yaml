@@ -17,5 +17,5 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   telemetry:
-    metric:
+    metrics:
       prometheus: {}
