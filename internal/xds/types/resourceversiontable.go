@@ -103,7 +103,8 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		}
 
 	case resourcev3.EndpointType:
-		// Handle specific operations
+		// TBD - ValidateAll() breaks existing test 'internal/cmd/egctl/translate_test'
+		// 'authn-single-route-single-match-to-xds.endpoint' expects address for socketAddress field, but this field currently only has port, does not have address
 
 	case resourcev3.ClusterType:
 		// Handle specific operations
