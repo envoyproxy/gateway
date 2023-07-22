@@ -18,10 +18,7 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
-
-	anyv3 "github.com/golang/protobuf/ptypes/any"
 )
 
 var (
@@ -115,7 +112,6 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 		},
 	}
-	listenerWithSecret := createListenerWithSecret(t)
 	testCluster := &clusterv3.Cluster{
 		Name: "test-cluster",
 		LoadAssignment: &endpointv3.ClusterLoadAssignment{
@@ -198,6 +194,24 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 				},
 			},
 		},
+	}
+	testSecret := &tlsv3.Secret{
+		Name: "example-secret",
+		Type: &tlsv3.Secret_TlsCertificate{
+			TlsCertificate: &tlsv3.TlsCertificate{
+				CertificateChain: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: []byte("-----BEGIN CERTIFICATE-----\n... Your certificate data ... \n-----END CERTIFICATE-----"),
+					},
+				},
+				PrivateKey: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: []byte("-----BEGIN PRIVATE KEY-----\n... Your private key data ... \n-----END PRIVATE KEY-----"),
+					},
+				},
+			},
+		},
+		// Add other fields for the secret as needed.
 	}
 
 	testCases := []struct {
@@ -385,14 +399,14 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 		},
 		{
-			name: "new-listener-secret",
+			name: "new-secret",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{},
+					resourcev3.SecretType: []types.Resource{},
 				},
 			},
-			typeIn:     resourcev3.ListenerType,
-			resourceIn: listenerWithSecret,
+			typeIn:     resourcev3.SecretType,
+			resourceIn: testSecret,
 			funcIn: func(existing types.Resource, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
@@ -406,7 +420,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{listenerWithSecret},
+					resourcev3.SecretType: []types.Resource{testSecret},
 				},
 			},
 		},
@@ -494,6 +508,21 @@ func TestInvalidAddXdsResource(t *testing.T) {
 		},
 	}
 
+	invalidSecret := &tlsv3.Secret{
+		Name: "=*&",
+		Type: &tlsv3.Secret_TlsCertificate{
+			TlsCertificate: &tlsv3.TlsCertificate{
+				CertificateChain: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: []byte("-----BEGIN CERTIFICATE-----\n... Your certificate data ... \n-----END CERTIFICATE-----"),
+					},
+				},
+				PrivateKey: &corev3.DataSource{},
+			},
+		},
+		// Add other fields for the secret as needed.
+	}
+
 	testCases := []struct {
 		name       string
 		tableIn    *ResourceVersionTable
@@ -572,6 +601,138 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 			tableOut: nil,
 		},
+		{
+			name: "cast-cluster-type",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ClusterType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.ClusterType,
+			resourceIn: invalidListener,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldCluster := existing.(*clusterv3.Cluster)
+				newCluster := new.(*clusterv3.Cluster)
+				if newCluster == nil || oldCluster == nil {
+					return false
+				}
+				if oldCluster.Name == newCluster.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "cast-listener-type",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ListenerType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.ListenerType,
+			resourceIn: invalidCluster,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "cast-route-config-type",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.RouteType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.RouteType,
+			resourceIn: invalidCluster,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "cast-secret-type",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.SecretType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.SecretType,
+			resourceIn: invalidRouteConfig,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "cast-rate-limit-config-type",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.RateLimitConfigType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.RateLimitConfigType,
+			resourceIn: invalidListener,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldCluster := existing.(*clusterv3.Cluster)
+				newCluster := new.(*clusterv3.Cluster)
+				if newCluster == nil || oldCluster == nil {
+					return false
+				}
+				if oldCluster.Name == newCluster.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "invalid-secret",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.SecretType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.SecretType,
+			resourceIn: invalidSecret,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc
@@ -579,65 +740,5 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
 			require.Error(t, err)
 		})
-	}
-}
-
-func createListenerWithSecret(t *testing.T) *listenerv3.Listener {
-	// Define the Secret data directly as a struct.
-	secret := &tlsv3.Secret{
-		Name: "example-secret",
-		Type: &tlsv3.Secret_TlsCertificate{
-			TlsCertificate: &tlsv3.TlsCertificate{
-				CertificateChain: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{
-						InlineBytes: []byte("-----BEGIN CERTIFICATE-----\n... Your certificate data ... \n-----END CERTIFICATE-----"),
-					},
-				},
-				PrivateKey: &corev3.DataSource{
-					Specifier: &corev3.DataSource_InlineBytes{
-						InlineBytes: []byte("-----BEGIN PRIVATE KEY-----\n... Your private key data ... \n-----END PRIVATE KEY-----"),
-					},
-				},
-			},
-		},
-		// Add other fields for the secret as needed.
-	}
-
-	// Marshal the Secret data to bytes.
-	secretData, err := proto.Marshal(secret)
-	if err != nil {
-		t.Logf("Failed to marshal Secret: %v", err)
-	}
-
-	// Create the listener with the Secret data.
-	return &listenerv3.Listener{
-		Name: "listener-with-secret",
-		Address: &corev3.Address{
-			Address: &corev3.Address_SocketAddress{
-				SocketAddress: &corev3.SocketAddress{
-					Address: "0.0.0.0",
-					PortSpecifier: &corev3.SocketAddress_PortValue{
-						PortValue: 10080,
-					},
-				},
-			},
-		},
-		FilterChains: []*listenerv3.FilterChain{
-			{
-				FilterChainMatch: &listenerv3.FilterChainMatch{
-					ServerNames: []string{"example.com"}, // Domain names to match.
-				},
-				TransportSocket: &corev3.TransportSocket{
-					Name: "envoy.transport_sockets.tls",
-					ConfigType: &corev3.TransportSocket_TypedConfig{
-						TypedConfig: &anyv3.Any{
-							TypeUrl: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",
-							Value:   secretData, // Include the Secret data directly here.
-						},
-					},
-				},
-				Filters: []*listenerv3.Filter{},
-			},
-		},
 	}
 }
