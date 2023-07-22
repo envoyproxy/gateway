@@ -233,7 +233,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			name: "inject-new-listener",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
-					resourcev3.ListenerType: []types.Resource{testListener},
+					resourcev3.ListenerType: []types.Resource{},
 				},
 			},
 			typeIn:     resourcev3.ListenerType,
@@ -336,6 +336,65 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			require.NoError(t, err)
 			diff := cmp.Diff(tc.tableOut, tc.tableIn.DeepCopy(), protocmp.Transform())
 			require.Empty(t, diff)
+		})
+	}
+}
+
+func TestInvalidAddXdsResource(t *testing.T) {
+	invalidListener := &listenerv3.Listener{
+		Name: "invalid-listener",
+		Address: &corev3.Address{
+			Address: &corev3.Address_SocketAddress{
+				SocketAddress: &corev3.SocketAddress{
+					Address: "",
+					PortSpecifier: &corev3.SocketAddress_PortValue{
+						PortValue: 5000,
+					},
+					Protocol: corev3.SocketAddress_TCP,
+				},
+			},
+		},
+	}
+	testCases := []struct {
+		name       string
+		tableIn    *ResourceVersionTable
+		typeIn     resourcev3.Type
+		resourceIn types.Resource
+		funcIn     func(existing types.Resource, new types.Resource) bool
+		tableOut   *ResourceVersionTable
+	}{
+		{
+			name: "inject-new-listener",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ListenerType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.ListenerType,
+			resourceIn: invalidListener,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ListenerType: []types.Resource{testListener},
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
+			require.Error(t, err)
 		})
 	}
 }
