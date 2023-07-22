@@ -18,7 +18,10 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
+
+	anyv3 "github.com/golang/protobuf/ptypes/any"
 )
 
 var (
@@ -112,6 +115,7 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 		},
 	}
+	listenerWithSecret := createListenerWithSecret(t)
 	testCluster := &clusterv3.Cluster{
 		Name: "test-cluster",
 		LoadAssignment: &endpointv3.ClusterLoadAssignment{
@@ -170,6 +174,32 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 		},
 	}
+	testRouteConfig := &routev3.RouteConfiguration{
+		Name: "test-route-config",
+		VirtualHosts: []*routev3.VirtualHost{
+			{
+				Name:    "test-virtual-host",
+				Domains: []string{"test.example.com"},
+				Routes: []*routev3.Route{
+					{
+						Match: &routev3.RouteMatch{
+							PathSpecifier: &routev3.RouteMatch_Prefix{
+								Prefix: "/",
+							},
+						},
+						Action: &routev3.Route_Route{
+							Route: &routev3.RouteAction{
+								ClusterSpecifier: &routev3.RouteAction_Cluster{
+									Cluster: "test-cluster",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	testCases := []struct {
 		name       string
 		tableIn    *ResourceVersionTable
@@ -328,6 +358,58 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "inject-route-config",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.RouteType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.RouteType,
+			resourceIn: testRouteConfig,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.RouteType: []types.Resource{testRouteConfig},
+				},
+			},
+		},
+		{
+			name: "new-listener-secret",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ListenerType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.ListenerType,
+			resourceIn: listenerWithSecret,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldListener := existing.(*listenerv3.Listener)
+				newListener := new.(*listenerv3.Listener)
+				if newListener == nil || oldListener == nil {
+					return false
+				}
+				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.ListenerType: []types.Resource{listenerWithSecret},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -360,7 +442,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 		Name: "test-route-config",
 		VirtualHosts: []*routev3.VirtualHost{
 			{
-				Name:    "", //missing name
+				Name:    "", // missing name
 				Domains: []string{"test.example.com"},
 				Routes: []*routev3.Route{
 					{
@@ -497,5 +579,65 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			err := tc.tableIn.AddOrReplaceXdsResource(tc.typeIn, tc.resourceIn, tc.funcIn)
 			require.Error(t, err)
 		})
+	}
+}
+
+func createListenerWithSecret(t *testing.T) *listenerv3.Listener {
+	// Define the Secret data directly as a struct.
+	secret := &tlsv3.Secret{
+		Name: "example-secret",
+		Type: &tlsv3.Secret_TlsCertificate{
+			TlsCertificate: &tlsv3.TlsCertificate{
+				CertificateChain: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: []byte("-----BEGIN CERTIFICATE-----\n... Your certificate data ... \n-----END CERTIFICATE-----"),
+					},
+				},
+				PrivateKey: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{
+						InlineBytes: []byte("-----BEGIN PRIVATE KEY-----\n... Your private key data ... \n-----END PRIVATE KEY-----"),
+					},
+				},
+			},
+		},
+		// Add other fields for the secret as needed.
+	}
+
+	// Marshal the Secret data to bytes.
+	secretData, err := proto.Marshal(secret)
+	if err != nil {
+		t.Logf("Failed to marshal Secret: %v", err)
+	}
+
+	// Create the listener with the Secret data.
+	return &listenerv3.Listener{
+		Name: "listener-with-secret",
+		Address: &corev3.Address{
+			Address: &corev3.Address_SocketAddress{
+				SocketAddress: &corev3.SocketAddress{
+					Address: "0.0.0.0",
+					PortSpecifier: &corev3.SocketAddress_PortValue{
+						PortValue: 10080,
+					},
+				},
+			},
+		},
+		FilterChains: []*listenerv3.FilterChain{
+			{
+				FilterChainMatch: &listenerv3.FilterChainMatch{
+					ServerNames: []string{"example.com"}, // Domain names to match.
+				},
+				TransportSocket: &corev3.TransportSocket{
+					Name: "envoy.transport_sockets.tls",
+					ConfigType: &corev3.TransportSocket_TypedConfig{
+						TypedConfig: &anyv3.Any{
+							TypeUrl: "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",
+							Value:   secretData, // Include the Secret data directly here.
+						},
+					},
+				},
+				Filters: []*listenerv3.Filter{},
+			},
+		},
 	}
 }
