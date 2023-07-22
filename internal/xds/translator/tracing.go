@@ -115,7 +115,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	}, nil
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *egcfgv1a1.ProxyTracing) error {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing) error {
 	if tracing == nil {
 		return nil
 	}
