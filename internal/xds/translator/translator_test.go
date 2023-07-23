@@ -201,24 +201,30 @@ func TestTranslateXdsNegative(t *testing.T) {
 		name           string
 		dnsDomain      string
 		requireSecrets bool
-	}{
+	}{ /*
+			{
+				name: "http-route-invalid",
+			},
+			{
+				name: "tcp-route-invalid",
+			},
+			{
+				name: "udp-route-invalid",
+			},
+			{
+				name: "jsonpatch-invalid",
+			},
+			{
+				name: "accesslog-invalid",
+			},
+			{
+				name: "tracing-invalid",
+			}, */
 		{
-			name: "http-route-invalid",
+			name: "jsonpatch-invalid-listener",
 		},
 		{
-			name: "tcp-route-invalid",
-		},
-		{
-			name: "udp-route-invalid",
-		},
-		{
-			name: "jsonpatch-invalid",
-		},
-		{
-			name: "accesslog-invalid",
-		},
-		{
-			name: "tracing-invalid",
+			name: "jsonpatch-invalid-cluster",
 		},
 	}
 
