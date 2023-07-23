@@ -10,6 +10,7 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/rest"
@@ -75,7 +77,7 @@ var ReloadTest = suite.ConformanceTest{
 					}
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-					assert.JSONEq(t, string(initialConfig), string(newConfigDump), "Configuration mismatch after reload")
+					require.Empty(t, cmp.Diff(initialConfig, newConfigDump))
 				}
 
 				// Wait for Step 2 to complete before moving to the next reload
@@ -89,7 +91,7 @@ var ReloadTest = suite.ConformanceTest{
 	},
 }
 
-func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseBody []byte, err error) {
+func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseMap map[string]interface{}, err error) {
 	selectorLabels := map[string]string{
 		"gateway.envoyproxy.io/owning-gateway-name":      "all-namespaces",
 		"gateway.envoyproxy.io/owning-gateway-namespace": "gateway-conformance-infra",
@@ -163,22 +165,22 @@ func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace
 	defer resp.Body.Close()
 
 	// Read the response body as a string
-	responseBody, err = ioutil.ReadAll(resp.Body)
+	responseBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal the response body into a map[string]interface{}
-	/* err = json.Unmarshal(responseBody, &responseMap)
+	err = json.Unmarshal(responseBody, &responseMap)
 	if err != nil {
 		return nil, err
-	} */
+	}
 
 	// Wait for termination signal
 	// <-stopCh
 
 	portForwarder.Close()
-	return responseBody, nil
+	return responseMap, nil
 }
 
 func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err error) {
