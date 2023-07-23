@@ -76,7 +76,8 @@ EnvoyGateway is the schema for the envoygateways API.
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
-| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
+| `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
+| `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
 
 
 ## EnvoyGatewayAdmin
@@ -255,7 +256,8 @@ _Appears in:_
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
-| `extension` _[Extension](#extension)_ | Extension defines an extension to register for the Envoy Gateway Control Plane. |
+| `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
+| `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
 
 
 ## EnvoyProxy
@@ -323,11 +325,40 @@ _Appears in:_
 
 
 
-## Extension
+## ExtensionAPISettings
 
 
 
-Extension defines the configuration for registering an extension to the Envoy Gateway control plane.
+ExtensionAPISettings defines the settings specific to Gateway API Extensions.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `enableEnvoyPatchPolicy` _boolean_ | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
+
+
+## ExtensionHooks
+
+
+
+ExtensionHooks defines extension hooks across all supported runners
+
+_Appears in:_
+- [ExtensionManager](#extensionmanager)
+
+| Field | Description |
+| --- | --- |
+| `xdsTranslator` _[XDSTranslatorHooks](#xdstranslatorhooks)_ | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
+
+
+## ExtensionManager
+
+
+
+ExtensionManager defines the configuration for registering an extension manager to the Envoy Gateway control plane.
 
 _Appears in:_
 - [EnvoyGateway](#envoygateway)
@@ -340,20 +371,6 @@ _Appears in:_
 | `service` _[ExtensionService](#extensionservice)_ | Service defines the configuration of the extension service that the Envoy Gateway Control Plane will call through extension hooks. |
 
 
-## ExtensionHooks
-
-
-
-ExtensionHooks defines extension hooks across all supported runners
-
-_Appears in:_
-- [Extension](#extension)
-
-| Field | Description |
-| --- | --- |
-| `xdsTranslator` _[XDSTranslatorHooks](#xdstranslatorhooks)_ | XDSTranslator defines all the supported extension hooks for the xds-translator runner |
-
-
 ## ExtensionService
 
 
@@ -361,7 +378,7 @@ _Appears in:_
 ExtensionService defines the configuration for connecting to a registered extension service.
 
 _Appears in:_
-- [Extension](#extension)
+- [ExtensionManager](#extensionmanager)
 
 | Field | Description |
 | --- | --- |
@@ -421,7 +438,7 @@ _Appears in:_
 GroupVersionKind unambiguously identifies a Kind. It can be converted to k8s.io/apimachinery/pkg/runtime/schema.GroupVersionKind
 
 _Appears in:_
-- [Extension](#extension)
+- [ExtensionManager](#extensionmanager)
 
 | Field | Description |
 | --- | --- |
@@ -573,6 +590,32 @@ _Appears in:_
 
 
 
+## MetricSink
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
+| `openTelemetry` _[OpenTelemetrySink](#opentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
+
+
+## MetricSinkType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [MetricSink](#metricsink)
+
+
+
 ## OpenTelemetryEnvoyProxyAccessLog
 
 
@@ -587,6 +630,32 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
+
+
+## OpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [MetricSink](#metricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the service hostname. |
+| `port` _integer_ | Port defines the port the service is exposed on. |
+
+
+## PrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
 
 
 ## ProviderType
@@ -699,6 +768,21 @@ _Appears in:_
 | `level` _object (keys:[LogComponent](#logcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
 
 
+## ProxyMetrics
+
+
+
+
+
+_Appears in:_
+- [ProxyTelemetry](#proxytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
+| `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+
+
 ## ProxyTelemetry
 
 
@@ -712,6 +796,7 @@ _Appears in:_
 | --- | --- |
 | `accessLog` _[ProxyAccessLog](#proxyaccesslog)_ | AccessLogs defines accesslog parameters for managed proxies. If unspecified, will send default format to stdout. |
 | `tracing` _[ProxyTracing](#proxytracing)_ | Tracing defines tracing configuration for managed proxies. If unspecified, will not send tracing data. |
+| `metrics` _[ProxyMetrics](#proxymetrics)_ | Metrics defines metrics configuration for managed proxies. |
 
 
 ## ProxyTracing

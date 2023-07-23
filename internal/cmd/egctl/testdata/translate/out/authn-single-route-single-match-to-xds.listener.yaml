@@ -1,5 +1,5 @@
 xds:
-  envoy-gateway-system-eg:
+  envoy-gateway-system/eg:
     '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
     dynamicListeners:
     - activeState:
@@ -47,7 +47,7 @@ xds:
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                     providers:
-                      envoy-gateway-system-backend-rule-0-match-0-www.example.com-example:
+                      envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
                         remoteJwks:
                           cacheDuration: 300s
                           httpUri:
@@ -55,8 +55,8 @@ xds:
                             timeout: 5s
                             uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
                     requirementMap:
-                      envoy-gateway-system-backend-rule-0-match-0-www.example.com:
-                        providerName: envoy-gateway-system-backend-rule-0-match-0-www.example.com-example
+                      envoy-gateway-system/backend/rule/0/match/0-www.example.com:
+                        providerName: envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -67,10 +67,10 @@ xds:
                   configSource:
                     ads: {}
                     resourceApiVersion: V3
-                  routeConfigName: envoy-gateway-system-eg-http
+                  routeConfigName: envoy-gateway-system/eg/http
                 statPrefix: http
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
-          name: envoy-gateway-system-eg-http
+          name: envoy-gateway-system/eg/http
           perConnectionBufferLimitBytes: 32768
