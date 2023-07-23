@@ -41,7 +41,7 @@ var ReloadTest = suite.ConformanceTest{
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Envoy gatewa reload", func(t *testing.T) {
 			// Step 1: Start with an initial configuration for the Envoy Proxy
-			suite.RestConfig.Host = "https://127.0.0.1:6443"
+
 			var namespace = "envoy-gateway-system"
 
 			initialConfig, err := getConfigDump(t, suite.RestConfig, suite.Client, namespace)
@@ -50,25 +50,40 @@ var ReloadTest = suite.ConformanceTest{
 				t.Fatal(err) // Fail the test and log the error
 			}
 			var numReloads = 5
+			var numCheckingEachReload = 3
+			// Channel to communicate between Goroutines
+			errCh := make(chan error)
 
 			for i := 0; i < numReloads; i++ {
-				// Step 2: Restart or reload the Envoy Gateway
-				err := restartEnvoyGateway(t, suite.Client, namespace)
-				if err != nil {
+				// Step 2: Restart or reload the Envoy Gateway in a Goroutine
+				go func() {
+					err := restartEnvoyGateway(t, suite.Client, namespace)
+					if err != nil {
+						errCh <- err
+						return
+					}
+					errCh <- nil // Notify that Step 2 is completed
+				}()
+
+				// Nested loop to check config dump multiple times during each reload
+				for j := 0; j < numCheckingEachReload; j++ {
+
+					// Step 3: Retrieve the `/config_dump` output from the Envoy Proxy admin interface
+					newConfigDump, err := getConfigDump(t, suite.RestConfig, suite.Client, namespace)
+					if err != nil {
+						t.Log(err)
+						t.Fatal(err)
+					}
+
+					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
+					assert.Equal(t, initialConfig, newConfigDump, "Configuration mismatch after reload")
+				}
+
+				// Wait for Step 2 to complete before moving to the next reload
+				if err := <-errCh; err != nil {
 					t.Log(err)
 					t.Fatal(err)
 				}
-
-				// Step 3: Retrieve the `/config_dump` output from the Envoy Proxy admin interface
-				newConfigDump, err := getConfigDump(t, suite.RestConfig, suite.Client, namespace)
-				if err != nil {
-					t.Log(err)
-					t.Fatal(err)
-				}
-
-				// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-				assert.Equal(t, initialConfig, newConfigDump, "Configuration mismatch after reload")
-
 				// Step 5: Repeat the above steps for the desired number of reloads
 			}
 		})
@@ -110,7 +125,7 @@ func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace
 	}
 
 	portForwardURL := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s/portforward", namespace, podName)
-	portForwardURL = fmt.Sprintf("https://127.0.0.1:6443%s", portForwardURL)
+	portForwardURL = fmt.Sprintf("%v%s", config.Host, portForwardURL)
 
 	serverURL, _ := url.Parse(portForwardURL)
 	ports := []string{fmt.Sprintf("%d:%d", localPort, remotePort)}
@@ -140,8 +155,8 @@ func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace
 	// Output the local address for accessing the forwarded port
 	fmt.Printf("Port forwarding started. Access the service locally at: localhost:%d\n", localPort)
 
-	// Perform an HTTP GET request to the forwarded port
-	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/config_dump", localPort))
+	// Perform an HTTP GET request to the forwarded port, reaches to envoy proxy admin
+	resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:%d/config_dump?include_eds", localPort))
 	if err != nil {
 		t.Log(err)
 		return nil, err
