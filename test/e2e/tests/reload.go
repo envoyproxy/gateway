@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -179,7 +180,7 @@ func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace
 	// <-stopCh
 
 	portForwarder.Close()
-	return responseMap, nil
+	return sortKeys(responseMap), nil
 }
 
 func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err error) {
@@ -204,7 +205,7 @@ func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err e
 			return err
 		}
 
-		fmt.Printf("Deleting pod: %s\n", previousGatewayPodName)
+		fmt.Printf("Deleting envoy gateway pod: %s\n", previousGatewayPodName)
 	} else {
 		fmt.Println("No pods found with the selector 'control-plane=envoy-gateway'")
 	}
@@ -226,11 +227,10 @@ func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err e
 		if len(podList.Items) > 0 {
 			pod := podList.Items[0]
 			if pod.Status.Phase == corev1.PodRunning && pod.Name != previousGatewayPodName {
-				fmt.Printf("Pod %s is running\n", pod.Name)
+				fmt.Printf("Envoy gateway pod %s is deleted. New pod %s is running\n\r", previousGatewayPodName, pod.Name)
 				break
 			} else {
-				fmt.Printf("previous: %s; new: %s\n\r", previousGatewayPodName, pod.Name)
-
+				fmt.Printf("Envoy gateway pod %s is being deleted......\n", previousGatewayPodName)
 			}
 		}
 
@@ -243,4 +243,25 @@ func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err e
 		}
 	}
 	return nil
+}
+
+func sortKeys(m map[string]interface{}) map[string]interface{} {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Create a new map to hold the sorted key-value pairs
+	newMap := make(map[string]interface{})
+	for _, k := range keys {
+		v := m[k]
+		if vm, ok := v.(map[string]interface{}); ok {
+			newMap[k] = sortKeys(vm)
+		} else {
+			newMap[k] = v
+		}
+	}
+
+	return newMap
 }
