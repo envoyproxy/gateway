@@ -40,7 +40,7 @@ var ReloadTest = suite.ConformanceTest{
 	Description: "Envoy gateway reload route order",
 	Manifests:   []string{"testdata/reload-route-order.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("Envoy gatewa reload", func(t *testing.T) {
+		t.Run("Envoy gateway reload", func(t *testing.T) {
 			// Step 1: Start with an initial configuration for the Envoy Proxy
 
 			var namespace = "envoy-gateway-system"
