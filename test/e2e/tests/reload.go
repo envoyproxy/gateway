@@ -10,14 +10,12 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"testing"
 	"time"
 
@@ -77,7 +75,7 @@ var ReloadTest = suite.ConformanceTest{
 					}
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-					assert.Equal(t, initialConfig, newConfigDump, "Configuration mismatch after reload")
+					assert.JSONEq(t, string(initialConfig), string(newConfigDump), "Configuration mismatch after reload")
 				}
 
 				// Wait for Step 2 to complete before moving to the next reload
@@ -91,7 +89,7 @@ var ReloadTest = suite.ConformanceTest{
 	},
 }
 
-func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseMap map[string]interface{}, err error) {
+func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseBody []byte, err error) {
 	selectorLabels := map[string]string{
 		"gateway.envoyproxy.io/owning-gateway-name":      "all-namespaces",
 		"gateway.envoyproxy.io/owning-gateway-namespace": "gateway-conformance-infra",
@@ -165,22 +163,22 @@ func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace
 	defer resp.Body.Close()
 
 	// Read the response body as a string
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Unmarshal the response body into a map[string]interface{}
-	err = json.Unmarshal(responseBody, &responseMap)
+	/* err = json.Unmarshal(responseBody, &responseMap)
 	if err != nil {
 		return nil, err
-	}
+	} */
 
 	// Wait for termination signal
 	// <-stopCh
 
 	portForwarder.Close()
-	return sortKeys(responseMap), nil
+	return responseBody, nil
 }
 
 func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err error) {
@@ -243,25 +241,4 @@ func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err e
 		}
 	}
 	return nil
-}
-
-func sortKeys(m map[string]interface{}) map[string]interface{} {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// Create a new map to hold the sorted key-value pairs
-	newMap := make(map[string]interface{})
-	for _, k := range keys {
-		v := m[k]
-		if vm, ok := v.(map[string]interface{}); ok {
-			newMap[k] = sortKeys(vm)
-		} else {
-			newMap[k] = v
-		}
-	}
-
-	return newMap
 }
