@@ -211,6 +211,15 @@ func TestTranslateXdsNegative(t *testing.T) {
 		{
 			name: "udp-route-invalid",
 		},
+		{
+			name: "jsonpatch-invalid",
+		},
+		{
+			name: "accesslog-invalid",
+		},
+		{
+			name: "tracing-invalid",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -229,8 +238,10 @@ func TestTranslateXdsNegative(t *testing.T) {
 
 			tCtx, err := tr.Translate(ir)
 			require.Error(t, err)
-			require.Contains(t, err.Error(), "validation failed for xds resource")
 			require.Nil(t, tCtx)
+			if tc.name != "jsonpatch-invalid" {
+				require.Contains(t, err.Error(), "validation failed for xds resource")
+			}
 		})
 	}
 }
