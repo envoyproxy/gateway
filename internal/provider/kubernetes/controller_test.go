@@ -148,11 +148,10 @@ func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
 		expect []string
 	}{
 		{
-			name: "envoyproxy with existing gatewayclass finalizer",
+			name: "envoyproxy with no finalizers",
 			ep: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ep",
-					Finalizers: []string{gatewayClassFinalizer},
+					Name: "test",
 				},
 			},
 			expect: nil,
