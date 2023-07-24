@@ -79,8 +79,21 @@ var ReloadTest = suite.ConformanceTest{
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
 					// Define the comparison options with SortSlices
+					// Define the comparison options with SortSlices
 					opts := cmp.Options{
 						cmpopts.SortSlices(func(a, b interface{}) bool {
+							if a == nil && b == nil {
+								return false
+							}
+							if a == nil {
+								return true
+							}
+							if b == nil {
+								return false
+							}
+
+							// Implement your custom sorting logic here
+							// In this case, sort based on the "cluster_name" field
 							clusterA := a.(map[string]interface{})["endpoint_config"].(map[string]interface{})["cluster_name"].(string)
 							clusterB := b.(map[string]interface{})["endpoint_config"].(map[string]interface{})["cluster_name"].(string)
 							return clusterA < clusterB
