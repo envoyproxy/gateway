@@ -16,16 +16,21 @@ import (
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
-		name string
+		name             string
+		enablePrometheus bool
 	}{
 		{
 			name: "default",
+		},
+		{
+			name:             "enable-prometheus",
+			enablePrometheus: true,
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetRenderedBootstrapConfig()
+			got, err := GetRenderedBootstrapConfig(tc.enablePrometheus)
 			assert.NoError(t, err)
 			expected, err := readTestData(tc.name)
 			assert.NoError(t, err)

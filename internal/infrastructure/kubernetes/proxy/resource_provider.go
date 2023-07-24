@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
-
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +20,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
 
 type ResourceRender struct {
