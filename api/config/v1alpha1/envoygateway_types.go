@@ -273,6 +273,17 @@ type RateLimit struct {
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
 	Backend RateLimitDatabaseBackend `json:"backend"`
+
+	// Timeout specifies the timeout period for the proxy to access the ratelimit server
+	// If not set, timeout is 20ms.
+	Timeout string `json:"timeout"`
+
+	// FailOpen is a switch used to control the flow of traffic
+	// when the response from the ratelimit server cannot be obtained.
+	// If FailOpen is true, let the traffic pass,
+	// otherwise, don't let the traffic pass and return 500.
+	// If not set, FailOpen is False.
+	FailOpen bool `json:"failopen"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

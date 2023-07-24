@@ -67,6 +67,8 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				if r.EnvoyGateway.RateLimit != nil {
 					t.GlobalRateLimit = &translator.GlobalRateLimitSettings{
 						ServiceURL: ratelimit.GetServiceURL(r.Namespace, r.DNSDomain),
+						Timeout:    r.EnvoyGateway.RateLimit.Timeout,
+						FailOpen:   r.EnvoyGateway.RateLimit.FailOpen,
 					}
 				}
 

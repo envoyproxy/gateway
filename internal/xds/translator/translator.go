@@ -37,6 +37,14 @@ type GlobalRateLimitSettings struct {
 	// ServiceURL is the URL of the global
 	// rate limit service.
 	ServiceURL string
+
+	// Timeout specifies the timeout period for the proxy to access the ratelimit server
+	// If not set, timeout is 20ms.
+	Timeout string
+
+	// FailOpen is a switch used to control the flow of traffic
+	// when the response from the ratelimit server cannot be obtained.
+	FailOpen bool
 }
 
 // Translate translates the XDS IR into xDS resources

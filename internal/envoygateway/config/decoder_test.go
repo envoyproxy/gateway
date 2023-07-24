@@ -188,6 +188,30 @@ func TestDecode(t *testing.T) {
 			expect: true,
 		},
 		{
+			in: inPath + "gateway-global-ratelimit.yaml",
+			out: &v1alpha1.EnvoyGateway{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha1.KindEnvoyGateway,
+					APIVersion: v1alpha1.GroupVersion.String(),
+				},
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					Gateway:  v1alpha1.DefaultGateway(),
+					RateLimit: &v1alpha1.RateLimit{
+						Timeout:  "10ms",
+						FailOpen: false,
+						Backend: v1alpha1.RateLimitDatabaseBackend{
+							Type: v1alpha1.RedisBackendType,
+							Redis: &v1alpha1.RateLimitRedisSettings{
+								URL: "localhost:6379",
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		},
+		{
 			in: inPath + "gateway-logging.yaml",
 			out: &v1alpha1.EnvoyGateway{
 				TypeMeta: metav1.TypeMeta{
