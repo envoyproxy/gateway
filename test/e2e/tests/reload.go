@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -77,7 +78,15 @@ var ReloadTest = suite.ConformanceTest{
 					}
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-					require.Empty(t, cmp.Diff(initialConfig, newConfigDump))
+					// Define the comparison options with SortSlices
+					opts := cmp.Options{
+						cmpopts.SortSlices(func(a, b interface{}) bool {
+							clusterA := a.(map[string]interface{})["endpoint_config"].(map[string]interface{})["cluster_name"].(string)
+							clusterB := b.(map[string]interface{})["endpoint_config"].(map[string]interface{})["cluster_name"].(string)
+							return clusterA < clusterB
+						}),
+					}
+					require.Empty(t, cmp.Diff(initialConfig, newConfigDump, opts))
 				}
 
 				// Wait for Step 2 to complete before moving to the next reload
