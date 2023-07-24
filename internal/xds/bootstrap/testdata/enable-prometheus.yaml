@@ -84,10 +84,10 @@ static_resources:
                 address: envoy-gateway
                 port_value: 18000
     typed_extension_protocol_options:
-      "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
-         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-         "explicit_http_config":
-           "http2_protocol_options": {}
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+        explicit_http_config:
+          http2_protocol_options: {}
     name: xds_cluster
     type: STRICT_DNS
     transport_socket:
