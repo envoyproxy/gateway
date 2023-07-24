@@ -55,7 +55,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: TCPRoute
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
       listeners:
       - address: ""
@@ -72,7 +72,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
+      name: envoy-gateway/gateway-1
 tcpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: TCPRoute
@@ -137,7 +137,7 @@ tcpRoutes:
         name: gateway-1
         namespace: envoy-gateway
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
@@ -146,13 +146,13 @@ xdsIR:
       destinations:
       - host: 7.7.7.7
         port: 8163
-      name: envoy-gateway-gateway-1-tcp1-tcproute-1
+      name: envoy-gateway/gateway-1/tcp1/tcproute-1
       port: 10161
       tls: {}
     - address: 0.0.0.0
       destinations:
       - host: 7.7.7.7
         port: 8163
-      name: envoy-gateway-gateway-1-tcp2-tcproute-1
+      name: envoy-gateway/gateway-1/tcp2/tcproute-1
       port: 10162
       tls: {}

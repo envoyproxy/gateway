@@ -63,6 +63,7 @@ type gatewayAPIReconciler struct {
 	classController gwapiv1b1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
+	envoyGateway    *egcfgv1a1.EnvoyGateway
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -74,8 +75,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 
 	// Gather additional resources to watch from registered extensions
 	var extGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.Extension != nil {
-		for _, rsrc := range cfg.EnvoyGateway.Extension.Resources {
+	if cfg.EnvoyGateway.ExtensionManager != nil {
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
@@ -90,6 +91,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		resources:       resources,
 		extGVKs:         extGVKs,
 		store:           newProviderStore(),
+		envoyGateway:    cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -1309,17 +1311,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch EnvoyPatchPolicy CRUDs
+	// Watch EnvoyPatchPolicy if enabled in config
 	eppPredicates := []predicate.Predicate{}
 	if len(ls) != 0 {
 		eppPredicates = append(eppPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
 	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
-		&handler.EnqueueRequestForObject{},
-		eppPredicates...,
-	); err != nil {
-		return err
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		// Watch EnvoyPatchPolicy CRUDs
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
+			&handler.EnqueueRequestForObject{},
+			eppPredicates...,
+		); err != nil {
+			return err
+		}
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")

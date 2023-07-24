@@ -187,7 +187,7 @@ func TestValidate(t *testing.T) {
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-						Extension: &v1alpha1.Extension{
+						ExtensionManager: &v1alpha1.ExtensionManager{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
 									Group:   "foo.example.io",
@@ -224,7 +224,7 @@ func TestValidate(t *testing.T) {
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-						Extension: &v1alpha1.Extension{
+						ExtensionManager: &v1alpha1.ExtensionManager{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
 									Group:   "foo.example.io",
@@ -267,7 +267,7 @@ func TestValidate(t *testing.T) {
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-						Extension: &v1alpha1.Extension{
+						ExtensionManager: &v1alpha1.ExtensionManager{
 							Hooks: &v1alpha1.ExtensionHooks{
 								XDSTranslator: &v1alpha1.XDSTranslatorHooks{
 									Pre: []v1alpha1.XDSTranslatorHook{},
@@ -303,7 +303,7 @@ func TestValidate(t *testing.T) {
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-						Extension: &v1alpha1.Extension{
+						ExtensionManager: &v1alpha1.ExtensionManager{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
 									Group:   "foo.example.io",
@@ -346,7 +346,7 @@ func TestValidate(t *testing.T) {
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-						Extension: &v1alpha1.Extension{
+						ExtensionManager: &v1alpha1.ExtensionManager{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
 									Group:   "foo.example.io",
@@ -379,7 +379,7 @@ func TestValidate(t *testing.T) {
 					EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
 						Gateway:  v1alpha1.DefaultGateway(),
 						Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
-						Extension: &v1alpha1.Extension{
+						ExtensionManager: &v1alpha1.ExtensionManager{
 							Resources: []v1alpha1.GroupVersionKind{
 								{
 									Group:   "foo.example.io",
