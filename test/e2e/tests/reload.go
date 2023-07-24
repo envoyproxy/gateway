@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"testing"
 	"time"
 
@@ -79,27 +80,37 @@ var ReloadTest = suite.ConformanceTest{
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
 					// Define the comparison options with SortSlices
-					// Define the comparison options with SortSlices
-					opts := cmp.Options{
-						cmpopts.SortSlices(func(a, b interface{}) bool {
-							if a == nil && b == nil {
-								return false
+					// Custom sorting function for dynamic_endpoint_configs
+					sortFn := func(slice []interface{}) {
+						sort.Slice(slice, func(i, j int) bool {
+							endpointConfigI, okI := slice[i].(map[string]interface{})["endpoint_config"].(map[string]interface{})
+							endpointConfigJ, okJ := slice[j].(map[string]interface{})["endpoint_config"].(map[string]interface{})
+							if !okI || !okJ {
+								return false // If either map is missing, consider them equal (no sorting)
 							}
-							if a == nil {
-								return true
-							}
-							if b == nil {
-								return false
-							}
-
-							// Implement your custom sorting logic here
-							// In this case, sort based on the "cluster_name" field
-							clusterA := a.(map[string]interface{})["endpoint_config"].(map[string]interface{})["cluster_name"].(string)
-							clusterB := b.(map[string]interface{})["endpoint_config"].(map[string]interface{})["cluster_name"].(string)
-							return clusterA < clusterB
-						}),
+							clusterNameI := endpointConfigI["cluster_name"].(string)
+							clusterNameJ := endpointConfigJ["cluster_name"].(string)
+							return clusterNameI < clusterNameJ
+						})
 					}
-					require.Empty(t, cmp.Diff(initialConfig, newConfigDump, opts))
+
+					// Define options for comparison
+					sortOpts := cmpopts.SortSlices(func(a, b interface{}) bool {
+						// Check if both a and b are strings
+						strA, okA := a.(string)
+						strB, okB := b.(string)
+
+						// If either a or b is not a string, return false
+						if !okA || !okB {
+							return false
+						}
+
+						// Compare the strings
+						return strA < strB
+					})
+
+					// Compare the two JSON structures with sorting
+					require.Empty(t, cmp.Diff(initialConfig, newConfigDump, sortOpts, cmpopts.SortMaps(sortFn)))
 				}
 
 				// Wait for Step 2 to complete before moving to the next reload
