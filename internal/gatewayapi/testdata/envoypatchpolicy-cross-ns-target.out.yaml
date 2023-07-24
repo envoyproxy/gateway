@@ -55,11 +55,11 @@ xdsIR:
       text:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - Name: edit-conn-buffer-bytes
-      Namespace: envoy-gateway-2
+    - name: edit-conn-buffer-bytes
+      namespace: envoy-gateway-2
       status:
         conditions:
-        - lastTransitionTime: "2023-07-22T00:35:42Z"
+        - lastTransitionTime: null
           message: Namespace:envoy-gateway-2 TargetRef.Namespace:envoy-gateway, EnvoyPatchPolicy
             can only target a Gateway in the same namespace.
           reason: Invalid

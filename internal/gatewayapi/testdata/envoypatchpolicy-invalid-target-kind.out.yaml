@@ -55,11 +55,11 @@ xdsIR:
       text:
       - path: /dev/stdout
     envoyPatchPolicies:
-    - Name: edit-conn-buffer-bytes
-      Namespace: envoy-gateway
+    - name: edit-conn-buffer-bytes
+      namespace: envoy-gateway
       status:
         conditions:
-        - lastTransitionTime: "2023-07-22T00:35:42Z"
+        - lastTransitionTime: null
           message: TargetRef.Group:gateway.networking.k8s.io TargetRef.Kind:MyGateway,
             only TargetRef.Group:gateway.networking.k8s.io and TargetRef.Kind:Gateway
             is supported.

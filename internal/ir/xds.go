@@ -13,7 +13,6 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	ktypes "k8s.io/apimachinery/pkg/types"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -803,7 +802,8 @@ type OpenTelemetryAccessLog struct {
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicy struct {
-	ktypes.NamespacedName
+	Name      string `json:"name,omitempty" yaml:"name"`
+	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
 	Status *egv1a1.EnvoyPatchPolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 	// JSONPatches are the JSON Patches that
