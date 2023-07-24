@@ -49,7 +49,7 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 
 func getXdsClusterObjFromBootstrap(t *testing.T) *clusterv3.Cluster {
 	bootstrapObj := &bootstrapv3.Bootstrap{}
-	bootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()
+	bootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(false)
 	require.NoError(t, err)
 	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapStr))
 	require.NoError(t, err)

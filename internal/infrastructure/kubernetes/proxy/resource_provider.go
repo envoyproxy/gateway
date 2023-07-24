@@ -7,6 +7,9 @@ package proxy
 
 import (
 	"fmt"
+	"strconv"
+
+	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
@@ -151,6 +154,13 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
+	enablePrometheus := false
+	if r.infra.Config != nil &&
+		r.infra.Config.Spec.Telemetry.Metrics != nil &&
+		r.infra.Config.Spec.Telemetry.Metrics.Prometheus != nil {
+		enablePrometheus = true
+	}
+
 	// Get expected bootstrap configurations rendered ProxyContainers
 	containers, err := expectedProxyContainers(r.infra, deploymentConfig)
 	if err != nil {
@@ -172,6 +182,14 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	var annotations map[string]string
 	if deploymentConfig.Pod.Annotations != nil {
 		annotations = deploymentConfig.Pod.Annotations
+	}
+	if enablePrometheus {
+		if annotations == nil {
+			annotations = make(map[string]string, 2)
+		}
+		annotations["prometheus.io/path"] = "/stats/prometheus" // TODO: make this configurable
+		annotations["prometheus.io/scrape"] = "true"
+		annotations["prometheus.io/port"] = strconv.Itoa(bootstrap.EnvoyReadinessPort)
 	}
 
 	deployment := &appsv1.Deployment{
