@@ -17,7 +17,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"sort"
 	"testing"
 	"time"
 
@@ -79,38 +78,39 @@ var ReloadTest = suite.ConformanceTest{
 					}
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-					// Define the comparison options with SortSlices
-					// Custom sorting function for dynamic_endpoint_configs
-					sortFn := func(slice []interface{}) {
-						sort.Slice(slice, func(i, j int) bool {
-							endpointConfigI, okI := slice[i].(map[string]interface{})["endpoint_config"].(map[string]interface{})
-							endpointConfigJ, okJ := slice[j].(map[string]interface{})["endpoint_config"].(map[string]interface{})
-							if !okI || !okJ {
-								return false // If either map is missing, consider them equal (no sorting)
-							}
-							clusterNameI := endpointConfigI["cluster_name"].(string)
-							clusterNameJ := endpointConfigJ["cluster_name"].(string)
-							return clusterNameI < clusterNameJ
-						})
-					}
-
 					// Define options for comparison
 					sortOpts := cmpopts.SortSlices(func(a, b interface{}) bool {
-						// Check if both a and b are strings
-						strA, okA := a.(string)
-						strB, okB := b.(string)
+						// Type assertion to get the map[string]interface{} from the interface{}
+						mapA, okA := a.(map[string]interface{})
+						mapB, okB := b.(map[string]interface{})
 
-						// If either a or b is not a string, return false
+						// If either a or b is not a map or does not have the "endpoint_config" key, return false
 						if !okA || !okB {
 							return false
 						}
 
-						// Compare the strings
-						return strA < strB
+						endpointA, okA := mapA["endpoint_config"].(map[string]interface{})
+						endpointB, okB := mapB["endpoint_config"].(map[string]interface{})
+
+						// If either a or b does not have the "endpoint_config" key or is not a map, return false
+						if !okA || !okB {
+							return false
+						}
+
+						// Extract the "cluster_name" field from the endpoint_config map and compare the values
+						clusterA, okA := endpointA["cluster_name"].(string)
+						clusterB, okB := endpointB["cluster_name"].(string)
+
+						// If either clusterA or clusterB is not a string, return false
+						if !okA || !okB {
+							return false
+						}
+
+						return clusterA < clusterB
 					})
 
 					// Compare the two JSON structures with sorting
-					require.Empty(t, cmp.Diff(initialConfig, newConfigDump, sortOpts, cmpopts.SortMaps(sortFn)))
+					require.Empty(t, cmp.Diff(initialConfig, newConfigDump, sortOpts))
 				}
 
 				// Wait for Step 2 to complete before moving to the next reload
