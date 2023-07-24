@@ -802,13 +802,19 @@ type OpenTelemetryAccessLog struct {
 // EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
 // +k8s:deepcopy-gen=true
 type EnvoyPatchPolicy struct {
+	EnvoyPatchPolicyStatus
+	// JSONPatches are the JSON Patches that
+	// are to be applied to generaed Xds linked to the gateway.
+	JSONPatches []*JSONPatchConfig `json:"jsonPatches,omitempty" yaml:"jsonPatches,omitempty"`
+}
+
+// EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
+// +k8s:deepcopy-gen=true
+type EnvoyPatchPolicyStatus struct {
 	Name      string `json:"name,omitempty" yaml:"name"`
 	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
 	// Status of the EnvoyPatchPolicy
 	Status *egv1a1.EnvoyPatchPolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
-	// JSONPatches are the JSON Patches that
-	// are to be applied to generaed Xds linked to the gateway.
-	JSONPatches []*JSONPatchConfig `json:"jsonPatches,omitempty" yaml:"jsonPatches,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource

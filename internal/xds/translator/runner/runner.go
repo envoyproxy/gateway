@@ -82,7 +82,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				// Publish EnvoyPatchPolicyStatus
-				for _, e := range val.EnvoyPatchPolicies {
+				for _, e := range result.EnvoyPatchPolicyStatuses {
 					key := ktypes.NamespacedName{
 						Name:      e.Name,
 						Namespace: e.Namespace,
