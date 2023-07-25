@@ -22,31 +22,31 @@ func (i *Infra) CreateOrUpdateRateLimitInfra(ctx context.Context) error {
 	}
 
 	// Create ratelimit infra requires the uid of owner reference.
-	ownerReferenceUid := make(map[string]types.UID)
+	ownerReferenceUID := make(map[string]types.UID)
 	key := types.NamespacedName{
 		Namespace: i.Namespace,
 		Name:      "envoy-gateway",
 	}
 
-	serviceUid, err := i.Client.GetUID(ctx, key, &corev1.Service{})
+	serviceUID, err := i.Client.GetUID(ctx, key, &corev1.Service{})
 	if err != nil {
 		return err
 	}
-	ownerReferenceUid[ratelimit.ResourceKindService] = serviceUid
+	ownerReferenceUID[ratelimit.ResourceKindService] = serviceUID
 
-	deploymentUid, err := i.Client.GetUID(ctx, key, &appsv1.Deployment{})
+	deploymentUID, err := i.Client.GetUID(ctx, key, &appsv1.Deployment{})
 	if err != nil {
 		return err
 	}
-	ownerReferenceUid[ratelimit.ResourceKindDeployment] = deploymentUid
+	ownerReferenceUID[ratelimit.ResourceKindDeployment] = deploymentUID
 
-	serviceAccount, err := i.Client.GetUID(ctx, key, &corev1.ServiceAccount{})
+	serviceAccountUID, err := i.Client.GetUID(ctx, key, &corev1.ServiceAccount{})
 	if err != nil {
 		return err
 	}
-	ownerReferenceUid[ratelimit.ResourceKindServiceAccount] = serviceAccount
+	ownerReferenceUID[ratelimit.ResourceKindServiceAccount] = serviceAccountUID
 
-	r := ratelimit.NewResourceRender(i.Namespace, i.EnvoyGateway, ownerReferenceUid)
+	r := ratelimit.NewResourceRender(i.Namespace, i.EnvoyGateway, ownerReferenceUID)
 	return i.createOrUpdate(ctx, r)
 }
 

@@ -35,10 +35,10 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 		},
 	}
 
-	ownerReferenceUid := map[string]types.UID{
+	ownerReferenceUID := map[string]types.UID{
 		ratelimit.ResourceKindDeployment: "foo.bar",
 	}
-	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUid)
+	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 	deployment, err := r.Deployment()
 	require.NoError(t, err)
 
@@ -75,7 +75,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUid)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUID)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 

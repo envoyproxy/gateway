@@ -29,7 +29,7 @@ const (
 	RedisAuthEnvVar = "REDIS_AUTH"
 )
 
-var ownerReferenceUid = map[string]types.UID{
+var ownerReferenceUID = map[string]types.UID{
 	ResourceKindService:        "test-owner-reference-uid-for-service",
 	ResourceKindDeployment:     "test-owner-reference-uid-for-deployment",
 	ResourceKindServiceAccount: "test-owner-reference-uid-for-service-account",
@@ -71,7 +71,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUid)
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestService(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUid)
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 	svc, err := r.Service()
 	require.NoError(t, err)
 
@@ -489,7 +489,7 @@ func TestDeployment(t *testing.T) {
 				Kubernetes: &egcfgv1a1.EnvoyGatewayKubernetesProvider{
 					RateLimitDeployment: tc.deploy,
 				}}
-			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUid)
+			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 

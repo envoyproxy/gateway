@@ -32,17 +32,17 @@ type ResourceRender struct {
 	rateLimit           *egcfgv1a1.RateLimit
 	rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec
 
-	// ownerReferenceUid store the uid of its owner reference.
-	ownerReferenceUid map[string]types.UID
+	// ownerReferenceUID store the uid of its owner reference.
+	ownerReferenceUID map[string]types.UID
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway, ownerReferenceUid map[string]types.UID) *ResourceRender {
+func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
 	return &ResourceRender{
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
-		ownerReferenceUid:   ownerReferenceUid,
+		ownerReferenceUID:   ownerReferenceUID,
 	}
 }
 
@@ -87,8 +87,8 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		Spec: serviceSpec,
 	}
 
-	if r.ownerReferenceUid != nil {
-		if uid, ok := r.ownerReferenceUid[ResourceKindService]; ok {
+	if r.ownerReferenceUID != nil {
+		if uid, ok := r.ownerReferenceUID[ResourceKindService]; ok {
 			svc.OwnerReferences = []metav1.OwnerReference{
 				{
 					Kind:       ResourceKindService,
@@ -118,8 +118,8 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		},
 	}
 
-	if r.ownerReferenceUid != nil {
-		if uid, ok := r.ownerReferenceUid[ResourceKindServiceAccount]; ok {
+	if r.ownerReferenceUID != nil {
+		if uid, ok := r.ownerReferenceUID[ResourceKindServiceAccount]; ok {
 			sa.OwnerReferences = []metav1.OwnerReference{
 				{
 					Kind:       ResourceKindServiceAccount,
@@ -183,8 +183,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 	}
 
-	if r.ownerReferenceUid != nil {
-		if uid, ok := r.ownerReferenceUid[ResourceKindDeployment]; ok {
+	if r.ownerReferenceUID != nil {
+		if uid, ok := r.ownerReferenceUID[ResourceKindDeployment]; ok {
 			deployment.OwnerReferences = []metav1.OwnerReference{
 				{
 					Kind:       ResourceKindDeployment,
