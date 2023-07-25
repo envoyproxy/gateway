@@ -8,4 +8,4 @@
 
 package ignore
 
-import "github.com/norwoodj/helm-docs/cmd/helm-docs"
+import _ "github.com/norwoodj/helm-docs/cmd/helm-docs"
