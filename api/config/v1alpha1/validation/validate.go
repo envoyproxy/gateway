@@ -8,7 +8,6 @@ package validation
 import (
 	"errors"
 	"fmt"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"reflect"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -38,7 +37,7 @@ func ValidateEnvoyProxy(proxy *egcfgv1a1.EnvoyProxy) error {
 }
 
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
-func validateEnvoyProxySpec(spec *v1alpha1.EnvoyProxySpec) error {
+func validateEnvoyProxySpec(spec *egcfgv1a1.EnvoyProxySpec) error {
 	var errs []error
 
 	if spec == nil {
@@ -60,10 +59,10 @@ func validateEnvoyProxySpec(spec *v1alpha1.EnvoyProxySpec) error {
 	return utilerrors.NewAggregate(errs)
 }
 
-func validateProvider(spec *v1alpha1.EnvoyProxySpec) []error {
+func validateProvider(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
-		if spec.Provider.Type != v1alpha1.ProviderTypeKubernetes {
+		if spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
 		}
 		validateServiceTypeErrs := validateServiceType(spec)
@@ -74,13 +73,13 @@ func validateProvider(spec *v1alpha1.EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateServiceType(spec *v1alpha1.EnvoyProxySpec) []error {
+func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
 		if serviceType := spec.Provider.Kubernetes.EnvoyService.Type; serviceType != nil {
-			if *serviceType != v1alpha1.ServiceTypeLoadBalancer &&
-				*serviceType != v1alpha1.ServiceTypeClusterIP &&
-				*serviceType != v1alpha1.ServiceTypeNodePort {
+			if *serviceType != egcfgv1a1.ServiceTypeLoadBalancer &&
+				*serviceType != egcfgv1a1.ServiceTypeClusterIP &&
+				*serviceType != egcfgv1a1.ServiceTypeNodePort {
 				errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
 			}
 		}

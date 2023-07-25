@@ -8,7 +8,6 @@ package validation
 import (
 	// Register embed
 	_ "embed"
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"reflect"
 	"testing"
 
@@ -16,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 var (
