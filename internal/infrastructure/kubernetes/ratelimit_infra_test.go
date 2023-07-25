@@ -35,7 +35,7 @@ func createRateLimitTLSSecret(t *testing.T, client client.Client) {
 				},
 			},
 		},
-	})
+	}, false)
 	require.NoError(t, secretErr)
 }
 
