@@ -25,7 +25,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
@@ -122,7 +121,7 @@ type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces map[string]struct{}
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
-	allAssociatedBackendRefs map[v1beta1.BackendObjectReference]struct{}
+	allAssociatedBackendRefs map[gwapiv1b1.BackendObjectReference]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
 	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1a2.ReferenceGrant
 	// authenFilters is a map of AuthenticationFilters, where the key is the
@@ -140,7 +139,7 @@ type resourceMappings struct {
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedBackendRefs: map[v1beta1.BackendObjectReference]struct{}{},
+		allAssociatedBackendRefs: map[gwapiv1b1.BackendObjectReference]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
 		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
 		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},

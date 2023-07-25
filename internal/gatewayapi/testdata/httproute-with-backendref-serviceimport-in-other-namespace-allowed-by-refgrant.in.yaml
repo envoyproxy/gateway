@@ -41,8 +41,8 @@ serviceImports:
       namespace: backends
       name: service-import-1
     spec:
-      ips: 
-      - 7.7.7.7
+      ips:
+        - 7.7.7.7
       ports:
         - port: 8080
 referenceGrants:

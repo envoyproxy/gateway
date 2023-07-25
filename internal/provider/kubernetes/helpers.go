@@ -213,14 +213,12 @@ func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
 //   - Validating ports.
 //   - Referencing HTTPRoutes.
 func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
-	backendGroup := gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName)
-	backendKind := gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService)
 	switch {
 	case ref == nil:
 		return nil
-	case backendGroup != corev1.GroupName && backendGroup != mcsapi.GroupName:
+	case gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != corev1.GroupName && gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName) != mcsapi.GroupName:
 		return fmt.Errorf("invalid group; must be nil, empty string or %q", mcsapi.GroupName)
-	case backendKind != gatewayapi.KindService && backendKind != gatewayapi.KindServiceImport:
+	case gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != gatewayapi.KindService && gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService) != gatewayapi.KindServiceImport:
 		return fmt.Errorf("invalid kind %q; must be %q or %q",
 			*ref.BackendObjectReference.Kind, gatewayapi.KindService, gatewayapi.KindServiceImport)
 	}
