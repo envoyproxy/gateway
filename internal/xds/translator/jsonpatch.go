@@ -54,13 +54,13 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				// The patch library expects an array so convert it into one
 				y, err := yaml.Marshal(p.Operation.Value)
 				if err != nil {
-					msg := fmt.Sprintf("unable to marshal patch %+v, err: %v", p.Operation.Value, err)
+					msg := fmt.Sprintf("unable to marshal patch %+v, err: %s", p.Operation.Value, err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 				jsonBytes, err := yaml.YAMLToJSON(y)
 				if err != nil {
-					msg := fmt.Sprintf("unable to convert patch to json %s, err: %v", string(y), err)
+					msg := fmt.Sprintf("unable to convert patch to json %s, err: %s", string(y), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -68,12 +68,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.ListenerType):
 					temp := &listenerv3.Listener{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
 					if err = temp.Validate(); err != nil {
-						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -82,12 +82,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.RouteType):
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
 					if err = temp.Validate(); err != nil {
-						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -95,12 +95,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.ClusterType):
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
 					if err = temp.Validate(); err != nil {
-						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -108,12 +108,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.EndpointType):
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
 					if err = temp.Validate(); err != nil {
-						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%v", p.Operation.Value, err)
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -180,20 +180,20 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			// The patch library expects an array so convert it into one
 			y, err := yaml.Marshal([]ir.JSONPatchOperation{p.Operation})
 			if err != nil {
-				msg := fmt.Sprintf("unable to marshal patch %+v, err: %v", p.Operation, err)
+				msg := fmt.Sprintf("unable to marshal patch %+v, err: %s", p.Operation, err.Error())
 				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 				continue
 			}
 			jsonBytes, err := yaml.YAMLToJSON(y)
 			if err != nil {
-				msg := fmt.Sprintf("unable to convert patch to json %s, err: %v", string(y), err)
+				msg := fmt.Sprintf("unable to convert patch to json %s, err: %s", string(y), err.Error())
 				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 				continue
 			}
 
 			patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
 			if err != nil {
-				msg := fmt.Sprintf("unable to decode patch %s, err: %v", string(jsonBytes), err)
+				msg := fmt.Sprintf("unable to decode patch %s, err: %s", string(jsonBytes), err.Error())
 				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 				continue
 			}
@@ -203,7 +203,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			opts.EnsurePathExistsOnAdd = true
 			modifiedJSON, err := patchObj.ApplyWithOptions(resourceJSON, opts)
 			if err != nil {
-				msg := fmt.Sprintf("unable to apply patch:\n%s on resource:\n%s, err: %v", string(jsonBytes), string(resourceJSON), err)
+				msg := fmt.Sprintf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(resourceJSON), err.Error())
 				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 				continue
 			}
@@ -215,12 +215,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.ListenerType):
 				temp := &listenerv3.Listener{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 				if err = temp.Validate(); err != nil {
-					msg := fmt.Sprintf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -232,12 +232,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.RouteType):
 				temp := &routev3.RouteConfiguration{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 				if err = temp.Validate(); err != nil {
-					msg := fmt.Sprintf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -249,12 +249,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.ClusterType):
 				temp := &clusterv3.Cluster{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 				if err = temp.Validate(); err != nil {
-					msg := fmt.Sprintf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -266,12 +266,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.EndpointType):
 				temp := &endpointv3.ClusterLoadAssignment{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
 				if err = temp.Validate(); err != nil {
-					msg := fmt.Sprintf("validation failed for xds resource %s, err:%v", string(modifiedJSON), err)
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
