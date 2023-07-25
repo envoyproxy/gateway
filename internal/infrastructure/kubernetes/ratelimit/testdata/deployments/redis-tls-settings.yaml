@@ -32,80 +32,80 @@ spec:
     spec:
       automountServiceAccountToken: false
       containers:
-        - command:
-            - /bin/ratelimit
-          env:
-            - name: REDIS_SOCKET_TYPE
-              value: tcp
-            - name: REDIS_URL
-              value: redis.redis.svc:6379
-            - name: RUNTIME_ROOT
-              value: /data
-            - name: RUNTIME_SUBDIRECTORY
-              value: ratelimit
-            - name: RUNTIME_IGNOREDOTFILES
-              value: "true"
-            - name: RUNTIME_WATCH_ROOT
-              value: "false"
-            - name: LOG_LEVEL
-              value: info
-            - name: USE_STATSD
-              value: "true"
-            - name: CONFIG_TYPE
-              value: GRPC_XDS_SOTW
-            - name: CONFIG_GRPC_XDS_SERVER_URL
-              value: envoy-gateway:18001
-            - name: CONFIG_GRPC_XDS_NODE_ID
-              value: envoy-ratelimit
-            - name: GRPC_SERVER_USE_TLS
-              value: "true"
-            - name: GRPC_SERVER_TLS_CERT
-              value: "/certs/tls.crt"
-            - name: GRPC_SERVER_TLS_KEY
-              value: "/certs/tls.key"
-            - name: GRPC_SERVER_TLS_CA_CERT
-              value: "/certs/ca.crt"
-            - name: CONFIG_GRPC_XDS_SERVER_USE_TLS
-              value: "true"
-            - name: CONFIG_GRPC_XDS_CLIENT_TLS_CERT
-              value: "/certs/tls.crt"
-            - name: CONFIG_GRPC_XDS_CLIENT_TLS_KEY
-              value: "/certs/tls.key"
-            - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
-              value: "/certs/ca.crt"
-            - name: REDIS_TLS
-              value: "true"
-            - name: REDIS_TLS_CLIENT_CERT
-              value: "/redis-certs/tls.crt"
-            - name: REDIS_TLS_CLIENT_KEY
-              value: "/redis-certs/tls.key"
-            - name: REDIS_AUTH
-              value: "redis_auth_password"
-          image: custom-image
-          imagePullPolicy: IfNotPresent
-          name: envoy-ratelimit
-          ports:
-            - containerPort: 8081
-              name: http
-              protocol: TCP
-          securityContext:
-            privileged: true
-          resources:
-            limits:
-              cpu: 400m
-              memory: 2Gi
-            requests:
-              cpu: 200m
-              memory: 1Gi
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          volumeMounts:
-            - mountPath: /certs
-              name: certs
-              readOnly: true
-            - mountPath: /redis-certs
-              name: redis-certs
-              readOnly: true
+      - command:
+        - /bin/ratelimit
+        env:
+        - name: REDIS_SOCKET_TYPE
+          value: tcp
+        - name: REDIS_URL
+          value: redis.redis.svc:6379
+        - name: RUNTIME_ROOT
+          value: /data
+        - name: RUNTIME_SUBDIRECTORY
+          value: ratelimit
+        - name: RUNTIME_IGNOREDOTFILES
+          value: "true"
+        - name: RUNTIME_WATCH_ROOT
+          value: "false"
+        - name: LOG_LEVEL
+          value: info
+        - name: USE_STATSD
+          value: "true"
+        - name: CONFIG_TYPE
+          value: GRPC_XDS_SOTW
+        - name: CONFIG_GRPC_XDS_SERVER_URL
+          value: envoy-gateway:18001
+        - name: CONFIG_GRPC_XDS_NODE_ID
+          value: envoy-ratelimit
+        - name: GRPC_SERVER_USE_TLS
+          value: "true"
+        - name: GRPC_SERVER_TLS_CERT
+          value: "/certs/tls.crt"
+        - name: GRPC_SERVER_TLS_KEY
+          value: "/certs/tls.key"
+        - name: GRPC_SERVER_TLS_CA_CERT
+          value: "/certs/ca.crt"
+        - name: CONFIG_GRPC_XDS_SERVER_USE_TLS
+          value: "true"
+        - name: CONFIG_GRPC_XDS_CLIENT_TLS_CERT
+          value: "/certs/tls.crt"
+        - name: CONFIG_GRPC_XDS_CLIENT_TLS_KEY
+          value: "/certs/tls.key"
+        - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
+          value: "/certs/ca.crt"
+        - name: REDIS_TLS
+          value: "true"
+        - name: REDIS_TLS_CLIENT_CERT
+          value: "/redis-certs/tls.crt"
+        - name: REDIS_TLS_CLIENT_KEY
+          value: "/redis-certs/tls.key"
+        - name: REDIS_AUTH
+          value: "redis_auth_password"
+        image: custom-image
+        imagePullPolicy: IfNotPresent
+        name: envoy-ratelimit
+        ports:
+        - containerPort: 8081
+          name: http
+          protocol: TCP
+        securityContext:
+          privileged: true
+        resources:
+          limits:
+            cpu: 400m
+            memory: 2Gi
+          requests:
+            cpu: 200m
+            memory: 1Gi
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /certs
+          name: certs
+          readOnly: true
+        - mountPath: /redis-certs
+          name: redis-certs
+          readOnly: true
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -114,9 +114,9 @@ spec:
         runAsUser: 1000
       terminationGracePeriodSeconds: 300
       volumes:
-        - name: redis-certs
-          secret:
-            secretName: ratelimit-cert
-        - name: certs
-          secret:
-            secretName: envoy-rate-limit
+      - name: redis-certs
+        secret:
+          secretName: ratelimit-cert
+      - name: certs
+        secret:
+          secretName: envoy-rate-limit
