@@ -1,7 +1,7 @@
 envoyPatchPolicies:
 - status: {}
   name: "first-policy"
-  namespace: "default"  
+  namespace: "default"
   jsonPatches:
   - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
     name: "first-listener"

@@ -159,6 +159,14 @@ func TestTranslateXds(t *testing.T) {
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
 		},
+		{
+			name:                      "jsonpatch-missing-resource",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-invalid-patch",
+			requireEnvoyPatchPolicies: true,
+		},
 	}
 
 	for _, tc := range testCases {
