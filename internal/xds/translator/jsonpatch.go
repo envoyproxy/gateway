@@ -68,7 +68,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.ListenerType):
 					temp := &listenerv3.Listener{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -82,7 +82,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.RouteType):
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -95,7 +95,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.ClusterType):
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -108,7 +108,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.EndpointType):
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -215,7 +215,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.ListenerType):
 				temp := &listenerv3.Listener{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -232,7 +232,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.RouteType):
 				temp := &routev3.RouteConfiguration{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -249,7 +249,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.ClusterType):
 				temp := &clusterv3.Cluster{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -266,7 +266,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.EndpointType):
 				temp := &endpointv3.ClusterLoadAssignment{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
