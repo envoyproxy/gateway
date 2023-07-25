@@ -7,7 +7,7 @@ envoyPatchPolicies:
     name: "first-listener"
     operation:
       op: "add"
-      path: "/this/path/doesnt/exist"
+      path: "/this/path/never/existed"
       value:
         name: "envoy.filters.http.ratelimit"
         typed_config:
