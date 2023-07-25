@@ -20,6 +20,7 @@ spec:
       app.kubernetes.io/managed-by: envoy-gateway
       gateway.envoyproxy.io/owning-gateway-name: default
       gateway.envoyproxy.io/owning-gateway-namespace: default
+      foo.bar: custom-label
   template:
     metadata:
       labels:
@@ -28,6 +29,7 @@ spec:
         app.kubernetes.io/managed-by: envoy-gateway
         gateway.envoyproxy.io/owning-gateway-name: default
         gateway.envoyproxy.io/owning-gateway-namespace: default
+        foo.bar: custom-label
       annotations:
         prometheus.io/scrape: "true"
     spec:
@@ -101,10 +103,10 @@ spec:
                               address: envoy-gateway
                               port_value: 18000
                   typed_extension_protocol_options:
-                    "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
-                       "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-                       "explicit_http_config":
-                         "http2_protocol_options": {}
+                    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+                      "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+                      explicit_http_config:
+                        http2_protocol_options: {}
                   name: xds_cluster
                   type: STRICT_DNS
                   transport_socket:

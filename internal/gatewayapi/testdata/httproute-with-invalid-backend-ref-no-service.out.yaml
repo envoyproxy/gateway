@@ -2,101 +2,109 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: gateway-1
+    namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
+    - allowedRoutes:
         namespaces:
           from: All
+      name: http
+      port: 80
+      protocol: HTTP
   status:
     listeners:
-    - name: http
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-      attachedRoutes: 1
-      conditions:
-      - type: Programmed
-        status: "True"
-        reason: Programmed
-        message: Sending translated listener configuration to the data plane
-      - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Listener has been successfully translated
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: default
+    creationTimestamp: null
     name: httproute-1
+    namespace: default
   spec:
     parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
+    - name: gateway-1
+      namespace: envoy-gateway
     rules:
-    - matches:
-      - path:
-          type: Exact
-          value: "/exact"
-      backendRefs:
+    - backendRefs:
       - name: service-that-doesnt-exist
         port: 8080
+      matches:
+      - path:
+          type: Exact
+          value: /exact
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: null
         message: Route is accepted
-      - type: ResolvedRefs
-        status: "False"
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Service default/service-that-doesnt-exist not found
         reason: BackendNotFound
-        message: "Service default/service-that-doesnt-exist not found"
-xdsIR:
-  envoy-gateway-gateway-1:
-    accessLog:
-      text:
-      - path: /dev/stdout
-    http:
-    - name: envoy-gateway-gateway-1-http
-      address: 0.0.0.0
-      port: 10080
-      hostnames:
-      - "*"
-      routes:
-      - name: default-httproute-1-rule-0-match-0-*
-        pathMatch:
-          exact: "/exact"
-        backendWeights:
-          invalid: 1
-        directResponse:
-          statusCode: 500
+        status: "False"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 infraIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     proxy:
+      listeners:
+      - address: ""
+        ports:
+        - containerPort: 10080
+          name: http
+          protocol: HTTP
+          servicePort: 80
       metadata:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-1
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway-gateway-1
-
-      listeners:
-      - address: ""
-        ports:
-        - name: http
-          protocol: "HTTP"
-          containerPort: 10080
-          servicePort: 80
-
+      name: envoy-gateway/gateway-1
+xdsIR:
+  envoy-gateway/gateway-1:
+    accessLog:
+      text:
+      - path: /dev/stdout
+    http:
+    - address: 0.0.0.0
+      hostnames:
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/http
+      port: 10080
+      routes:
+      - backendWeights:
+          invalid: 1
+          valid: 0
+        directResponse:
+          statusCode: 500
+        name: default/httproute-1/rule/0/match/0-*
+        pathMatch:
+          distinct: false
+          exact: /exact
+          name: ""

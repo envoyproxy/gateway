@@ -1,6 +1,6 @@
 {
   "xds": {
-    "default-eg": {
+    "default/eg": {
       "configs": [
         {
           "@type": "type.googleapis.com/envoy.admin.v3.BootstrapConfigDump",
@@ -59,56 +59,6 @@
               ]
             },
             "staticResources": {
-              "listeners": [
-                {
-                  "name": "envoy-gateway-proxy-ready-0.0.0.0-19001",
-                  "address": {
-                    "socketAddress": {
-                      "address": "0.0.0.0",
-                      "portValue": 19001
-                    }
-                  },
-                  "filterChains": [
-                    {
-                      "filters": [
-                        {
-                          "name": "envoy.filters.network.http_connection_manager",
-                          "typedConfig": {
-                            "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
-                            "statPrefix": "eg-ready-http",
-                            "routeConfig": {
-                              "name": "local_route"
-                            },
-                            "httpFilters": [
-                              {
-                                "name": "envoy.filters.http.health_check",
-                                "typedConfig": {
-                                  "@type": "type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck",
-                                  "passThroughMode": false,
-                                  "headers": [
-                                    {
-                                      "name": ":path",
-                                      "stringMatch": {
-                                        "exact": "/ready"
-                                      }
-                                    }
-                                  ]
-                                }
-                              },
-                              {
-                                "name": "envoy.filters.http.router",
-                                "typedConfig": {
-                                  "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
-                                }
-                              }
-                            ]
-                          }
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ],
               "clusters": [
                 {
                   "connectTimeout": "10s",
@@ -173,6 +123,56 @@
                     }
                   }
                 }
+              ],
+              "listeners": [
+                {
+                  "address": {
+                    "socketAddress": {
+                      "address": "0.0.0.0",
+                      "portValue": 19001
+                    }
+                  },
+                  "filterChains": [
+                    {
+                      "filters": [
+                        {
+                          "name": "envoy.filters.network.http_connection_manager",
+                          "typedConfig": {
+                            "@type": "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+                            "httpFilters": [
+                              {
+                                "name": "envoy.filters.http.health_check",
+                                "typedConfig": {
+                                  "@type": "type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck",
+                                  "headers": [
+                                    {
+                                      "name": ":path",
+                                      "stringMatch": {
+                                        "exact": "/ready"
+                                      }
+                                    }
+                                  ],
+                                  "passThroughMode": false
+                                }
+                              },
+                              {
+                                "name": "envoy.filters.http.router",
+                                "typedConfig": {
+                                  "@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"
+                                }
+                              }
+                            ],
+                            "routeConfig": {
+                              "name": "local_route"
+                            },
+                            "statPrefix": "eg-ready-http"
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "name": "envoy-gateway-proxy-ready-0.0.0.0-19001"
+                }
               ]
             }
           }
@@ -183,7 +183,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default-backend-rule-0-match-0-www.example.com",
+                "clusterName": "default/backend/rule/0/match/0-www.example.com",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -208,7 +208,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default-backend-rule-0-match-0-www.grpc-example.com",
+                "clusterName": "default/backend/rule/0/match/0-www.grpc-example.com",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -233,7 +233,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default-eg-tls-passthrough-backend",
+                "clusterName": "default/eg/tls-passthrough/backend",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -258,7 +258,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default-eg-tcp-backend",
+                "clusterName": "default/eg/tcp/backend",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -282,7 +282,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default-eg-udp-backend",
+                "clusterName": "default/eg/udp/backend",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -321,9 +321,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default-backend-rule-0-match-0-www.example.com"
+                  "serviceName": "default/backend/rule/0/match/0-www.example.com"
                 },
-                "name": "default-backend-rule-0-match-0-www.example.com",
+                "name": "default/backend/rule/0/match/0-www.example.com",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -342,9 +342,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default-backend-rule-0-match-0-www.grpc-example.com"
+                  "serviceName": "default/backend/rule/0/match/0-www.grpc-example.com"
                 },
-                "name": "default-backend-rule-0-match-0-www.grpc-example.com",
+                "name": "default/backend/rule/0/match/0-www.grpc-example.com",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS",
@@ -371,9 +371,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default-eg-tls-passthrough-backend"
+                  "serviceName": "default/eg/tls-passthrough/backend"
                 },
-                "name": "default-eg-tls-passthrough-backend",
+                "name": "default/eg/tls-passthrough/backend",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -392,9 +392,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default-eg-tcp-backend"
+                  "serviceName": "default/eg/tcp/backend"
                 },
-                "name": "default-eg-tcp-backend",
+                "name": "default/eg/tcp/backend",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -413,9 +413,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default-eg-udp-backend"
+                  "serviceName": "default/eg/udp/backend"
                 },
-                "name": "default-eg-udp-backend",
+                "name": "default/eg/udp/backend",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -501,7 +501,7 @@
                               "ads": {},
                               "resourceApiVersion": "V3"
                             },
-                            "routeConfigName": "default-eg-http"
+                            "routeConfigName": "default/eg/http"
                           },
                           "statPrefix": "http",
                           "upgradeConfigs": [
@@ -514,7 +514,7 @@
                       }
                     ]
                   },
-                  "name": "default-eg-http",
+                  "name": "default/eg/http",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -608,7 +608,7 @@
                               "ads": {},
                               "resourceApiVersion": "V3"
                             },
-                            "routeConfigName": "default-eg-grpc"
+                            "routeConfigName": "default/eg/grpc"
                           },
                           "statPrefix": "http",
                           "useRemoteAddress": true
@@ -616,7 +616,7 @@
                       }
                     ]
                   },
-                  "name": "default-eg-grpc",
+                  "name": "default/eg/grpc",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -678,7 +678,7 @@
                                 }
                               }
                             ],
-                            "cluster": "default-eg-tls-passthrough-backend",
+                            "cluster": "default/eg/tls-passthrough/backend",
                             "statPrefix": "passthrough"
                           }
                         }
@@ -693,7 +693,7 @@
                       }
                     }
                   ],
-                  "name": "default-eg-tls-passthrough-backend",
+                  "name": "default/eg/tls-passthrough/backend",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -750,14 +750,14 @@
                                 }
                               }
                             ],
-                            "cluster": "default-eg-tcp-backend",
+                            "cluster": "default/eg/tcp/backend",
                             "statPrefix": "tcp"
                           }
                         }
                       ]
                     }
                   ],
-                  "name": "default-eg-tcp-backend",
+                  "name": "default/eg/tcp/backend",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -819,7 +819,7 @@
                               "name": "route",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route",
-                                "cluster": "default-eg-udp-backend"
+                                "cluster": "default/eg/udp/backend"
                               }
                             }
                           }
@@ -828,7 +828,7 @@
                       }
                     }
                   ],
-                  "name": "default-eg-udp-backend"
+                  "name": "default/eg/udp/backend"
                 }
               }
             }
@@ -841,13 +841,13 @@
               "routeConfig": {
                 "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
                 "ignorePortInHostMatching": true,
-                "name": "default-eg-http",
+                "name": "default/eg/http",
                 "virtualHosts": [
                   {
                     "domains": [
                       "*"
                     ],
-                    "name": "default-eg-http",
+                    "name": "default/eg/http",
                     "routes": [
                       {
                         "match": {
@@ -861,9 +861,9 @@
                           ],
                           "prefix": "/"
                         },
-                        "name": "default-backend-rule-0-match-0-www.example.com",
+                        "name": "default/backend/rule/0/match/0-www.example.com",
                         "route": {
-                          "cluster": "default-backend-rule-0-match-0-www.example.com"
+                          "cluster": "default/backend/rule/0/match/0-www.example.com"
                         }
                       }
                     ]
@@ -875,13 +875,13 @@
               "routeConfig": {
                 "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
                 "ignorePortInHostMatching": true,
-                "name": "default-eg-grpc",
+                "name": "default/eg/grpc",
                 "virtualHosts": [
                   {
                     "domains": [
                       "*"
                     ],
-                    "name": "default-eg-grpc",
+                    "name": "default/eg/grpc",
                     "routes": [
                       {
                         "match": {
@@ -895,9 +895,9 @@
                           ],
                           "path": "/com.example.Things/DoThing"
                         },
-                        "name": "default-backend-rule-0-match-0-www.grpc-example.com",
+                        "name": "default/backend/rule/0/match/0-www.grpc-example.com",
                         "route": {
-                          "cluster": "default-backend-rule-0-match-0-www.grpc-example.com"
+                          "cluster": "default/backend/rule/0/match/0-www.grpc-example.com"
                         }
                       }
                     ]

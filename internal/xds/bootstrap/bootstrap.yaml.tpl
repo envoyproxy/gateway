@@ -62,10 +62,10 @@ static_resources:
                 address: {{ .XdsServer.Address }}
                 port_value: {{ .XdsServer.Port }}
     typed_extension_protocol_options:
-      "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
-         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-         "explicit_http_config":
-           "http2_protocol_options": {}
+      envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+        "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+        explicit_http_config:
+          http2_protocol_options: {}
     name: xds_cluster
     type: STRICT_DNS
     transport_socket:

@@ -46,9 +46,10 @@ go.test.unit: ## Run go unit tests
 
 .PHONY: go.testdata.complete
 go.testdata.complete: ## Override test ouputdata
-	go test -timeout 30s -run ^TestTranslateXds github.com/envoyproxy/gateway/internal/xds/translator --override-testdata=true
-	go test -timeout 30s -run ^TestTranslate github.com/envoyproxy/gateway/internal/cmd/egctl --override-testdata=true
-
+	@$(LOG_TARGET)
+	go test -timeout 30s github.com/envoyproxy/gateway/internal/xds/translator --override-testdata=true
+	go test -timeout 30s github.com/envoyproxy/gateway/internal/cmd/egctl --override-testdata=true
+	go test -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
 
 .PHONY: go.test.coverage
 go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in GitHub Actions

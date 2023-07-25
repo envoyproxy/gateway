@@ -535,7 +535,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 		}
 
-		irKey := irStringKey(listener.gateway)
+		irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
@@ -629,7 +629,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			hasHostnameIntersection = true
 
-			irKey := irStringKey(listener.gateway)
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the TCP Listener while parsing the TLSRoute since
 			// the listener directly links to a routeDestination.
@@ -764,7 +764,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				continue
 			}
 			accepted = true
-			irKey := irStringKey(listener.gateway)
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the UDP Listener while parsing the UDPRoute since
 			// the listener directly links to a routeDestination.
@@ -896,7 +896,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			accepted = true
-			irKey := irStringKey(listener.gateway)
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the TCP Listener while parsing the TCPRoute since
 			// the listener directly links to a routeDestination.

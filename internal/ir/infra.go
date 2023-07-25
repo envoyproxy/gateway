@@ -22,23 +22,23 @@ const (
 // +k8s:deepcopy-gen=true
 type Infra struct {
 	// Proxy defines managed proxy infrastructure.
-	Proxy *ProxyInfra
+	Proxy *ProxyInfra `json:"proxy" yaml:"proxy"`
 }
 
 // ProxyInfra defines managed proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type ProxyInfra struct {
 	// Metadata defines metadata for the managed proxy infrastructure.
-	Metadata *InfraMetadata
+	Metadata *InfraMetadata `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	// Name is the name used for managed proxy infrastructure.
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Config defines user-facing configuration of the managed proxy infrastructure.
-	Config *v1alpha1.EnvoyProxy
+	Config *v1alpha1.EnvoyProxy `json:"config,omitempty" yaml:"config,omitempty"`
 	// Listeners define the listeners exposed by the proxy infrastructure.
-	Listeners []ProxyListener
+	Listeners []ProxyListener `json:"listeners,omitempty" yaml:"listeners,omitempty"`
 	// Addresses contain the external addresses this gateway has been
 	// requested to be available at.
-	Addresses []string
+	Addresses []string `json:"addresses,omitempty" yaml:"addresses,omitempty"`
 }
 
 // InfraMetadata defines metadata for the managed proxy infrastructure.
@@ -46,29 +46,29 @@ type ProxyInfra struct {
 type InfraMetadata struct {
 	// Labels define a map of string keys and values that can be used to organize
 	// and categorize proxy infrastructure objects.
-	Labels map[string]string
+	Labels map[string]string `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 // ProxyListener defines the listener configuration of the proxy infrastructure.
 // +k8s:deepcopy-gen=true
 type ProxyListener struct {
 	// Address is the address that the listener should listen on.
-	Address string
+	Address string `json:"address" yaml:"address"`
 	// Ports define network ports of the listener.
-	Ports []ListenerPort
+	Ports []ListenerPort `json:"ports,omitempty" yaml:"ports,omitempty"`
 }
 
 // ListenerPort defines a network port of a listener.
 // +k8s:deepcopy-gen=true
 type ListenerPort struct {
 	// Name is the name of the listener port.
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// Protocol is the protocol that the listener port will listener for.
-	Protocol ProtocolType
+	Protocol ProtocolType `json:"protocol" yaml:"protocol"`
 	// ServicePort is the port number the proxy service is listening on.
-	ServicePort int32
+	ServicePort int32 `json:"servicePort" yaml:"servicePort"`
 	// ContainerPort is the port number the proxy container is listening on.
-	ContainerPort int32
+	ContainerPort int32 `json:"containerPort" yaml:"containerPort"`
 }
 
 // ProtocolType defines the application protocol accepted by a ListenerPort.

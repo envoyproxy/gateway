@@ -1,0 +1,76 @@
+xds:
+  envoy-gateway-system/eg:
+    '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
+    dynamicListeners:
+    - activeState:
+        listener:
+          '@type': type.googleapis.com/envoy.config.listener.v3.Listener
+          accessLog:
+          - filter:
+              responseFlagFilter:
+                flags:
+                - NR
+            name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              logFormat:
+                textFormatSource:
+                  inlineString: |
+                    [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+              path: /dev/stdout
+          address:
+            socketAddress:
+              address: 0.0.0.0
+              portValue: 10080
+          defaultFilterChain:
+            filters:
+            - name: envoy.filters.network.http_connection_manager
+              typedConfig:
+                '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                accessLog:
+                - name: envoy.access_loggers.file
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+                    logFormat:
+                      textFormatSource:
+                        inlineString: |
+                          [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
+                    path: /dev/stdout
+                commonHttpProtocolOptions:
+                  headersWithUnderscoresAction: REJECT_REQUEST
+                http2ProtocolOptions:
+                  initialConnectionWindowSize: 1048576
+                  initialStreamWindowSize: 65536
+                  maxConcurrentStreams: 100
+                httpFilters:
+                - name: envoy.filters.http.jwt_authn
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
+                    providers:
+                      envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
+                        remoteJwks:
+                          cacheDuration: 300s
+                          httpUri:
+                            cluster: raw_githubusercontent_com_443
+                            timeout: 5s
+                            uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+                    requirementMap:
+                      envoy-gateway-system/backend/rule/0/match/0-www.example.com:
+                        providerName: envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
+                - name: envoy.filters.http.router
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                mergeSlashes: true
+                normalizePath: true
+                pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+                rds:
+                  configSource:
+                    ads: {}
+                    resourceApiVersion: V3
+                  routeConfigName: envoy-gateway-system/eg/http
+                statPrefix: http
+                upgradeConfigs:
+                - upgradeType: websocket
+                useRemoteAddress: true
+          name: envoy-gateway-system/eg/http
+          perConnectionBufferLimitBytes: 32768

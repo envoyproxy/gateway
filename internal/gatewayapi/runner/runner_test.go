@@ -33,7 +33,7 @@ func TestRunner(t *testing.T) {
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1cfg.Extension{}),
+		ExtensionManager:  testutils.NewManager(egv1a1cfg.ExtensionManager{}),
 	})
 	ctx := context.Background()
 	// Start

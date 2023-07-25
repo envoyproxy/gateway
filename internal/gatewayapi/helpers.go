@@ -385,28 +385,28 @@ type crossNamespaceTo struct {
 	name      string
 }
 
-func irStringKey(gateway *v1beta1.Gateway) string {
-	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
+func irStringKey(gatewayNs, gatewayName string) string {
+	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
 func irHTTPListenerName(listener *ListenerContext) string {
-	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
+	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
 func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
-	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
 }
 
 func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
-	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
 }
 
 func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
-	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
 }
 
 func routeName(route RouteContext, ruleIdx, matchIdx int) string {
-	return fmt.Sprintf("%s-%s-rule-%d-match-%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
+	return fmt.Sprintf("%s/%s/rule/%d/match/%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
 }
 
 func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {
