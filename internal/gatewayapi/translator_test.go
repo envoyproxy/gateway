@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 	"sigs.k8s.io/yaml"
 
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -88,6 +89,21 @@ func TestTranslate(t *testing.T) {
 					Spec: v1.ServiceSpec{
 						ClusterIP: "7.6.5.4",
 						Ports: []v1.ServicePort{
+							{Port: 8080, Protocol: v1.ProtocolTCP},
+						},
+					},
+				},
+			)
+
+			resources.ServiceImports = append(resources.ServiceImports,
+				&mcsapi.ServiceImport{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "service-import-1",
+					},
+					Spec: mcsapi.ServiceImportSpec{
+						IPs: []string{"7.7.7.7"},
+						Ports: []mcsapi.ServicePort{
 							{Port: 8080, Protocol: v1.ProtocolTCP},
 						},
 					},

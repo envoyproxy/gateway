@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -47,9 +48,11 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[v1beta1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != tlsRoute.Namespace {
@@ -126,9 +129,11 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[v1beta1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != grpcRoute.Namespace {
@@ -275,9 +280,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[v1beta1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != httpRoute.Namespace {
@@ -340,9 +347,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					}
 
 					backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
-					resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-						Namespace: backendNamespace,
-						Name:      string(mirrorBackendRef.Name),
+					resourceMap.allAssociatedBackendRefs[v1beta1.BackendObjectReference{
+						Group:     mirrorBackendRef.BackendObjectReference.Group,
+						Kind:      mirrorBackendRef.BackendObjectReference.Kind,
+						Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+						Name:      mirrorBackendRef.Name,
 					}] = struct{}{}
 
 					if backendNamespace != httpRoute.Namespace {
@@ -451,9 +460,11 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tcpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[v1beta1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != tcpRoute.Namespace {
@@ -511,9 +522,11 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[v1beta1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != udpRoute.Namespace {

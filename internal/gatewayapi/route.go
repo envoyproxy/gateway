@@ -971,27 +971,36 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 		weight = uint32(*backendRef.Weight)
 	}
 
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 
 	routeType := GetRouteType(route)
-	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, routeType) {
+	if !t.validateBackendRef(&backendRef, parentRef, route, resources, backendNamespace, routeType) {
 		return nil, weight
 	}
 
-	var ep *ir.DestinationEndpoint
-	// Weights are not relevant for TCP and UDP Routes
-	if routeType == KindTCPRoute || routeType == KindUDPRoute {
-		ep = ir.NewDestEndpoint(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port))
-	} else {
-		ep = ir.NewDestEndpointWithWeight(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port),
-			weight)
+	var backendIps []string
+	switch KindDerefOr(backendRef.Kind, KindService) {
+	case KindServiceImport:
+		backendIps = resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+	case KindService:
+		backendIps = []string{resources.GetService(backendNamespace, string(backendRef.Name)).Spec.ClusterIP}
 	}
-	endpoints = append(endpoints, ep)
+
+	for _, ip := range backendIps {
+		var ep *ir.DestinationEndpoint
+		// Weights are not relevant for TCP and UDP Routes
+		if routeType == KindTCPRoute || routeType == KindUDPRoute {
+			ep = ir.NewDestEndpoint(
+				ip,
+				uint32(*backendRef.Port))
+		} else {
+			ep = ir.NewDestEndpointWithWeight(
+				ip,
+				uint32(*backendRef.Port),
+				weight)
+		}
+		endpoints = append(endpoints, ep)
+	}
 	return endpoints, weight
 }
 

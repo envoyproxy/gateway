@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -212,14 +213,16 @@ func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
 //   - Validating ports.
 //   - Referencing HTTPRoutes.
 func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
+	backendGroup := gatewayapi.GroupDerefOr(ref.Group, corev1.GroupName)
+	backendKind := gatewayapi.KindDerefOr(ref.Kind, gatewayapi.KindService)
 	switch {
 	case ref == nil:
 		return nil
-	case ref.Group != nil && *ref.Group != corev1.GroupName:
-		return fmt.Errorf("invalid group; must be nil or empty string")
-	case ref.Kind != nil && *ref.Kind != gatewayapi.KindService:
-		return fmt.Errorf("invalid kind %q; must be %q",
-			*ref.BackendObjectReference.Kind, gatewayapi.KindService)
+	case backendGroup != corev1.GroupName && backendGroup != mcsapi.GroupName:
+		return fmt.Errorf("invalid group; must be nil, empty string or %q", mcsapi.GroupName)
+	case backendKind != gatewayapi.KindService && backendKind != gatewayapi.KindServiceImport:
+		return fmt.Errorf("invalid kind %q; must be %q or %q",
+			*ref.BackendObjectReference.Kind, gatewayapi.KindService, gatewayapi.KindServiceImport)
 	}
 
 	return nil

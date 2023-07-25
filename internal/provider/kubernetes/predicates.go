@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -116,16 +117,30 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
-	return r.isRouteReferencingService(&nsName)
+	return r.isRouteReferencingBackend(&nsName)
 }
 
-// isRouteReferencingService returns true if the service is referenced by any of the xRoutes
+// validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
+// if it exists, finds the Gateway's Deployment, and further updates the Gateway
+// status Ready condition. All Services are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Object) bool {
+	svcImport, ok := obj.(*mcsapi.ServiceImport)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	nsName := utils.NamespacedName(svcImport)
+	return r.isRouteReferencingBackend(&nsName)
+}
+
+// isRouteReferencingBackend returns true if the backend(service and serviceImport) is referenced by any of the xRoutes
 // in the system, else returns false.
-func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.NamespacedName) bool {
+func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.NamespacedName) bool {
 	ctx := context.Background()
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated HTTPRoutes")
 		return false
@@ -133,7 +148,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceGRPCRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated GRPCRoutes")
 		return false
@@ -141,7 +156,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated TLSRoutes")
 		return false
@@ -149,7 +164,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTCPRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated TCPRoutes")
 		return false
@@ -157,13 +172,13 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated UDPRoutes")
 		return false
 	}
 
-	// Check how many Route objects refer this Service
+	// Check how many Route objects refer this Backend
 	allAssociatedRoutes := len(httpRouteList.Items) +
 		len(grpcRouteList.Items) +
 		len(tlsRouteList.Items) +
@@ -183,8 +198,9 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	}
 
 	svcName, ok := ep.GetLabels()[discoveryv1.LabelServiceName]
-	if !ok {
-		r.log.Info("endpointslice is missing kubernetes.io/service-name label", "object", obj)
+	multiClusterSvcName, isMCS := ep.GetLabels()[mcsapi.LabelServiceName]
+	if !ok && !isMCS {
+		r.log.Info("endpointslice is missing kubernetes.io/service-name or multicluster.kubernetes.io/service-name label", "object", obj)
 		return false
 	}
 
@@ -193,7 +209,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		Name:      svcName,
 	}
 
-	return r.isRouteReferencingService(&nsName)
+	if isMCS {
+		nsName.Name = multiClusterSvcName
+	}
+
+	return r.isRouteReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment

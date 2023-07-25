@@ -45,15 +45,16 @@ httpRoutes:
     parentRefs:
     - name: gateway-1
       namespace: envoy-gateway
+      sectionName: http
     rules:
     - backendRefs:
-      - name: service-1
-        namespace: backends
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: service-import-1
         port: 8080
       matches:
       - path:
-          type: Exact
-          value: /exact
+          value: /
   status:
     parents:
     - conditions:
@@ -63,14 +64,15 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Backend ref to Service backends/service-1 not permitted by any ReferenceGrant.
-        reason: RefNotPermitted
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
+        sectionName: http
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -100,13 +102,14 @@ xdsIR:
       port: 10080
       routes:
       - backendWeights:
-          invalid: 1
+          invalid: 0
           valid: 0
-        directResponse:
-          statusCode: 500
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/0/match/0-*
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        name: default/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false
-          exact: /exact
           name: ""
+          prefix: /
