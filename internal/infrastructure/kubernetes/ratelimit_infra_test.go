@@ -39,14 +39,90 @@ func createRateLimitTLSSecret(t *testing.T, client client.Client) {
 	require.NoError(t, secretErr)
 }
 
+func createEnvoyGatewayService(t *testing.T, client client.Client, ns string) {
+	err := client.Create(context.Background(), &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envoy-gateway",
+			Namespace: ns,
+		},
+	})
+	require.NoError(t, err)
+}
+
+func createEnvoyGatewayDeployment(t *testing.T, client client.Client, ns string) {
+	err := client.Create(context.Background(), &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envoy-gateway",
+			Namespace: ns,
+		},
+	})
+	require.NoError(t, err)
+}
+
+func createEnvoyGatewayServiceAccount(t *testing.T, client client.Client, ns string) {
+	err := client.Create(context.Background(), &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "envoy-gateway",
+			Namespace: ns,
+		},
+	})
+	require.NoError(t, err)
+}
+
 func TestCreateRateLimitInfra(t *testing.T) {
 	testCases := []struct {
-		name   string
-		expect bool
+		name            string
+		ownerReferences []string
+		expect          bool
 	}{
 		{
-			name:   "default infra",
+			name: "default infra",
+			ownerReferences: []string{
+				ratelimit.ResourceKindService,
+				ratelimit.ResourceKindDeployment,
+				ratelimit.ResourceKindServiceAccount,
+			},
 			expect: true,
+		},
+		{
+			name: "default infra but missing service owner reference",
+			ownerReferences: []string{
+				ratelimit.ResourceKindDeployment,
+				ratelimit.ResourceKindServiceAccount,
+			},
+			expect: false,
+		},
+		{
+			name: "default infra but missing deployment owner reference",
+			ownerReferences: []string{
+				ratelimit.ResourceKindService,
+				ratelimit.ResourceKindServiceAccount,
+			},
+			expect: false,
+		},
+		{
+			name: "default infra but missing service account owner reference",
+			ownerReferences: []string{
+				ratelimit.ResourceKindService,
+				ratelimit.ResourceKindDeployment,
+			},
+			expect: false,
+		},
+		{
+			name:   "default infra but missing all owner reference",
+			expect: false,
 		},
 	}
 
@@ -55,6 +131,18 @@ func TestCreateRateLimitInfra(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			kube := newTestInfra(t)
+
+			// Ratelimit infra creation require Gateway infra as owner reference.
+			for _, ref := range tc.ownerReferences {
+				switch ref {
+				case ratelimit.ResourceKindService:
+					createEnvoyGatewayService(t, kube.Client.Client, kube.Namespace)
+				case ratelimit.ResourceKindDeployment:
+					createEnvoyGatewayDeployment(t, kube.Client.Client, kube.Namespace)
+				case ratelimit.ResourceKindServiceAccount:
+					createEnvoyGatewayServiceAccount(t, kube.Client.Client, kube.Namespace)
+				}
+			}
 
 			createRateLimitTLSSecret(t, kube.Client.Client)
 

@@ -9,11 +9,20 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
+)
+
+// ResourceKind indicates the main resources of envoy-ratelimit,
+// but also the key for the uid of their ownerReference.
+const (
+	ResourceKindService        = "Service"
+	ResourceKindDeployment     = "Deployment"
+	ResourceKindServiceAccount = "ServiceAccount"
 )
 
 type ResourceRender struct {
@@ -22,14 +31,18 @@ type ResourceRender struct {
 
 	rateLimit           *egcfgv1a1.RateLimit
 	rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec
+
+	// ownerReferenceUid store the uid of its owner reference.
+	ownerReferenceUid map[string]types.UID
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway) *ResourceRender {
+func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway, ownerReferenceUid map[string]types.UID) *ResourceRender {
 	return &ResourceRender{
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
 		rateLimitDeployment: gateway.GetEnvoyGatewayProvider().GetEnvoyGatewayKubeProvider().RateLimitDeployment,
+		ownerReferenceUid:   ownerReferenceUid,
 	}
 }
 
@@ -44,6 +57,8 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 
 // Service returns the expected rate limit Service based on the provided infra.
 func (r *ResourceRender) Service() (*corev1.Service, error) {
+	const apiVersion = "v1"
+
 	ports := []corev1.ServicePort{
 		{
 			Name:       "http",
@@ -61,8 +76,8 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	svc := &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
+			Kind:       ResourceKindService,
+			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
@@ -72,25 +87,57 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		Spec: serviceSpec,
 	}
 
+	if r.ownerReferenceUid != nil {
+		if uid, ok := r.ownerReferenceUid[ResourceKindService]; ok {
+			svc.OwnerReferences = []metav1.OwnerReference{
+				{
+					Kind:       ResourceKindService,
+					APIVersion: apiVersion,
+					Name:       "envoy-gateway",
+					UID:        uid,
+				},
+			}
+		}
+	}
+
 	return svc, nil
 }
 
 // ServiceAccount returns the expected rateLimit serviceAccount.
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
-	return &corev1.ServiceAccount{
+	const apiVersion = "v1"
+
+	sa := &corev1.ServiceAccount{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "ServiceAccount",
-			APIVersion: "v1",
+			Kind:       ResourceKindServiceAccount,
+			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
 			Name:      InfraName,
 		},
-	}, nil
+	}
+
+	if r.ownerReferenceUid != nil {
+		if uid, ok := r.ownerReferenceUid[ResourceKindServiceAccount]; ok {
+			sa.OwnerReferences = []metav1.OwnerReference{
+				{
+					Kind:       ResourceKindServiceAccount,
+					APIVersion: apiVersion,
+					Name:       "envoy-gateway",
+					UID:        uid,
+				},
+			}
+		}
+	}
+
+	return sa, nil
 }
 
 // Deployment returns the expected rate limit Deployment based on the provided infra.
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
+	const apiVersion = "apps/v1"
+
 	containers := expectedRateLimitContainers(r.rateLimit, r.rateLimitDeployment)
 	labels := rateLimitLabels()
 	selector := resource.GetSelector(labels)
@@ -102,8 +149,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "Deployment",
-			APIVersion: "apps/v1",
+			Kind:       ResourceKindDeployment,
+			APIVersion: apiVersion,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
@@ -134,6 +181,19 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 			},
 		},
+	}
+
+	if r.ownerReferenceUid != nil {
+		if uid, ok := r.ownerReferenceUid[ResourceKindDeployment]; ok {
+			deployment.OwnerReferences = []metav1.OwnerReference{
+				{
+					Kind:       ResourceKindDeployment,
+					APIVersion: apiVersion,
+					Name:       "envoy-gateway",
+					UID:        uid,
+				},
+			}
+		}
 	}
 
 	return deployment, nil
