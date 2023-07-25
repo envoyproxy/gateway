@@ -158,13 +158,14 @@ func (u *UpdateWriter) Send(update Update) {
 //
 // Supported objects:
 //
-//	GatewayClasses
-//	Gateway
-//	HTTPRoute
-//	TLSRoute
-//	TCPRoute
-//	UDPRoute
-//	GRPCRoute
+//		GatewayClasses
+//		Gateway
+//		HTTPRoute
+//		TLSRoute
+//		TCPRoute
+//		UDPRoute
+//		GRPCRoute
+//	     EnvoyPatchPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -206,6 +207,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *gwapiv1a2.GRPCRoute:
 		if b, ok := objB.(*gwapiv1a2.GRPCRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *egv1a1.EnvoyPatchPolicy:
+		if b, ok := objB.(*egv1a1.EnvoyPatchPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
