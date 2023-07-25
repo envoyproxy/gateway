@@ -3,11 +3,12 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+package validation
 
 import (
 	// Register embed
 	_ "embed"
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"reflect"
 	"testing"
 
@@ -31,22 +32,22 @@ var (
 func TestValidateEnvoyProxy(t *testing.T) {
 	testCases := []struct {
 		name     string
-		obj      *EnvoyProxy
+		proxy    *egcfgv1a1.EnvoyProxy
 		expected bool
 	}{
 		{
-			name:     "nil envoyproxy",
-			obj:      nil,
+			name:     "nil egcfgv1a1.EnvoyProxy",
+			proxy:    nil,
 			expected: false,
 		},
 		{
 			name: "nil provider",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
+				Spec: egcfgv1a1.EnvoyProxySpec{
 					Provider: nil,
 				},
 			},
@@ -54,14 +55,14 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported provider",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
-					Provider: &EnvoyProxyProvider{
-						Type: ProviderTypeFile,
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeFile,
 					},
 				},
 			},
@@ -69,15 +70,15 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "nil envoy service",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
-					Provider: &EnvoyProxyProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyProxyKubernetesProvider{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: nil,
 						},
 					},
@@ -87,17 +88,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported envoy service type \"\" ",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
-					Provider: &EnvoyProxyProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyProxyKubernetesProvider{
-							EnvoyService: &KubernetesServiceSpec{
-								Type: GetKubernetesServiceType(""),
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(""),
 							},
 						},
 					},
@@ -107,17 +108,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported envoy service type 'NodePort'",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
-					Provider: &EnvoyProxyProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyProxyKubernetesProvider{
-							EnvoyService: &KubernetesServiceSpec{
-								Type: GetKubernetesServiceType(ServiceType(corev1.ServiceTypeNodePort)),
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceType(corev1.ServiceTypeNodePort)),
 							},
 						},
 					},
@@ -127,17 +128,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'LoadBalancer'",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
-					Provider: &EnvoyProxyProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyProxyKubernetesProvider{
-							EnvoyService: &KubernetesServiceSpec{
-								Type: GetKubernetesServiceType(ServiceTypeLoadBalancer),
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
 							},
 						},
 					},
@@ -147,17 +148,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'ClusterIP'",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
-					Provider: &EnvoyProxyProvider{
-						Type: ProviderTypeKubernetes,
-						Kubernetes: &EnvoyProxyKubernetesProvider{
-							EnvoyService: &KubernetesServiceSpec{
-								Type: GetKubernetesServiceType(ServiceTypeClusterIP),
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
 							},
 						},
 					},
@@ -167,12 +168,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid user bootstrap",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
+				Spec: egcfgv1a1.EnvoyProxySpec{
 					Bootstrap: &validUserBootstrap,
 				},
 			},
@@ -180,12 +181,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with missing admin address",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
+				Spec: egcfgv1a1.EnvoyProxySpec{
 					Bootstrap: &missingAdminAddressUserBootstrap,
 				},
 			},
@@ -193,12 +194,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with different dynamic resources",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
+				Spec: egcfgv1a1.EnvoyProxySpec{
 					Bootstrap: &differentDynamicResourcesUserBootstrap,
 				},
 			},
@@ -206,12 +207,12 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with different xds_cluster endpoint",
-			obj: &EnvoyProxy{
+			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: EnvoyProxySpec{
+				Spec: egcfgv1a1.EnvoyProxySpec{
 					Bootstrap: &differentXdsClusterAddressBootstrap,
 				},
 			},
@@ -222,7 +223,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 	for i := range testCases {
 		tc := testCases[i]
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.obj.Validate()
+			err := ValidateEnvoyProxy(tc.proxy)
 			if tc.expected {
 				require.NoError(t, err)
 			} else {
@@ -233,74 +234,74 @@ func TestValidateEnvoyProxy(t *testing.T) {
 }
 
 func TestEnvoyGateway(t *testing.T) {
-	envoyGateway := DefaultEnvoyGateway()
+	envoyGateway := egcfgv1a1.DefaultEnvoyGateway()
 	assert.True(t, envoyGateway.Provider != nil)
 	assert.True(t, envoyGateway.Gateway != nil)
 	assert.True(t, envoyGateway.Logging != nil)
 	envoyGateway.SetEnvoyGatewayDefaults()
-	assert.Equal(t, envoyGateway.Logging, DefaultEnvoyGatewayLogging())
+	assert.Equal(t, envoyGateway.Logging, egcfgv1a1.DefaultEnvoyGatewayLogging())
 
-	logging := DefaultEnvoyGatewayLogging()
+	logging := egcfgv1a1.DefaultEnvoyGatewayLogging()
 	assert.True(t, logging != nil)
-	assert.True(t, logging.Level[LogComponentGatewayDefault] == LogLevelInfo)
+	assert.True(t, logging.Level[egcfgv1a1.LogComponentGatewayDefault] == egcfgv1a1.LogLevelInfo)
 
-	gatewayLogging := &EnvoyGatewayLogging{
+	gatewayLogging := &egcfgv1a1.EnvoyGatewayLogging{
 		Level: logging.Level,
 	}
 	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
 	assert.True(t, gatewayLogging != nil)
-	assert.True(t, gatewayLogging.Level[LogComponentGatewayDefault] == LogLevelInfo)
+	assert.True(t, gatewayLogging.Level[egcfgv1a1.LogComponentGatewayDefault] == egcfgv1a1.LogLevelInfo)
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 	type args struct {
 		component string
-		level     LogLevel
+		level     egcfgv1a1.LogLevel
 	}
 	tests := []struct {
 		name string
 		args args
-		want LogLevel
+		want egcfgv1a1.LogLevel
 	}{
 		{
 			name: "test default info level for empty level",
 			args: args{component: "", level: ""},
-			want: LogLevelInfo,
+			want: egcfgv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default info level for empty level",
-			args: args{component: string(LogComponentGatewayDefault), level: ""},
-			want: LogLevelInfo,
+			args: args{component: string(egcfgv1a1.LogComponentGatewayDefault), level: ""},
+			want: egcfgv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default info level for info level",
-			args: args{component: string(LogComponentGatewayDefault), level: LogLevelInfo},
-			want: LogLevelInfo,
+			args: args{component: string(egcfgv1a1.LogComponentGatewayDefault), level: egcfgv1a1.LogLevelInfo},
+			want: egcfgv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default error level for error level",
-			args: args{component: string(LogComponentGatewayDefault), level: LogLevelError},
-			want: LogLevelError,
+			args: args{component: string(egcfgv1a1.LogComponentGatewayDefault), level: egcfgv1a1.LogLevelError},
+			want: egcfgv1a1.LogLevelError,
 		},
 		{
 			name: "test gateway-api error level for error level",
-			args: args{component: string(LogComponentGatewayAPIRunner), level: LogLevelError},
-			want: LogLevelError,
+			args: args{component: string(egcfgv1a1.LogComponentGatewayAPIRunner), level: egcfgv1a1.LogLevelError},
+			want: egcfgv1a1.LogLevelError,
 		},
 		{
 			name: "test gateway-api info level for info level",
-			args: args{component: string(LogComponentGatewayAPIRunner), level: LogLevelInfo},
-			want: LogLevelInfo,
+			args: args{component: string(egcfgv1a1.LogComponentGatewayAPIRunner), level: egcfgv1a1.LogLevelInfo},
+			want: egcfgv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default gateway-api warn level for info level",
-			args: args{component: string(LogComponentGatewayAPIRunner), level: ""},
-			want: LogLevelInfo,
+			args: args{component: string(egcfgv1a1.LogComponentGatewayAPIRunner), level: ""},
+			want: egcfgv1a1.LogLevelInfo,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logging := &EnvoyGatewayLogging{}
+			logging := &egcfgv1a1.EnvoyGatewayLogging{}
 			if got := logging.DefaultEnvoyGatewayLoggingLevel(tt.args.level); got != tt.want {
 				t.Errorf("defaultLevel() = %v, want %v", got, tt.want)
 			}
@@ -309,9 +310,9 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 }
 
 func TestEnvoyGatewayProvider(t *testing.T) {
-	envoyGateway := &EnvoyGateway{
+	envoyGateway := &egcfgv1a1.EnvoyGateway{
 		TypeMeta:         metav1.TypeMeta{},
-		EnvoyGatewaySpec: EnvoyGatewaySpec{Provider: DefaultEnvoyGatewayProvider()},
+		EnvoyGatewaySpec: egcfgv1a1.EnvoyGatewaySpec{Provider: egcfgv1a1.DefaultEnvoyGatewayProvider()},
 	}
 	assert.True(t, envoyGateway.Provider != nil)
 
@@ -319,31 +320,33 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.True(t, envoyGatewayProvider.Kubernetes == nil)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
-	envoyGatewayProvider.Kubernetes = DefaultEnvoyGatewayKubeProvider()
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, DefaultKubernetesDeployment(DefaultRateLimitImage))
+	envoyGatewayProvider.Kubernetes = egcfgv1a1.DefaultEnvoyGatewayKubeProvider()
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egcfgv1a1.DefaultKubernetesDeployment(egcfgv1a1.DefaultRateLimitImage))
 
-	envoyGatewayProvider.Kubernetes = &EnvoyGatewayKubernetesProvider{}
+	envoyGatewayProvider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{}
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment == nil)
 
-	envoyGatewayProvider.Kubernetes = &EnvoyGatewayKubernetesProvider{RateLimitDeployment: &KubernetesDeploymentSpec{
-		Replicas:  nil,
-		Pod:       nil,
-		Container: nil,
-	}}
+	envoyGatewayProvider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+			Replicas:  nil,
+			Pod:       nil,
+			Container: nil,
+		}}
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas == nil)
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod == nil)
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container == nil)
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
-	envoyGatewayProvider.Kubernetes = &EnvoyGatewayKubernetesProvider{RateLimitDeployment: &KubernetesDeploymentSpec{
-		Replicas: nil,
-		Pod:      nil,
-		Container: &KubernetesContainerSpec{
-			Resources:       nil,
-			SecurityContext: nil,
-			Image:           nil,
-		},
-	}}
+	envoyGatewayProvider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+			Replicas: nil,
+			Pod:      nil,
+			Container: &egcfgv1a1.KubernetesContainerSpec{
+				Resources:       nil,
+				SecurityContext: nil,
+				Image:           nil,
+			},
+		}}
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources == nil)
 	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
@@ -351,21 +354,25 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Equal(t, envoyGatewayProvider.Kubernetes, envoyGatewayKubeProvider)
 
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, DefaultKubernetesDeployment(DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egcfgv1a1.DefaultKubernetesDeployment(egcfgv1a1.DefaultRateLimitImage))
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, DefaultKubernetesDeploymentReplicas())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, egcfgv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, DefaultKubernetesPod())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, egcfgv1a1.DefaultKubernetesPod())
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, DefaultKubernetesContainer(DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, egcfgv1a1.DefaultKubernetesContainer(egcfgv1a1.DefaultRateLimitImage))
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, DefaultResourceRequirements())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, egcfgv1a1.DefaultResourceRequirements())
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, DefaultKubernetesContainerImage(DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, egcfgv1a1.DefaultKubernetesContainerImage(egcfgv1a1.DefaultRateLimitImage))
 }
 
 func TestEnvoyProxyProvider(t *testing.T) {
-	envoyProxy := &EnvoyProxy{Spec: EnvoyProxySpec{Provider: DefaultEnvoyProxyProvider()}}
+	envoyProxy := &egcfgv1a1.EnvoyProxy{
+		Spec: egcfgv1a1.EnvoyProxySpec{
+			Provider: egcfgv1a1.DefaultEnvoyProxyProvider(),
+		},
+	}
 	assert.True(t, envoyProxy.Spec.Provider != nil)
 
 	envoyProxyProvider := envoyProxy.GetEnvoyProxyProvider()
@@ -380,25 +387,25 @@ func TestEnvoyProxyProvider(t *testing.T) {
 	envoyProxyProvider.GetEnvoyProxyKubeProvider()
 
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, DefaultKubernetesDeployment(DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egcfgv1a1.DefaultKubernetesDeployment(egcfgv1a1.DefaultEnvoyProxyImage))
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, DefaultKubernetesDeploymentReplicas())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egcfgv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, DefaultKubernetesPod())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egcfgv1a1.DefaultKubernetesPod())
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, DefaultKubernetesContainer(DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, egcfgv1a1.DefaultKubernetesContainer(egcfgv1a1.DefaultEnvoyProxyImage))
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, DefaultResourceRequirements())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, egcfgv1a1.DefaultResourceRequirements())
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, DefaultKubernetesContainerImage(DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, egcfgv1a1.DefaultKubernetesContainerImage(egcfgv1a1.DefaultEnvoyProxyImage))
 
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyService != nil)
-	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, GetKubernetesServiceType(ServiceTypeLoadBalancer)))
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer)))
 }
 
 func TestEnvoyGatewayAdmin(t *testing.T) {
 	// default envoygateway config admin should not be nil
-	eg := DefaultEnvoyGateway()
+	eg := egcfgv1a1.DefaultEnvoyGateway()
 	assert.True(t, eg.Admin != nil)
 
 	// get default admin config from envoygateway
@@ -406,16 +413,16 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	egAdmin := eg.GetEnvoyGatewayAdmin()
 	assert.True(t, egAdmin != nil)
 	assert.True(t, egAdmin.Debug == false)
-	assert.True(t, egAdmin.Address.Port == GatewayAdminPort)
-	assert.True(t, egAdmin.Address.Host == GatewayAdminHost)
+	assert.True(t, egAdmin.Address.Port == egcfgv1a1.GatewayAdminPort)
+	assert.True(t, egAdmin.Address.Host == egcfgv1a1.GatewayAdminHost)
 
 	// override the admin config
 	// values should be updated
 	eg.Admin.Debug = true
 	eg.Admin.Address = nil
 	assert.True(t, eg.Admin.Debug == true)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == GatewayAdminPort)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == GatewayAdminHost)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == egcfgv1a1.GatewayAdminPort)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == egcfgv1a1.GatewayAdminHost)
 
 	// set eg defaults when admin is nil
 	// the admin should not be nil
@@ -423,6 +430,6 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	eg.SetEnvoyGatewayDefaults()
 	assert.True(t, eg.Admin != nil)
 	assert.True(t, eg.Admin.Debug == false)
-	assert.True(t, eg.Admin.Address.Port == GatewayAdminPort)
-	assert.True(t, eg.Admin.Address.Host == GatewayAdminHost)
+	assert.True(t, eg.Admin.Address.Port == egcfgv1a1.GatewayAdminPort)
+	assert.True(t, eg.Admin.Address.Host == egcfgv1a1.GatewayAdminHost)
 }
