@@ -830,7 +830,7 @@ _Appears in:_
 | --- | --- |
 | `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
 | `timeout` _string_ | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
-| `failopen` _boolean_ | FailOpen is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailOpen is true, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailOpen is False. |
+| `failOpen` _boolean_ | FailOpen is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailOpen is true, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailOpen is False. |
 
 
 ## RateLimitDatabaseBackend
