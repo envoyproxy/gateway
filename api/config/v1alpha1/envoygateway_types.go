@@ -283,7 +283,7 @@ type RateLimit struct {
 	// If FailOpen is true, let the traffic pass,
 	// otherwise, don't let the traffic pass and return 500.
 	// If not set, FailOpen is False.
-	FailOpen bool `json:"failopen"`
+	FailOpen bool `json:"failOpen"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
