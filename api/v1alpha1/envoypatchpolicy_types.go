@@ -17,6 +17,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 
 // EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 // resources by Envoy Gateway using this patch API

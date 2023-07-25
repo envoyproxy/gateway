@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // Update contains an all the information needed to update an object's status.
@@ -158,14 +160,14 @@ func (u *UpdateWriter) Send(update Update) {
 //
 // Supported objects:
 //
-//		GatewayClasses
-//		Gateway
-//		HTTPRoute
-//		TLSRoute
-//		TCPRoute
-//		UDPRoute
-//		GRPCRoute
-//	     EnvoyPatchPolicy
+//	GatewayClasses
+//	Gateway
+//	HTTPRoute
+//	TLSRoute
+//	TCPRoute
+//	UDPRoute
+//	GRPCRoute
+//	EnvoyPatchPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {

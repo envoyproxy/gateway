@@ -74,12 +74,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				result, err := t.Translate(val)
-				if err != nil {
-					r.Logger.Error(err, "failed to translate xds ir")
-				} else {
-					// Publish
-					r.Xds.Store(key, result)
-				}
 
 				// Publish EnvoyPatchPolicyStatus
 				for _, e := range result.EnvoyPatchPolicyStatuses {
@@ -88,6 +82,15 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						Namespace: e.Namespace,
 					}
 					r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+				}
+				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
+				result.EnvoyPatchPolicyStatuses = nil
+
+				if err != nil {
+					r.Logger.Error(err, "failed to translate xds ir")
+				} else {
+					// Publish
+					r.Xds.Store(key, result)
 				}
 			}
 		},
