@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -269,7 +270,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxy != nil {
-		if err := resources.EnvoyProxy.Validate(); err != nil {
+		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxy); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(v1beta1.GatewayClassReasonInvalidParameters), msg)
@@ -390,10 +391,9 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 		bootstrapYAML = *resources.EnvoyProxy.Spec.Bootstrap
 	} else {
 		var err error
-		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(); err != nil {
+		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(false); err != nil {
 			return nil, err
 		}
-
 	}
 
 	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapYAML))
@@ -854,7 +854,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 
 	defaultEnvoyProxyName := "default-envoy-proxy"
 	namespace := resources.GatewayClass.Namespace
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(false)
 	if err != nil {
 		return err
 	}

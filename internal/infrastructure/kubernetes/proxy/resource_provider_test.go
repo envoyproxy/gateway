@@ -67,6 +67,7 @@ func TestDeployment(t *testing.T) {
 		deploy       *egcfgv1a1.KubernetesDeploymentSpec
 		proxyLogging map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
 		bootstrap    *string
+		telemetry    *egcfgv1a1.ProxyTelemetry
 	}{
 		{
 			caseName: "default",
@@ -251,6 +252,15 @@ func TestDeployment(t *testing.T) {
 			},
 			bootstrap: pointer.String(`test bootstrap config`),
 		},
+		{
+			caseName: "enable-prometheus",
+			infra:    newTestInfra(),
+			telemetry: &egcfgv1a1.ProxyTelemetry{
+				Metrics: &egcfgv1a1.ProxyMetrics{
+					Prometheus: &egcfgv1a1.PrometheusProvider{},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -261,6 +271,10 @@ func TestDeployment(t *testing.T) {
 
 			if tc.bootstrap != nil && *tc.bootstrap != "" {
 				tc.infra.Proxy.Config.Spec.Bootstrap = tc.bootstrap
+			}
+
+			if tc.telemetry != nil {
+				tc.infra.Proxy.Config.Spec.Telemetry = *tc.telemetry
 			}
 
 			if len(tc.proxyLogging) > 0 {

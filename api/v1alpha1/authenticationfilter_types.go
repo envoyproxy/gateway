@@ -14,7 +14,8 @@ const (
 	KindAuthenticationFilter = "AuthenticationFilter"
 )
 
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 type AuthenticationFilter struct {
 	metav1.TypeMeta   `json:",inline"`
