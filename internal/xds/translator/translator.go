@@ -40,7 +40,7 @@ type GlobalRateLimitSettings struct {
 	ServiceURL string
 
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
-	// If not set, timeout is 20ms.
+	// If not set, timeout is 20000000(20ms).
 	Timeout time.Duration
 
 	// FailClosed is a switch used to control the flow of traffic
