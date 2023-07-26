@@ -21,7 +21,7 @@ changes:
       Added Support for EnvoyPatchPolicy
       Added Support for EnvoyProxy Telemetry - Access Logging, Traces and Metrics
       Added Support for configuring EnvoyProxy Pod Labels
-      Added Support for configuring EnvoyProxy Deployment Strategy Settings, Volumes and Volume Mounts 
+      Added Support for configuring EnvoyProxy Deployment Strategy Settings, Volumes and Volume Mounts
       Added Support for configuring EnvoyProxy as a NodePort Type Service
       Added Support for Distinct RateLimiting for IP Addresses
       Added Support for converting JWT Claims to Headers, to be used for RateLimiting
@@ -52,7 +52,6 @@ changes:
     breaking-change: |
       Renamed IR resources from <namespace>-<name> to <namespace>/<name>
       which also affects generated Xds Resources
-      
 
   - area: providers
     change: |
@@ -72,5 +71,5 @@ changes:
 
   - area: cli
     change: |
-      Added egctl x translate Support to generate default missing Resources 
-      Added egctl x translate Support for AuthenticationFilter and EnvoyPatchPolicy 
+      Added egctl x translate Support to generate default missing Resources
+      Added egctl x translate Support for AuthenticationFilter and EnvoyPatchPolicy
