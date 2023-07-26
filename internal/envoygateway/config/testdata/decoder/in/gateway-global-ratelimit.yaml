@@ -6,7 +6,7 @@ provider:
   type: Kubernetes
 rateLimit:
   timeout: 10ms
-  fallOpen: True
+  failClosed: true
   backend:
     type: Redis
     redis:

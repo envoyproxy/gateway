@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
@@ -21,8 +20,8 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
-	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
@@ -102,13 +101,12 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 		},
 		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
 	}
-	idleTimeout, err := time.ParseDuration(t.GlobalRateLimit.Timeout)
-	if idleTimeout > 0 && err == nil {
-		rateLimitFilterProto.Timeout = ptypes.DurationProto(idleTimeout)
+	if t.GlobalRateLimit.Timeout > 0 {
+		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
 	}
 
-	if t.GlobalRateLimit.FailOpen {
-		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailOpen
+	if t.GlobalRateLimit.FailClosed {
+		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
 	}
 
 	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)

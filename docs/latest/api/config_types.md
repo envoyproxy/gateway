@@ -829,8 +829,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
-| `timeout` _string_ | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
-| `failOpen` _boolean_ | FailOpen is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailOpen is true, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailOpen is False. |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
+| `failClosed` _boolean_ | FailClosed is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailClosed is false, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailClosed is False. |
 
 
 ## RateLimitDatabaseBackend

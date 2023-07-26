@@ -276,14 +276,16 @@ type RateLimit struct {
 
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
 	// If not set, timeout is 20ms.
-	Timeout string `json:"timeout"`
+	// +optional
+	// +kubebuilder:validation:Format=duration
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 
-	// FailOpen is a switch used to control the flow of traffic
+	// FailClosed is a switch used to control the flow of traffic
 	// when the response from the ratelimit server cannot be obtained.
-	// If FailOpen is true, let the traffic pass,
+	// If FailClosed is false, let the traffic pass,
 	// otherwise, don't let the traffic pass and return 500.
-	// If not set, FailOpen is False.
-	FailOpen bool `json:"failOpen"`
+	// If not set, FailClosed is False.
+	FailClosed bool `json:"failClosed"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

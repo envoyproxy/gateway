@@ -198,8 +198,10 @@ func TestDecode(t *testing.T) {
 					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
 					Gateway:  v1alpha1.DefaultGateway(),
 					RateLimit: &v1alpha1.RateLimit{
-						Timeout:  "10ms",
-						FailOpen: false,
+						Timeout: &metav1.Duration{
+							Duration: 10000000,
+						},
+						FailClosed: true,
 						Backend: v1alpha1.RateLimitDatabaseBackend{
 							Type: v1alpha1.RedisBackendType,
 							Redis: &v1alpha1.RateLimitRedisSettings{

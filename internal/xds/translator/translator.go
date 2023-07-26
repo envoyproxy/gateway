@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -40,11 +41,11 @@ type GlobalRateLimitSettings struct {
 
 	// Timeout specifies the timeout period for the proxy to access the ratelimit server
 	// If not set, timeout is 20ms.
-	Timeout string
+	Timeout time.Duration
 
-	// FailOpen is a switch used to control the flow of traffic
+	// FailClosed is a switch used to control the flow of traffic
 	// when the response from the ratelimit server cannot be obtained.
-	FailOpen bool
+	FailClosed bool
 }
 
 // Translate translates the XDS IR into xDS resources
