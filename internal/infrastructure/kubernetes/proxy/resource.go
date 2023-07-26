@@ -112,6 +112,13 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
+	enablePrometheus := false
+	if infra.Config != nil &&
+		infra.Config.Spec.Telemetry.Metrics != nil &&
+		infra.Config.Spec.Telemetry.Metrics.Prometheus != nil {
+		enablePrometheus = true
+	}
+
 	var bootstrapConfigurations string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
@@ -121,7 +128,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	} else {
 		var err error
 		// Use the default Bootstrap
-		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig()
+		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(enablePrometheus)
 		if err != nil {
 			return nil, err
 		}

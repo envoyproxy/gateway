@@ -55,6 +55,8 @@ type bootstrapParameters struct {
 	AdminServer adminServerParameters
 	// ReadyServer defines the configuration for health check ready listener
 	ReadyServer readyServerParameters
+	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
+	EnablePrometheus bool
 }
 
 type xdsServerParameters struct {
@@ -94,8 +96,7 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig() (string, error) {
-
+func GetRenderedBootstrapConfig(enablePrometheus bool) (string, error) {
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
 			XdsServer: xdsServerParameters{
@@ -112,6 +113,7 @@ func GetRenderedBootstrapConfig() (string, error) {
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
+			EnablePrometheus: enablePrometheus,
 		},
 	}
 
