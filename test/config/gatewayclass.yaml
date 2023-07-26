@@ -17,6 +17,8 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   telemetry:
+    metrics:
+      prometheus: {}
     accessLog:
       settings:
         - format:

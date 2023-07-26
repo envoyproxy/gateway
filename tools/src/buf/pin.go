@@ -8,4 +8,4 @@
 
 package ignore
 
-import "github.com/bufbuild/buf/cmd/buf"
+import _ "github.com/bufbuild/buf/cmd/buf"

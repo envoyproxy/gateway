@@ -11,6 +11,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/ir"
 	xdstypes "github.com/envoyproxy/gateway/internal/xds/types"
@@ -54,9 +55,15 @@ func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
 	p.GatewayStatuses.Close()
 	p.HTTPRouteStatuses.Close()
+	p.GRPCRouteStatuses.Close()
 	p.TLSRouteStatuses.Close()
 	p.TCPRouteStatuses.Close()
 	p.UDPRouteStatuses.Close()
+}
+
+// EnvoyPatchPolicyStatuses message
+type EnvoyPatchPolicyStatuses struct {
+	watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
 }
 
 // XdsIR message

@@ -15,6 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // RateLimitFilter allows the user to limit the number of incoming requests
 // to a predefined value based on attributes within the traffic flow.
