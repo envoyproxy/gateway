@@ -9,9 +9,10 @@ import (
 	// Register embed
 	_ "embed"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"strings"
 	"text/template"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
