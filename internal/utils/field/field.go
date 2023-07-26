@@ -52,15 +52,27 @@ func SetValue(s any, fieldName string, fieldValue any) error {
 		if field.Kind() == reflect.Slice {
 			for i := 0; i < field.Len(); i++ {
 				elem := field.Index(i)
-				// If the field is a struct, recursively call the setFieldValue function.
+				// If the field is a struct, recursively call the setValue function.
 				if elem.Kind() == reflect.Struct {
 					if err := SetValue(elem.Addr().Interface(), fieldName, fieldValue); err != nil {
 						return err
 					}
 				}
-				// If the field is a pointer, recursively call the setFieldValue function.
+				// If the field is a pointer, recursively call the setValue function.
 				if elem.Kind() == reflect.Pointer && !elem.IsNil() && elem.Elem().Kind() == reflect.Struct {
 					if err := SetValue(elem.Interface(), fieldName, fieldValue); err != nil {
+						return err
+					}
+				}
+			}
+		}
+
+		// If the field is a map, recursively call the setValue function
+		if field.Kind() == reflect.Map {
+			for _, k := range field.MapKeys() {
+				v := field.MapIndex(k)
+				if v.Kind() == reflect.Pointer && !v.IsNil() && v.Elem().Kind() == reflect.Struct {
+					if err := SetValue(v.Interface(), fieldName, fieldValue); err != nil {
 						return err
 					}
 				}

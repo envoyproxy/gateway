@@ -17,6 +17,9 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 // resources by Envoy Gateway using this patch API
@@ -121,6 +124,34 @@ type EnvoyPatchPolicyStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+const (
+	// PolicyConditionProgrammed indicates whether the policy has been translated
+	// and ready to be programmed into the data plane.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Programmed"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "Invalid"
+	// * "ResourceNotFound"
+	//
+	PolicyConditionProgrammed gwapiv1a2.PolicyConditionType = "Programmed"
+
+	// PolicyReasonProgrammed is used with the "Programmed" condition when the policy
+	// is ready to be programmed into the data plane.
+	PolicyReasonProgrammed gwapiv1a2.PolicyConditionReason = "Programmed"
+
+	// PolicyReasonInvalid is used with the "Programmed" condition when the patch
+	// is syntactically or semantically invalid.
+	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
+
+	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// policy cannot find the resource type to patch to.
+	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
+)
 
 //+kubebuilder:object:root=true
 

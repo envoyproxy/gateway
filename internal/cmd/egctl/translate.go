@@ -391,10 +391,9 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 		bootstrapYAML = *resources.EnvoyProxy.Spec.Bootstrap
 	} else {
 		var err error
-		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(); err != nil {
+		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(false); err != nil {
 			return nil, err
 		}
-
 	}
 
 	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapYAML))
@@ -855,7 +854,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 
 	defaultEnvoyProxyName := "default-envoy-proxy"
 	namespace := resources.GatewayClass.Namespace
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(false)
 	if err != nil {
 		return err
 	}
