@@ -75,7 +75,7 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 	}
 
 	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
-		return !resource.CompareDeployment(current, deployment)
+		return !reflect.DeepEqual(deployment.Spec, current.Spec)
 	})
 }
 
