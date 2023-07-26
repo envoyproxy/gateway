@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package v1alpha1
+package validation
 
 import (
 	"errors"
@@ -18,17 +18,18 @@ import (
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/yaml"
 
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
 // Validate validates the provided EnvoyProxy.
-func (e *EnvoyProxy) Validate() error {
+func ValidateEnvoyProxy(proxy *egcfgv1a1.EnvoyProxy) error {
 	var errs []error
-	if e == nil {
+	if proxy == nil {
 		return errors.New("envoyproxy is nil")
 	}
-	if err := validateEnvoyProxySpec(&e.Spec); err != nil {
+	if err := validateEnvoyProxySpec(&proxy.Spec); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -36,7 +37,7 @@ func (e *EnvoyProxy) Validate() error {
 }
 
 // validateEnvoyProxySpec validates the provided EnvoyProxy spec.
-func validateEnvoyProxySpec(spec *EnvoyProxySpec) error {
+func validateEnvoyProxySpec(spec *egcfgv1a1.EnvoyProxySpec) error {
 	var errs []error
 
 	if spec == nil {
@@ -58,10 +59,10 @@ func validateEnvoyProxySpec(spec *EnvoyProxySpec) error {
 	return utilerrors.NewAggregate(errs)
 }
 
-func validateProvider(spec *EnvoyProxySpec) []error {
+func validateProvider(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
-		if spec.Provider.Type != ProviderTypeKubernetes {
+		if spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
 		}
 		validateServiceTypeErrs := validateServiceType(spec)
@@ -72,13 +73,13 @@ func validateProvider(spec *EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateServiceType(spec *EnvoyProxySpec) []error {
+func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
 		if serviceType := spec.Provider.Kubernetes.EnvoyService.Type; serviceType != nil {
-			if *serviceType != ServiceTypeLoadBalancer &&
-				*serviceType != ServiceTypeClusterIP &&
-				*serviceType != ServiceTypeNodePort {
+			if *serviceType != egcfgv1a1.ServiceTypeLoadBalancer &&
+				*serviceType != egcfgv1a1.ServiceTypeClusterIP &&
+				*serviceType != egcfgv1a1.ServiceTypeNodePort {
 				errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
 			}
 		}
