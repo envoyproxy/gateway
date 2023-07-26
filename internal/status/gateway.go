@@ -10,7 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 // UpdateGatewayStatusAcceptedCondition updates the status condition for the provided Gateway based on the accepted state.
@@ -67,7 +67,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 		var gwAddresses []gwapiv1b1.GatewayAddress
 		for i := range addresses {
 			addr := gwapiv1b1.GatewayAddress{
-				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
+				Type:  ptr.To(gwapiv1b1.IPAddressType),
 				Value: addresses[i],
 			}
 			gwAddresses = append(gwAddresses, addr)
@@ -75,7 +75,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 
 		for i := range hostnames {
 			addr := gwapiv1b1.GatewayAddress{
-				Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.HostnameAddressType),
+				Type:  ptr.To(gwapiv1b1.HostnameAddressType),
 				Value: hostnames[i],
 			}
 			gwAddresses = append(gwAddresses, addr)

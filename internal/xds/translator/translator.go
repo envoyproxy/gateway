@@ -59,7 +59,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 		return nil, err
 	}
 
-	if err := processJSONPatches(tCtx, ir.JSONPatches); err != nil {
+	if err := processJSONPatches(tCtx, ir.EnvoyPatchPolicies); err != nil {
 		return nil, err
 	}
 

@@ -65,12 +65,14 @@ type gatewayAPIReconciler struct {
 	namespace       string
 	envoyGateway    *egcfgv1a1.EnvoyGateway
 
-	resources *message.ProviderResources
-	extGVKs   []schema.GroupVersionKind
+	resources                *message.ProviderResources
+	envoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
+	extGVKs                  []schema.GroupVersionKind
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
+	resources *message.ProviderResources, eStatuses *message.EnvoyPatchPolicyStatuses) error {
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
@@ -83,15 +85,16 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	r := &gatewayAPIReconciler{
-		client:          mgr.GetClient(),
-		log:             cfg.Logger,
-		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		namespace:       cfg.Namespace,
-		statusUpdater:   su,
-		resources:       resources,
-		extGVKs:         extGVKs,
-		store:           newProviderStore(),
-		envoyGateway:    cfg.EnvoyGateway,
+		client:                   mgr.GetClient(),
+		log:                      cfg.Logger,
+		classController:          gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		namespace:                cfg.Namespace,
+		statusUpdater:            su,
+		resources:                resources,
+		envoyPatchPolicyStatuses: eStatuses,
+		extGVKs:                  extGVKs,
+		store:                    newProviderStore(),
+		envoyGateway:             cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -242,6 +245,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 	for _, policy := range envoyPatchPolicies.Items {
 		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
 		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 	}
 
@@ -1066,6 +1072,34 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 			},
 		)
 		r.log.Info("udpRoute status subscriber shutting down")
+	}()
+
+	// EnvoyPatchPolicy object status updater
+	go func() {
+		message.HandleSubscription(r.envoyPatchPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.EnvoyPatchPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.EnvoyPatchPolicy)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("envoyPatchPolicy status subscriber shutting down")
 	}()
 }
 

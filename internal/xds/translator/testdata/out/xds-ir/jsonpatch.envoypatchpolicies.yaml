@@ -1,0 +1,9 @@
+- name: first-policy
+  namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: successfully applied patches.
+      reason: Programmed
+      status: "True"
+      type: Programmed
