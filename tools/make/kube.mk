@@ -28,7 +28,7 @@ YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: manifests
-manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
 	$(tools/controller-gen) crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
 .PHONY: generate-gwapi-manifests
