@@ -15,8 +15,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -28,6 +28,12 @@ const (
 	// RedisAuthEnvVar is the redis auth.
 	RedisAuthEnvVar = "REDIS_AUTH"
 )
+
+var ownerReferenceUID = map[string]types.UID{
+	ResourceKindService:        "test-owner-reference-uid-for-service",
+	ResourceKindDeployment:     "test-owner-reference-uid-for-deployment",
+	ResourceKindServiceAccount: "test-owner-reference-uid-for-service-account",
+}
 
 func TestRateLimitLabels(t *testing.T) {
 	cases := []struct {
@@ -65,7 +71,7 @@ func TestServiceAccount(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 
 	sa, err := r.ServiceAccount()
 	require.NoError(t, err)
@@ -98,7 +104,7 @@ func TestService(t *testing.T) {
 			},
 		},
 	}
-	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
+	r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 	svc, err := r.Service()
 	require.NoError(t, err)
 
@@ -483,7 +489,7 @@ func TestDeployment(t *testing.T) {
 				Kubernetes: &egcfgv1a1.EnvoyGatewayKubernetesProvider{
 					RateLimitDeployment: tc.deploy,
 				}}
-			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
+			r := NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 			dp, err := r.Deployment()
 			require.NoError(t, err)
 
