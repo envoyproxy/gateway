@@ -17,7 +17,6 @@ import (
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -60,7 +59,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 		return nil, err
 	}
 
-	if err := processJSONPatches(tCtx, ir.JSONPatches); err != nil {
+	if err := processJSONPatches(tCtx, ir.EnvoyPatchPolicies); err != nil {
 		return nil, err
 	}
 
@@ -77,7 +76,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *egcfgv1a1.ProxyTracing) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration

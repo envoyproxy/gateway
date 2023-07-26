@@ -68,6 +68,9 @@ type ProxyTelemetry struct {
 	// If unspecified, will not send tracing data.
 	// +optional
 	Tracing *ProxyTracing `json:"tracing,omitempty"`
+
+	// Metrics defines metrics configuration for managed proxies.
+	Metrics *ProxyMetrics `json:"metrics,omitempty"`
 }
 
 // EnvoyProxyProvider defines the desired state of a resource provider.

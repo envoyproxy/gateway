@@ -6,12 +6,16 @@
 package gatewayapi
 
 import (
+	"fmt"
 	"sort"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/status"
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR XdsIRMap) {
@@ -21,16 +25,19 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	})
 
 	for _, policy := range envoyPatchPolicies {
-		// Ensure policy can only target a Gateway
-		if policy.Spec.TargetRef.Group != gwv1b1.GroupName || policy.Spec.TargetRef.Kind != KindGateway {
-			// TODO: Update Status
-			continue
-		}
 
-		// Ensure Policy and target Gateway are in the same namespace
 		targetNs := policy.Spec.TargetRef.Namespace
-		if targetNs == nil || policy.Namespace != string(*targetNs) {
-			// TODO: Update Status
+		if targetNs == nil {
+			// This status condition will not get updated in the resource because
+			// we dont have access to the IR yet, but it has been kept here in case we publish
+			// the status from this layer instead of the xds layer.
+
+			status.SetEnvoyPatchPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				"TargetRef.Namespace must be set",
+			)
 			continue
 		}
 
@@ -39,7 +46,54 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 		irKey := irStringKey(string(*targetNs), string(policy.Spec.TargetRef.Name))
 		gwXdsIR, ok := xdsIR[irKey]
 		if !ok {
-			// TODO: Update Status
+			// This status condition will not get updated in the resource because
+			// the IR is missing, but it has been kept here in case we publish
+			// the status from this layer instead of the xds layer.
+			message := fmt.Sprintf("Gateway:%s not found.", policy.Spec.TargetRef.Name)
+
+			status.SetEnvoyPatchPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonTargetNotFound,
+				message,
+			)
+			continue
+		}
+
+		// Create the IR with the context need to publish the status later
+		policyIR := ir.EnvoyPatchPolicy{}
+		policyIR.Name = policy.Name
+		policyIR.Namespace = policy.Namespace
+		policyIR.Status = &policy.Status
+
+		// Append the IR
+		gwXdsIR.EnvoyPatchPolicies = append(gwXdsIR.EnvoyPatchPolicies, &policyIR)
+
+		// Ensure policy can only target a Gateway
+		if policy.Spec.TargetRef.Group != gwv1b1.GroupName || policy.Spec.TargetRef.Kind != KindGateway {
+			message := fmt.Sprintf("TargetRef.Group:%s TargetRef.Kind:%s, only TargetRef.Group:%s and TargetRef.Kind:%s is supported.",
+				policy.Spec.TargetRef.Group, policy.Spec.TargetRef.Kind, gwv1b1.GroupName, KindGateway)
+
+			status.SetEnvoyPatchPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
+			continue
+		}
+
+		// Ensure Policy and target Gateway are in the same namespace
+		if policy.Namespace != string(*targetNs) {
+			message := fmt.Sprintf("Namespace:%s TargetRef.Namespace:%s, EnvoyPatchPolicy can only target a Gateway in the same namespace.",
+				policy.Namespace, *targetNs)
+
+			status.SetEnvoyPatchPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionFalse,
+				gwv1a2.PolicyReasonInvalid,
+				message,
+			)
 			continue
 		}
 
@@ -52,7 +106,15 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 			irPatch.Operation.Path = patch.Operation.Path
 			irPatch.Operation.Value = patch.Operation.Value
 
-			gwXdsIR.JSONPatches = append(gwXdsIR.JSONPatches, &irPatch)
+			policyIR.JSONPatches = append(policyIR.JSONPatches, &irPatch)
 		}
+
+		// Set Accepted=True
+		status.SetEnvoyPatchPolicyCondition(policy,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionTrue,
+			gwv1a2.PolicyReasonAccepted,
+			"EnvoyPatchPolicy has been accepted.",
+		)
 	}
 }

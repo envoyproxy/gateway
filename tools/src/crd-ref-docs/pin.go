@@ -8,4 +8,4 @@
 
 package ignore
 
-import "github.com/elastic/crd-ref-docs"
+import _ "github.com/elastic/crd-ref-docs"

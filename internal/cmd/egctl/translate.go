@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -231,7 +232,10 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 		for _, outType := range outTypes {
 			// Translate
 			if outType == gatewayAPIType {
-				result.Resources = translateGatewayAPIToGatewayAPI(resources)
+				result.Resources, err = translateGatewayAPIToGatewayAPI(resources)
+				if err != nil {
+					return err
+				}
 			}
 			if outType == xdsType {
 				res, err := translateGatewayAPIToXds(dnsDomain, resourceType, resources)
@@ -251,7 +255,11 @@ func translate(w io.Writer, inFile, inType string, outTypes []string, output, re
 	return fmt.Errorf("unable to find translate from input type %s to output type %s", inType, outTypes)
 }
 
-func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi.Resources {
+func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayapi.Resources, error) {
+	if resources.GatewayClass == nil {
+		return gatewayapi.Resources{}, fmt.Errorf("the GatewayClass resource is required")
+	}
+
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -262,7 +270,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi
 	// Update the status of the GatewayClass based on EnvoyProxy validation
 	epInvalid := false
 	if resources.EnvoyProxy != nil {
-		if err := resources.EnvoyProxy.Validate(); err != nil {
+		if err := validation.ValidateEnvoyProxy(resources.EnvoyProxy); err != nil {
 			epInvalid = true
 			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
 			status.SetGatewayClassAccepted(resources.GatewayClass, false, string(v1beta1.GatewayClassReasonInvalidParameters), msg)
@@ -274,10 +282,14 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) gatewayapi
 	}
 
 	gRes.GatewayClass = resources.GatewayClass
-	return gRes.Resources
+	return gRes.Resources, nil
 }
 
 func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *gatewayapi.Resources) (map[string]any, error) {
+	if resources.GatewayClass == nil {
+		return nil, fmt.Errorf("the GatewayClass resource is required")
+	}
+
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
 		GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -358,8 +370,8 @@ func printOutput(w io.Writer, result TranslationResult, output string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintln(w, string(out))
-	return nil
+	_, err = fmt.Fprintln(w, string(out))
+	return err
 }
 
 // constructConfigDump constructs configDump from ResourceVersionTable and BootstrapConfig
@@ -379,10 +391,9 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 		bootstrapYAML = *resources.EnvoyProxy.Spec.Bootstrap
 	} else {
 		var err error
-		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(); err != nil {
+		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(false); err != nil {
 			return nil, err
 		}
-
 	}
 
 	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapYAML))
@@ -585,9 +596,9 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		gvk := un.GroupVersionKind()
 		name, namespace := un.GetName(), un.GetNamespace()
 		if namespace == "" {
-			// When kubectl apply a resource in yaml which doesn't have a namespace,
+			// When kubectl applies a resource in yaml which doesn't have a namespace,
 			// the current namespace is applied. Here we do the same thing before translating
-			// the GatewayAPI resource. Otherwise the resource can't pass the namespace validation
+			// the GatewayAPI resource. Otherwise, the resource can't pass the namespace validation
 			useDefaultNamespace = true
 			namespace = config.DefaultNamespace
 		}
@@ -736,6 +747,20 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(egv1a1.AuthenticationFilterSpec),
 			}
 			resources.AuthenticationFilters = append(resources.AuthenticationFilters, authenticationFilter)
+		case egv1a1.KindEnvoyPatchPolicy:
+			typedSpec := spec.Interface()
+			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindEnvoyPatchPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
+			}
+			resources.EnvoyPatchPolicies = append(resources.EnvoyPatchPolicies, envoyPatchPolicy)
 		}
 	}
 
@@ -823,9 +848,13 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 }
 
 func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
+	if resources.GatewayClass == nil {
+		return fmt.Errorf("the GatewayClass resource is required")
+	}
+
 	defaultEnvoyProxyName := "default-envoy-proxy"
 	namespace := resources.GatewayClass.Namespace
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig()
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(false)
 	if err != nil {
 		return err
 	}

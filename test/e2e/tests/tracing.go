@@ -28,6 +28,8 @@ import (
 	httputils "sigs.k8s.io/gateway-api/conformance/utils/http"
 	"sigs.k8s.io/gateway-api/conformance/utils/kubernetes"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
 
 func init() {
@@ -58,9 +60,8 @@ var OpenTelemetryTracingTest = suite.ConformanceTest{
 			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
 
 			tags := map[string]string{
-				"component":          "proxy",
-				"k8s.cluster.name":   "envoy-gateway",
-				"k8s.namespace.name": "envoy-gateway-system",
+				"component":    "proxy",
+				"service.name": naming.ServiceName(gwNN),
 			}
 			// let's wait for the log to be sent to stdout
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
@@ -137,9 +138,7 @@ func QueryTraceFromTempo(t *testing.T, c client.Client, tags map[string]string) 
 		return -1, err
 	}
 
-	// TODO: looks like there's some unmarshal issue with gogo/protobuf,
-	// but it's fine for now cause we only need the total count.
-	total := int(tempoResponse.Metrics.InspectedTraces)
+	total := len(tempoResponse.Traces)
 	t.Logf("get response from tempo, url=%s, response=%v, total=%d", tempoURL.String(), tempoResponse, total)
 	return total, nil
 }

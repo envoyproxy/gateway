@@ -7,6 +7,7 @@ All namespaced resources for Envoy Gateway RBAC.
 - {{ include "eg.rbac.namespaced.discovery" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.config.envoyproxy" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.envoyproxy" . | nindent 2 | trim }}
+- {{ include "eg.rbac.namespaced.gateway.envoyproxy.status" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking.status" . | nindent 2 | trim }}
 {{- end }}
@@ -80,8 +81,18 @@ resources:
 verbs:
 - get
 - list
+- patch
 - update
 - watch
+{{- end }}
+
+{{- define "eg.rbac.namespaced.gateway.envoyproxy.status" -}}
+apiGroups:
+- gateway.envoyproxy.io
+resources:
+- envoypatchpolicies/status
+verbs:
+- update
 {{- end }}
 
 {{- define "eg.rbac.namespaced.gateway.networking" -}}

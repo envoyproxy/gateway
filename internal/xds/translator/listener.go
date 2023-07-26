@@ -23,7 +23,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	xdsfilters "github.com/envoyproxy/gateway/internal/xds/filters"
@@ -75,7 +74,7 @@ func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.Access
 }
 
 func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *egcfgv1a1.ProxyTracing) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)

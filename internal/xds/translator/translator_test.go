@@ -10,18 +10,24 @@ import (
 	"flag"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
 
@@ -30,17 +36,16 @@ var (
 	outFiles embed.FS
 	//go:embed testdata/in/*
 	inFiles embed.FS
-)
 
-var (
 	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 func TestTranslateXds(t *testing.T) {
 	testCases := []struct {
-		name           string
-		dnsDomain      string
-		requireSecrets bool
+		name                      string
+		dnsDomain                 string
+		requireSecrets            bool
+		requireEnvoyPatchPolicies bool
 	}{
 		{
 			name: "empty",
@@ -151,7 +156,16 @@ func TestTranslateXds(t *testing.T) {
 			name: "tracing",
 		},
 		{
-			name: "jsonpatch",
+			name:                      "jsonpatch",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-missing-resource",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-invalid-patch",
+			requireEnvoyPatchPolicies: true,
 		},
 	}
 
@@ -191,6 +205,23 @@ func TestTranslateXds(t *testing.T) {
 					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", tc.name+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
+			}
+			if tc.requireEnvoyPatchPolicies {
+				got := tCtx.EnvoyPatchPolicyStatuses
+				for _, e := range got {
+					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
+				}
+				if *overrideTestData {
+					out, err := yaml.Marshal(got)
+					require.NoError(t, err)
+					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", tc.name+".envoypatchpolicies.yaml")))
+				}
+
+				in := requireTestDataOutFile(t, "xds-ir", tc.name+".envoypatchpolicies.yaml")
+				want := xtypes.EnvoyPatchPolicyStatuses{}
+				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
+				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+				require.Empty(t, cmp.Diff(want, got, opts))
 			}
 		})
 	}
@@ -286,7 +317,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
-			ext := v1alpha1.Extension{
+			ext := v1alpha1.ExtensionManager{
 				Resources: []v1alpha1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",
