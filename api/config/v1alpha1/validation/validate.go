@@ -104,7 +104,7 @@ func validateBootstrap(boostrapConfig *string) error {
 	}
 	defaultBootstrap := &bootstrapv3.Bootstrap{}
 	// TODO: need validate when enable prometheus?
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(false)
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	if err != nil {
 		return err
 	}

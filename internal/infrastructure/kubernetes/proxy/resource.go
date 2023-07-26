@@ -112,11 +112,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
-	enablePrometheus := false
-	if infra.Config != nil &&
-		infra.Config.Spec.Telemetry.Metrics != nil &&
-		infra.Config.Spec.Telemetry.Metrics.Prometheus != nil {
-		enablePrometheus = true
+	var proxyMetrics *egcfgv1a1.ProxyMetrics
+	if infra.Config != nil {
+		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
 	var bootstrapConfigurations string
@@ -128,7 +126,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	} else {
 		var err error
 		// Use the default Bootstrap
-		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(enablePrometheus)
+		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
 		if err != nil {
 			return nil, err
 		}
