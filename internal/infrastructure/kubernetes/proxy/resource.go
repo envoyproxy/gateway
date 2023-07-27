@@ -163,10 +163,15 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path: bootstrap.EnvoyReadinessPath,
-						Port: intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
 					},
 				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
 			},
 		},
 	}
@@ -222,7 +227,8 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "envoy",
+					SecretName:  "envoy",
+					DefaultMode: pointer.Int32(420),
 				},
 			},
 		},
@@ -243,7 +249,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 							Path: SdsCertFilename,
 						},
 					},
-					DefaultMode: pointer.Int32(int32(420)),
+					DefaultMode: pointer.Int32(420),
 					Optional:    pointer.Bool(false),
 				},
 			},
