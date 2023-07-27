@@ -114,13 +114,13 @@ spec:
         runAsUser: 1000
       terminationGracePeriodSeconds: 300
       volumes:
-        - name: redis-certs
-          secret:
-            secretName: ratelimit-cert
-            defaultMode: 420
-        - name: certs
-          secret:
-            secretName: envoy-rate-limit
-            defaultMode: 420
+      - name: redis-certs
+        secret:
+          secretName: ratelimit-cert
+          defaultMode: 420
+      - name: certs
+        secret:
+          secretName: envoy-rate-limit
+          defaultMode: 420
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600
