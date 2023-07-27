@@ -10,7 +10,6 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -21,7 +20,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -78,39 +77,10 @@ var ReloadTest = suite.ConformanceTest{
 					}
 
 					// Step 4: Compare the obtained `/config_dump` output with the initial configuration
-					// Define options for comparison
-					sortOpts := cmpopts.SortSlices(func(a, b interface{}) bool {
-						// Type assertion to get the map[string]interface{} from the interface{}
-						mapA, okA := a.(map[string]interface{})
-						mapB, okB := b.(map[string]interface{})
-
-						// If either a or b is not a map or does not have the "endpoint_config" key, return false
-						if !okA || !okB {
-							return false
-						}
-
-						endpointA, okA := mapA["endpoint_config"].(map[string]interface{})
-						endpointB, okB := mapB["endpoint_config"].(map[string]interface{})
-
-						// If either a or b does not have the "endpoint_config" key or is not a map, return false
-						if !okA || !okB {
-							return false
-						}
-
-						// Extract the "cluster_name" field from the endpoint_config map and compare the values
-						clusterA, okA := endpointA["cluster_name"].(string)
-						clusterB, okB := endpointB["cluster_name"].(string)
-
-						// If either clusterA or clusterB is not a string, return false
-						if !okA || !okB {
-							return false
-						}
-
-						return clusterA < clusterB
-					})
 
 					// Compare the two JSON structures with sorting
-					require.Empty(t, cmp.Diff(initialConfig, newConfigDump, sortOpts))
+					assert.Empty(t, cmp.Diff(string(initialConfig), string(newConfigDump)))
+					require.Empty(t, cmp.Diff(initialConfig, newConfigDump))
 				}
 
 				// Wait for Step 2 to complete before moving to the next reload
@@ -124,7 +94,7 @@ var ReloadTest = suite.ConformanceTest{
 	},
 }
 
-func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseMap map[string]interface{}, err error) {
+func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace string) (responseMap []byte, err error) {
 	selectorLabels := map[string]string{
 		"gateway.envoyproxy.io/owning-gateway-name":      "all-namespaces",
 		"gateway.envoyproxy.io/owning-gateway-namespace": "gateway-conformance-infra",
@@ -203,17 +173,11 @@ func getConfigDump(t *testing.T, config *rest.Config, c client.Client, namespace
 		return nil, err
 	}
 
-	// Unmarshal the response body into a map[string]interface{}
-	err = json.Unmarshal(responseBody, &responseMap)
-	if err != nil {
-		return nil, err
-	}
-
 	// Wait for termination signal
 	// <-stopCh
 
 	portForwarder.Close()
-	return responseMap, nil
+	return responseBody, nil
 }
 
 func restartEnvoyGateway(t *testing.T, c client.Client, namespace string) (err error) {
