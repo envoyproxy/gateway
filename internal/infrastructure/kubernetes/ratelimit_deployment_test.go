@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -34,7 +35,10 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 		},
 	}
 
-	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway)
+	ownerReferenceUID := map[string]types.UID{
+		ratelimit.ResourceKindDeployment: "foo.bar",
+	}
+	r := ratelimit.NewResourceRender(cfg.Namespace, cfg.EnvoyGateway, ownerReferenceUID)
 	deployment, err := r.Deployment()
 	require.NoError(t, err)
 
@@ -71,7 +75,7 @@ func TestCreateOrUpdateRateLimitDeployment(t *testing.T) {
 
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = cfg.EnvoyGateway.RateLimit
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUID)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
@@ -113,7 +117,7 @@ func TestDeleteRateLimitDeployment(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			kube := newTestInfra(t)
 			kube.EnvoyGateway.RateLimit = rl
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, nil)
 			err := kube.createOrUpdateDeployment(context.Background(), r)
 			require.NoError(t, err)
 
