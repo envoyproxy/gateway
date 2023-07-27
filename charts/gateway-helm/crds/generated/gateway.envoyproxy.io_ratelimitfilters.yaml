@@ -15,7 +15,11 @@ spec:
     singular: ratelimitfilter
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: RateLimitFilter allows the user to limit the number of incoming
@@ -177,3 +181,4 @@ spec:
         type: object
     served: true
     storage: true
+    subresources: {}

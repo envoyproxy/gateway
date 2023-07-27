@@ -1,0 +1,13 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: first-route
+  name: first-route
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

@@ -16,14 +16,19 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // XdsResources represents all the xds resources
 type XdsResources = map[resourcev3.Type][]types.Resource
 
+type EnvoyPatchPolicyStatuses []*ir.EnvoyPatchPolicyStatus
+
 // ResourceVersionTable holds all the translated xds resources
 type ResourceVersionTable struct {
 	XdsResources
+	EnvoyPatchPolicyStatuses
 }
 
 // DeepCopyInto copies the contents into the output object

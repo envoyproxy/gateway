@@ -17,6 +17,13 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   telemetry:
+    metrics:
+      prometheus: {}
+      sinks:
+        - type: OpenTelemetry
+          openTelemetry:
+            host: otel-collector.monitoring.svc.cluster.local
+            port: 4317
     accessLog:
       settings:
         - format:

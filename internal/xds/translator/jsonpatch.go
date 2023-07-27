@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/status"
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -29,232 +30,264 @@ const (
 )
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
-func processJSONPatches(tCtx *types.ResourceVersionTable, jsonPatches []*ir.JSONPatchConfig) error {
+func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*ir.EnvoyPatchPolicy) error {
 	var errs error
 	m := protojson.MarshalOptions{
 		UseProtoNames: true,
 	}
 
-	for _, p := range jsonPatches {
-		var (
-			listener     *listenerv3.Listener
-			routeConfig  *routev3.RouteConfiguration
-			cluster      *clusterv3.Cluster
-			endpoint     *endpointv3.ClusterLoadAssignment
-			resourceJSON []byte
-			err          error
-		)
+	for _, e := range envoyPatchPolicies {
+		for _, p := range e.JSONPatches {
+			var (
+				listener     *listenerv3.Listener
+				routeConfig  *routev3.RouteConfiguration
+				cluster      *clusterv3.Cluster
+				endpoint     *endpointv3.ClusterLoadAssignment
+				resourceJSON []byte
+				err          error
+			)
 
-		// If Path is "" and op is "add", unmarshal and add the patch as a complete
-		// resource
-		if p.Operation.Op == AddOperation && p.Operation.Path == EmptyPath {
+			// If Path is "" and op is "add", unmarshal and add the patch as a complete
+			// resource
+			if p.Operation.Op == AddOperation && p.Operation.Path == EmptyPath {
+				// Convert patch to JSON
+				// The patch library expects an array so convert it into one
+				y, err := yaml.Marshal(p.Operation.Value)
+				if err != nil {
+					msg := fmt.Sprintf("unable to marshal patch %+v, err: %s", p.Operation.Value, err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				jsonBytes, err := yaml.YAMLToJSON(y)
+				if err != nil {
+					msg := fmt.Sprintf("unable to convert patch to json %s, err: %s", string(y), err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				switch p.Type {
+				case string(resourcev3.ListenerType):
+					temp := &listenerv3.Listener{}
+					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+					if err = tCtx.AddXdsResource(resourcev3.ListenerType, temp); err != nil {
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+
+				case string(resourcev3.RouteType):
+					temp := &routev3.RouteConfiguration{}
+					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+					if err = tCtx.AddXdsResource(resourcev3.RouteType, temp); err != nil {
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+
+				case string(resourcev3.ClusterType):
+					temp := &clusterv3.Cluster{}
+					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+					if err = tCtx.AddXdsResource(resourcev3.ClusterType, temp); err != nil {
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+
+				case string(resourcev3.EndpointType):
+					temp := &endpointv3.ClusterLoadAssignment{}
+					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v", p.Operation.Value)
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+					if err = tCtx.AddXdsResource(resourcev3.EndpointType, temp); err != nil {
+						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+						continue
+					}
+
+				}
+
+				// Skip further processing
+				continue
+			}
+			// Find the resource to patch and convert it to JSON
+			switch p.Type {
+			case string(resourcev3.ListenerType):
+				if listener = findXdsListener(tCtx, p.Name); listener == nil {
+					msg := fmt.Sprintf("unable to find xds resource %s: %s", p.Type, p.Name)
+					status.SetEnvoyPatchPolicyResourceNotFound(e.Status, msg)
+					continue
+				}
+
+				if resourceJSON, err = m.Marshal(listener); err != nil {
+					err := fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+
+			case string(resourcev3.RouteType):
+				if routeConfig = findXdsRouteConfig(tCtx, p.Name); routeConfig == nil {
+					msg := fmt.Sprintf("unable to find xds resource %s: %s", p.Type, p.Name)
+					status.SetEnvoyPatchPolicyResourceNotFound(e.Status, msg)
+					continue
+				}
+
+				if resourceJSON, err = m.Marshal(routeConfig); err != nil {
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+
+			case string(resourcev3.ClusterType):
+				if cluster = findXdsCluster(tCtx, p.Name); cluster == nil {
+					msg := fmt.Sprintf("unable to find xds resource %s: %s", p.Type, p.Name)
+					status.SetEnvoyPatchPolicyResourceNotFound(e.Status, msg)
+					continue
+				}
+
+				if resourceJSON, err = m.Marshal(cluster); err != nil {
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+			case string(resourcev3.EndpointType):
+				if endpoint = findXdsEndpoint(tCtx, p.Name); endpoint == nil {
+					msg := fmt.Sprintf("unable to find xds resource %s: %s", p.Type, p.Name)
+					status.SetEnvoyPatchPolicyResourceNotFound(e.Status, msg)
+					continue
+				}
+				if resourceJSON, err = m.Marshal(endpoint); err != nil {
+					err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
+					errs = multierror.Append(errs, err)
+					continue
+				}
+			}
+
 			// Convert patch to JSON
 			// The patch library expects an array so convert it into one
-			y, err := yaml.Marshal(p.Operation.Value)
+			y, err := yaml.Marshal([]ir.JSONPatchOperation{p.Operation})
 			if err != nil {
-				err := fmt.Errorf("unable to marshal patch %+v, err: %v", p.Operation.Value, err)
-				errs = multierror.Append(errs, err)
+				msg := fmt.Sprintf("unable to marshal patch %+v, err: %s", p.Operation, err.Error())
+				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 				continue
 			}
 			jsonBytes, err := yaml.YAMLToJSON(y)
 			if err != nil {
-				err := fmt.Errorf("unable to convert patch to json %s, err: %v", string(y), err)
-				errs = multierror.Append(errs, err)
+				msg := fmt.Sprintf("unable to convert patch to json %s, err: %s", string(y), err.Error())
+				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 				continue
 			}
+
+			patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
+			if err != nil {
+				msg := fmt.Sprintf("unable to decode patch %s, err: %s", string(jsonBytes), err.Error())
+				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+				continue
+			}
+
+			// Apply patch
+			opts := jsonpatchv5.NewApplyOptions()
+			opts.EnsurePathExistsOnAdd = true
+			modifiedJSON, err := patchObj.ApplyWithOptions(resourceJSON, opts)
+			if err != nil {
+				msg := fmt.Sprintf("unable to apply patch:\n%s on resource:\n%s, err: %s", string(jsonBytes), string(resourceJSON), err.Error())
+				status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+				continue
+			}
+
+			// Unmarshal back to typed resource
+			// Use a temp staging variable that can be marshalled
+			// into and validated before saving it into the xds output resource
 			switch p.Type {
 			case string(resourcev3.ListenerType):
 				temp := &listenerv3.Listener{}
-				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
+				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
-
-				if err := tCtx.AddXdsResource(resourcev3.ListenerType, temp); err != nil {
-					return err
+				if err = temp.Validate(); err != nil {
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = deepCopyPtr(temp, listener); err != nil {
+					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					errs = multierror.Append(errs, err)
+					continue
 				}
 			case string(resourcev3.RouteType):
 				temp := &routev3.RouteConfiguration{}
-				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
+				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
-
-				if err := tCtx.AddXdsResource(resourcev3.RouteType, temp); err != nil {
-					return err
+				if err = temp.Validate(); err != nil {
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = deepCopyPtr(temp, routeConfig); err != nil {
+					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					errs = multierror.Append(errs, err)
+					continue
 				}
 			case string(resourcev3.ClusterType):
 				temp := &clusterv3.Cluster{}
-				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
-					errs = multierror.Append(errs, err)
+				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
-
-				if err := tCtx.AddXdsResource(resourcev3.ClusterType, temp); err != nil {
-					return err
+				if err = temp.Validate(); err != nil {
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = deepCopyPtr(temp, cluster); err != nil {
+					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
+					errs = multierror.Append(errs, err)
+					continue
 				}
 			case string(resourcev3.EndpointType):
 				temp := &endpointv3.ClusterLoadAssignment{}
-				if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-					err := fmt.Errorf("unable to unmarshal xds resource %+v, err:%v", p.Operation.Value, err)
+				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
+					msg := fmt.Sprintf("unable to unmarshal xds resource %s", string(modifiedJSON))
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = temp.Validate(); err != nil {
+					msg := fmt.Sprintf("validation failed for xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
+					continue
+				}
+				if err = deepCopyPtr(temp, endpoint); err != nil {
+					err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
 					errs = multierror.Append(errs, err)
 					continue
 				}
-
-				if err := tCtx.AddXdsResource(resourcev3.EndpointType, temp); err != nil {
-					return err
-				}
-			}
-
-			// Skip further processing
-			continue
-		}
-		// Find the resource to patch and convert it to JSON
-		switch p.Type {
-		case string(resourcev3.ListenerType):
-			if listener = findXdsListener(tCtx, p.Name); listener == nil {
-				err = fmt.Errorf("unable to find xds resource %s: %s", p.Type, p.Name)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if resourceJSON, err = m.Marshal(listener); err != nil {
-				err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-		case string(resourcev3.RouteType):
-			if routeConfig = findXdsRouteConfig(tCtx, p.Name); routeConfig == nil {
-				err := fmt.Errorf("unable to find xds resource %s: %s", p.Type, p.Name)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if resourceJSON, err = m.Marshal(routeConfig); err != nil {
-				err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-		case string(resourcev3.ClusterType):
-			if cluster := findXdsCluster(tCtx, p.Name); cluster == nil {
-				err := fmt.Errorf("unable to find xds resource %s: %s", p.Type, p.Name)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if resourceJSON, err = m.Marshal(cluster); err != nil {
-				err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-		case string(resourcev3.EndpointType):
-			endpoint = findXdsEndpoint(tCtx, p.Name)
-			if endpoint == nil {
-				err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-			if resourceJSON, err = m.Marshal(endpoint); err != nil {
-				err = fmt.Errorf("unable to marshal xds resource %s: %s, err:%v", p.Type, p.Name, err)
-				errs = multierror.Append(errs, err)
-				continue
 			}
 		}
 
-		// Convert patch to JSON
-		// The patch library expects an array so convert it into one
-		y, err := yaml.Marshal([]ir.JSONPatchOperation{p.Operation})
-		if err != nil {
-			err := fmt.Errorf("unable to marshal patch %+v, err: %v", p.Operation, err)
-			errs = multierror.Append(errs, err)
-			continue
-		}
-		jsonBytes, err := yaml.YAMLToJSON(y)
-		if err != nil {
-			err := fmt.Errorf("unable to convert patch to json %s, err: %v", string(y), err)
-			errs = multierror.Append(errs, err)
-			continue
-		}
+		// Set Programmed condition if not yet set
+		status.SetEnvoyPatchPolicyProgrammedIfUnset(e.Status, "successfully applied patches.")
 
-		patchObj, err := jsonpatchv5.DecodePatch(jsonBytes)
-		if err != nil {
-			err := fmt.Errorf("unable to decode patch %s, err: %v", string(jsonBytes), err)
-			errs = multierror.Append(errs, err)
-			continue
-		}
+		// Set output context
 
-		// Apply patch
-		opts := jsonpatchv5.NewApplyOptions()
-		opts.EnsurePathExistsOnAdd = true
-		modifiedJSON, err := patchObj.ApplyWithOptions(resourceJSON, opts)
-		if err != nil {
-			err := fmt.Errorf("unable to apply patch:\n%s on resource:\n%s, err: %v", string(jsonBytes), string(resourceJSON), err)
-			errs = multierror.Append(errs, err)
-			continue
-		}
-
-		// Unmarshal back to typed resource
-		// Use a temp staging variable that can be marshalled
-		// into and validated before saving it into the xds output resource
-		switch p.Type {
-		case string(resourcev3.ListenerType):
-			temp := &listenerv3.Listener{}
-			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if err = deepCopyPtr(temp, listener); err != nil {
-				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-		case string(resourcev3.RouteType):
-			temp := &routev3.RouteConfiguration{}
-			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if err = deepCopyPtr(temp, routeConfig); err != nil {
-				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-		case string(resourcev3.ClusterType):
-			temp := &clusterv3.Cluster{}
-			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if err = deepCopyPtr(temp, cluster); err != nil {
-				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-		case string(resourcev3.EndpointType):
-			temp := &endpointv3.ClusterLoadAssignment{}
-			if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-				err := fmt.Errorf("unable to unmarshal xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-
-			if err = deepCopyPtr(temp, endpoint); err != nil {
-				err := fmt.Errorf("unable to copy xds resource %s, err:%v", string(modifiedJSON), err)
-				errs = multierror.Append(errs, err)
-				continue
-			}
-		}
+		tCtx.EnvoyPatchPolicyStatuses = append(tCtx.EnvoyPatchPolicyStatuses, &e.EnvoyPatchPolicyStatus)
 	}
 	return errs
 }

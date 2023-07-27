@@ -58,9 +58,8 @@ type Xds struct {
 	TCP []*TCPListener `json:"tcp,omitempty" yaml:"tcp,omitempty"`
 	// UDP Listeners exposed by the gateway.
 	UDP []*UDPListener `json:"udp,omitempty" yaml:"udp,omitempty"`
-	// JSONPatches are the JSON Patches that
-	// are to be applied to generaed Xds linked to the gateway.
-	JSONPatches []*JSONPatchConfig `json:"jsonPatches,omitempty" yaml:"jsonPatches,omitempty"`
+	// EnvoyPatchPolicies is the intermediate representation of the EnvoyPatchPolicy resource
+	EnvoyPatchPolicies []*EnvoyPatchPolicy `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 }
 
 // Validate the fields within the Xds structure.
@@ -798,6 +797,24 @@ type OpenTelemetryAccessLog struct {
 	Host       string            `json:"host" yaml:"host"`
 	Port       uint32            `json:"port" yaml:"port"`
 	Resources  map[string]string `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+// EnvoyPatchPolicy defines the intermediate representation of the EnvoyPatchPolicy resource.
+// +k8s:deepcopy-gen=true
+type EnvoyPatchPolicy struct {
+	EnvoyPatchPolicyStatus
+	// JSONPatches are the JSON Patches that
+	// are to be applied to generaed Xds linked to the gateway.
+	JSONPatches []*JSONPatchConfig `json:"jsonPatches,omitempty" yaml:"jsonPatches,omitempty"`
+}
+
+// EnvoyPatchPolicyStatus defines the status reference for the EnvoyPatchPolicy resource
+// +k8s:deepcopy-gen=true
+type EnvoyPatchPolicyStatus struct {
+	Name      string `json:"name,omitempty" yaml:"name"`
+	Namespace string `json:"namespace,omitempty" yaml:"namespace"`
+	// Status of the EnvoyPatchPolicy
+	Status *egv1a1.EnvoyPatchPolicyStatus `json:"status,omitempty" yaml:"status,omitempty"`
 }
 
 // JSONPatchConfig defines the configuration for patching a Envoy xDS Resource
