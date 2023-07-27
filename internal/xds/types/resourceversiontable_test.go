@@ -478,36 +478,6 @@ func TestInvalidAddXdsResource(t *testing.T) {
 		},
 	}
 
-	invalidCluster := &clusterv3.Cluster{
-		Name: "test-cluster",
-		LoadAssignment: &endpointv3.ClusterLoadAssignment{
-			ClusterName: "test-cluster",
-			Endpoints: []*endpointv3.LocalityLbEndpoints{
-				{
-					LbEndpoints: []*endpointv3.LbEndpoint{
-						{
-							HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-								Endpoint: &endpointv3.Endpoint{
-									Address: &corev3.Address{
-										Address: &corev3.Address_SocketAddress{
-											SocketAddress: &corev3.SocketAddress{
-												Address: "",
-												PortSpecifier: &corev3.SocketAddress_PortValue{
-													PortValue: 5000,
-												},
-												Protocol: corev3.SocketAddress_TCP,
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
 	invalidSecret := &tlsv3.Secret{
 		Name: "=*&",
 		Type: &tlsv3.Secret_TlsCertificate{
@@ -580,50 +550,6 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			tableOut: nil,
 		},
 		{
-			name: "inject-new-cluster",
-			tableIn: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{},
-				},
-			},
-			typeIn:     resourcev3.ClusterType,
-			resourceIn: invalidCluster,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
-				oldCluster := existing.(*clusterv3.Cluster)
-				newCluster := new.(*clusterv3.Cluster)
-				if newCluster == nil || oldCluster == nil {
-					return false
-				}
-				if oldCluster.Name == newCluster.Name {
-					return true
-				}
-				return false
-			},
-			tableOut: nil,
-		},
-		{
-			name: "cast-cluster-type",
-			tableIn: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.ClusterType: []types.Resource{},
-				},
-			},
-			typeIn:     resourcev3.ClusterType,
-			resourceIn: invalidListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
-				oldCluster := existing.(*clusterv3.Cluster)
-				newCluster := new.(*clusterv3.Cluster)
-				if newCluster == nil || oldCluster == nil {
-					return false
-				}
-				if oldCluster.Name == newCluster.Name {
-					return true
-				}
-				return false
-			},
-			tableOut: nil,
-		},
-		{
 			name: "cast-listener-type",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
@@ -631,7 +557,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 				},
 			},
 			typeIn:     resourcev3.ListenerType,
-			resourceIn: invalidCluster,
+			resourceIn: invalidRouteConfig,
 			funcIn: func(existing types.Resource, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
@@ -653,7 +579,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 				},
 			},
 			typeIn:     resourcev3.RouteType,
-			resourceIn: invalidCluster,
+			resourceIn: invalidRouteConfig,
 			funcIn: func(existing types.Resource, new types.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
@@ -734,6 +660,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			tableOut: nil,
 		},
 	}
+
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {

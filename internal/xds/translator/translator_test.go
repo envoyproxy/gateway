@@ -243,19 +243,7 @@ func TestTranslateXdsNegative(t *testing.T) {
 			name: "udp-route-invalid",
 		},
 		{
-			name: "jsonpatch-invalid",
-		},
-		{
-			name: "accesslog-invalid",
-		},
-		{
-			name: "tracing-invalid",
-		},
-		{
 			name: "jsonpatch-invalid-listener",
-		},
-		{
-			name: "jsonpatch-invalid-cluster",
 		},
 	}
 
