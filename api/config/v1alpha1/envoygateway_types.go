@@ -185,7 +185,7 @@ type KubernetesWatchMode struct {
 	// GatewayClass that it is linked to.
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
-	Namespaces []string `json:"namespaces"`
+	Namespaces []string `json:"namespaces,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
