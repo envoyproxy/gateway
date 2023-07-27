@@ -50,6 +50,12 @@ spec:
                   You can edit this configuration, and rerun `egctl x translate` to
                   ensure there are no validation errors.
                 type: string
+              concurrency:
+                description: Concurrency defines the number of worker threads to run.
+                  If unset, the default back to Envoy default value which the number
+                  of hardware threads on the machine.
+                format: int32
+                type: integer
               logging:
                 default:
                   level:

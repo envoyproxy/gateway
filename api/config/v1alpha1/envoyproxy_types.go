@@ -57,6 +57,12 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Bootstrap *string `json:"bootstrap,omitempty"`
+
+	// Concurrency defines the number of worker threads to run. If unset, the default back to
+	// Envoy default value which the number of hardware threads on the machine.
+	//
+	// +optional
+	Concurrency *int32 `json:"concurrency,omitempty"`
 }
 
 type ProxyTelemetry struct {
