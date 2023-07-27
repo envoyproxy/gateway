@@ -33,7 +33,7 @@ func init() {
 var MetricTest = suite.ConformanceTest{
 	ShortName:   "Proxy Metrics",
 	Description: "Make sure metric is working",
-	Manifests:   []string{"testdata/metric-prometheus.yaml"},
+	Manifests:   []string{"testdata/metric.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("prometheus", func(t *testing.T) {
 			ns := "gateway-conformance-infra"
@@ -56,7 +56,44 @@ var MetricTest = suite.ConformanceTest{
 			// let's check the metric
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
-					if err := ScrapeMetrics(t, suite.Client); err != nil {
+					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
+						Namespace: "envoy-gateway-system",
+						Name:      "same-namespace-gw-metrics",
+					}, "/stats/prometheus"); err != nil {
+						t.Logf("failed to get metric: %v", err)
+						return false, nil
+					}
+					return true, nil
+				}); err != nil {
+				t.Errorf("failed to scrape metrics: %v", err)
+			}
+		})
+
+		t.Run("otel", func(t *testing.T) {
+			ns := "gateway-conformance-infra"
+			routeNN := types.NamespacedName{Name: "metric-prometheus", Namespace: ns}
+			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
+			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+
+			expectedResponse := httputils.ExpectedResponse{
+				Request: httputils.Request{
+					Path: "/prom",
+				},
+				Response: httputils.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+			// make sure listener is ready
+			httputils.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, expectedResponse)
+
+			// let's check the metric
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+				func(_ context.Context) (done bool, err error) {
+					if err := ScrapeMetrics(t, suite.Client, types.NamespacedName{
+						Namespace: "monitoring",
+						Name:      "otel-collecot-prometheus",
+					}, "/metrics"); err != nil {
 						t.Logf("failed to get metric: %v", err)
 						return false, nil
 					}
@@ -68,12 +105,9 @@ var MetricTest = suite.ConformanceTest{
 	},
 }
 
-func ScrapeMetrics(t *testing.T, c client.Client) error {
+func ScrapeMetrics(t *testing.T, c client.Client, nn types.NamespacedName, path string) error {
 	svc := corev1.Service{}
-	if err := c.Get(context.Background(), types.NamespacedName{
-		Namespace: "envoy-gateway-system",
-		Name:      "same-namespace-gw-metrics",
-	}, &svc); err != nil {
+	if err := c.Get(context.Background(), nn, &svc); err != nil {
 		return err
 	}
 	host := ""
@@ -83,7 +117,7 @@ func ScrapeMetrics(t *testing.T, c client.Client) error {
 			break
 		}
 	}
-	url := fmt.Sprintf("http://%s:19001/stats/prometheus", host)
+	url := fmt.Sprintf("http://%s:19001%s", host, path)
 	t.Logf("try to request: %s", url)
 
 	httpClient := http.Client{

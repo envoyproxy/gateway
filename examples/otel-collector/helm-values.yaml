@@ -2,8 +2,10 @@ fullnameOverride: otel-collector
 mode: deployment
 config:
   exporters:
+    prometheus:
+      endpoint: 0.0.0.0:19001
     logging:
-      loglevel: debug
+      verbosity: detailed
     loki:
       endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
     otlp:
@@ -34,6 +36,11 @@ config:
     extensions:
       - health_check
     pipelines:
+      metrics:
+        exporters:
+          - prometheus
+        receivers:
+          - otlp
       logs:
         exporters:
           - loki

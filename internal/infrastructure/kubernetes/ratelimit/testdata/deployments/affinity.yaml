@@ -7,6 +7,11 @@ metadata:
     app.kubernetes.io/managed-by: envoy-gateway
   name: envoy-ratelimit
   namespace: envoy-gateway-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    kind: Deployment
+    name: envoy-gateway
+    uid: test-owner-reference-uid-for-deployment
 spec:
   replicas: 2
   strategy:
@@ -110,3 +115,6 @@ spec:
       - name: certs
         secret:
           secretName: envoy-rate-limit
+          defaultMode: 420
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
