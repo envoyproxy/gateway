@@ -71,7 +71,7 @@ spec:
           value: "/certs/tls.key"
         - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
           value: "/certs/ca.crt"
-        image: envoyproxy/ratelimit:master
+        image: envoyproxy/ratelimit:e059638d
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:

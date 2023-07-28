@@ -18,9 +18,9 @@ const (
 	// DefaultDeploymentMemoryResourceRequests for deployment memory resource
 	DefaultDeploymentMemoryResourceRequests = "512Mi"
 	// DefaultEnvoyProxyImage is the default image used by envoyproxy
-	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
+	DefaultEnvoyProxyImage = "envoyproxy/envoy:v1.27-latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
-	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
+	DefaultRateLimitImage = "envoyproxy/ratelimit:e059638d"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
