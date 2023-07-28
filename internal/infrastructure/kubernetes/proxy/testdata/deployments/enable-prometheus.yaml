@@ -159,6 +159,7 @@ spec:
                       resource_api_version: V3
                     name: runtime-0
             - --log-level warn
+            - --cpuset-threads  
           command:
             - envoy
           env:
