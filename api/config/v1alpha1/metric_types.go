@@ -10,6 +10,13 @@ type ProxyMetrics struct {
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
+	// ProxyStatMatcher defines configuration for reporting custom Envoy stats.
+	// To redurece memory and CPU overhead from Envoy stats system.
+	ProxyStatsMatcher *StatsMatcher `json:"statsMatcher,omitempty"`
+	// HistogramBucketSettings defines rules for setting the histogram buckets.
+	// Default buckets are used if not set. See more details at
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
+	HistogramBucketSettings []HistogramBucketSetting `json:"histogramBucketSettings,omitempty"`
 }
 
 type MetricSinkType string
@@ -27,6 +34,26 @@ type MetricSink struct {
 	// OpenTelemetry defines the configuration for OpenTelemetry sink.
 	// It's required if the sink type is OpenTelemetry.
 	OpenTelemetry *OpenTelemetrySink `json:"openTelemetry,omitempty"`
+}
+
+type StatsMatcher struct {
+	// Proxy stats name prefix matcher for inclusion.
+	InclusionPrefixes []string `json:"inclusionPrefixes,omitempty"`
+	// Proxy stats name suffix matcher for inclusion.
+	InclusionSuffixes []string `json:"inclusionSuffixes,omitempty"`
+	// Proxy stats name regexps matcher for inclusion.
+	InclusionRegexps []string `json:"inclusionRegexps,omitempty"`
+}
+
+type HistogramBucketSetting struct {
+	// Regex defines the regex for the stats name.
+	// This use RE2 engine.
+	// +kubebuilder:validation:Pattern=^/.*$
+	// +kubebuilder:validation:MinLength=1
+	Regex string `json:"regex"`
+	// Buckets defines the buckets for the histogram.
+	// +kubebuilder:validation:MinItems=1
+	Buckets []float32 `json:"buckets"`
 }
 
 type OpenTelemetrySink struct {

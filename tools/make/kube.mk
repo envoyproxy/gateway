@@ -30,7 +30,7 @@ CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/
 .PHONY: manifests
 manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
+	$(tools/controller-gen) crd:allowDangerousTypes=true webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.

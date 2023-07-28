@@ -3926,6 +3926,29 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      histogramBucketSettings:
+                        description: HistogramBucketSettings defines rules for setting
+                          the histogram buckets. Default buckets are used if not set.
+                          See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
+                        items:
+                          properties:
+                            buckets:
+                              description: Buckets defines the buckets for the histogram.
+                              items:
+                                type: number
+                              minItems: 1
+                              type: array
+                            regex:
+                              description: Regex defines the regex for the stats name.
+                                This use RE2 engine.
+                              minLength: 1
+                              pattern: ^/.*$
+                              type: string
+                          required:
+                          - buckets
+                          - regex
+                          type: object
+                        type: array
                       prometheus:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
@@ -3965,6 +3988,27 @@ spec:
                           - type
                           type: object
                         type: array
+                      statsMatcher:
+                        description: ProxyStatMatcher defines configuration for reporting
+                          custom Envoy stats. To redurece memory and CPU overhead
+                          from Envoy stats system.
+                        properties:
+                          inclusionPrefixes:
+                            description: Proxy stats name prefix matcher for inclusion.
+                            items:
+                              type: string
+                            type: array
+                          inclusionRegexps:
+                            description: Proxy stats name regexps matcher for inclusion.
+                            items:
+                              type: string
+                            type: array
+                          inclusionSuffixes:
+                            description: Proxy stats name suffix matcher for inclusion.
+                            items:
+                              type: string
+                            type: array
+                        type: object
                     type: object
                   tracing:
                     description: Tracing defines tracing configuration for managed
