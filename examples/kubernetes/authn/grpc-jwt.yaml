@@ -14,22 +14,22 @@ kind: GRPCRoute
 metadata:
   name: yages
   labels:
-    example: grpc-routing        
+    example: grpc-routing
 spec:
   parentRefs:
-    - name: example-gateway 
+  - name: example-gateway
   hostnames:
-    - "grpc-example.com"
+  - "grpc-example.com"
   rules:
-    - backendRefs:
-        - group: ""
-          kind: Service
-          name: yages 
-          port: 9000
-          weight: 1
-      filters:
-      - extensionRef:
-          group: gateway.envoyproxy.io
-          kind: AuthenticationFilter
-          name: jwt-example
-        type: ExtensionRef
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: yages
+      port: 9000
+      weight: 1
+    filters:
+    - extensionRef:
+        group: gateway.envoyproxy.io
+        kind: AuthenticationFilter
+        name: jwt-example
+      type: ExtensionRef
