@@ -268,6 +268,14 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 	}
 }
 
+// IsAuthnGRPCFilter returns true if the provided filter is an AuthenticationFilter.
+func IsAuthnGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
+	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
+}
+
 // GatewayOwnerLabels returns the Gateway Owner labels using
 // the provided namespace and name as the values.
 func GatewayOwnerLabels(namespace, name string) map[string]string {
