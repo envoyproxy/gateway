@@ -39,7 +39,7 @@ func TestDeleteRateLimitService(t *testing.T) {
 			kube := newTestInfra(t)
 
 			kube.EnvoyGateway.RateLimit = rl
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, nil)
 			err := kube.createOrUpdateService(context.Background(), r)
 			require.NoError(t, err)
 
