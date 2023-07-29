@@ -11,8 +11,10 @@ in different namespaces, linking a GatewayClass to each of them.
 
 #### Kubernetes
 
-* The current deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
+* The default deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
+* Envoy Gateway also supports **Namespaced** deployment mode, you can watch resources in the specific namespaces by assigning
+`EnvoyGateway.provider.kubernetes.watch.namespaces` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
 * Support for alternate deployment modes is being tracked [here](https://github.com/envoyproxy/gateway/issues/1117).
 
 ### Multi-tenancy
@@ -27,6 +29,12 @@ by the `marketing` and `product` teams in separate namespaces.
 
 ```
 helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n marketing --create-namespace
+```
+
+* If you want to deploy Envoy Gateway in Namespaced mode, and watches resources only in the `marketing` namespace, you can specify a namespace by running:
+
+```
+helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller --set config.envoyGateway.provider.kubernetes.watch.namespaces={marketing} eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n marketing --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
@@ -200,6 +208,12 @@ Handling connection for 8888
 
 ```
 helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n product --create-namespace
+```
+
+* If you want to deploy Envoy Gateway in Namespaced mode, and watches resources only in the `product` namespace, you can specify a namespace by running:
+
+```
+helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller --set config.envoyGateway.provider.kubernetes.watch.namespaces={product} eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n product --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
