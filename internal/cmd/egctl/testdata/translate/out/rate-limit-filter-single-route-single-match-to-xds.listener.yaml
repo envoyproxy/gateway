@@ -1,5 +1,5 @@
 xds:
-  envoy-gateway-system-eg:
+  envoy-gateway-system/eg:
     '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
     dynamicListeners:
     - activeState:
@@ -46,7 +46,7 @@ xds:
                 - name: envoy.filters.http.ratelimit
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
-                    domain: envoy-gateway-system-eg-http
+                    domain: envoy-gateway-system/eg/http
                     enableXRatelimitHeaders: DRAFT_VERSION_03
                     rateLimitService:
                       grpcService:
@@ -63,11 +63,10 @@ xds:
                   configSource:
                     ads: {}
                     resourceApiVersion: V3
-                  routeConfigName: envoy-gateway-system-eg-http
+                  routeConfigName: envoy-gateway-system/eg/http
                 statPrefix: http
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
-          name: envoy-gateway-system-eg-http
+          name: envoy-gateway-system/eg/http
           perConnectionBufferLimitBytes: 32768
-

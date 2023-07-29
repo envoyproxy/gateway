@@ -77,13 +77,13 @@ spec:
   type: Global
   global:
     rules:
-    - clientSelectors:
-      - headers:
-        - name: x-user-id
-          value: one
-      limit:
-        requests: 3
-        unit: Hour
+      - clientSelectors:
+          - headers:
+              - name: x-user-id
+                value: one
+        limit:
+          requests: 3
+          unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
@@ -91,22 +91,22 @@ metadata:
   name: http-ratelimit
 spec:
   parentRefs:
-  - name: eg
+    - name: eg
   hostnames:
-  - ratelimit.example 
+    - "ratelimit.example"
   rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-specific-user
-    backendRefs:
-    - group: ""
-      kind: Service
-      name: backend
-      port: 3000
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: RateLimitFilter
+            name: ratelimit-specific-user
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: backend
+          port: 3000

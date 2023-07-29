@@ -1,6 +1,6 @@
 {
     "xds": {
-      "envoy-gateway-system-eg": {
+      "envoy-gateway-system/eg": {
         "configs": [
           {
             "@type": "type.googleapis.com/envoy.admin.v3.BootstrapConfigDump",
@@ -183,7 +183,7 @@
               {
                 "endpointConfig": {
                   "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                  "clusterName": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example",
+                  "clusterName": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",
                   "endpoints": [
                     {
                       "lbEndpoints": [
@@ -222,9 +222,9 @@
                       "ads": {},
                       "resourceApiVersion": "V3"
                     },
-                    "serviceName": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example"
+                    "serviceName": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example"
                   },
-                  "name": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example",
+                  "name": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",
                   "outlierDetection": {},
                   "perConnectionBufferLimitBytes": 32768,
                   "type": "EDS"
@@ -367,7 +367,7 @@
                                 "name": "envoy.filters.http.ratelimit",
                                 "typedConfig": {
                                   "@type": "type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit",
-                                  "domain": "envoy-gateway-system-eg-http",
+                                  "domain": "envoy-gateway-system/eg/http",
                                   "enableXRatelimitHeaders": "DRAFT_VERSION_03",
                                   "rateLimitService": {
                                     "grpcService": {
@@ -394,7 +394,7 @@
                                 "ads": {},
                                 "resourceApiVersion": "V3"
                               },
-                              "routeConfigName": "envoy-gateway-system-eg-http"
+                              "routeConfigName": "envoy-gateway-system/eg/http"
                             },
                             "statPrefix": "http",
                             "upgradeConfigs": [
@@ -407,7 +407,7 @@
                         }
                       ]
                     },
-                    "name": "envoy-gateway-system-eg-http",
+                    "name": "envoy-gateway-system/eg/http",
                     "perConnectionBufferLimitBytes": 32768
                   }
                 }
@@ -421,13 +421,13 @@
                 "routeConfig": {
                   "@type": "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
                   "ignorePortInHostMatching": true,
-                  "name": "envoy-gateway-system-eg-http",
+                  "name": "envoy-gateway-system/eg/http",
                   "virtualHosts": [
                     {
                       "domains": [
                         "*"
                       ],
-                      "name": "envoy-gateway-system-eg-http",
+                      "name": "envoy-gateway-system/eg/http",
                       "routes": [
                         {
                           "match": {
@@ -441,16 +441,16 @@
                             ],
                             "prefix": "/"
                           },
-                          "name": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example",
+                          "name": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",
                           "route": {
-                            "cluster": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example",
+                            "cluster": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",
                             "rateLimits": [
                               {
                                 "actions": [
                                   {
                                     "headerValueMatch": {
-                                      "descriptorKey": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example-key-rule-0-match-0",
-                                      "descriptorValue": "envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example-value-rule-0-match-0",
+                                      "descriptorKey": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example-key-rule-0-match-0",
+                                      "descriptorValue": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example-value-rule-0-match-0",
                                       "expectMatch": true,
                                       "headers": [
                                         {
@@ -478,3 +478,4 @@
       }
     }
   }
+  
