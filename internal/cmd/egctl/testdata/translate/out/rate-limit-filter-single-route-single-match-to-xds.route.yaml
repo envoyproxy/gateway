@@ -1,0 +1,33 @@
+xds:
+  envoy-gateway-system-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+    dynamicRouteConfigs:
+    - routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
+        name: envoy-gateway-system-eg-http
+        virtualHosts:
+        - domains:
+          - '*'
+          name: envoy-gateway-system-eg-http
+          routes:
+          - match:
+              headers:
+              - name: :authority
+                stringMatch:
+                  exact: ratelimit.example
+              prefix: /
+            name: envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example
+            route:
+              cluster: envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example
+              rateLimits:
+              - actions:
+                - headerValueMatch:
+                    descriptorKey: envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example-key-rule-0-match-0
+                    descriptorValue: envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example-value-rule-0-match-0
+                    expectMatch: true
+                    headers:
+                    - name: x-user-id
+                      stringMatch:
+                        exact: one
+

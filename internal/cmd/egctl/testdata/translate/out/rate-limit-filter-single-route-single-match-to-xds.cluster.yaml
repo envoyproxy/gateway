@@ -1,0 +1,61 @@
+xds:
+  envoy-gateway-system-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
+    dynamicActiveClusters:
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          serviceName: envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example
+        name: envoy-gateway-system-http-ratelimit-rule-0-match-0-ratelimit.example
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        type: EDS
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        dnsRefreshRate: 30s
+        loadAssignment:
+          clusterName: ratelimit_cluster
+          endpoints:
+          - lbEndpoints:
+            - endpoint:
+                address:
+                  socketAddress:
+                    address: envoy-ratelimit.envoy-gateway.svc.cluster.local
+                    portValue: 8081
+            loadBalancingWeight: 1
+            locality: {}
+        name: ratelimit_cluster
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        respectDnsTtl: true
+        transportSocket:
+          name: envoy.transport_sockets.tls
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+            commonTlsContext:
+              tlsCertificates:
+              - certificateChain:
+                  filename: /certs/tls.crt
+                privateKey:
+                  filename: /certs/tls.key
+              validationContext:
+                trustedCa:
+                  filename: /certs/ca.crt
+        type: STRICT_DNS
+        typedExtensionProtocolOptions:
+          envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+            '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+            explicitHttpConfig:
+              http2ProtocolOptions: {}
+
