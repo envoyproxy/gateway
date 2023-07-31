@@ -141,6 +141,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logLevel),
+		"--cpuset-threads",
 	}
 	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))

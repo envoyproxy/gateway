@@ -16,7 +16,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/grafana/tempo v1.5.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/common v0.42.0
+	github.com/prometheus/common v0.44.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.4
@@ -26,7 +26,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.0.0
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	google.golang.org/grpc v1.56.2
+	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.27.4
