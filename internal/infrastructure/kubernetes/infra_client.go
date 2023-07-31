@@ -10,6 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,4 +58,12 @@ func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error 
 	}
 
 	return nil
+}
+
+// GetUID retrieves the uid of one resource.
+func (cli *InfraClient) GetUID(ctx context.Context, key client.ObjectKey, current client.Object) (types.UID, error) {
+	if err := cli.Client.Get(ctx, key, current); err != nil {
+		return "", err
+	}
+	return current.GetUID(), nil
 }

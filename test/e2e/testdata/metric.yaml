@@ -33,3 +33,20 @@ spec:
       port: 19001
       targetPort: 19001
   type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collecot-prometheus
+  namespace: monitoring
+spec:
+  selector:
+    app.kubernetes.io/instance: otel-collector
+    app.kubernetes.io/name: opentelemetry-collector
+    component: standalone-collector
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 19001
+      targetPort: 19001
+  type: LoadBalancer
