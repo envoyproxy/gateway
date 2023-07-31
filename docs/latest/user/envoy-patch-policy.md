@@ -105,6 +105,7 @@ EOF
 ```
 
 * Lets edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
+
 ```
 kubectl patch httproute backend --type=json --patch '[{
    "op": "add",
