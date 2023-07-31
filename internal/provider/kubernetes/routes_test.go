@@ -634,7 +634,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "httproute with one authenticationfilter",
+			name: "grpcroute with one authenticationfilter",
 			routes: []*gwapiv1a2.GRPCRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
