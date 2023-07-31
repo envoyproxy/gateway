@@ -497,30 +497,6 @@ func TestProcessParamsRef(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "referenced envoyproxy does not exist",
-			gc: &gwapiv1b1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test",
-				},
-				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: gcCtrlName,
-					ParametersRef: &gwapiv1b1.ParametersReference{
-						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
-						Name:      "non-exist",
-						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
-					},
-				},
-			},
-			ep: &egcfgv1a1.EnvoyProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: config.DefaultNamespace,
-					Name:      "test",
-				},
-			},
-			expected: false,
-		},
-		{
 			name: "invalid gatewayclass parameters ref",
 			gc: &gwapiv1b1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{

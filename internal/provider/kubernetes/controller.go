@@ -298,15 +298,13 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	}
 
 	// Process the parametersRef of the accepted GatewayClass.
-	if acceptedGC.Spec.ParametersRef != nil {
-		if err := r.processParamsRef(ctx, acceptedGC, resourceTree); err != nil {
-			msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
-			if err := r.gatewayClassUpdater(ctx, acceptedGC, false, string(gwapiv1b1.GatewayClassReasonInvalidParameters), msg); err != nil {
-				r.log.Error(err, "unable to update GatewayClass status")
-			}
-			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
-			return reconcile.Result{}, err
+	if err := r.processParamsRef(ctx, acceptedGC, resourceTree); err != nil {
+		msg := fmt.Sprintf("%s: %v", status.MsgGatewayClassInvalidParams, err)
+		if err := r.gatewayClassUpdater(ctx, acceptedGC, false, string(gwapiv1b1.GatewayClassReasonInvalidParameters), msg); err != nil {
+			r.log.Error(err, "unable to update GatewayClass status")
 		}
+		r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
+		return reconcile.Result{}, err
 	}
 
 	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1b1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
@@ -1444,10 +1442,11 @@ func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
 
 // processParamsRef processes the parametersRef of the provided GatewayClass.
 func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1b1.GatewayClass, resourceTree *gatewayapi.Resources) error {
-	if !refsEnvoyProxy(gc) {
-		return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
+	if gc.Spec.ParametersRef != nil {
+		if !refsEnvoyProxy(gc) {
+			return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
+		}
 	}
-
 	epList := new(egcfgv1a1.EnvoyProxyList)
 	// The EnvoyProxy must be in the same namespace as EG.
 	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
@@ -1459,14 +1458,10 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		return nil
 	}
 
-	found := false
-	valid := false
-	var validationErr error
 	for i := range epList.Items {
 		ep := epList.Items[i]
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 		if classRefsEnvoyProxy(gc, &ep) {
-			found = true
 			if !gc.DeletionTimestamp.IsZero() {
 				if err := r.removeFinalizer(ctx, &ep); err != nil {
 					r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
@@ -1476,26 +1471,27 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 				return nil
 			}
 			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
-				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
-				continue
+				return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, err)
 			}
+
 			if err := r.addFinalizer(ctx, &ep); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed adding finalizer to envoy proxy %s",
 					ep.Name))
 				return err
 			}
-			valid = true
+
 			resourceTree.EnvoyProxy = &ep
 			break
 		}
-	}
 
-	if !found {
-		return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
-	}
-
-	if !valid {
-		return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
+		if slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
+			if err := r.removeFinalizer(ctx, &ep); err != nil {
+				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
+					ep.Name))
+				return err
+			}
+			return nil
+		}
 	}
 
 	return nil
