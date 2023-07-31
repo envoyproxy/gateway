@@ -20,6 +20,11 @@ not exposed by Envoy Gateway APIs today.
 
 ### Prerequistes
 
+#### Quickstart
+
+* Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
+
 #### Enable EnvoyPatchPolicy
 
 * By default EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
@@ -54,11 +59,6 @@ EOF
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
-#### Quickstart
-
-* Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
-Before proceeding, you should be able to query the example backend using HTTP.
-
 ## Customize Response
 
 * Lets use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
@@ -71,7 +71,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyPatchPolicy
 metadata:
-  name: ratelimit-patch-policy
+  name: custom-response-patch-policy
   namespace: default
 spec:
   targetRef:
