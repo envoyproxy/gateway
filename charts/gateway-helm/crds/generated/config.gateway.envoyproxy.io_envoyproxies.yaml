@@ -52,8 +52,7 @@ spec:
                 type: string
               concurrency:
                 description: Concurrency defines the number of worker threads to run.
-                  If unset, the default back to Envoy default value which the number
-                  of hardware threads on the machine.
+                  If unset, it defaults to the number of cpuset threads on the platform.
                 format: int32
                 type: integer
               logging:

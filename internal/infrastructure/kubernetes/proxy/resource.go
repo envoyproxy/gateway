@@ -144,13 +144,13 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		"--cpuset-threads",
 	}
 
-	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
-		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
-	}
-
 	if infra.Config != nil &&
 		infra.Config.Spec.Concurrency != nil {
 		args = append(args, fmt.Sprintf("--concurrency %d", *infra.Config.Spec.Concurrency))
+	}
+
+	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
+		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
 	}
 
 	containers := []corev1.Container{
