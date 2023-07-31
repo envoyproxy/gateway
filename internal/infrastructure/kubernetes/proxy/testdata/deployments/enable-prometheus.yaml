@@ -172,7 +172,7 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-          image: envoyproxy/envoy-dev:latest
+          image: envoyproxy/envoy:v1.27-latest
           imagePullPolicy: IfNotPresent
           name: envoy
           ports:
