@@ -591,7 +591,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 		expected           bool
 	}{
 		{
-			name: "valid httproute",
+			name: "valid grpcroute",
 			routes: []*gwapiv1a2.GRPCRoute{
 				{
 					ObjectMeta: metav1.ObjectMeta{
