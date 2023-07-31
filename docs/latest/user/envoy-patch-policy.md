@@ -59,7 +59,9 @@ EOF
 kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
-## Customize Response
+## Testing
+
+### Customize Response
 
 * Lets use EnvoyProxy's [Local Reply Modification][] feature to return a custom response back to the client when
 the status code is `404`
@@ -102,8 +104,98 @@ spec:
 EOF
 ```
 
+* Lets edit the HTTPRoute resource from the Quickstart to only match on paths with value `/get`
+```
+kubectl patch httproute backend --type=json --patch '[{
+   "op": "add",
+   "path": "/spec/rules/0/matches/0/path/value",
+   "value": "/get",
+}]'
+```
+
+* Lets test it out by specifying a path apart from `/get`
+
+```
+$ curl --header "Host: www.example.com" http://localhost:8888/find
+Handling connection for 8888
+could not find what you are looking for
+```
+
+## Debugging
+
+### Runtime
+
+* The `Status` subresource should have information about the status of the resource. Make sure
+`Accepted=True` and `Programmed=True` conditions are set to ensure that the policy has been
+applied to Envoy Proxy.
+
+```
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"gateway.envoyproxy.io/v1alpha1","kind":"EnvoyPatchPolicy","metadata":{"annotations":{},"name":"custom-response-patch-policy","namespace":"default"},"spec":{"jsonPatches":[{"name":"default/eg/http","operation":{"op":"add","path":"/default_filter_chain/filters/0/typed_config/local_reply_config","value":{"mappers":[{"body":{"inline_string":"could not find what you are looking for"},"filter":{"status_code_filter":{"comparison":{"op":"EQ","value":{"default_value":404}}}}}]}},"type":"type.googleapis.com/envoy.config.listener.v3.Listener"}],"priority":0,"targetRef":{"group":"gateway.networking.k8s.io","kind":"Gateway","name":"eg","namespace":"default"},"type":"JSONPatch"}}
+  creationTimestamp: "2023-07-31T21:47:53Z"
+  generation: 1
+  name: custom-response-patch-policy
+  namespace: default
+  resourceVersion: "10265"
+  uid: a35bda6e-a0cc-46d7-a63a-cee765174bc3
+spec:
+  jsonPatches:
+  - name: default/eg/http
+    operation:
+      op: add
+      path: /default_filter_chain/filters/0/typed_config/local_reply_config
+      value:
+        mappers:
+        - body:
+            inline_string: could not find what you are looking for
+          filter:
+            status_code_filter:
+              comparison:
+                op: EQ
+                value:
+                  default_value: 404
+    type: type.googleapis.com/envoy.config.listener.v3.Listener
+  priority: 0
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: eg
+    namespace: default
+  type: JSONPatch
+status:
+  conditions:
+  - lastTransitionTime: "2023-07-31T21:48:19Z"
+    message: EnvoyPatchPolicy has been accepted.
+    observedGeneration: 1
+    reason: Accepted
+    status: "True"
+    type: Accepted
+  - lastTransitionTime: "2023-07-31T21:48:19Z"
+    message: successfully applied patches.
+    reason: Programmed
+    status: "True"
+    type: Programmed
+```
+
+### Offline
+
+* You can use [egctl x translate][] to validate the translated xds output.
+
+## Caveats
+
+This API will always be an unstable API and the same outcome cannot be garunteed
+across versions for these reasons
+* The Envoy Proxy API might deprecate and remove API fields
+* Envoy Gateway might alter the xDS translation creating a different xDS output
+such as changing the `name` field of resources.
+
 [EnvoyPatchPolicy]: https://gateway.envoyproxy.io/latest/api/extension_types.html#envoypatchpolicy
 [EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902
 [xDS]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/operations/dynamic_configuration
 [Local Reply Modification]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/local_reply
+[egctl x translate]: https://gateway.envoyproxy.io/latest/user/egctl.html#egctl-experimental-translate
