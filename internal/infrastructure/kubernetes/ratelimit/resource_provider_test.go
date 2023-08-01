@@ -444,7 +444,8 @@ func TestDeployment(t *testing.T) {
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: "custom-cert",
+									SecretName:  "custom-cert",
+									DefaultMode: pointer.Int32(420),
 								},
 							},
 						},
