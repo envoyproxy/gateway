@@ -41,7 +41,7 @@ var EnvoyPatchPolicyTest = suite.ConformanceTest{
 				Namespace: ns,
 			}
 
-			// Send a request to an valid path and expect a sucessful response
+			// Send a request to an valid path and expect a successful response
 			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
 
 			customResp := http.ExpectedResponse{
