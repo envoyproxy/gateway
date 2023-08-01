@@ -10,7 +10,6 @@ import (
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	ratelimitv3 "github.com/envoyproxy/go-control-plane/envoy/config/ratelimit/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -120,21 +119,13 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		} else {
 			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
 		}
-
 	case resourcev3.RateLimitConfigType:
 		// Handle specific operations
-		if resourceOfType, ok := xdsResource.(*ratelimitv3.RateLimitServiceConfig); ok {
-			if err := resourceOfType.ValidateAll(); err != nil {
-				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
-			}
-		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
-		}
+		// cfg resource from runner.go is the RateLimitConfig type from "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3", which does have validate function.
 
 		// Add more cases for other types as needed
 	default:
 		// Handle the case when the type is not recognized or supported
-		return fmt.Errorf("unsupported resource type: %v", rType)
 	}
 
 	if t.XdsResources == nil {
