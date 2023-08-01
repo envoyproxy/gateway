@@ -142,7 +142,6 @@ spec:
                 - JSONPatch
                 type: string
             required:
-            - priority
             - targetRef
             - type
             type: object
