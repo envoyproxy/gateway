@@ -16,16 +16,14 @@ using [JSON Patch][] semantics.
 This API was introduced to allow advanced users to be able to leverage Envoy Proxy functionality
 not exposed by Envoy Gateway APIs today.
 
-## Installation
+## Quickstart
 
 ### Prerequistes
-
-#### Quickstart
 
 * Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-#### Enable EnvoyPatchPolicy
+### Enable EnvoyPatchPolicy
 
 * By default EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
 
@@ -48,7 +46,7 @@ data:
       type: Kubernetes
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
-    extensionAPIs:
+    extensionApis:
       enableEnvoyPatchPolicy: true
 EOF
 ```
