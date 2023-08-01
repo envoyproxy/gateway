@@ -31,6 +31,19 @@ var EnvoyPatchPolicyTest = suite.ConformanceTest{
 			routeNN := types.NamespacedName{Name: "http-envoy-patch-policy", Namespace: ns}
 			gwNN := types.NamespacedName{Name: "same-namespace", Namespace: ns}
 			gwAddr := kubernetes.GatewayAndHTTPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, kubernetes.NewGatewayRef(gwNN), routeNN)
+			OkResp := http.ExpectedResponse{
+				Request: http.Request{
+					Path: "/foo",
+				},
+				Response: http.Response{
+					StatusCode: 200,
+				},
+				Namespace: ns,
+			}
+
+			// Send a request to an valid path and expect a sucessful response
+			http.MakeRequestAndExpectEventuallyConsistentResponse(t, suite.RoundTripper, suite.TimeoutConfig, gwAddr, OkResp)
+
 			customResp := http.ExpectedResponse{
 				Request: http.Request{
 					Path: "/bar",
