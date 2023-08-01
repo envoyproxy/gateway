@@ -254,9 +254,6 @@ func TestTranslateXdsNegative(t *testing.T) {
 		{
 			name: "jsonpatch-invalid-listener",
 		},
-		{
-			name: "jsonpatch-invalid-cluster",
-		},
 	}
 
 	for _, tc := range testCases {

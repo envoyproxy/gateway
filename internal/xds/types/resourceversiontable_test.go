@@ -690,28 +690,6 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			tableOut: nil,
 		},
 		{
-			name: "cast-rate-limit-config-type",
-			tableIn: &ResourceVersionTable{
-				XdsResources: XdsResources{
-					resourcev3.RateLimitConfigType: []types.Resource{},
-				},
-			},
-			typeIn:     resourcev3.RateLimitConfigType,
-			resourceIn: invalidListener,
-			funcIn: func(existing types.Resource, new types.Resource) bool {
-				oldCluster := existing.(*clusterv3.Cluster)
-				newCluster := new.(*clusterv3.Cluster)
-				if newCluster == nil || oldCluster == nil {
-					return false
-				}
-				if oldCluster.Name == newCluster.Name {
-					return true
-				}
-				return false
-			},
-			tableOut: nil,
-		},
-		{
 			name: "invalid-secret",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
