@@ -16,6 +16,14 @@ func SetValue(s any, fieldName string, fieldValue any) error {
 	// Get the reflect.Value of the struct.
 	v := reflect.ValueOf(s)
 
+	if fieldName == "" {
+		return errors.New("setValue: fieldName can not be empty")
+	}
+
+	if unicode.IsLower(rune(fieldName[0])) {
+		return errors.New("setValue: fieldName can not be unexported")
+	}
+
 	// Check if the input is a pointer.
 	if v.Kind() != reflect.Ptr {
 		return errors.New("setValue: input is not a pointer")
