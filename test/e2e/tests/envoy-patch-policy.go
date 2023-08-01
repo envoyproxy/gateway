@@ -36,7 +36,7 @@ var EnvoyPatchPolicyTest = suite.ConformanceTest{
 					Path: "/bar",
 				},
 				Response: http.Response{
-					StatusCode: 418,
+					StatusCode: 406,
 				},
 				Namespace: ns,
 			}

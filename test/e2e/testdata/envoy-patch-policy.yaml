@@ -45,6 +45,6 @@ spec:
                   value:
                     default_value: 404
                     runtime_key: key_b
-            status_code: 418
+            status_code: 406
             body:
-              inline_string: "im a teapot"
+              inline_string: "not acceptable"
