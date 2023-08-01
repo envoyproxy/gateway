@@ -110,7 +110,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources.
 	message.HandleSubscription(r.XdsIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Xds]) {
-			r.Logger.Info("received a notification")
+			r.Logger.Debug("received an update")
 
 			if update.Delete {
 				if err := r.addNewSnapshot(ctx, nil); err != nil {

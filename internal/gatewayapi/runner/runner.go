@@ -51,7 +51,7 @@ func (r *Runner) Start(ctx context.Context) error {
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	message.HandleSubscription(r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
 		func(update message.Update[string, *gatewayapi.Resources]) {
-			r.Logger.Info("received an update")
+			r.Logger.Debug("received an update")
 
 			val := update.Value
 
