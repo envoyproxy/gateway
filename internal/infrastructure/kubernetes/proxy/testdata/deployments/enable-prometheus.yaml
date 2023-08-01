@@ -182,6 +182,9 @@ spec:
             - containerPort: 8443
               name: EnvoyHTTPSPort
               protocol: TCP
+            - containerPort: 19001
+              name: metrics
+              protocol: TCP
           resources:
             requests:
               cpu: 100m
