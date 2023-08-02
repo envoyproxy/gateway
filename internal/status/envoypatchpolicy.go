@@ -25,6 +25,9 @@ func SetEnvoyPatchPolicyProgrammedIfUnset(s *egv1a1.EnvoyPatchPolicyStatus, mess
 		if c.Type == string(egv1a1.PolicyConditionProgrammed) {
 			return
 		}
+		if c.Type == string(gwv1a2.PolicyConditionAccepted) && c.Status == metav1.ConditionFalse {
+			return
+		}
 	}
 
 	cond := newCondition(string(egv1a1.PolicyConditionProgrammed), metav1.ConditionTrue, string(egv1a1.PolicyReasonProgrammed), message, time.Now(), 0)
