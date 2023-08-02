@@ -25,7 +25,7 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	})
 
 	for _, policy := range envoyPatchPolicies {
-
+		policy := policy.DeepCopy()
 		targetNs := policy.Spec.TargetRef.Namespace
 		if targetNs == nil {
 			// This status condition will not get updated in the resource because
