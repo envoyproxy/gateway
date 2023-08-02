@@ -103,7 +103,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
 			}
 		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
+			return fmt.Errorf("failed to cast xds resource %+v to Secret type", xdsResource)
 		}
 
 	case resourcev3.EndpointType:
@@ -117,7 +117,7 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
 			}
 		} else {
-			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
+			return fmt.Errorf("failed to cast xds resource %+v to Cluster type", xdsResource)
 		}
 	case resourcev3.RateLimitConfigType:
 		// Handle specific operations
