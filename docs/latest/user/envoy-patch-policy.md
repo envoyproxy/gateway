@@ -86,19 +86,19 @@ spec:
       name: default/eg/http
       operation:
         op: add
-        path: "/default_filter_chain/filters/0/typed_config"
+        path: "/default_filter_chain/filters/0/typed_config/local_reply_config"
         value:
-          local_reply_config:
-            mappers:
-            - filter:
-                status_code_filter:
-                  comparison:
-                   op: EQ
-                   value:
-                     default_value: 404
-                     runtime_key: key_b
-              body:
-                inline_string: "could not find what you are looking for"
+          mappers:
+          - filter:
+              status_code_filter:
+                comparison:
+                 op: EQ
+                 value:
+                   default_value: 404
+                   runtime_key: key_b
+            status_code: 406
+            body:
+              inline_string: "could not find what you are looking for"
 EOF
 ```
 
