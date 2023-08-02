@@ -159,6 +159,7 @@ spec:
                       resource_api_version: V3
                     name: runtime-0
             - --log-level warn
+            - --cpuset-threads
           command:
             - envoy
           env:
@@ -181,6 +182,9 @@ spec:
               protocol: TCP
             - containerPort: 8443
               name: EnvoyHTTPSPort
+              protocol: TCP
+            - containerPort: 19001
+              name: metrics
               protocol: TCP
           resources:
             requests:

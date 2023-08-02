@@ -117,6 +117,14 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 
+	if proxyMetrics != nil && proxyMetrics.Prometheus != nil {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "metrics",
+			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
 	var bootstrapConfigurations string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
@@ -141,6 +149,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logLevel),
+		"--cpuset-threads",
 	}
 	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
 		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
