@@ -28,9 +28,10 @@ Only OpenTelemetry sink can be configured currently, you can use [OpenTelemetry 
 type ProxyTracing struct {
 	// SamplingRate controls the rate at which traffic will be
 	// selected for tracing if no prior sampling decision has been made.
-	// Defaults to 0, valid values [0-100]. 100 indicates 100% sampling.
+	// Defaults to 100, valid values [0-100]. 100 indicates 100% sampling.
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=100
 	// +optional
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
@@ -41,7 +42,18 @@ type ProxyTracing struct {
 	Provider TracingProvider `json:"provider"`
 }
 
+type TracingProviderType string
+
+const (
+	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
+)
+
 type TracingProvider struct {
+	// Type defines the tracing provider type.
+	// EG currently only supports OpenTelemetry.
+	// +kubebuilder:validation:Enum=OpenTelemetry
+	// +kubebuilder:default=OpenTelemetry
+	Type TracingProviderType `json:"type"`
 	// Host define the provider service hostname.
 	Host string `json:"host"`
 	// Port defines the port the provider service is exposed on.
@@ -120,24 +132,28 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   telemetry:
-    samplingRate: 100  # sample 100% of requests
     tracing:
+      # sample 100% of requests
+      samplingRate: 100
       provider:
         host: otel-collector.monitoring.svc.cluster.local
         port: 4317
       customTags:
-        key1: # This is an example of using a literal as a tag value
+        # This is an example of using a literal as a tag value
+        key1:
           type: Literal
           literal:
             value: "val1"
-        env1: # This is an example of using an environment variable as a tag value
+        # This is an example of using an environment variable as a tag value
+        env1:
           type: Environment
           environment:
             name: ENV1
             defaultValue: "-"
-        header1: # This is an example of using a header value as a tag value
-          type: Header
-          header:
+        # This is an example of using a header value as a tag value
+        header1:
+          type: RequestHeader
+          requestHeader:
             name: X-Header-1
             defaultValue: "-"
 ```
