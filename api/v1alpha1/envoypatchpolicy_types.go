@@ -59,7 +59,7 @@ type EnvoyPatchPolicySpec struct {
 	// the priority i.e. int32.min has the highest priority and
 	// int32.max has the lowest priority.
 	// Defaults to 0.
-	Priority int32 `json:"priority"`
+	Priority int32 `json:"priority,omitempty"`
 }
 
 // EnvoyPatchType specifies the types of Envoy patching mechanisms.
