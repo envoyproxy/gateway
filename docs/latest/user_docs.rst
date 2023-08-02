@@ -12,6 +12,7 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/http-redirect
   user/http-urlrewrite
   user/http-traffic-splitting
+  user/http-traffic-mirroring
   user/http-request-headers
   user/http-response-headers
   user/secure-gateways
@@ -23,6 +24,7 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/grpc-routing
   user/authn
   user/rate-limit
+  user/envoy-patch-policy
   user/egctl
   user/customize-envoyproxy
   user/deployment-mode
