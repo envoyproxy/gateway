@@ -1,0 +1,49 @@
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - filters:
+      - type: ExtensionRef
+        extensionRef:
+          group: gateway.envoyproxy.io
+          kind: AuthenticationFilter
+          name: test
+      backendRefs:
+      - name: service-1
+        port: 8080
+authenticationFilters:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: AuthenticationFilter
+  metadata:
+    namespace: default
+    name: test
+  spec:
+    type: JWT
+    jwtProviders:
+    - name: test
+      issuer: https://www.test.local
+      remoteJWKS:
+        uri: https://test.local/jwt/public-key/jwks.json

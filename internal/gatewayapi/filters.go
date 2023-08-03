@@ -136,6 +136,8 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case v1alpha2.GRPCRouteFilterRequestMirror:
 			t.processRequestMirrorFilter(filter.RequestMirror, httpFiltersContext, resources)
+		case v1alpha2.GRPCRouteFilterExtensionRef:
+			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}

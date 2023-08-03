@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	cfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -542,6 +543,225 @@ func TestProcessHTTPRoutes(t *testing.T) {
 							Name:      filter.GetName(),
 						}
 						require.Equal(t, *filter, resourceMap.extensionRefFilters[key])
+					}
+				}
+			} else {
+				require.Error(t, err)
+			}
+		})
+	}
+}
+
+func TestProcessGRPCRoutes(t *testing.T) {
+	// The gatewayclass configured for the reconciler and referenced by test cases.
+	gcCtrlName := gwapiv1b1.GatewayController(cfgv1a1.GatewayControllerName)
+	gc := &gwapiv1b1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+		Spec: gwapiv1b1.GatewayClassSpec{
+			ControllerName: gcCtrlName,
+		},
+	}
+
+	// The gateway referenced by test cases.
+	gw := &gwapiv1b1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "test",
+		},
+		Spec: gwapiv1b1.GatewaySpec{
+			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
+			Listeners: []gwapiv1b1.Listener{
+				{
+					Name:     "http",
+					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1b1.PortNumber(int32(8080)),
+				},
+			},
+		},
+	}
+	gwNsName := utils.NamespacedName(gw).String()
+
+	testCases := []struct {
+		name               string
+		routes             []*gwapiv1a2.GRPCRoute
+		authenFilters      []*egv1a1.AuthenticationFilter
+		extensionAPIGroups []schema.GroupVersionKind
+		expected           bool
+	}{
+		{
+			name: "valid grpcroute",
+			routes: []*gwapiv1a2.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1a2.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1a2.GRPCRouteRule{
+							{
+								Matches: []gwapiv1a2.GRPCRouteMatch{
+									{
+										Method: &gwapiv1a2.GRPCMethodMatch{
+											Method: gatewayapi.StringPtr("Ping"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1a2.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "grpcroute with one authenticationfilter",
+			routes: []*gwapiv1a2.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1a2.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1a2.GRPCRouteRule{
+							{
+								Matches: []gwapiv1a2.GRPCRouteMatch{
+									{
+										Method: &gwapiv1a2.GRPCMethodMatch{
+											Method: gatewayapi.StringPtr("Ping"),
+										},
+									},
+								},
+								Filters: []gwapiv1a2.GRPCRouteFilter{
+									{
+										Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1b1.LocalObjectReference{
+											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+											Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
+											Name:  gwapiv1b1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1a2.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			authenFilters: []*egv1a1.AuthenticationFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindAuthenticationFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: egv1a1.AuthenticationFilterSpec{
+						Type: egv1a1.JwtAuthenticationFilterProviderType,
+						JwtProviders: []egv1a1.JwtAuthenticationFilterProvider{
+							{
+								Name:      "test",
+								Issuer:    "https://www.test.local",
+								Audiences: []string{"test.local"},
+								RemoteJWKS: egv1a1.RemoteJWKS{
+									URI: "https://test.local/jwt/public-key/jwks.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+		// Run the test cases.
+		t.Run(tc.name, func(t *testing.T) {
+			// Add objects referenced by test cases.
+			objs := []client.Object{gc, gw}
+
+			// Create the reconciler.
+			logger := logging.DefaultLogger(cfgv1a1.LogLevelInfo)
+
+			ctx := context.Background()
+
+			r := &gatewayAPIReconciler{
+				log:             logger,
+				classController: gcCtrlName,
+			}
+
+			// Add the test case objects to the reconciler client.
+			for _, route := range tc.routes {
+				objs = append(objs, route)
+			}
+			for _, filter := range tc.authenFilters {
+				objs = append(objs, filter)
+			}
+			if len(tc.extensionAPIGroups) > 0 {
+				r.extGVKs = append(r.extGVKs, tc.extensionAPIGroups...)
+			}
+			r.client = fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(objs...).
+				WithIndex(&gwapiv1a2.GRPCRoute{}, gatewayGRPCRouteIndex, gatewayGRPCRouteIndexFunc).
+				Build()
+
+			// Process the test case httproutes.
+			resourceTree := gatewayapi.NewResources()
+			resourceMap := newResourceMapping()
+			err := r.processGRPCRoutes(ctx, gwNsName, resourceMap, resourceTree)
+			if tc.expected {
+				require.NoError(t, err)
+				// Ensure the resource tree and map are as expected.
+				require.Equal(t, tc.routes, resourceTree.GRPCRoutes)
+				// NOTE: filters must be in the same namespace as the HTTPRoute
+				if tc.authenFilters != nil {
+					for i, filter := range tc.authenFilters {
+						key := types.NamespacedName{
+							Namespace: tc.routes[i].Namespace,
+							Name:      filter.Name,
+						}
+						require.Equal(t, filter, resourceMap.authenFilters[key])
 					}
 				}
 			} else {
