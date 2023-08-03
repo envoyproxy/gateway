@@ -68,6 +68,7 @@ func TestDeployment(t *testing.T) {
 		proxyLogging map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
 		bootstrap    *string
 		telemetry    *egcfgv1a1.ProxyTelemetry
+		concurrency  *int32
 	}{
 		{
 			caseName: "default",
@@ -262,6 +263,13 @@ func TestDeployment(t *testing.T) {
 				},
 			},
 		},
+		{
+			caseName:    "with-concurrency",
+			infra:       newTestInfra(),
+			deploy:      nil,
+			concurrency: pointer.Int32(4),
+			bootstrap:   pointer.String(`test bootstrap config`),
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -282,6 +290,10 @@ func TestDeployment(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.Logging = egcfgv1a1.ProxyLogging{
 					Level: tc.proxyLogging,
 				}
+			}
+
+			if tc.concurrency != nil {
+				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
 			}
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())
