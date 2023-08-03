@@ -436,13 +436,15 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 			return err
 		}
 
-		addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
 			destinations: routeDestinations,
 			tSocket:      tSocket,
 			protocol:     HTTP2,
 			endpoint:     DefaultEndpointType,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
