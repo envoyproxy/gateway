@@ -430,11 +430,6 @@ func (in *RateLimitSelectCondition) DeepCopyInto(out *RateLimitSelectCondition) 
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.SourceIP != nil {
-		in, out := &in.SourceIP, &out.SourceIP
-		*out = new(string)
-		**out = **in
-	}
 	if in.SourceCIDR != nil {
 		in, out := &in.SourceCIDR, &out.SourceCIDR
 		*out = new(SourceMatch)

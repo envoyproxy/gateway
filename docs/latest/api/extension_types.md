@@ -308,7 +308,6 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. |
-| `sourceIP` _string_ | Deprecated: Use SourceCIDR instead. |
 | `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
 
 
