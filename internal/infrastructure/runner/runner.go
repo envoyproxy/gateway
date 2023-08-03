@@ -57,6 +57,7 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
 	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra]) {
+			r.Logger.Info("received an update")
 			val := update.Value
 
 			if update.Delete {

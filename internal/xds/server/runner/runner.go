@@ -130,6 +130,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			key := update.Key
 			val := update.Value
 
+			r.Logger.Info("received an update")
 			var err error
 			if update.Delete {
 				err = r.cache.GenerateNewSnapshot(key, nil)

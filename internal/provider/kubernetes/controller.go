@@ -241,16 +241,19 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 
 	// Add all EnvoyPatchPolicies
-	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
-	}
-	for _, policy := range envoyPatchPolicies.Items {
-		policy := policy
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
-		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+		}
+
+		for _, policy := range envoyPatchPolicies.Items {
+			policy := policy
+			// Discard Status to reduce memory consumption in watchable
+			// It will be recomputed by the gateway-api layer
+			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+		}
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the

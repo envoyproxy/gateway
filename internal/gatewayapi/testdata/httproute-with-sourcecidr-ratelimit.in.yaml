@@ -51,7 +51,8 @@ rateLimitFilters:
     global:
       rules:
       - clientSelectors:
-        - sourceIP: 192.168.0.0/16
+        - sourceCIDR:
+            value: 192.168.0.0/16
         limit:
           requests: 10
           unit: Hour

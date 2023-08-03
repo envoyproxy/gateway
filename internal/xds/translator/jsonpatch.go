@@ -72,13 +72,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					if err = temp.Validate(); err != nil {
+					if err = tCtx.AddXdsResource(resourcev3.ListenerType, temp); err != nil {
 						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
 
-					tCtx.AddXdsResource(resourcev3.ListenerType, temp)
 				case string(resourcev3.RouteType):
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
@@ -86,12 +85,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					if err = temp.Validate(); err != nil {
+					if err = tCtx.AddXdsResource(resourcev3.RouteType, temp); err != nil {
 						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					tCtx.AddXdsResource(resourcev3.RouteType, temp)
+
 				case string(resourcev3.ClusterType):
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
@@ -99,12 +98,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					if err = temp.Validate(); err != nil {
+					if err = tCtx.AddXdsResource(resourcev3.ClusterType, temp); err != nil {
 						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					tCtx.AddXdsResource(resourcev3.ClusterType, temp)
+
 				case string(resourcev3.EndpointType):
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
@@ -112,12 +111,12 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					if err = temp.Validate(); err != nil {
+					if err = tCtx.AddXdsResource(resourcev3.EndpointType, temp); err != nil {
 						msg := fmt.Sprintf("validation failed for xds resource %+v, err:%s", p.Operation.Value, err.Error())
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
-					tCtx.AddXdsResource(resourcev3.EndpointType, temp)
+
 				}
 
 				// Skip further processing
