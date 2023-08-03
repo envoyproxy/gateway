@@ -62,6 +62,8 @@ data:
       type: Kubernetes
     gateway:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    extensionApis:
+      enableEnvoyPatchPolicy: true
     rateLimit:
       backend:
         type: Redis

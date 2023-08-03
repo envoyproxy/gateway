@@ -761,6 +761,20 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
 			}
 			resources.EnvoyPatchPolicies = append(resources.EnvoyPatchPolicies, envoyPatchPolicy)
+		case egv1a1.KindRateLimitFilter:
+			typedSpec := spec.Interface()
+			rateLimitFilter := &egv1a1.RateLimitFilter{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindRateLimitFilter,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.RateLimitFilterSpec),
+			}
+			resources.RateLimitFilters = append(resources.RateLimitFilters, rateLimitFilter)
 		}
 	}
 

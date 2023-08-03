@@ -39,7 +39,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 		}
 		httpRoute := &HTTPRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			HTTPRoute:             h,
+			HTTPRoute:             h.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -67,7 +67,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 		}
 		grpcRoute := &GRPCRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			GRPCRoute:             g,
+			GRPCRoute:             g.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -563,7 +563,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 		}
 		tlsRoute := &TLSRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			TLSRoute:              tls,
+			TLSRoute:              tls.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -685,7 +685,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 		}
 		udpRoute := &UDPRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			UDPRoute:              u,
+			UDPRoute:              u.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -817,7 +817,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 		}
 		tcpRoute := &TCPRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			TCPRoute:              tcp,
+			TCPRoute:              tcp.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
