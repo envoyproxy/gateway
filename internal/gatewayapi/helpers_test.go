@@ -128,6 +128,42 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "invalid ratelimitfilter group",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "UnsupportedGroup",
+					Kind:  egv1a1.KindRateLimitFilter,
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ratelimitfilter kind",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+					Kind:  "UnsupportedKind",
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid ratelimitfilter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+					Kind:  egv1a1.KindRateLimitFilter,
+					Name:  "test",
+				},
+			},
+			expected: true,
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc

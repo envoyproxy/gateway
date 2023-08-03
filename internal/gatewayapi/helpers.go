@@ -254,6 +254,9 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
 			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
 			return nil
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
+			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
@@ -274,6 +277,14 @@ func IsAuthnGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
 		filter.ExtensionRef != nil &&
 		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
 		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
+}
+
+// IsRateLimitGRPCFilter returns true if the provided filter is an RateLimitFilter.
+func IsRateLimitGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
+	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter
 }
 
 // GatewayOwnerLabels returns the Gateway Owner labels using
