@@ -129,7 +129,7 @@ xdsIR:
             rules:
             - cidrMatch:
                 cidr: 192.168.0.0/16
-                distinct: true 
+                distinct: true
                 ipv6: false
                 maskLen: 16
               headerMatches: []
