@@ -739,18 +739,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 							}
 						}
 
-						if match.SourceCIDR != nil || match.SourceIP != nil {
-							sourceCIDR := ""
+						if match.SourceCIDR != nil {
 							// distinct means that each IP Address within the specified Source IP CIDR is treated as a
 							// distinct client selector and uses a separate rate limit bucket/counter.
 							distinct := false
-							if match.SourceCIDR != nil {
-								sourceCIDR = match.SourceCIDR.Value
-								if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
-									distinct = true
-								}
-							} else {
-								sourceCIDR = *match.SourceIP
+							sourceCIDR := match.SourceCIDR.Value
+							if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+								distinct = true
 							}
 
 							ip, ipn, err := net.ParseCIDR(sourceCIDR)
