@@ -587,6 +587,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 		name               string
 		routes             []*gwapiv1a2.GRPCRoute
 		authenFilters      []*egv1a1.AuthenticationFilter
+		rateLimitFilters   []*egv1a1.RateLimitFilter
 		extensionAPIGroups []schema.GroupVersionKind
 		expected           bool
 	}{
@@ -711,6 +712,94 @@ func TestProcessGRPCRoutes(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "grpcroute with one ratelimitfilter",
+			routes: []*gwapiv1a2.GRPCRoute{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: gwapiv1a2.GRPCRouteSpec{
+						CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
+							ParentRefs: []gwapiv1b1.ParentReference{
+								{
+									Name: "test",
+								},
+							},
+						},
+						Rules: []gwapiv1a2.GRPCRouteRule{
+							{
+								Matches: []gwapiv1a2.GRPCRouteMatch{
+									{
+										Method: &gwapiv1a2.GRPCMethodMatch{
+											Method: gatewayapi.StringPtr("Ping"),
+										},
+									},
+								},
+								Filters: []gwapiv1a2.GRPCRouteFilter{
+									{
+										Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+										ExtensionRef: &gwapiv1b1.LocalObjectReference{
+											Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+											Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
+											Name:  gwapiv1b1.ObjectName("test"),
+										},
+									},
+								},
+								BackendRefs: []gwapiv1a2.GRPCBackendRef{
+									{
+										BackendRef: gwapiv1b1.BackendRef{
+											BackendObjectReference: gwapiv1b1.BackendObjectReference{
+												Group: gatewayapi.GroupPtr(corev1.GroupName),
+												Kind:  gatewayapi.KindPtr(gatewayapi.KindService),
+												Name:  "test",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			rateLimitFilters: []*egv1a1.RateLimitFilter{
+				{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       egv1a1.KindRateLimitFilter,
+						APIVersion: egv1a1.GroupVersion.String(),
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "test",
+					},
+					Spec: egv1a1.RateLimitFilterSpec{
+						Type: egv1a1.KindRateLimitFilter,
+						Global: &egv1a1.GlobalRateLimit{
+							Rules: []egv1a1.RateLimitRule{
+								{
+									ClientSelectors: []egv1a1.RateLimitSelectCondition{
+										{
+											Headers: []egv1a1.HeaderMatch{
+												{
+													Name:  "x-user-id",
+													Value: gatewayapi.StringPtr("one"),
+												},
+											},
+										},
+									},
+									Limit: egv1a1.RateLimitValue{
+										Requests: 5,
+										Unit:     "Second",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
 	}
 
 	for i := range testCases {
@@ -735,6 +824,9 @@ func TestProcessGRPCRoutes(t *testing.T) {
 				objs = append(objs, route)
 			}
 			for _, filter := range tc.authenFilters {
+				objs = append(objs, filter)
+			}
+			for _, filter := range tc.rateLimitFilters {
 				objs = append(objs, filter)
 			}
 			if len(tc.extensionAPIGroups) > 0 {
@@ -762,6 +854,15 @@ func TestProcessGRPCRoutes(t *testing.T) {
 							Name:      filter.Name,
 						}
 						require.Equal(t, filter, resourceMap.authenFilters[key])
+					}
+				}
+				if tc.rateLimitFilters != nil {
+					for i, filter := range tc.rateLimitFilters {
+						key := types.NamespacedName{
+							Namespace: tc.routes[i].Namespace,
+							Name:      filter.Name,
+						}
+						require.Equal(t, filter, resourceMap.rateLimitFilters[key])
 					}
 				}
 			} else {
