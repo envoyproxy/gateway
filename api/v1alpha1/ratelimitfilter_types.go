@@ -99,10 +99,6 @@ type RateLimitSelectCondition struct {
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
-	// Deprecated: Use SourceCIDR instead.
-	// +optional
-	SourceIP *string `json:"sourceIP,omitempty"`
-
 	// SourceCIDR is the client IP Address range to match on.
 	//
 	// +optional

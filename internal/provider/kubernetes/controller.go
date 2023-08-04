@@ -55,6 +55,8 @@ const (
 	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
+	authenFilterGRPCRouteIndex    = "authenGRPCRouteIndex"
+	rateLimitFilterGRPCRouteIndex = "rateLimitGRPCRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -667,6 +669,14 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, authenFilterGRPCRouteIndex, authenFilterGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, rateLimitFilterGRPCRouteIndex, rateLimitFilterGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -706,6 +716,48 @@ func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return services
+}
+
+func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var filters []string
+	for _, rule := range grpcroute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if gatewayapi.IsAuthnGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: grpcroute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
+}
+
+func rateLimitFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var filters []string
+	for _, rule := range grpcroute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if gatewayapi.IsRateLimitGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: grpcroute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
 }
 
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are

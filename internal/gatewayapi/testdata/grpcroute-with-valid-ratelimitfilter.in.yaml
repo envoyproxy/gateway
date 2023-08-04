@@ -10,48 +10,46 @@ gateways:
     - name: http
       protocol: HTTP
       port: 80
-      hostname: "*.envoyproxy.io"
       allowedRoutes:
         namespaces:
           from: All
-httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: HTTPRoute
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
   metadata:
     namespace: default
-    name: httproute-1
+    name: grpcroute-1
   spec:
-    hostnames:
-    - gateway.envoyproxy.io
     parentRefs:
     - namespace: envoy-gateway
       name: gateway-1
       sectionName: http
     rules:
-    - matches:
-      - path:
-          value: "/"
-      backendRefs:
-      - name: service-1
-        port: 8080
-      filters:
+    - filters:
       - type: ExtensionRef
         extensionRef:
           group: gateway.envoyproxy.io
           kind: RateLimitFilter
           name: test
+      backendRefs:
+      - name: service-1
+        port: 8080
 rateLimitFilters:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: RateLimitFilter
   metadata:
-    name: test
     namespace: default
+    name: test
   spec:
     type: Global
     global:
       rules:
       - clientSelectors:
-        - sourceIP: 192.168.0.0/16
+        - headers:
+          - name: x-user-id
+            value: one
+          - name: x-org-id
+            type: Distinct
         limit:
           requests: 10
           unit: Hour

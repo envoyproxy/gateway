@@ -219,9 +219,9 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	return keyValueList
 }
 
-func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) {
+func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) error {
 	if al == nil {
-		return
+		return nil
 	}
 
 	for _, otel := range al.OpenTelemetry {
@@ -229,13 +229,17 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 
 		if existingCluster := findXdsCluster(tCtx, clusterName); existingCluster == nil {
 			destinations := []*ir.RouteDestination{ir.NewRouteDest(otel.Host, otel.Port)}
-			addXdsCluster(tCtx, addXdsClusterArgs{
+			if err := addXdsCluster(tCtx, addXdsClusterArgs{
 				name:         clusterName,
 				destinations: destinations,
 				tSocket:      nil,
 				protocol:     HTTP2,
 				endpoint:     DefaultEndpointType,
-			})
+			}); err != nil {
+				return err
+			}
+
 		}
 	}
+	return nil
 }

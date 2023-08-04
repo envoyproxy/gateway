@@ -108,7 +108,7 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 		} else if modifiedListener != nil {
 			// Use the resource table to update the listener with the modified version returned by the extension
 			// We're assuming that Listener names are unique.
-			tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
+			if err := tCtx.AddOrReplaceXdsResource(resourcev3.ListenerType, modifiedListener, func(existing resourceTypes.Resource, new resourceTypes.Resource) bool {
 				oldListener := existing.(*listenerv3.Listener)
 				newListener := new.(*listenerv3.Listener)
 				if newListener == nil || oldListener == nil {
@@ -118,7 +118,9 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 					return true
 				}
 				return false
-			})
+			}); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
