@@ -128,9 +128,6 @@ spec:
                                 required:
                                 - value
                                 type: object
-                              sourceIP:
-                                description: 'Deprecated: Use SourceCIDR instead.'
-                                type: string
                             type: object
                           maxItems: 8
                           type: array

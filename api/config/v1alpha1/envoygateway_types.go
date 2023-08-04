@@ -185,7 +185,7 @@ type KubernetesWatchMode struct {
 	// GatewayClass that it is linked to.
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
-	Namespaces []string
+	Namespaces []string `json:"namespaces,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
@@ -273,6 +273,19 @@ type RateLimit struct {
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
 	Backend RateLimitDatabaseBackend `json:"backend"`
+
+	// Timeout specifies the timeout period for the proxy to access the ratelimit server
+	// If not set, timeout is 20ms.
+	// +optional
+	// +kubebuilder:validation:Format=duration
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+
+	// FailClosed is a switch used to control the flow of traffic
+	// when the response from the ratelimit server cannot be obtained.
+	// If FailClosed is false, let the traffic pass,
+	// otherwise, don't let the traffic pass and return 500.
+	// If not set, FailClosed is False.
+	FailClosed bool `json:"failClosed"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with

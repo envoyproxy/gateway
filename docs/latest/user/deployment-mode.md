@@ -11,8 +11,10 @@ in different namespaces, linking a GatewayClass to each of them.
 
 #### Kubernetes
 
-* The current deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
+* The default deployment model is - Envoy Gateway **watches** for resources such a `Service` & `HTTPRoute` in **all** namespaces
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
+* Envoy Gateway also supports **Namespaced** deployment mode, you can watch resources in the specific namespaces by assigning
+`EnvoyGateway.provider.kubernetes.watch.namespaces` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
 * Support for alternate deployment modes is being tracked [here](https://github.com/envoyproxy/gateway/issues/1117).
 
 ### Multi-tenancy
@@ -23,10 +25,10 @@ and **creates** managed data plane resources such as EnvoyProxy `Deployment` in 
 each `tenant` deploy their own Envoy Gateway controller in their respective `namespace`. Below is an example of deploying Envoy Gateway
 by the `marketing` and `product` teams in separate namespaces.
 
-* Lets deploy Envoy Gateway in the `marketing` namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
+* Lets deploy Envoy Gateway in the `marketing` namespace and also watch resources only in this namespace. We are also setting the controller name to a unique string here `gateway.envoyproxy.io/marketing-gatewayclass-controller`.
 
 ```
-helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n marketing --create-namespace
+helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/marketing-gatewayclass-controller --set config.envoyGateway.provider.kubernetes.watch.namespaces={marketing} eg-marketing oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n marketing --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
@@ -132,7 +134,7 @@ spec:
 EOF
 ```            
 
-Lets port forward to the generated envoy proxy service in the `marketing` namespace and send a request to it
+Lets port forward to the generated envoy proxy service in the `marketing` namespace and send a request to it.
 
 ```shell
 export ENVOY_SERVICE=$(kubectl get svc -n marketing --selector=gateway.envoyproxy.io/owning-gateway-namespace=marketing,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
@@ -196,10 +198,10 @@ Handling connection for 8888
 * Connection #0 to host localhost left intact
 ```
 
-* Lets deploy Envoy Gateway in the `product` namespace
+* Lets deploy Envoy Gateway in the `product` namespace and also watch resources only in this namespace.
 
 ```
-helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n product --create-namespace
+helm install --set config.envoyGateway.gateway.controllerName=gateway.envoyproxy.io/product-gatewayclass-controller --set config.envoyGateway.provider.kubernetes.watch.namespaces={product} eg-product oci://docker.io/envoyproxy/gateway-helm --version v0.0.0-latest -n product --create-namespace
 ```
 
 Lets create a `GatewayClass` linked to the product team's Envoy Gateway controller, and as well other resources linked to it, so the `backend` application operated by this team can be exposed to external clients.
@@ -305,7 +307,7 @@ spec:
 EOF
 ```
 
-Lets port forward to the generated envoy proxy service in the `product` namespace and send a request to it
+Lets port forward to the generated envoy proxy service in the `product` namespace and send a request to it.
 
 ```shell
 export ENVOY_SERVICE=$(kubectl get svc -n product --selector=gateway.envoyproxy.io/owning-gateway-namespace=product,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')

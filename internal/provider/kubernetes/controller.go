@@ -55,6 +55,7 @@ const (
 	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
+	authenFilterGRPCRouteIndex    = "authenGRPCRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -240,16 +241,19 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	}
 
 	// Add all EnvoyPatchPolicies
-	envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
-	if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
-	}
-	for _, policy := range envoyPatchPolicies.Items {
-		policy := policy
-		// Discard Status to reduce memory consumption in watchable
-		// It will be recomputed by the gateway-api layer
-		policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
-		resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+		}
+
+		for _, policy := range envoyPatchPolicies.Items {
+			policy := policy
+			// Discard Status to reduce memory consumption in watchable
+			// It will be recomputed by the gateway-api layer
+			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+		}
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the
@@ -655,6 +659,10 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, authenFilterGRPCRouteIndex, authenFilterGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -694,6 +702,27 @@ func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return services
+}
+
+func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var filters []string
+	for _, rule := range grpcroute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if gatewayapi.IsAuthnGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: grpcroute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
 }
 
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are

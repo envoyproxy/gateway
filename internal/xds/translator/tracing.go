@@ -115,21 +115,24 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	}, nil
 }
 
-func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing) {
+func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Tracing) error {
 	if tracing == nil {
-		return
+		return nil
 	}
 
 	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
 
 	if existingCluster := findXdsCluster(tCtx, clusterName); existingCluster == nil {
 		destinations := []*ir.RouteDestination{ir.NewRouteDest(tracing.Provider.Host, uint32(tracing.Provider.Port))}
-		addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
 			destinations: destinations,
 			tSocket:      nil,
 			protocol:     HTTP2,
 			endpoint:     DefaultEndpointType,
-		})
+		}); err != nil {
+			return err
+		}
 	}
+	return nil
 }

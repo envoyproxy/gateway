@@ -21,6 +21,7 @@ import (
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
@@ -64,7 +65,7 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 		}
 	}
 
-	rateLimitFilter := buildRateLimitFilter(irListener)
+	rateLimitFilter := t.buildRateLimitFilter(irListener)
 	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
@@ -84,7 +85,8 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: getRateLimitDomain(irListener),
 		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
@@ -98,6 +100,13 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
 		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
+	}
+	if t.GlobalRateLimit.Timeout > 0 {
+		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
+	}
+
+	if t.GlobalRateLimit.FailClosed {
+		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
 	}
 
 	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
@@ -427,13 +436,15 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 			return err
 		}
 
-		addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
 			destinations: routeDestinations,
 			tSocket:      tSocket,
 			protocol:     HTTP2,
 			endpoint:     DefaultEndpointType,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

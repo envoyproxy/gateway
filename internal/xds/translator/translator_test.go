@@ -227,6 +227,59 @@ func TestTranslateXds(t *testing.T) {
 	}
 }
 
+func TestTranslateXdsNegative(t *testing.T) {
+	testCases := []struct {
+		name           string
+		dnsDomain      string
+		requireSecrets bool
+	}{
+		{
+			name: "http-route-invalid",
+		},
+		{
+			name: "tcp-route-invalid",
+		},
+		{
+			name: "udp-route-invalid",
+		},
+		{
+			name: "jsonpatch-invalid",
+		},
+		{
+			name: "accesslog-invalid",
+		},
+		{
+			name: "tracing-invalid",
+		},
+		{
+			name: "jsonpatch-invalid-listener",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			dnsDomain := tc.dnsDomain
+			if dnsDomain == "" {
+				dnsDomain = "cluster.local"
+			}
+			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
+				},
+			}
+
+			tCtx, err := tr.Translate(ir)
+			require.Error(t, err)
+			require.Nil(t, tCtx)
+			if tc.name != "jsonpatch-invalid" {
+				require.Contains(t, err.Error(), "validation failed for xds resource")
+			}
+		})
+	}
+}
+
 func TestTranslateRateLimitConfig(t *testing.T) {
 	testCases := []struct {
 		name string
