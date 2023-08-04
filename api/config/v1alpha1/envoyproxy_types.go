@@ -57,6 +57,12 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Bootstrap *string `json:"bootstrap,omitempty"`
+
+	// Concurrency defines the number of worker threads to run. If unset, it defaults to
+	// the number of cpuset threads on the platform.
+	//
+	// +optional
+	Concurrency *int32 `json:"concurrency,omitempty"`
 }
 
 type ProxyTelemetry struct {
@@ -64,6 +70,13 @@ type ProxyTelemetry struct {
 	// If unspecified, will send default format to stdout.
 	// +optional
 	AccessLog *ProxyAccessLog `json:"accessLog,omitempty"`
+	// Tracing defines tracing configuration for managed proxies.
+	// If unspecified, will not send tracing data.
+	// +optional
+	Tracing *ProxyTracing `json:"tracing,omitempty"`
+
+	// Metrics defines metrics configuration for managed proxies.
+	Metrics *ProxyMetrics `json:"metrics,omitempty"`
 }
 
 // EnvoyProxyProvider defines the desired state of a resource provider.

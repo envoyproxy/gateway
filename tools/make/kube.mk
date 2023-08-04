@@ -9,6 +9,8 @@ GATEWAY_RELEASE_URL ?= https://github.com/kubernetes-sigs/gateway-api/releases/d
 WAIT_TIMEOUT ?= 15m
 
 FLUENT_BIT_CHART_VERSION ?= 0.30.4
+OTEL_COLLECTOR_CHART_VERSION ?= 0.60.0
+TEMPO_CHART_VERSION ?= 1.3.1
 
 # Set Kubernetes Resources Directory Path
 ifeq ($(origin KUBE_PROVIDER_DIR),undefined)
@@ -26,11 +28,9 @@ YEAR := $(shell date +%Y)
 CONTROLLERGEN_OBJECT_FLAGS :=  object:headerFile="$(ROOT_DIR)/tools/boilerplate/boilerplate.generatego.txt",year=$(YEAR)
 
 .PHONY: manifests
-manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: $(tools/controller-gen) generate-gwapi-manifests ## Generate WebhookConfiguration and CustomResourceDefinition objects.
 	@$(LOG_TARGET)
-	$(tools/controller-gen) rbac:roleName=envoy-gateway-role crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:rbac:artifacts:config=charts/gateway-helm/templates/generated/rbac output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
-	cat charts/gateway-helm/templates/generated/rbac/role.yaml | sed "s;envoy-gateway-role;{{ include \"eg.fullname\" . }}-envoy-gateway-role;g" > charts/gateway-helm/templates/generated/rbac/roles.yaml
-	rm charts/gateway-helm/templates/generated/rbac/role.yaml
+	$(tools/controller-gen) crd webhook paths="./..." output:crd:artifacts:config=charts/gateway-helm/crds/generated output:webhook:artifacts:config=charts/gateway-helm/templates/generated/webhook
 .PHONY: generate-gwapi-manifests
 generate-gwapi-manifests:
 generate-gwapi-manifests: ## Generate GWAPI manifests and make it consistent with the go mod version.
@@ -119,15 +119,19 @@ run-e2e: prepare-e2e
 	go test -v -tags e2e ./test/e2e --gateway-class=envoy-gateway --debug=true
 
 .PHONY: prepare-e2e
-prepare-e2e: prepare-helm-repo install-fluent-bit install-loki
+prepare-e2e: prepare-helm-repo install-fluent-bit install-loki install-tempo install-otel-collector
 	@$(LOG_TARGET)
 	kubectl rollout status daemonset fluent-bit -n monitoring --timeout 5m
 	kubectl rollout status statefulset loki -n monitoring --timeout 5m
+	kubectl rollout status statefulset tempo -n monitoring --timeout 5m
+	kubectl rollout status deployment otel-collector -n monitoring --timeout 5m
 
 .PHONY: prepare-helm-repo
 prepare-helm-repo:
 	@$(LOG_TARGET)
 	helm repo add fluent https://fluent.github.io/helm-charts
+	helm repo add grafana https://grafana.github.io/helm-charts
+	helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
 	helm repo update
 
 .PHONY: install-fluent-bit
@@ -139,6 +143,16 @@ install-fluent-bit:
 install-loki:
 	@$(LOG_TARGET)
 	kubectl apply -f examples/loki/loki.yaml -n monitoring
+
+.PHONY: install-tempo
+install-tempo:
+	@$(LOG_TARGET)
+	helm upgrade --install tempo grafana/tempo -f examples/tempo/helm-values.yaml -n monitoring --create-namespace --version $(TEMPO_CHART_VERSION)
+
+.PHONY: install-otel-collector
+install-otel-collector:
+	@$(LOG_TARGET)
+	helm upgrade --install otel-collector open-telemetry/opentelemetry-collector -f examples/otel-collector/helm-values.yaml -n monitoring --create-namespace --version $(OTEL_COLLECTOR_CHART_VERSION)
 
 .PHONY: create-cluster
 create-cluster: $(tools/kind) ## Create a kind cluster suitable for running Gateway API conformance.

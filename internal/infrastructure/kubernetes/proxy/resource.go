@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -109,6 +110,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
+	var proxyMetrics *egcfgv1a1.ProxyMetrics
+	if infra.Config != nil {
+		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
+	}
+
+	if proxyMetrics != nil && proxyMetrics.Prometheus != nil {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "metrics",
+			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
 	var bootstrapConfigurations string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
@@ -118,7 +132,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	} else {
 		var err error
 		// Use the default Bootstrap
-		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig()
+		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
 		if err != nil {
 			return nil, err
 		}
@@ -131,6 +145,12 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
 		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
+		"--cpuset-threads",
+	}
+
+	if infra.Config != nil &&
+		infra.Config.Spec.Concurrency != nil {
+		args = append(args, fmt.Sprintf("--concurrency %d", *infra.Config.Spec.Concurrency))
 	}
 
 	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
@@ -151,6 +171,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			VolumeMounts:             expectedContainerVolumeMounts(deploymentConfig),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
 		},
 	}
 
@@ -181,7 +214,8 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "envoy",
+					SecretName:  "envoy",
+					DefaultMode: pointer.Int32(420),
 				},
 			},
 		},
@@ -202,7 +236,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 							Path: SdsCertFilename,
 						},
 					},
-					DefaultMode: pointer.Int32(int32(420)),
+					DefaultMode: pointer.Int32(420),
 					Optional:    pointer.Bool(false),
 				},
 			},

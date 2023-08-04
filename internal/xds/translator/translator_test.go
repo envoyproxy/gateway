@@ -6,23 +6,28 @@
 package translator
 
 import (
-	"bufio"
 	"embed"
 	"flag"
-	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	ratelimitv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/field"
+	"github.com/envoyproxy/gateway/internal/utils/file"
+	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
 
@@ -31,17 +36,16 @@ var (
 	outFiles embed.FS
 	//go:embed testdata/in/*
 	inFiles embed.FS
-)
 
-var (
 	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 func TestTranslateXds(t *testing.T) {
 	testCases := []struct {
-		name           string
-		dnsDomain      string
-		requireSecrets bool
+		name                      string
+		dnsDomain                 string
+		requireSecrets            bool
+		requireEnvoyPatchPolicies bool
 	}{
 		{
 			name: "empty",
@@ -148,6 +152,21 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "accesslog",
 		},
+		{
+			name: "tracing",
+		},
+		{
+			name:                      "jsonpatch",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-missing-resource",
+			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name:                      "jsonpatch-invalid-patch",
+			requireEnvoyPatchPolicies: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -171,10 +190,10 @@ func TestTranslateXds(t *testing.T) {
 			clusters := tCtx.XdsResources[resourcev3.ClusterType]
 			endpoints := tCtx.XdsResources[resourcev3.EndpointType]
 			if *overrideTestData {
-				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, listeners), "xds-ir", tc.name+".listeners.yaml")
-				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, routes), "xds-ir", tc.name+".routes.yaml")
-				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, clusters), "xds-ir", tc.name+".clusters.yaml")
-				overrideTestDataOutFile(t, requireResourcesToYAMLString(t, endpoints), "xds-ir", tc.name+".endpoints.yaml")
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "xds-ir", tc.name+".listeners.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "xds-ir", tc.name+".routes.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "xds-ir", tc.name+".clusters.yaml")))
+				require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "xds-ir", tc.name+".endpoints.yaml")))
 			}
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 			require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
@@ -183,9 +202,79 @@ func TestTranslateXds(t *testing.T) {
 			if tc.requireSecrets {
 				secrets := tCtx.XdsResources[resourcev3.SecretType]
 				if *overrideTestData {
-					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, secrets), "xds-ir", tc.name+".secrets.yaml")
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "xds-ir", tc.name+".secrets.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
+			}
+			if tc.requireEnvoyPatchPolicies {
+				got := tCtx.EnvoyPatchPolicyStatuses
+				for _, e := range got {
+					require.NoError(t, field.SetValue(e, "LastTransitionTime", metav1.NewTime(time.Time{})))
+				}
+				if *overrideTestData {
+					out, err := yaml.Marshal(got)
+					require.NoError(t, err)
+					require.NoError(t, file.Write(string(out), filepath.Join("testdata", "out", "xds-ir", tc.name+".envoypatchpolicies.yaml")))
+				}
+
+				in := requireTestDataOutFile(t, "xds-ir", tc.name+".envoypatchpolicies.yaml")
+				want := xtypes.EnvoyPatchPolicyStatuses{}
+				require.NoError(t, yaml.Unmarshal([]byte(in), &want))
+				opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
+				require.Empty(t, cmp.Diff(want, got, opts))
+			}
+		})
+	}
+}
+
+func TestTranslateXdsNegative(t *testing.T) {
+	testCases := []struct {
+		name           string
+		dnsDomain      string
+		requireSecrets bool
+	}{
+		{
+			name: "http-route-invalid",
+		},
+		{
+			name: "tcp-route-invalid",
+		},
+		{
+			name: "udp-route-invalid",
+		},
+		{
+			name: "jsonpatch-invalid",
+		},
+		{
+			name: "accesslog-invalid",
+		},
+		{
+			name: "tracing-invalid",
+		},
+		{
+			name: "jsonpatch-invalid-listener",
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			dnsDomain := tc.dnsDomain
+			if dnsDomain == "" {
+				dnsDomain = "cluster.local"
+			}
+			ir := requireXdsIRFromInputTestData(t, "xds-ir", tc.name+".yaml")
+			tr := &Translator{
+				GlobalRateLimit: &GlobalRateLimitSettings{
+					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", dnsDomain),
+				},
+			}
+
+			tCtx, err := tr.Translate(ir)
+			require.Error(t, err)
+			require.Nil(t, tCtx)
+			if tc.name != "jsonpatch-invalid" {
+				require.Contains(t, err.Error(), "validation failed for xds resource")
 			}
 		})
 	}
@@ -224,7 +313,7 @@ func TestTranslateRateLimitConfig(t *testing.T) {
 			in := requireXdsIRListenerFromInputTestData(t, "ratelimit-config", tc.name+".yaml")
 			out := BuildRateLimitServiceConfig(in)
 			if *overrideTestData {
-				overrideTestDataOutFile(t, requireYamlRootToYAMLString(t, out), "ratelimit-config", tc.name+".yaml")
+				require.NoError(t, file.Write(requireYamlRootToYAMLString(t, out), filepath.Join("testdata", "out", "ratelimit-config", tc.name+".yaml")))
 			}
 			require.Equal(t, requireTestDataOutFile(t, "ratelimit-config", tc.name+".yaml"), requireYamlRootToYAMLString(t, out))
 		})
@@ -281,7 +370,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					ServiceURL: ratelimit.GetServiceURL("envoy-gateway-system", "cluster.local"),
 				},
 			}
-			ext := v1alpha1.Extension{
+			ext := v1alpha1.ExtensionManager{
 				Resources: []v1alpha1.GroupVersionKind{
 					{
 						Group:   "foo.example.io",
@@ -314,10 +403,10 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				clusters := tCtx.XdsResources[resourcev3.ClusterType]
 				endpoints := tCtx.XdsResources[resourcev3.EndpointType]
 				if *overrideTestData {
-					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, listeners), "extension-xds-ir", tc.name+".listeners.yaml")
-					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, routes), "extension-xds-ir", tc.name+".routes.yaml")
-					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, clusters), "extension-xds-ir", tc.name+".clusters.yaml")
-					overrideTestDataOutFile(t, requireResourcesToYAMLString(t, endpoints), "extension-xds-ir", tc.name+".endpoints.yaml")
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, listeners), filepath.Join("testdata", "out", "extension-xds-ir", tc.name+".listeners.yaml")))
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, routes), filepath.Join("testdata", "out", "extension-xds-ir", tc.name+".routes.yaml")))
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, clusters), filepath.Join("testdata", "out", "extension-xds-ir", tc.name+".clusters.yaml")))
+					require.NoError(t, file.Write(requireResourcesToYAMLString(t, endpoints), filepath.Join("testdata", "out", "extension-xds-ir", tc.name+".endpoints.yaml")))
 				}
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".listeners.yaml"), requireResourcesToYAMLString(t, listeners))
 				require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".routes.yaml"), requireResourcesToYAMLString(t, routes))
@@ -326,7 +415,7 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 				if tc.requireSecrets {
 					secrets := tCtx.XdsResources[resourcev3.SecretType]
 					if *overrideTestData {
-						overrideTestDataOutFile(t, requireResourcesToYAMLString(t, secrets), "extension-xds-ir", tc.name+".secrets.yaml")
+						require.NoError(t, file.Write(requireResourcesToYAMLString(t, secrets), filepath.Join("testdata", "out", "extension-xds-ir", tc.name+".secrets.yaml")))
 					}
 					require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 				}
@@ -363,18 +452,6 @@ func requireTestDataOutFile(t *testing.T, name ...string) string {
 	content, err := outFiles.ReadFile(filepath.Join(elems...))
 	require.NoError(t, err)
 	return string(content)
-}
-
-func overrideTestDataOutFile(t *testing.T, data string, name ...string) {
-	t.Helper()
-	elems := append([]string{"testdata", "out"}, name...)
-	file, err := os.OpenFile(filepath.Join(elems...), os.O_WRONLY, 0666)
-	require.NoError(t, err)
-	defer file.Close()
-	write := bufio.NewWriter(file)
-	_, err = write.WriteString(data)
-	require.NoError(t, err)
-	write.Flush()
 }
 
 func requireYamlRootToYAMLString(t *testing.T, pbRoot *ratelimitv3.RateLimitConfig) string {

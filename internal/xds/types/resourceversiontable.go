@@ -6,18 +6,28 @@
 package types
 
 import (
+	"fmt"
+
+	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 // XdsResources represents all the xds resources
 type XdsResources = map[resourcev3.Type][]types.Resource
 
+type EnvoyPatchPolicyStatuses []*ir.EnvoyPatchPolicyStatus
+
 // ResourceVersionTable holds all the translated xds resources
 type ResourceVersionTable struct {
 	XdsResources
+	EnvoyPatchPolicyStatuses
 }
 
 // DeepCopyInto copies the contents into the output object
@@ -64,7 +74,60 @@ func (t *ResourceVersionTable) GetXdsResources() XdsResources {
 	return t.XdsResources
 }
 
-func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource types.Resource) {
+func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource types.Resource) error {
+	// Perform type switch to handle different types of xdsResource
+	switch rType {
+	case resourcev3.ListenerType:
+		// Handle Type specific operations
+		if resourceOfType, ok := xdsResource.(*listenerv3.Listener); ok {
+			if err := resourceOfType.ValidateAll(); err != nil {
+				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+			}
+		} else {
+			return fmt.Errorf("failed to cast xds resource %+v to Listener type", xdsResource)
+		}
+	case resourcev3.RouteType:
+		// Handle Type specific operations
+		if resourceOfType, ok := xdsResource.(*routev3.RouteConfiguration); ok {
+			if err := resourceOfType.ValidateAll(); err != nil {
+				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+			}
+		} else {
+			return fmt.Errorf("failed to cast xds resource %+v to RouteConfiguration type", xdsResource)
+		}
+
+	case resourcev3.SecretType:
+		// Handle specific operations
+		if resourceOfType, ok := xdsResource.(*tlsv3.Secret); ok {
+			if err := resourceOfType.ValidateAll(); err != nil {
+				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+			}
+		} else {
+			return fmt.Errorf("failed to cast xds resource %+v to Secret type", xdsResource)
+		}
+
+	case resourcev3.EndpointType:
+		// TBD - ValidateAll() breaks existing test internal/cmd/egctl/translate_test
+		// authn-single-route-single-match-to-xds.endpoint expects address for socketAddress field, but this field currently only has port, does not have address
+
+	case resourcev3.ClusterType:
+		// Handle specific operations
+		if resourceOfType, ok := xdsResource.(*clusterv3.Cluster); ok {
+			if err := resourceOfType.ValidateAll(); err != nil {
+				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+			}
+		} else {
+			return fmt.Errorf("failed to cast xds resource %+v to Cluster type", xdsResource)
+		}
+	case resourcev3.RateLimitConfigType:
+		// Handle specific operations
+		// cfg resource from runner.go is the RateLimitConfig type from "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3", which does have validate function.
+
+		// Add more cases for other types as needed
+	default:
+		// Handle the case when the type is not recognized or supported
+	}
+
 	if t.XdsResources == nil {
 		t.XdsResources = make(XdsResources)
 	}
@@ -73,15 +136,19 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 	}
 
 	t.XdsResources[rType] = append(t.XdsResources[rType], xdsResource)
+	return nil
 }
 
 // AddOrReplaceXdsResource will update an existing resource of rType according to matchFunc or add as a new resource
 // if none satisfy the match criteria. It will only update the first match it finds, regardless
 // if multiple resources satisfy the match criteria.
-func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resource.Type, resource types.Resource, matchFunc func(existing types.Resource, new types.Resource) bool) {
+func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resourcev3.Type, resource types.Resource, matchFunc func(existing types.Resource, new types.Resource) bool) error {
 	if t.XdsResources == nil || t.XdsResources[rType] == nil {
-		t.AddXdsResource(rType, resource)
-		return
+		if err := t.AddXdsResource(rType, resource); err != nil {
+			return err
+		} else {
+			return nil
+		}
 	}
 
 	var found bool
@@ -93,8 +160,13 @@ func (t *ResourceVersionTable) AddOrReplaceXdsResource(rType resource.Type, reso
 		}
 	}
 	if !found {
-		t.AddXdsResource(rType, resource)
+		if err := t.AddXdsResource(rType, resource); err != nil {
+			return err
+		} else {
+			return nil
+		}
 	}
+	return nil
 }
 
 // SetResources will update an entire entry of the XdsResources for a certain type to the provided resources

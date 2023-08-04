@@ -15,6 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // RateLimitFilter allows the user to limit the number of incoming requests
 // to a predefined value based on attributes within the traffic flow.
@@ -98,10 +99,6 @@ type RateLimitSelectCondition struct {
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
 
-	// Deprecated: Use SourceCIDR instead.
-	// +optional
-	SourceIP *string `json:"sourceIP,omitempty"`
-
 	// SourceCIDR is the client IP Address range to match on.
 	//
 	// +optional
@@ -120,12 +117,16 @@ const (
 )
 
 type SourceMatch struct {
+	// +optional
+	// +kubebuilder:default=Exact
 	Type *SourceMatchType `json:"type,omitempty"`
 
 	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
 	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
 	// For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`.
-	Value string `json:"address"`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	Value string `json:"value"`
 }
 
 // HeaderMatch defines the match attributes within the HTTP Headers of the request.

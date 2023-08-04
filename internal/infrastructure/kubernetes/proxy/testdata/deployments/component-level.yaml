@@ -36,6 +36,7 @@ spec:
             - --service-node $(ENVOY_POD_NAME)
             - --config-yaml test bootstrap config
             - --log-level error
+            - --cpuset-threads
             - --component-log-level filter:info
           command:
             - envoy
@@ -64,6 +65,15 @@ spec:
             requests:
               cpu: 100m
               memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 19001
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
@@ -81,6 +91,7 @@ spec:
         - name: certs
           secret:
             secretName: envoy
+            defaultMode: 420
         - configMap:
             defaultMode: 420
             items:
@@ -91,3 +102,5 @@ spec:
             name: envoy-default-64656661
             optional: false
           name: sds
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

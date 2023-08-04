@@ -60,6 +60,33 @@ spec:
                   ads: {}
                   resource_api_version: V3
               static_resources:
+                listeners:
+                - name: envoy-gateway-proxy-ready-0.0.0.0-19001
+                  address:
+                    socket_address:
+                      address: 0.0.0.0
+                      port_value: 19001
+                      protocol: TCP
+                  filter_chains:
+                  - filters:
+                    - name: envoy.filters.network.http_connection_manager
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                        stat_prefix: eg-ready-http
+                        route_config:
+                          name: local_route
+                        http_filters:
+                        - name: envoy.filters.http.health_check
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.health_check.v3.HealthCheck
+                            pass_through_mode: false
+                            headers:
+                            - name: ":path"
+                              string_match:
+                                exact: /ready
+                        - name: envoy.filters.http.router
+                          typed_config:
+                            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                 clusters:
                 - connect_timeout: 10s
                   load_assignment:
@@ -72,10 +99,10 @@ spec:
                               address: envoy-gateway
                               port_value: 18000
                   typed_extension_protocol_options:
-                    "envoy.extensions.upstreams.http.v3.HttpProtocolOptions":
-                       "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
-                       "explicit_http_config":
-                         "http2_protocol_options": {}
+                    envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+                      "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
+                      explicit_http_config:
+                        http2_protocol_options: {}
                   name: xds_cluster
                   type: STRICT_DNS
                   transport_socket:
@@ -106,6 +133,7 @@ spec:
                       resource_api_version: V3
                     name: runtime-0
             - --log-level warn
+            - --cpuset-threads
           command:
             - envoy
           env:
@@ -133,6 +161,15 @@ spec:
             requests:
               cpu: 100m
               memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 19001
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
@@ -150,6 +187,7 @@ spec:
         - name: certs
           secret:
             secretName: envoy
+            defaultMode: 420
         - configMap:
             defaultMode: 420
             items:
@@ -160,3 +198,5 @@ spec:
             name: envoy-default-64656661
             optional: false
           name: sds
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

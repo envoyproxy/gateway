@@ -1,5 +1,5 @@
 xds:
-  default-eg:
+  default/eg:
     '@type': type.googleapis.com/envoy.admin.v3.ListenersConfigDump
     dynamicListeners:
     - activeState:
@@ -53,12 +53,12 @@ xds:
                   configSource:
                     ads: {}
                     resourceApiVersion: V3
-                  routeConfigName: default-eg-http
+                  routeConfigName: default/eg/http
                 statPrefix: http
                 upgradeConfigs:
                 - upgradeType: websocket
                 useRemoteAddress: true
-          name: default-eg-http
+          name: default/eg/http
           perConnectionBufferLimitBytes: 32768
     - activeState:
         listener:
@@ -94,7 +94,6 @@ xds:
                         inlineString: |
                           [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                     path: /dev/stdout
-                codecType: HTTP2
                 commonHttpProtocolOptions:
                   headersWithUnderscoresAction: REJECT_REQUEST
                 http2ProtocolOptions:
@@ -120,10 +119,10 @@ xds:
                   configSource:
                     ads: {}
                     resourceApiVersion: V3
-                  routeConfigName: default-eg-grpc
+                  routeConfigName: default/eg/grpc
                 statPrefix: http
                 useRemoteAddress: true
-          name: default-eg-grpc
+          name: default/eg/grpc
           perConnectionBufferLimitBytes: 32768
     - activeState:
         listener:
@@ -162,13 +161,13 @@ xds:
                         inlineString: |
                           [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                     path: /dev/stdout
-                cluster: default-eg-tls-passthrough-backend
+                cluster: default/eg/tls-passthrough/backend
                 statPrefix: passthrough
           listenerFilters:
           - name: envoy.filters.listener.tls_inspector
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-          name: default-eg-tls-passthrough-backend
+          name: default/eg/tls-passthrough/backend
           perConnectionBufferLimitBytes: 32768
     - activeState:
         listener:
@@ -204,9 +203,9 @@ xds:
                         inlineString: |
                           [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                     path: /dev/stdout
-                cluster: default-eg-tcp-backend
+                cluster: default/eg/tcp/backend
                 statPrefix: tcp
-          name: default-eg-tcp-backend
+          name: default/eg/tcp/backend
           perConnectionBufferLimitBytes: 32768
     - activeState:
         listener:
@@ -248,7 +247,6 @@ xds:
                     name: route
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
-                      cluster: default-eg-udp-backend
+                      cluster: default/eg/udp/backend
               statPrefix: service
-          name: default-eg-udp-backend
-
+          name: default/eg/udp/backend

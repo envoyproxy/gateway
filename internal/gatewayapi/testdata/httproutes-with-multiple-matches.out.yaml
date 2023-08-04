@@ -2,282 +2,331 @@ gateways:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: Gateway
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: gateway-1
+    namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-      allowedRoutes:
+    - allowedRoutes:
         namespaces:
           from: Same
+      name: http
+      port: 80
+      protocol: HTTP
   status:
     listeners:
-    - name: http
+    - attachedRoutes: 5
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute       
-      attachedRoutes: 5
-      conditions:
-      - type: Programmed
-        status: "True"
-        reason: Programmed
-        message: Sending translated listener configuration to the data plane
-      - type: Accepted
-        status: "True"
-        reason: Accepted
-        message: Listener has been successfully translated
+        kind: GRPCRoute
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: httproute-1
+    namespace: envoy-gateway
   spec:
     parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
+    - name: gateway-1
+      namespace: envoy-gateway
     rules:
-    - matches:
-      - path:
-          value: "/"
-      backendRefs:
+    - backendRefs:
       - name: service-1
         port: 8080
+      matches:
+      - path:
+          value: /
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: null
         message: Route is accepted
-      - type: ResolvedRefs
+        reason: Accepted
         status: "True"
-        reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: httproute-2
+    namespace: envoy-gateway
   spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
     hostnames:
     - example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
     rules:
-    - matches:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
       - path:
-          value: "/v1/example"
+          value: /v1/example
         queryParams:
-        - name: "debug"
+        - name: debug
           value: "yes"
-      backendRefs:
-      - name: service-1
-        port: 8080
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: null
         message: Route is accepted
-      - type: ResolvedRefs
+        reason: Accepted
         status: "True"
-        reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: httproute-3
+    namespace: envoy-gateway
   spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
     hostnames:
     - example.com
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
     rules:
-    - matches:
-      - path:
-          value: "/v1/example"
-      backendRefs:
+    - backendRefs:
       - name: service-2
         port: 8080
+      matches:
+      - path:
+          value: /v1/example
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: null
         message: Route is accepted
-      - type: ResolvedRefs
+        reason: Accepted
         status: "True"
-        reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: httproute-4
+    namespace: envoy-gateway
   spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
     hostnames:
     - example.net
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
     rules:
-    - matches:
-      - path:
-          value: "/v1/status"
-        headers:
-        - name: "version"
-          value: "one"
-      backendRefs:
+    - backendRefs:
       - name: service-1
         port: 8080
+      matches:
+      - headers:
+        - name: version
+          value: one
+        path:
+          value: /v1/status
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: null
         message: Route is accepted
-      - type: ResolvedRefs
+        reason: Accepted
         status: "True"
-        reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
-    namespace: envoy-gateway
+    creationTimestamp: null
     name: httproute-5
+    namespace: envoy-gateway
   spec:
-    parentRefs:
-    - namespace: envoy-gateway
-      name: gateway-1
     hostnames:
     - example.net
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
     rules:
-    - matches:
-      - path:
-          value: "/v1/status"
-      backendRefs:
+    - backendRefs:
       - name: service-2
         port: 8080
+      matches:
+      - path:
+          value: /v1/status
   status:
     parents:
-    - parentRef:
-        namespace: envoy-gateway
-        name: gateway-1
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      conditions:
-      - type: Accepted
-        status: "True"
-        reason: Accepted
+    - conditions:
+      - lastTransitionTime: null
         message: Route is accepted
-      - type: ResolvedRefs
+        reason: Accepted
         status: "True"
-        reason: ResolvedRefs
+        type: Accepted
+      - lastTransitionTime: null
         message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+infraIR:
+  envoy-gateway/gateway-1:
+    proxy:
+      listeners:
+      - address: ""
+        ports:
+        - containerPort: 10080
+          name: http
+          protocol: HTTP
+          servicePort: 80
+      metadata:
+        labels:
+          gateway.envoyproxy.io/owning-gateway-name: gateway-1
+          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
+      name: envoy-gateway/gateway-1
 xdsIR:
-  envoy-gateway-gateway-1:
+  envoy-gateway/gateway-1:
     accessLog:
       text:
       - path: /dev/stdout
     http:
-    - name: envoy-gateway-gateway-1-http
-      address: 0.0.0.0
-      port: 10080
+    - address: 0.0.0.0
       hostnames:
-      - "*"
+      - '*'
+      isHTTP2: false
+      name: envoy-gateway/gateway-1/http
+      port: 10080
       routes:
-      - name: envoy-gateway-httproute-2-rule-0-match-0-example.com
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        headerMatches:
+        - distinct: false
+          exact: example.com
+          name: :authority
+        name: envoy-gateway/httproute-2/rule/0/match/0-example.com
         pathMatch:
-          prefix: "/v1/example"
+          distinct: false
+          name: ""
+          prefix: /v1/example
         queryParamMatches:
-        - name: "debug"
+        - distinct: false
           exact: "yes"
-        headerMatches:
-        - name: :authority
-          exact: example.com
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
-      - name: envoy-gateway-httproute-3-rule-0-match-0-example.com
-        pathMatch:
-          prefix: "/v1/example"
-        headerMatches:
-        - name: :authority
-          exact: example.com
+          name: debug
+      - backendWeights:
+          invalid: 0
+          valid: 0
         destinations:
         - host: 8.8.8.8
           port: 8080
           weight: 1
-      - name: envoy-gateway-httproute-4-rule-0-match-0-example.net
-        pathMatch:
-          prefix: "/v1/status"
         headerMatches:
-        - name: :authority
-          exact: example.net
-        - name: "version"
-          exact: "one"
+        - distinct: false
+          exact: example.com
+          name: :authority
+        name: envoy-gateway/httproute-3/rule/0/match/0-example.com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v1/example
+      - backendWeights:
+          invalid: 0
+          valid: 0
         destinations:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-      - name: envoy-gateway-httproute-5-rule-0-match-0-example.net
-        pathMatch:
-          prefix: "/v1/status"
         headerMatches:
-        - name: :authority
+        - distinct: false
           exact: example.net
+          name: :authority
+        - distinct: false
+          exact: one
+          name: version
+        name: envoy-gateway/httproute-4/rule/0/match/0-example.net
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /v1/status
+      - backendWeights:
+          invalid: 0
+          valid: 0
         destinations:
         - host: 8.8.8.8
           port: 8080
           weight: 1
-      - name: envoy-gateway-httproute-1-rule-0-match-0-*
+        headerMatches:
+        - distinct: false
+          exact: example.net
+          name: :authority
+        name: envoy-gateway/httproute-5/rule/0/match/0-example.net
         pathMatch:
-          prefix: "/"
+          distinct: false
+          name: ""
+          prefix: /v1/status
+      - backendWeights:
+          invalid: 0
+          valid: 0
         destinations:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-infraIR:
-  envoy-gateway-gateway-1:
-    proxy:
-      metadata:
-        labels:
-          gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-          gateway.envoyproxy.io/owning-gateway-name: gateway-1
-      name: envoy-gateway-gateway-1
-
-      listeners:
-      - address: ""
-        ports:
-        - name: http
-          protocol: "HTTP"
-          servicePort: 80
-          containerPort: 10080
+        name: envoy-gateway/httproute-1/rule/0/match/0-*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /

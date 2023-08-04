@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // Update contains an all the information needed to update an object's status.
@@ -91,8 +93,8 @@ func (u *UpdateHandler) apply(update Update) {
 			return nil
 		}
 
-		newObj.SetResourceVersion(obj.GetResourceVersion())
 		newObj.SetUID(obj.GetUID())
+
 		return u.client.Status().Update(context.Background(), newObj)
 	}); err != nil {
 		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
@@ -165,6 +167,7 @@ func (u *UpdateWriter) Send(update Update) {
 //	TCPRoute
 //	UDPRoute
 //	GRPCRoute
+//	EnvoyPatchPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -206,6 +209,12 @@ func isStatusEqual(objA, objB interface{}) bool {
 		}
 	case *gwapiv1a2.GRPCRoute:
 		if b, ok := objB.(*gwapiv1a2.GRPCRoute); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *egv1a1.EnvoyPatchPolicy:
+		if b, ok := objB.(*egv1a1.EnvoyPatchPolicy); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}

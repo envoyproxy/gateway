@@ -6,12 +6,15 @@
 package gatewayapi
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -24,6 +27,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/field"
+	"github.com/envoyproxy/gateway/internal/utils/file"
+)
+
+var (
+	overrideTestData = flag.Bool("override-testdata", false, "if override the test output data.")
 )
 
 func mustUnmarshal(t *testing.T, val []byte, out interface{}) {
@@ -42,12 +51,6 @@ func TestTranslate(t *testing.T) {
 
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
-
-			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
-			require.NoError(t, err)
-
-			want := &TranslateResult{}
-			mustUnmarshal(t, output, want)
 
 			translator := &Translator{
 				GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -102,6 +105,20 @@ func TestTranslate(t *testing.T) {
 			})
 
 			got := translator.Translate(resources)
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
+			out, err := yaml.Marshal(got)
+			require.NoError(t, err)
+
+			if *overrideTestData {
+				overrideOutputConfig(t, string(out), outputFilePath)
+			}
+
+			output, err := os.ReadFile(outputFilePath)
+			require.NoError(t, err)
+
+			want := &TranslateResult{}
+			mustUnmarshal(t, output, want)
 
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))
@@ -121,12 +138,6 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 
 			resources := &Resources{}
 			mustUnmarshal(t, input, resources)
-
-			output, err := os.ReadFile(strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml"))
-			require.NoError(t, err)
-
-			want := &TranslateResult{}
-			mustUnmarshal(t, output, want)
 
 			translator := &Translator{
 				GatewayControllerName:  egv1alpha1.GatewayControllerName,
@@ -182,11 +193,37 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			})
 
 			got := translator.Translate(resources)
+			require.NoError(t, field.SetValue(got, "LastTransitionTime", metav1.NewTime(time.Time{})))
+
+			outputFilePath := strings.ReplaceAll(inputFile, ".in.yaml", ".out.yaml")
+			out, err := yaml.Marshal(got)
+			require.NoError(t, err)
+
+			if *overrideTestData {
+				require.NoError(t, file.Write(string(out), outputFilePath))
+			}
+
+			output, err := os.ReadFile(outputFilePath)
+			require.NoError(t, err)
+
+			want := &TranslateResult{}
+			mustUnmarshal(t, output, want)
 
 			opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 			require.Empty(t, cmp.Diff(want, got, opts))
 		})
 	}
+}
+
+func overrideOutputConfig(t *testing.T, data string, filepath string) {
+	t.Helper()
+	file, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0755)
+	require.NoError(t, err)
+	defer file.Close()
+	write := bufio.NewWriter(file)
+	_, err = write.WriteString(data)
+	require.NoError(t, err)
+	write.Flush()
 }
 
 func testName(inputFile string) string {

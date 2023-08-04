@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -51,6 +52,14 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind:       ratelimit.ResourceKindServiceAccount,
+							APIVersion: "v1",
+							Name:       "envoy-gateway",
+							UID:        "foo.bar",
+						},
+					},
 				},
 			},
 		},
@@ -65,6 +74,14 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "envoy-gateway-system",
 					Name:      ratelimit.InfraName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							Kind:       ratelimit.ResourceKindServiceAccount,
+							APIVersion: "v1",
+							Name:       "envoy-gateway",
+							UID:        "foo.bar",
+						},
+					},
 				},
 			},
 		},
@@ -87,7 +104,10 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 			kube := NewInfra(cli, cfg)
 			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
+			ownerReferenceUID := map[string]types.UID{
+				ratelimit.ResourceKindServiceAccount: "foo.bar",
+			}
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, ownerReferenceUID)
 
 			err = kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
@@ -131,7 +151,7 @@ func TestDeleteRateLimitServiceAccount(t *testing.T) {
 
 			kube.EnvoyGateway.RateLimit = rl
 
-			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway)
+			r := ratelimit.NewResourceRender(kube.Namespace, kube.EnvoyGateway, nil)
 			err := kube.createOrUpdateServiceAccount(context.Background(), r)
 			require.NoError(t, err)
 

@@ -1,0 +1,26 @@
+xds:
+  envoy-gateway-system/eg:
+    '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
+    dynamicRouteConfigs:
+    - routeConfig:
+        '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+        ignorePortInHostMatching: true
+        name: envoy-gateway-system/eg/http
+        virtualHosts:
+        - domains:
+          - '*'
+          name: envoy-gateway-system/eg/http
+          routes:
+          - match:
+              headers:
+              - name: :authority
+                stringMatch:
+                  exact: www.example.com
+              pathSeparatedPrefix: /foo
+            name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+            route:
+              cluster: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+            typedPerFilterConfig:
+              envoy.filters.http.jwt_authn:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
+                requirementName: envoy-gateway-system/backend/rule/0/match/0-www.example.com

@@ -57,6 +57,7 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
 	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra]) {
+			r.Logger.Info("received an update")
 			val := update.Value
 
 			if update.Delete {
@@ -77,13 +78,5 @@ func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 func (r *Runner) enableRateLimitInfra(ctx context.Context) {
 	if err := r.mgr.CreateOrUpdateRateLimitInfra(ctx); err != nil {
 		r.Logger.Error(err, "failed to create ratelimit infra")
-	}
-
-	<-ctx.Done()
-	r.Logger.Info("deleting ratelimit infra")
-	if err := r.mgr.DeleteRateLimitInfra(ctx); err != nil {
-		r.Logger.Error(err, "failed to delete ratelimit infra")
-	} else {
-		r.Logger.Info("ratelimit infra deleted")
 	}
 }

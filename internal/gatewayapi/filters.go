@@ -136,6 +136,8 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case v1alpha2.GRPCRouteFilterRequestMirror:
 			t.processRequestMirrorFilter(filter.RequestMirror, httpFiltersContext, resources)
+		case v1alpha2.GRPCRouteFilterExtensionRef:
+			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
 			t.processUnsupportedHTTPFilter(string(filter.Type), httpFiltersContext)
 		}
@@ -732,15 +734,23 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
 							default:
 								// set negative status condition.
-								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
+								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: %s/%s", filterNs,
 									extFilter.Name)
 								t.processUnresolvedHTTPFilter(errMsg, filterContext)
 								return
 							}
 						}
 
-						if match.SourceIP != nil {
-							ip, ipn, err := net.ParseCIDR(*match.SourceIP)
+						if match.SourceCIDR != nil {
+							// distinct means that each IP Address within the specified Source IP CIDR is treated as a
+							// distinct client selector and uses a separate rate limit bucket/counter.
+							distinct := false
+							sourceCIDR := match.SourceCIDR.Value
+							if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+								distinct = true
+							}
+
+							ip, ipn, err := net.ParseCIDR(sourceCIDR)
 							if err != nil {
 								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
 									extFilter.Name)
@@ -750,13 +760,13 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *v1beta1.LocalObjec
 
 							mask, _ := ipn.Mask.Size()
 							rules[i].CIDRMatch = &ir.CIDRMatch{
-								CIDR:    ipn.String(),
-								IPv6:    ip.To4() == nil,
-								MaskLen: mask,
+								CIDR:     ipn.String(),
+								IPv6:     ip.To4() == nil,
+								MaskLen:  mask,
+								Distinct: distinct,
 							}
 						}
 					}
-
 				}
 				filterContext.HTTPFilterIR.RateLimit = rateLimit
 				return

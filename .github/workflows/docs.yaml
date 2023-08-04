@@ -34,9 +34,9 @@ jobs:
       - name: Generate EG Pages
         run: make docs
 
-      # Upload docs for GitHub Pages    
+      # Upload docs for GitHub Pages
       - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v1.0.8
+        uses: actions/upload-pages-artifact@v2.0.0
         with:
           # Path of the directory containing the static assets.
           path: docs/html
@@ -63,4 +63,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v2.0.1
+        uses: actions/deploy-pages@v2.0.3

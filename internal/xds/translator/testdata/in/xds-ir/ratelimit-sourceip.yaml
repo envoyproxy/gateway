@@ -19,7 +19,7 @@ http:
       exact: "foo/bar"
     destinations:
     - host: "1.2.3.4"
-      port: 50000    
+      port: 50000
   - name: "second-route"
     rateLimit:
       global:
@@ -34,7 +34,7 @@ http:
       exact: "example"
     destinations:
     - host: "1.2.3.4"
-      port: 50000     
+      port: 50000
   - name: "third-route"
     rateLimit:
       global:
@@ -44,6 +44,22 @@ http:
             unit: second
     pathMatch:
       exact: "test"
+    destinations:
+    - host: "1.2.3.4"
+      port: 50000
+  - name: "fourth-route"
+    rateLimit:
+      global:
+        rules:
+        - cidrMatch:
+            cidr: 192.168.0.0/16
+            maskLen: 16
+            distinct: true
+          limit:
+            requests: 5
+            unit: second
+    pathMatch:
+      exact: "distinct"
     destinations:
     - host: "1.2.3.4"
       port: 50000

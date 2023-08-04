@@ -39,5 +39,5 @@ httpRoutes:
         extensionRef:
           group: gateway.envoyproxy.io
           kind: AuthenticationFilter
-          name: non-exist 
+          name: non-exist
 

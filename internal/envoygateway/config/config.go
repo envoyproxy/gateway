@@ -75,7 +75,7 @@ func (s *Server) Validate() error {
 			switch component {
 			case v1alpha1.LogComponentGatewayDefault,
 				v1alpha1.LogComponentProviderRunner,
-				v1alpha1.LogComponentGatewayApiRunner,
+				v1alpha1.LogComponentGatewayAPIRunner,
 				v1alpha1.LogComponentXdsTranslatorRunner,
 				v1alpha1.LogComponentXdsServerRunner,
 				v1alpha1.LogComponentInfrastructureRunner,
@@ -99,21 +99,21 @@ func (s *Server) Validate() error {
 		if _, err := url.Parse(s.EnvoyGateway.RateLimit.Backend.Redis.URL); err != nil {
 			return fmt.Errorf("unknown ratelimit redis url format: %w", err)
 		}
-	case s.EnvoyGateway.Extension != nil:
-		if s.EnvoyGateway.Extension.Hooks == nil || s.EnvoyGateway.Extension.Hooks.XDSTranslator == nil {
+	case s.EnvoyGateway.ExtensionManager != nil:
+		if s.EnvoyGateway.ExtensionManager.Hooks == nil || s.EnvoyGateway.ExtensionManager.Hooks.XDSTranslator == nil {
 			return fmt.Errorf("registered extension has no hooks specified")
 		}
 
-		if len(s.EnvoyGateway.Extension.Hooks.XDSTranslator.Pre) == 0 && len(s.EnvoyGateway.Extension.Hooks.XDSTranslator.Post) == 0 {
+		if len(s.EnvoyGateway.ExtensionManager.Hooks.XDSTranslator.Pre) == 0 && len(s.EnvoyGateway.ExtensionManager.Hooks.XDSTranslator.Post) == 0 {
 			return fmt.Errorf("registered extension has no hooks specified")
 		}
 
-		if s.EnvoyGateway.Extension.Service == nil {
+		if s.EnvoyGateway.ExtensionManager.Service == nil {
 			return fmt.Errorf("extension service config is empty")
 		}
 
-		if s.EnvoyGateway.Extension.Service.TLS != nil {
-			certificateRefKind := s.EnvoyGateway.Extension.Service.TLS.CertificateRef.Kind
+		if s.EnvoyGateway.ExtensionManager.Service.TLS != nil {
+			certificateRefKind := s.EnvoyGateway.ExtensionManager.Service.TLS.CertificateRef.Kind
 
 			if certificateRefKind == nil {
 				return fmt.Errorf("certificateRef empty in extension service server TLS settings")

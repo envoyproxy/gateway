@@ -21,6 +21,7 @@ import (
 	rlsconfv3 "github.com/envoyproxy/go-control-plane/ratelimit/config/ratelimit/v3"
 	"github.com/envoyproxy/ratelimit/src/config"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
@@ -35,6 +36,18 @@ const (
 	rateLimitClientTLSKeyFilename = "/certs/tls.key"
 	// rateLimitClientTLSCACertFilename is the ratelimit ca cert file.
 	rateLimitClientTLSCACertFilename = "/certs/ca.crt"
+)
+const (
+	// Use `draft RFC Version 03 <https://tools.ietf.org/id/draft-polli-ratelimit-headers-03.html>` by default,
+	// where 3 headers will be added:
+	// * ``X-RateLimit-Limit`` - indicates the request-quota associated to the
+	//   client in the current time-window followed by the description of the
+	//   quota policy. The value is returned by the maximum tokens of the token bucket.
+	// * ``X-RateLimit-Remaining`` - indicates the remaining requests in the
+	//   current time-window. The value is returned by the remaining tokens in the token bucket.
+	// * ``X-RateLimit-Reset`` - indicates the number of seconds until reset of
+	//   the current time-window. The value is returned by the remaining fill interval of the token bucket.
+	xRateLimitHeadersRfcVersion = 1
 )
 
 // patchHCMWithRateLimit builds and appends the Rate Limit Filter to the HTTP connection manager
@@ -52,7 +65,7 @@ func (t *Translator) patchHCMWithRateLimit(mgr *hcmv3.HttpConnectionManager, irL
 		}
 	}
 
-	rateLimitFilter := buildRateLimitFilter(irListener)
+	rateLimitFilter := t.buildRateLimitFilter(irListener)
 	// Make sure the router filter is the terminal filter in the chain.
 	mgr.HttpFilters = append([]*hcmv3.HttpFilter{rateLimitFilter}, mgr.HttpFilters...)
 }
@@ -72,7 +85,8 @@ func (t *Translator) isRateLimitPresent(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
+
 	rateLimitFilterProto := &ratelimitfilterv3.RateLimit{
 		Domain: getRateLimitDomain(irListener),
 		RateLimitService: &ratelimitv3.RateLimitServiceConfig{
@@ -85,6 +99,14 @@ func buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.HttpFilter {
 			},
 			TransportApiVersion: corev3.ApiVersion_V3,
 		},
+		EnableXRatelimitHeaders: ratelimitfilterv3.RateLimit_XRateLimitHeadersRFCVersion(xRateLimitHeadersRfcVersion),
+	}
+	if t.GlobalRateLimit.Timeout > 0 {
+		rateLimitFilterProto.Timeout = durationpb.New(t.GlobalRateLimit.Timeout)
+	}
+
+	if t.GlobalRateLimit.FailClosed {
+		rateLimitFilterProto.FailureModeDeny = t.GlobalRateLimit.FailClosed
 	}
 
 	rateLimitFilterAny, err := anypb.New(rateLimitFilterProto)
@@ -159,6 +181,23 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 			}
 		}
 
+		// To be able to rate limit each individual IP, we need to use a nested descriptors structure in the configuration
+		// of the rate limit server:
+		// * the outer layer is a masked_remote_address descriptor that catches all the source IPs inside a specified CIDR.
+		// * the inner layer is a remote_address descriptor that sets the limit for individual IP.
+		//
+		// An example of rate limit server configuration looks like this:
+		//
+		//	descriptors:
+		//	  - key: masked_remote_address //catch all the source IPs inside a CIDR
+		//	    value: 192.168.0.0/16
+		//	    descriptors:
+		//	      - key: remote_address //set limit for individual IP
+		//	        rate_limit:
+		//	          unit: second
+		//	          requests_per_unit: 100
+		//
+		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		if rule.CIDRMatch != nil {
 			// Setup MaskedRemoteAddress action
 			mra := &routev3.RateLimit_Action_MaskedRemoteAddress{}
@@ -174,6 +213,17 @@ func buildRouteRateLimits(descriptorPrefix string, global *ir.GlobalRateLimit) [
 				},
 			}
 			rlActions = append(rlActions, action)
+
+			// Setup RemoteAddress action if distinct match is set
+			if rule.CIDRMatch.Distinct {
+				// Setup RemoteAddress action
+				action := &routev3.RateLimit_Action{
+					ActionSpecifier: &routev3.RateLimit_Action_RemoteAddress_{
+						RemoteAddress: &routev3.RateLimit_Action_RemoteAddress{},
+					},
+				}
+				rlActions = append(rlActions, action)
+			}
 		}
 
 		// Case when header match is not set and the rate limit is applied
@@ -281,6 +331,27 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 			cur = pbDesc
 		}
 
+		// EG supports two kinds of rate limit descriptors for the source IP: exact and distinct.
+		// * exact means that all IP Addresses within the specified Source IP CIDR share the same rate limit bucket.
+		// * distinct means that each IP Address within the specified Source IP CIDR has its own rate limit bucket.
+		//
+		// To be able to rate limit each individual IP, we need to use a nested descriptors structure in the configuration
+		// of the rate limit server:
+		// * the outer layer is a masked_remote_address descriptor that catches all the source IPs inside a specified CIDR.
+		// * the inner layer is a remote_address descriptor that sets the limit for individual IP.
+		//
+		// An example of rate limit server configuration looks like this:
+		//
+		//	descriptors:
+		//	  - key: masked_remote_address //catch all the source IPs inside a CIDR
+		//	    value: 192.168.0.0/16
+		//	    descriptors:
+		//	      - key: remote_address //set limit for individual IP
+		//	        rate_limit:
+		//	          unit: second
+		//	          requests_per_unit: 100
+		//
+		// Please refer to [Rate Limit Service Descriptor list definition](https://github.com/envoyproxy/ratelimit#descriptor-list-definition) for details.
 		if rule.CIDRMatch != nil {
 			// MaskedRemoteAddress case
 			pbDesc := new(rlsconfv3.RateLimitDescriptor)
@@ -290,7 +361,17 @@ func buildRateLimitServiceDescriptors(descriptorPrefix string, global *ir.Global
 				RequestsPerUnit: uint32(rule.Limit.Requests),
 				Unit:            rlsconfv3.RateLimitUnit(rlsconfv3.RateLimitUnit_value[strings.ToUpper(string(rule.Limit.Unit))]),
 			}
-			pbDesc.RateLimit = &rateLimit
+
+			if rule.CIDRMatch.Distinct {
+				pbDesc.Descriptors = []*rlsconfv3.RateLimitDescriptor{
+					{
+						Key:       "remote_address",
+						RateLimit: &rateLimit,
+					},
+				}
+			} else {
+				pbDesc.RateLimit = &rateLimit
+			}
 			head = pbDesc
 			cur = head
 		}
@@ -355,13 +436,15 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 			return err
 		}
 
-		addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
 			destinations: routeDestinations,
 			tSocket:      tSocket,
 			protocol:     HTTP2,
 			endpoint:     DefaultEndpointType,
-		})
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

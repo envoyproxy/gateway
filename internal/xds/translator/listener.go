@@ -73,8 +73,14 @@ func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.Access
 	}
 }
 
-func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener, accesslog *ir.AccessLog) error {
+func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
+	accesslog *ir.AccessLog, tracing *ir.Tracing) error {
 	al := buildXdsAccessLog(accesslog, false)
+
+	hcmTracing, err := buildHCMTracing(tracing)
+	if err != nil {
+		return err
+	}
 
 	// HTTP filter configuration
 	var statPrefix string
@@ -107,12 +113,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		CommonHttpProtocolOptions: &corev3.HttpProtocolOptions{
 			HeadersWithUnderscoresAction: corev3.HttpProtocolOptions_REJECT_REQUEST,
 		},
+		Tracing: hcmTracing,
 	}
 
 	if irListener.IsHTTP2 {
-		// Set codec to HTTP2
-		mgr.CodecType = hcmv3.HttpConnectionManager_HTTP2
-
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCStats)

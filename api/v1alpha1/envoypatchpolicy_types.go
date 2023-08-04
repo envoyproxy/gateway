@@ -6,6 +6,7 @@
 package v1alpha1
 
 import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -16,6 +17,9 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // EnvoyPatchPolicy allows the user to modify the generated Envoy xDS
 // resources by Envoy Gateway using this patch API
@@ -27,7 +31,7 @@ type EnvoyPatchPolicy struct {
 	Spec EnvoyPatchPolicySpec `json:"spec"`
 
 	// Status defines the current status of EnvoyPatchPolicy.
-	Status EnvoyPatchPolicyStatus `json:"status"`
+	Status EnvoyPatchPolicyStatus `json:"status,omitempty"`
 }
 
 // EnvoyPatchPolicySpec defines the desired state of EnvoyPatchPolicy.
@@ -55,7 +59,7 @@ type EnvoyPatchPolicySpec struct {
 	// the priority i.e. int32.min has the highest priority and
 	// int32.max has the lowest priority.
 	// Defaults to 0.
-	Priority int32 `json:"priority"`
+	Priority int32 `json:"priority,omitempty"`
 }
 
 // EnvoyPatchType specifies the types of Envoy patching mechanisms.
@@ -94,16 +98,20 @@ const (
 	ClusterLoadAssignmentEnvoyResourceType EnvoyResourceType = "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment"
 )
 
+// JSONPatchOperationType specifies the JSON Patch operations that can be performed.
+// +kubebuilder:validation:Enum=add;remove;replace;move;copy;test
+type JSONPatchOperationType string
+
 // JSONPatchOperation defines the JSON Patch Operation as defined in
 // https://datatracker.ietf.org/doc/html/rfc6902
 type JSONPatchOperation struct {
 	// Op is the type of operation to perform
-	Op string `json:"op"`
+	Op JSONPatchOperationType `json:"op"`
 	// Path is the location of the target document/field where the operation will be performed
 	// Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details.
 	Path string `json:"path"`
 	// Value is the new value of the path location.
-	Value string `json:"value"`
+	Value apiextensionsv1.JSON `json:"value"`
 }
 
 // EnvoyPatchPolicyStatus defines the state of EnvoyPatchPolicy
@@ -116,6 +124,34 @@ type EnvoyPatchPolicyStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
+
+const (
+	// PolicyConditionProgrammed indicates whether the policy has been translated
+	// and ready to be programmed into the data plane.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Programmed"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "Invalid"
+	// * "ResourceNotFound"
+	//
+	PolicyConditionProgrammed gwapiv1a2.PolicyConditionType = "Programmed"
+
+	// PolicyReasonProgrammed is used with the "Programmed" condition when the policy
+	// is ready to be programmed into the data plane.
+	PolicyReasonProgrammed gwapiv1a2.PolicyConditionReason = "Programmed"
+
+	// PolicyReasonInvalid is used with the "Programmed" condition when the patch
+	// is syntactically or semantically invalid.
+	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
+
+	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// policy cannot find the resource type to patch to.
+	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
+)
 
 //+kubebuilder:object:root=true
 
