@@ -118,7 +118,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 			} else {
 				// Translate to ratelimit xDS Config.
-				rvt := r.translate(update.Value)
+				rvt, err := r.translate(update.Value)
+				if err != nil {
+					r.Logger.Error(err, err.Error())
+				}
 
 				// Update ratelimit xDS config cache.
 				if rvt != nil {
@@ -130,17 +133,19 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	r.Logger.Info("subscriber shutting down")
 }
 
-func (r *Runner) translate(xdsIR *ir.Xds) *types.ResourceVersionTable {
+func (r *Runner) translate(xdsIR *ir.Xds) (*types.ResourceVersionTable, error) {
 	resourceVT := new(types.ResourceVersionTable)
 
 	for _, listener := range xdsIR.HTTP {
 		cfg := translator.BuildRateLimitServiceConfig(listener)
 		if cfg != nil {
 			// Add to xDS Config resources.
-			resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg)
+			if err := resourceVT.AddXdsResource(resourcev3.RateLimitConfigType, cfg); err != nil {
+				return nil, err
+			}
 		}
 	}
-	return resourceVT
+	return resourceVT, nil
 }
 
 func (r *Runner) updateSnapshot(ctx context.Context, resource types.XdsResources) {

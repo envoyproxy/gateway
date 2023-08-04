@@ -92,6 +92,42 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "invalid authenticationfilter group",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: "UnsupportedGroup",
+					Kind:  egv1a1.KindAuthenticationFilter,
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid authenticationfilter kind",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+					Kind:  "UnsupportedKind",
+					Name:  "test",
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "valid authenticationfilter",
+			filter: &gwapiv1a2.GRPCRouteFilter{
+				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gwapiv1b1.LocalObjectReference{
+					Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+					Kind:  egv1a1.KindAuthenticationFilter,
+					Name:  "test",
+				},
+			},
+			expected: true,
+		},
 	}
 	for _, tc := range testCases {
 		tc := tc
