@@ -70,6 +70,7 @@ verbs:
 - list
 - update
 - watch
+- patch
 {{- end }}
 
 {{- define "eg.rbac.namespaced.gateway.envoyproxy" -}}
