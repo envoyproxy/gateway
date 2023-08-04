@@ -13,15 +13,14 @@ i.e. if the data plane has 2 replicas of Envoy running, and the rate limit is 10
 if 5 requests pass through the first replica and 5 requests pass through the second replica within the same second.
 
 Envoy Gateway introduces a new CRD called [RateLimitFilter][] that allows the user to describe their rate limit intent. This instantiated resource
-can be linked to a [HTTPRoute][] or [GRPCRoute][] resource using an [ExtensionRef][] filter.
+can be linked to a [HTTPRoute][] resource using an [ExtensionRef][] filter.
 
 ## Prerequisites
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the HTTPRoute example manifest,
-or install the GRPCRoute example from [GRPC Routing](grpc-routing.md).
-Before proceeding, you should be able to query the example backend using HTTP/GRPC.
+* Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Install Redis
 
@@ -144,13 +143,7 @@ spec:
       limit:
         requests: 3
         unit: Hour
-EOF
-```
-
-### HTTPRoute
-
-```shell
-cat <<EOF | kubectl apply -f -
+---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
@@ -273,105 +266,6 @@ server: envoy
 
 ```
 
-### GRPCRoute
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: GRPCRoute
-metadata:
-  name: yages
-  labels:
-    example: grpc-routing
-spec:
-  parentRefs:
-  - name: example-gateway
-  hostnames:
-  - "grpc-example.com"
-  rules:
-  - matches:
-    - method:
-        method: ServerReflectionInfo
-        service: grpc.reflection.v1alpha.ServerReflection
-    - method:
-        method: Ping
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-specific-user
-    backendRefs:
-    - group: ""
-      kind: Service
-      name: yages
-      port: 9000
-      weight: 1
-EOF
-```
-
-The GRPCRoute status should indicate that it has been accepted and is bound to the example Gateway.
-
-```shell
-kubectl get grpcroute/yages -o yaml
-```
-
-Get the Gateway's address:
-
-```shell
-export GATEWAY_HOST=$(kubectl get gateway/example-gateway -o jsonpath='{.status.addresses[0].value}')
-```
-
-Lets query `grpc-example.com` with `yages.Echo/Ping` 4 times. We should receive a `pong` response from the example Gateway for the first 3 requests
-and then receive a rpc error for the 4th request since the limit is set at 3 requests/Hour for the request which contains the header `x-user-id`
-and value `one`.
-
-```shell
-for i in {1..4}; do grpcurl -plaintext -authority=grpc-example.com -H "x-user-id: one" ${GATEWAY_HOST}:80 yages.Echo/Ping ; sleep 1; done
-```
-
-```console
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
-
-```
-
-You should be able to send requests with the `x-user-id` header and a different value and receive successful responses from the server.
-
-```shell
-for i in {1..4}; do grpcurl -plaintext -authority=grpc-example.com -H "x-user-id: two" ${GATEWAY_HOST}:80 yages.Echo/Ping ; sleep 1; done
-```
-
-```console
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-```
-
 ## Rate Limit Distinct Users 
 
 Here is an example of a rate limit implemented by the application developer to limit distinct users who can be differentiated based on the 
@@ -395,13 +289,7 @@ spec:
       limit:
         requests: 3
         unit: Hour
-EOF
-```
-
-### HTTPRoute
-
-```shell
-cat <<EOF | kubectl apply -f -
+---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
@@ -429,6 +317,7 @@ spec:
       port: 3000
 EOF
 ```
+
 
 Lets run the same command again with the header `x-user-id` and value `one` set in the request. We should the first 3 requests succeeding and
 the 4th request being rate limited.
@@ -509,90 +398,6 @@ transfer-encoding: chunked
 
 ```
 
-### GRPCRoute
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: GRPCRoute
-metadata:
-  name: yages
-  labels:
-    example: grpc-routing
-spec:
-  parentRefs:
-  - name: example-gateway
-  hostnames:
-  - "grpc-example.com"
-  rules:
-  - matches:
-    - method:
-        method: ServerReflectionInfo
-        service: grpc.reflection.v1alpha.ServerReflection
-    - method:
-        method: Ping
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-distinct-users
-    backendRefs:
-    - group: ""
-      kind: Service
-      name: yages
-      port: 9000
-      weight: 1
-EOF
-```
-
-Lets run the same command again with the header `x-user-id` and value `one` set in the request. We should the first 3 requests succeeding and
-the 4th request being rate limited.
-
-```shell
-for i in {1..4}; do grpcurl -plaintext -authority=grpc-example.com -H "x-user-id: one" ${GATEWAY_HOST}:80 yages.Echo/Ping ; sleep 1; done
-```
-
-```console
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
-
-```
-
-You should see the same behavior when the value for header `x-user-id` is set to `two` and 4 requests are sent.
-
-```shell
-for i in {1..4}; do grpcurl -plaintext -authority=grpc-example.com -H "x-user-id: two" ${GATEWAY_HOST}:80 yages.Echo/Ping ; sleep 1; done
-```
-
-```console
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-{
-  "text": "pong"
-}
-
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
-
-```
-
 ## Rate Limit All Requests 
 
 This example shows you how to rate limit all requests matching the HTTPRoute rule at 3 requests/Hour by leaving the `clientSelectors` field unset.
@@ -610,13 +415,7 @@ spec:
     - limit:
         requests: 3
         unit: Hour
-EOF
-```
-
-### HTTPRoute
-
-```shell
-cat <<EOF | kubectl apply -f -
+---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
@@ -679,58 +478,6 @@ x-envoy-ratelimited: true
 date: Wed, 08 Feb 2023 02:33:34 GMT
 server: envoy
 transfer-encoding: chunked
-
-```
-
-### GRPCRoute
-
-```shell
-cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: GRPCRoute
-metadata:
-  name: yages
-  labels:
-    example: grpc-routing
-spec:
-  parentRefs:
-  - name: example-gateway
-  hostnames:
-  - "grpc-example.com"
-  rules:
-  - matches:
-    - method:
-        method: ServerReflectionInfo
-        service: grpc.reflection.v1alpha.ServerReflection
-    - method:
-        method: Ping
-    filters:
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-all-requests
-    backendRefs:
-    - group: ""
-      kind: Service
-      name: yages
-      port: 9000
-      weight: 1
-EOF
-```
-
-```shell
-for i in {1..4}; do grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOST}:80 yages.Echo/Ping ; sleep 1; done
-```
-
-```console
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
-
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
-
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
-
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
 
 ```
 
@@ -1058,5 +805,4 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
 [EnvoyGateway]: https://gateway.envoyproxy.io/v0.5.0/api/config_types.html#envoygateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/
 [ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPRouteFilter
