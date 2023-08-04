@@ -177,16 +177,16 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 					authFilter, ok := resourceMap.authenFilters[key]
 					if !ok {
 						r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
-						continue
+					} else {
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
 					}
-					resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
 
 					rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
 					if !ok {
 						r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
-						continue
+					} else {
+						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
 					}
-					resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
 				}
 			}
 		}
