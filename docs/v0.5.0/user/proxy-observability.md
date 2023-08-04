@@ -1,6 +1,6 @@
 # Proxy Observability
 
-Envoy Gateway provide observability for the ControlPlane and the underlying EnvoyProxy instances.
+Envoy Gateway provides observability for the ControlPlane and the underlying EnvoyProxy instances.
 This guide show you how to config proxy observability, includes metrics, logs, and traces.
 
 ## Prerequisites
