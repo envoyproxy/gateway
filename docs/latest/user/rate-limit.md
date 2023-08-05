@@ -2,7 +2,7 @@
 
 Rate limit is a feature that allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
 
-Here are some reasons why you may want to implements Rate limits
+Here are some reasons why you may want to implement Rate limits
 
 * To prevent malicious activity such as DDoS attacks.
 * To prevent applications and its resources (such as a database) from getting overloaded.
@@ -19,9 +19,8 @@ can be linked to a [HTTPRoute][] or [GRPCRoute][] resource using an [ExtensionRe
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the HTTPRoute example manifest,
-or install the GRPCRoute example from [GRPC Routing](grpc-routing.md).
-Before proceeding, you should be able to query the example backend using HTTP/GRPC.
+* Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the HTTPRoute example manifest.
+Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Install Redis
 
@@ -275,6 +274,9 @@ server: envoy
 
 ### GRPCRoute
 
+Before proceeding, you should install the GRPCRoute example from [GRPC Routing](grpc-routing.md),
+and be able to query the example backend using GRPC.
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -511,6 +513,9 @@ transfer-encoding: chunked
 
 ### GRPCRoute
 
+Before proceeding, you should install the GRPCRoute example from [GRPC Routing](grpc-routing.md),
+and be able to query the example backend using GRPC.
+
 ```shell
 cat <<EOF | kubectl apply -f -
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -683,6 +688,9 @@ transfer-encoding: chunked
 ```
 
 ### GRPCRoute
+
+Before proceeding, you should install the GRPCRoute example from [GRPC Routing](grpc-routing.md),
+and be able to query the example backend using GRPC.
 
 ```shell
 cat <<EOF | kubectl apply -f -

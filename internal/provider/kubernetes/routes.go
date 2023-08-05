@@ -169,23 +169,43 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the GRPCRoute
-					key := types.NamespacedName{
-						Namespace: grpcRoute.Namespace,
-						Name:      string(filter.ExtensionRef.Name),
-					}
+					switch string(filter.ExtensionRef.Kind) {
+					case egv1a1.KindAuthenticationFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						authFilter, ok := resourceMap.authenFilters[key]
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+						}
 
-					authFilter, ok := resourceMap.authenFilters[key]
-					if !ok {
-						r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
-					} else {
 						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
-					}
+					case egv1a1.KindRateLimitFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
+						if !ok {
+							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
+						}
 
-					rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
-					if !ok {
-						r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
-					} else {
 						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
+					default:
+						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
+						// managed by an extension and add to resourceTree
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						extRefFilter, ok := resourceMap.extensionRefFilters[key]
+						if !ok {
+							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
+							continue
+						}
+
+						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
 					}
 				}
 			}
