@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -107,8 +108,13 @@ func (t *ResourceVersionTable) AddXdsResource(rType resourcev3.Type, xdsResource
 		}
 
 	case resourcev3.EndpointType:
-		// TBD - ValidateAll() breaks existing test internal/cmd/egctl/translate_test
-		// authn-single-route-single-match-to-xds.endpoint expects address for socketAddress field, but this field currently only has port, does not have address
+		if resourceOfType, ok := xdsResource.(*endpointv3.ClusterLoadAssignment); ok {
+			if err := resourceOfType.ValidateAll(); err != nil {
+				return fmt.Errorf("validation failed for xds resource %+v, err:%v", xdsResource, err)
+			}
+		} else {
+			return fmt.Errorf("failed to cast xds resource %+v to ClusterLoadAssignment type", xdsResource)
+		}
 
 	case resourcev3.ClusterType:
 		// Handle specific operations
