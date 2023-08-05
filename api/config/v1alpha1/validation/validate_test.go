@@ -434,3 +434,92 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	assert.True(t, eg.Admin.Address.Port == egcfgv1a1.GatewayAdminPort)
 	assert.True(t, eg.Admin.Address.Host == egcfgv1a1.GatewayAdminHost)
 }
+
+func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
+	cases := []struct {
+		logging   egcfgv1a1.ProxyLogging
+		component egcfgv1a1.LogComponent
+		expected  egcfgv1a1.LogLevel
+	}{
+		{
+			logging: egcfgv1a1.ProxyLogging{
+				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+				},
+			},
+			expected: egcfgv1a1.LogLevelInfo,
+		},
+		{
+			logging: egcfgv1a1.ProxyLogging{
+				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+				},
+			},
+			expected: egcfgv1a1.LogLevelInfo,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := tc.logging.DefaultEnvoyProxyLoggingLevel()
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
+	cases := []struct {
+		logging  egcfgv1a1.ProxyLogging
+		expected string
+	}{
+		{
+			logging:  egcfgv1a1.ProxyLogging{},
+			expected: "",
+		},
+		{
+			logging: egcfgv1a1.ProxyLogging{
+				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+				},
+			},
+			expected: "",
+		},
+		{
+			logging: egcfgv1a1.ProxyLogging{
+				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
+				},
+			},
+			expected: "admin:warn",
+		},
+		{
+			logging: egcfgv1a1.ProxyLogging{
+				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
+					egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelDebug,
+				},
+			},
+			expected: "admin:warn,filter:debug",
+		},
+		{
+			logging: egcfgv1a1.ProxyLogging{
+				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
+					egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelDebug,
+					egcfgv1a1.LogComponentClient:  "",
+				},
+			},
+			expected: "admin:warn,filter:debug",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run("", func(t *testing.T) {
+			got := tc.logging.GetEnvoyProxyComponentLevel()
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
