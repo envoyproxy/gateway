@@ -89,7 +89,7 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 	gwAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "gatewayapi-crds.yaml")
 	egAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "generated")
-	mcsAPIs := filepath.Join("..", "..", "..", "charts", "gateway-helm", "crds", "multicluster-svc.yaml")
+	mcsAPIs := filepath.Join(".", "testdata", "crds", "multicluster-svc.yaml")
 
 	env := &envtest.Environment{
 		CRDDirectoryPaths: []string{gwAPIs, egAPIs, mcsAPIs},
