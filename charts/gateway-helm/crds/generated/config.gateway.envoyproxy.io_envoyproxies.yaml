@@ -3990,8 +3990,8 @@ spec:
                         type: array
                       statsMatcher:
                         description: ProxyStatMatcher defines configuration for reporting
-                          custom Envoy stats. To redurece memory and CPU overhead
-                          from Envoy stats system.
+                          custom Envoy stats. To reduce memory and CPU overhead from
+                          Envoy stats system.
                         properties:
                           inclusionPrefixes:
                             description: Proxy stats name prefix matcher for inclusion.

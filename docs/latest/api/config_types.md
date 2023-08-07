@@ -798,7 +798,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `statsMatcher` _[StatsMatcher](#statsmatcher)_ | ProxyStatMatcher defines configuration for reporting custom Envoy stats. To redurece memory and CPU overhead from Envoy stats system. |
+| `statsMatcher` _[StatsMatcher](#statsmatcher)_ | ProxyStatMatcher defines configuration for reporting custom Envoy stats. To reduce memory and CPU overhead from Envoy stats system. |
 | `histogramBucketSettings` _[HistogramBucketSetting](#histogrambucketsetting) array_ | HistogramBucketSettings defines rules for setting the histogram buckets. Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings. |
 
 
