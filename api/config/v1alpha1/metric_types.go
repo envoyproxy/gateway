@@ -11,7 +11,7 @@ type ProxyMetrics struct {
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
 	// ProxyStatMatcher defines configuration for reporting custom Envoy stats.
-	// To redurece memory and CPU overhead from Envoy stats system.
+	// To reduce memory and CPU overhead from Envoy stats system.
 	ProxyStatsMatcher *StatsMatcher `json:"statsMatcher,omitempty"`
 	// HistogramBucketSettings defines rules for setting the histogram buckets.
 	// Default buckets are used if not set. See more details at
