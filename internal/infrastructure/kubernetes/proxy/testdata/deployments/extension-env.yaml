@@ -107,11 +107,10 @@ spec:
                         http2_protocol_options: {}
                   name: xds_cluster
                   type: STRICT_DNS
-                  upstream_connection_options:
-                    tcp_keepalive:
-                      keepalive_probes: 3
-                      keepalive_time: 30
-                      keepalive_interval: 5
+                  http2_protocol_options:
+                    connection_keepalive:
+                      interval: 30s
+                      timeout: 5s
                   transport_socket:
                     name: envoy.transport_sockets.tls
                     typed_config:

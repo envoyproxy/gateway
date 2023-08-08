@@ -37,6 +37,10 @@ xds:
       staticResources:
         clusters:
         - connectTimeout: 10s
+          http2ProtocolOptions:
+            connectionKeepalive:
+              interval: 30s
+              timeout: 5s
           loadAssignment:
             clusterName: xds_cluster
             endpoints:
@@ -72,11 +76,6 @@ xds:
               '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
               explicitHttpConfig:
                 http2ProtocolOptions: {}
-          upstreamConnectionOptions:
-            tcpKeepalive:
-              keepaliveInterval: 5
-              keepaliveProbes: 3
-              keepaliveTime: 30
         listeners:
         - address:
             socketAddress:
