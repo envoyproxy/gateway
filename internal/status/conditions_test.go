@@ -323,7 +323,7 @@ func TestGatewayReadyCondition(t *testing.T) {
 			gtw := &gwapiv1b1.Gateway{}
 			if tc.serviceAddress {
 				gtw.Status = gwapiv1b1.GatewayStatus{
-					Addresses: []gwapiv1b1.GatewayAddress{
+					Addresses: []gwapiv1b1.GatewayStatusAddress{
 						{
 							Type:  ptr.To(gwapiv1b1.IPAddressType),
 							Value: "1.1.1.1",
