@@ -37,6 +37,10 @@ xds:
       staticResources:
         clusters:
         - connectTimeout: 10s
+          http2ProtocolOptions:
+            connectionKeepalive:
+              interval: 30s
+              timeout: 5s
           loadAssignment:
             clusterName: xds_cluster
             endpoints:

@@ -14,6 +14,9 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"time"
+
+	"google.golang.org/grpc/keepalive"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/service/cluster/v3"
 	discoveryv3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -75,7 +78,10 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Create SnapshotCache before start subscribeAndTranslate,
 	// prevent panics in case cache is nil.
 	cfg := r.tlsConfig(xdsTLSCertFilename, xdsTLSKeyFilename, xdsTLSCaFilename)
-	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)))
+	r.grpc = grpc.NewServer(grpc.Creds(credentials.NewTLS(cfg)), grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+		MinTime:             15 * time.Second,
+		PermitWithoutStream: true,
+	}))
 
 	r.cache = cache.NewSnapshotCache(false, r.Logger)
 	registerServer(serverv3.NewServer(ctx, r.cache, r.cache), r.grpc)
