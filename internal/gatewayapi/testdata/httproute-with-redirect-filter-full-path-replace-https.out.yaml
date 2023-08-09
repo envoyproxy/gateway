@@ -127,6 +127,6 @@ xdsIR:
           path:
             fullReplace: /redirected
             prefixMatchReplace: null
-          port: null
+          port: 443
           scheme: https
           statusCode: 301
