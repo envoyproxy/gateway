@@ -429,8 +429,12 @@ func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) str
 	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
 }
 
-func routeName(route RouteContext, ruleIdx, matchIdx int) string {
+func irRouteName(route RouteContext, ruleIdx, matchIdx int) string {
 	return fmt.Sprintf("%s/%s/rule/%d/match/%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
+}
+
+func irRouteDestinationName(route RouteContext, ruleIdx int) string {
+	return fmt.Sprintf("%s/%s/rule/%d", route.GetNamespace(), route.GetName(), ruleIdx)
 }
 
 func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {

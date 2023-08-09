@@ -40,6 +40,7 @@ type HTTPFiltersContext struct {
 
 	ParentRef *RouteParentContext
 	Route     RouteContext
+	RuleIdx   int
 }
 
 // HTTPFilterIR contains the ir processing results.
@@ -55,7 +56,7 @@ type HTTPFilterIR struct {
 	AddResponseHeaders    []ir.AddHeader
 	RemoveResponseHeaders []string
 
-	Mirrors []*ir.RouteDestination
+	Mirror *ir.RouteDestination
 
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
@@ -67,10 +68,12 @@ type HTTPFilterIR struct {
 func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 	route RouteContext,
 	filters []v1beta1.HTTPRouteFilter,
+	ruleIdx int,
 	resources *Resources) *HTTPFiltersContext {
 	httpFiltersContext := &HTTPFiltersContext{
 		ParentRef:    parentRef,
 		Route:        route,
+		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
 
@@ -831,21 +834,27 @@ func (t *Translator) processRequestMirrorFilter(
 		return
 	}
 
-	mirrorDests, _ := t.processRouteDestinations(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	mirrorEndpoints, _ := t.processDestEndpoints(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
 	// Only add missing mirror destinations
-	for _, mirrorDest := range mirrorDests {
+	for _, mirrorEp := range mirrorEndpoints {
 		var found bool
-		for _, mirror := range filterContext.Mirrors {
-			if mirror != nil {
-				if mirror.Host == mirrorDest.Host && mirror.Port == mirrorDest.Port {
-					found = true
+		if filterContext.Mirror != nil {
+			for _, mirror := range filterContext.Mirror.Endpoints {
+				if mirror != nil {
+					if mirror.Host == mirrorEp.Host && mirror.Port == mirrorEp.Port {
+						found = true
+					}
 				}
 			}
 		}
-
 		if !found {
-			filterContext.Mirrors = append(filterContext.Mirrors, mirrorDest)
+			if filterContext.Mirror == nil {
+				filterContext.Mirror = &ir.RouteDestination{
+					Name: irRouteDestinationName(filterContext.Route, filterContext.RuleIdx),
+				}
+			}
+			filterContext.Mirror.Endpoints = append(filterContext.Mirror.Endpoints, mirrorEp)
 		}
 	}
 }

@@ -23,6 +23,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+var (
+	ErrXdsClusterExists = errors.New("xds cluster exists")
+)
+
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
 	// GlobalRateLimit holds the global rate limit settings
@@ -181,34 +185,31 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
-			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
+			if httpRoute.Destination == nil || httpRoute.BackendWeights.Invalid > 0 {
 				continue
 			}
 			if err := addXdsCluster(tCtx, addXdsClusterArgs{
 				name:         httpRoute.Name,
-				destinations: httpRoute.Destinations,
+				endpoints:    httpRoute.Destination.Endpoints,
 				tSocket:      nil,
 				protocol:     protocol,
-				endpoint:     Static,
-			}); err != nil {
+				endpointType: Static,
+			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 				return err
 			}
 
 			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
-			for i, mirror := range httpRoute.Mirrors {
+			for i, mirror := range httpRoute.Mirror.Endpoints {
 				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
-				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
-					if err := addXdsCluster(tCtx, addXdsClusterArgs{
-						name:         mirrorClusterName,
-						destinations: []*ir.RouteDestination{mirror},
-						tSocket:      nil,
-						protocol:     protocol,
-						endpoint:     Static,
-					}); err != nil {
-						return err
-					}
+				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+					name:         mirrorClusterName,
+					endpoints:    []*ir.DestinationEndpoint{mirror},
+					tSocket:      nil,
+					protocol:     protocol,
+					endpointType: Static,
+				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+					return err
 				}
-
 			}
 		}
 
@@ -247,11 +248,11 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         tcpListener.Name,
-			destinations: tcpListener.Destinations,
+			endpoints:    tcpListener.Destination.Endpoints,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
-			endpoint:     Static,
-		}); err != nil {
+			endpointType: Static,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
 
@@ -284,11 +285,11 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		// 1:1 between IR UDPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         udpListener.Name,
-			destinations: udpListener.Destinations,
+			endpoints:    udpListener.Destination.Endpoints,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
-			endpoint:     Static,
-		}); err != nil {
+			endpointType: Static,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
 
@@ -390,10 +391,15 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) error {
-	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpoint)
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.destinations)
+	// Return early if cluster with the same name exists
+	if c := findXdsCluster(tCtx, args.name); c != nil {
+		return ErrXdsClusterExists
+	}
+
+	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpointType)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.endpoints)
 	// Use EDS for static endpoints
-	if args.endpoint == Static {
+	if args.endpointType == Static {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
@@ -408,10 +414,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) err
 
 type addXdsClusterArgs struct {
 	name         string
-	destinations []*ir.RouteDestination
+	endpoints    []*ir.DestinationEndpoint
 	tSocket      *corev3.TransportSocket
 	protocol     ProtocolType
-	endpoint     EndpointType
+	endpointType EndpointType
 }
 
 type ProtocolType int

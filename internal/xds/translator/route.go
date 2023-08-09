@@ -45,8 +45,8 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)
-		if len(httpRoute.Mirrors) > 0 {
-			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+		if httpRoute.Mirror != nil {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirror.Endpoints)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -54,14 +54,14 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
 			routeAction := buildXdsWeightedRouteAction(httpRoute)
-			if len(httpRoute.Mirrors) > 0 {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+			if httpRoute.Mirror != nil {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirror.Endpoints)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
 			routeAction := buildXdsRouteAction(httpRoute.Name)
-			if len(httpRoute.Mirrors) > 0 {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirrors)
+			if httpRoute.Mirror != nil {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirror.Endpoints)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
@@ -289,7 +289,7 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(routeName string, mirrors []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
+func buildXdsRequestMirrorPolicies(routeName string, mirrors []*ir.DestinationEndpoint) []*routev3.RouteAction_RequestMirrorPolicy {
 	mirrorPolicies := []*routev3.RouteAction_RequestMirrorPolicy{}
 
 	for i := range mirrors {
