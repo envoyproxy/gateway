@@ -240,6 +240,9 @@ func TestTranslateXdsNegative(t *testing.T) {
 			name: "tcp-route-invalid",
 		},
 		{
+			name: "tcp-route-invalid-endpoint",
+		},
+		{
 			name: "udp-route-invalid",
 		},
 		{

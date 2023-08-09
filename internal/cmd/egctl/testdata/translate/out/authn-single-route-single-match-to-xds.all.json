@@ -191,6 +191,7 @@
                         "endpoint": {
                           "address": {
                             "socketAddress": {
+                              "address": "7.7.7.7",
                               "portValue": 3000
                             }
                           }

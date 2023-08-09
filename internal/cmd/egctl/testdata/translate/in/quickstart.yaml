@@ -29,6 +29,7 @@ metadata:
     app: backend
     service: backend
 spec:
+  clusterIP: 7.7.7.7
   ports:
     - name: http
       port: 3000
