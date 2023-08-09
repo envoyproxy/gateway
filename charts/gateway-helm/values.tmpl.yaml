@@ -14,7 +14,7 @@ deployment:
   kubeRbacProxy:
     image:
       repository: gcr.io/kubebuilder/kube-rbac-proxy
-      tag: v0.11.0
+      tag: v0.14.1
     resources:
       limits:
         cpu: 500m
