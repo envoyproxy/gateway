@@ -64,9 +64,9 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 			}
 		}
 
-		var gwAddresses []gwapiv1b1.GatewayAddress
+		var gwAddresses []gwapiv1b1.GatewayStatusAddress
 		for i := range addresses {
-			addr := gwapiv1b1.GatewayAddress{
+			addr := gwapiv1b1.GatewayStatusAddress{
 				Type:  ptr.To(gwapiv1b1.IPAddressType),
 				Value: addresses[i],
 			}
@@ -74,7 +74,7 @@ func UpdateGatewayStatusProgrammedCondition(gw *gwapiv1b1.Gateway, svc *corev1.S
 		}
 
 		for i := range hostnames {
-			addr := gwapiv1b1.GatewayAddress{
+			addr := gwapiv1b1.GatewayStatusAddress{
 				Type:  ptr.To(gwapiv1b1.HostnameAddressType),
 				Value: hostnames[i],
 			}

@@ -23,7 +23,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		gw         *gwapiv1b1.Gateway
 		svc        *corev1.Service
 		deployment *appsv1.Deployment
-		addresses  []gwapiv1b1.GatewayAddress
+		addresses  []gwapiv1b1.GatewayStatusAddress
 	}
 	tests := []struct {
 		name string
@@ -58,7 +58,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						},
 					},
 				},
-				addresses: []gwapiv1b1.GatewayAddress{
+				addresses: []gwapiv1b1.GatewayStatusAddress{
 					{
 						Type:  ptr.To(gwapiv1b1.IPAddressType),
 						Value: "127.0.0.1",
@@ -87,7 +87,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						},
 					},
 				},
-				addresses: []gwapiv1b1.GatewayAddress{
+				addresses: []gwapiv1b1.GatewayStatusAddress{
 					{
 						Type:  ptr.To(gwapiv1b1.IPAddressType),
 						Value: "127.0.0.1",
@@ -111,7 +111,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						Type:       corev1.ServiceTypeClusterIP,
 					},
 				},
-				addresses: []gwapiv1b1.GatewayAddress{
+				addresses: []gwapiv1b1.GatewayStatusAddress{
 					{
 						Type:  ptr.To(gwapiv1b1.IPAddressType),
 						Value: "127.0.0.1",
