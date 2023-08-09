@@ -1,44 +1,27 @@
-name: Rerun Action on PR Comment
+name: Return Action on PR Comment
+
 on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: read
+
 jobs:
-  rerun-action:
-    if: ${{ github.event.issue.pull_request }}
-    runs-on: ubuntu-latest
-
+  retest:
+    if: |
+      ${{
+         github.event.issue.pull_request
+         && github.repository == 'envoyproxy/gateway'
+         && github.actor != 'repokitteh-read-only[bot]'
+         && github.actor != 'dependabot[bot]'
+      }}
+    name: Retest
+    runs-on: ubuntu-22.04
+    permissions:
+      pull-requests: write
+      actions: write
     steps:
-      - name: Check if PR comment contains trigger phrase
-        id: check_comment
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const triggerPhrase = '/retest';
-            const comment = context.payload.comment.body.toLowerCase();
-            const containsTrigger = comment.includes(triggerPhrase);
-            console.log(`Comment: ${comment}`);
-            console.log(`Contains Trigger: ${containsTrigger}`);
-            return containsTrigger;
-
-      - name: Install @octokit/core
-        run: npm install @octokit/core@^3
-
-      - name: Rerun Action
-        if: steps.check_comment.outputs.result == 'true'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { Octokit } = require("@octokit/core");
-            const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-            const { owner, repo } = context.repo;
-            const workflowId = 'build_and_test.yaml';
-            const { number } = context.issue;
-            await octokit.request('POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches', {
-              owner,
-              repo,
-              workflow_id: workflowId,
-              ref: `pull/${number}/merge`
-            });
+    - uses: envoyproxy/toolshed/gh-actions/retest@actions-v0.0.10
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}

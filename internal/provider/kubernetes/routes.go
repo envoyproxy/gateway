@@ -86,6 +86,27 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
+
+	// An GRPCRoute may reference an AuthenticationFilter and RateLimitFilter,
+	// so add them to the resource map first (if they exist).
+	authenFilters, err := r.getAuthenticationFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range authenFilters {
+		filter := authenFilters[i]
+		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
+	rateLimitFilters, err := r.getRateLimitFilters(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range rateLimitFilters {
+		filter := rateLimitFilters[i]
+		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
+	}
+
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -145,6 +166,47 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				if err := gatewayapi.ValidateGRPCRouteFilter(&filter, extGKs...); err != nil {
 					r.log.Error(err, "bypassing filter rule", "index", i)
 					continue
+				}
+				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
+					// NOTE: filters must be in the same namespace as the GRPCRoute
+					switch string(filter.ExtensionRef.Kind) {
+					case egv1a1.KindAuthenticationFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						authFilter, ok := resourceMap.authenFilters[key]
+						if !ok {
+							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+						}
+
+						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
+					case egv1a1.KindRateLimitFilter:
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
+						if !ok {
+							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
+						}
+
+						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
+					default:
+						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
+						// managed by an extension and add to resourceTree
+						key := types.NamespacedName{
+							Namespace: grpcRoute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}
+						extRefFilter, ok := resourceMap.extensionRefFilters[key]
+						if !ok {
+							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
+							continue
+						}
+
+						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+					}
 				}
 			}
 		}

@@ -39,7 +39,7 @@ func (t *Translator) ProcessHTTPRoutes(httpRoutes []*v1beta1.HTTPRoute, gateways
 		}
 		httpRoute := &HTTPRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			HTTPRoute:             h,
+			HTTPRoute:             h.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -67,7 +67,7 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 		}
 		grpcRoute := &GRPCRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			GRPCRoute:             g,
+			GRPCRoute:             g.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -553,7 +553,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 		}
 
-		irKey := irStringKey(listener.gateway)
+		irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
@@ -581,7 +581,7 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 		}
 		tlsRoute := &TLSRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			TLSRoute:              tls,
+			TLSRoute:              tls.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -647,7 +647,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			hasHostnameIntersection = true
 
-			irKey := irStringKey(listener.gateway)
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the TCP Listener while parsing the TLSRoute since
 			// the listener directly links to a routeDestination.
@@ -703,7 +703,7 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 		}
 		udpRoute := &UDPRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			UDPRoute:              u,
+			UDPRoute:              u.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -782,7 +782,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				continue
 			}
 			accepted = true
-			irKey := irStringKey(listener.gateway)
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the UDP Listener while parsing the UDPRoute since
 			// the listener directly links to a routeDestination.
@@ -835,7 +835,7 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 		}
 		tcpRoute := &TCPRouteContext{
 			GatewayControllerName: t.GatewayControllerName,
-			TCPRoute:              tcp,
+			TCPRoute:              tcp.DeepCopy(),
 		}
 
 		// Find out if this route attaches to one of our Gateway's listeners,
@@ -914,7 +914,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			accepted = true
-			irKey := irStringKey(listener.gateway)
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the TCP Listener while parsing the TCPRoute since
 			// the listener directly links to a routeDestination.

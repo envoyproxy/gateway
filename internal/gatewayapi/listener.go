@@ -9,10 +9,12 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
 
 var _ ListenersTranslator = (*Translator)(nil)
@@ -31,7 +33,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	// to the Xds IR.
 	for _, gateway := range gateways {
 		// init IR per gateway
-		irKey := irStringKey(gateway.Gateway)
+		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
 		gwInfraIR.Proxy.Name = irKey
@@ -48,6 +50,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		var foundPorts []*protocolPort
 
 		gwXdsIR.AccessLog = processAccessLog(gwInfraIR.Proxy.Config)
+		gwXdsIR.Tracing = processTracing(gateway.Gateway, gwInfraIR.Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -215,4 +218,15 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 	}
 
 	return irAccessLog
+}
+
+func processTracing(gw *v1beta1.Gateway, envoyproxy *configv1a1.EnvoyProxy) *ir.Tracing {
+	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Tracing == nil {
+		return nil
+	}
+
+	return &ir.Tracing{
+		ServiceName:  naming.ServiceName(types.NamespacedName{Name: gw.Name, Namespace: gw.Namespace}),
+		ProxyTracing: *envoyproxy.Spec.Telemetry.Tracing,
+	}
 }

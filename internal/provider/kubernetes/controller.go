@@ -28,6 +28,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -54,6 +55,8 @@ const (
 	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
+	authenFilterGRPCRouteIndex    = "authenGRPCRouteIndex"
+	rateLimitFilterGRPCRouteIndex = "rateLimitGRPCRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -63,33 +66,38 @@ type gatewayAPIReconciler struct {
 	classController gwapiv1b1.GatewayController
 	store           *kubernetesProviderStore
 	namespace       string
+	envoyGateway    *egcfgv1a1.EnvoyGateway
 
-	resources *message.ProviderResources
-	extGVKs   []schema.GroupVersionKind
+	resources                *message.ProviderResources
+	envoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
+	extGVKs                  []schema.GroupVersionKind
 }
 
 // newGatewayAPIController
-func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater, resources *message.ProviderResources) error {
+func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
+	resources *message.ProviderResources, eStatuses *message.EnvoyPatchPolicyStatuses) error {
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
 	var extGVKs []schema.GroupVersionKind
-	if cfg.EnvoyGateway.Extension != nil {
-		for _, rsrc := range cfg.EnvoyGateway.Extension.Resources {
+	if cfg.EnvoyGateway.ExtensionManager != nil {
+		for _, rsrc := range cfg.EnvoyGateway.ExtensionManager.Resources {
 			gvk := schema.GroupVersionKind(rsrc)
 			extGVKs = append(extGVKs, gvk)
 		}
 	}
 
 	r := &gatewayAPIReconciler{
-		client:          mgr.GetClient(),
-		log:             cfg.Logger,
-		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		namespace:       cfg.Namespace,
-		statusUpdater:   su,
-		resources:       resources,
-		extGVKs:         extGVKs,
-		store:           newProviderStore(),
+		client:                   mgr.GetClient(),
+		log:                      cfg.Logger,
+		classController:          gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		namespace:                cfg.Namespace,
+		statusUpdater:            su,
+		resources:                resources,
+		envoyPatchPolicyStatuses: eStatuses,
+		extGVKs:                  extGVKs,
+		store:                    newProviderStore(),
+		envoyGateway:             cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -231,6 +239,22 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Add all ReferenceGrants to the resourceTree
 	for _, referenceGrant := range resourceMap.allAssociatedRefGrants {
 		resourceTree.ReferenceGrants = append(resourceTree.ReferenceGrants, referenceGrant)
+	}
+
+	// Add all EnvoyPatchPolicies
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
+		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
+			return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+		}
+
+		for _, policy := range envoyPatchPolicies.Items {
+			policy := policy
+			// Discard Status to reduce memory consumption in watchable
+			// It will be recomputed by the gateway-api layer
+			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
+			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
+		}
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the
@@ -391,15 +415,6 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 
 	// No ReferenceGrant found.
 	return nil, nil
-}
-
-func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a1.RateLimitFilter, error) {
-	rateLimitList := new(egv1a1.RateLimitFilterList)
-	if err := r.client.List(ctx, rateLimitList); err != nil {
-		return nil, fmt.Errorf("failed to list RateLimitFilters: %v", err)
-	}
-
-	return rateLimitList.Items, nil
 }
 
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
@@ -636,6 +651,14 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, authenFilterGRPCRouteIndex, authenFilterGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, rateLimitFilterGRPCRouteIndex, rateLimitFilterGRPCRouteIndexFunc); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -675,6 +698,48 @@ func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return services
+}
+
+func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var filters []string
+	for _, rule := range grpcroute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if gatewayapi.IsAuthnGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: grpcroute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
+}
+
+func rateLimitFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
+	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
+	var filters []string
+	for _, rule := range grpcroute.Spec.Rules {
+		for i := range rule.Filters {
+			filter := rule.Filters[i]
+			if gatewayapi.IsRateLimitGRPCFilter(&filter) {
+				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
+					filters = append(filters,
+						types.NamespacedName{
+							Namespace: grpcroute.Namespace,
+							Name:      string(filter.ExtensionRef.Name),
+						}.String(),
+					)
+				}
+			}
+		}
+	}
+	return filters
 }
 
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are
@@ -1055,6 +1120,34 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		)
 		r.log.Info("udpRoute status subscriber shutting down")
 	}()
+
+	// EnvoyPatchPolicy object status updater
+	go func() {
+		message.HandleSubscription(r.envoyPatchPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.EnvoyPatchPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.EnvoyPatchPolicy)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("envoyPatchPolicy status subscriber shutting down")
+	}()
 }
 
 // watchResources watches gateway api resources.
@@ -1216,6 +1309,16 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch EnvoyPatchPolicy if enabled in config
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
+		// Watch EnvoyPatchPolicy CRUDs
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
+			&handler.EnqueueRequestForObject{}); err != nil {
+			return err
+		}
+	}
+
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
@@ -1292,7 +1395,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
 		if classRefsEnvoyProxy(gc, &ep) {
 			found = true
-			if err := (&ep).Validate(); err != nil {
+			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
 				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
 				continue
 			}

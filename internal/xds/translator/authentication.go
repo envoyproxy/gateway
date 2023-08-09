@@ -338,13 +338,15 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 					if err != nil {
 						return err
 					}
-					addXdsCluster(tCtx, addXdsClusterArgs{
+					if err := addXdsCluster(tCtx, addXdsClusterArgs{
 						name:         jwks.name,
 						destinations: routeDestinations,
 						tSocket:      tSocket,
 						protocol:     DefaultProtocol,
 						endpoint:     ep,
-					})
+					}); err != nil {
+						return err
+					}
 				}
 			}
 		}

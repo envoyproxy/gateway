@@ -67,6 +67,8 @@ func TestDeployment(t *testing.T) {
 		deploy       *egcfgv1a1.KubernetesDeploymentSpec
 		proxyLogging map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
 		bootstrap    *string
+		telemetry    *egcfgv1a1.ProxyTelemetry
+		concurrency  *int32
 	}{
 		{
 			caseName: "default",
@@ -82,6 +84,9 @@ func TestDeployment(t *testing.T) {
 				Pod: &egcfgv1a1.KubernetesPodSpec{
 					Annotations: map[string]string{
 						"prometheus.io/scrape": "true",
+					},
+					Labels: map[string]string{
+						"foo.bar": "custom-label",
 					},
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: pointer.Int64(1000),
@@ -204,7 +209,8 @@ func TestDeployment(t *testing.T) {
 							Name: "certs",
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: "custom-envoy-cert",
+									SecretName:  "custom-envoy-cert",
+									DefaultMode: pointer.Int32(420),
 								},
 							},
 						},
@@ -248,6 +254,22 @@ func TestDeployment(t *testing.T) {
 			},
 			bootstrap: pointer.String(`test bootstrap config`),
 		},
+		{
+			caseName: "enable-prometheus",
+			infra:    newTestInfra(),
+			telemetry: &egcfgv1a1.ProxyTelemetry{
+				Metrics: &egcfgv1a1.ProxyMetrics{
+					Prometheus: &egcfgv1a1.PrometheusProvider{},
+				},
+			},
+		},
+		{
+			caseName:    "with-concurrency",
+			infra:       newTestInfra(),
+			deploy:      nil,
+			concurrency: pointer.Int32(4),
+			bootstrap:   pointer.String(`test bootstrap config`),
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -260,10 +282,18 @@ func TestDeployment(t *testing.T) {
 				tc.infra.Proxy.Config.Spec.Bootstrap = tc.bootstrap
 			}
 
+			if tc.telemetry != nil {
+				tc.infra.Proxy.Config.Spec.Telemetry = *tc.telemetry
+			}
+
 			if len(tc.proxyLogging) > 0 {
 				tc.infra.Proxy.Config.Spec.Logging = egcfgv1a1.ProxyLogging{
 					Level: tc.proxyLogging,
 				}
+			}
+
+			if tc.concurrency != nil {
+				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
 			}
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())

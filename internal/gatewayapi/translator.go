@@ -72,8 +72,8 @@ type Translator struct {
 
 type TranslateResult struct {
 	Resources
-	XdsIR   XdsIRMap
-	InfraIR InfraIRMap
+	XdsIR   XdsIRMap   `json:"xdsIR" yaml:"xdsIR"`
+	InfraIR InfraIRMap `json:"infraIR" yaml:"infraIR"`
 }
 
 func newTranslateResult(gateways []*GatewayContext,
@@ -119,6 +119,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
+
+	// Process EnvoyPatchPolicies
+	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)

@@ -53,7 +53,8 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	provider, err := New(cliCfg, svr, resources)
+	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1663,4 +1664,65 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		}
 		return true
 	}, defaultWait, defaultTick)
+}
+
+func TestNamespacedProvider(t *testing.T) {
+	// Setup the test environment.
+	testEnv, cliCfg, err := startEnv()
+	require.NoError(t, err)
+
+	// Setup and start the kube provider.
+	svr, err := config.New()
+	require.NoError(t, err)
+	// config to watch a subset of namespaces
+	svr.EnvoyGateway.Provider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
+		Watch: &egcfgv1a1.KubernetesWatchMode{
+			Namespaces: []string{"ns1", "ns2"},
+		},
+	}
+
+	resources := new(message.ProviderResources)
+	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		require.NoError(t, provider.Start(ctx))
+	}()
+
+	// Make sure a cluster scoped gatewayclass can be reconciled
+	testGatewayClassController(ctx, t, provider, resources)
+
+	cli := provider.manager.GetClient()
+	gcName := "gc-watch-ns"
+	gc := test.GetGatewayClass(gcName, egcfgv1a1.GatewayControllerName)
+	require.NoError(t, cli.Create(ctx, gc))
+
+	// Create the namespaces.
+	ns1 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns1"}}
+	require.NoError(t, cli.Create(ctx, ns1))
+	ns2 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns2"}}
+	require.NoError(t, cli.Create(ctx, ns2))
+	ns3 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns3"}}
+	require.NoError(t, cli.Create(ctx, ns3))
+
+	// Create the gateways
+	gw1 := test.GetGateway(types.NamespacedName{Name: "gw-ns1", Namespace: "ns1"}, gcName)
+	require.NoError(t, cli.Create(ctx, gw1))
+	gw2 := test.GetGateway(types.NamespacedName{Name: "gw-ns2", Namespace: "ns2"}, gcName)
+	require.NoError(t, cli.Create(ctx, gw2))
+	gw3 := test.GetGateway(types.NamespacedName{Name: "gw-ns3", Namespace: "ns3"}, gcName)
+	require.NoError(t, cli.Create(ctx, gw3))
+
+	// Ensure only 2 gateways are reconciled
+	gatewayList := &gwapiv1b1.GatewayList{}
+	require.NoError(t, cli.List(ctx, gatewayList))
+	assert.Equal(t, len(gatewayList.Items), 2)
+
+	// Stop the kube provider.
+	defer func() {
+		cancel()
+		require.NoError(t, testEnv.Stop())
+	}()
+
 }

@@ -24,7 +24,7 @@ import (
 	fakeclock "k8s.io/utils/clock/testing"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var clock utilclock.Clock = utilclock.RealClock{}
@@ -323,9 +323,9 @@ func TestGatewayReadyCondition(t *testing.T) {
 			gtw := &gwapiv1b1.Gateway{}
 			if tc.serviceAddress {
 				gtw.Status = gwapiv1b1.GatewayStatus{
-					Addresses: []gwapiv1b1.GatewayAddress{
+					Addresses: []gwapiv1b1.GatewayStatusAddress{
 						{
-							Type:  gatewayapi.GatewayAddressTypePtr(gwapiv1b1.IPAddressType),
+							Type:  ptr.To(gwapiv1b1.IPAddressType),
 							Value: "1.1.1.1",
 						},
 					},

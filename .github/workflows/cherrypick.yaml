@@ -6,23 +6,23 @@ on:
     types: ["closed"]
 
 jobs:
-  cherry_pick_release_v0_4:
+  cherry_pick_release_v0_5:
     runs-on: ubuntu-latest
-    name: Cherry pick into release-v0.4
-    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.4') && github.event.pull_request.merged == true }}
+    name: Cherry pick into release-v0.5
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.5') && github.event.pull_request.merged == true }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Cherry pick into release/v0.4
+      - name: Cherry pick into release/v0.5
         uses: carloscastrojumo/github-cherry-pick-action@v1.0.9
         with:
-          branch: release/v0.4
-          title: "[release/v0.4] {old_title}"
-          body: "Cherry picking #{old_pull_request_id} onto release/v0.4"
+          branch: release/v0.5
+          title: "[release/v0.5] {old_title}"
+          body: "Cherry picking #{old_pull_request_id} onto release/v0.5"
           labels: |
-            cherrypick/release-v0.4
+            cherrypick/release-v0.5
           # put release manager here
           reviewers: |
-            AliceProxy
+            arkodg

@@ -2,9 +2,16 @@ fullnameOverride: otel-collector
 mode: deployment
 config:
   exporters:
-    logging: {}
+    prometheus:
+      endpoint: 0.0.0.0:19001
+    logging:
+      verbosity: detailed
     loki:
       endpoint: "http://loki.monitoring.svc:3100/loki/api/v1/push"
+    otlp:
+      endpoint: tempo.monitoring.svc:4317
+      tls:
+        insecure: true
   extensions:
     # The health_check extension is mandatory for this chart.
     # Without the health_check extension the collector will fail the readiness and liveliness probes.
@@ -29,10 +36,20 @@ config:
     extensions:
       - health_check
     pipelines:
+      metrics:
+        exporters:
+          - prometheus
+        receivers:
+          - otlp
       logs:
         exporters:
           - loki
         processors:
           - attributes
+        receivers:
+          - otlp
+      traces:
+        exporters:
+          - otlp
         receivers:
           - otlp

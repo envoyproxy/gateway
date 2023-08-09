@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"fmt"
 	"sort"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -127,7 +126,7 @@ func buildXdsAccessLog(al *ir.AccessLog, forListener bool) []*accesslog.AccessLo
 				GrpcService: &cfgcore.GrpcService{
 					TargetSpecifier: &cfgcore.GrpcService_EnvoyGrpc_{
 						EnvoyGrpc: &cfgcore.GrpcService_EnvoyGrpc{
-							ClusterName: buildClusterNameForOpenTelemetry(otel),
+							ClusterName: buildClusterName("accesslog", otel.Host, otel.Port),
 							Authority:   otel.Host,
 						},
 					},
@@ -220,31 +219,27 @@ func convertToKeyValueList(attributes map[string]string, additionalLabels bool) 
 	return keyValueList
 }
 
-// buildClusterNameForOpenTelemetry returns a cluster name for the given OpenTelemetry access log.
-// The format is: <type>|<host>|<port>, where type is "accesslog" for access logs.
-// It's easy to distinguish when debugging.
-// TODO: consider using a uniform naming scheme for all clusters.
-func buildClusterNameForOpenTelemetry(otel *ir.OpenTelemetryAccessLog) string {
-	return fmt.Sprintf("accesslog|%s|%d", otel.Host, otel.Port)
-}
-
-func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) {
+func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessLog) error {
 	if al == nil {
-		return
+		return nil
 	}
 
 	for _, otel := range al.OpenTelemetry {
-		clusterName := buildClusterNameForOpenTelemetry(otel)
+		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
 
 		if existingCluster := findXdsCluster(tCtx, clusterName); existingCluster == nil {
 			destinations := []*ir.RouteDestination{ir.NewRouteDest(otel.Host, otel.Port)}
-			addXdsCluster(tCtx, addXdsClusterArgs{
+			if err := addXdsCluster(tCtx, addXdsClusterArgs{
 				name:         clusterName,
 				destinations: destinations,
 				tSocket:      nil,
 				protocol:     HTTP2,
 				endpoint:     DefaultEndpointType,
-			})
+			}); err != nil {
+				return err
+			}
+
 		}
 	}
+	return nil
 }

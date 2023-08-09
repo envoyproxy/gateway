@@ -216,9 +216,20 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `op` _string_ | Op is the type of operation to perform |
+| `op` _[JSONPatchOperationType](#jsonpatchoperationtype)_ | Op is the type of operation to perform |
 | `path` _string_ | Path is the location of the target document/field where the operation will be performed Refer to https://datatracker.ietf.org/doc/html/rfc6901 for more details. |
-| `value` _string_ | Value is the new value of the path location. |
+| `value` _[JSON](#json)_ | Value is the new value of the path location. |
+
+
+## JSONPatchOperationType
+
+_Underlying type:_ `string`
+
+JSONPatchOperationType specifies the JSON Patch operations that can be performed.
+
+_Appears in:_
+- [JSONPatchOperation](#jsonpatchoperation)
+
 
 
 ## JwtAuthenticationFilterProvider
@@ -297,7 +308,6 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `headers` _[HeaderMatch](#headermatch) array_ | Headers is a list of request headers to match. Multiple header values are ANDed together, meaning, a request MUST match all the specified headers. |
-| `sourceIP` _string_ | Deprecated: Use SourceCIDR instead. |
 | `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
 
 

@@ -248,19 +248,43 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 		filter.Type == v1alpha2.GRPCRouteFilterResponseHeaderModifier:
 		return nil
 	case filter.Type == v1alpha2.GRPCRouteFilterExtensionRef:
-		if filter.ExtensionRef == nil {
+		switch {
+		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		}
-		for _, gk := range extGKs {
-			if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
-				filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {
-				return nil
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
+			return nil
+		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+			string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
+			return nil
+		default:
+			for _, gk := range extGKs {
+				if filter.ExtensionRef.Group == v1beta1.Group(gk.Group) &&
+					filter.ExtensionRef.Kind == v1beta1.Kind(gk.Kind) {
+					return nil
+				}
 			}
+			return fmt.Errorf("unknown kind %s/%s", string(filter.ExtensionRef.Group), string(filter.ExtensionRef.Kind))
 		}
-		return fmt.Errorf("unknown kind %s/%s", string(filter.ExtensionRef.Group), string(filter.ExtensionRef.Kind))
 	default:
 		return fmt.Errorf("unsupported filter type %v", filter.Type)
 	}
+}
+
+// IsAuthnGRPCFilter returns true if the provided filter is an AuthenticationFilter.
+func IsAuthnGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
+	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
+}
+
+// IsRateLimitGRPCFilter returns true if the provided filter is an RateLimitFilter.
+func IsRateLimitGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
+	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
+		filter.ExtensionRef != nil &&
+		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
+		string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter
 }
 
 // GatewayOwnerLabels returns the Gateway Owner labels using
@@ -385,28 +409,28 @@ type crossNamespaceTo struct {
 	name      string
 }
 
-func irStringKey(gateway *v1beta1.Gateway) string {
-	return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
+func irStringKey(gatewayNs, gatewayName string) string {
+	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
 func irHTTPListenerName(listener *ListenerContext) string {
-	return fmt.Sprintf("%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
+	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
 func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
-	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
 }
 
 func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
-	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
 }
 
 func irUDPListenerName(listener *ListenerContext, udpRoute *UDPRouteContext) string {
-	return fmt.Sprintf("%s-%s-%s-%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
+	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, udpRoute.Name)
 }
 
 func routeName(route RouteContext, ruleIdx, matchIdx int) string {
-	return fmt.Sprintf("%s-%s-rule-%d-match-%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
+	return fmt.Sprintf("%s/%s/rule/%d/match/%d", route.GetNamespace(), route.GetName(), ruleIdx, matchIdx)
 }
 
 func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {

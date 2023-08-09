@@ -11,6 +11,10 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
+
+	"k8s.io/apimachinery/pkg/util/sets"
+
+	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
 
 const (
@@ -55,9 +59,20 @@ type bootstrapParameters struct {
 	AdminServer adminServerParameters
 	// ReadyServer defines the configuration for health check ready listener
 	ReadyServer readyServerParameters
+	// EnablePrometheus defines whether to enable metrics endpoint for prometheus.
+	EnablePrometheus bool
+	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
+	OtelMetricSinks []metricSink
 }
 
 type xdsServerParameters struct {
+	// Address is the address of the XDS Server that Envoy is managed by.
+	Address string
+	// Port is the port of the XDS Server that Envoy is managed by.
+	Port int32
+}
+
+type metricSink struct {
 	// Address is the address of the XDS Server that Envoy is managed by.
 	Address string
 	// Port is the port of the XDS Server that Envoy is managed by.
@@ -94,7 +109,36 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig() (string, error) {
+func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, error) {
+	var (
+		enablePrometheus bool
+		metricSinks      []metricSink
+	)
+
+	if proxyMetrics != nil {
+		if proxyMetrics.Prometheus != nil {
+			enablePrometheus = true
+		}
+
+		addresses := sets.NewString()
+		for _, sink := range proxyMetrics.Sinks {
+			if sink.OpenTelemetry == nil {
+				continue
+			}
+
+			// skip duplicate sinks
+			addr := fmt.Sprintf("%s:%d", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
+			if addresses.Has(addr) {
+				continue
+			}
+			addresses.Insert(addr)
+
+			metricSinks = append(metricSinks, metricSink{
+				Address: sink.OpenTelemetry.Host,
+				Port:    sink.OpenTelemetry.Port,
+			})
+		}
+	}
 
 	cfg := &bootstrapConfig{
 		parameters: bootstrapParameters{
@@ -112,6 +156,8 @@ func GetRenderedBootstrapConfig() (string, error) {
 				Port:          EnvoyReadinessPort,
 				ReadinessPath: EnvoyReadinessPath,
 			},
+			EnablePrometheus: enablePrometheus,
+			OtelMetricSinks:  metricSinks,
 		},
 	}
 

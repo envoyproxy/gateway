@@ -15,6 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // RateLimitFilter allows the user to limit the number of incoming requests
 // to a predefined value based on attributes within the traffic flow.
@@ -97,10 +98,6 @@ type RateLimitSelectCondition struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
 	Headers []HeaderMatch `json:"headers,omitempty"`
-
-	// Deprecated: Use SourceCIDR instead.
-	// +optional
-	SourceIP *string `json:"sourceIP,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
 	//

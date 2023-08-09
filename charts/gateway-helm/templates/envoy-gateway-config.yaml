@@ -8,12 +8,5 @@ metadata:
 data:
   envoy-gateway.yaml: |
     apiVersion: config.gateway.envoyproxy.io/v1alpha1
-    gateway:
-      controllerName: {{ .Values.config.envoyGateway.gateway.controllerName
-        | quote }}
     kind: EnvoyGateway
-    provider:
-      type: {{ .Values.config.envoyGateway.provider.type | quote }}
-    logging:
-      level:
-        default: info
+    {{- toYaml .Values.config.envoyGateway | nindent 4 }}

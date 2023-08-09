@@ -7,8 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -112,6 +110,19 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
+	var proxyMetrics *egcfgv1a1.ProxyMetrics
+	if infra.Config != nil {
+		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
+	}
+
+	if proxyMetrics != nil && proxyMetrics.Prometheus != nil {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "metrics",
+			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable
+			Protocol:      corev1.ProtocolTCP,
+		})
+	}
+
 	var bootstrapConfigurations string
 	// Get Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
@@ -121,24 +132,29 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	} else {
 		var err error
 		// Use the default Bootstrap
-		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig()
+		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	proxyLogging := infra.Config.Spec.Logging
-
-	logLevel := componentLogLevel(proxyLogging.Level, egcfgv1a1.LogComponentDefault, egcfgv1a1.LogLevelWarn)
+	logging := infra.Config.Spec.Logging
 
 	args := []string{
 		fmt.Sprintf("--service-cluster %s", infra.Name),
 		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-		fmt.Sprintf("--log-level %s", logLevel),
+		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
+		"--cpuset-threads",
 	}
-	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
-		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
+
+	if infra.Config != nil &&
+		infra.Config.Spec.Concurrency != nil {
+		args = append(args, fmt.Sprintf("--concurrency %d", *infra.Config.Spec.Concurrency))
+	}
+
+	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
+		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
 	containers := []corev1.Container{
@@ -158,39 +174,20 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 			ReadinessProbe: &corev1.Probe{
 				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path: bootstrap.EnvoyReadinessPath,
-						Port: intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Path:   bootstrap.EnvoyReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: bootstrap.EnvoyReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
 					},
 				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
 			},
 		},
 	}
 
 	return containers, nil
-}
-
-func componentLogLevel(levels map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel, component egcfgv1a1.LogComponent, defaultLevel egcfgv1a1.LogLevel) egcfgv1a1.LogLevel {
-	if level, ok := levels[component]; ok {
-		return level
-	}
-
-	return defaultLevel
-}
-
-func componentLogLevelArgs(levels map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel) string {
-	var args []string
-
-	for component, level := range levels {
-		if component == egcfgv1a1.LogComponentDefault {
-			// Skip default component
-			continue
-		}
-		args = append(args, fmt.Sprintf("%s:%s", component, level))
-	}
-
-	sort.Strings(args)
-
-	return strings.Join(args, ",")
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
@@ -217,7 +214,8 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 			Name: "certs",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: "envoy",
+					SecretName:  "envoy",
+					DefaultMode: pointer.Int32(420),
 				},
 			},
 		},
@@ -238,7 +236,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 							Path: SdsCertFilename,
 						},
 					},
-					DefaultMode: pointer.Int32(int32(420)),
+					DefaultMode: pointer.Int32(420),
 					Optional:    pointer.Bool(false),
 				},
 			},

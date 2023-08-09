@@ -51,6 +51,8 @@ func (r *Runner) Start(ctx context.Context) error {
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	message.HandleSubscription(r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
 		func(update message.Update[string, *gatewayapi.Resources]) {
+			r.Logger.Info("received an update")
+
 			val := update.Value
 
 			if update.Delete || val == nil {
@@ -65,9 +67,9 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 
 			// If an extension is loaded, pass its supported groups/kinds to the translator
-			if r.EnvoyGateway.Extension != nil {
+			if r.EnvoyGateway.ExtensionManager != nil {
 				var extGKs []schema.GroupKind
-				for _, gvk := range r.EnvoyGateway.Extension.Resources {
+				for _, gvk := range r.EnvoyGateway.ExtensionManager.Resources {
 					extGKs = append(extGKs, schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind})
 				}
 				t.ExtensionGroupKinds = extGKs

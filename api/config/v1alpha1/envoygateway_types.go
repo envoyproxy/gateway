@@ -67,10 +67,16 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	RateLimit *RateLimit `json:"rateLimit,omitempty"`
 
-	// Extension defines an extension to register for the Envoy Gateway Control Plane.
+	// ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane.
 	//
 	// +optional
-	Extension *Extension `json:"extension,omitempty"`
+	ExtensionManager *ExtensionManager `json:"extensionManager,omitempty"`
+
+	// ExtensionAPIs defines the settings related to specific Gateway API Extensions
+	// implemented by Envoy Gateway
+	//
+	// +optional
+	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
@@ -122,6 +128,13 @@ type Gateway struct {
 	ControllerName string `json:"controllerName,omitempty"`
 }
 
+// ExtensionAPISettings defines the settings specific to Gateway API Extensions.
+type ExtensionAPISettings struct {
+	// EnableEnvoyPatchPolicy enables Envoy Gateway to
+	// reconcile and implement the EnvoyPatchPolicy resources.
+	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
+}
+
 // EnvoyGatewayProvider defines the desired configuration of a provider.
 // +union
 type EnvoyGatewayProvider struct {
@@ -160,6 +173,8 @@ type EnvoyGatewayKubernetesProvider struct {
 	// should be deployed
 	// +optional
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
+	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
+	OverwriteControlPlaneCerts bool `json:"overwrite_control_plane_certs,omitempty"`
 }
 
 // KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
@@ -170,7 +185,7 @@ type KubernetesWatchMode struct {
 	// GatewayClass that it is linked to.
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
-	Namespaces []string
+	Namespaces []string `json:"namespaces,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy
@@ -258,6 +273,19 @@ type RateLimit struct {
 	// database backend used by the rate limit service to store
 	// state associated with global ratelimiting.
 	Backend RateLimitDatabaseBackend `json:"backend"`
+
+	// Timeout specifies the timeout period for the proxy to access the ratelimit server
+	// If not set, timeout is 20ms.
+	// +optional
+	// +kubebuilder:validation:Format=duration
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
+
+	// FailClosed is a switch used to control the flow of traffic
+	// when the response from the ratelimit server cannot be obtained.
+	// If FailClosed is false, let the traffic pass,
+	// otherwise, don't let the traffic pass and return 500.
+	// If not set, FailClosed is False.
+	FailClosed bool `json:"failClosed"`
 }
 
 // RateLimitDatabaseBackend defines the configuration associated with
@@ -304,9 +332,9 @@ type RateLimitRedisSettings struct {
 	TLS *RedisTLSSettings `json:"tls,omitempty"`
 }
 
-// Extension defines the configuration for registering an extension to
+// ExtensionManager defines the configuration for registering an extension manager to
 // the Envoy Gateway control plane.
-type Extension struct {
+type ExtensionManager struct {
 	// Resources defines the set of K8s resources the extension will handle.
 	//
 	// +optional

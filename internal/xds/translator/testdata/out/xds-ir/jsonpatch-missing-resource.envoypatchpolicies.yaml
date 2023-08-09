@@ -1,0 +1,10 @@
+- name: first-policy
+  namespace: default
+  status:
+    conditions:
+    - lastTransitionTime: null
+      message: 'unable to find xds resource type.googleapis.com/envoy.config.listener.v3.Listener:
+        non-existant-listener'
+      reason: ResourceNotFound
+      status: "False"
+      type: Programmed

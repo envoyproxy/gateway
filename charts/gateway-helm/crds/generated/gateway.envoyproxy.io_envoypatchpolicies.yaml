@@ -15,7 +15,14 @@ spec:
     singular: envoypatchpolicy
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Programmed")].reason
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: EnvoyPatchPolicy allows the user to modify the generated Envoy
@@ -50,6 +57,13 @@ spec:
                       properties:
                         op:
                           description: Op is the type of operation to perform
+                          enum:
+                          - add
+                          - remove
+                          - replace
+                          - move
+                          - copy
+                          - test
                           type: string
                         path:
                           description: Path is the location of the target document/field
@@ -58,7 +72,7 @@ spec:
                           type: string
                         value:
                           description: Value is the new value of the path location.
-                          type: string
+                          x-kubernetes-preserve-unknown-fields: true
                       required:
                       - op
                       - path
@@ -128,7 +142,6 @@ spec:
                 - JSONPatch
                 type: string
             required:
-            - priority
             - targetRef
             - type
             type: object
@@ -211,7 +224,8 @@ spec:
             type: object
         required:
         - spec
-        - status
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

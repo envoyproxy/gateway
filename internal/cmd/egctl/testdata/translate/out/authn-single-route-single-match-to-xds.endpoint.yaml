@@ -1,0 +1,17 @@
+xds:
+  envoy-gateway-system-eg:
+    '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump
+    dynamicEndpointConfigs:
+    - endpointConfig:
+        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+        clusterName: envoy-gateway-system-backend-rule-0-match-0-www.example.com
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: "7.7.7.7"
+                  portValue: 3000
+            loadBalancingWeight: 1
+          loadBalancingWeight: 1
+          locality: {}
