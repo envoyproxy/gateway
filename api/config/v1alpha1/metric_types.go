@@ -10,13 +10,10 @@ type ProxyMetrics struct {
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
-	// ProxyStatMatcher defines configuration for reporting custom Envoy stats.
+
+	// CustomMetricScale defines configuration for reporting custom Envoy stats.
 	// To reduce memory and CPU overhead from Envoy stats system.
-	ProxyStatsMatcher *StatsMatcher `json:"statsMatcher,omitempty"`
-	// HistogramBucketSettings defines rules for setting the histogram buckets.
-	// Default buckets are used if not set. See more details at
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
-	HistogramBucketSettings []HistogramBucketSetting `json:"histogramBucketSettings,omitempty"`
+	CustomMetricScales CustomMetricScale `json:"customMetricScale,omitempty"`
 }
 
 type MetricSinkType string
@@ -36,25 +33,43 @@ type MetricSink struct {
 	OpenTelemetry *OpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
 
-type StatsMatcher struct {
-	// Proxy stats name prefix matcher for inclusion.
-	InclusionPrefixes []string `json:"inclusionPrefixes,omitempty"`
-	// Proxy stats name suffix matcher for inclusion.
-	InclusionSuffixes []string `json:"inclusionSuffixes,omitempty"`
-	// Proxy stats name regexps matcher for inclusion.
-	InclusionRegexps []string `json:"inclusionRegexps,omitempty"`
+type CustomMetricScale struct {
+	// Envoy Gateway by default create and expose only a subset of Envoy stats.
+	// This option is to control creation of additional Envoy stats with prefix, suffix, and regex
+	// expressions match on the name of the stats.
+	// The default Envoy stats with prefixs(cluster_manager, listener_manager, server, cluster.xds-grpc)
+	// expressions match on the name of the stats.
+	ProxyStatsMatcher *ProxyStatsMatcher `json:"statsMatcher,omitempty"`
+	// HistogramBucketSettings defines rules for setting the histogram buckets.
+	// Default buckets are used if not set. See more details at
+	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
+	HistogramBucketSettings []HistogramBucketSetting `json:"histogramBucketSettings,omitempty"`
+}
+
+type ProxyStatsMatcher struct {
+	// Gateway stats name matcher for inclusion.
+	InclusionMatches []Match `json:"inclusionMatches,omitempty"`
 }
 
 type HistogramBucketSetting struct {
-	// Regex defines the regex for the stats name.
-	// This use RE2 engine.
-	// +kubebuilder:validation:Pattern=^/.*$
-	// +kubebuilder:validation:MinLength=1
-	Regex string `json:"regex"`
+	Match Match `json:"match"`
 	// Buckets defines the buckets for the histogram.
 	// +kubebuilder:validation:MinItems=1
 	Buckets []float32 `json:"buckets"`
 }
+
+type Match struct {
+	Type  StringMatcher `json:"type"`
+	Value string        `json:"value"`
+}
+
+type StringMatcher string
+
+const (
+	Prefix StringMatcher = "Prefix"
+	Regex  StringMatcher = "Regex"
+	Suffix StringMatcher = "Suffix"
+)
 
 type OpenTelemetrySink struct {
 	// Host define the service hostname.

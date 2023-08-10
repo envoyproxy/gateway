@@ -16,6 +16,21 @@ API group.
 
 
 
+## CustomMetricScale
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `statsMatcher` _[ProxyStatsMatcher](#proxystatsmatcher)_ | Envoy Gateway by default create and expose only a subset of Envoy stats. This option is to control creation of additional Envoy stats with prefix, suffix, and regex expressions match on the name of the stats. The default Envoy stats with prefixs(cluster_manager, listener_manager, server, cluster.xds-grpc) expressions match on the name of the stats. |
+| `histogramBucketSettings` _[HistogramBucketSetting](#histogrambucketsetting) array_ | HistogramBucketSettings defines rules for setting the histogram buckets. Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings. |
+
+
 ## CustomTag
 
 
@@ -456,11 +471,11 @@ _Appears in:_
 
 
 _Appears in:_
-- [ProxyMetrics](#proxymetrics)
+- [CustomMetricScale](#custommetricscale)
 
 | Field | Description |
 | --- | --- |
-| `regex` _string_ | Regex defines the regex for the stats name. This use RE2 engine. |
+| `match` _[Match](#match)_ |  |
 | `buckets` _float array_ | Buckets defines the buckets for the histogram. |
 
 
@@ -605,6 +620,22 @@ _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
 
+
+
+## Match
+
+
+
+
+
+_Appears in:_
+- [HistogramBucketSetting](#histogrambucketsetting)
+- [ProxyStatsMatcher](#proxystatsmatcher)
+
+| Field | Description |
+| --- | --- |
+| `type` _[StringMatcher](#stringmatcher)_ |  |
+| `value` _string_ |  |
 
 
 ## MetricSink
@@ -798,8 +829,21 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `statsMatcher` _[StatsMatcher](#statsmatcher)_ | ProxyStatMatcher defines configuration for reporting custom Envoy stats. To reduce memory and CPU overhead from Envoy stats system. |
-| `histogramBucketSettings` _[HistogramBucketSetting](#histogrambucketsetting) array_ | HistogramBucketSettings defines rules for setting the histogram buckets. Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings. |
+| `customMetricScale` _[CustomMetricScale](#custommetricscale)_ | CustomMetricScale defines configuration for reporting custom Envoy stats. To reduce memory and CPU overhead from Envoy stats system. |
+
+
+## ProxyStatsMatcher
+
+
+
+
+
+_Appears in:_
+- [CustomMetricScale](#custommetricscale)
+
+| Field | Description |
+| --- | --- |
+| `inclusionMatches` _[Match](#match) array_ | Gateway stats name matcher for inclusion. |
 
 
 ## ProxyTelemetry
@@ -943,20 +987,15 @@ _Appears in:_
 
 
 
-## StatsMatcher
+## StringMatcher
 
-
+_Underlying type:_ `string`
 
 
 
 _Appears in:_
-- [ProxyMetrics](#proxymetrics)
+- [Match](#match)
 
-| Field | Description |
-| --- | --- |
-| `inclusionPrefixes` _string array_ | Proxy stats name prefix matcher for inclusion. |
-| `inclusionSuffixes` _string array_ | Proxy stats name suffix matcher for inclusion. |
-| `inclusionRegexps` _string array_ | Proxy stats name regexps matcher for inclusion. |
 
 
 ## TracingProvider
