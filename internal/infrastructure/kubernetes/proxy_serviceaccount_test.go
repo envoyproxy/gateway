@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -195,8 +194,6 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
-			fmt.Println("@@@", tc.want, actual)
-
 			assert.Equal(t, true, cmp.Equal(tc.want, actual, opts))
 		})
 	}
