@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -54,7 +55,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test-74657374",
+					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -103,7 +104,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-test-74657374",
+					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -152,7 +153,7 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
-					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-76657279",
+					Name:      "envoy-very-long-name-that-will-be-hashed-and-cut-off-b-5bacc75e",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -194,6 +195,8 @@ func TestCreateOrUpdateProxyServiceAccount(t *testing.T) {
 			require.NoError(t, kube.Client.Get(context.Background(), client.ObjectKeyFromObject(actual), actual))
 
 			opts := cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ResourceVersion")
+			fmt.Println("@@@", tc.want, actual)
+
 			assert.Equal(t, true, cmp.Equal(tc.want, actual, opts))
 		})
 	}
