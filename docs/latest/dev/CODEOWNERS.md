@@ -4,7 +4,6 @@
 
 - @AliceProxy
 - @arkodg
-- @skriss
 - @Xunzhuo
 - @youngnick
 - @zirain
@@ -13,3 +12,4 @@
 
 - @danehans
 - @alexgervais
+- @skriss
