@@ -515,7 +515,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					// If redirect scheme is not-empty, the redirect post must be the
 					// well-known port associated with the redirect scheme.
 					if scheme := routeRoute.Redirect.Scheme; scheme != nil {
-						switch *scheme {
+						switch strings.ToLower(*scheme) {
 						case "http":
 							redirectPort = 80
 						case "https":
