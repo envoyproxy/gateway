@@ -5,11 +5,12 @@
 - @AliceProxy
 - @arkodg
 - @Xunzhuo
-- @youngnick
 - @zirain
+- @qicz
 
 ## Emeritus Maintainers
 
 - @danehans
 - @alexgervais
 - @skriss
+- @youngnick
