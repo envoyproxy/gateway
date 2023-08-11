@@ -658,6 +658,9 @@ _Appears in:_
 _Appears in:_
 - [ProxyMetrics](#proxymetrics)
 
+| Field | Description |
+| --- | --- |
+| `port` _integer_ | Port defines the port for Prometheus metrics. It shares the same port as EnvoyProxy readiness port by default. |
 
 
 ## ProviderType

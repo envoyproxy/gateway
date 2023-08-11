@@ -3929,6 +3929,16 @@ spec:
                       prometheus:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
+                        properties:
+                          port:
+                            default: 19001
+                            description: Port defines the port for Prometheus metrics.
+                              It shares the same port as EnvoyProxy readiness port
+                              by default.
+                            format: int32
+                            maximum: 65535
+                            minimum: 0
+                            type: integer
                         type: object
                       sinks:
                         description: Sinks defines the metric sinks where metrics

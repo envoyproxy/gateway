@@ -44,4 +44,12 @@ type OpenTelemetrySink struct {
 }
 
 type PrometheusProvider struct {
+	// Port defines the port for Prometheus metrics.
+	// It shares the same port as EnvoyProxy readiness port by default.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=19001
+	Port int32 `json:"port,omitempty"`
 }
