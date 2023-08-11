@@ -3929,10 +3929,10 @@ spec:
                       matches:
                         description: Matches defines configuration for metric matching
                           rules to reduce memory and CPU overhead from Envoy stats
-                          system. If Matches not set, gateway by default create and
-                          expose only a subset of Envoy stats with prefixes(cluster_manager,listener_manager,server,cluster.xds-grpc)
-                          expressions match on the name of stats. If Matches is not
-                          empty, this option is to control creation of additional
+                          system. When Matches is nil(not set), gateway by default
+                          create and expose only a subset of Envoy stats with prefixes(cluster_manager,listener_manager,server,cluster.xds-grpc)
+                          expressions match on the name of stats. When Matches is
+                          not empty, this option is to control creation of additional
                           Envoy stats with prefix, suffix, and regex expressions match
                           on the name of the stats.
                         items:
