@@ -10,10 +10,14 @@ type ProxyMetrics struct {
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
-
-	// CustomMetricScale defines configuration for reporting custom Envoy stats.
-	// To reduce memory and CPU overhead from Envoy stats system.
-	CustomMetricScales CustomMetricScale `json:"customMetricScale,omitempty"`
+	// Matches defines configuration for metric matching rules
+	// to reduce memory and CPU overhead from Envoy stats system.
+	// If Matches not set, gateway by default create and expose only a subset of
+	// Envoy stats with prefixes(cluster_manager,listener_manager,server,cluster.xds-grpc)
+	// expressions match on the name of stats.
+	// If Matches is not empty, this option is to control creation of additional Envoy stats
+	// with prefix, suffix, and regex expressions match on the name of the stats.
+	Matches []Match `json:"matches,omitempty"`
 }
 
 type MetricSinkType string
@@ -33,42 +37,17 @@ type MetricSink struct {
 	OpenTelemetry *OpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
 
-type CustomMetricScale struct {
-	// Envoy Gateway by default create and expose only a subset of Envoy stats.
-	// This option is to control creation of additional Envoy stats with prefix, suffix, and regex
-	// expressions match on the name of the stats.
-	// The default Envoy stats with prefixs(cluster_manager, listener_manager, server, cluster.xds-grpc)
-	// expressions match on the name of the stats.
-	ProxyStatsMatcher *ProxyStatsMatcher `json:"statsMatcher,omitempty"`
-	// HistogramBucketSettings defines rules for setting the histogram buckets.
-	// Default buckets are used if not set. See more details at
-	// https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings.
-	HistogramBucketSettings []HistogramBucketSetting `json:"histogramBucketSettings,omitempty"`
-}
-
-type ProxyStatsMatcher struct {
-	// Gateway stats name matcher for inclusion.
-	InclusionMatches []Match `json:"inclusionMatches,omitempty"`
-}
-
-type HistogramBucketSetting struct {
-	Match Match `json:"match"`
-	// Buckets defines the buckets for the histogram.
-	// +kubebuilder:validation:MinItems=1
-	Buckets []float32 `json:"buckets"`
-}
-
 type Match struct {
-	Type  StringMatcher `json:"type"`
-	Value string        `json:"value"`
+	Type  MatcherType `json:"type"`
+	Value string      `json:"value"`
 }
 
-type StringMatcher string
+type MatcherType string
 
 const (
-	Prefix StringMatcher = "Prefix"
-	Regex  StringMatcher = "Regex"
-	Suffix StringMatcher = "Suffix"
+	Prefix MatcherType = "Prefix"
+	Regex  MatcherType = "Regex"
+	Suffix MatcherType = "Suffix"
 )
 
 type OpenTelemetrySink struct {

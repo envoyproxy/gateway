@@ -16,21 +16,6 @@ API group.
 
 
 
-## CustomMetricScale
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `statsMatcher` _[ProxyStatsMatcher](#proxystatsmatcher)_ | Envoy Gateway by default create and expose only a subset of Envoy stats. This option is to control creation of additional Envoy stats with prefix, suffix, and regex expressions match on the name of the stats. The default Envoy stats with prefixs(cluster_manager, listener_manager, server, cluster.xds-grpc) expressions match on the name of the stats. |
-| `histogramBucketSettings` _[HistogramBucketSetting](#histogrambucketsetting) array_ | HistogramBucketSettings defines rules for setting the histogram buckets. Default buckets are used if not set. See more details at https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/metrics/v3/stats.proto.html#config-metrics-v3-histogrambucketsettings. |
-
-
 ## CustomTag
 
 
@@ -464,21 +449,6 @@ _Appears in:_
 | `kind` _string_ |  |
 
 
-## HistogramBucketSetting
-
-
-
-
-
-_Appears in:_
-- [CustomMetricScale](#custommetricscale)
-
-| Field | Description |
-| --- | --- |
-| `match` _[Match](#match)_ |  |
-| `buckets` _float array_ | Buckets defines the buckets for the histogram. |
-
-
 ## InfrastructureProviderType
 
 _Underlying type:_ `string`
@@ -629,13 +599,23 @@ _Appears in:_
 
 
 _Appears in:_
-- [HistogramBucketSetting](#histogrambucketsetting)
-- [ProxyStatsMatcher](#proxystatsmatcher)
+- [ProxyMetrics](#proxymetrics)
 
 | Field | Description |
 | --- | --- |
-| `type` _[StringMatcher](#stringmatcher)_ |  |
+| `type` _[MatcherType](#matchertype)_ |  |
 | `value` _string_ |  |
+
+
+## MatcherType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [Match](#match)
+
 
 
 ## MetricSink
@@ -829,21 +809,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `customMetricScale` _[CustomMetricScale](#custommetricscale)_ | CustomMetricScale defines configuration for reporting custom Envoy stats. To reduce memory and CPU overhead from Envoy stats system. |
-
-
-## ProxyStatsMatcher
-
-
-
-
-
-_Appears in:_
-- [CustomMetricScale](#custommetricscale)
-
-| Field | Description |
-| --- | --- |
-| `inclusionMatches` _[Match](#match) array_ | Gateway stats name matcher for inclusion. |
+| `matches` _[Match](#match) array_ | Matches defines configuration for metric matching rules to reduce memory and CPU overhead from Envoy stats system. If Matches not set, gateway by default create and expose only a subset of Envoy stats with prefixes(cluster_manager,listener_manager,server,cluster.xds-grpc) expressions match on the name of stats. If Matches is not empty, this option is to control creation of additional Envoy stats with prefix, suffix, and regex expressions match on the name of the stats. |
 
 
 ## ProxyTelemetry
@@ -984,17 +950,6 @@ ServiceType string describes ingress methods for a service
 
 _Appears in:_
 - [KubernetesServiceSpec](#kubernetesservicespec)
-
-
-
-## StringMatcher
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [Match](#match)
 
 
 
