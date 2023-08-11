@@ -197,12 +197,12 @@ func refsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
 }
 
 func infraServiceName(gateway *gwapiv1b1.Gateway) string {
-	infraName := utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
+	infraName := utils.GetHashedName(fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name))
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
 }
 
 func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
-	infraName := utils.GetHashedName(fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name))
+	infraName := utils.GetHashedName(fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name))
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
 }
 
