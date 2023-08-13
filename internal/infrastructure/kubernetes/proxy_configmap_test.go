@@ -43,7 +43,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      "envoy-test-74657374",
+					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",
@@ -77,7 +77,7 @@ func TestCreateOrUpdateProxyConfigMap(t *testing.T) {
 			expect: &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: cfg.Namespace,
-					Name:      "envoy-test-74657374",
+					Name:      "envoy-test-9f86d081",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":               "envoy",
 						"app.kubernetes.io/component":          "proxy",

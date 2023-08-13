@@ -27,11 +27,13 @@
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
+                  asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
                     timeout: 5s
                     uri: https://localhost/jwt/public-key/jwks.json
+                  retryPolicy: {}
               first-route-www.test.com-example2:
                 audiences:
                 - one.foo.com
@@ -44,11 +46,13 @@
                 issuer: https://www.two.example.com
                 payloadInMetadata: https://www.two.example.com
                 remoteJwks:
+                  asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: "192_168_1_250_8080"
                     timeout: 5s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+                  retryPolicy: {}
               second-route-www.test.com-example:
                 audiences:
                 - foo.com
@@ -58,11 +62,13 @@
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
+                  asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
                     timeout: 5s
                     uri: https://localhost/jwt/public-key/jwks.json
+                  retryPolicy: {}
               second-route-www.test.com-example2:
                 audiences:
                 - one.foo.com
@@ -70,11 +76,13 @@
                 issuer: https://www.two.example.com
                 payloadInMetadata: https://www.two.example.com
                 remoteJwks:
+                  asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: "192_168_1_250_8080"
                     timeout: 5s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
+                  retryPolicy: {}
             requirementMap:
               first-route-www.test.com:
                 requiresAny:
