@@ -12,8 +12,8 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: default/backend/rule/0
-        name: default/backend/rule/0
+          serviceName: httproute/default/backend/rule/0
+        name: httproute/default/backend/rule/0
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS
@@ -27,8 +27,58 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: default/backend/rule/-1
-        name: default/backend/rule/-1
+          serviceName: grpcroute/default/backend/rule/0
+        name: grpcroute/default/backend/rule/0
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        type: EDS
+        typedExtensionProtocolOptions:
+          envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+            '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+            explicitHttpConfig:
+              http2ProtocolOptions: {}
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          serviceName: tlsroute/default/backend/rule/-1
+        name: tlsroute/default/backend/rule/-1
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        type: EDS
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          serviceName: tcproute/default/backend/rule/-1
+        name: tcproute/default/backend/rule/-1
+        outlierDetection: {}
+        perConnectionBufferLimitBytes: 32768
+        type: EDS
+    - cluster:
+        '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
+        commonLbConfig:
+          localityWeightedLbConfig: {}
+        connectTimeout: 10s
+        dnsLookupFamily: V4_ONLY
+        edsClusterConfig:
+          edsConfig:
+            ads: {}
+            resourceApiVersion: V3
+          serviceName: udproute/default/backend/rule/-1
+        name: udproute/default/backend/rule/-1
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

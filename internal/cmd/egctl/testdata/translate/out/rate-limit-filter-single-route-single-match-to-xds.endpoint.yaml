@@ -4,7 +4,7 @@ xds:
     dynamicEndpointConfigs:
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: envoy-gateway-system/http-ratelimit/rule/0
+        clusterName: httproute/envoy-gateway-system/http-ratelimit/rule/0
         endpoints:
         - lbEndpoints:
           - endpoint:

@@ -13,10 +13,10 @@ xds:
           routes:
           - match:
               pathSeparatedPrefix: /foo
-            name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+            name: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com
             route:
-              cluster: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+              cluster: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com
             typedPerFilterConfig:
               envoy.filters.http.jwt_authn:
                 '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-                requirementName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+                requirementName: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com

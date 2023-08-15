@@ -94,7 +94,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        name: default/tlsroute-1/rule/-1
+        name: tlsroute/default/tlsroute-1/rule/-1
       name: envoy-gateway/gateway-1/tls/tlsroute-1
       port: 10090
       tls:

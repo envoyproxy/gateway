@@ -4,7 +4,7 @@ xds:
     dynamicEndpointConfigs:
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/backend/rule/0
+        clusterName: httproute/default/backend/rule/0
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -17,7 +17,20 @@ xds:
           locality: {}
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/backend/rule/-1
+        clusterName: grpcroute/default/backend/rule/0
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 1.1.1.1
+                  portValue: 9000
+            loadBalancingWeight: 1
+          loadBalancingWeight: 1
+          locality: {}
+    - endpointConfig:
+        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+        clusterName: tlsroute/default/backend/rule/-1
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -26,5 +39,29 @@ xds:
                   address: 1.1.1.1
                   portValue: 3000
             loadBalancingWeight: 1
+          loadBalancingWeight: 1
+          locality: {}
+    - endpointConfig:
+        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+        clusterName: tcproute/default/backend/rule/-1
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 1.1.1.1
+                  portValue: 3000
+          loadBalancingWeight: 1
+          locality: {}
+    - endpointConfig:
+        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
+        clusterName: udproute/default/backend/rule/-1
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 1.1.1.1
+                  portValue: 3000
           loadBalancingWeight: 1
           locality: {}

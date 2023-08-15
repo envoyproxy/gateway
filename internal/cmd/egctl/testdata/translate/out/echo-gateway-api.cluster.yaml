@@ -95,8 +95,8 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: envoy-gateway-system/backend/rule/0
-        name: envoy-gateway-system/backend/rule/0
+          serviceName: httproute/envoy-gateway-system/backend/rule/0
+        name: httproute/envoy-gateway-system/backend/rule/0
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

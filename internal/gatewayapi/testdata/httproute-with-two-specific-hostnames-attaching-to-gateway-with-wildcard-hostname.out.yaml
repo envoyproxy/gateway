@@ -109,9 +109,9 @@ xdsIR:
           - host: 7.7.7.7
             port: 8080
             weight: 1
-          name: default/httproute-1/rule/0
+          name: httproute/default/httproute-1/rule/0
         hostname: gateway.envoyproxy.io
-        name: default/httproute-1/rule/0/match/0-gateway.envoyproxy.io
+        name: httproute/default/httproute-1/rule/0/match/0-gateway.envoyproxy.io
         pathMatch:
           distinct: false
           name: ""
@@ -124,9 +124,9 @@ xdsIR:
           - host: 7.7.7.7
             port: 8080
             weight: 1
-          name: default/httproute-1/rule/0
+          name: httproute/default/httproute-1/rule/0
         hostname: whales.envoyproxy.io
-        name: default/httproute-1/rule/0/match/0-whales.envoyproxy.io
+        name: httproute/default/httproute-1/rule/0/match/0-whales.envoyproxy.io
         pathMatch:
           distinct: false
           name: ""
