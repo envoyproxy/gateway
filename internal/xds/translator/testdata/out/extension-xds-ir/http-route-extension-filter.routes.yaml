@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: extension-listener
+    name: extension-listener-*
     routes:
     - match:
         prefix: /
@@ -29,6 +29,3 @@
           value: foo.example.io/v1alpha1
       route:
         cluster: first-route
-    - directResponse:
-        status: 200
-      name: mock-extension-inserted-route

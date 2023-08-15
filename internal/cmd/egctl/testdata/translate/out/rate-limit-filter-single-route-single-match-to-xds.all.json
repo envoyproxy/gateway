@@ -432,20 +432,12 @@
                 "virtualHosts": [
                   {
                     "domains": [
-                      "*"
+                      "ratelimit.example"
                     ],
-                    "name": "envoy-gateway-system/eg/http",
+                    "name": "envoy-gateway-system/eg/http-ratelimit.example",
                     "routes": [
                       {
                         "match": {
-                          "headers": [
-                            {
-                              "name": ":authority",
-                              "stringMatch": {
-                                "exact": "ratelimit.example"
-                              }
-                            }
-                          ],
                           "prefix": "/"
                         },
                         "name": "envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",

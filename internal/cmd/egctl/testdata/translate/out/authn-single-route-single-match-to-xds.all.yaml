@@ -250,14 +250,10 @@ xds:
           name: envoy-gateway-system/eg/http
           virtualHosts:
           - domains:
-            - '*'
-            name: envoy-gateway-system/eg/http
+            - www.example.com
+            name: envoy-gateway-system/eg/http-www.example.com
             routes:
             - match:
-                headers:
-                - name: :authority
-                  stringMatch:
-                    exact: www.example.com
                 pathSeparatedPrefix: /foo
               name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
               route:

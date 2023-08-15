@@ -124,10 +124,7 @@ xdsIR:
               namespace: default
             spec:
               data: stuff
-        headerMatches:
-        - distinct: false
-          exact: gateway.envoyproxy.io
-          name: :authority
+        hostname: gateway.envoyproxy.io
         name: default/httproute-1/rule/0/match/0-gateway.envoyproxy.io
         pathMatch:
           distinct: false

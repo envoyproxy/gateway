@@ -80,7 +80,7 @@ func (c *XDSHookClient) PostRouteModifyHook(route *routeV3.Route, routeHostnames
 func (c *XDSHookClient) PostVirtualHostModifyHook(vh *routeV3.VirtualHost) (*routeV3.VirtualHost, error) {
 	// Only make the change when the VirtualHost's name matches the expected testdata
 	// This prevents us from having to update every single testfile.out
-	if vh.Name == "extension-post-xdsvirtualhost-hook-error" {
+	if vh.Name == "extension-post-xdsvirtualhost-hook-error-*" {
 		return nil, fmt.Errorf("extension post xds virtual host hook error")
 	} else if vh.Name == "extension-listener" {
 		// Setup a new VirtualHost to avoid operating directly on the passed in pointer for better test coverage that the

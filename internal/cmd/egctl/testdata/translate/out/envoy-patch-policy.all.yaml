@@ -198,10 +198,3 @@ xds:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
           name: default/eg/http
-          virtualHosts:
-          - domains:
-            - '*'
-            name: default/eg/http
-            rateLimits:
-            - actions:
-              - remoteAddress: {}

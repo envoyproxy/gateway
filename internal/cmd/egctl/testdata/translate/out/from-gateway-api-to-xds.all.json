@@ -851,20 +851,12 @@
                 "virtualHosts": [
                   {
                     "domains": [
-                      "*"
+                      "www.example.com"
                     ],
-                    "name": "default/eg/http",
+                    "name": "default/eg/http-www.example.com",
                     "routes": [
                       {
                         "match": {
-                          "headers": [
-                            {
-                              "name": ":authority",
-                              "stringMatch": {
-                                "exact": "www.example.com"
-                              }
-                            }
-                          ],
                           "prefix": "/"
                         },
                         "name": "default/backend/rule/0/match/0-www.example.com",
@@ -885,20 +877,12 @@
                 "virtualHosts": [
                   {
                     "domains": [
-                      "*"
+                      "www.grpc-example.com"
                     ],
-                    "name": "default/eg/grpc",
+                    "name": "default/eg/grpc-www.grpc-example.com",
                     "routes": [
                       {
                         "match": {
-                          "headers": [
-                            {
-                              "name": ":authority",
-                              "stringMatch": {
-                                "exact": "www.grpc-example.com"
-                              }
-                            }
-                          ],
                           "path": "/com.example.Things/DoThing"
                         },
                         "name": "default/backend/rule/0/match/0-www.grpc-example.com",

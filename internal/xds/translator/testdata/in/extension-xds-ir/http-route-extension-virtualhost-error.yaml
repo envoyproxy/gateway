@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     pathMatch:
       prefix: "/"
     destinations:

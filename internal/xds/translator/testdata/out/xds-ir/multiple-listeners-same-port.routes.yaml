@@ -2,8 +2,8 @@
   name: first-listener
   virtualHosts:
   - domains:
-    - foo.com
-    name: first-listener
+    - '*'
+    name: first-listener-*
     routes:
     - match:
         prefix: /
@@ -14,8 +14,8 @@
   name: second-listener
   virtualHosts:
   - domains:
-    - foo.net
-    name: second-listener
+    - '*'
+    name: second-listener-*
     routes:
     - match:
         prefix: /
@@ -26,8 +26,8 @@
   name: third-listener
   virtualHosts:
   - domains:
-    - example.com
-    name: third-listener
+    - '*'
+    name: third-listener-*
     routes:
     - match:
         prefix: /
@@ -35,8 +35,8 @@
       route:
         cluster: third-route
   - domains:
-    - example.net
-    name: fourth-listener
+    - '*'
+    name: fourth-listener-*
     routes:
     - match:
         prefix: /

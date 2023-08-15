@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener-*
     routes:
     - match:
         path: foo/bar

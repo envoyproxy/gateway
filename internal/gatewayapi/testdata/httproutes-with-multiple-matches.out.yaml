@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 5
+    - attachedRoutes: 6
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -52,6 +52,43 @@ httpRoutes:
       matches:
       - path:
           value: /
+  status:
+    parents:
+    - conditions:
+      - lastTransitionTime: null
+        message: Route is accepted
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: null
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+      parentRef:
+        name: gateway-1
+        namespace: envoy-gateway
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    creationTimestamp: null
+    name: httproute-1
+    namespace: envoy-gateway
+  spec:
+    hostnames:
+    - '*.com'
+    - '*.net'
+    parentRefs:
+    - name: gateway-1
+      namespace: envoy-gateway
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+      matches:
+      - path:
+          value: /foo
   status:
     parents:
     - conditions:
@@ -254,10 +291,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        headerMatches:
-        - distinct: false
-          exact: example.com
-          name: :authority
+        hostname: example.com
         name: envoy-gateway/httproute-2/rule/0/match/0-example.com
         pathMatch:
           distinct: false
@@ -274,10 +308,7 @@ xdsIR:
         - host: 8.8.8.8
           port: 8080
           weight: 1
-        headerMatches:
-        - distinct: false
-          exact: example.com
-          name: :authority
+        hostname: example.com
         name: envoy-gateway/httproute-3/rule/0/match/0-example.com
         pathMatch:
           distinct: false
@@ -292,11 +323,9 @@ xdsIR:
           weight: 1
         headerMatches:
         - distinct: false
-          exact: example.net
-          name: :authority
-        - distinct: false
           exact: one
           name: version
+        hostname: example.net
         name: envoy-gateway/httproute-4/rule/0/match/0-example.net
         pathMatch:
           distinct: false
@@ -309,15 +338,38 @@ xdsIR:
         - host: 8.8.8.8
           port: 8080
           weight: 1
-        headerMatches:
-        - distinct: false
-          exact: example.net
-          name: :authority
+        hostname: example.net
         name: envoy-gateway/httproute-5/rule/0/match/0-example.net
         pathMatch:
           distinct: false
           name: ""
           prefix: /v1/status
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        hostname: '*.com'
+        name: envoy-gateway/httproute-1/rule/0/match/0-*.com
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        hostname: '*.net'
+        name: envoy-gateway/httproute-1/rule/0/match/0-*.net
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /foo
       - backendWeights:
           invalid: 0
           valid: 0

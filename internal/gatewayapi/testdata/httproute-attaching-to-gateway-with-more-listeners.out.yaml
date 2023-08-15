@@ -280,6 +280,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: foo.com
         name: default/httproute-1/rule/0/match/0-foo.com
         pathMatch:
           distinct: false
@@ -299,6 +300,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: bar.com
         name: default/httproute-1/rule/0/match/0-bar.com
         pathMatch:
           distinct: false
@@ -318,6 +320,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: foo1.com
         name: default/httproute-1/rule/0/match/0-foo1.com
         pathMatch:
           distinct: false
@@ -337,6 +340,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: bar1.com
         name: default/httproute-1/rule/0/match/0-bar1.com
         pathMatch:
           distinct: false
@@ -356,6 +360,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: foo2.com
         name: default/httproute-1/rule/0/match/0-foo2.com
         pathMatch:
           distinct: false
@@ -375,6 +380,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: bar2.com
         name: default/httproute-1/rule/0/match/0-bar2.com
         pathMatch:
           distinct: false
@@ -394,6 +400,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: foo3.com
         name: default/httproute-1/rule/0/match/0-foo3.com
         pathMatch:
           distinct: false
@@ -413,6 +420,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: bar3.com
         name: default/httproute-1/rule/0/match/0-bar3.com
         pathMatch:
           distinct: false

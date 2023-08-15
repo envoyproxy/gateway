@@ -508,14 +508,10 @@ xds:
           name: default/eg/http
           virtualHosts:
           - domains:
-            - '*'
-            name: default/eg/http
+            - www.example.com
+            name: default/eg/http-www.example.com
             routes:
             - match:
-                headers:
-                - name: :authority
-                  stringMatch:
-                    exact: www.example.com
                 prefix: /
               name: default/backend/rule/0/match/0-www.example.com
               route:
@@ -526,14 +522,10 @@ xds:
           name: default/eg/grpc
           virtualHosts:
           - domains:
-            - '*'
-            name: default/eg/grpc
+            - www.grpc-example.com
+            name: default/eg/grpc-www.grpc-example.com
             routes:
             - match:
-                headers:
-                - name: :authority
-                  stringMatch:
-                    exact: www.grpc-example.com
                 path: /com.example.Things/DoThing
               name: default/backend/rule/0/match/0-www.grpc-example.com
               route:

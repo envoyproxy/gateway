@@ -2,14 +2,10 @@
   name: first-listener
   virtualHosts:
   - domains:
-    - '*'
-    name: first-listener
+    - gateway.envoyproxy.io
+    name: first-listener-gateway.envoyproxy.io
     routes:
     - match:
-        headers:
-        - name: :authority
-          stringMatch:
-            exact: gateway.envoyproxy.io
         pathSeparatedPrefix: /origin
       name: rewrite-route
       route:
