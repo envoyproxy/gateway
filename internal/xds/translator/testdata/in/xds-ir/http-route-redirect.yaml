@@ -8,9 +8,11 @@ http:
   routes:
   - name: "redirect-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "redirect-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     redirect:
       scheme: https
       statusCode: 302

@@ -10,3 +10,5 @@
       name: mirror-route
       route:
         cluster: mirror-route
+        requestMirrorPolicies:
+        - cluster: mirror-route-mirror-0

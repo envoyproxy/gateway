@@ -7,16 +7,18 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    destinations:
-    - host: "1.1.1.1"
-      port: 50001
-      weight: 20
-    - host: "2.2.2.2"
-      port: 50002
-      weight: 40
-    - host: "3.3.3.3"
-      port: 50003
-      weight: 20
-    - host: "4.4.4.4"
-      port: 50004
-      weight: 20
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.1.1.1"
+        port: 50001
+        weight: 20
+      - host: "2.2.2.2"
+        port: 50002
+        weight: 40
+      - host: "3.3.3.3"
+        port: 50003
+        weight: 20
+      - host: "4.4.4.4"
+        port: 50004
+        weight: 20

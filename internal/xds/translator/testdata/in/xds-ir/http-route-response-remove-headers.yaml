@@ -8,9 +8,11 @@ http:
   routes:
   - name: "response-header-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "response-header-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     removeResponseHeaders:
     - "some-header5"
     - "some-header6"
