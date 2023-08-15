@@ -14,6 +14,6 @@
       name: rewrite-route
       route:
         appendXForwardedHost: true
-        cluster: rewrite-route
+        cluster: rewrite-route-dest
         hostRewriteLiteral: 3.3.3.3
         prefixRewrite: /rewrite

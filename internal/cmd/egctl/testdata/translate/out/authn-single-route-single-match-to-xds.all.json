@@ -433,7 +433,7 @@
                         },
                         "name": "httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com",
                         "route": {
-                          "cluster": "httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com"
+                          "cluster": "httproute/envoy-gateway-system/backend/rule/0"
                         },
                         "typedPerFilterConfig": {
                           "envoy.filters.http.jwt_authn": {

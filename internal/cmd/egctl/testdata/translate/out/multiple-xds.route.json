@@ -21,7 +21,7 @@
                     },
                     "name": "httproute/default/backend/rule/0/match/0-www.example.com",
                     "route": {
-                      "cluster": "httproute/default/backend/rule/0/match/0-www.example.com"
+                      "cluster": "httproute/default/backend/rule/0"
                     }
                   }
                 ]
@@ -52,7 +52,7 @@
                     },
                     "name": "httproute/default/backend/rule/0/match/0-www.example2.com",
                     "route": {
-                      "cluster": "httproute/default/backend/rule/0/match/0-www.example2.com"
+                      "cluster": "httproute/default/backend/rule/0"
                     }
                   }
                 ]

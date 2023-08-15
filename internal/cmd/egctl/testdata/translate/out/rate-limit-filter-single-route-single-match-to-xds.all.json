@@ -442,7 +442,7 @@
                         },
                         "name": "httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",
                         "route": {
-                          "cluster": "httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example",
+                          "cluster": "httproute/envoy-gateway-system/http-ratelimit/rule/0",
                           "rateLimits": [
                             {
                               "actions": [

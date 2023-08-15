@@ -24,9 +24,11 @@ http:
           claimToHeaders:
           - header: first-route-key
             claim: claim.neteased.key
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
   - name: "second-route"
     hostname: "*"
     pathMatch:
@@ -40,6 +42,8 @@ http:
           - foo.com
           remoteJWKS:
             uri: https://localhost/jwt/public-key/jwks.json
-    destinations:
-    - host: "5.6.7.8"
-      port: 50000
+    destination:
+      name: "second-route-dest"
+      endpoints:
+      - host: "5.6.7.8"
+        port: 50000

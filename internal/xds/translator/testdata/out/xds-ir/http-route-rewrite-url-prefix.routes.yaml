@@ -13,5 +13,5 @@
         pathSeparatedPrefix: /origin
       name: rewrite-route
       route:
-        cluster: rewrite-route
+        cluster: rewrite-route-dest
         prefixRewrite: /rewrite

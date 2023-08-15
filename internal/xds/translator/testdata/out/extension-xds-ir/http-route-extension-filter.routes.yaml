@@ -28,4 +28,4 @@
           key: mock-extension-was-here-extensionRef-apiversion
           value: foo.example.io/v1alpha1
       route:
-        cluster: first-route
+        cluster: first-route-dest

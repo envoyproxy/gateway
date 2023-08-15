@@ -30,4 +30,4 @@
           key: empty-header
         keepEmptyValue: true
       route:
-        cluster: response-header-route
+        cluster: response-header-route-dest

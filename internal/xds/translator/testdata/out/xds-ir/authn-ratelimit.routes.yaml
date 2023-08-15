@@ -9,7 +9,7 @@
         path: foo/bar
       name: first-route
       route:
-        cluster: first-route
+        cluster: first-route-dest
         rateLimits:
         - actions:
           - headerValueMatch:
@@ -28,7 +28,7 @@
         path: example
       name: second-route
       route:
-        cluster: second-route
+        cluster: second-route-dest
         rateLimits:
         - actions:
           - requestHeaders:
@@ -38,7 +38,7 @@
         path: test
       name: third-route
       route:
-        cluster: third-route
+        cluster: third-route-dest
         rateLimits:
         - actions:
           - genericKey:

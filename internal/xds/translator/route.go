@@ -6,7 +6,6 @@
 package translator
 
 import (
-	"fmt"
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -44,9 +43,9 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Name, httpRoute.URLRewrite)
+		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite)
 		if httpRoute.Mirror != nil {
-			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirror.Endpoints)
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -55,13 +54,13 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 			// If there are invalid backends then a weighted cluster is required for the route
 			routeAction := buildXdsWeightedRouteAction(httpRoute)
 			if httpRoute.Mirror != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirror.Endpoints)
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
-			routeAction := buildXdsRouteAction(httpRoute.Name)
+			routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
 			if httpRoute.Mirror != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Name, httpRoute.Mirror.Endpoints)
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
@@ -180,10 +179,10 @@ func buildXdsStringMatcher(irMatch *ir.StringMatch) *matcherv3.StringMatcher {
 	return stringMatcher
 }
 
-func buildXdsRouteAction(routeName string) *routev3.RouteAction {
+func buildXdsRouteAction(destName string) *routev3.RouteAction {
 	return &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: routeName,
+			Cluster: destName,
 		},
 	}
 }
@@ -195,7 +194,7 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
 		},
 		{
-			Name:   httpRoute.Name,
+			Name:   httpRoute.Destination.Name,
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
 		},
 	}
@@ -244,10 +243,10 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 	return routeAction
 }
 
-func buildXdsURLRewriteAction(routeName string, urlRewrite *ir.URLRewrite) *routev3.RouteAction {
+func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *routev3.RouteAction {
 	routeAction := &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
-			Cluster: routeName,
+			Cluster: destName,
 		},
 	}
 
@@ -289,13 +288,11 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(routeName string, mirrors []*ir.DestinationEndpoint) []*routev3.RouteAction_RequestMirrorPolicy {
-	mirrorPolicies := []*routev3.RouteAction_RequestMirrorPolicy{}
-
-	for i := range mirrors {
-		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
-			Cluster: fmt.Sprintf("%s-mirror-%d", routeName, i),
-		})
+func buildXdsRequestMirrorPolicies(destName string) []*routev3.RouteAction_RequestMirrorPolicy {
+	mirrorPolicies := []*routev3.RouteAction_RequestMirrorPolicy{
+		{
+			Cluster: destName,
+		},
 	}
 
 	return mirrorPolicies

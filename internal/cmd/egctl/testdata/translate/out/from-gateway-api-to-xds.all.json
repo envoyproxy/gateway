@@ -861,7 +861,7 @@
                         },
                         "name": "httproute/default/backend/rule/0/match/0-www.example.com",
                         "route": {
-                          "cluster": "httproute/default/backend/rule/0/match/0-www.example.com"
+                          "cluster": "httproute/default/backend/rule/0"
                         }
                       }
                     ]
@@ -887,7 +887,7 @@
                         },
                         "name": "grpcroute/default/backend/rule/0/match/0-www.grpc-example.com",
                         "route": {
-                          "cluster": "grpcroute/default/backend/rule/0/match/0-www.grpc-example.com"
+                          "cluster": "grpcroute/default/backend/rule/0"
                         }
                       }
                     ]

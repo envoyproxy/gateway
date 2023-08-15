@@ -515,7 +515,7 @@ xds:
                 prefix: /
               name: httproute/default/backend/rule/0/match/0-www.example.com
               route:
-                cluster: httproute/default/backend/rule/0/match/0-www.example.com
+                cluster: httproute/default/backend/rule/0
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
@@ -529,4 +529,4 @@ xds:
                 path: /com.example.Things/DoThing
               name: grpcroute/default/backend/rule/0/match/0-www.grpc-example.com
               route:
-                cluster: grpcroute/default/backend/rule/0/match/0-www.grpc-example.com
+                cluster: grpcroute/default/backend/rule/0
