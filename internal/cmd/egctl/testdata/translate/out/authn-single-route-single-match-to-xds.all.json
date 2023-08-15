@@ -189,7 +189,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "envoy-gateway-system/backend/rule/0/match/0-www.example.com",
+                "clusterName": "envoy-gateway-system/backend/rule/0",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -229,9 +229,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "envoy-gateway-system/backend/rule/0/match/0-www.example.com"
+                  "serviceName": "envoy-gateway-system/backend/rule/0"
                 },
-                "name": "envoy-gateway-system/backend/rule/0/match/0-www.example.com",
+                "name": "envoy-gateway-system/backend/rule/0",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"

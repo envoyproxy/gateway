@@ -2,45 +2,6 @@
     localityWeightedLbConfig: {}
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: first-route
-  name: first-route
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: second-route
-  name: second-route
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: third-route
-  name: third-route
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
   loadAssignment:
     clusterName: ratelimit_cluster

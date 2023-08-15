@@ -1,4 +1,4 @@
-- clusterName: tls-terminate
+- clusterName: tls-terminate-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

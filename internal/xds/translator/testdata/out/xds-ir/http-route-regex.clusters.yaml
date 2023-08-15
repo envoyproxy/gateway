@@ -1,13 +1,1 @@
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: regex-route
-  name: regex-route
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
+[]

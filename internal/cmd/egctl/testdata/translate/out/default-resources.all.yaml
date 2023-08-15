@@ -533,7 +533,7 @@ xds:
       dynamicEndpointConfigs:
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/backend/rule/0/match/0-www.example.com
+          clusterName: default/backend/rule/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -546,20 +546,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/backend/rule/0/match/0-www.grpc-example.com
-          endpoints:
-          - lbEndpoints:
-            - endpoint:
-                address:
-                  socketAddress:
-                    address: 1.1.1.1
-                    portValue: 9000
-              loadBalancingWeight: 1
-            loadBalancingWeight: 1
-            locality: {}
-      - endpointConfig:
-          '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/eg/tls-passthrough/backend
+          clusterName: default/backend/rule/-1
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -568,30 +555,6 @@ xds:
                     address: 127.0.0.1
                     portValue: 3000
               loadBalancingWeight: 1
-            loadBalancingWeight: 1
-            locality: {}
-      - endpointConfig:
-          '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/eg/tcp/backend
-          endpoints:
-          - lbEndpoints:
-            - endpoint:
-                address:
-                  socketAddress:
-                    address: 127.0.0.1
-                    portValue: 3000
-            loadBalancingWeight: 1
-            locality: {}
-      - endpointConfig:
-          '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/eg/udp/backend
-          endpoints:
-          - lbEndpoints:
-            - endpoint:
-                address:
-                  socketAddress:
-                    address: 127.0.0.1
-                    portValue: 3000
             loadBalancingWeight: 1
             locality: {}
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
@@ -606,8 +569,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/backend/rule/0/match/0-www.example.com
-          name: default/backend/rule/0/match/0-www.example.com
+            serviceName: default/backend/rule/0
+          name: default/backend/rule/0
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -621,58 +584,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/backend/rule/0/match/0-www.grpc-example.com
-          name: default/backend/rule/0/match/0-www.grpc-example.com
-          outlierDetection: {}
-          perConnectionBufferLimitBytes: 32768
-          type: EDS
-          typedExtensionProtocolOptions:
-            envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
-              '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
-              explicitHttpConfig:
-                http2ProtocolOptions: {}
-      - cluster:
-          '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-          commonLbConfig:
-            localityWeightedLbConfig: {}
-          connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
-          edsClusterConfig:
-            edsConfig:
-              ads: {}
-              resourceApiVersion: V3
-            serviceName: default/eg/tls-passthrough/backend
-          name: default/eg/tls-passthrough/backend
-          outlierDetection: {}
-          perConnectionBufferLimitBytes: 32768
-          type: EDS
-      - cluster:
-          '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-          commonLbConfig:
-            localityWeightedLbConfig: {}
-          connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
-          edsClusterConfig:
-            edsConfig:
-              ads: {}
-              resourceApiVersion: V3
-            serviceName: default/eg/tcp/backend
-          name: default/eg/tcp/backend
-          outlierDetection: {}
-          perConnectionBufferLimitBytes: 32768
-          type: EDS
-      - cluster:
-          '@type': type.googleapis.com/envoy.config.cluster.v3.Cluster
-          commonLbConfig:
-            localityWeightedLbConfig: {}
-          connectTimeout: 10s
-          dnsLookupFamily: V4_ONLY
-          edsClusterConfig:
-            edsConfig:
-              ads: {}
-              resourceApiVersion: V3
-            serviceName: default/eg/udp/backend
-          name: default/eg/udp/backend
+            serviceName: default/backend/rule/-1
+          name: default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS

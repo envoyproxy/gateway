@@ -92,9 +92,11 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destinations:
-      - host: 7.7.7.7
-        port: 8080
+      destination:
+        endpoints:
+        - host: 7.7.7.7
+          port: 8080
+        name: default/tcproute-1/rule/-1
       name: envoy-gateway/gateway-1/tls/tcproute-1
       port: 10090
       tls:

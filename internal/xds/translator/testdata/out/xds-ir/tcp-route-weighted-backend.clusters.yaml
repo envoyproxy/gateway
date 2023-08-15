@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-weighted-backend
-  name: tcp-route-weighted-backend
+    serviceName: tcp-route-weighted-backend-dest
+  name: tcp-route-weighted-backend-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

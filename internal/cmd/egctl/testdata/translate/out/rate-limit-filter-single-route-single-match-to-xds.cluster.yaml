@@ -12,8 +12,8 @@ xds:
           edsConfig:
             ads: {}
             resourceApiVersion: V3
-          serviceName: envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example
-        name: envoy-gateway-system/http-ratelimit/rule/0/match/0-ratelimit.example
+          serviceName: envoy-gateway-system/http-ratelimit/rule/0
+        name: envoy-gateway-system/http-ratelimit/rule/0
         outlierDetection: {}
         perConnectionBufferLimitBytes: 32768
         type: EDS

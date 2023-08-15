@@ -851,7 +851,7 @@ func (t *Translator) processRequestMirrorFilter(
 		if !found {
 			if filterContext.Mirror == nil {
 				filterContext.Mirror = &ir.RouteDestination{
-					Name: irRouteDestinationName(filterContext.Route, filterContext.RuleIdx),
+					Name: fmt.Sprintf("%s-mirror", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx)),
 				}
 			}
 			filterContext.Mirror.Endpoints = append(filterContext.Mirror.Endpoints, mirrorEp)

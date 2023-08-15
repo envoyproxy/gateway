@@ -189,7 +189,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				continue
 			}
 			if err := addXdsCluster(tCtx, addXdsClusterArgs{
-				name:         httpRoute.Name,
+				name:         httpRoute.Destination.Name,
 				endpoints:    httpRoute.Destination.Endpoints,
 				tSocket:      nil,
 				protocol:     protocol,
@@ -198,12 +198,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				return err
 			}
 
-			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
-			for i, mirror := range httpRoute.Mirror.Endpoints {
-				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
+			if httpRoute.Mirror != nil {
 				if err := addXdsCluster(tCtx, addXdsClusterArgs{
-					name:         mirrorClusterName,
-					endpoints:    []*ir.DestinationEndpoint{mirror},
+					name:         httpRoute.Mirror.Name,
+					endpoints:    httpRoute.Mirror.Endpoints,
 					tSocket:      nil,
 					protocol:     protocol,
 					endpointType: Static,
@@ -247,7 +245,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
-			name:         tcpListener.Name,
+			name:         tcpListener.Destination.Name,
 			endpoints:    tcpListener.Destination.Endpoints,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
@@ -284,7 +282,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
-			name:         udpListener.Name,
+			name:         udpListener.Destination.Name,
 			endpoints:    udpListener.Destination.Endpoints,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,

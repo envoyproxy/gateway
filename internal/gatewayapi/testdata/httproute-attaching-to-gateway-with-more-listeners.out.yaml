@@ -276,10 +276,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: foo.com
         name: default/httproute-1/rule/0/match/0-foo.com
         pathMatch:
@@ -296,10 +298,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: bar.com
         name: default/httproute-1/rule/0/match/0-bar.com
         pathMatch:
@@ -316,10 +320,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: foo1.com
         name: default/httproute-1/rule/0/match/0-foo1.com
         pathMatch:
@@ -336,10 +342,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: bar1.com
         name: default/httproute-1/rule/0/match/0-bar1.com
         pathMatch:
@@ -356,10 +364,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: foo2.com
         name: default/httproute-1/rule/0/match/0-foo2.com
         pathMatch:
@@ -376,10 +386,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: bar2.com
         name: default/httproute-1/rule/0/match/0-bar2.com
         pathMatch:
@@ -396,10 +408,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: foo3.com
         name: default/httproute-1/rule/0/match/0-foo3.com
         pathMatch:
@@ -416,10 +430,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: default/httproute-1/rule/0
         hostname: bar3.com
         name: default/httproute-1/rule/0/match/0-bar3.com
         pathMatch:

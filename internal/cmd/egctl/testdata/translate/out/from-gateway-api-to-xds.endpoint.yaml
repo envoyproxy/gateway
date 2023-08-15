@@ -4,7 +4,7 @@ xds:
     dynamicEndpointConfigs:
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/backend/rule/0/match/0-www.example.com
+        clusterName: default/backend/rule/0
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -17,20 +17,7 @@ xds:
           locality: {}
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/backend/rule/0/match/0-www.grpc-example.com
-        endpoints:
-        - lbEndpoints:
-          - endpoint:
-              address:
-                socketAddress:
-                  address: 1.1.1.1
-                  portValue: 9000
-            loadBalancingWeight: 1
-          loadBalancingWeight: 1
-          locality: {}
-    - endpointConfig:
-        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/eg/tls-passthrough/backend
+        clusterName: default/backend/rule/-1
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -39,29 +26,5 @@ xds:
                   address: 1.1.1.1
                   portValue: 3000
             loadBalancingWeight: 1
-          loadBalancingWeight: 1
-          locality: {}
-    - endpointConfig:
-        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/eg/tcp/backend
-        endpoints:
-        - lbEndpoints:
-          - endpoint:
-              address:
-                socketAddress:
-                  address: 1.1.1.1
-                  portValue: 3000
-          loadBalancingWeight: 1
-          locality: {}
-    - endpointConfig:
-        '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/eg/udp/backend
-        endpoints:
-        - lbEndpoints:
-          - endpoint:
-              address:
-                socketAddress:
-                  address: 1.1.1.1
-                  portValue: 3000
           loadBalancingWeight: 1
           locality: {}
