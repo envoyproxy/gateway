@@ -488,26 +488,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 		var perHostRoutes []*ir.HTTPRoute
 		for _, host := range hosts {
-			var headerMatches []*ir.StringMatch
-
-			// If the intersecting host is more specific than the Listener's hostname,
-			// add an additional header match to all of the routes for it
-			if host != "*" && (listener.Hostname == nil || string(*listener.Hostname) != host) {
-				// Hostnames that are prefixed with a wildcard label (*.)
-				// are interpreted as a suffix match.
-				if strings.HasPrefix(host, "*.") {
-					headerMatches = append(headerMatches, &ir.StringMatch{
-						Name:   ":authority",
-						Suffix: StringPtr(host[2:]),
-					})
-				} else {
-					headerMatches = append(headerMatches, &ir.StringMatch{
-						Name:  ":authority",
-						Exact: StringPtr(host),
-					})
-				}
-			}
-
 			for _, routeRoute := range routeRoutes {
 				// If the redirect port is not set, the final redirect port must be derived.
 				if routeRoute.Redirect != nil && routeRoute.Redirect.Port == nil {
@@ -529,8 +509,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 
 				hostRoute := &ir.HTTPRoute{
 					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
+					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
-					HeaderMatches:         append(headerMatches, routeRoute.HeaderMatches...),
+					HeaderMatches:         routeRoute.HeaderMatches,
 					QueryParamMatches:     routeRoute.QueryParamMatches,
 					AddRequestHeaders:     routeRoute.AddRequestHeaders,
 					RemoveRequestHeaders:  routeRoute.RemoveRequestHeaders,
@@ -544,6 +525,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
+				}
+				if hostRoute.Hostname == "*" {
+					hostRoute.Hostname = ""
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {

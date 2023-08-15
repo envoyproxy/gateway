@@ -145,19 +145,35 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 		}
 
-		// Allocate virtual host for this httpListener.
-		// 1:1 between IR HTTPListener and xDS VirtualHost
-		vHost := &routev3.VirtualHost{
-			Name:    httpListener.Name,
-			Domains: httpListener.Hostnames,
-		}
 		protocol := DefaultProtocol
 		if httpListener.IsHTTP2 {
 			protocol = HTTP2
 		}
 
+		// store virtual hosts by domain
+		vHosts := map[string]*routev3.VirtualHost{}
+		// keep track of order by using a list as well as the map
+		var vHostsList []*routev3.VirtualHost
+
 		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 		for _, httpRoute := range httpListener.Routes {
+			hostname := httpRoute.Hostname
+			if hostname == "" {
+				hostname = "*"
+			}
+
+			// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
+			vHost := vHosts[hostname]
+			if vHost == nil {
+				// Allocate virtual host for this httpRoute.
+				vHost = &routev3.VirtualHost{
+					Name:    fmt.Sprintf("%s-%s", httpListener.Name, hostname),
+					Domains: []string{hostname},
+				}
+				vHosts[hostname] = vHost
+				vHostsList = append(vHostsList, vHost)
+			}
+
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 
@@ -201,13 +217,14 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 		}
 
-		// Check if an extension want to modify the Virtual Host we just generated
-		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-			return err
+		for _, vHost := range vHostsList {
+			// Check if an extension want to modify the Virtual Host we just generated
+			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+			if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
+				return err
+			}
 		}
-
-		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
+		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
 		// TODO: Make this into a generic interface for API Gateway features.
 		//       https://github.com/envoyproxy/gateway/issues/882
