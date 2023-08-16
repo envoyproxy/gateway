@@ -684,7 +684,7 @@
                                 }
                               }
                             ],
-                            "cluster": "default/eg/tls-passthrough/backend",
+                            "cluster": "tlsroute/default/backend/rule/-1",
                             "statPrefix": "passthrough"
                           }
                         }
@@ -756,7 +756,7 @@
                                 }
                               }
                             ],
-                            "cluster": "default/eg/tcp/backend",
+                            "cluster": "tcproute/default/backend/rule/-1",
                             "statPrefix": "tcp"
                           }
                         }
@@ -825,7 +825,7 @@
                               "name": "route",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route",
-                                "cluster": "default/eg/udp/backend"
+                                "cluster": "udproute/default/backend/rule/-1"
                               }
                             }
                           }

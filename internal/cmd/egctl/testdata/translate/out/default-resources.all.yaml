@@ -837,7 +837,7 @@ xds:
                           inlineString: |
                             [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
-                  cluster: default/eg/tls-passthrough/backend
+                  cluster: tlsroute/default/backend/rule/-1
                   statPrefix: passthrough
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector
@@ -879,7 +879,7 @@ xds:
                           inlineString: |
                             [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
-                  cluster: default/eg/tcp/backend
+                  cluster: tcproute/default/backend/rule/-1
                   statPrefix: tcp
             name: default/eg/tcp/backend
             perConnectionBufferLimitBytes: 32768
@@ -923,7 +923,7 @@ xds:
                       name: route
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
-                        cluster: default/eg/udp/backend
+                        cluster: udproute/default/backend/rule/-1
                 statPrefix: service
             name: default/eg/udp/backend
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump

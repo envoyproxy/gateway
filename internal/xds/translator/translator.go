@@ -271,7 +271,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Name, accesslog); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
 			return err
 		}
 	}
@@ -293,7 +293,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
-		xdsListener, err := buildXdsUDPListener(udpListener.Name, udpListener, accesslog)
+		xdsListener, err := buildXdsUDPListener(udpListener.Destination.Name, udpListener, accesslog)
 		if err != nil {
 			return multierror.Append(err, errors.New("error building xds cluster"))
 		}
