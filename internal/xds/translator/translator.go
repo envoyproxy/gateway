@@ -184,18 +184,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
-			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
-			if httpRoute.Destination == nil && httpRoute.BackendWeights.Invalid > 0 {
-				continue
-			}
-			if err := addXdsCluster(tCtx, addXdsClusterArgs{
-				name:         httpRoute.Destination.Name,
-				endpoints:    httpRoute.Destination.Endpoints,
-				tSocket:      nil,
-				protocol:     protocol,
-				endpointType: Static,
-			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-				return err
+			if httpRoute.Destination != nil {
+				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+					name:         httpRoute.Destination.Name,
+					endpoints:    httpRoute.Destination.Endpoints,
+					tSocket:      nil,
+					protocol:     protocol,
+					endpointType: Static,
+				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+					return err
+				}
 			}
 
 			if httpRoute.Mirror != nil {
