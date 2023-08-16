@@ -193,11 +193,16 @@ func buildXdsWeightedRouteAction(httpRoute *ir.HTTPRoute) *routev3.RouteAction {
 			Name:   "invalid-backend-cluster",
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Invalid},
 		},
-		{
+	}
+
+	if httpRoute.BackendWeights.Valid > 0 {
+		validCluster := &routev3.WeightedCluster_ClusterWeight{
 			Name:   httpRoute.Destination.Name,
 			Weight: &wrapperspb.UInt32Value{Value: httpRoute.BackendWeights.Valid},
-		},
+		}
+		clusters = append(clusters, validCluster)
 	}
+
 	return &routev3.RouteAction{
 		// Intentionally route to a non-existent cluster and return a 500 error when it is not found
 		ClusterNotFoundResponseCode: routev3.RouteAction_INTERNAL_SERVER_ERROR,
