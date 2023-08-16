@@ -1271,13 +1271,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch ServiceImport CRUDs and process affected *Route objects.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &mcsapi.ServiceImport{}),
-		&handler.EnqueueRequestForObject{},
-		predicate.NewPredicateFuncs(r.validateServiceImportForReconcile)); err != nil {
-		return err
+	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableMultiClusterServiceAPI {
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &mcsapi.ServiceImport{}),
+			&handler.EnqueueRequestForObject{},
+			predicate.NewPredicateFuncs(r.validateServiceImportForReconcile)); err != nil {
+			return err
+		}
 	}
-
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
