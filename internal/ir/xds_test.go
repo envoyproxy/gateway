@@ -984,7 +984,7 @@ func TestValidateRouteDestination(t *testing.T) {
 		{
 			name: "missing ip",
 			input: RouteDestination{
-				Name: "mising ip",
+				Name: "missing ip",
 				Endpoints: []*DestinationEndpoint{
 					{
 						Port: 8080,
