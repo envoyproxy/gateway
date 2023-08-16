@@ -10,7 +10,7 @@ tcp:
       - example.com
   destination:
     name: "tcp-route-weighted-backend-dest"
-    endpoints:  
+    endpoints:
     - host: "1.1.1.1"
       port: 50001
       weight: 20

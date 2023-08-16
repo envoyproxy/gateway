@@ -10,7 +10,7 @@ tcp:
       - example.com
   destination:
     name: "tcp-route-complex-dest"
-    endpoints:  
+    endpoints:
     - host: "1.2.3.4"
       port: 50000
     - host: "5.6.7.8"

@@ -19,6 +19,6 @@ http:
       exact: "yes"
     destination:
       name: "first-route-dest"
-      endpoints:  
+      endpoints:
       - host: "1.2.3.4"
         port: 50000
