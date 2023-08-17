@@ -27,8 +27,7 @@ const (
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 )
 
-func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
-	clusterName := routeName
+func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
