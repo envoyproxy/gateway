@@ -526,9 +526,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					RateLimit:             routeRoute.RateLimit,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
-				if hostRoute.Hostname == "*" {
-					hostRoute.Hostname = ""
-				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
 					hostRoute.BackendWeights = routeRoute.BackendWeights

@@ -157,20 +157,15 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 		for _, httpRoute := range httpListener.Routes {
-			hostname := httpRoute.Hostname
-			if hostname == "" {
-				hostname = "*"
-			}
-
 			// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
-			vHost := vHosts[hostname]
+			vHost := vHosts[httpRoute.Hostname]
 			if vHost == nil {
 				// Allocate virtual host for this httpRoute.
 				vHost = &routev3.VirtualHost{
-					Name:    fmt.Sprintf("%s-%s", httpListener.Name, hostname),
-					Domains: []string{hostname},
+					Name:    fmt.Sprintf("%s-%s", httpListener.Name, httpRoute.Hostname),
+					Domains: []string{httpRoute.Hostname},
 				}
-				vHosts[hostname] = vHost
+				vHosts[httpRoute.Hostname] = vHost
 				vHostsList = append(vHostsList, vHost)
 			}
 

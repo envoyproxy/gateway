@@ -30,6 +30,7 @@ var (
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
 	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
 	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
@@ -237,7 +238,7 @@ type HTTPRoute struct {
 	// Name of the HTTPRoute
 	Name string `json:"name" yaml:"name"`
 	// Hostname that the route matches against
-	Hostname string `json:"hostname,omitempty" yaml:"hostname,omitempty"`
+	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
 	// HeaderMatches define the match conditions on the request headers for this route.
@@ -307,6 +308,9 @@ func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
+	}
+	if h.Hostname == "" {
+		errs = multierror.Append(errs, ErrHTTPRouteHostnameEmpty)
 	}
 	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
 		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
