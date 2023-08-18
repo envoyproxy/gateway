@@ -49,12 +49,14 @@ contributing to the project.
 
 ### [v0.5.0][v0.5.0]: Observability and Scale
 
-- Observability for control plane and data plane [Issue #701][701]. 
-- Compute and document Envoy Gateway performance [Issue #1365][1365].
+- Observability for data plane [Issue #699][699].
 - Allow users to configure xDS Resources [Issue #24][24].
 
 ### [v0.6.0][v0.6.0]: Preparation for GA
 
+- Observability for control plane [Issue #700][700].
+- Compute and document Envoy Gateway performance [Issue #1365][1365].
+- Add TrafficPolicy APIs for advanced features [Issue #1492][1492].
 - Envoy Gateway meets readiness criteria [Issue #1160][1160]. 
 
 [issue]: https://github.com/envoyproxy/gateway/issues
@@ -82,7 +84,9 @@ contributing to the project.
 [643]: https://github.com/envoyproxy/gateway/issues/643
 [670]: https://github.com/envoyproxy/gateway/issues/670
 [675]: https://github.com/envoyproxy/gateway/issues/675
-[701]: https://github.com/envoyproxy/gateway/issues/701
+[699]: https://github.com/envoyproxy/gateway/issues/699
+[700]: https://github.com/envoyproxy/gateway/issues/700
 [707]: https://github.com/envoyproxy/gateway/issues/707
 [1160]: https://github.com/envoyproxy/gateway/issues/1160
 [1365]: https://github.com/envoyproxy/gateway/issues/1365
+[1492]: https://github.com/envoyproxy/gateway/issues/1492

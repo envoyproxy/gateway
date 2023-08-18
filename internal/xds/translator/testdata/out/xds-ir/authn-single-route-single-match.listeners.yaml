@@ -24,11 +24,13 @@
                 issuer: https://www.example.com
                 payloadInMetadata: https://www.example.com
                 remoteJwks:
+                  asyncFetch: {}
                   cacheDuration: 300s
                   httpUri:
                     cluster: localhost_443
                     timeout: 5s
                     uri: https://localhost/jwt/public-key/jwks.json
+                  retryPolicy: {}
             requirementMap:
               first-route:
                 providerName: first-route-example

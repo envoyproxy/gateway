@@ -7,8 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -140,15 +138,13 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
-	proxyLogging := infra.Config.Spec.Logging
-
-	logLevel := componentLogLevel(proxyLogging.Level, egcfgv1a1.LogComponentDefault, egcfgv1a1.LogLevelWarn)
+	logging := infra.Config.Spec.Logging
 
 	args := []string{
 		fmt.Sprintf("--service-cluster %s", infra.Name),
 		fmt.Sprintf("--service-node $(%s)", envoyPodEnvVar),
 		fmt.Sprintf("--config-yaml %s", bootstrapConfigurations),
-		fmt.Sprintf("--log-level %s", logLevel),
+		fmt.Sprintf("--log-level %s", logging.DefaultEnvoyProxyLoggingLevel()),
 		"--cpuset-threads",
 	}
 
@@ -157,8 +153,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		args = append(args, fmt.Sprintf("--concurrency %d", *infra.Config.Spec.Concurrency))
 	}
 
-	if componentLogLevel := componentLogLevelArgs(proxyLogging.Level); componentLogLevel != "" {
-		args = append(args, fmt.Sprintf("--component-log-level %s", componentLogLevel))
+	if componentsLogLevel := logging.GetEnvoyProxyComponentLevel(); componentsLogLevel != "" {
+		args = append(args, fmt.Sprintf("--component-log-level %s", componentsLogLevel))
 	}
 
 	containers := []corev1.Container{
@@ -192,30 +188,6 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	}
 
 	return containers, nil
-}
-
-func componentLogLevel(levels map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel, component egcfgv1a1.LogComponent, defaultLevel egcfgv1a1.LogLevel) egcfgv1a1.LogLevel {
-	if level, ok := levels[component]; ok {
-		return level
-	}
-
-	return defaultLevel
-}
-
-func componentLogLevelArgs(levels map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel) string {
-	var args []string
-
-	for component, level := range levels {
-		if component == egcfgv1a1.LogComponentDefault {
-			// Skip default component
-			continue
-		}
-		args = append(args, fmt.Sprintf("%s:%s", component, level))
-	}
-
-	sort.Strings(args)
-
-	return strings.Join(args, ",")
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.

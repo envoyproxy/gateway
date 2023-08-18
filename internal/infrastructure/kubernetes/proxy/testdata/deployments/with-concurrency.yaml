@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/managed-by: envoy-gateway
     gateway.envoyproxy.io/owning-gateway-name: default
     gateway.envoyproxy.io/owning-gateway-namespace: default
-  name: envoy-default-64656661
+  name: envoy-default-37a8eec1
   namespace: envoy-gateway-system
 spec:
   replicas: 1
@@ -85,7 +85,7 @@ spec:
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
-      serviceAccountName: envoy-default-64656661
+      serviceAccountName: envoy-default-37a8eec1
       terminationGracePeriodSeconds: 300
       volumes:
         - name: certs
@@ -99,7 +99,7 @@ spec:
                 path: xds-trusted-ca.json
               - key: xds-certificate.json
                 path: xds-certificate.json
-            name: envoy-default-64656661
+            name: envoy-default-37a8eec1
             optional: false
           name: sds
   revisionHistoryLimit: 10

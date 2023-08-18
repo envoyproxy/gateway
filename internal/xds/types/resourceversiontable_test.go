@@ -170,6 +170,58 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			},
 		},
 	}
+	testEndpoint := &endpointv3.ClusterLoadAssignment{
+		ClusterName: "test-cluster",
+		Endpoints: []*endpointv3.LocalityLbEndpoints{
+			{
+				LbEndpoints: []*endpointv3.LbEndpoint{
+					{
+						HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+							Endpoint: &endpointv3.Endpoint{
+								Address: &corev3.Address{
+									Address: &corev3.Address_SocketAddress{
+										SocketAddress: &corev3.SocketAddress{
+											Address: "exampleservice.examplenamespace.svc.cluster.local",
+											PortSpecifier: &corev3.SocketAddress_PortValue{
+												PortValue: 5000,
+											},
+											Protocol: corev3.SocketAddress_TCP,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	updatedEndpoint := &endpointv3.ClusterLoadAssignment{
+		ClusterName: "test-cluster",
+		Endpoints: []*endpointv3.LocalityLbEndpoints{
+			{
+				LbEndpoints: []*endpointv3.LbEndpoint{
+					{
+						HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+							Endpoint: &endpointv3.Endpoint{
+								Address: &corev3.Address{
+									Address: &corev3.Address_SocketAddress{
+										SocketAddress: &corev3.SocketAddress{
+											Address: "modified.example.svc.cluster.local",
+											PortSpecifier: &corev3.SocketAddress_PortValue{
+												PortValue: 5000,
+											},
+											Protocol: corev3.SocketAddress_TCP,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 	testRouteConfig := &routev3.RouteConfiguration{
 		Name: "test-route-config",
 		VirtualHosts: []*routev3.VirtualHost{
@@ -271,6 +323,58 @@ func TestAddOrReplaceXdsResource(t *testing.T) {
 			tableOut: &ResourceVersionTable{
 				XdsResources: XdsResources{
 					resourcev3.ClusterType: []types.Resource{updatedCluster},
+				},
+			},
+		},
+		{
+			name: "inject-new-endpoint",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.EndpointType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.EndpointType,
+			resourceIn: testEndpoint,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
+				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
+				if newEndpoint == nil || oldEndpoint == nil {
+					return false
+				}
+				if oldEndpoint.ClusterName == newEndpoint.ClusterName {
+					return true
+				}
+				return false
+			},
+			tableOut: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.EndpointType: []types.Resource{testEndpoint},
+				},
+			},
+		},
+		{
+			name: "replace-endpoint",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.EndpointType: []types.Resource{testEndpoint},
+				},
+			},
+			typeIn:     resourcev3.EndpointType,
+			resourceIn: updatedEndpoint,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
+				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
+				if newEndpoint == nil || oldEndpoint == nil {
+					return false
+				}
+				if oldEndpoint.ClusterName == newEndpoint.ClusterName {
+					return true
+				}
+				return false
+			},
+			tableOut: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.EndpointType: []types.Resource{updatedEndpoint},
 				},
 			},
 		},
@@ -507,6 +611,32 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 		},
 	}
+	invalidEndpoint := &endpointv3.ClusterLoadAssignment{
+		ClusterName: "test-cluster",
+		Endpoints: []*endpointv3.LocalityLbEndpoints{
+			{
+				LbEndpoints: []*endpointv3.LbEndpoint{
+					{
+						HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+							Endpoint: &endpointv3.Endpoint{
+								Address: &corev3.Address{
+									Address: &corev3.Address_SocketAddress{
+										SocketAddress: &corev3.SocketAddress{
+											Address: "",
+											PortSpecifier: &corev3.SocketAddress_PortValue{
+												PortValue: 5000,
+											},
+											Protocol: corev3.SocketAddress_TCP,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
 	invalidSecret := &tlsv3.Secret{
 		Name: "=*&",
@@ -532,7 +662,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 		tableOut   *ResourceVersionTable
 	}{
 		{
-			name: "inject-new-listener",
+			name: "inject-invalid-listener",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
 					resourcev3.ListenerType: []types.Resource{},
@@ -558,7 +688,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			},
 		},
 		{
-			name: "inject-new-route-config",
+			name: "inject-invalid-route-config",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
 					resourcev3.RouteType: []types.Resource{},
@@ -580,7 +710,7 @@ func TestInvalidAddXdsResource(t *testing.T) {
 			tableOut: nil,
 		},
 		{
-			name: "inject-new-cluster",
+			name: "inject-invalid-cluster",
 			tableIn: &ResourceVersionTable{
 				XdsResources: XdsResources{
 					resourcev3.ClusterType: []types.Resource{},
@@ -705,6 +835,50 @@ func TestInvalidAddXdsResource(t *testing.T) {
 					return false
 				}
 				if oldListener.Name == newListener.Name {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "inject-invalid-endpoint",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.EndpointType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.EndpointType,
+			resourceIn: invalidEndpoint,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
+				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
+				if newEndpoint == nil || oldEndpoint == nil {
+					return false
+				}
+				if oldEndpoint.ClusterName == newEndpoint.ClusterName {
+					return true
+				}
+				return false
+			},
+			tableOut: nil,
+		},
+		{
+			name: "cast-endpoint-type",
+			tableIn: &ResourceVersionTable{
+				XdsResources: XdsResources{
+					resourcev3.EndpointType: []types.Resource{},
+				},
+			},
+			typeIn:     resourcev3.EndpointType,
+			resourceIn: invalidListener,
+			funcIn: func(existing types.Resource, new types.Resource) bool {
+				oldEndpoint := existing.(*endpointv3.ClusterLoadAssignment)
+				newEndpoint := new.(*endpointv3.ClusterLoadAssignment)
+				if newEndpoint == nil || oldEndpoint == nil {
+					return false
+				}
+				if oldEndpoint.ClusterName == newEndpoint.ClusterName {
 					return true
 				}
 				return false

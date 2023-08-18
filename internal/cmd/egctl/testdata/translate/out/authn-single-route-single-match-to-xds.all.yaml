@@ -38,6 +38,10 @@ xds:
         staticResources:
           clusters:
           - connectTimeout: 10s
+            http2ProtocolOptions:
+              connectionKeepalive:
+                interval: 30s
+                timeout: 5s
             loadAssignment:
               clusterName: xds_cluster
               endpoints:
@@ -109,6 +113,7 @@ xds:
             - endpoint:
                 address:
                   socketAddress:
+                    address: 7.7.7.7
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
@@ -210,11 +215,13 @@ xds:
                       providers:
                         envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
                           remoteJwks:
+                            asyncFetch: {}
                             cacheDuration: 300s
                             httpUri:
                               cluster: raw_githubusercontent_com_443
                               timeout: 5s
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+                            retryPolicy: {}
                       requirementMap:
                         envoy-gateway-system/backend/rule/0/match/0-www.example.com:
                           providerName: envoy-gateway-system/backend/rule/0/match/0-www.example.com-example

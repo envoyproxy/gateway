@@ -426,15 +426,6 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a1.RateLimitFilter, error) {
-	rateLimitList := new(egv1a1.RateLimitFilterList)
-	if err := r.client.List(ctx, rateLimitList); err != nil {
-		return nil, fmt.Errorf("failed to list RateLimitFilters: %v", err)
-	}
-
-	return rateLimitList.Items, nil
-}
-
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	// Find gateways for the acceptedGC
 	// Find the Gateways that reference this Class.

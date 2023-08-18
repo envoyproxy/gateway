@@ -25,11 +25,5 @@ helm-install: helm-generate ## Install envoy gateway helm chart from OCI registr
 	@$(LOG_TARGET)
 	helm install eg ${OCI_REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n envoy-gateway-system --create-namespace
 
-helm-release:
-helm-release: ## Package envoy gateway helm chart for release
-helm-release: helm-generate
-	@$(LOG_TARGET)
-	helm package charts/${CHART_NAME} --app-version ${TAG} --version ${CHART_VERSION} --destination ${OUTPUT_DIR}/charts/
-
 helm-generate:
 	ImageRepository=${IMAGE} ImageTag=${TAG} envsubst < charts/gateway-helm/values.tmpl.yaml > ./charts/gateway-helm/values.yaml
