@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/telepresenceio/watchable"
 
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/message"
 )
 
@@ -58,4 +59,68 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	)
 	assert.Equal(t, 2, storeCalls)
 	assert.Equal(t, 1, deleteCalls)
+}
+
+func TestXdsIRUpdates(t *testing.T) {
+	tests := []struct {
+		desc    string
+		xx      []*ir.Xds
+		updates int
+	}{
+		{
+			desc: "HTTP listener order change skips update",
+			xx: []*ir.Xds{
+				{
+					HTTP: []*ir.HTTPListener{
+						{Name: "listener-1"},
+						{Name: "listener-2"},
+					},
+				},
+				{
+					HTTP: []*ir.HTTPListener{
+						{Name: "listener-2"},
+						{Name: "listener-1"},
+					},
+				},
+			},
+			updates: 1,
+		},
+		{
+			desc: "Additional HTTP listener triggers update",
+			xx: []*ir.Xds{
+				{
+					HTTP: []*ir.HTTPListener{
+						{Name: "listener-1"},
+					},
+				},
+				{
+					HTTP: []*ir.HTTPListener{
+						{Name: "listener-1"},
+						{Name: "listener-2"},
+					},
+				},
+			},
+			updates: 2,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			ctx := context.Background()
+			m := new(message.XdsIR)
+
+			snapshotC := m.Subscribe(ctx)
+			go func() {
+				for _, x := range tc.xx {
+					m.Store("test", x)
+				}
+				m.Close()
+			}()
+
+			updates := 0
+			message.HandleSubscription(snapshotC, func(u message.Update[string, *ir.Xds]) {
+				updates += 1
+			})
+			assert.Equal(t, tc.updates, updates)
+		})
+	}
 }
