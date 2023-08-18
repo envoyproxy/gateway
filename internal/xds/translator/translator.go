@@ -162,7 +162,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			if vHost == nil {
 				// Allocate virtual host for this httpRoute.
 				vHost = &routev3.VirtualHost{
-					Name:    fmt.Sprintf("%s-%s", httpListener.Name, httpRoute.Hostname),
+					Name:    fmt.Sprintf("%s/%s", httpListener.Name, httpRoute.Hostname),
 					Domains: []string{httpRoute.Hostname},
 				}
 				vHosts[httpRoute.Hostname] = vHost

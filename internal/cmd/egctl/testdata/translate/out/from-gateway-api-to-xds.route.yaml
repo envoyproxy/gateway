@@ -9,7 +9,7 @@ xds:
         virtualHosts:
         - domains:
           - www.example.com
-          name: default/eg/http-www.example.com
+          name: default/eg/http/www.example.com
           routes:
           - match:
               prefix: /
@@ -23,7 +23,7 @@ xds:
         virtualHosts:
         - domains:
           - www.grpc-example.com
-          name: default/eg/grpc-www.grpc-example.com
+          name: default/eg/grpc/www.grpc-example.com
           routes:
           - match:
               path: /com.example.Things/DoThing

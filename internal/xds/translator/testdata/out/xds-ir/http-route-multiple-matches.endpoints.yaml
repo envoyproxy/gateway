@@ -1,4 +1,4 @@
-- clusterName: envoy-gateway/httproute-2/rule/0/match/0-example.com
+- clusterName: envoy-gateway/httproute-2/rule/0/match/0/example.com
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,7 +8,7 @@
             portValue: 8080
     loadBalancingWeight: 1
     locality: {}
-- clusterName: envoy-gateway/httproute-3/rule/0/match/0-example.com
+- clusterName: envoy-gateway/httproute-3/rule/0/match/0/example.com
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -18,7 +18,7 @@
             portValue: 8080
     loadBalancingWeight: 1
     locality: {}
-- clusterName: envoy-gateway/httproute-4/rule/0/match/0-example.net
+- clusterName: envoy-gateway/httproute-4/rule/0/match/0/example.net
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -28,7 +28,7 @@
             portValue: 8080
     loadBalancingWeight: 1
     locality: {}
-- clusterName: envoy-gateway/httproute-5/rule/0/match/0-example.net
+- clusterName: envoy-gateway/httproute-5/rule/0/match/0/example.net
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -38,7 +38,7 @@
             portValue: 8080
     loadBalancingWeight: 1
     locality: {}
-- clusterName: envoy-gateway/httproute-1/rule/0/match/0-*.com
+- clusterName: envoy-gateway/httproute-1/rule/0/match/0/*.com
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -48,7 +48,7 @@
             portValue: 8080
     loadBalancingWeight: 1
     locality: {}
-- clusterName: envoy-gateway/httproute-1/rule/0/match/0-*.net
+- clusterName: envoy-gateway/httproute-1/rule/0/match/0/*.net
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -58,7 +58,7 @@
             portValue: 8080
     loadBalancingWeight: 1
     locality: {}
-- clusterName: envoy-gateway/httproute-1/rule/0/match/0-*
+- clusterName: envoy-gateway/httproute-1/rule/0/match/0/*
   endpoints:
   - lbEndpoints:
     - endpoint:

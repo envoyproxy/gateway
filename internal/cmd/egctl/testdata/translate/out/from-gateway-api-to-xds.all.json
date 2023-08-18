@@ -853,7 +853,7 @@
                     "domains": [
                       "www.example.com"
                     ],
-                    "name": "default/eg/http-www.example.com",
+                    "name": "default/eg/http/www.example.com",
                     "routes": [
                       {
                         "match": {
@@ -879,7 +879,7 @@
                     "domains": [
                       "www.grpc-example.com"
                     ],
-                    "name": "default/eg/grpc-www.grpc-example.com",
+                    "name": "default/eg/grpc/www.grpc-example.com",
                     "routes": [
                       {
                         "match": {

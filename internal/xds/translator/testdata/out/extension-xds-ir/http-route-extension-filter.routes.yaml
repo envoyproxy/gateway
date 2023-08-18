@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: extension-listener-*
+    name: extension-listener/*
     routes:
     - match:
         prefix: /

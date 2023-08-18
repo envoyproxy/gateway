@@ -9,7 +9,7 @@ xds:
         virtualHosts:
         - domains:
           - ratelimit.example
-          name: envoy-gateway-system/eg/http-ratelimit.example
+          name: envoy-gateway-system/eg/http/ratelimit.example
           routes:
           - match:
               prefix: /

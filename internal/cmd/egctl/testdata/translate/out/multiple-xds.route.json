@@ -13,7 +13,7 @@
                 "domains": [
                   "www.example.com"
                 ],
-                "name": "default/eg/http-www.example.com",
+                "name": "default/eg/http/www.example.com",
                 "routes": [
                   {
                     "match": {
@@ -44,7 +44,7 @@
                 "domains": [
                   "www.example2.com"
                 ],
-                "name": "default/eg2/http-www.example2.com",
+                "name": "default/eg2/http/www.example2.com",
                 "routes": [
                   {
                     "match": {

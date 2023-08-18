@@ -425,7 +425,7 @@
                     "domains": [
                       "www.example.com"
                     ],
-                    "name": "envoy-gateway-system/eg/http-www.example.com",
+                    "name": "envoy-gateway-system/eg/http/www.example.com",
                     "routes": [
                       {
                         "match": {

@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - gateway.envoyproxy.io
-    name: first-listener-gateway.envoyproxy.io
+    name: first-listener/gateway.envoyproxy.io
     routes:
     - match:
         pathSeparatedPrefix: /origin
