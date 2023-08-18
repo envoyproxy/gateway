@@ -7,7 +7,7 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: tls-terminate
+        cluster: tls-terminate-route
         statPrefix: terminate
     transportSocket:
       name: envoy.transport_sockets.tls

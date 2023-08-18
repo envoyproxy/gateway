@@ -66,18 +66,41 @@ var (
 	}
 
 	// TCPListener
-	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:         "happy",
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
-	}
-
-	happyTCPListenerTLSTerminate = TCPListener{
+	happyTCPListener = TCPListener{
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
+	}
+	happyTCPListenerWithRoute = TCPListener{
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRoute},
+	}
+	invalidNameTCPListener = TCPListener{
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRoute},
+	}
+	invalidAddrTCPListener = TCPListener{
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRoute},
+	}
+
+	// TCPRoute
+	happyTCPRoute = TCPRoute{
+		Name:         "happy",
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	happyTCPRouteTLSPassthrough = TCPRoute{
+		Name:         "happy-tls-passthrough",
+		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destinations: []*RouteDestination{&happyRouteDestination},
+	}
+	happyTCPRouteTLSTermination = TCPRoute{
+		Name: "happy-tls-termination",
 		TLS: &TLS{Terminate: []*TLSListenerConfig{{
 			Name:              "happy",
 			ServerCertificate: []byte("server-cert"),
@@ -85,29 +108,11 @@ var (
 		}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
-
-	emptySNITCPListenerTLSPassthrough = TCPListener{
-		Name:         "empty-sni",
-		Address:      "0.0.0.0",
-		Port:         80,
+	invalidNameTCPRoute = TCPRoute{
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
-	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
-	}
-	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:         "invalid-addr",
-		Address:      "1.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
-	}
-	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
+	invalidSNITCPRoute = TCPRoute{
+		Name:         "invalid-sni-route",
 		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
@@ -485,14 +490,24 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "happy tls passthrough",
 			input: Xds{
-				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
+				TCP: []*TCPListener{{
+					Name:    "happy-tls-passthrough",
+					Address: "0.0.0.0",
+					Port:    80,
+					Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+				}},
 			},
 			want: nil,
 		},
 		{
 			name: "happy tls terminate",
 			input: Xds{
-				TCP: []*TCPListener{&happyTCPListenerTLSTerminate},
+				TCP: []*TCPListener{{
+					Name:    "happy-tls-terminate",
+					Address: "0.0.0.0",
+					Port:    80,
+					Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
+				}},
 			},
 			want: nil,
 		},
@@ -596,29 +611,24 @@ func TestValidateTCPListener(t *testing.T) {
 		want  []error
 	}{
 		{
-			name:  "tls passthrough happy",
-			input: happyTCPListenerTLSPassthrough,
+			name:  "happy",
+			input: happyTCPListener,
 			want:  nil,
 		},
 		{
-			name:  "tcp empty SNIs",
-			input: emptySNITCPListenerTLSPassthrough,
+			name:  "happy with route",
+			input: happyTCPListenerWithRoute,
 			want:  nil,
 		},
 		{
-			name:  "tls passthrough invalid name",
-			input: invalidNameTCPListenerTLSPassthrough,
+			name:  "invalid name",
+			input: invalidNameTCPListener,
 			want:  []error{ErrListenerNameEmpty},
 		},
 		{
-			name:  "tls passthrough invalid addr",
-			input: invalidAddrTCPListenerTLSPassthrough,
+			name:  "invalid addr",
+			input: invalidAddrTCPListener,
 			want:  []error{ErrListenerAddressInvalid},
-		},
-		{
-			name:  "tls passthrough empty SNIs",
-			input: invalidSNITCPListenerTLSPassthrough,
-			want:  []error{ErrTCPListenerSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -812,7 +822,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Destinations: []*RouteDestination{&happyRouteDestination},
 			},
-			want: []error{ErrHTTPRouteNameEmpty},
+			want: []error{ErrRouteNameEmpty},
 		},
 		{
 			name:  "empty match",
@@ -835,7 +845,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
 				Destinations:  []*RouteDestination{&happyRouteDestination},
 			},
-			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
+			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
 		{
 			name:  "redirect-httproute",
@@ -925,6 +935,53 @@ func TestValidateHTTPRoute(t *testing.T) {
 			name:  "mirror-filter-multiple",
 			input: requestMirrorFilterMultiple,
 			want:  nil,
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTCPRoute(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TCPRoute
+		want  []error
+	}{
+		{
+			name:  "happy",
+			input: happyTCPRoute,
+			want:  nil,
+		},
+		{
+			name:  "tls passthrough happy",
+			input: happyTCPRouteTLSPassthrough,
+			want:  nil,
+		},
+		{
+			name:  "tls terminatation happy",
+			input: happyTCPRouteTLSTermination,
+			want:  nil,
+		},
+		{
+			name:  "invalid name",
+			input: invalidNameTCPRoute,
+			want:  []error{ErrRouteNameEmpty},
+		},
+		{
+			name:  "invalid sni",
+			input: invalidSNITCPRoute,
+			want:  []error{ErrTCPRouteSNIsEmpty},
 		},
 	}
 	for _, test := range tests {

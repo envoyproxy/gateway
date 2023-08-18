@@ -58,8 +58,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: fifth-listener
-  name: fifth-listener
+    serviceName: fifth-route
+  name: fifth-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -71,8 +71,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: sixth-listener
-  name: sixth-listener
+    serviceName: sixth-route
+  name: sixth-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

@@ -26,11 +26,11 @@ var (
 	ErrListenerAddressInvalid        = errors.New("field Address must be a valid IP address")
 	ErrListenerPortInvalid           = errors.New("field Port specified is invalid")
 	ErrHTTPListenerHostnamesEmpty    = errors.New("field Hostnames must be specified with at least a single hostname entry")
-	ErrTCPListenerSNIsEmpty          = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
-	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
+	ErrRouteNameEmpty                = errors.New("field Name must be specified")
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
+	ErrTCPRouteSNIsEmpty             = errors.New("field SNIs must be specified with at least a single server name entry")
 	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
 	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
 	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
@@ -304,7 +304,7 @@ type JwtRequestAuthentication struct {
 func (h HTTPRoute) Validate() error {
 	var errs error
 	if h.Name == "" {
-		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
+		errs = multierror.Append(errs, ErrRouteNameEmpty)
 	}
 	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
 		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
@@ -646,7 +646,16 @@ type TCPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
-	// TLS holds information for configuring TLS on a listener
+	// Routes associated with TCP traffic to the listener.
+	Routes []*TCPRoute
+}
+
+// TCPRoute holds the route information associated with the TCP Route
+// +k8s:deepcopy-gen=true
+type TCPRoute struct {
+	// Name of the TCPRoute.
+	Name string
+	// TLS holds information for configuring TLS on a listener.
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.
 	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
@@ -673,6 +682,20 @@ func (h TCPListener) Validate() error {
 	}
 	if h.Port == 0 {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
+	}
+	for _, route := range h.Routes {
+		if err := route.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	return errs
+}
+
+// Validate the fields within the TCPRoute structure
+func (h TCPRoute) Validate() error {
+	var errs error
+	if h.Name == "" {
+		errs = multierror.Append(errs, ErrRouteNameEmpty)
 	}
 	if h.TLS != nil && h.TLS.Passthrough != nil {
 		if err := h.TLS.Passthrough.Validate(); err != nil {
@@ -710,7 +733,7 @@ type TLSInspectorConfig struct {
 func (t TLSInspectorConfig) Validate() error {
 	var errs error
 	if len(t.SNIs) == 0 {
-		errs = multierror.Append(errs, ErrTCPListenerSNIsEmpty)
+		errs = multierror.Append(errs, ErrTCPRouteSNIsEmpty)
 	}
 	return errs
 }

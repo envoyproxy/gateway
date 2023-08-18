@@ -18,5 +18,5 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  name: tcp-route-complex
+  name: tcp-listener-complex
   perConnectionBufferLimitBytes: 32768

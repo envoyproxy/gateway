@@ -1,4 +1,4 @@
-- clusterName: tls-passthrough
+- clusterName: tls-route
   endpoints:
   - lbEndpoints:
     - endpoint:

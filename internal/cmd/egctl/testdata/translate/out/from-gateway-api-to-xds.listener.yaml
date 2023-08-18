@@ -167,7 +167,7 @@ xds:
           - name: envoy.filters.listener.tls_inspector
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-          name: default/eg/tls-passthrough/backend
+          name: default/eg/tls-passthrough
           perConnectionBufferLimitBytes: 32768
     - activeState:
         listener:
@@ -205,7 +205,7 @@ xds:
                     path: /dev/stdout
                 cluster: default/eg/tcp/backend
                 statPrefix: tcp
-          name: default/eg/tcp/backend
+          name: default/eg/tcp
           perConnectionBufferLimitBytes: 32768
     - activeState:
         listener:

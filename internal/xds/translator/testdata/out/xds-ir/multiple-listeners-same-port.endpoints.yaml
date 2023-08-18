@@ -38,7 +38,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: fifth-listener
+- clusterName: fifth-route
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -48,7 +48,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: sixth-listener
+- clusterName: sixth-route
   endpoints:
   - loadBalancingWeight: 1
     locality: {}

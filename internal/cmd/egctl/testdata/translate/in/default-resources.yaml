@@ -13,18 +13,18 @@ metadata:
 spec:
   gatewayClassName: eg
   listeners:
-    - name: tcp
-      protocol: TCP
-      port: 1234
-    - name: udp
-      protocol: UDP
-      port: 1234
     - name: tls-passthrough
       protocol: TLS
       port: 8443
       hostname: foo.com
       tls:
         mode: Passthrough
+    - name: tcp
+      protocol: TCP
+      port: 1234
+    - name: udp
+      protocol: UDP
+      port: 1234
     - name: http
       protocol: HTTP
       port: 80

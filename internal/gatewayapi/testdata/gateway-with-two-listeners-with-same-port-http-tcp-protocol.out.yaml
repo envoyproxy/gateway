@@ -170,9 +170,11 @@ xdsIR:
           prefix: /
     tcp:
     - address: 0.0.0.0
-      destinations:
-      - host: 7.7.7.7
-        port: 8163
-      name: envoy-gateway/gateway-1/tcp/tcproute-1
+      name: envoy-gateway/gateway-1/tcp
       port: 10080
-      tls: {}
+      routes:
+      - name: envoy-gateway/gateway-1/tcp/tcproute-1
+        tls: {}
+        destinations:
+        - host: 7.7.7.7
+          port: 8163

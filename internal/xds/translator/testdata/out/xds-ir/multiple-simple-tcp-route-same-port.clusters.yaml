@@ -6,19 +6,6 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-simple
-  name: tcp-route-simple
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
     serviceName: tcp-route-simple-1
   name: tcp-route-simple-1
   outlierDetection: {}

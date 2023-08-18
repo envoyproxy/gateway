@@ -136,18 +136,18 @@ gateways:
   spec:
     gatewayClassName: eg
     listeners:
-    - name: tcp
-      port: 1234
-      protocol: TCP
-    - name: udp
-      port: 1234
-      protocol: UDP
     - hostname: foo.com
       name: tls-passthrough
       port: 8443
       protocol: TLS
       tls:
         mode: Passthrough
+    - name: tcp
+      port: 1234
+      protocol: TCP
+    - name: udp
+      port: 1234
+      protocol: UDP
     - allowedRoutes:
         kinds:
         - group: gateway.networking.k8s.io
@@ -164,6 +164,22 @@ gateways:
       protocol: HTTP
   status:
     listeners:
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: null
+        message: Sending translated listener configuration to the data plane
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: null
+        message: Listener has been successfully translated
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      name: tls-passthrough
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: TLSRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -196,22 +212,6 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
-    - attachedRoutes: 1
-      conditions:
-      - lastTransitionTime: null
-        message: Sending translated listener configuration to the data plane
-        reason: Programmed
-        status: "True"
-        type: Programmed
-      - lastTransitionTime: null
-        message: Listener has been successfully translated
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      name: tls-passthrough
-      supportedKinds:
-      - group: gateway.networking.k8s.io
-        kind: TLSRoute
     - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
@@ -843,7 +843,7 @@ xds:
             - name: envoy.filters.listener.tls_inspector
               typedConfig:
                 '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-            name: default/eg/tls-passthrough/backend
+            name: default/eg/tls-passthrough
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:
@@ -881,7 +881,7 @@ xds:
                       path: /dev/stdout
                   cluster: default/eg/tcp/backend
                   statPrefix: tcp
-            name: default/eg/tcp/backend
+            name: default/eg/tcp
             perConnectionBufferLimitBytes: 32768
       - activeState:
           listener:

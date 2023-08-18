@@ -413,15 +413,15 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
-func irHTTPListenerName(listener *ListenerContext) string {
+func irListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
 
-func irTLSListenerName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
+func irTLSRouteName(listener *ListenerContext, tlsRoute *TLSRouteContext) string {
 	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tlsRoute.Name)
 }
 
-func irTCPListenerName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
+func irTCPRouteName(listener *ListenerContext, tcpRoute *TCPRouteContext) string {
 	return fmt.Sprintf("%s/%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name, tcpRoute.Name)
 }
 

@@ -123,24 +123,24 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destinations:
-      - host: 7.7.7.7
-        port: 8080
-        weight: 1
-      name: envoy-gateway/gateway-1/tls/tlsroute-1
+      name: envoy-gateway/gateway-1/tls
       port: 10091
-      tls:
-        passthrough:
-          snis:
-          - foo.com
-    - address: 0.0.0.0
-      destinations:
-      - host: 7.7.7.7
-        port: 8080
-        weight: 1
-      name: envoy-gateway/gateway-1/tls/tlsroute-2
-      port: 10091
-      tls:
-        passthrough:
-          snis:
-          - bar.com
+      routes:
+      - name: envoy-gateway/gateway-1/tls/tlsroute-1
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        tls:
+          passthrough:
+            snis:
+            - foo.com
+      - name: envoy-gateway/gateway-1/tls/tlsroute-2
+        destinations:
+        - host: 7.7.7.7
+          port: 8080
+          weight: 1
+        tls:
+          passthrough:
+            snis:
+            - bar.com

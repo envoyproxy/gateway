@@ -121,7 +121,7 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: fifth-listener
+        cluster: fifth-route
         statPrefix: passthrough
   - filterChainMatch:
       serverNames:
@@ -130,7 +130,7 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: sixth-listener
+        cluster: sixth-route
         statPrefix: passthrough
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector

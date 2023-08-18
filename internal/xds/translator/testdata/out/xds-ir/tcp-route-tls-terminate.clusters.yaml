@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tls-terminate
-  name: tls-terminate
+    serviceName: tls-terminate-route
+  name: tls-terminate-route
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

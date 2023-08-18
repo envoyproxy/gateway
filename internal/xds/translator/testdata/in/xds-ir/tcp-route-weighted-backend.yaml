@@ -1,23 +1,25 @@
 tcp:
-- name: "tcp-route-weighted-backend"
+- name: "tcp-listener-weighted-backend"
   address: "0.0.0.0"
   port: 10080
-  tls:
-    passthrough:
-      snis:
-      - foo.com
-      - bar.com
-      - example.com
-  destinations:
-  - host: "1.1.1.1"
-    port: 50001
-    weight: 20
-  - host: "2.2.2.2"
-    port: 50002
-    weight: 40
-  - host: "3.3.3.3"
-    port: 50003
-    weight: 20
-  - host: "4.4.4.4"
-    port: 50004
-    weight: 20
+  routes:
+  - name: tcp-route-weighted-backend
+    tls:
+      passthrough:
+        snis:
+        - foo.com
+        - bar.com
+        - example.com
+    destinations:
+    - host: "1.1.1.1"
+      port: 50001
+      weight: 20
+    - host: "2.2.2.2"
+      port: 50002
+      weight: 40
+    - host: "3.3.3.3"
+      port: 50003
+      weight: 20
+    - host: "4.4.4.4"
+      port: 50004
+      weight: 20
