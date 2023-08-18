@@ -63,6 +63,13 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
+
+	// Enables core dumps for gateway.
+	//
+	// If set, gateway will have core dumps enabled.
+	//
+	// +optional
+	EnableCoreDump bool `json:"enableCoreDump,omitempty"`
 }
 
 type ProxyTelemetry struct {

@@ -193,6 +193,8 @@ spec:
               readOnly: true
             - mountPath: /sds
               name: sds
+            - mountPath: /tmp/
+              name: coredump
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -215,5 +217,9 @@ spec:
             name: envoy-default-37a8eec1
             optional: false
           name: sds
+        - name: coredump
+          hostPath:
+            path: /data/log
+            type: DirectoryOrCreate
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600

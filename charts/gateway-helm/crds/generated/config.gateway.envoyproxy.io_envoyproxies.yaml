@@ -70,6 +70,10 @@ spec:
                   If unset, it defaults to the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              enableCoreDump:
+                description: "Enables core dumps for gateway. \n If set, gateway will
+                  have core dumps enabled."
+                type: boolean
               logging:
                 default:
                   level:
