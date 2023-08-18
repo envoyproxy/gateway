@@ -113,6 +113,7 @@ func TestXdsIRUpdates(t *testing.T) {
 				for _, x := range tc.xx {
 					m.Store("test", x)
 				}
+				time.Sleep(100 * time.Millisecond)
 				m.Close()
 			}()
 
