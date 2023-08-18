@@ -647,14 +647,14 @@ type TCPListener struct {
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
 	// Routes associated with TCP traffic to the listener.
-	Routes []*TCPRoute
+	Routes []*TCPRoute `json:"routes" yaml:"routes"`
 }
 
 // TCPRoute holds the route information associated with the TCP Route
 // +k8s:deepcopy-gen=true
 type TCPRoute struct {
 	// Name of the TCPRoute.
-	Name string
+	Name string `json:"name" yaml:"name"`
 	// TLS holds information for configuring TLS on a listener.
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.

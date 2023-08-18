@@ -186,11 +186,11 @@ xdsIR:
       name: envoy-gateway/gateway-1/tls-passthrough
       port: 10090
       routes:
-      - name: envoy-gateway/gateway-1/tls-passthrough/tlsroute-1
-        destinations:
+      - destinations:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        name: envoy-gateway/gateway-1/tls-passthrough/tlsroute-1
         tls:
           passthrough:
             snis:

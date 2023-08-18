@@ -95,10 +95,10 @@ xdsIR:
       name: envoy-gateway/gateway-1/tls
       port: 10090
       routes:
-      - name: envoy-gateway/gateway-1/tls/tcproute-1
-        destinations:
+      - destinations:
         - host: 7.7.7.7
           port: 8080
+        name: envoy-gateway/gateway-1/tls/tcproute-1
         tls:
           terminate:
           - name: envoy-gateway-tls-secret-1
