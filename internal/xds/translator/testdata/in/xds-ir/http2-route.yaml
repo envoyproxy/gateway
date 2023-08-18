@@ -7,6 +7,7 @@ http:
   isHTTP2: true
   routes:
   - name: "first-route"
+    hostname: "*"
     pathMatch:
       name: "test"
       exact: "foo/bar"

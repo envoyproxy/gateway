@@ -9,6 +9,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     pathMatch:
       exact: "foo/bar"
     requestAuthentication:
@@ -27,6 +28,7 @@ http:
     - host: "1.2.3.4"
       port: 50000
   - name: "second-route"
+    hostname: "*"
     pathMatch:
       exact: "foo/baz"
     requestAuthentication:

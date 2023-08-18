@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     destinations:
     - host: "1.1.1.1"
       port: 50001
