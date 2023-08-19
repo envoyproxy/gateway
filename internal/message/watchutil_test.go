@@ -109,17 +109,26 @@ func TestXdsIRUpdates(t *testing.T) {
 			m := new(message.XdsIR)
 
 			snapshotC := m.Subscribe(ctx)
+			endCtx, end := context.WithCancel(ctx)
+			m.Store("start", &ir.Xds{})
+
 			go func() {
+				<-endCtx.Done()
 				for _, x := range tc.xx {
 					m.Store("test", x)
 				}
-				time.Sleep(100 * time.Millisecond)
-				m.Close()
+				m.Store("end", &ir.Xds{})
 			}()
 
 			updates := 0
 			message.HandleSubscription(snapshotC, func(u message.Update[string, *ir.Xds]) {
-				updates += 1
+				end()
+				if u.Key == "test" {
+					updates += 1
+				}
+				if u.Key == "end" {
+					m.Close()
+				}
 			})
 			assert.Equal(t, tc.updates, updates)
 		})
