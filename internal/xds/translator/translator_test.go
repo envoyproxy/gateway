@@ -63,6 +63,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-mirror",
 		},
 		{
+			name: "http-route-multiple-matches",
+		},
+		{
 			name: "http-route-direct-response",
 		},
 		{

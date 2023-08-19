@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "extension-post-xdsroute-hook-error"
+    hostname: "*"
     pathMatch:
       prefix: "/"
     destinations:

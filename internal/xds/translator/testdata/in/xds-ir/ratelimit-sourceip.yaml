@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:
@@ -21,6 +22,7 @@ http:
     - host: "1.2.3.4"
       port: 50000
   - name: "second-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:
@@ -36,6 +38,7 @@ http:
     - host: "1.2.3.4"
       port: 50000
   - name: "third-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:
@@ -48,6 +51,7 @@ http:
     - host: "1.2.3.4"
       port: 50000
   - name: "fourth-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:

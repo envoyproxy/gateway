@@ -106,10 +106,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        headerMatches:
-        - distinct: false
-          name: :authority
-          suffix: envoyproxy.io
+        hostname: '*.envoyproxy.io'
         name: default/httproute-1/rule/0/match/0-*.envoyproxy.io
         pathMatch:
           distinct: false

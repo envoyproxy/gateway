@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     destinations:
     - host: "1.2.3.4"
       port: 50000

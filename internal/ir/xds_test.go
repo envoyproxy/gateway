@@ -139,7 +139,8 @@ var (
 
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
-		Name: "happy",
+		Name:     "happy",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("example"),
 		},
@@ -147,10 +148,12 @@ var (
 	}
 	emptyMatchHTTPRoute = HTTPRoute{
 		Name:         "empty-match",
+		Hostname:     "*",
 		Destinations: []*RouteDestination{&happyRouteDestination},
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
-		Name: "invalid-backend",
+		Name:     "invalid-backend",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("invalid-backend"),
 		},
@@ -159,7 +162,8 @@ var (
 		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
-		Name: "weighted-invalid-backends",
+		Name:     "weighted-invalid-backends",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("invalid-backends"),
 		},
@@ -171,7 +175,8 @@ var (
 	}
 
 	redirectHTTPRoute = HTTPRoute{
-		Name: "redirect",
+		Name:     "redirect",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -187,7 +192,8 @@ var (
 	}
 	// A direct response error is used when an invalid filter type is supplied
 	invalidFilterHTTPRoute = HTTPRoute{
-		Name: "filter-error",
+		Name:     "filter-error",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("filter-error"),
 		},
@@ -198,7 +204,8 @@ var (
 	}
 
 	redirectFilterInvalidStatus = HTTPRoute{
-		Name: "redirect-bad-status-scheme-nopat",
+		Name:     "redirect-bad-status-scheme-nopat",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -211,7 +218,8 @@ var (
 		},
 	}
 	redirectFilterBadPath = HTTPRoute{
-		Name: "redirect",
+		Name:     "redirect",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -227,7 +235,8 @@ var (
 		},
 	}
 	directResponseBadStatus = HTTPRoute{
-		Name: "redirect",
+		Name:     "redirect",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -238,7 +247,8 @@ var (
 	}
 
 	urlRewriteHTTPRoute = HTTPRoute{
-		Name: "rewrite",
+		Name:     "rewrite",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("rewrite"),
 		},
@@ -251,7 +261,8 @@ var (
 	}
 
 	urlRewriteFilterBadPath = HTTPRoute{
-		Name: "rewrite",
+		Name:     "rewrite",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("rewrite"),
 		},
@@ -265,7 +276,8 @@ var (
 	}
 
 	addRequestHeaderHTTPRoute = HTTPRoute{
-		Name: "addheader",
+		Name:     "addheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addheader"),
 		},
@@ -289,7 +301,8 @@ var (
 	}
 
 	removeRequestHeaderHTTPRoute = HTTPRoute{
-		Name: "remheader",
+		Name:     "remheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("remheader"),
 		},
@@ -301,7 +314,8 @@ var (
 	}
 
 	addAndRemoveRequestHeadersDupeHTTPRoute = HTTPRoute{
-		Name: "duplicateheader",
+		Name:     "duplicateheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("duplicateheader"),
 		},
@@ -325,7 +339,8 @@ var (
 	}
 
 	addRequestHeaderEmptyHTTPRoute = HTTPRoute{
-		Name: "addemptyheader",
+		Name:     "addemptyheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addemptyheader"),
 		},
@@ -339,7 +354,8 @@ var (
 	}
 
 	addResponseHeaderHTTPRoute = HTTPRoute{
-		Name: "addheader",
+		Name:     "addheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addheader"),
 		},
@@ -363,7 +379,8 @@ var (
 	}
 
 	removeResponseHeaderHTTPRoute = HTTPRoute{
-		Name: "remheader",
+		Name:     "remheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("remheader"),
 		},
@@ -375,7 +392,8 @@ var (
 	}
 
 	addAndRemoveResponseHeadersDupeHTTPRoute = HTTPRoute{
-		Name: "duplicateheader",
+		Name:     "duplicateheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("duplicateheader"),
 		},
@@ -399,7 +417,8 @@ var (
 	}
 
 	addResponseHeaderEmptyHTTPRoute = HTTPRoute{
-		Name: "addemptyheader",
+		Name:     "addemptyheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addemptyheader"),
 		},
@@ -413,7 +432,8 @@ var (
 	}
 
 	jwtAuthenHTTPRoute = HTTPRoute{
-		Name: "jwtauthen",
+		Name:     "jwtauthen",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("jwtauthen"),
 		},
@@ -431,7 +451,8 @@ var (
 		},
 	}
 	requestMirrorFilter = HTTPRoute{
-		Name: "mirrorfilter",
+		Name:     "mirrorfilter",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("mirrorfilter"),
 		},
@@ -441,7 +462,8 @@ var (
 	}
 
 	requestMirrorFilterMultiple = HTTPRoute{
-		Name: "mirrorfilterMultiple",
+		Name:     "mirrorfilterMultiple",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("mirrorfiltermultiple"),
 		},
@@ -807,12 +829,24 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "invalid name",
 			input: HTTPRoute{
+				Hostname: "*",
 				PathMatch: &StringMatch{
 					Exact: ptrTo("example"),
 				},
 				Destinations: []*RouteDestination{&happyRouteDestination},
 			},
 			want: []error{ErrHTTPRouteNameEmpty},
+		},
+		{
+			name: "invalid hostname",
+			input: HTTPRoute{
+				Name: "invalid hostname",
+				PathMatch: &StringMatch{
+					Exact: ptrTo("example"),
+				},
+				Destinations: []*RouteDestination{&happyRouteDestination},
+			},
+			want: []error{ErrHTTPRouteHostnameEmpty},
 		},
 		{
 			name:  "empty match",
@@ -832,6 +866,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "empty name and invalid match",
 			input: HTTPRoute{
+				Hostname:      "*",
 				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
 				Destinations:  []*RouteDestination{&happyRouteDestination},
 			},

@@ -104,6 +104,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: '*'
         name: envoy-gateway/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false
