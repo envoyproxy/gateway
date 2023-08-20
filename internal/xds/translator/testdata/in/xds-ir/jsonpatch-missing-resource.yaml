@@ -28,6 +28,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     headerMatches:
     - name: user
       stringMatch:

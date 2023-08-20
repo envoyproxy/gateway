@@ -120,10 +120,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
-        headerMatches:
-        - distinct: false
-          exact: gateway.envoyproxy.io
-          name: :authority
+        hostname: gateway.envoyproxy.io
         name: default/httproute-1/rule/0/match/0-gateway.envoyproxy.io
         pathMatch:
           distinct: false

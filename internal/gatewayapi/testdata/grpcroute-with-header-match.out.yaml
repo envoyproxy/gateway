@@ -112,4 +112,5 @@ xdsIR:
         - distinct: false
           exact: foo
           name: magic
+        hostname: '*'
         name: default/grpcroute-1/rule/0/match/0-*

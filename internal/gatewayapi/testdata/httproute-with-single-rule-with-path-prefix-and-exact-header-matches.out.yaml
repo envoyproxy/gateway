@@ -116,6 +116,7 @@ xdsIR:
         - distinct: false
           exact: Val-2
           name: Header-2
+        hostname: '*'
         name: default/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false

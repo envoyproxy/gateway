@@ -168,6 +168,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: foo.com
         name: default/httproute-2/rule/0/match/0-foo.com
         pathMatch:
           distinct: false
@@ -180,6 +181,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: foo.com
         name: default/httproute-1/rule/0/match/0-foo.com
         pathMatch:
           distinct: false
@@ -199,6 +201,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: bar.com
         name: default/httproute-2/rule/0/match/0-bar.com
         pathMatch:
           distinct: false
@@ -211,6 +214,7 @@ xdsIR:
         - host: 7.7.7.7
           port: 8080
           weight: 1
+        hostname: bar.com
         name: default/httproute-1/rule/0/match/0-bar.com
         pathMatch:
           distinct: false

@@ -34,6 +34,25 @@ httpRoutes:
   kind: HTTPRoute
   metadata:
     namespace: envoy-gateway
+    name: httproute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+    hostnames:
+    - "*.com"
+    - "*.net"
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1beta1
+  kind: HTTPRoute
+  metadata:
+    namespace: envoy-gateway
     name: httproute-2
   spec:
     parentRefs:

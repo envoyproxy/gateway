@@ -11,20 +11,12 @@
             "virtualHosts": [
               {
                 "domains": [
-                  "*"
+                  "www.example.com"
                 ],
                 "name": "default-eg-http",
                 "routes": [
                   {
                     "match": {
-                      "headers": [
-                        {
-                          "name": ":authority",
-                          "stringMatch": {
-                            "exact": "www.example.com"
-                          }
-                        }
-                      ],
                       "prefix": "/"
                     },
                     "route": {

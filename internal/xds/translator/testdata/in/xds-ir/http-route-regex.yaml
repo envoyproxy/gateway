@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "regex-route"
+    hostname: "*"
     pathMatch:
       safeRegex: "/v1/.*"
     headerMatches:

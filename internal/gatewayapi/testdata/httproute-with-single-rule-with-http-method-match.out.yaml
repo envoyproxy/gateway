@@ -107,4 +107,5 @@ xdsIR:
         - distinct: false
           exact: POST
           name: :method
+        hostname: '*'
         name: default/httproute-1/rule/0/match/0-*
