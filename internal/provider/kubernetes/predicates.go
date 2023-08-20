@@ -7,6 +7,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -46,36 +47,55 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 // the provided labels or false otherwise.
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(client.Object) bool {
 	return func(obj client.Object) bool {
-		nsString := obj.GetNamespace()
-		ns := &corev1.Namespace{}
-		if err := r.client.Get(
-			context.Background(),
-			client.ObjectKey{
-				Namespace: "", // Namespace object should have empty Namespace
-				Name:      nsString,
-			},
-			ns,
-		); err != nil {
-			r.log.Error(err, "fail to get Namespace", "namespace", nsString)
-			return false
-		}
+		ns := obj.GetNamespace()
+		ok, err := r.checkNamespaceLabels(ns, labels)
+		if err != nil {
+			r.log.Error(
+				err, "fail to get Namespace",
+				"object", obj.GetObjectKind().GroupVersionKind().String(),
+				"name", obj.GetName(),
+				"namespace", ns)
 
-		if len(ns.Labels) < len(labels) {
-			return false
+            return false
 		}
-		for l := range ns.Labels {
-			if !contains(labels, l) {
-				return false
-			}
-		}
-
-		return true
+		return ok
 	}
 }
 
-func contains(s []string, i string) bool {
-	for _, v := range s {
-		if v == i {
+// TODO: add comments and rename the file name
+func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string, labelsToCheck []string) (bool, error) {
+    // TODO: can cache be done here?
+	ns := &corev1.Namespace{}
+	if err := r.client.Get(
+		context.Background(),
+		client.ObjectKey{
+			Namespace: "", // Namespace object should have empty Namespace
+			Name:      nsString,
+		},
+		ns,
+	); err != nil {
+        // TODO: add log rather fail
+		return false, err
+	}
+	// r.log.Logger.Info(fmt.Sprintf("start to check labels %v in namespace with labels %v", labels, ns.Labels))
+	return containAll(ns.Labels, labelsToCheck), nil
+}
+
+func containAll(labels map[string]string, labelsToCheck []string) bool {
+	if len(labels) < len(labelsToCheck) {
+		return false
+	}
+	for _, l := range labelsToCheck {
+		if !contains(labels, l) {
+			return false
+		}
+	}
+	return true
+}
+
+func contains(m map[string]string, i string) bool {
+	for k := range m {
+		if k == i {
 			return true
 		}
 	}
@@ -100,6 +120,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	}
 
 	if gc.Spec.ControllerName != r.classController {
+		r.log.Info("gatewayclass controller name", gc.Spec.ControllerName, "class controller name", r.classController)
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false

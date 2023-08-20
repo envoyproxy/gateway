@@ -43,7 +43,6 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	}
 
 	// TODO: implement config validation on the watch mode config
-
 	byNamespace :=
 		svr.EnvoyGateway.Provider != nil &&
 			svr.EnvoyGateway.Provider.Kubernetes != nil &&

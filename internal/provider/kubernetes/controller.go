@@ -113,7 +113,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
-		cfg.EnvoyGateway.Provider.Type == egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
+		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
 		len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0
 	if byNamespaceSelector {
 		ls = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
@@ -405,14 +405,33 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	})
 }
 
-func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1a2.ReferenceGrant, error) {
+func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName, namespaceLabels []string) (*gwapiv1a2.ReferenceGrant, error) {
 	refGrantList := new(gwapiv1a2.ReferenceGrantList)
 	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
 	if err := r.client.List(ctx, refGrantList, opts); err != nil {
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %v", err)
 	}
 
-	for _, refGrant := range refGrantList.Items {
+	refGrants := refGrantList.Items
+	if len(namespaceLabels) != 0 {
+		var rgs []gwapiv1a2.ReferenceGrant
+		for _, refGrant := range refGrants {
+			ns := refGrant.Namespace
+			ok, err := r.checkNamespaceLabels(ns, namespaceLabels)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return nil, fmt.Errorf("failed to check namespace labels for namespace %s: %s", ns, err)
+			}
+			if !ok {
+				// TODO: should log?
+				continue
+			}
+			rgs = append(rgs, refGrant)
+		}
+		refGrants = rgs
+	}
+
+	for _, refGrant := range refGrants {
 		if refGrant.Namespace == to.namespace {
 			for _, src := range refGrant.Spec.From {
 				if src.Kind == gwapiv1a2.Kind(from.kind) && string(src.Namespace) == from.namespace {
@@ -426,7 +445,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
-func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
+func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1b1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources, namespaceLabels []string) error {
 	// Find gateways for the acceptedGC
 	// Find the Gateways that reference this Class.
 	gatewayList := &gwapiv1b1.GatewayList{}
@@ -437,7 +456,25 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 		return err
 	}
 
-	for _, gtw := range gatewayList.Items {
+	gateways := gatewayList.Items
+	if len(namespaceLabels) != 0 {
+		var gtws []gwapiv1b1.Gateway
+		for _, gtw := range gateways {
+			ns := gtw.GetNamespace()
+			ok, err := r.checkNamespaceLabels(ns, namespaceLabels)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for namespace %s: %s", ns, err)
+			}
+
+			if ok {
+				gtws = append(gtws, gtw)
+			}
+		}
+		gateways = gtws
+	}
+
+	for _, gtw := range gateways {
 		gtw := gtw
 		r.log.Info("processing Gateway", "namespace", gtw.Namespace, "name", gtw.Name)
 		resourceMap.allAssociatedNamespaces[gtw.Namespace] = struct{}{}
@@ -447,8 +484,21 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
-					certRef := certRef
 					if refsSecret(&certRef) {
+						certRef := certRef
+
+						if len(namespaceLabels) != 0 {
+							ns := string(*certRef.Namespace)
+							ok, err := r.checkNamespaceLabels(ns, namespaceLabels)
+							if err != nil {
+								// TODO: should return? or just proceed?
+								return fmt.Errorf("failed to check namespace labels for namespace %s: %s", ns, err)
+							}
+							if !ok {
+								// TODO: should log?
+								continue
+							}
+						}
 						secret := new(corev1.Secret)
 						secretNamespace := gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace)
 						err := r.client.Get(ctx,
@@ -473,7 +523,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 								namespace: secretNamespace,
 								name:      string(certRef.Name),
 							}
-							refGrant, err := r.findReferenceGrant(ctx, from, to)
+							refGrant, err := r.findReferenceGrant(ctx, from, to, namespaceLabels)
 							switch {
 							case err != nil:
 								r.log.Error(err, "failed to find ReferenceGrant")
@@ -497,27 +547,27 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 
 		// Route Processing
 		// Get TLSRoute objects and check if it exists.
-		if err := r.processTLSRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+		if err := r.processTLSRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree, namespaceLabels); err != nil {
 			return err
 		}
 
 		// Get HTTPRoute objects and check if it exists.
-		if err := r.processHTTPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+		if err := r.processHTTPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree, namespaceLabels); err != nil {
 			return err
 		}
 
 		// Get GRPCRoute objects and check if it exists.
-		if err := r.processGRPCRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+		if err := r.processGRPCRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree, namespaceLabels); err != nil {
 			return err
 		}
 
 		// Get TCPRoute objects and check if it exists.
-		if err := r.processTCPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+		if err := r.processTCPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree, namespaceLabels); err != nil {
 			return err
 		}
 
 		// Get UDPRoute objects and check if it exists.
-		if err := r.processUDPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree); err != nil {
+		if err := r.processUDPRoutes(ctx, utils.NamespacedName(&gtw).String(), resourceMap, resourceTree, namespaceLabels); err != nil {
 			return err
 		}
 
@@ -1161,15 +1211,10 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 // watchResources watches gateway api resources.
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller, ls []string) error {
-	// Only enqueue GatewayClass objects that match this Envoy Gateway's controller name.
-	gcPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.hasMatchingController)}
-	if len(ls) != 0 {
-		gcPredicates = append(gcPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
-	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.GatewayClass{}),
 		&handler.EnqueueRequestForObject{},
-		gcPredicates...,
+		predicate.NewPredicateFuncs(r.hasMatchingController),
 	); err != nil {
 		return err
 	}

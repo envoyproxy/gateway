@@ -1,6 +1,3 @@
-//go:build integration
-// +build integration
-
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
 // The full text of the Apache license is available in the LICENSE file at
@@ -1725,4 +1722,125 @@ func TestNamespacedProvider(t *testing.T) {
 		cancel()
 		require.NoError(t, testEnv.Stop())
 	}()
+}
+
+func TestNamespaceSelectorsProvider(t *testing.T) {
+	// Setup the test environment.
+	testEnv, cliCfg, err := startEnv()
+	require.NoError(t, err)
+
+	// Setup and start the kube provider.
+	svr, err := config.New()
+	require.NoError(t, err)
+	// config to watch a subset of namespaces
+	svr.EnvoyGateway.Provider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
+		Watch: &egcfgv1a1.KubernetesWatchMode{
+			Type:               egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors,
+			NamespaceSelectors: []string{"label-1", "label-2"},
+		},
+	}
+
+	resources := new(message.ProviderResources)
+	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		require.NoError(t, provider.Start(ctx))
+	}()
+
+	// Stop the kube provider.
+	defer func() {
+		cancel()
+		require.NoError(t, testEnv.Stop())
+	}()
+
+	watchedNSName := "watched-ns"
+	noneWatchedNSName := "nonwatched-ns"
+	cli := provider.manager.GetClient()
+	ns1 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   watchedNSName,
+		Labels: map[string]string{"label-1": "true", "label-2": "true"},
+	}}
+	require.NoError(t, cli.Create(ctx, ns1))
+	noneWatchedNS1 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: noneWatchedNSName}}
+	require.NoError(t, cli.Create(ctx, noneWatchedNS1))
+
+	gcName := "gc-name"
+	gc := test.GetGatewayClass(gcName, egcfgv1a1.GatewayControllerName)
+	require.NoError(t, cli.Create(ctx, gc))
+
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
+			return false
+		}
+
+		for _, cond := range gc.Status.Conditions {
+			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+
+		return false
+	}, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gc))
+	}()
+
+	// Create the gateways
+	gw1 := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNSName}, gcName)
+	require.NoError(t, cli.Create(ctx, gw1))
+	gw2 := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName}, gcName)
+	require.NoError(t, cli.Create(ctx, gw2))
+
+	// require.Eventually(t, func() bool {
+	// 	if err := cli.Get(ctx, types.NamespacedName{Namespace: gw1.Namespace, Name: gw1.Name}, gw1); err != nil {
+	// 		return false
+	// 	}
+
+	// 	for _, cond := range gw1.Status.Conditions {
+	// 		// fmt.Printf("Condition: %v\n", cond)
+	// 		if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+	// 			return true
+	// 		}
+	// 	}
+
+	// 	// Scheduled=True condition not found.
+	// 	return false
+	// }, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw1))
+	}()
+
+	// require.Eventually(t, func() bool {
+	// 	if err := cli.Get(ctx, types.NamespacedName{Namespace: gw2.Namespace, Name: gw2.Name}, gw2); err != nil {
+	// 		return false
+	// 	}
+
+	// 	for _, cond := range gw1.Status.Conditions {
+	// 		fmt.Printf("Condition: %v\n", cond)
+	// 		if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+	// 			return true
+	// 		}
+	// 	}
+
+	// 	// Scheduled=True condition not found.
+	// 	return false
+	// }, defaultWait, defaultTick)
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, gw2))
+	}()
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+        fmt.Println("the number of gateway:", len(res.Gateways))
+		return res != nil && len(res.Gateways) == 1
+	}, defaultWait, defaultTick)
+
+	// _, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "gw-ns-2", Namespace: noneWatchedNSName})
+	// require.Equal(t, false, ok)
+
 }
