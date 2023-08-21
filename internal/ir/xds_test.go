@@ -829,7 +829,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				PathMatch: &StringMatch{
 					Exact: ptrTo("example"),
 				},
-				Destinations: []*RouteDestination{&happyRouteDestination},
+				Destination: &happyRouteDestination,
 			},
 			want: []error{ErrHTTPRouteHostnameEmpty},
 		},
