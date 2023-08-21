@@ -146,8 +146,11 @@ func newResourceMapping() *resourceMappings {
 	}
 }
 
-func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	r.log.WithName(request.Name).Info("reconciling gateways")
+// Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
+// same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
+// be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
+func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+	r.log.Info("reconciling gateways")
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
@@ -313,7 +316,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Store will be required to trigger a cleanup of envoy infra resources.
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
 
-	r.log.WithName(request.Name).Info("reconciled gateways successfully")
+	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
 }
 
@@ -1315,7 +1318,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
-			&handler.EnqueueRequestForObject{}); err != nil {
+			handler.EnqueueRequestsFromMapFunc(r.enqueueClass)); err != nil {
 			return err
 		}
 	}
