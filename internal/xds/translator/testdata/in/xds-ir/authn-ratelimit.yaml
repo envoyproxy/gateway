@@ -6,6 +6,7 @@ http:
   - "*"
   routes:
   - name: "first-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:
@@ -17,9 +18,11 @@ http:
             unit: second
     pathMatch:
       exact: "foo/bar"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     requestAuthentication:
       jwt:
         providers:
@@ -30,6 +33,7 @@ http:
           remoteJWKS:
             uri: https://192.168.1.250/jwt/public-key/jwks.json
   - name: "second-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:
@@ -41,10 +45,13 @@ http:
             unit: second
     pathMatch:
       exact: "example"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "second-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
   - name: "third-route"
+    hostname: "*"
     rateLimit:
       global:
         rules:
@@ -53,6 +60,8 @@ http:
             unit: second
     pathMatch:
       exact: "test"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "third-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000

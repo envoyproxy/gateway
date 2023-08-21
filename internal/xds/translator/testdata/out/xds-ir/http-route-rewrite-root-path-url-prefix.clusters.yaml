@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: rewrite-route
-  name: rewrite-route
+    serviceName: rewrite-route-dest
+  name: rewrite-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

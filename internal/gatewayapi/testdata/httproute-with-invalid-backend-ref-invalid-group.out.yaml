@@ -106,7 +106,8 @@ xdsIR:
           valid: 0
         directResponse:
           statusCode: 500
-        name: default/httproute-1/rule/0/match/0-*
+        hostname: '*'
+        name: httproute/default/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false
           exact: /exact

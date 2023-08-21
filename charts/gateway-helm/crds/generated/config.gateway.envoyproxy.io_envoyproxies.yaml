@@ -49,7 +49,22 @@ spec:
                   `Bootstrap` field set to the default Bootstrap configuration used.
                   You can edit this configuration, and rerun `egctl x translate` to
                   ensure there are no validation errors.
-                type: string
+                properties:
+                  type:
+                    default: Replace
+                    description: Type is the type of the bootstrap configuration,
+                      it should be either Replace or Merge. If unspecified, it defaults
+                      to Replace.
+                    enum:
+                    - Merge
+                    - Replace
+                    type: string
+                  value:
+                    description: Value is a YAML string of the bootstrap.
+                    type: string
+                required:
+                - value
+                type: object
               concurrency:
                 description: Concurrency defines the number of worker threads to run.
                   If unset, it defaults to the number of cpuset threads on the platform.

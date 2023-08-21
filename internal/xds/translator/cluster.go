@@ -27,8 +27,7 @@ const (
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 )
 
-func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
-	clusterName := routeName
+func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
@@ -69,9 +68,9 @@ func buildXdsCluster(routeName string, tSocket *corev3.TransportSocket, protocol
 	return cluster
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, destinations []*ir.RouteDestination) *endpointv3.ClusterLoadAssignment {
-	endpoints := make([]*endpointv3.LbEndpoint, 0, len(destinations))
-	for _, destination := range destinations {
+func buildXdsClusterLoadAssignment(clusterName string, irEndpoints []*ir.DestinationEndpoint) *endpointv3.ClusterLoadAssignment {
+	endpoints := make([]*endpointv3.LbEndpoint, 0, len(irEndpoints))
+	for _, irEp := range irEndpoints {
 		lbEndpoint := &endpointv3.LbEndpoint{
 			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
 				Endpoint: &endpointv3.Endpoint{
@@ -79,9 +78,9 @@ func buildXdsClusterLoadAssignment(clusterName string, destinations []*ir.RouteD
 						Address: &corev3.Address_SocketAddress{
 							SocketAddress: &corev3.SocketAddress{
 								Protocol: corev3.SocketAddress_TCP,
-								Address:  destination.Host,
+								Address:  irEp.Host,
 								PortSpecifier: &corev3.SocketAddress_PortValue{
-									PortValue: destination.Port,
+									PortValue: irEp.Port,
 								},
 							},
 						},
@@ -89,8 +88,8 @@ func buildXdsClusterLoadAssignment(clusterName string, destinations []*ir.RouteD
 				},
 			},
 		}
-		if destination.Weight != nil {
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: *destination.Weight}
+		if irEp.Weight != nil {
+			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: *irEp.Weight}
 		}
 		endpoints = append(endpoints, lbEndpoint)
 	}

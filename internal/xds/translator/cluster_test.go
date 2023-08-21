@@ -40,9 +40,9 @@ func TestBuildXdsCluster(t *testing.T) {
 
 func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 	bootstrapXdsCluster := getXdsClusterObjFromBootstrap(t)
-	destinations := []*ir.RouteDestination{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}}
+	endpoints := []*ir.DestinationEndpoint{{Host: envoyGatewayXdsServerHost, Port: bootstrap.DefaultXdsServerPort}}
 
-	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, destinations)
+	dynamicXdsClusterLoadAssignment := buildXdsClusterLoadAssignment(bootstrapXdsCluster.Name, endpoints)
 
 	assert.True(t, proto.Equal(bootstrapXdsCluster.LoadAssignment.Endpoints[0].LbEndpoints[0], dynamicXdsClusterLoadAssignment.Endpoints[0].LbEndpoints[0]))
 }

@@ -6,11 +6,14 @@ http:
   - "*"
   routes:
   - name: "extension-post-xdsroute-hook-error"
+    hostname: "*"
     pathMatch:
       prefix: "/"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "extension-post-xdsroute-hook-error-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     extensionRefs:
     - object:
         apiVersion: foo.example.io/v1alpha1

@@ -87,13 +87,25 @@ func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
-func validateBootstrap(boostrapConfig *string) error {
-	userBootstrap := &bootstrapv3.Bootstrap{}
-	jsonData, err := yaml.YAMLToJSON([]byte(*boostrapConfig))
+func validateBootstrap(boostrapConfig *egcfgv1a1.ProxyBootstrap) error {
+	defaultBootstrap := &bootstrapv3.Bootstrap{}
+	// TODO: need validate when enable prometheus?
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
+	if err != nil {
+		return err
+	}
+
+	userBootstrapStr, err := bootstrap.ApplyBootstrapConfig(boostrapConfig, defaultBootstrapStr)
+	if err != nil {
+		return err
+	}
+
+	jsonData, err := yaml.YAMLToJSON([]byte(userBootstrapStr))
 	if err != nil {
 		return fmt.Errorf("unable to convert user bootstrap to json: %w", err)
 	}
 
+	userBootstrap := &bootstrapv3.Bootstrap{}
 	if err := protojson.Unmarshal(jsonData, userBootstrap); err != nil {
 		return fmt.Errorf("unable to unmarshal user bootstrap: %w", err)
 	}
@@ -101,12 +113,6 @@ func validateBootstrap(boostrapConfig *string) error {
 	// Call Validate method
 	if err := userBootstrap.Validate(); err != nil {
 		return fmt.Errorf("validation failed for user bootstrap: %w", err)
-	}
-	defaultBootstrap := &bootstrapv3.Bootstrap{}
-	// TODO: need validate when enable prometheus?
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
-	if err != nil {
-		return err
 	}
 
 	jsonData, err = yaml.YAMLToJSON([]byte(defaultBootstrapStr))

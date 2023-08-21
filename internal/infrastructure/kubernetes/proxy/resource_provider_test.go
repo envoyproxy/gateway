@@ -66,7 +66,7 @@ func TestDeployment(t *testing.T) {
 		infra        *ir.Infra
 		deploy       *egcfgv1a1.KubernetesDeploymentSpec
 		proxyLogging map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
-		bootstrap    *string
+		bootstrap    string
 		telemetry    *egcfgv1a1.ProxyTelemetry
 		concurrency  *int32
 	}{
@@ -114,7 +114,7 @@ func TestDeployment(t *testing.T) {
 			caseName:  "bootstrap",
 			infra:     newTestInfra(),
 			deploy:    nil,
-			bootstrap: pointer.String(`test bootstrap config`),
+			bootstrap: `test bootstrap config`,
 		},
 		{
 			caseName: "extension-env",
@@ -252,7 +252,7 @@ func TestDeployment(t *testing.T) {
 				egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelError,
 				egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelInfo,
 			},
-			bootstrap: pointer.String(`test bootstrap config`),
+			bootstrap: `test bootstrap config`,
 		},
 		{
 			caseName: "enable-prometheus",
@@ -268,7 +268,7 @@ func TestDeployment(t *testing.T) {
 			infra:       newTestInfra(),
 			deploy:      nil,
 			concurrency: pointer.Int32(4),
-			bootstrap:   pointer.String(`test bootstrap config`),
+			bootstrap:   `test bootstrap config`,
 		},
 	}
 	for _, tc := range cases {
@@ -277,9 +277,12 @@ func TestDeployment(t *testing.T) {
 			if tc.deploy != nil {
 				kube.EnvoyDeployment = tc.deploy
 			}
-
-			if tc.bootstrap != nil && *tc.bootstrap != "" {
-				tc.infra.Proxy.Config.Spec.Bootstrap = tc.bootstrap
+			replace := egcfgv1a1.BootstrapTypeReplace
+			if tc.bootstrap != "" {
+				tc.infra.Proxy.Config.Spec.Bootstrap = &egcfgv1a1.ProxyBootstrap{
+					Type:  &replace,
+					Value: tc.bootstrap,
+				}
 			}
 
 			if tc.telemetry != nil {

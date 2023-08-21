@@ -150,17 +150,21 @@ xdsIR:
       name: envoy-gateway/gateway-1/tcp1
       port: 10162
       routes:
-      - destinations:
-        - host: 7.7.7.7
-          port: 8163
+      - destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8163
+          name: tcproute/default/tcproute-1/rule/-1
         name: envoy-gateway/gateway-1/tcp1/tcproute-1
         tls: {}
     - address: 0.0.0.0
       name: envoy-gateway/gateway-1/tcp2
       port: 10163
       routes:
-      - destinations:
-        - host: 7.7.7.7
-          port: 8163
+      - destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8163
+          name: tcproute/default/tcproute-2/rule/-1
         name: envoy-gateway/gateway-1/tcp2/tcproute-2
         tls: {}

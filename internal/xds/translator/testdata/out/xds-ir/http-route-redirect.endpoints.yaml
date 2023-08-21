@@ -1,4 +1,4 @@
-- clusterName: redirect-route
+- clusterName: redirect-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

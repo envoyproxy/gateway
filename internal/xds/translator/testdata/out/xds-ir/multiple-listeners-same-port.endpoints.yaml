@@ -1,4 +1,4 @@
-- clusterName: first-route
+- clusterName: first-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,7 +8,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: second-route
+- clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -18,7 +18,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: third-route
+- clusterName: third-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -28,7 +28,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: fourth-route
+- clusterName: fourth-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -38,7 +38,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: fifth-route
+- clusterName: tcp-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -48,7 +48,13 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: sixth-route
+- clusterName: tls-route-dest
   endpoints:
-  - loadBalancingWeight: 1
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 1.2.3.4
+            portValue: 50000
+    loadBalancingWeight: 1
     locality: {}

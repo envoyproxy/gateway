@@ -1,4 +1,4 @@
-- clusterName: response-header-route
+- clusterName: response-header-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

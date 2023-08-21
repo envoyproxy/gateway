@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 )
@@ -22,6 +23,8 @@ import (
 var (
 	//go:embed testdata/valid-user-bootstrap.yaml
 	validUserBootstrap string
+	//go:embed testdata/merge-user-bootstrap.yaml
+	mergeUserBootstrap string
 	//go:embed testdata/missing-admin-address-user-bootstrap.yaml
 	missingAdminAddressUserBootstrap string
 	//go:embed testdata/different-dynamic-resources-user-bootstrap.yaml
@@ -168,14 +171,32 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "valid user bootstrap",
+			name: "valid user bootstrap replace type",
 			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
 				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &validUserBootstrap,
+					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+						Value: validUserBootstrap,
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid user bootstrap merge type",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+						Type:  (*egcfgv1a1.BootstrapType)(pointer.String(string(egcfgv1a1.BootstrapTypeMerge))),
+						Value: mergeUserBootstrap,
+					},
 				},
 			},
 			expected: true,
@@ -188,7 +209,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &missingAdminAddressUserBootstrap,
+					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+						Value: missingAdminAddressUserBootstrap,
+					},
 				},
 			},
 			expected: false,
@@ -201,7 +224,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &differentDynamicResourcesUserBootstrap,
+					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+						Value: differentDynamicResourcesUserBootstrap,
+					},
 				},
 			},
 			expected: false,
@@ -214,7 +239,9 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &differentXdsClusterAddressBootstrap,
+					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+						Value: differentXdsClusterAddressBootstrap,
+					},
 				},
 			},
 			expected: false,

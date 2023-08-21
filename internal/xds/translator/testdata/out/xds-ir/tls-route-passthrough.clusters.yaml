@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tls-route
-  name: tls-route
+    serviceName: tls-passthrough-dest
+  name: tls-passthrough-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

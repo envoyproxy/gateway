@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route
-  name: first-route
+    serviceName: first-route-dest
+  name: first-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

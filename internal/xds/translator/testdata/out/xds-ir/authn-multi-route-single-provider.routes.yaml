@@ -3,13 +3,13 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener/*
     routes:
     - match:
         path: foo/bar
       name: first-route
       route:
-        cluster: first-route
+        cluster: first-route-dest
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
@@ -18,7 +18,7 @@
         path: foo/baz
       name: second-route
       route:
-        cluster: second-route
+        cluster: second-route-dest
       typedPerFilterConfig:
         envoy.filters.http.jwt_authn:
           '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig

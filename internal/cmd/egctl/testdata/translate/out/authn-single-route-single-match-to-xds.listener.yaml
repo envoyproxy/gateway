@@ -47,7 +47,7 @@ xds:
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                     providers:
-                      envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
+                      httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
                         remoteJwks:
                           asyncFetch: {}
                           cacheDuration: 300s
@@ -57,8 +57,8 @@ xds:
                             uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
                           retryPolicy: {}
                     requirementMap:
-                      envoy-gateway-system/backend/rule/0/match/0-www.example.com:
-                        providerName: envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
+                      httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com:
+                        providerName: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
                 - name: envoy.filters.http.router
                   typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

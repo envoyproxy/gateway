@@ -4,26 +4,42 @@ tcp:
   port: 10080
   routes:
   - name: "tcp-route-simple-1"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
-    - host: "5.6.7.8"
-      port: 50001
+    destination:
+      name: "tcp-route-simple-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+      - host: "5.6.7.8"
+        port: 50001
+  - name: "tcp-route-simple-1"
+    destination:
+      name: "tcp-route-simple-1-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+      - host: "5.6.7.8"
+        port: 50001
   - name: "tcp-route-simple-2"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
-    - host: "5.6.7.8"
-      port: 50001
+    destination:
+      name: "tcp-route-simple-2-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+      - host: "5.6.7.8"
+        port: 50001
   - name: "tcp-route-simple-3"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
-    - host: "5.6.7.8"
-      port: 50001
+    destination:
+      name: "tcp-route-simple-3-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+      - host: "5.6.7.8"
+        port: 50001
   - name: "tcp-route-simple-4"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
-    - host: "5.6.7.8"
-      port: 50001
+    destination:
+      name: "tcp-route-simple-4-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+      - host: "5.6.7.8"
+        port: 50001

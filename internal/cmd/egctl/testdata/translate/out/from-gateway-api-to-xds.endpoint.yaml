@@ -4,7 +4,7 @@ xds:
     dynamicEndpointConfigs:
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/backend/rule/0/match/0-www.example.com
+        clusterName: httproute/default/backend/rule/0
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -17,7 +17,7 @@ xds:
           locality: {}
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/backend/rule/0/match/0-www.grpc-example.com
+        clusterName: grpcroute/default/backend/rule/0
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -30,7 +30,7 @@ xds:
           locality: {}
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/eg/tls-passthrough/backend
+        clusterName: tlsroute/default/backend/rule/-1
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -43,7 +43,7 @@ xds:
           locality: {}
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/eg/tcp/backend
+        clusterName: tcproute/default/backend/rule/-1
         endpoints:
         - lbEndpoints:
           - endpoint:
@@ -55,7 +55,7 @@ xds:
           locality: {}
     - endpointConfig:
         '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-        clusterName: default/eg/udp/backend
+        clusterName: udproute/default/backend/rule/-1
         endpoints:
         - lbEndpoints:
           - endpoint:

@@ -1,4 +1,4 @@
-- clusterName: tcp-route-weighted-backend
+- clusterName: tcp-route-weighted-backend-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

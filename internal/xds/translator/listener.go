@@ -237,7 +237,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute
 		AccessLog:  buildXdsAccessLog(accesslog, false),
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
-			Cluster: irRoute.Name,
+			Cluster: irRoute.Destination.Name,
 		},
 	}
 	mgrAny, err := anypb.New(mgr)

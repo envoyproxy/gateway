@@ -3,13 +3,13 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener/*
     routes:
     - match:
         path: foo/bar
       name: first-route
       route:
-        cluster: first-route
+        cluster: first-route-dest
         rateLimits:
         - actions:
           - maskedRemoteAddress:
@@ -18,7 +18,7 @@
         path: example
       name: second-route
       route:
-        cluster: second-route
+        cluster: second-route-dest
         rateLimits:
         - actions:
           - maskedRemoteAddress:
@@ -27,7 +27,7 @@
         path: test
       name: third-route
       route:
-        cluster: third-route
+        cluster: third-route-dest
         rateLimits:
         - actions:
           - genericKey:
@@ -37,7 +37,7 @@
         path: distinct
       name: fourth-route
       route:
-        cluster: fourth-route
+        cluster: fourth-route-dest
         rateLimits:
         - actions:
           - maskedRemoteAddress:

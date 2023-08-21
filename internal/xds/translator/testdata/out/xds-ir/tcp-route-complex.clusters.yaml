@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: tcp-route-complex
-  name: tcp-route-complex
+    serviceName: tcp-route-complex-dest
+  name: tcp-route-complex-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
