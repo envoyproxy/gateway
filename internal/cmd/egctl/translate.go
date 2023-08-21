@@ -385,18 +385,22 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 	endpointConfigs := &adminv3.EndpointsConfigDump{}
 
 	// construct bootstrap config
+	var bootstrapConfigurations string
+	var err error
+	if bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(nil); err != nil {
+		return nil, err
+	}
 
-	var bootstrapYAML string
+	// Apply Bootstrap from EnvoyProxy API if set by the user
+	// The config should have been validated already
 	if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.Bootstrap != nil {
-		bootstrapYAML = *resources.EnvoyProxy.Spec.Bootstrap
-	} else {
-		var err error
-		if bootstrapYAML, err = bootstrap.GetRenderedBootstrapConfig(nil); err != nil {
+		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(resources.EnvoyProxy.Spec.Bootstrap, bootstrapConfigurations)
+		if err != nil {
 			return nil, err
 		}
 	}
 
-	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapYAML))
+	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapConfigurations))
 	if err != nil {
 		return nil, err
 	}
@@ -878,7 +882,9 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 			Name:      defaultEnvoyProxyName,
 		},
 		Spec: egv1alpha1.EnvoyProxySpec{
-			Bootstrap: &defaultBootstrapStr,
+			Bootstrap: &egv1alpha1.ProxyBootstrap{
+				Value: defaultBootstrapStr,
+			},
 		},
 	}
 	resources.EnvoyProxy = ep

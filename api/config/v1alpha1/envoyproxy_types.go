@@ -56,7 +56,7 @@ type EnvoyProxySpec struct {
 	// Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors.
 	//
 	// +optional
-	Bootstrap *string `json:"bootstrap,omitempty"`
+	Bootstrap *ProxyBootstrap `json:"bootstrap,omitempty"`
 
 	// Concurrency defines the number of worker threads to run. If unset, it defaults to
 	// the number of cpuset threads on the platform.
@@ -159,6 +159,32 @@ const (
 
 	// LogComponentRuntime defines the "runtime" logging component.
 	LogComponentRuntime LogComponent = "runtime"
+)
+
+// ProxyBootstrap defines Envoy Bootstrap configuration.
+type ProxyBootstrap struct {
+	// Type is the type of the bootstrap configuration, it should be either Replace or Merge.
+	// If unspecified, it defaults to Replace.
+	// +optional
+	// +kubebuilder:default=Replace
+	Type *BootstrapType `json:"type"`
+
+	// Value is a YAML string of the bootstrap.
+	Value string `json:"value"`
+}
+
+// BootstrapType defines the types of bootstrap supported by Envoy Gateway.
+// +kubebuilder:validation:Enum=Merge;Replace
+type BootstrapType string
+
+const (
+	// Merge merges the provided bootstrap with the default one. The provided bootstrap can add or override a value
+	// within a map, or add a new value to a list.
+	// Please note that the provided bootstrap can't override a value within a list.
+	BootstrapTypeMerge BootstrapType = "Merge"
+
+	// Replace replaces the default bootstrap with the provided one.
+	BootstrapTypeReplace BootstrapType = "Replace"
 )
 
 // EnvoyProxyStatus defines the observed state of EnvoyProxy. This type is not implemented
