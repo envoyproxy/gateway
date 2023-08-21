@@ -1794,21 +1794,21 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	gw2 := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName}, gcName)
 	require.NoError(t, cli.Create(ctx, gw2))
 
-	// require.Eventually(t, func() bool {
-	// 	if err := cli.Get(ctx, types.NamespacedName{Namespace: gw1.Namespace, Name: gw1.Name}, gw1); err != nil {
-	// 		return false
-	// 	}
+	require.Eventually(t, func() bool {
+		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw1.Namespace, Name: gw1.Name}, gw1); err != nil {
+			return false
+		}
 
-	// 	for _, cond := range gw1.Status.Conditions {
-	// 		// fmt.Printf("Condition: %v\n", cond)
-	// 		if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
-	// 			return true
-	// 		}
-	// 	}
+		for _, cond := range gw1.Status.Conditions {
+			// fmt.Printf("Condition: %v\n", cond)
+			if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
 
-	// 	// Scheduled=True condition not found.
-	// 	return false
-	// }, defaultWait, defaultTick)
+		// Scheduled=True condition not found.
+		return false
+	}, defaultWait, defaultTick)
 
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gw1))

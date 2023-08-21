@@ -82,7 +82,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 			name:            "matching one label when namespace has two labels",
 			labels:          []string{"label-1"},
 			namespaceLabels: []string{"label-1", "label-2"},
-			expect:          false,
+			expect:          true,
 		},
 		{
 			name:            "namespace has less labels than the specified labels",
@@ -104,6 +104,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 
 		r := gatewayAPIReconciler{
 			classController: v1alpha1.GatewayControllerName,
+            namespaceLabels: tc.labels,
 			log:             logger,
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).

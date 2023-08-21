@@ -7,7 +7,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +47,7 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(client.Object) bool {
 	return func(obj client.Object) bool {
 		ns := obj.GetNamespace()
-		ok, err := r.checkNamespaceLabels(ns, labels)
+		ok, err := r.checkNamespaceLabels(ns)
 		if err != nil {
 			r.log.Error(
 				err, "fail to get Namespace",
@@ -56,15 +55,15 @@ func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(
 				"name", obj.GetName(),
 				"namespace", ns)
 
-            return false
+			return false
 		}
 		return ok
 	}
 }
 
 // TODO: add comments and rename the file name
-func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string, labelsToCheck []string) (bool, error) {
-    // TODO: can cache be done here?
+func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string) (bool, error) {
+	// TODO: can cache be done here?
 	ns := &corev1.Namespace{}
 	if err := r.client.Get(
 		context.Background(),
@@ -74,11 +73,11 @@ func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string, labelsToChe
 		},
 		ns,
 	); err != nil {
-        // TODO: add log rather fail
+		// TODO: add log rather fail
 		return false, err
 	}
 	// r.log.Logger.Info(fmt.Sprintf("start to check labels %v in namespace with labels %v", labels, ns.Labels))
-	return containAll(ns.Labels, labelsToCheck), nil
+	return containAll(ns.Labels, r.namespaceLabels), nil
 }
 
 func containAll(labels map[string]string, labelsToCheck []string) bool {
