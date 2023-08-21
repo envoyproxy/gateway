@@ -147,7 +147,7 @@ func newResourceMapping() *resourceMappings {
 }
 
 func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	r.log.WithName(request.Name).Info("reconciling gateways", "namespace")
+	r.log.WithName(request.Name).Info("reconciling gateways")
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
