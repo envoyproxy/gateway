@@ -50,7 +50,8 @@ func TestLoggerWithName(t *testing.T) {
 	defer func() {
 		// Restore the original stdout and close the pipe
 		os.Stdout = originalStdout
-		w.Close()
+		err := w.Close()
+		assert.NoError(t, err)
 	}()
 
 	config := v1alpha1.DefaultEnvoyGatewayLogging()
@@ -62,7 +63,8 @@ func TestLoggerWithName(t *testing.T) {
 
 	// Read from the pipe (captured stdout)
 	outputBytes := make([]byte, 200)
-	r.Read(outputBytes)
+	_, err := r.Read(outputBytes)
+	assert.NoError(t, err)
 	capturedOutput := string(outputBytes)
 	assert.Contains(t, capturedOutput, string(v1alpha1.LogComponentInfrastructureRunner))
 	assert.Contains(t, capturedOutput, "info message")
