@@ -1,4 +1,4 @@
-- clusterName: first-route
+- clusterName: first-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

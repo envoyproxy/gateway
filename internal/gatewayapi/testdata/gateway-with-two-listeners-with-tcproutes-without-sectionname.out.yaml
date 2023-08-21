@@ -143,16 +143,20 @@ xdsIR:
       - path: /dev/stdout
     tcp:
     - address: 0.0.0.0
-      destinations:
-      - host: 7.7.7.7
-        port: 8163
+      destination:
+        endpoints:
+        - host: 7.7.7.7
+          port: 8163
+        name: tcproute/default/tcproute-1/rule/-1
       name: envoy-gateway/gateway-1/tcp1/tcproute-1
       port: 10161
       tls: {}
     - address: 0.0.0.0
-      destinations:
-      - host: 7.7.7.7
-        port: 8163
+      destination:
+        endpoints:
+        - host: 7.7.7.7
+          port: 8163
+        name: tcproute/default/tcproute-1/rule/-1
       name: envoy-gateway/gateway-1/tcp2/tcproute-1
       port: 10162
       tls: {}

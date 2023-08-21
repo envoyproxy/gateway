@@ -13,9 +13,11 @@ http:
   routes:
   - name: "first-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "second-listener"
   address: "0.0.0.0"
   port: 10080
@@ -30,9 +32,11 @@ http:
   routes:
   - name: "second-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "second-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "third-listener"
   address: "0.0.0.0"
   port: 10080
@@ -41,9 +45,11 @@ http:
   routes:
   - name: "third-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "third-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "fourth-listener"
   address: "0.0.0.0"
   port: 10080
@@ -52,9 +58,11 @@ http:
   routes:
   - name: "fourth-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "fourth-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
 tcp:
 - name: "fifth-listener"
   address: "0.0.0.0"
@@ -63,9 +71,11 @@ tcp:
     passthrough:
       snis:
       - bar.com
-  destinations:
-  - host: "1.2.3.4"
-    port: 50000
+  destination:
+    name: "tcp-route-dest"
+    endpoints:
+    - host: "1.2.3.4"
+      port: 50000
 - name: "sixth-listener"
   address: "0.0.0.0"
   port: 10080
@@ -73,6 +83,8 @@ tcp:
     passthrough:
       snis:
       - bar.net
-    destinations:
+  destination:
+    name: "tls-route-dest"
+    endpoints:
     - host: "1.2.3.4"
       port: 50000

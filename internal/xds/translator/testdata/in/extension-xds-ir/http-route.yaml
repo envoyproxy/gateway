@@ -17,6 +17,8 @@ http:
     queryParamMatches:
     - name: "debug"
       exact: "yes"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000

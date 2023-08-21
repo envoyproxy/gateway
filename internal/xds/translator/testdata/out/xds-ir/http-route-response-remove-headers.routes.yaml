@@ -12,4 +12,4 @@
       - some-header5
       - some-header6
       route:
-        cluster: response-header-route
+        cluster: response-header-route-dest

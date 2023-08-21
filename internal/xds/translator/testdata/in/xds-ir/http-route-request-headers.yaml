@@ -8,9 +8,11 @@ http:
   routes:
   - name: "request-header-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "request-header-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     addRequestHeaders:
     - name: "some-header"
       value: "some-value"

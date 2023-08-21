@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route-www.test.com
-  name: first-route-www.test.com
+    serviceName: first-route-www.test.com-dest
+  name: first-route-www.test.com-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -19,8 +19,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route-www.test.com
-  name: second-route-www.test.com
+    serviceName: second-route-www.test.com-dest
+  name: second-route-www.test.com-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

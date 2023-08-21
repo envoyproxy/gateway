@@ -1,4 +1,4 @@
-- clusterName: first-route-www.test.com
+- clusterName: first-route-www.test.com-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -8,7 +8,7 @@
             portValue: 50000
     loadBalancingWeight: 1
     locality: {}
-- clusterName: second-route-www.test.com
+- clusterName: second-route-www.test.com-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

@@ -9,7 +9,7 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route
+        cluster: first-route-dest
 - ignorePortInHostMatching: true
   name: second-listener
   virtualHosts:
@@ -21,7 +21,7 @@
         prefix: /
       name: second-route
       route:
-        cluster: second-route
+        cluster: second-route-dest
 - ignorePortInHostMatching: true
   name: third-listener
   virtualHosts:
@@ -33,7 +33,7 @@
         prefix: /
       name: third-route
       route:
-        cluster: third-route
+        cluster: third-route-dest
   - domains:
     - '*'
     name: fourth-listener/*
@@ -42,4 +42,4 @@
         prefix: /
       name: fourth-route
       route:
-        cluster: fourth-route
+        cluster: fourth-route-dest

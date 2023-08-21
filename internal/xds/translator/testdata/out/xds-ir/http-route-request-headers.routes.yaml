@@ -33,4 +33,4 @@
       - some-header5
       - some-header6
       route:
-        cluster: request-header-route
+        cluster: request-header-route-dest

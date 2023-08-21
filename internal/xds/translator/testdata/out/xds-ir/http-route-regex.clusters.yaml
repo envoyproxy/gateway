@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: regex-route
-  name: regex-route
+    serviceName: regex-route-dest
+  name: regex-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

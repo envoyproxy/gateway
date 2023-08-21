@@ -104,13 +104,15 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: grpcroute/default/grpcroute-1/rule/0
         headerMatches:
         - distinct: false
           exact: foo
           name: magic
         hostname: '*'
-        name: default/grpcroute-1/rule/0/match/0-*
+        name: grpcroute/default/grpcroute-1/rule/0/match/0-*

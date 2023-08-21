@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: redirect-route
-  name: redirect-route
+    serviceName: redirect-route-dest
+  name: redirect-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

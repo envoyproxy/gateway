@@ -8,9 +8,12 @@ http:
   routes:
   - name: "mirror-route"
     hostname: "*"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
-    mirrors:
-    - host: "2.3.4.5"
-      port: 60000
+    destination:
+      name: "route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
+    mirror:
+      name: "mirror-route-dest"
+      endpoints:
+      - host: "2.3.4.5"

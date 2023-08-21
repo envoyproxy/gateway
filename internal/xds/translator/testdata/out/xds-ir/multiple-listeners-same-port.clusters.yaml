@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: first-route
-  name: first-route
+    serviceName: first-route-dest
+  name: first-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -19,8 +19,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: second-route
-  name: second-route
+    serviceName: second-route-dest
+  name: second-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -32,8 +32,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: third-route
-  name: third-route
+    serviceName: third-route-dest
+  name: third-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -45,8 +45,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: fourth-route
-  name: fourth-route
+    serviceName: fourth-route-dest
+  name: fourth-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -58,8 +58,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: fifth-listener
-  name: fifth-listener
+    serviceName: tcp-route-dest
+  name: tcp-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -71,8 +71,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: sixth-listener
-  name: sixth-listener
+    serviceName: tls-route-dest
+  name: tls-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

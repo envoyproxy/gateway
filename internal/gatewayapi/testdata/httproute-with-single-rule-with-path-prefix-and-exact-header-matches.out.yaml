@@ -105,10 +105,12 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: httproute/default/httproute-1/rule/0
         headerMatches:
         - distinct: false
           exact: Val-1
@@ -117,7 +119,7 @@ xdsIR:
           exact: Val-2
           name: Header-2
         hostname: '*'
-        name: default/httproute-1/rule/0/match/0-*
+        name: httproute/default/httproute-1/rule/0/match/0-*
         pathMatch:
           distinct: false
           name: ""

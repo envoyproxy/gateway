@@ -12,7 +12,7 @@
     - name: envoy.filters.network.tcp_proxy
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
-        cluster: tcp-route-weighted-backend
+        cluster: tcp-route-weighted-backend-dest
         statPrefix: passthrough
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector

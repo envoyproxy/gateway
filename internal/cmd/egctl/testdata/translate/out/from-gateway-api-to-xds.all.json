@@ -189,7 +189,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default/backend/rule/0/match/0-www.example.com",
+                "clusterName": "httproute/default/backend/rule/0",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -214,7 +214,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default/backend/rule/0/match/0-www.grpc-example.com",
+                "clusterName": "grpcroute/default/backend/rule/0",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -239,7 +239,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default/eg/tls-passthrough/backend",
+                "clusterName": "tlsroute/default/backend/rule/-1",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -264,7 +264,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default/eg/tcp/backend",
+                "clusterName": "tcproute/default/backend/rule/-1",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -288,7 +288,7 @@
             {
               "endpointConfig": {
                 "@type": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-                "clusterName": "default/eg/udp/backend",
+                "clusterName": "udproute/default/backend/rule/-1",
                 "endpoints": [
                   {
                     "lbEndpoints": [
@@ -327,9 +327,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default/backend/rule/0/match/0-www.example.com"
+                  "serviceName": "httproute/default/backend/rule/0"
                 },
-                "name": "default/backend/rule/0/match/0-www.example.com",
+                "name": "httproute/default/backend/rule/0",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -348,9 +348,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default/backend/rule/0/match/0-www.grpc-example.com"
+                  "serviceName": "grpcroute/default/backend/rule/0"
                 },
-                "name": "default/backend/rule/0/match/0-www.grpc-example.com",
+                "name": "grpcroute/default/backend/rule/0",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS",
@@ -377,9 +377,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default/eg/tls-passthrough/backend"
+                  "serviceName": "tlsroute/default/backend/rule/-1"
                 },
-                "name": "default/eg/tls-passthrough/backend",
+                "name": "tlsroute/default/backend/rule/-1",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -398,9 +398,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default/eg/tcp/backend"
+                  "serviceName": "tcproute/default/backend/rule/-1"
                 },
-                "name": "default/eg/tcp/backend",
+                "name": "tcproute/default/backend/rule/-1",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -419,9 +419,9 @@
                     "ads": {},
                     "resourceApiVersion": "V3"
                   },
-                  "serviceName": "default/eg/udp/backend"
+                  "serviceName": "udproute/default/backend/rule/-1"
                 },
-                "name": "default/eg/udp/backend",
+                "name": "udproute/default/backend/rule/-1",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
                 "type": "EDS"
@@ -684,7 +684,7 @@
                                 }
                               }
                             ],
-                            "cluster": "default/eg/tls-passthrough/backend",
+                            "cluster": "tlsroute/default/backend/rule/-1",
                             "statPrefix": "passthrough"
                           }
                         }
@@ -756,7 +756,7 @@
                                 }
                               }
                             ],
-                            "cluster": "default/eg/tcp/backend",
+                            "cluster": "tcproute/default/backend/rule/-1",
                             "statPrefix": "tcp"
                           }
                         }
@@ -825,7 +825,7 @@
                               "name": "route",
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route",
-                                "cluster": "default/eg/udp/backend"
+                                "cluster": "udproute/default/backend/rule/-1"
                               }
                             }
                           }
@@ -859,9 +859,9 @@
                         "match": {
                           "prefix": "/"
                         },
-                        "name": "default/backend/rule/0/match/0-www.example.com",
+                        "name": "httproute/default/backend/rule/0/match/0-www.example.com",
                         "route": {
-                          "cluster": "default/backend/rule/0/match/0-www.example.com"
+                          "cluster": "httproute/default/backend/rule/0"
                         }
                       }
                     ]
@@ -885,9 +885,9 @@
                         "match": {
                           "path": "/com.example.Things/DoThing"
                         },
-                        "name": "default/backend/rule/0/match/0-www.grpc-example.com",
+                        "name": "grpcroute/default/backend/rule/0/match/0-www.grpc-example.com",
                         "route": {
-                          "cluster": "default/backend/rule/0/match/0-www.grpc-example.com"
+                          "cluster": "grpcroute/default/backend/rule/0"
                         }
                       }
                     ]
