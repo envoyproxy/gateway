@@ -55,7 +55,7 @@ func (l Logger) WithName(name string) Logger {
 	return Logger{
 		Logger:        zapr.NewLogger(logger).WithName(name),
 		logging:       l.logging,
-		sugaredLogger: l.sugaredLogger,
+		sugaredLogger: logger.Sugar(),
 	}
 }
 
