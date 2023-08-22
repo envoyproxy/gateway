@@ -357,7 +357,7 @@
                               "typedConfig": {
                                 "@type": "type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication",
                                 "providers": {
-                                  "httproute/envoy-gateway-system/backend/rule/0/match/0/www.example.com-example": {
+                                  "httproute/envoy-gateway-system/backend/rule/0/match/0/www.example.com/example": {
                                     "remoteJwks": {
                                       "asyncFetch": {},
                                       "cacheDuration": "300s",
@@ -372,7 +372,7 @@
                                 },
                                 "requirementMap": {
                                   "httproute/envoy-gateway-system/backend/rule/0/match/0/www.example.com": {
-                                    "providerName": "httproute/envoy-gateway-system/backend/rule/0/match/0/www.example.com-example"
+                                    "providerName": "httproute/envoy-gateway-system/backend/rule/0/match/0/www.example.com/example"
                                   }
                                 }
                               }

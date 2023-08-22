@@ -40,7 +40,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route-example:
+              first-route/example:
                 audiences:
                 - foo.com
                 claimToHeaders:
@@ -56,7 +56,7 @@
                     timeout: 5s
                     uri: https://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
-              second-route-example:
+              second-route/example:
                 audiences:
                 - foo.com
                 issuer: https://www.example.com
@@ -71,9 +71,9 @@
                   retryPolicy: {}
             requirementMap:
               first-route:
-                providerName: first-route-example
+                providerName: first-route/example
               second-route:
-                providerName: second-route-example
+                providerName: second-route/example
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

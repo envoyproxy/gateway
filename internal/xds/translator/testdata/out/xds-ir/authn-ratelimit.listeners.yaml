@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route-example:
+              first-route/example:
                 audiences:
                 - foo.com
                 issuer: https://www.example.com
@@ -33,7 +33,7 @@
                   retryPolicy: {}
             requirementMap:
               first-route:
-                providerName: first-route-example
+                providerName: first-route/example
         - name: envoy.filters.http.ratelimit
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.ratelimit.v3.RateLimit
