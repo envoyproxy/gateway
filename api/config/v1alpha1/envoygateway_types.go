@@ -133,10 +133,6 @@ type ExtensionAPISettings struct {
 	// EnableEnvoyPatchPolicy enables Envoy Gateway to
 	// reconcile and implement the EnvoyPatchPolicy resources.
 	EnableEnvoyPatchPolicy bool `json:"enableEnvoyPatchPolicy"`
-
-	// EnableMultiClusterServiceAPI enables Envoy Gateway to
-	// reconcile and implement the Multicluster services' ServiceImport resource.
-	EnableMultiClusterServiceAPI bool `json:"enableMultiClusterServiceAPI"`
 }
 
 // EnvoyGatewayProvider defines the desired configuration of a provider.

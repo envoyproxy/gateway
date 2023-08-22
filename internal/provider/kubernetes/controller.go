@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -17,9 +18,12 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -1176,6 +1180,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 // watchResources watches gateway api resources.
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller) error {
+	log.SetLogger(zap.New(zap.WriteTo(os.Stderr), zap.UseDevMode(true)))
 	// Only enqueue GatewayClass objects that match this Envoy Gateway's controller name.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.GatewayClass{}),
@@ -1270,15 +1275,22 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	serviceImportFound := r.mcsServiceImportFound(mgr)
+	if !serviceImportFound {
+		r.log.Info("ServiceImport CRD not found, skipping ServiceImport watch")
+	}
+
 	// Watch ServiceImport CRUDs and process affected *Route objects.
-	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableMultiClusterServiceAPI {
+	if serviceImportFound {
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &mcsapi.ServiceImport{}),
 			&handler.EnqueueRequestForObject{},
 			predicate.NewPredicateFuncs(r.validateServiceImportForReconcile)); err != nil {
-			return err
+			// ServiceImport is not available in the cluster, skip the watch and not throw error.
+			r.log.Info("Unable to watch not ServiceImport: %s", err.Error())
 		}
 	}
+
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
@@ -1451,4 +1463,27 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	return nil
+}
+
+// mcsServiceImportFound checks for the existence of the ServiceImport CRD in k8s APIServer before watching it
+func (r *gatewayAPIReconciler) mcsServiceImportFound(mgr manager.Manager) bool {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		r.log.Error(err, "Failed to create discovery client")
+	}
+	apiResourceList, err := discoveryClient.ServerPreferredResources()
+	if err != nil {
+		r.log.Error(err, "Failed to get API resource list")
+	}
+	serviceImportFound := false
+	for _, list := range apiResourceList {
+		for _, resource := range list.APIResources {
+			if list.GroupVersion == mcsapi.GroupVersion.String() && resource.Kind == gatewayapi.KindServiceImport {
+				serviceImportFound = true
+				break
+			}
+		}
+	}
+
+	return serviceImportFound
 }
