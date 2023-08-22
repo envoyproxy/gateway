@@ -107,7 +107,7 @@ xds:
       dynamicEndpointConfigs:
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/backend/rule/0/match/0-www.example.com
+          clusterName: httproute/default/backend/rule/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -120,7 +120,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/backend/rule/0/match/0-www.grpc-example.com
+          clusterName: grpcroute/default/backend/rule/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -133,7 +133,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/eg/tls-passthrough/backend
+          clusterName: tlsroute/default/backend/rule/-1
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -146,7 +146,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/eg/tcp/backend
+          clusterName: tcproute/default/backend/rule/-1
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -158,7 +158,7 @@ xds:
             locality: {}
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: default/eg/udp/backend
+          clusterName: udproute/default/backend/rule/-1
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -180,8 +180,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/backend/rule/0/match/0-www.example.com
-          name: default/backend/rule/0/match/0-www.example.com
+            serviceName: httproute/default/backend/rule/0
+          name: httproute/default/backend/rule/0
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -195,8 +195,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/backend/rule/0/match/0-www.grpc-example.com
-          name: default/backend/rule/0/match/0-www.grpc-example.com
+            serviceName: grpcroute/default/backend/rule/0
+          name: grpcroute/default/backend/rule/0
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -215,8 +215,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/eg/tls-passthrough/backend
-          name: default/eg/tls-passthrough/backend
+            serviceName: tlsroute/default/backend/rule/-1
+          name: tlsroute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -230,8 +230,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/eg/tcp/backend
-          name: default/eg/tcp/backend
+            serviceName: tcproute/default/backend/rule/-1
+          name: tcproute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -245,8 +245,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: default/eg/udp/backend
-          name: default/eg/udp/backend
+            serviceName: udproute/default/backend/rule/-1
+          name: udproute/default/backend/rule/-1
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -411,7 +411,7 @@ xds:
                           inlineString: |
                             [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
-                  cluster: default/eg/tls-passthrough/backend
+                  cluster: tlsroute/default/backend/rule/-1
                   statPrefix: passthrough
             listenerFilters:
             - name: envoy.filters.listener.tls_inspector
@@ -453,7 +453,7 @@ xds:
                           inlineString: |
                             [%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%"
                       path: /dev/stdout
-                  cluster: default/eg/tcp/backend
+                  cluster: tcproute/default/backend/rule/-1
                   statPrefix: tcp
             name: default/eg/tcp/backend
             perConnectionBufferLimitBytes: 32768
@@ -497,7 +497,7 @@ xds:
                       name: route
                       typedConfig:
                         '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
-                        cluster: default/eg/udp/backend
+                        cluster: udproute/default/backend/rule/-1
                 statPrefix: service
             name: default/eg/udp/backend
     - '@type': type.googleapis.com/envoy.admin.v3.RoutesConfigDump
@@ -508,33 +508,25 @@ xds:
           name: default/eg/http
           virtualHosts:
           - domains:
-            - '*'
-            name: default/eg/http
+            - www.example.com
+            name: default/eg/http/www.example.com
             routes:
             - match:
-                headers:
-                - name: :authority
-                  stringMatch:
-                    exact: www.example.com
                 prefix: /
-              name: default/backend/rule/0/match/0-www.example.com
+              name: httproute/default/backend/rule/0/match/0-www.example.com
               route:
-                cluster: default/backend/rule/0/match/0-www.example.com
+                cluster: httproute/default/backend/rule/0
       - routeConfig:
           '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
           ignorePortInHostMatching: true
           name: default/eg/grpc
           virtualHosts:
           - domains:
-            - '*'
-            name: default/eg/grpc
+            - www.grpc-example.com
+            name: default/eg/grpc/www.grpc-example.com
             routes:
             - match:
-                headers:
-                - name: :authority
-                  stringMatch:
-                    exact: www.grpc-example.com
                 path: /com.example.Things/DoThing
-              name: default/backend/rule/0/match/0-www.grpc-example.com
+              name: grpcroute/default/backend/rule/0/match/0-www.grpc-example.com
               route:
-                cluster: default/backend/rule/0/match/0-www.grpc-example.com
+                cluster: grpcroute/default/backend/rule/0

@@ -23,6 +23,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
+var (
+	ErrXdsClusterExists = errors.New("xds cluster exists")
+)
+
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
 	// GlobalRateLimit holds the global rate limit settings
@@ -145,19 +149,30 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 		}
 
-		// Allocate virtual host for this httpListener.
-		// 1:1 between IR HTTPListener and xDS VirtualHost
-		vHost := &routev3.VirtualHost{
-			Name:    httpListener.Name,
-			Domains: httpListener.Hostnames,
-		}
 		protocol := DefaultProtocol
 		if httpListener.IsHTTP2 {
 			protocol = HTTP2
 		}
 
+		// store virtual hosts by domain
+		vHosts := map[string]*routev3.VirtualHost{}
+		// keep track of order by using a list as well as the map
+		var vHostsList []*routev3.VirtualHost
+
 		// Check if an extension is loaded that wants to modify xDS Routes after they have been generated
 		for _, httpRoute := range httpListener.Routes {
+			// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
+			vHost := vHosts[httpRoute.Hostname]
+			if vHost == nil {
+				// Allocate virtual host for this httpRoute.
+				vHost = &routev3.VirtualHost{
+					Name:    fmt.Sprintf("%s/%s", httpListener.Name, httpRoute.Hostname),
+					Domains: []string{httpRoute.Hostname},
+				}
+				vHosts[httpRoute.Hostname] = vHost
+				vHostsList = append(vHostsList, vHost)
+			}
+
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
 			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
 
@@ -169,45 +184,39 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
-			// Skip trying to build an IR cluster if the httpRoute only has invalid backends
-			if len(httpRoute.Destinations) == 0 && httpRoute.BackendWeights.Invalid > 0 {
-				continue
+			if httpRoute.Destination != nil {
+				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+					name:         httpRoute.Destination.Name,
+					endpoints:    httpRoute.Destination.Endpoints,
+					tSocket:      nil,
+					protocol:     protocol,
+					endpointType: Static,
+				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+					return err
+				}
 			}
-			if err := addXdsCluster(tCtx, addXdsClusterArgs{
-				name:         httpRoute.Name,
-				destinations: httpRoute.Destinations,
-				tSocket:      nil,
-				protocol:     protocol,
-				endpoint:     Static,
-			}); err != nil {
+
+			if httpRoute.Mirror != nil {
+				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+					name:         httpRoute.Mirror.Name,
+					endpoints:    httpRoute.Mirror.Endpoints,
+					tSocket:      nil,
+					protocol:     protocol,
+					endpointType: Static,
+				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+					return err
+				}
+			}
+		}
+
+		for _, vHost := range vHostsList {
+			// Check if an extension want to modify the Virtual Host we just generated
+			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
+			if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
 				return err
 			}
-
-			// If the httpRoute has a list of mirrors create clusters for them unless they already have one
-			for i, mirror := range httpRoute.Mirrors {
-				mirrorClusterName := fmt.Sprintf("%s-mirror-%d", httpRoute.Name, i)
-				if cluster := findXdsCluster(tCtx, mirrorClusterName); cluster == nil {
-					if err := addXdsCluster(tCtx, addXdsClusterArgs{
-						name:         mirrorClusterName,
-						destinations: []*ir.RouteDestination{mirror},
-						tSocket:      nil,
-						protocol:     protocol,
-						endpoint:     Static,
-					}); err != nil {
-						return err
-					}
-				}
-
-			}
 		}
-
-		// Check if an extension want to modify the Virtual Host we just generated
-		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
-		if err := processExtensionPostVHostHook(vHost, t.ExtensionManager); err != nil {
-			return err
-		}
-
-		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHost)
+		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
 		// TODO: Make this into a generic interface for API Gateway features.
 		//       https://github.com/envoyproxy/gateway/issues/882
@@ -234,12 +243,12 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
-			name:         tcpListener.Name,
-			destinations: tcpListener.Destinations,
+			name:         tcpListener.Destination.Name,
+			endpoints:    tcpListener.Destination.Endpoints,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
-			endpoint:     Static,
-		}); err != nil {
+			endpointType: Static,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
 
@@ -260,7 +269,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Name, accesslog); err != nil {
+		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
 			return err
 		}
 	}
@@ -271,18 +280,18 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
-			name:         udpListener.Name,
-			destinations: udpListener.Destinations,
+			name:         udpListener.Destination.Name,
+			endpoints:    udpListener.Destination.Endpoints,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
-			endpoint:     Static,
-		}); err != nil {
+			endpointType: Static,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
 
 		// There won't be multiple UDP listeners on the same port since it's already been checked at the gateway api
 		// translator
-		xdsListener, err := buildXdsUDPListener(udpListener.Name, udpListener, accesslog)
+		xdsListener, err := buildXdsUDPListener(udpListener.Destination.Name, udpListener, accesslog)
 		if err != nil {
 			return multierror.Append(err, errors.New("error building xds cluster"))
 		}
@@ -378,10 +387,15 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 }
 
 func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) error {
-	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpoint)
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.destinations)
+	// Return early if cluster with the same name exists
+	if c := findXdsCluster(tCtx, args.name); c != nil {
+		return ErrXdsClusterExists
+	}
+
+	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpointType)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.endpoints)
 	// Use EDS for static endpoints
-	if args.endpoint == Static {
+	if args.endpointType == Static {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
@@ -396,10 +410,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) err
 
 type addXdsClusterArgs struct {
 	name         string
-	destinations []*ir.RouteDestination
+	endpoints    []*ir.DestinationEndpoint
 	tSocket      *corev3.TransportSocket
 	protocol     ProtocolType
-	endpoint     EndpointType
+	endpointType EndpointType
 }
 
 type ProtocolType int

@@ -1,4 +1,4 @@
-- clusterName: tcp-route-complex
+- clusterName: tcp-route-complex-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

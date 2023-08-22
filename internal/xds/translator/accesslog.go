@@ -6,6 +6,7 @@
 package translator
 
 import (
+	"errors"
 	"sort"
 
 	accesslog "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
@@ -227,19 +228,18 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	for _, otel := range al.OpenTelemetry {
 		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
 
-		if existingCluster := findXdsCluster(tCtx, clusterName); existingCluster == nil {
-			destinations := []*ir.RouteDestination{ir.NewRouteDest(otel.Host, otel.Port)}
-			if err := addXdsCluster(tCtx, addXdsClusterArgs{
-				name:         clusterName,
-				destinations: destinations,
-				tSocket:      nil,
-				protocol:     HTTP2,
-				endpoint:     DefaultEndpointType,
-			}); err != nil {
-				return err
-			}
-
+		endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)}
+		if err := addXdsCluster(tCtx, addXdsClusterArgs{
+			name:         clusterName,
+			endpoints:    endpoints,
+			tSocket:      nil,
+			protocol:     HTTP2,
+			endpointType: DefaultEndpointType,
+		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+			return err
 		}
+
 	}
+
 	return nil
 }

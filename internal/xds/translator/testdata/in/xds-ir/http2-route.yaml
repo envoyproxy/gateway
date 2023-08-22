@@ -7,6 +7,7 @@ http:
   isHTTP2: true
   routes:
   - name: "first-route"
+    hostname: "*"
     pathMatch:
       name: "test"
       exact: "foo/bar"
@@ -17,6 +18,8 @@ http:
     queryParamMatches:
     - name: "debug"
       exact: "yes"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000

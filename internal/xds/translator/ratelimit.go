@@ -7,6 +7,7 @@ package translator
 
 import (
 	"bytes"
+	"errors"
 	"net/url"
 	"strconv"
 	"strings"
@@ -426,26 +427,25 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		return nil
 	}
 	clusterName := getRateLimitServiceClusterName()
-	if rlCluster := findXdsCluster(tCtx, clusterName); rlCluster == nil {
-		// Create cluster if it does not exist
-		host, port := t.getRateLimitServiceGrpcHostPort()
-		routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(host, uint32(port))}
+	// Create cluster if it does not exist
+	host, port := t.getRateLimitServiceGrpcHostPort()
+	endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))}
 
-		tSocket, err := buildRateLimitTLSocket()
-		if err != nil {
-			return err
-		}
-
-		if err := addXdsCluster(tCtx, addXdsClusterArgs{
-			name:         clusterName,
-			destinations: routeDestinations,
-			tSocket:      tSocket,
-			protocol:     HTTP2,
-			endpoint:     DefaultEndpointType,
-		}); err != nil {
-			return err
-		}
+	tSocket, err := buildRateLimitTLSocket()
+	if err != nil {
+		return err
 	}
+
+	if err := addXdsCluster(tCtx, addXdsClusterArgs{
+		name:         clusterName,
+		endpoints:    endpoints,
+		tSocket:      tSocket,
+		protocol:     HTTP2,
+		endpointType: DefaultEndpointType,
+	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
+	}
+
 	return nil
 }
 

@@ -124,15 +124,17 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	}
 
 	var bootstrapConfigurations string
-	// Get Bootstrap from EnvoyProxy API if set by the user
+
+	// Get the default Bootstrap
+	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply Bootstrap from EnvoyProxy API if set by the user
 	// The config should have been validated already
-	if infra.Config != nil &&
-		infra.Config.Spec.Bootstrap != nil {
-		bootstrapConfigurations = *infra.Config.Spec.Bootstrap
-	} else {
-		var err error
-		// Use the default Bootstrap
-		bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
+	if infra.Config != nil && infra.Config.Spec.Bootstrap != nil {
+		bootstrapConfigurations, err = bootstrap.ApplyBootstrapConfig(infra.Config.Spec.Bootstrap, bootstrapConfigurations)
 		if err != nil {
 			return nil, err
 		}

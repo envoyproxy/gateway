@@ -102,15 +102,14 @@ xdsIR:
       - backendWeights:
           invalid: 0
           valid: 0
-        destinations:
-        - host: 7.7.7.7
-          port: 8080
-          weight: 1
-        headerMatches:
-        - distinct: false
-          name: :authority
-          suffix: envoyproxy.io
-        name: default/httproute-1/rule/0/match/0-*.envoyproxy.io
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: httproute/default/httproute-1/rule/0
+        hostname: '*.envoyproxy.io'
+        name: httproute/default/httproute-1/rule/0/match/0-*.envoyproxy.io
         pathMatch:
           distinct: false
           name: ""

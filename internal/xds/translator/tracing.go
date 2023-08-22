@@ -122,17 +122,15 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 
 	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
 
-	if existingCluster := findXdsCluster(tCtx, clusterName); existingCluster == nil {
-		destinations := []*ir.RouteDestination{ir.NewRouteDest(tracing.Provider.Host, uint32(tracing.Provider.Port))}
-		if err := addXdsCluster(tCtx, addXdsClusterArgs{
-			name:         clusterName,
-			destinations: destinations,
-			tSocket:      nil,
-			protocol:     HTTP2,
-			endpoint:     DefaultEndpointType,
-		}); err != nil {
-			return err
-		}
+	endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))}
+	if err := addXdsCluster(tCtx, addXdsClusterArgs{
+		name:         clusterName,
+		endpoints:    endpoints,
+		tSocket:      nil,
+		protocol:     HTTP2,
+		endpointType: DefaultEndpointType,
+	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+		return err
 	}
 	return nil
 }

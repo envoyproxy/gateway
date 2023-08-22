@@ -4,17 +4,19 @@ envoyProxy:
     name: example
     namespace: default
   spec:
-    bootstrap: |-
-      admin:
-        access_log:
-        - name: envoy.access_loggers.file
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
-            path: /dev/null
-        address:
-          socket_address:
-            address: 127.0.0.1
-            port_value: 19000
+    bootstrap:
+      type: Replace
+      value: |-
+        admin:
+          access_log:
+          - name: envoy.access_loggers.file
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/null
+          address:
+            socket_address:
+              address: 127.0.0.1
+              port_value: 19000
     logging: {}
     telemetry: {}
   status: {}

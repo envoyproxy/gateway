@@ -1,4 +1,4 @@
-- clusterName: udp-route
+- clusterName: udp-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

@@ -8,6 +8,7 @@ package ir
 import (
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -66,11 +67,11 @@ var (
 
 	// TCPListener
 	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:         "happy",
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "happy",
+		Address:     "0.0.0.0",
+		Port:        80,
+		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destination: &happyRouteDestination,
 	}
 
 	happyTCPListenerTLSTerminate = TCPListener{
@@ -82,74 +83,77 @@ var (
 			ServerCertificate: []byte("server-cert"),
 			PrivateKey:        []byte("priv-key"),
 		}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Destination: &happyRouteDestination,
 	}
 
 	emptySNITCPListenerTLSPassthrough = TCPListener{
-		Name:         "empty-sni",
-		Address:      "0.0.0.0",
-		Port:         80,
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "empty-sni",
+		Address:     "0.0.0.0",
+		Port:        80,
+		Destination: &happyRouteDestination,
 	}
 	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address:     "0.0.0.0",
+		Port:        80,
+		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destination: &happyRouteDestination,
 	}
 	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:         "invalid-addr",
-		Address:      "1.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "invalid-addr",
+		Address:     "1.0.0",
+		Port:        80,
+		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+		Destination: &happyRouteDestination,
 	}
 	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		TLS:          &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address:     "0.0.0.0",
+		Port:        80,
+		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
+		Destination: &happyRouteDestination,
 	}
 
 	// UDPListener
 	happyUDPListener = UDPListener{
-		Name:         "happy",
-		Address:      "0.0.0.0",
-		Port:         80,
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "happy",
+		Address:     "0.0.0.0",
+		Port:        80,
+		Destination: &happyRouteDestination,
 	}
 	invalidNameUDPListener = UDPListener{
-		Address:      "0.0.0.0",
-		Port:         80,
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Address:     "0.0.0.0",
+		Port:        80,
+		Destination: &happyRouteDestination,
 	}
 	invalidAddrUDPListener = UDPListener{
-		Name:         "invalid-addr",
-		Address:      "1.0.0",
-		Port:         80,
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "invalid-addr",
+		Address:     "1.0.0",
+		Port:        80,
+		Destination: &happyRouteDestination,
 	}
 	invalidPortUDPListenerT = UDPListener{
-		Name:         "invalid-port",
-		Address:      "0.0.0.0",
-		Port:         0,
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "invalid-port",
+		Address:     "0.0.0.0",
+		Port:        0,
+		Destination: &happyRouteDestination,
 	}
 
 	// HTTPRoute
 	happyHTTPRoute = HTTPRoute{
-		Name: "happy",
+		Name:     "happy",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("example"),
 		},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Destination: &happyRouteDestination,
 	}
 	emptyMatchHTTPRoute = HTTPRoute{
-		Name:         "empty-match",
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Name:        "empty-match",
+		Hostname:    "*",
+		Destination: &happyRouteDestination,
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
-		Name: "invalid-backend",
+		Name:     "invalid-backend",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("invalid-backend"),
 		},
@@ -158,11 +162,12 @@ var (
 		},
 	}
 	weightedInvalidBackendsHTTPRoute = HTTPRoute{
-		Name: "weighted-invalid-backends",
+		Name:     "weighted-invalid-backends",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("invalid-backends"),
 		},
-		Destinations: []*RouteDestination{&happyRouteDestination},
+		Destination: &happyRouteDestination,
 		BackendWeights: BackendWeights{
 			Invalid: 1,
 			Valid:   1,
@@ -170,7 +175,8 @@ var (
 	}
 
 	redirectHTTPRoute = HTTPRoute{
-		Name: "redirect",
+		Name:     "redirect",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -186,7 +192,8 @@ var (
 	}
 	// A direct response error is used when an invalid filter type is supplied
 	invalidFilterHTTPRoute = HTTPRoute{
-		Name: "filter-error",
+		Name:     "filter-error",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("filter-error"),
 		},
@@ -197,7 +204,8 @@ var (
 	}
 
 	redirectFilterInvalidStatus = HTTPRoute{
-		Name: "redirect-bad-status-scheme-nopat",
+		Name:     "redirect-bad-status-scheme-nopat",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -210,7 +218,8 @@ var (
 		},
 	}
 	redirectFilterBadPath = HTTPRoute{
-		Name: "redirect",
+		Name:     "redirect",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -226,7 +235,8 @@ var (
 		},
 	}
 	directResponseBadStatus = HTTPRoute{
-		Name: "redirect",
+		Name:     "redirect",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("redirect"),
 		},
@@ -237,7 +247,8 @@ var (
 	}
 
 	urlRewriteHTTPRoute = HTTPRoute{
-		Name: "rewrite",
+		Name:     "rewrite",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("rewrite"),
 		},
@@ -250,7 +261,8 @@ var (
 	}
 
 	urlRewriteFilterBadPath = HTTPRoute{
-		Name: "rewrite",
+		Name:     "rewrite",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("rewrite"),
 		},
@@ -264,7 +276,8 @@ var (
 	}
 
 	addRequestHeaderHTTPRoute = HTTPRoute{
-		Name: "addheader",
+		Name:     "addheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addheader"),
 		},
@@ -288,7 +301,8 @@ var (
 	}
 
 	removeRequestHeaderHTTPRoute = HTTPRoute{
-		Name: "remheader",
+		Name:     "remheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("remheader"),
 		},
@@ -300,7 +314,8 @@ var (
 	}
 
 	addAndRemoveRequestHeadersDupeHTTPRoute = HTTPRoute{
-		Name: "duplicateheader",
+		Name:     "duplicateheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("duplicateheader"),
 		},
@@ -324,7 +339,8 @@ var (
 	}
 
 	addRequestHeaderEmptyHTTPRoute = HTTPRoute{
-		Name: "addemptyheader",
+		Name:     "addemptyheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addemptyheader"),
 		},
@@ -338,7 +354,8 @@ var (
 	}
 
 	addResponseHeaderHTTPRoute = HTTPRoute{
-		Name: "addheader",
+		Name:     "addheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addheader"),
 		},
@@ -362,7 +379,8 @@ var (
 	}
 
 	removeResponseHeaderHTTPRoute = HTTPRoute{
-		Name: "remheader",
+		Name:     "remheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("remheader"),
 		},
@@ -374,7 +392,8 @@ var (
 	}
 
 	addAndRemoveResponseHeadersDupeHTTPRoute = HTTPRoute{
-		Name: "duplicateheader",
+		Name:     "duplicateheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("duplicateheader"),
 		},
@@ -398,7 +417,8 @@ var (
 	}
 
 	addResponseHeaderEmptyHTTPRoute = HTTPRoute{
-		Name: "addemptyheader",
+		Name:     "addemptyheader",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("addemptyheader"),
 		},
@@ -412,7 +432,8 @@ var (
 	}
 
 	jwtAuthenHTTPRoute = HTTPRoute{
-		Name: "jwtauthen",
+		Name:     "jwtauthen",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("jwtauthen"),
 		},
@@ -430,36 +451,23 @@ var (
 		},
 	}
 	requestMirrorFilter = HTTPRoute{
-		Name: "mirrorfilter",
+		Name:     "mirrorfilter",
+		Hostname: "*",
 		PathMatch: &StringMatch{
 			Exact: ptrTo("mirrorfilter"),
 		},
-		Mirrors: []*RouteDestination{
-			&happyRouteDestination,
-		},
-	}
-
-	requestMirrorFilterMultiple = HTTPRoute{
-		Name: "mirrorfilterMultiple",
-		PathMatch: &StringMatch{
-			Exact: ptrTo("mirrorfiltermultiple"),
-		},
-		Mirrors: []*RouteDestination{
-			&happyRouteDestination,
-			&otherHappyRouteDestination,
-		},
+		Mirror: &happyRouteDestination,
 	}
 
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
-		Host: "10.11.12.13",
-		Port: 8080,
-	}
-
-	// RouteDestination
-	otherHappyRouteDestination = RouteDestination{
-		Host: "11.12.13.14",
-		Port: 8080,
+		Name: "happy-dest",
+		Endpoints: []*DestinationEndpoint{
+			{
+				Host: "10.11.12.13",
+				Port: 8080,
+			},
+		},
 	}
 )
 
@@ -676,6 +684,80 @@ func TestValidateTLSListenerConfig(t *testing.T) {
 	}
 }
 
+func TestEqualXds(t *testing.T) {
+	tests := []struct {
+		desc  string
+		a     *Xds
+		b     *Xds
+		equal bool
+	}{
+		{
+			desc: "out of order tcp listeners are equal",
+			a: &Xds{
+				TCP: []*TCPListener{
+					{Name: "listener-1"},
+					{Name: "listener-2"},
+				},
+			},
+			b: &Xds{
+				TCP: []*TCPListener{
+					{Name: "listener-2"},
+					{Name: "listener-1"},
+				},
+			},
+			equal: true,
+		},
+		{
+			desc: "out of order http routes are equal",
+			a: &Xds{
+				HTTP: []*HTTPListener{
+					{
+						Name: "listener-1",
+						Routes: []*HTTPRoute{
+							{Name: "route-1"},
+							{Name: "route-2"},
+						},
+					},
+				},
+			},
+			b: &Xds{
+				HTTP: []*HTTPListener{
+					{
+						Name: "listener-1",
+						Routes: []*HTTPRoute{
+							{Name: "route-2"},
+							{Name: "route-1"},
+						},
+					},
+				},
+			},
+			equal: true,
+		},
+		{
+			desc: "out of order udp listeners are equal",
+			a: &Xds{
+				UDP: []*UDPListener{
+					{Name: "listener-1"},
+					{Name: "listener-2"},
+				},
+			},
+			b: &Xds{
+				UDP: []*UDPListener{
+					{Name: "listener-2"},
+					{Name: "listener-1"},
+				},
+			},
+			equal: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			require.Equal(t, tc.equal, cmp.Equal(tc.a, tc.b))
+		})
+	}
+}
+
 func TestValidateUDPListener(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -732,12 +814,24 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "invalid name",
 			input: HTTPRoute{
+				Hostname: "*",
 				PathMatch: &StringMatch{
 					Exact: ptrTo("example"),
 				},
-				Destinations: []*RouteDestination{&happyRouteDestination},
+				Destination: &happyRouteDestination,
 			},
 			want: []error{ErrHTTPRouteNameEmpty},
+		},
+		{
+			name: "invalid hostname",
+			input: HTTPRoute{
+				Name: "invalid hostname",
+				PathMatch: &StringMatch{
+					Exact: ptrTo("example"),
+				},
+				Destination: &happyRouteDestination,
+			},
+			want: []error{ErrHTTPRouteHostnameEmpty},
 		},
 		{
 			name:  "empty match",
@@ -757,8 +851,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "empty name and invalid match",
 			input: HTTPRoute{
+				Hostname:      "*",
 				HeaderMatches: []*StringMatch{ptrTo(StringMatch{})},
-				Destinations:  []*RouteDestination{&happyRouteDestination},
+				Destination:   &happyRouteDestination,
 			},
 			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
@@ -846,11 +941,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 			input: requestMirrorFilter,
 			want:  nil,
 		},
-		{
-			name:  "mirror-filter-multiple",
-			input: requestMirrorFilterMultiple,
-			want:  nil,
-		},
 	}
 	for _, test := range tests {
 		test := test
@@ -881,24 +971,51 @@ func TestValidateRouteDestination(t *testing.T) {
 		{
 			name: "invalid ip",
 			input: RouteDestination{
-				Host: "example.com",
-				Port: 8080,
+				Name: "invalid ip",
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "example.com",
+						Port: 8080,
+					},
+				},
 			},
-			want: ErrRouteDestinationHostInvalid,
+			want: ErrDestEndpointHostInvalid,
 		},
 		{
 			name: "missing ip",
 			input: RouteDestination{
-				Port: 8080,
+				Name: "missing ip",
+				Endpoints: []*DestinationEndpoint{
+					{
+						Port: 8080,
+					},
+				},
 			},
-			want: ErrRouteDestinationHostInvalid,
+			want: ErrDestEndpointHostInvalid,
 		},
 		{
 			name: "missing port",
 			input: RouteDestination{
-				Host: "10.11.12.13",
+				Name: "missing port",
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "10.11.12.13",
+					},
+				},
 			},
-			want: ErrRouteDestinationPortInvalid,
+			want: ErrDestEndpointPortInvalid,
+		},
+		{
+			name: "missing name",
+			input: RouteDestination{
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "10.11.12.13",
+						Port: 8080,
+					},
+				},
+			},
+			want: ErrDestinationNameEmpty,
 		},
 	}
 	for _, test := range tests {

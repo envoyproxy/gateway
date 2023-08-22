@@ -107,7 +107,7 @@ xds:
       dynamicEndpointConfigs:
       - endpointConfig:
           '@type': type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment
-          clusterName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+          clusterName: httproute/envoy-gateway-system/backend/rule/0
           endpoints:
           - lbEndpoints:
             - endpoint:
@@ -130,8 +130,8 @@ xds:
             edsConfig:
               ads: {}
               resourceApiVersion: V3
-            serviceName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
-          name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+            serviceName: httproute/envoy-gateway-system/backend/rule/0
+          name: httproute/envoy-gateway-system/backend/rule/0
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
           type: EDS
@@ -213,7 +213,7 @@ xds:
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
                       providers:
-                        envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
+                        httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com-example:
                           remoteJwks:
                             asyncFetch: {}
                             cacheDuration: 300s
@@ -223,8 +223,8 @@ xds:
                               uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
                             retryPolicy: {}
                       requirementMap:
-                        envoy-gateway-system/backend/rule/0/match/0-www.example.com:
-                          providerName: envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
+                        httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com:
+                          providerName: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com-example
                   - name: envoy.filters.http.router
                     typedConfig:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -250,19 +250,15 @@ xds:
           name: envoy-gateway-system/eg/http
           virtualHosts:
           - domains:
-            - '*'
-            name: envoy-gateway-system/eg/http
+            - www.example.com
+            name: envoy-gateway-system/eg/http/www.example.com
             routes:
             - match:
-                headers:
-                - name: :authority
-                  stringMatch:
-                    exact: www.example.com
                 pathSeparatedPrefix: /foo
-              name: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+              name: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com
               route:
-                cluster: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+                cluster: httproute/envoy-gateway-system/backend/rule/0
               typedPerFilterConfig:
                 envoy.filters.http.jwt_authn:
                   '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-                  requirementName: envoy-gateway-system/backend/rule/0/match/0-www.example.com
+                  requirementName: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com

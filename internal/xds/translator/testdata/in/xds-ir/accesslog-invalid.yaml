@@ -29,9 +29,11 @@ http:
   - "*"
   routes:
   - name: "direct-route"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "direct-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     directResponse:
       body: "Unknown custom filter type: UnsupportedType"
       statusCode: 500

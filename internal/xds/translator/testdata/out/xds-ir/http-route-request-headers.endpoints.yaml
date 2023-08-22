@@ -1,4 +1,4 @@
-- clusterName: request-header-route
+- clusterName: request-header-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
