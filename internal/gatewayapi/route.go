@@ -518,7 +518,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				}
 
 				hostRoute := &ir.HTTPRoute{
-					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
+					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, host),
 					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
 					HeaderMatches:         routeRoute.HeaderMatches,

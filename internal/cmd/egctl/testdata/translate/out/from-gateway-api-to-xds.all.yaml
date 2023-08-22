@@ -513,7 +513,7 @@ xds:
             routes:
             - match:
                 prefix: /
-              name: httproute/default/backend/rule/0/match/0-www.example.com
+              name: httproute/default/backend/rule/0/match/0/www.example.com
               route:
                 cluster: httproute/default/backend/rule/0
       - routeConfig:
@@ -527,6 +527,6 @@ xds:
             routes:
             - match:
                 path: /com.example.Things/DoThing
-              name: grpcroute/default/backend/rule/0/match/0-www.grpc-example.com
+              name: grpcroute/default/backend/rule/0/match/0/www.grpc-example.com
               route:
                 cluster: grpcroute/default/backend/rule/0

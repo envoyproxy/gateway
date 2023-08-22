@@ -19,7 +19,7 @@
                     "match": {
                       "prefix": "/"
                     },
-                    "name": "httproute/default/backend/rule/0/match/0-www.example.com",
+                    "name": "httproute/default/backend/rule/0/match/0/www.example.com",
                     "route": {
                       "cluster": "httproute/default/backend/rule/0"
                     }
@@ -50,7 +50,7 @@
                     "match": {
                       "prefix": "/v2/"
                     },
-                    "name": "httproute/default/backend/rule/0/match/0-www.example2.com",
+                    "name": "httproute/default/backend/rule/0/match/0/www.example2.com",
                     "route": {
                       "cluster": "httproute/default/backend/rule/0"
                     }

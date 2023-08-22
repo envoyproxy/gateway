@@ -175,7 +175,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/0
         hostname: foo.bar.com
-        name: httproute/default/httproute-1/rule/0/match/0-foo.bar.com
+        name: httproute/default/httproute-1/rule/0/match/0/foo.bar.com
         pathMatch:
           distinct: false
           name: ""

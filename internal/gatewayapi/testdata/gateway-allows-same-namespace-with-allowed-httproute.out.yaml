@@ -107,7 +107,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
         hostname: '*'
-        name: httproute/envoy-gateway/httproute-1/rule/0/match/0-*
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
