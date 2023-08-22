@@ -1235,7 +1235,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egcfgv1a1.EnvoyProxy{}),
-		handler.EnqueueRequestsFromMapFunc(r.enqueueManagedClass),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		epPredicates...,
 	); err != nil {
 		return err
