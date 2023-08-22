@@ -261,7 +261,7 @@ type HTTPRoute struct {
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
 	// Destination that requests to this HTTPRoute will be mirrored to
-	Mirror *RouteDestination `json:"mirror,omitempty" yaml:"mirror,omitempty"`
+	Mirror []*RouteDestination `json:"mirror,omitempty" yaml:"mirror,omitempty"`
 	// Destination associated with this matched route.
 	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
@@ -352,8 +352,10 @@ func (h HTTPRoute) Validate() error {
 		}
 	}
 	if h.Mirror != nil {
-		if err := h.Mirror.Validate(); err != nil {
-			errs = multierror.Append(errs, err)
+		for _, mirror := range h.Mirror {
+			if err := mirror.Validate(); err != nil {
+				errs = multierror.Append(errs, err)
+			}
 		}
 	}
 	if len(h.AddRequestHeaders) > 0 {
