@@ -41,3 +41,32 @@ func TestLogger(t *testing.T) {
 	assert.True(t, defaultLogger.logging != nil)
 	assert.True(t, defaultLogger.sugaredLogger != nil)
 }
+
+func TestLoggerWithName(t *testing.T) {
+	originalStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	defer func() {
+		// Restore the original stdout and close the pipe
+		os.Stdout = originalStdout
+		err := w.Close()
+		assert.NoError(t, err)
+	}()
+
+	config := v1alpha1.DefaultEnvoyGatewayLogging()
+	config.Level[v1alpha1.LogComponentInfrastructureRunner] = v1alpha1.LogLevelDebug
+
+	logger := NewLogger(config).WithName(string(v1alpha1.LogComponentInfrastructureRunner))
+	logger.Info("info message")
+	logger.Sugar().Debugf("debug message")
+
+	// Read from the pipe (captured stdout)
+	outputBytes := make([]byte, 200)
+	_, err := r.Read(outputBytes)
+	assert.NoError(t, err)
+	capturedOutput := string(outputBytes)
+	assert.Contains(t, capturedOutput, string(v1alpha1.LogComponentInfrastructureRunner))
+	assert.Contains(t, capturedOutput, "info message")
+	assert.Contains(t, capturedOutput, "debug message")
+}

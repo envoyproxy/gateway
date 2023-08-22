@@ -14,7 +14,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -152,14 +151,14 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 	}
 }
 
-func TestEnqueueManagedClass(t *testing.T) {
+func TestHasManagedClass(t *testing.T) {
 	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
 
 	testCases := []struct {
 		name     string
 		ep       client.Object
 		classes  []*gwapiv1b1.GatewayClass
-		expected []reconcile.Request
+		expected bool
 	}{
 		{
 			name: "no matching gatewayclasses",
@@ -193,7 +192,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 					},
 				},
 			},
-			expected: []reconcile.Request{},
+			expected: false,
 		},
 		{
 			name: "match one gatewayclass",
@@ -227,11 +226,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 					},
 				},
 			},
-			expected: []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{Name: "test-gc"},
-				},
-			},
+			expected: true,
 		},
 		{
 			name: "envoyproxy in different namespace as eg",
@@ -249,7 +244,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 					Spec: gwapiv1b1.GatewayClassSpec{ControllerName: gcCtrlName},
 				},
 			},
-			expected: []reconcile.Request{},
+			expected: false,
 		},
 		{
 			name: "multiple gatewayclasses one with accepted status",
@@ -305,11 +300,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 					},
 				},
 			},
-			expected: []reconcile.Request{
-				{
-					NamespacedName: types.NamespacedName{Name: "test-gc1"},
-				},
-			},
+			expected: true,
 		},
 	}
 
@@ -339,7 +330,7 @@ func TestEnqueueManagedClass(t *testing.T) {
 				Build()
 
 			// Process the test case gatewayclasses.
-			results := r.enqueueManagedClass(context.TODO(), tc.ep)
+			results := r.hasManagedClass(tc.ep)
 			require.Equal(t, tc.expected, results)
 		})
 	}
