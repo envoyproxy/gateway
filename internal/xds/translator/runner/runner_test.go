@@ -53,10 +53,13 @@ func TestRunner(t *testing.T) {
 						PathMatch: &ir.StringMatch{
 							Exact: &path,
 						},
-						Destinations: []*ir.RouteDestination{
-							{
-								Host: "10.11.12.13",
-								Port: 8080,
+						Destination: &ir.RouteDestination{
+							Name: "test-dest",
+							Endpoints: []*ir.DestinationEndpoint{
+								{
+									Host: "10.11.12.13",
+									Port: 8080,
+								},
 							},
 						},
 					},

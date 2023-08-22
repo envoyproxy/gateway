@@ -9,12 +9,15 @@ http:
   - name: "rewrite-route"
     pathMatch:
       prefix: "/origin"
+    hostname: gateway.envoyproxy.io
     headerMatches:
     - name: ":authority"
       exact: gateway.envoyproxy.io
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    destination:
+      name: "rewrite-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     urlRewrite:
       path:
         prefixMatchReplace: /rewrite

@@ -2203,20 +2203,12 @@
                             {
                                 "name": "default-eg-http",
                                 "domains": [
-                                    "*"
+                                    "www.example.com"
                                 ],
                                 "routes": [
                                     {
                                         "match": {
-                                            "prefix": "/",
-                                            "headers": [
-                                                {
-                                                    "name": ":authority",
-                                                    "string_match": {
-                                                        "exact": "www.example.com"
-                                                    }
-                                                }
-                                            ]
+                                            "prefix": "/"
                                         },
                                         "route": {
                                             "cluster": "default-backend-rule-0-match-0-www.example.com"

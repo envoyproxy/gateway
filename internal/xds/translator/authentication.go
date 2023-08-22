@@ -327,28 +327,26 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 			for i := range route.RequestAuthentication.JWT.Providers {
 				provider := route.RequestAuthentication.JWT.Providers[i]
 				jwks, err := newJwksCluster(&provider)
-				ep := DefaultEndpointType
+				epType := DefaultEndpointType
 				if jwks.isStatic {
-					ep = Static
+					epType = Static
 				}
 				if err != nil {
 					return err
 				}
-				if existingCluster := findXdsCluster(tCtx, jwks.name); existingCluster == nil {
-					routeDestinations := []*ir.RouteDestination{ir.NewRouteDest(jwks.hostname, jwks.port)}
-					tSocket, err := buildXdsUpstreamTLSSocket()
-					if err != nil {
-						return err
-					}
-					if err := addXdsCluster(tCtx, addXdsClusterArgs{
-						name:         jwks.name,
-						destinations: routeDestinations,
-						tSocket:      tSocket,
-						protocol:     DefaultProtocol,
-						endpoint:     ep,
-					}); err != nil {
-						return err
-					}
+				endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)}
+				tSocket, err := buildXdsUpstreamTLSSocket()
+				if err != nil {
+					return err
+				}
+				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+					name:         jwks.name,
+					endpoints:    endpoints,
+					tSocket:      tSocket,
+					protocol:     DefaultProtocol,
+					endpointType: epType,
+				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+					return err
 				}
 			}
 		}

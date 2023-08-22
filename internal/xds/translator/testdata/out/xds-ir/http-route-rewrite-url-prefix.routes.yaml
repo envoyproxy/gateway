@@ -2,8 +2,8 @@
   name: first-listener
   virtualHosts:
   - domains:
-    - '*'
-    name: first-listener
+    - gateway.envoyproxy.io
+    name: first-listener/gateway.envoyproxy.io
     routes:
     - match:
         headers:
@@ -13,5 +13,5 @@
         pathSeparatedPrefix: /origin
       name: rewrite-route
       route:
-        cluster: rewrite-route
+        cluster: rewrite-route-dest
         prefixRewrite: /rewrite

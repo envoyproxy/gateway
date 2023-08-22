@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener/*
     routes:
     - match:
         prefix: /
@@ -30,4 +30,4 @@
           key: empty-header
         keepEmptyValue: true
       route:
-        cluster: response-header-route
+        cluster: response-header-route-dest

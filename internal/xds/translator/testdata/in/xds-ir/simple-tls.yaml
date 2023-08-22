@@ -15,6 +15,9 @@ http:
     privateKey: [107, 101, 121, 45, 100, 97, 116, 97]
   routes:
   - name: "first-route"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000

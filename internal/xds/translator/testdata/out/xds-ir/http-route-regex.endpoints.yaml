@@ -1,4 +1,4 @@
-- clusterName: regex-route
+- clusterName: regex-route-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

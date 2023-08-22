@@ -158,8 +158,11 @@ func newResourceMapping() *resourceMappings {
 	}
 }
 
-func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
-	r.log.WithName(request.Name).Info("reconciling object", "namespace", request.Namespace, "name", request.Name)
+// Reconcile handles reconciling all resources in a single call. Any resource event should enqueue the
+// same reconcile.Request containing the gateway controller name. This allows multiple resource updates to
+// be handled by a single call to Reconcile. The reconcile.Request DOES NOT map to a specific resource.
+func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
+	r.log.Info("reconciling gateways")
 
 	var gatewayClasses gwapiv1b1.GatewayClassList
 	if err := r.client.List(ctx, &gatewayClasses); err != nil {
@@ -325,7 +328,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, request reconcile.
 	// Store will be required to trigger a cleanup of envoy infra resources.
 	r.resources.GatewayAPIResources.Store(acceptedGC.Name, resourceTree)
 
-	r.log.WithName(request.Name).Info("reconciled gatewayAPI object successfully", "namespace", request.Namespace, "name", request.Name)
+	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
 }
 
@@ -1216,14 +1219,17 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.Manager, c controller.Controller, ls []string) error {
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.GatewayClass{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		predicate.NewPredicateFuncs(r.hasMatchingController),
 	); err != nil {
 		return err
 	}
 
 	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
-	epPredicates := []predicate.Predicate{predicate.ResourceVersionChangedPredicate{}}
+	epPredicates := []predicate.Predicate{
+    predicate.ResourceVersionChangedPredicate{},
+    predicate.NewPredicateFuncs(r.hasManagedClass),
+  }
 	if len(ls) != 0 {
 		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
 	}
@@ -1242,7 +1248,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.Gateway{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		gPredicates...,
 	); err != nil {
 		return err
@@ -1258,7 +1264,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1b1.HTTPRoute{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		httprPredicates...,
 	); err != nil {
 		return err
@@ -1274,7 +1280,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.GRPCRoute{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		grpcrPredicates...,
 	); err != nil {
 		return err
@@ -1290,7 +1296,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.TLSRoute{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		tlsrPredicates...,
 	); err != nil {
 		return err
@@ -1306,7 +1312,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.UDPRoute{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		udprPredicates...,
 	); err != nil {
 		return err
@@ -1322,7 +1328,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.TCPRoute{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		tcprPredicates...,
 	); err != nil {
 		return err
@@ -1338,7 +1344,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Service{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		servicePredicates...,
 	); err != nil {
 		return err
@@ -1351,7 +1357,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		esPredicates...,
 	); err != nil {
 		return err
@@ -1366,7 +1372,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// resource address.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Node{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		nPredicates...,
 	); err != nil {
 		return err
@@ -1379,7 +1385,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &corev1.Secret{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		secretPredicates...,
 	); err != nil {
 		return err
@@ -1392,7 +1398,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &gwapiv1a2.ReferenceGrant{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		rgPredicates...,
 	); err != nil {
 		return err
@@ -1408,7 +1414,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &appsv1.Deployment{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		dPredicates...,
 	); err != nil {
 		return err
@@ -1421,7 +1427,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egv1a1.AuthenticationFilter{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		afPredicates...,
 	); err != nil {
 		return err
@@ -1434,7 +1440,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &egv1a1.RateLimitFilter{}),
-		&handler.EnqueueRequestForObject{},
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		rfPredicates...,
 	); err != nil {
 		return err
@@ -1449,7 +1455,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
-			&handler.EnqueueRequestForObject{},
+		  handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 			eppPredicates...,
 		); err != nil {
 			return err
@@ -1467,7 +1473,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		u := &unstructured.Unstructured{}
 		u.SetGroupVersionKind(gvk)
 		if err := c.Watch(source.Kind(mgr.GetCache(), u),
-			&handler.EnqueueRequestForObject{},
+			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 			uPredicates...,
 		); err != nil {
 			return err
@@ -1477,7 +1483,13 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	return nil
 }
 
-func (r *gatewayAPIReconciler) enqueueManagedClass(_ context.Context, obj client.Object) []reconcile.Request {
+func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) []reconcile.Request {
+	return []reconcile.Request{{NamespacedName: types.NamespacedName{
+		Name: string(r.classController),
+	}}}
+}
+
+func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
 	ep, ok := obj.(*egcfgv1a1.EnvoyProxy)
 	if !ok {
 		panic(fmt.Sprintf("unsupported object type %T", obj))
@@ -1487,14 +1499,14 @@ func (r *gatewayAPIReconciler) enqueueManagedClass(_ context.Context, obj client
 	if ep.Namespace != r.namespace {
 		r.log.Info("envoyproxy namespace does not match Envoy Gateway's namespace",
 			"namespace", ep.Namespace, "name", ep.Name)
-		return []reconcile.Request{}
+		return false
 	}
 
 	gcList := new(gwapiv1b1.GatewayClassList)
 	err := r.client.List(context.TODO(), gcList)
 	if err != nil {
 		r.log.Error(err, "failed to list gatewayclasses")
-		return []reconcile.Request{}
+		return false
 	}
 
 	for i := range gcList.Items {
@@ -1503,14 +1515,11 @@ func (r *gatewayAPIReconciler) enqueueManagedClass(_ context.Context, obj client
 		if r.hasMatchingController(&gc) &&
 			classAccepted(&gc) &&
 			classRefsEnvoyProxy(&gc, ep) {
-			req := reconcile.Request{
-				NamespacedName: types.NamespacedName{Name: gc.Name},
-			}
-			return []reconcile.Request{req}
+			return true
 		}
 	}
 
-	return []reconcile.Request{}
+	return false
 }
 
 // processParamsRef processes the parametersRef of the provided GatewayClass.

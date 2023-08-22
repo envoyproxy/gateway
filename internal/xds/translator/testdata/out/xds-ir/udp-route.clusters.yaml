@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: udp-route
-  name: udp-route
+    serviceName: udp-route-dest
+  name: udp-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

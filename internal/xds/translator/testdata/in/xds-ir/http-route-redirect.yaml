@@ -7,9 +7,12 @@ http:
   - "*"
   routes:
   - name: "redirect-route"
-    destinations:
-    - host: "1.2.3.4"
-      port: 50000
+    hostname: "*"
+    destination:
+      name: "redirect-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000
     redirect:
       scheme: https
       statusCode: 302

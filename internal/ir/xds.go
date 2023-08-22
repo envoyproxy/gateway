@@ -30,9 +30,11 @@ var (
 	ErrTLSServerCertEmpty            = errors.New("field ServerCertificate must be specified")
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
+	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
 	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
-	ErrRouteDestinationHostInvalid   = errors.New("field Address must be a valid IP address")
-	ErrRouteDestinationPortInvalid   = errors.New("field Port specified is invalid")
+	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
+	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP address")
+	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
 	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
 	ErrDirectResponseStatusInvalid   = errors.New("only HTTP status codes 100 - 599 are supported for DirectResponse")
@@ -236,6 +238,8 @@ type BackendWeights struct {
 type HTTPRoute struct {
 	// Name of the HTTPRoute
 	Name string `json:"name" yaml:"name"`
+	// Hostname that the route matches against
+	Hostname string `json:"hostname" yaml:"hostname,omitempty"`
 	// PathMatch defines the match conditions on the path.
 	PathMatch *StringMatch `json:"pathMatch,omitempty" yaml:"pathMatch,omitempty"`
 	// HeaderMatches define the match conditions on the request headers for this route.
@@ -256,10 +260,10 @@ type HTTPRoute struct {
 	DirectResponse *DirectResponse `json:"directResponse,omitempty" yaml:"directResponse,omitempty"`
 	// Redirections to be returned for this route. Takes precedence over Destinations.
 	Redirect *Redirect `json:"redirect,omitempty" yaml:"redirect,omitempty"`
-	// Destinations that requests to this HTTPRoute will be mirrored to
-	Mirrors []*RouteDestination `json:"mirrors,omitempty" yaml:"mirrors,omitempty"`
-	// Destinations associated with this matched route.
-	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
+	// Destination that requests to this HTTPRoute will be mirrored to
+	Mirror *RouteDestination `json:"mirror,omitempty" yaml:"mirror,omitempty"`
+	// Destination associated with this matched route.
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 	// Rewrite to be changed for this route.
 	URLRewrite *URLRewrite `json:"urlRewrite,omitempty" yaml:"urlRewrite,omitempty"`
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
@@ -306,6 +310,9 @@ func (h HTTPRoute) Validate() error {
 	if h.Name == "" {
 		errs = multierror.Append(errs, ErrHTTPRouteNameEmpty)
 	}
+	if h.Hostname == "" {
+		errs = multierror.Append(errs, ErrHTTPRouteHostnameEmpty)
+	}
 	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
 		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
 	}
@@ -324,8 +331,8 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	for _, dest := range h.Destinations {
-		if err := dest.Validate(); err != nil {
+	if h.Destination != nil {
+		if err := h.Destination.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -344,8 +351,8 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	for _, mirror := range h.Mirrors {
-		if err := mirror.Validate(); err != nil {
+	if h.Mirror != nil {
+		if err := h.Mirror.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -425,6 +432,32 @@ func (j *JwtRequestAuthentication) Validate() error {
 // RouteDestination holds the destination details associated with the route
 // +kubebuilder:object:generate=true
 type RouteDestination struct {
+	// Name of the destination. This field allows the xds layer
+	// to check if this route destination already exists and can be
+	// reused
+	Name      string                 `json:"name" yaml:"name"`
+	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+}
+
+// Validate the fields within the RouteDestination structure
+func (r RouteDestination) Validate() error {
+	var errs error
+	if len(r.Name) == 0 {
+		errs = multierror.Append(errs, ErrDestinationNameEmpty)
+	}
+	for _, ep := range r.Endpoints {
+		if err := ep.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	return errs
+
+}
+
+// DestinationEndpoint holds the endpoint details associated with the destination
+// +kubebuilder:object:generate=true
+type DestinationEndpoint struct {
 	// Host refers to the FQDN or IP address of the backend service.
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
@@ -434,30 +467,30 @@ type RouteDestination struct {
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
-// Validate the fields within the RouteDestination structure
-func (r RouteDestination) Validate() error {
+// Validate the fields within the DestinationEndpoint structure
+func (d DestinationEndpoint) Validate() error {
 	var errs error
 	// Only support IP hosts for now
-	if ip := net.ParseIP(r.Host); ip == nil {
-		errs = multierror.Append(errs, ErrRouteDestinationHostInvalid)
+	if ip := net.ParseIP(d.Host); ip == nil {
+		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
 	}
-	if r.Port == 0 {
-		errs = multierror.Append(errs, ErrRouteDestinationPortInvalid)
+	if d.Port == 0 {
+		errs = multierror.Append(errs, ErrDestEndpointPortInvalid)
 	}
 
 	return errs
 }
 
-// NewRouteDest creates a new RouteDestination.
-func NewRouteDest(host string, port uint32) *RouteDestination {
-	return &RouteDestination{
+// NewDestEndpoint creates a new DestinationEndpoint.
+func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
+	return &DestinationEndpoint{
 		Host: host,
 		Port: port,
 	}
 }
 
-func NewRouteDestWithWeight(host string, port uint32, weight uint32) *RouteDestination {
-	return &RouteDestination{
+func NewDestEndpointWithWeight(host string, port uint32, weight uint32) *DestinationEndpoint {
+	return &DestinationEndpoint{
 		Host:   host,
 		Port:   port,
 		Weight: &weight,
@@ -649,7 +682,7 @@ type TCPListener struct {
 	// TLS holds information for configuring TLS on a listener
 	TLS *TLS `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Destinations associated with TCP traffic to the service.
-	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 }
 
 // TLS holds information for configuring TLS on a listener
@@ -688,8 +721,8 @@ func (h TCPListener) Validate() error {
 		}
 	}
 
-	for _, route := range h.Destinations {
-		if err := route.Validate(); err != nil {
+	if h.Destination != nil {
+		if err := h.Destination.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -724,8 +757,8 @@ type UDPListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Port on which the service can be expected to be accessed by clients.
 	Port uint32 `json:"port" yaml:"port"`
-	// Destinations associated with UDP traffic to the service.
-	Destinations []*RouteDestination `json:"destinations,omitempty" yaml:"destinations,omitempty"`
+	// Destination associated with UDP traffic to the service.
+	Destination *RouteDestination `json:"destination,omitempty" yaml:"destination,omitempty"`
 }
 
 // Validate the fields within the UDPListener structure
@@ -740,11 +773,12 @@ func (h UDPListener) Validate() error {
 	if h.Port == 0 {
 		errs = multierror.Append(errs, ErrListenerPortInvalid)
 	}
-	for _, route := range h.Destinations {
-		if err := route.Validate(); err != nil {
+	if h.Destination != nil {
+		if err := h.Destination.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
+
 	return errs
 }
 

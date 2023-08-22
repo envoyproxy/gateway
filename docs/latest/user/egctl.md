@@ -283,14 +283,10 @@ configs:
       name: default-eg-http
       virtualHosts:
       - domains:
-        - '*'
-        name: default-eg-http
+        - www.example.com
+        name: default-eg-http-www.example.com
         routes:
         - match:
-            headers:
-            - name: :authority
-              stringMatch:
-                exact: www.example.com
             prefix: /
           route:
             cluster: default-backend-rule-0-match-0-www.example.com
@@ -377,14 +373,10 @@ dynamicRouteConfigs:
     name: default-eg-http
     virtualHosts:
     - domains:
-      - '*'
+      - www.example.com
       name: default-eg-http
       routes:
       - match:
-          headers:
-          - name: :authority
-            stringMatch:
-              exact: www.example.com
           prefix: /
         route:
           cluster: default-backend-rule-0-match-0-www.example.com

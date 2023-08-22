@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener/*
     routes:
     - match:
         prefix: /
@@ -14,5 +14,5 @@
           clusters:
           - name: invalid-backend-cluster
             weight: 1
-          - name: first-route
+          - name: first-route-dest
             weight: 1

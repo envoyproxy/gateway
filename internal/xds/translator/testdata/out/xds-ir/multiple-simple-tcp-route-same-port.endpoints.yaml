@@ -1,4 +1,4 @@
-- clusterName: tcp-route-simple
+- clusterName: tcp-route-simple-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -13,7 +13,7 @@
             portValue: 50001
     loadBalancingWeight: 1
     locality: {}
-- clusterName: tcp-route-simple-1
+- clusterName: tcp-route-simple-1-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -28,7 +28,7 @@
             portValue: 50001
     loadBalancingWeight: 1
     locality: {}
-- clusterName: tcp-route-simple-2
+- clusterName: tcp-route-simple-2-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -43,7 +43,7 @@
             portValue: 50001
     loadBalancingWeight: 1
     locality: {}
-- clusterName: tcp-route-simple-3
+- clusterName: tcp-route-simple-3-dest
   endpoints:
   - lbEndpoints:
     - endpoint:
@@ -58,7 +58,7 @@
             portValue: 50001
     loadBalancingWeight: 1
     locality: {}
-- clusterName: tcp-route-simple-4
+- clusterName: tcp-route-simple-4-dest
   endpoints:
   - lbEndpoints:
     - endpoint:

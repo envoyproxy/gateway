@@ -3,12 +3,12 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener/*
     routes:
     - match:
         prefix: /
       name: mirror-route
       route:
-        cluster: mirror-route
+        cluster: route-dest
         requestMirrorPolicies:
-        - cluster: mirror-route-mirror-0
+        - cluster: mirror-route-dest

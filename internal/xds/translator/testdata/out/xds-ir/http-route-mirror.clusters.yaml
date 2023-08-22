@@ -6,8 +6,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: mirror-route
-  name: mirror-route
+    serviceName: route-dest
+  name: route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
@@ -19,8 +19,8 @@
     edsConfig:
       ads: {}
       resourceApiVersion: V3
-    serviceName: mirror-route-mirror-0
-  name: mirror-route-mirror-0
+    serviceName: mirror-route-dest
+  name: mirror-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS

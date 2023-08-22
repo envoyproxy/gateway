@@ -3,7 +3,7 @@
   virtualHosts:
   - domains:
     - '*'
-    name: first-listener
+    name: first-listener/*
     routes:
     - match:
         headers:
@@ -13,4 +13,4 @@
         prefix: /
       name: first-route
       route:
-        cluster: first-route
+        cluster: first-route-dest
