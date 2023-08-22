@@ -351,7 +351,6 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `enableEnvoyPatchPolicy` _boolean_ | EnableEnvoyPatchPolicy enables Envoy Gateway to reconcile and implement the EnvoyPatchPolicy resources. |
-| `enableMultiClusterServiceAPI` _boolean_ | EnableMultiClusterServiceAPI enables Envoy Gateway to reconcile and implement the Multicluster services' ServiceImport resource. |
 
 
 ## ExtensionHooks
