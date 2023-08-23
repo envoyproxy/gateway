@@ -1227,9 +1227,9 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
 	epPredicates := []predicate.Predicate{
-    predicate.ResourceVersionChangedPredicate{},
-    predicate.NewPredicateFuncs(r.hasManagedClass),
-  }
+		predicate.ResourceVersionChangedPredicate{},
+		predicate.NewPredicateFuncs(r.hasManagedClass),
+	}
 	if len(ls) != 0 {
 		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels(ls)))
 	}
@@ -1455,7 +1455,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		// Watch EnvoyPatchPolicy CRUDs
 		if err := c.Watch(
 			source.Kind(mgr.GetCache(), &egv1a1.EnvoyPatchPolicy{}),
-		  handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 			eppPredicates...,
 		); err != nil {
 			return err

@@ -1791,45 +1791,12 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	// Create the gateways
 	gw1 := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNSName}, gcName)
 	require.NoError(t, cli.Create(ctx, gw1))
-	gw2 := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName}, gcName)
-	require.NoError(t, cli.Create(ctx, gw2))
-
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Namespace: gw1.Namespace, Name: gw1.Name}, gw1); err != nil {
-			return false
-		}
-
-		for _, cond := range gw1.Status.Conditions {
-			// fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-
-		// Scheduled=True condition not found.
-		return false
-	}, defaultWait, defaultTick)
-
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gw1))
 	}()
 
-	// require.Eventually(t, func() bool {
-	// 	if err := cli.Get(ctx, types.NamespacedName{Namespace: gw2.Namespace, Name: gw2.Name}, gw2); err != nil {
-	// 		return false
-	// 	}
-
-	// 	for _, cond := range gw1.Status.Conditions {
-	// 		fmt.Printf("Condition: %v\n", cond)
-	// 		if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
-	// 			return true
-	// 		}
-	// 	}
-
-	// 	// Scheduled=True condition not found.
-	// 	return false
-	// }, defaultWait, defaultTick)
-
+	gw2 := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName}, gcName)
+	require.NoError(t, cli.Create(ctx, gw2))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gw2))
 	}()
@@ -1840,7 +1807,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		return res != nil && len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
 
-	// _, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "gw-ns-2", Namespace: noneWatchedNSName})
-	// require.Equal(t, false, ok)
+	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName})
+	require.Equal(t, false, ok)
 
 }
