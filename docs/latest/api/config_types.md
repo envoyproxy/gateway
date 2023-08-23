@@ -835,7 +835,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy. When Matches is nil(not set), gateway by default create and expose only a subset of Envoy stats with prefixes(cluster_manager,listener_manager,server,cluster.xds-grpc) expressions match on the name of stats. When Matches is not empty, this option is to control creation of additional Envoy stats with prefix, suffix, and regex expressions match on the name of the stats. |
+| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy. |
 
 
 ## ProxyTelemetry
