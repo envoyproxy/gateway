@@ -47,8 +47,9 @@ httpRoutes:
       namespace: envoy-gateway
     rules:
     - backendRefs:
-      - name: service-1
-        namespace: backends
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: service-import-that-doesnt-exist
         port: 8080
       matches:
       - path:
@@ -63,8 +64,8 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Backend ref to Service backends/service-1 not permitted by any ReferenceGrant.
-        reason: RefNotPermitted
+        message: ServiceImport default/service-import-that-doesnt-exist not found
+        reason: BackendNotFound
         status: "False"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller

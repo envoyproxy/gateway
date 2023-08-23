@@ -220,11 +220,11 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
-			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
+			WithIndex(&gwapiv1b1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateEndpointSliceForReconcile(tc.endpointSlice)
@@ -360,11 +360,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
-			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
+			WithIndex(&gwapiv1b1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

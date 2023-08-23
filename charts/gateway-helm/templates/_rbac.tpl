@@ -19,6 +19,7 @@ All cluster scoped resources for Envoy Gateway RBAC.
 - {{ include "eg.rbac.cluster.basic" . | nindent 2 | trim }}
 - {{ include "eg.rbac.cluster.gateway.networking" . | nindent 2 | trim }}
 - {{ include "eg.rbac.cluster.gateway.networking.status" . | nindent 2 | trim }}
+- {{ include "eg.rbac.cluster.multiclusterservices" . | nindent 2 | trim }}
 {{- end }}
 
 {{/*
@@ -155,6 +156,18 @@ verbs:
 - list
 - patch
 - update
+- watch
+{{- end }}
+
+
+{{- define "eg.rbac.cluster.multiclusterservices" -}}
+apiGroups:
+- multicluster.x-k8s.io
+resources:
+- serviceimports
+verbs:
+- get
+- list
 - watch
 {{- end }}
 

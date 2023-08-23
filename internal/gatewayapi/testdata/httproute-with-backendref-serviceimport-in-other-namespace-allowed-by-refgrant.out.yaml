@@ -47,7 +47,9 @@ httpRoutes:
       namespace: envoy-gateway
     rules:
     - backendRefs:
-      - name: service-1
+      - group: multicluster.x-k8s.io
+        kind: ServiceImport
+        name: service-import-1
         namespace: backends
         port: 8080
       matches:
@@ -63,9 +65,9 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Backend ref to Service backends/service-1 not permitted by any ReferenceGrant.
-        reason: RefNotPermitted
-        status: "False"
+        message: Resolved all the Object references for the Route
+        reason: ResolvedRefs
+        status: "True"
         type: ResolvedRefs
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
       parentRef:
@@ -100,10 +102,14 @@ xdsIR:
       port: 10080
       routes:
       - backendWeights:
-          invalid: 1
+          invalid: 0
           valid: 0
-        directResponse:
-          statusCode: 500
+        destination:
+          endpoints:
+          - host: 7.7.7.7
+            port: 8080
+            weight: 1
+          name: httproute/default/httproute-1/rule/0
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0-*
         pathMatch:

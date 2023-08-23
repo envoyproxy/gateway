@@ -19,7 +19,7 @@ import (
 )
 
 func (t *Translator) validateBackendRef(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext,
-	resources *Resources, serviceNamespace string, routeKind v1beta1.Kind) bool {
+	resources *Resources, backendNamespace string, routeKind v1beta1.Kind) bool {
 	if !t.validateBackendRefGroup(backendRef, parentRef, route) {
 		return false
 	}
@@ -36,19 +36,27 @@ func (t *Translator) validateBackendRef(backendRef *v1alpha2.BackendRef, parentR
 	if routeKind == KindUDPRoute {
 		protocol = v1.ProtocolUDP
 	}
-	if !t.validateBackendService(backendRef, parentRef, resources, serviceNamespace, route, protocol) {
-		return false
+	backendRefKind := KindDerefOr(backendRef.Kind, KindService)
+	switch backendRefKind {
+	case KindService:
+		if !t.validateBackendService(backendRef, parentRef, resources, backendNamespace, route, protocol) {
+			return false
+		}
+	case KindServiceImport:
+		if !t.validateBackendServiceImport(backendRef, parentRef, resources, backendNamespace, route, protocol) {
+			return false
+		}
 	}
 	return true
 }
 
 func (t *Translator) validateBackendRefGroup(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
-	if backendRef.Group != nil && *backendRef.Group != "" {
+	if backendRef.Group != nil && *backendRef.Group != "" && *backendRef.Group != GroupMultiClusterService {
 		parentRef.SetCondition(route,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonInvalidKind,
-			"Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) is supported",
+			fmt.Sprintf("Group is invalid, only the core API group (specified by omitting the group field or setting it to an empty string) and %s is supported", GroupMultiClusterService),
 		)
 		return false
 	}
@@ -56,12 +64,12 @@ func (t *Translator) validateBackendRefGroup(backendRef *v1alpha2.BackendRef, pa
 }
 
 func (t *Translator) validateBackendRefKind(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, route RouteContext) bool {
-	if backendRef.Kind != nil && *backendRef.Kind != KindService {
+	if backendRef.Kind != nil && *backendRef.Kind != KindService && *backendRef.Kind != KindServiceImport {
 		parentRef.SetCondition(route,
 			v1beta1.RouteConditionResolvedRefs,
 			metav1.ConditionFalse,
 			v1beta1.RouteReasonInvalidKind,
-			"Kind is invalid, only Service is supported",
+			"Kind is invalid, only Service and MCS ServiceImport is supported",
 		)
 		return false
 	}
@@ -78,8 +86,8 @@ func (t *Translator) validateBackendNamespace(backendRef *v1alpha2.BackendRef, p
 				namespace: route.GetNamespace(),
 			},
 			crossNamespaceTo{
-				group:     "",
-				kind:      KindService,
+				group:     GroupDerefOr(backendRef.Group, ""),
+				kind:      KindDerefOr(backendRef.Kind, KindService),
 				namespace: string(*backendRef.Namespace),
 				name:      string(backendRef.Name),
 			},
@@ -89,7 +97,7 @@ func (t *Translator) validateBackendNamespace(backendRef *v1alpha2.BackendRef, p
 				v1beta1.RouteConditionResolvedRefs,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonRefNotPermitted,
-				fmt.Sprintf("Backend ref to service %s/%s not permitted by any ReferenceGrant.", *backendRef.Namespace, backendRef.Name),
+				fmt.Sprintf("Backend ref to %s %s/%s not permitted by any ReferenceGrant.", KindDerefOr(backendRef.Kind, KindService), *backendRef.Namespace, backendRef.Name),
 			)
 			return false
 		}
@@ -140,6 +148,44 @@ func (t *Translator) validateBackendService(backendRef *v1alpha2.BackendRef, par
 			metav1.ConditionFalse,
 			"PortNotFound",
 			fmt.Sprintf(string(protocol)+" Port %d not found on service %s/%s", *backendRef.Port, serviceNamespace,
+				string(backendRef.Name)),
+		)
+		return false
+	}
+	return true
+}
+
+func (t *Translator) validateBackendServiceImport(backendRef *v1alpha2.BackendRef, parentRef *RouteParentContext, resources *Resources,
+	serviceImportNamespace string, route RouteContext, protocol v1.Protocol) bool {
+	serviceImport := resources.GetServiceImport(serviceImportNamespace, string(backendRef.Name))
+	if serviceImport == nil {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			v1beta1.RouteReasonBackendNotFound,
+			fmt.Sprintf("ServiceImport %s/%s not found", NamespaceDerefOr(backendRef.Namespace, route.GetNamespace()),
+				string(backendRef.Name)),
+		)
+		return false
+	}
+	var portFound bool
+	for _, port := range serviceImport.Spec.Ports {
+		portProtocol := port.Protocol
+		if port.Protocol == "" { // Default protocol is TCP
+			portProtocol = v1.ProtocolTCP
+		}
+		if port.Port == int32(*backendRef.Port) && portProtocol == protocol {
+			portFound = true
+			break
+		}
+	}
+
+	if !portFound {
+		parentRef.SetCondition(route,
+			v1beta1.RouteConditionResolvedRefs,
+			metav1.ConditionFalse,
+			"PortNotFound",
+			fmt.Sprintf(string(protocol)+" Port %d not found on ServiceImport %s/%s", *backendRef.Port, serviceImportNamespace,
 				string(backendRef.Name)),
 		)
 		return false

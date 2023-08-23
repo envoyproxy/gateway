@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
@@ -48,11 +50,11 @@ const (
 	gatewayUDPRouteIndex          = "gatewayUDPRouteIndex"
 	secretGatewayIndex            = "secretGatewayIndex"
 	targetRefGrantRouteIndex      = "targetRefGrantRouteIndex"
-	serviceHTTPRouteIndex         = "serviceHTTPRouteIndex"
-	serviceGRPCRouteIndex         = "serviceGRPCRouteIndex"
-	serviceTLSRouteIndex          = "serviceTLSRouteIndex"
-	serviceTCPRouteIndex          = "serviceTCPRouteIndex"
-	serviceUDPRouteIndex          = "serviceUDPRouteIndex"
+	backendHTTPRouteIndex         = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex         = "backendGRPCRouteIndex"
+	backendTLSRouteIndex          = "backendTLSRouteIndex"
+	backendTCPRouteIndex          = "backendTCPRouteIndex"
+	backendUDPRouteIndex          = "backendUDPRouteIndex"
 	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
 	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
 	authenFilterGRPCRouteIndex    = "authenGRPCRouteIndex"
@@ -119,8 +121,8 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 type resourceMappings struct {
 	// Map for storing namespaces for Route, Service and Gateway objects.
 	allAssociatedNamespaces map[string]struct{}
-	// Map for storing service NamespaceNames referred by various Route objects.
-	allAssociatedBackendRefs map[types.NamespacedName]struct{}
+	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
+	allAssociatedBackendRefs map[gwapiv1b1.BackendObjectReference]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
 	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1a2.ReferenceGrant
 	// authenFilters is a map of AuthenticationFilters, where the key is the
@@ -138,7 +140,7 @@ type resourceMappings struct {
 func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
-		allAssociatedBackendRefs: map[types.NamespacedName]struct{}{},
+		allAssociatedBackendRefs: map[gwapiv1b1.BackendObjectReference]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
 		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
 		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
@@ -202,39 +204,59 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		return reconcile.Result{}, err
 	}
 
-	for serviceNamespaceName := range resourceMap.allAssociatedBackendRefs {
-		r.log.Info("processing Service", "namespace", serviceNamespaceName.Namespace,
-			"name", serviceNamespaceName.Name)
+	for backendRef := range resourceMap.allAssociatedBackendRefs {
+		backendRefKind := gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService)
+		r.log.Info("processing Backend", "kind", backendRefKind, "namespace", string(*backendRef.Namespace),
+			"name", string(backendRef.Name))
 
-		service := new(corev1.Service)
-		err := r.client.Get(ctx, serviceNamespaceName, service)
-		if err != nil {
-			r.log.Error(err, "failed to get Service", "namespace", serviceNamespaceName.Namespace,
-				"name", serviceNamespaceName.Name)
-		} else {
-			resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
-			resourceTree.Services = append(resourceTree.Services, service)
-			r.log.Info("added Service to resource tree", "namespace", serviceNamespaceName.Namespace,
-				"name", serviceNamespaceName.Name)
-
-			// Retrieve the EndpointSlices associated with the service
-			endpointSliceList := new(discoveryv1.EndpointSliceList)
-			opts := []client.ListOption{
-				client.MatchingLabels(map[string]string{
-					discoveryv1.LabelServiceName: serviceNamespaceName.Name,
-				}),
-				client.InNamespace(serviceNamespaceName.Namespace),
-			}
-			if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
-				r.log.Error(err, "failed to get EndpointSlices", "namespace", serviceNamespaceName.Namespace,
-					"service", serviceNamespaceName.Name)
+		var endpointSliceLabelKey string
+		switch backendRefKind {
+		case gatewayapi.KindService:
+			service := new(corev1.Service)
+			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, service)
+			if err != nil {
+				r.log.Error(err, "failed to get Service", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
 			} else {
-				for _, endpointSlice := range endpointSliceList.Items {
-					endpointSlice := endpointSlice
-					r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
-						"name", endpointSlice.Name)
-					resourceTree.EndpointSlices = append(resourceTree.EndpointSlices, &endpointSlice)
-				}
+				resourceMap.allAssociatedNamespaces[service.Namespace] = struct{}{}
+				resourceTree.Services = append(resourceTree.Services, service)
+				r.log.Info("added Service to resource tree", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			}
+			endpointSliceLabelKey = discoveryv1.LabelServiceName
+
+		case gatewayapi.KindServiceImport:
+			serviceImport := new(mcsapi.ServiceImport)
+			err := r.client.Get(ctx, types.NamespacedName{Namespace: string(*backendRef.Namespace), Name: string(backendRef.Name)}, serviceImport)
+			if err != nil {
+				r.log.Error(err, "failed to get ServiceImport", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			} else {
+				resourceMap.allAssociatedNamespaces[serviceImport.Namespace] = struct{}{}
+				resourceTree.ServiceImports = append(resourceTree.ServiceImports, serviceImport)
+				r.log.Info("added ServiceImport to resource tree", "namespace", string(*backendRef.Namespace),
+					"name", string(backendRef.Name))
+			}
+			endpointSliceLabelKey = mcsapi.LabelServiceName
+		}
+
+		// Retrieve the EndpointSlices associated with the service
+		endpointSliceList := new(discoveryv1.EndpointSliceList)
+		opts := []client.ListOption{
+			client.MatchingLabels(map[string]string{
+				endpointSliceLabelKey: string(backendRef.Name),
+			}),
+			client.InNamespace(string(*backendRef.Namespace)),
+		}
+		if err := r.client.List(ctx, endpointSliceList, opts...); err != nil {
+			r.log.Error(err, "failed to get EndpointSlices", "namespace", string(*backendRef.Namespace),
+				backendRefKind, string(backendRef.Name))
+		} else {
+			for _, endpointSlice := range endpointSliceList.Items {
+				endpointSlice := endpointSlice
+				r.log.Info("added EndpointSlice to resource tree", "namespace", endpointSlice.Namespace,
+					"name", endpointSlice.Name)
+				resourceTree.EndpointSlices = append(resourceTree.EndpointSlices, &endpointSlice)
 			}
 		}
 	}
@@ -538,7 +560,7 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 }
 
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
-//   - For Service objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
+//   - For Service, ServiceImports objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
 //     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
 //   - For AuthenticationFilter and RateLimitFilter objects that are referenced in HTTPRoute objects via
 //     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
@@ -548,7 +570,7 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -622,15 +644,15 @@ func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
 	return gateways
 }
 
-func serviceHTTPRouteIndexFunc(rawObj client.Object) []string {
+func backendHTTPRouteIndexFunc(rawObj client.Object) []string {
 	httproute := rawObj.(*gwapiv1b1.HTTPRoute)
-	var services []string
+	var backendRefs []string
 	for _, rule := range httproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
-				// If an explicit Service namespace is not provided, use the HTTPRoute namespace to
+				// If an explicit Backend namespace is not provided, use the HTTPRoute namespace to
 				// lookup the provided Gateway Name.
-				services = append(services,
+				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, httproute.Namespace),
 						Name:      string(backend.Name),
@@ -639,7 +661,7 @@ func serviceHTTPRouteIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
-	return services
+	return backendRefs
 }
 
 // addGRPCRouteIndexers adds indexing on GRPCRoute, for Service objects that are
@@ -650,7 +672,7 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc); err != nil {
 		return err
 	}
 
@@ -683,15 +705,15 @@ func gatewayGRPCRouteIndexFunc(rawObj client.Object) []string {
 	return gateways
 }
 
-func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
+func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
-	var services []string
+	var backendRefs []string
 	for _, rule := range grpcroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
-				// If an explicit Service namespace is not provided, use the GRPCRoute namespace to
+				// If an explicit Backend namespace is not provided, use the GRPCRoute namespace to
 				// lookup the provided Gateway Name.
-				services = append(services,
+				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOr(backend.Namespace, grpcroute.Namespace),
 						Name:      string(backend.Name),
@@ -700,7 +722,7 @@ func serviceGRPCRouteIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
-	return services
+	return backendRefs
 }
 
 func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
@@ -769,21 +791,21 @@ func addTLSRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
-func serviceTLSRouteIndexFunc(rawObj client.Object) []string {
+func backendTLSRouteIndexFunc(rawObj client.Object) []string {
 	tlsroute := rawObj.(*gwapiv1a2.TLSRoute)
-	var services []string
+	var backendRefs []string
 	for _, rule := range tlsroute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
-				// If an explicit Service namespace is not provided, use the TLSRoute namespace to
+				// If an explicit Backend namespace is not provided, use the TLSRoute namespace to
 				// lookup the provided Gateway Name.
-				services = append(services,
+				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tlsroute.Namespace),
 						Name:      string(backend.Name),
@@ -792,7 +814,7 @@ func serviceTLSRouteIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
-	return services
+	return backendRefs
 }
 
 // addTCPRouteIndexers adds indexing on TCPRoute, for Service objects that are
@@ -819,21 +841,21 @@ func addTCPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
-func serviceTCPRouteIndexFunc(rawObj client.Object) []string {
+func backendTCPRouteIndexFunc(rawObj client.Object) []string {
 	tcpRoute := rawObj.(*gwapiv1a2.TCPRoute)
-	var services []string
+	var backendRefs []string
 	for _, rule := range tcpRoute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
-				// If an explicit Service namespace is not provided, use the TCPRoute namespace to
+				// If an explicit Backend namespace is not provided, use the TCPRoute namespace to
 				// lookup the provided Gateway Name.
-				services = append(services,
+				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, tcpRoute.Namespace),
 						Name:      string(backend.Name),
@@ -842,7 +864,7 @@ func serviceTCPRouteIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
-	return services
+	return backendRefs
 }
 
 // addUDPRouteIndexers adds indexing on UDPRoute, for Service objects that are
@@ -869,21 +891,21 @@ func addUDPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc); err != nil {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc); err != nil {
 		return err
 	}
 	return nil
 }
 
-func serviceUDPRouteIndexFunc(rawObj client.Object) []string {
+func backendUDPRouteIndexFunc(rawObj client.Object) []string {
 	udproute := rawObj.(*gwapiv1a2.UDPRoute)
-	var services []string
+	var backendRefs []string
 	for _, rule := range udproute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			if backend.Kind == nil || string(*backend.Kind) == gatewayapi.KindService {
-				// If an explicit Service namespace is not provided, use the UDPRoute namespace to
+				// If an explicit Backend namespace is not provided, use the UDPRoute namespace to
 				// lookup the provided Gateway Name.
-				services = append(services,
+				backendRefs = append(backendRefs,
 					types.NamespacedName{
 						Namespace: gatewayapi.NamespaceDerefOrAlpha(backend.Namespace, udproute.Namespace),
 						Name:      string(backend.Name),
@@ -892,7 +914,7 @@ func serviceUDPRouteIndexFunc(rawObj client.Object) []string {
 			}
 		}
 	}
-	return services
+	return backendRefs
 }
 
 // addGatewayIndexers adds indexing on Gateway, for Secret objects that are
@@ -1249,6 +1271,22 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	serviceImportCRDExists := r.serviceImportCRDExists(mgr)
+	if !serviceImportCRDExists {
+		r.log.Info("ServiceImport CRD not found, skipping ServiceImport watch")
+	}
+
+	// Watch ServiceImport CRUDs and process affected *Route objects.
+	if serviceImportCRDExists {
+		if err := c.Watch(
+			source.Kind(mgr.GetCache(), &mcsapi.ServiceImport{}),
+			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+			predicate.NewPredicateFuncs(r.validateServiceImportForReconcile)); err != nil {
+			// ServiceImport is not available in the cluster, skip the watch and not throw error.
+			r.log.Info("unable to watch ServiceImport: %s", err.Error())
+		}
+	}
+
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
 	if err := c.Watch(
 		source.Kind(mgr.GetCache(), &discoveryv1.EndpointSlice{}),
@@ -1421,4 +1459,27 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 	}
 
 	return nil
+}
+
+// serviceImportCRDExists checks for the existence of the ServiceImport CRD in k8s APIServer before watching it
+func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool {
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	if err != nil {
+		r.log.Error(err, "failed to create discovery client")
+	}
+	apiResourceList, err := discoveryClient.ServerPreferredResources()
+	if err != nil {
+		r.log.Error(err, "failed to get API resource list")
+	}
+	serviceImportFound := false
+	for _, list := range apiResourceList {
+		for _, resource := range list.APIResources {
+			if list.GroupVersion == mcsapi.GroupVersion.String() && resource.Kind == gatewayapi.KindServiceImport {
+				serviceImportFound = true
+				break
+			}
+		}
+	}
+
+	return serviceImportFound
 }
