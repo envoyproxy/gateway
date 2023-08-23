@@ -81,22 +81,17 @@ spec:
               readOnly: true
             - mountPath: /sds
               name: sds
-            - mountPath: /tmp/
+            - mountPath: /cores/
               name: coredump
       initContainers:
-         - name: enable-core-dump
-           image: envoyproxy/envoy-dev:latest
-           command:
-             - /bin/sh
-           args:
-             - -c
-             - sysctl -w kernel.core_pattern=/tmp/core-%e-%p-%t && ulimit -c unlimited
-           imagePullPolicy: IfNotPresent
-           securityContext:
-             privileged: true
-             runAsUser:  0
-             runAsGroup: 0
-             runAsNonRoot: false
+        - name: condig-core-dump
+          image: envoyproxy/envoy-dev:latest
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - sysctl -w kernel.core_pattern=/cores/core-%e-%p-%t && ulimit -c unlimited
+          imagePullPolicy: IfNotPresent
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -119,7 +114,7 @@ spec:
           name: sds
         - name: coredump
           hostPath:
-            path: /data/log
+            path: /var/gateway/proxy/data/
             type: DirectoryOrCreate
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600

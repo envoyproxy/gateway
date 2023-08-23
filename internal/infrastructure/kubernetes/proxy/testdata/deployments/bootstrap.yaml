@@ -81,7 +81,7 @@ spec:
               readOnly: true
             - mountPath: /sds
               name: sds
-            - mountPath: /tmp/
+            - mountPath: /cores/
               name: coredump
       dnsPolicy: ClusterFirst
       restartPolicy: Always
@@ -105,7 +105,7 @@ spec:
           name: sds
         - name: coredump
           hostPath:
-            path: /data/log
+            path: /var/gateway/proxy/data/
             type: DirectoryOrCreate
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600

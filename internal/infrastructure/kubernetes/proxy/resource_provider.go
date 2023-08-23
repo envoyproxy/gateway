@@ -230,8 +230,8 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 
 	if r.infra.Config.Spec.EnableCoreDump {
-		initcontainers := expectedInitContainers(*deploymentConfig.Container.Image)
-		deployment.Spec.Template.Spec.InitContainers = initcontainers
+		coreDumpInitContainers := expectedCoreDumpInitContainers(*deploymentConfig.Container.Image)
+		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, coreDumpInitContainers)
 	}
 
 	return deployment, nil

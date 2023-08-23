@@ -39,7 +39,7 @@ const (
 	// envoyPodEnvVar is the name of the Envoy pod name environment variable.
 	envoyPodEnvVar = "ENVOY_POD_NAME"
 	// initContainerName is the name of the init container.
-	initContainerName = "enable-core-dump"
+	initContainerName = "configure-core-dump"
 )
 
 var (
@@ -194,24 +194,24 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 	return containers, nil
 }
 
-func expectedInitContainers(image string) []corev1.Container {
+func expectedCoreDumpInitContainers(image string) corev1.Container {
 	args := []string{
 		"-c",
-		"sysctl -w kernel.core_pattern=/tmp/core-%e-%p-%t && ulimit -c unlimited",
+		// set the output directory for the core file & increase the core file size limit
+		"sysctl -w kernel.core_pattern=/cores/core-%e-%p-%t && ulimit -c unlimited",
 	}
-	containers := []corev1.Container{
-		{
-			Name:            initContainerName,
-			Image:           *pointer.String(image),
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			Command:         []string{"/bin/sh"},
-			Args:            args,
-			SecurityContext: &corev1.SecurityContext{
-				RunAsUser:    pointer.Int64(0),
-				RunAsGroup:   pointer.Int64(0),
-				RunAsNonRoot: pointer.Bool(false),
-				Privileged:   pointer.Bool(true),
-			},
+
+	containers := corev1.Container{
+		Name:            initContainerName,
+		Image:           *pointer.String(image),
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Command:         []string{"/bin/sh"},
+		Args:            args,
+		SecurityContext: &corev1.SecurityContext{
+			RunAsUser:    pointer.Int64(0),
+			RunAsGroup:   pointer.Int64(0),
+			RunAsNonRoot: pointer.Bool(false),
+			Privileged:   pointer.Bool(true),
 		},
 	}
 	return containers
@@ -231,7 +231,7 @@ func expectedContainerVolumeMounts(deploymentSpec *egcfgv1a1.KubernetesDeploymen
 		},
 		{
 			Name:      "coredump",
-			MountPath: "/tmp/",
+			MountPath: "/cores/",
 		},
 	}
 
@@ -277,7 +277,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 			Name: "coredump",
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
-					Path: "/data/log",
+					Path: "/var/gateway/proxy/data/",
 					Type: &createType,
 				},
 			},
