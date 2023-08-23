@@ -1283,7 +1283,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 			handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 			predicate.NewPredicateFuncs(r.validateServiceImportForReconcile)); err != nil {
 			// ServiceImport is not available in the cluster, skip the watch and not throw error.
-			r.log.Info("Unable to watch not ServiceImport: %s", err.Error())
+			r.log.Info("unable to watch ServiceImport: %s", err.Error())
 		}
 	}
 
@@ -1465,11 +1465,11 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 func (r *gatewayAPIReconciler) serviceImportCRDExists(mgr manager.Manager) bool {
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
-		r.log.Error(err, "Failed to create discovery client")
+		r.log.Error(err, "failed to create discovery client")
 	}
 	apiResourceList, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
-		r.log.Error(err, "Failed to get API resource list")
+		r.log.Error(err, "failed to get API resource list")
 	}
 	serviceImportFound := false
 	for _, list := range apiResourceList {
