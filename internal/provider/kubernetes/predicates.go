@@ -54,16 +54,14 @@ func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(
 				"object", obj.GetObjectKind().GroupVersionKind().String(),
 				"name", obj.GetName(),
 				"namespace", ns)
-
 			return false
 		}
 		return ok
 	}
 }
 
-// TODO: add comments and rename the file name
+// checkNamespaceLabels checks if labels of namespace is subset of namespaceLabels
 func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string) (bool, error) {
-	// TODO: can cache be done here?
 	ns := &corev1.Namespace{}
 	if err := r.client.Get(
 		context.Background(),
@@ -73,10 +71,8 @@ func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string) (bool, erro
 		},
 		ns,
 	); err != nil {
-		// TODO: add log rather fail
 		return false, err
 	}
-	// r.log.Logger.Info(fmt.Sprintf("start to check labels %v in namespace with labels %v", labels, ns.Labels))
 	return containAll(ns.Labels, r.namespaceLabels), nil
 }
 
