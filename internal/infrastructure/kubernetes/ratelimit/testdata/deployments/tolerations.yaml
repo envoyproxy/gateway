@@ -73,6 +73,8 @@ spec:
           value: "/certs/tls.key"
         - name: CONFIG_GRPC_XDS_SERVER_TLS_CACERT
           value: "/certs/ca.crt"
+        - name: FORCE_START_WITHOUT_INITIAL_CONFIG
+          value: "true"
         - name: REDIS_TLS
           value: "true"
         - name: REDIS_TLS_CLIENT_CERT
@@ -86,7 +88,7 @@ spec:
         name: envoy-ratelimit
         ports:
         - containerPort: 8081
-          name: http
+          name: grpc
           protocol: TCP
         securityContext:
           privileged: true
@@ -106,6 +108,15 @@ spec:
         - mountPath: /redis-certs
           name: redis-certs
           readOnly: true
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthcheck
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
