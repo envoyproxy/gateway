@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -164,9 +165,12 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
 			vHost := vHosts[httpRoute.Hostname]
 			if vHost == nil {
+				// Remove dots from the hostname before appending it to the virtualHost name
+				// since dots are special chars used in stats tag extraction in Envoy
+				underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 				// Allocate virtual host for this httpRoute.
 				vHost = &routev3.VirtualHost{
-					Name:    fmt.Sprintf("%s/%s", httpListener.Name, httpRoute.Hostname),
+					Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
 					Domains: []string{httpRoute.Hostname},
 				}
 				vHosts[httpRoute.Hostname] = vHost

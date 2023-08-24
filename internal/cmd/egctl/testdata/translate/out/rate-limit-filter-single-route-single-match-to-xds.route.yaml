@@ -9,18 +9,18 @@ xds:
         virtualHosts:
         - domains:
           - ratelimit.example
-          name: envoy-gateway-system/eg/http/ratelimit.example
+          name: envoy-gateway-system/eg/http/ratelimit_example
           routes:
           - match:
               prefix: /
-            name: httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0/ratelimit.example
+            name: httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0/ratelimit_example
             route:
               cluster: httproute/envoy-gateway-system/http-ratelimit/rule/0
               rateLimits:
               - actions:
                 - headerValueMatch:
-                    descriptorKey: httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0/ratelimit.example-key-rule-0-match-0
-                    descriptorValue: httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0/ratelimit.example-value-rule-0-match-0
+                    descriptorKey: httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0/ratelimit_example-key-rule-0-match-0
+                    descriptorValue: httproute/envoy-gateway-system/http-ratelimit/rule/0/match/0/ratelimit_example-value-rule-0-match-0
                     expectMatch: true
                     headers:
                     - name: x-user-id

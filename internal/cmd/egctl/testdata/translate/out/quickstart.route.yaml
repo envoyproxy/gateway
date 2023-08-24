@@ -9,10 +9,10 @@ xds:
         virtualHosts:
         - domains:
           - www.example.com
-          name: envoy-gateway-system/eg/http/www.example.com
+          name: envoy-gateway-system/eg/http/www_example_com
           routes:
           - match:
               prefix: /
-            name: httproute/envoy-gateway-system/backend/rule/0/match/0/www.example.com
+            name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
             route:
               cluster: httproute/envoy-gateway-system/backend/rule/0

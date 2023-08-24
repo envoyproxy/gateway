@@ -13,13 +13,13 @@
                 "domains": [
                   "www.example.com"
                 ],
-                "name": "default/eg/http/www.example.com",
+                "name": "default/eg/http/www_example_com",
                 "routes": [
                   {
                     "match": {
                       "prefix": "/"
                     },
-                    "name": "httproute/default/backend/rule/0/match/0/www.example.com",
+                    "name": "httproute/default/backend/rule/0/match/0/www_example_com",
                     "route": {
                       "cluster": "httproute/default/backend/rule/0"
                     }
@@ -44,13 +44,13 @@
                 "domains": [
                   "www.example2.com"
                 ],
-                "name": "default/eg2/http/www.example2.com",
+                "name": "default/eg2/http/www_example2_com",
                 "routes": [
                   {
                     "match": {
                       "prefix": "/v2/"
                     },
-                    "name": "httproute/default/backend/rule/0/match/0/www.example2.com",
+                    "name": "httproute/default/backend/rule/0/match/0/www_example2_com",
                     "route": {
                       "cluster": "httproute/default/backend/rule/0"
                     }

@@ -853,13 +853,13 @@
                     "domains": [
                       "www.example.com"
                     ],
-                    "name": "default/eg/http/www.example.com",
+                    "name": "default/eg/http/www_example_com",
                     "routes": [
                       {
                         "match": {
                           "prefix": "/"
                         },
-                        "name": "httproute/default/backend/rule/0/match/0/www.example.com",
+                        "name": "httproute/default/backend/rule/0/match/0/www_example_com",
                         "route": {
                           "cluster": "httproute/default/backend/rule/0"
                         }
@@ -879,13 +879,13 @@
                     "domains": [
                       "www.grpc-example.com"
                     ],
-                    "name": "default/eg/grpc/www.grpc-example.com",
+                    "name": "default/eg/grpc/www_grpc-example_com",
                     "routes": [
                       {
                         "match": {
                           "path": "/com.example.Things/DoThing"
                         },
-                        "name": "grpcroute/default/backend/rule/0/match/0/www.grpc-example.com",
+                        "name": "grpcroute/default/backend/rule/0/match/0/www_grpc-example_com",
                         "route": {
                           "cluster": "grpcroute/default/backend/rule/0"
                         }
