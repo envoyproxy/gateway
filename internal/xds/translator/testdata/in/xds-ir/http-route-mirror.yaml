@@ -13,7 +13,7 @@ http:
       endpoints:
       - host: "1.2.3.4"
         port: 50000
-    mirror:
+    mirrors:
       - name: "mirror-route-dest"
         endpoints:
         - host: "2.3.4.5"
