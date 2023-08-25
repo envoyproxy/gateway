@@ -36,6 +36,9 @@ const (
 	envoyReadinessAddress = "0.0.0.0"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
+
+	// DefaultEnvoyStatsMatcherPrefixes is the default subset of Envoy stats.
+	DefaultEnvoyStatsMatcherPrefixes = "cluster_manager,listener_manager,server,cluster.xds-grpc"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -63,6 +66,10 @@ type bootstrapParameters struct {
 	EnablePrometheus bool
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
+
+	// StatsMatcher is to control creation of additional Envoy stats with prefix,
+	// suffix, and regex expressions match on the name of the stats.
+	StatsMatcher StatsMatcherParameters
 }
 
 type xdsServerParameters struct {
@@ -97,6 +104,12 @@ type readyServerParameters struct {
 	ReadinessPath string
 }
 
+type StatsMatcherParameters struct {
+	Prefixs            []string
+	Suffixs            []string
+	RegularExpressions []string
+}
+
 // render the stringified bootstrap config in yaml format.
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
@@ -113,7 +126,11 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 	var (
 		enablePrometheus bool
 		metricSinks      []metricSink
+		StatsMatcher     StatsMatcherParameters
 	)
+
+	// Set default envoy proxy Stats
+	StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, strings.Split(DefaultEnvoyStatsMatcherPrefixes, ",")...)
 
 	if proxyMetrics != nil {
 		if proxyMetrics.Prometheus != nil {
@@ -138,6 +155,18 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 				Port:    sink.OpenTelemetry.Port,
 			})
 		}
+
+		// Add additional custom envoy proxy stats
+		for _, match := range proxyMetrics.Matches {
+			switch match.Type {
+			case egcfgv1a1.Prefix:
+				StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+			case egcfgv1a1.Suffix:
+				StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+			case egcfgv1a1.RegularExpression:
+				StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
+			}
+		}
 	}
 
 	cfg := &bootstrapConfig{
@@ -158,6 +187,7 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			},
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
+			StatsMatcher:     StatsMatcher,
 		},
 	}
 
