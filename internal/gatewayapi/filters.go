@@ -76,7 +76,6 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		RuleIdx:      ruleIdx,
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
-	filterIdx := 0
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -98,8 +97,7 @@ func (t *Translator) ProcessHTTPFilters(parentRef *RouteParentContext,
 		case v1beta1.HTTPRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case v1beta1.HTTPRouteFilterRequestMirror:
-			t.processRequestMirrorFilter(filterIdx, filter.RequestMirror, httpFiltersContext, resources)
-			filterIdx++
+			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
 		case v1beta1.HTTPRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -121,7 +119,6 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 
 		HTTPFilterIR: &HTTPFilterIR{},
 	}
-	filterIdx := 0
 	for i := range filters {
 		filter := filters[i]
 		// If an invalid filter type has been configured then skip processing any more filters
@@ -139,8 +136,7 @@ func (t *Translator) ProcessGRPCFilters(parentRef *RouteParentContext,
 		case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
 			t.processResponseHeaderModifierFilter(filter.ResponseHeaderModifier, httpFiltersContext)
 		case v1alpha2.GRPCRouteFilterRequestMirror:
-			t.processRequestMirrorFilter(filterIdx, filter.RequestMirror, httpFiltersContext, resources)
-			filterIdx++
+			t.processRequestMirrorFilter(i, filter.RequestMirror, httpFiltersContext, resources)
 		case v1alpha2.GRPCRouteFilterExtensionRef:
 			t.processExtensionRefHTTPFilter(filter.ExtensionRef, httpFiltersContext, resources)
 		default:
@@ -839,31 +835,11 @@ func (t *Translator) processRequestMirrorFilter(
 
 	mirrorEndpoints, _ := t.processDestEndpoints(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
-	// Only add missing mirror destinations
-	for _, mirrorEp := range mirrorEndpoints {
-		var found bool
-		if filterContext.Mirror != nil && filterIdx < len(filterContext.Mirror) {
-			for _, mirror := range filterContext.Mirror[filterIdx].Endpoints {
-				if mirror != nil {
-					if mirror.Host == mirrorEp.Host && mirror.Port == mirrorEp.Port {
-						found = true
-					}
-				}
-			}
-		}
-
-		if !found {
-			if filterContext.Mirror == nil || filterIdx >= len(filterContext.Mirror) {
-				newMirror := &ir.RouteDestination{
-					Name: fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
-				}
-				newMirror.Endpoints = append(newMirror.Endpoints, mirrorEp)
-				filterContext.Mirror = append(filterContext.Mirror, newMirror)
-			} else {
-				filterContext.Mirror[filterIdx].Endpoints = append(filterContext.Mirror[filterIdx].Endpoints, mirrorEp)
-			}
-		}
+	newMirror := &ir.RouteDestination{
+		Name: fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
 	}
+	filterContext.Mirror = append(filterContext.Mirror, newMirror)
+	filterContext.Mirror[filterIdx].Endpoints = append(filterContext.Mirror[filterIdx].Endpoints, mirrorEndpoints...)
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {

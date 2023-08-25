@@ -456,7 +456,7 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("mirrorfilter"),
 		},
-		Mirror: &happyRouteDestination,
+		Mirror: []*RouteDestination{&happyRouteDestination},
 	}
 
 	// RouteDestination
