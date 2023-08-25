@@ -97,7 +97,13 @@ jobs:
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
-      run: make conformance
+      run: make experimental-conformance
+
+    - name: Upload Conformance Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: conformance-report-k8s-${{ matrix.version }}
+        path: ./conformance-report.yaml
 
   e2e-test:
     runs-on: ubuntu-latest
