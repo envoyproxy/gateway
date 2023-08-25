@@ -21,10 +21,10 @@ envoyProxy:
           stats_matcher:
             inclusion_list:
               patterns:
-              - prefix: "cluster_manager"
-              - prefix: "listener_manager"
-              - prefix: "server"
-              - prefix: "cluster.xds-grpc"
+              - prefix: cluster_manager
+              - prefix: listener_manager
+              - prefix: server
+              - prefix: cluster.xds-grpc
         dynamic_resources:
           ads_config:
             api_type: DELTA_GRPC

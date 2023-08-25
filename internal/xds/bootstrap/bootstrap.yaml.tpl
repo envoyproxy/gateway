@@ -13,15 +13,15 @@ stats_config:
     inclusion_list:
       patterns:
       {{- range $a, $s := .StatsMatcher.Prefixs }}
-      - prefix: "{{$s}}"
+      - prefix: {{$s}}
       {{- end}}
       {{- range $a, $s := .StatsMatcher.Suffixs }}
-      - suffix: "{{$s}}"
+      - suffix: {{$s}}
       {{- end}}
       {{- range $a, $s := .StatsMatcher.RegularExpressions }}
       - safe_regex:
           google_re2: {}
-          regex: "{{js $s}}"
+          regex: {{js $s}}
       {{- end}}
 dynamic_resources:
   ads_config:

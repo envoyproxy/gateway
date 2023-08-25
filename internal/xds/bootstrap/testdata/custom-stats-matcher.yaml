@@ -12,16 +12,16 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
-      - prefix: "cluster_manager"
-      - prefix: "listener_manager"
-      - prefix: "server"
-      - prefix: "cluster.xds-grpc"
-      - prefix: "http"
-      - prefix: "cluster"
-      - suffix: "upstream_rq"
+      - prefix: cluster_manager
+      - prefix: listener_manager
+      - prefix: server
+      - prefix: cluster.xds-grpc
+      - prefix: http
+      - prefix: cluster
+      - suffix: upstream_rq
       - safe_regex:
           google_re2: {}
-          regex: "virtual.*"
+          regex: virtual.*
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC
