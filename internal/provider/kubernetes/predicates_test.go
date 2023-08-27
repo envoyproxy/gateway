@@ -118,7 +118,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 				Build(),
 		}
 		t.Run(tc.name, func(t *testing.T) {
-			res := r.hasMatchingNamespaceLabels(tc.labels)(
+			res := r.hasMatchingNamespaceLabels(
 				test.GetHTTPRoute(
 					types.NamespacedName{
 						Namespace: ns,

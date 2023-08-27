@@ -44,30 +44,31 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 
 // hasMatchingNamespaceLabels returns true if the namespace of provided object has
 // the provided labels or false otherwise.
-func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(labels []string) func(client.Object) bool {
-	return func(obj client.Object) bool {
-		ns := obj.GetNamespace()
-		ok, err := r.checkNamespaceLabels(ns)
-		if err != nil {
-			r.log.Error(
-				err, "fail to get Namespace",
-				"object", obj.GetObjectKind().GroupVersionKind().String(),
-				"name", obj.GetName(),
-				"namespace", ns)
-			return false
-		}
-		return ok
+func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
+	ok, err := r.checkObjectNamespaceLabels(obj)
+	if err != nil {
+		r.log.Error(
+			err, "failed to get Namespace",
+			"object", obj.GetObjectKind().GroupVersionKind().String(),
+			"name", obj.GetName())
+		return false
 	}
+	return ok
 }
 
-// checkNamespaceLabels checks if labels of namespace is subset of namespaceLabels
-func (r *gatewayAPIReconciler) checkNamespaceLabels(nsString string) (bool, error) {
+type NamespaceGetter interface {
+	GetNamespace() string
+}
+
+// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
+func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(getter NamespaceGetter) (bool, error) {
+	// TODO: add validation here because some objects don't have namespace
 	ns := &corev1.Namespace{}
 	if err := r.client.Get(
 		context.Background(),
 		client.ObjectKey{
 			Namespace: "", // Namespace object should have empty Namespace
-			Name:      nsString,
+			Name:      getter.GetNamespace(),
 		},
 		ns,
 	); err != nil {

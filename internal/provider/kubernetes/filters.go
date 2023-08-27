@@ -24,11 +24,10 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 	if len(r.namespaceLabels) != 0 {
 		var as []egv1a1.AuthenticationFilter
 		for _, a := range authens {
-			ns := a.Namespace
-			ok, err := r.checkNamespaceLabels(ns)
+			ok, err := r.checkObjectNamespaceLabels(&a)
 			if err != nil {
 				// TODO: should return? or just proceeed?
-				return nil, fmt.Errorf("failed to check namespace labels for namespace %s: %s", ns, err)
+				return nil, fmt.Errorf("failed to check namespace labels for AuthenicationFilter %s: %s", a.GetName(), err)
 			}
 
 			if ok {
@@ -52,11 +51,10 @@ func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a
 	if len(r.namespaceLabels) != 0 {
 		var rls []egv1a1.RateLimitFilter
 		for _, rl := range rateLimits {
-			ns := rl.Namespace
-			ok, err := r.checkNamespaceLabels(ns)
+			ok, err := r.checkObjectNamespaceLabels(&rl)
 			if err != nil {
 				// TODO: should return? or just proceeed?
-				return nil, fmt.Errorf("failed to check namespace labels for namespace %s: %s", ns, err)
+				return nil, fmt.Errorf("failed to check namespace labels for RateLimitFilter %s: %s", rl.GetName(), err)
 			}
 
 			if ok {
@@ -84,11 +82,10 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		if len(r.namespaceLabels) != 0 {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
-				ns := extR.GetNamespace()
-				ok, err := r.checkNamespaceLabels(ns)
+				ok, err := r.checkObjectNamespaceLabels(&extR)
 				if err != nil {
 					// TODO: should return? or just proceeed?
-					return nil, fmt.Errorf("failed to check namespace labels for namespace %s: %s", ns, err)
+					return nil, fmt.Errorf("failed to check namespace labels for ExtensionRefFilter %s: %s", extR.GetName(), err)
 				}
 				if ok {
 					extRs = append(extRs, extR)
