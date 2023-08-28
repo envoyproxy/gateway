@@ -26,7 +26,7 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 		for _, a := range authens {
 			ok, err := r.checkObjectNamespaceLabels(&a)
 			if err != nil {
-				// TODO: should return? or just proceeed?
+				// TODO: should return? or just proceed?
 				return nil, fmt.Errorf("failed to check namespace labels for AuthenicationFilter %s: %s", a.GetName(), err)
 			}
 
@@ -53,7 +53,7 @@ func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a
 		for _, rl := range rateLimits {
 			ok, err := r.checkObjectNamespaceLabels(&rl)
 			if err != nil {
-				// TODO: should return? or just proceeed?
+				// TODO: should return? or just proceed?
 				return nil, fmt.Errorf("failed to check namespace labels for RateLimitFilter %s: %s", rl.GetName(), err)
 			}
 
@@ -84,7 +84,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 			for _, extR := range uExtResources {
 				ok, err := r.checkObjectNamespaceLabels(&extR)
 				if err != nil {
-					// TODO: should return? or just proceeed?
+					// TODO: should return? or just proceed?
 					return nil, fmt.Errorf("failed to check namespace labels for ExtensionRefFilter %s: %s", extR.GetName(), err)
 				}
 				if ok {

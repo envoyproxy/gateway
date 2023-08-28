@@ -138,7 +138,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		for _, gr := range grpcRoutes {
 			ok, err := r.checkObjectNamespaceLabels(&gr)
 			if err != nil {
-				// TODO: should return? or just proceeed?
+				// TODO: should return? or just proceed?
 				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s: %s", gr.GetName(), err)
 			}
 			if ok {
@@ -305,7 +305,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		for _, hr := range httpRoutes {
 			ok, err := r.checkObjectNamespaceLabels(&hr)
 			if err != nil {
-				// TODO: should return? or just proceeed?
+				// TODO: should return? or just proceed?
 				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s: %s", hr.GetName(), err)
 			}
 
@@ -497,7 +497,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		for _, tr := range tcpRoutes {
 			ok, err := r.checkObjectNamespaceLabels(&tr)
 			if err != nil {
-				// TODO: should return? or just proceeed?
+				// TODO: should return? or just proceed?
 				return fmt.Errorf("failed to check namespace labels for TCPRoute %s: %s", tr.GetName(), err)
 			}
 
@@ -575,7 +575,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		for _, ur := range udpRoutes {
 			ok, err := r.checkObjectNamespaceLabels(&ur)
 			if err != nil {
-				// TODO: should return? or just proceeed?
+				// TODO: should return? or just proceed?
 				return fmt.Errorf("failed to check namespace labels for UDPRoute %s: %s", ur.GetName(), err)
 			}
 
