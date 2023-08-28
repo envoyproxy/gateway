@@ -3941,6 +3941,28 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      matches:
+                        description: Matches defines configuration for selecting specific
+                          metrics instead of generating all metrics stats that are
+                          enabled by default. This helps reduce CPU and memory overhead
+                          in Envoy.
+                        items:
+                          description: Match defines the stats match configuration.
+                          properties:
+                            type:
+                              description: MatcherType defines the stats matcher type
+                              enum:
+                              - RegularExpression
+                              - Prefix
+                              - Suffix
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - type
+                          - value
+                          type: object
+                        type: array
                       prometheus:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.

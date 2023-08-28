@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -36,6 +37,7 @@ type Resources struct {
 	ReferenceGrants       []*v1alpha2.ReferenceGrant     `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
 	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
 	Services              []*v1.Service                  `json:"services,omitempty" yaml:"services,omitempty"`
+	ServiceImports        []*mcsapi.ServiceImport        `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
 	EndpointSlices        []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
 	Secrets               []*v1.Secret                   `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty" yaml:"authenticationFilters,omitempty"`
@@ -77,6 +79,16 @@ func (r *Resources) GetService(namespace, name string) *v1.Service {
 	for _, svc := range r.Services {
 		if svc.Namespace == namespace && svc.Name == name {
 			return svc
+		}
+	}
+
+	return nil
+}
+
+func (r *Resources) GetServiceImport(namespace, name string) *mcsapi.ServiceImport {
+	for _, svcImp := range r.ServiceImports {
+		if svcImp.Namespace == namespace && svcImp.Name == name {
+			return svcImp
 		}
 	}
 

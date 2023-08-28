@@ -616,6 +616,32 @@ _Appears in:_
 
 
 
+## Match
+
+
+
+Match defines the stats match configuration.
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MatcherType](#matchertype)_ | MatcherType defines the stats matcher type |
+| `value` _string_ |  |
+
+
+## MatcherType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [Match](#match)
+
+
+
 ## MetricSink
 
 
@@ -822,6 +848,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy. |
 
 
 ## ProxyTelemetry
