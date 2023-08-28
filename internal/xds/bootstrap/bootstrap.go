@@ -37,7 +37,7 @@ const (
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
 
-	// DefaultEnvoyStatsMatcherPrefixes is the default subset of Envoy stats.
+	// DefaultEnvoyStatsMatcherPrefixes is the default subset of Envoy stats added when setting StatsMatcher.
 	DefaultEnvoyStatsMatcherPrefixes = "cluster_manager,listener_manager,server,cluster.xds-grpc"
 )
 
@@ -66,13 +66,11 @@ type bootstrapParameters struct {
 	EnablePrometheus bool
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
-
-	// StatsMatcher is to control creation of additional Envoy stats with prefix,
-	// suffix, and regex expressions match on the name of the stats.
-	StatsMatcher StatsMatcherParameters
-
 	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
 	EnableStatConfig bool
+	// StatsMatcher is to control creation of custom Envoy stats with prefix,
+	// suffix, and regex expressions match on the name of the stats.
+	StatsMatcher StatsMatcherParameters
 }
 
 type xdsServerParameters struct {
@@ -157,9 +155,9 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			})
 		}
 
-		// Set default envoy proxy Stats
 		if proxyMetrics.Matches != nil {
 			enableStatConfig = true
+			// Set default envoy proxy Stats
 			StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, strings.Split(DefaultEnvoyStatsMatcherPrefixes, ",")...)
 
 			// Add additional custom envoy proxy stats
