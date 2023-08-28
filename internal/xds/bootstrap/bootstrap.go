@@ -70,6 +70,9 @@ type bootstrapParameters struct {
 	// StatsMatcher is to control creation of additional Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
 	StatsMatcher StatsMatcherParameters
+
+	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
+	EnableStatConfig bool
 }
 
 type xdsServerParameters struct {
@@ -127,10 +130,8 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 		enablePrometheus bool
 		metricSinks      []metricSink
 		StatsMatcher     StatsMatcherParameters
+		enableStatConfig bool
 	)
-
-	// Set default envoy proxy Stats
-	StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, strings.Split(DefaultEnvoyStatsMatcherPrefixes, ",")...)
 
 	if proxyMetrics != nil {
 		if proxyMetrics.Prometheus != nil {
@@ -156,17 +157,24 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			})
 		}
 
-		// Add additional custom envoy proxy stats
-		for _, match := range proxyMetrics.Matches {
-			switch match.Type {
-			case egcfgv1a1.Prefix:
-				StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
-			case egcfgv1a1.Suffix:
-				StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
-			case egcfgv1a1.RegularExpression:
-				StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
+		// Set default envoy proxy Stats
+		if proxyMetrics.Matches != nil {
+			enableStatConfig = true
+			StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, strings.Split(DefaultEnvoyStatsMatcherPrefixes, ",")...)
+
+			// Add additional custom envoy proxy stats
+			for _, match := range proxyMetrics.Matches {
+				switch match.Type {
+				case egcfgv1a1.Prefix:
+					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+				case egcfgv1a1.Suffix:
+					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+				case egcfgv1a1.RegularExpression:
+					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
+				}
 			}
 		}
+
 	}
 
 	cfg := &bootstrapConfig{
@@ -188,6 +196,7 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
 			StatsMatcher:     StatsMatcher,
+			EnableStatConfig: enableStatConfig,
 		},
 	}
 

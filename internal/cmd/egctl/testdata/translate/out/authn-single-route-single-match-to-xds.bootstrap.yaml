@@ -102,11 +102,3 @@ xds:
                   name: local_route
                 statPrefix: eg-ready-http
           name: envoy-gateway-proxy-ready-0.0.0.0-19001
-      statsConfig:
-        statsMatcher:
-          inclusionList:
-            patterns:
-            - prefix: cluster_manager
-            - prefix: listener_manager
-            - prefix: server
-            - prefix: cluster.xds-grpc

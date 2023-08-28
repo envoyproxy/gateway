@@ -8,6 +8,7 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+{{- if .EnableStatConfig }}
 stats_config:
   stats_matcher:
     inclusion_list:
@@ -23,6 +24,7 @@ stats_config:
           google_re2: {}
           regex: {{js $s}}
       {{- end}}
+{{- end }}
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC
