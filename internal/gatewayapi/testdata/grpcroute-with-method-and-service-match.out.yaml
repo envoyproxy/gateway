@@ -115,7 +115,7 @@ xdsIR:
             weight: 1
           name: grpcroute/default/grpcroute-1/rule/0
         hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/0-*
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           exact: /com.example/Example
@@ -130,7 +130,7 @@ xdsIR:
             weight: 1
           name: grpcroute/default/grpcroute-1/rule/0
         hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/1-*
+        name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
           name: ""

@@ -132,7 +132,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/0
         hostname: gateway.envoyproxy.io
-        name: httproute/default/httproute-1/rule/0/match/0-gateway.envoyproxy.io
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           exact: /test/path/1
@@ -154,7 +154,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/1
         hostname: gateway.envoyproxy.io
-        name: httproute/default/httproute-1/rule/1/match/0-gateway.envoyproxy.io
+        name: httproute/default/httproute-1/rule/1/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           exact: /test/path/2
