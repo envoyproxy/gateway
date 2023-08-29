@@ -14,9 +14,9 @@ http:
       - host: "1.2.3.4"
         port: 50000
     mirrors:
-      - name: "mirror-route-dest"
-        endpoints:
-        - host: "2.3.4.5"
-      - name: "mirror-route-dest1"
-        endpoints:
-        - host: "3.4.5.6"
+    - name: "mirror-route-dest"
+      endpoints:
+      - host: "2.3.4.5"
+    - name: "mirror-route-dest1"
+      endpoints:
+      - host: "3.4.5.6"
