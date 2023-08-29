@@ -33,7 +33,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "otel-metrics",
 			proxyMetrics: &egcfgv1a1.ProxyMetrics{
-				Sinks: []egcfgv1a1.MetricSink{
+				Sinks: []egcfgv1a1.ProxyMetricSink{
 					{
 						Type: egcfgv1a1.MetricSinkTypeOpenTelemetry,
 						OpenTelemetry: &egcfgv1a1.OpenTelemetrySink{

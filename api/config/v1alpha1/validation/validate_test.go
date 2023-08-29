@@ -465,12 +465,12 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 	cases := []struct {
 		logging   egcfgv1a1.ProxyLogging
-		component egcfgv1a1.LogComponent
+		component egcfgv1a1.ProxyLogComponent
 		expected  egcfgv1a1.LogLevel
 	}{
 		{
 			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				Level: map[egcfgv1a1.ProxyLogComponent]egcfgv1a1.LogLevel{
 					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
 				},
 			},
@@ -478,7 +478,7 @@ func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 		},
 		{
 			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				Level: map[egcfgv1a1.ProxyLogComponent]egcfgv1a1.LogLevel{
 					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
 				},
 			},
@@ -505,7 +505,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				Level: map[egcfgv1a1.ProxyLogComponent]egcfgv1a1.LogLevel{
 					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
 				},
 			},
@@ -513,7 +513,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				Level: map[egcfgv1a1.ProxyLogComponent]egcfgv1a1.LogLevel{
 					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
 					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
 				},
@@ -522,7 +522,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				Level: map[egcfgv1a1.ProxyLogComponent]egcfgv1a1.LogLevel{
 					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
 					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
 					egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelDebug,
@@ -532,7 +532,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
+				Level: map[egcfgv1a1.ProxyLogComponent]egcfgv1a1.LogLevel{
 					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
 					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
 					egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelDebug,

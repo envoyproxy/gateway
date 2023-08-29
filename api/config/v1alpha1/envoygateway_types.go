@@ -46,6 +46,11 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Provider *EnvoyGatewayProvider `json:"provider,omitempty"`
 
+	// Telemetry defines telemetry parameters for envoy gateway.
+	//
+	// +optional
+	Telemetry *EnvoyGatewayTelemetry `json:"telemetry,omitempty"`
+
 	// Logging defines logging parameters for Envoy Gateway.
 	//
 	// +optional
@@ -77,6 +82,16 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+}
+
+type EnvoyGatewayTelemetry struct {
+	// Tracing defines tracing configuration for envoy gateway.
+	// If unspecified, will not send tracing data.
+	// +optional
+	Tracing *EnvoyGatewayTracing `json:"tracing,omitempty"`
+
+	// Metrics defines metrics configuration for envoy gateway.
+	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.

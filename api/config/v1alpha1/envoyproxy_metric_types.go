@@ -9,7 +9,7 @@ type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
-	Sinks []MetricSink `json:"sinks,omitempty"`
+	Sinks []ProxyMetricSink `json:"sinks,omitempty"`
 	// Matches defines configuration for selecting specific metrics instead of generating all metrics stats
 	// that are enabled by default. This helps reduce CPU and memory overhead in Envoy.
 	Matches []Match `json:"matches,omitempty"`
@@ -21,7 +21,7 @@ const (
 	MetricSinkTypeOpenTelemetry MetricSinkType = "OpenTelemetry"
 )
 
-type MetricSink struct {
+type ProxyMetricSink struct {
 	// Type defines the metric sink type.
 	// EG currently only supports OpenTelemetry.
 	// +kubebuilder:validation:Enum=OpenTelemetry

@@ -16,10 +16,10 @@ type ProxyTracing struct {
 	SamplingRate *uint32 `json:"samplingRate,omitempty"`
 	// CustomTags defines the custom tags to add to each span.
 	// If provider is kubernetes, pod name and namespace are added by default.
-	CustomTags map[string]CustomTag `json:"customTags,omitempty"`
+	CustomTags map[string]ProxyCustomTag `json:"customTags,omitempty"`
 	// Provider defines the tracing provider.
 	// Only OpenTelemetry is supported currently.
-	Provider TracingProvider `json:"provider"`
+	Provider ProxyTracingProvider `json:"provider"`
 }
 
 type TracingProviderType string
@@ -28,7 +28,7 @@ const (
 	TracingProviderTypeOpenTelemetry TracingProviderType = "OpenTelemetry"
 )
 
-type TracingProvider struct {
+type ProxyTracingProvider struct {
 	// Type defines the tracing provider type.
 	// EG currently only supports OpenTelemetry.
 	// +kubebuilder:validation:Enum=OpenTelemetry
@@ -55,7 +55,7 @@ const (
 	CustomTagTypeRequestHeader CustomTagType = "RequestHeader"
 )
 
-type CustomTag struct {
+type ProxyCustomTag struct {
 	// Type defines the type of custom tag.
 	// +kubebuilder:validation:Enum=Literal;Environment;RequestHeader
 	// +unionDiscriminator

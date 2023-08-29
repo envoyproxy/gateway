@@ -121,44 +121,44 @@ type ProxyLogging struct {
 	// and the log level is the value. If unspecified, defaults to "default: warn".
 	//
 	// +kubebuilder:default={default: warn}
-	Level map[LogComponent]LogLevel `json:"level,omitempty"`
+	Level map[ProxyLogComponent]LogLevel `json:"level,omitempty"`
 }
 
 // LogComponent defines a component that supports a configured logging level.
 // +kubebuilder:validation:Enum=system;upstream;http;connection;admin;client;filter;main;router;runtime
-type LogComponent string
+type ProxyLogComponent string
 
 const (
 	// LogComponentDefault defines the default logging component.
 	// See more details: https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-l
-	LogComponentDefault LogComponent = "default"
+	LogComponentDefault ProxyLogComponent = "default"
 
 	// LogComponentUpstream defines the "upstream" logging component.
-	LogComponentUpstream LogComponent = "upstream"
+	LogComponentUpstream ProxyLogComponent = "upstream"
 
 	// LogComponentHTTP defines the "http" logging component.
-	LogComponentHTTP LogComponent = "http"
+	LogComponentHTTP ProxyLogComponent = "http"
 
 	// LogComponentConnection defines the "connection" logging component.
-	LogComponentConnection LogComponent = "connection"
+	LogComponentConnection ProxyLogComponent = "connection"
 
 	// LogComponentAdmin defines the "admin" logging component.
-	LogComponentAdmin LogComponent = "admin"
+	LogComponentAdmin ProxyLogComponent = "admin"
 
 	// LogComponentClient defines the "client" logging component.
-	LogComponentClient LogComponent = "client"
+	LogComponentClient ProxyLogComponent = "client"
 
 	// LogComponentFilter defines the "filter" logging component.
-	LogComponentFilter LogComponent = "filter"
+	LogComponentFilter ProxyLogComponent = "filter"
 
 	// LogComponentMain defines the "main" logging component.
-	LogComponentMain LogComponent = "main"
+	LogComponentMain ProxyLogComponent = "main"
 
 	// LogComponentRouter defines the "router" logging component.
-	LogComponentRouter LogComponent = "router"
+	LogComponentRouter ProxyLogComponent = "router"
 
 	// LogComponentRuntime defines the "runtime" logging component.
-	LogComponentRuntime LogComponent = "runtime"
+	LogComponentRuntime ProxyLogComponent = "runtime"
 )
 
 // ProxyBootstrap defines Envoy Bootstrap configuration.
