@@ -38,6 +38,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 	if len(r.namespaceLabels) != 0 {
 		var rts []gwapiv1a2.TLSRoute
 		for _, rt := range tlsRoutes {
+			rt := rt
 			ok, err := r.checkObjectNamespaceLabels(&rt)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -138,6 +139,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	if len(r.namespaceLabels) != 0 {
 		var grs []gwapiv1a2.GRPCRoute
 		for _, gr := range grpcRoutes {
+			gr := gr
 			ok, err := r.checkObjectNamespaceLabels(&gr)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -307,6 +309,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	if len(r.namespaceLabels) != 0 {
 		var hrs []gwapiv1b1.HTTPRoute
 		for _, hr := range httpRoutes {
+			hr := hr
 			ok, err := r.checkObjectNamespaceLabels(&hr)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -503,6 +506,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 	if len(r.namespaceLabels) != 0 {
 		var trs []gwapiv1a2.TCPRoute
 		for _, tr := range tcpRoutes {
+			tr := tr
 			ok, err := r.checkObjectNamespaceLabels(&tr)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -583,6 +587,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 	if len(r.namespaceLabels) != 0 {
 		var urs []gwapiv1a2.UDPRoute
 		for _, ur := range udpRoutes {
+			ur := ur
 			ok, err := r.checkObjectNamespaceLabels(&ur)
 			if err != nil {
 				// TODO: should return? or just proceed?

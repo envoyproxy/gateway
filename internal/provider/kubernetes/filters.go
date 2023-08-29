@@ -24,6 +24,7 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 	if len(r.namespaceLabels) != 0 {
 		var as []egv1a1.AuthenticationFilter
 		for _, a := range authens {
+			a := a
 			ok, err := r.checkObjectNamespaceLabels(&a)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -51,6 +52,7 @@ func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a
 	if len(r.namespaceLabels) != 0 {
 		var rls []egv1a1.RateLimitFilter
 		for _, rl := range rateLimits {
+			rl := rl
 			ok, err := r.checkObjectNamespaceLabels(&rl)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -82,6 +84,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		if len(r.namespaceLabels) != 0 {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
+				extR := extR
 				ok, err := r.checkObjectNamespaceLabels(&extR)
 				if err != nil {
 					// TODO: should return? or just proceed?

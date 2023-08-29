@@ -1805,7 +1805,6 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		res, _ := resources.GatewayAPIResources.Load(gc.Name)
-        fmt.Println("the number of gateway:", len(res.Gateways))
 		return res != nil && len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
 

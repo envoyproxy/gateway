@@ -104,7 +104,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 
 		r := gatewayAPIReconciler{
 			classController: v1alpha1.GatewayControllerName,
-            namespaceLabels: tc.labels,
+			namespaceLabels: tc.labels,
 			log:             logger,
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).

@@ -444,6 +444,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	if len(r.namespaceLabels) != 0 {
 		var rgs []gwapiv1a2.ReferenceGrant
 		for _, refGrant := range refGrants {
+			refGrant := refGrant
 			ok, err := r.checkObjectNamespaceLabels(&refGrant)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -487,6 +488,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 	if len(r.namespaceLabels) != 0 {
 		var gtws []gwapiv1b1.Gateway
 		for _, gtw := range gateways {
+			gtw := gtw
 			ok, err := r.checkObjectNamespaceLabels(&gtw)
 			if err != nil {
 				// TODO: should return? or just proceed?
@@ -510,8 +512,8 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 			// Get Secret for gateway if it exists.
 			if terminatesTLS(&listener) {
 				for _, certRef := range listener.TLS.CertificateRefs {
+					certRef := certRef
 					if refsSecret(&certRef) {
-						certRef := certRef
 						secret := new(corev1.Secret)
 						secretNamespace := gatewayapi.NamespaceDerefOr(certRef.Namespace, gtw.Namespace)
 						err := r.client.Get(ctx,
