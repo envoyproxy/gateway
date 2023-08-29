@@ -24,7 +24,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gatewayclasses.gateway.networking.k8s.io
@@ -469,7 +469,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gateways.gateway.networking.k8s.io
@@ -578,7 +578,7 @@ spec:
                   x-kubernetes-validations:
                   - message: Hostname value must only contain valid characters (matching
                       ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$)
-                    rule: 'self.type == ''Hostname'' ? self.value.matches(''^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$''):
+                    rule: 'self.type == ''Hostname'' ? self.value.matches(r"""^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"""):
                       true'
                 maxItems: 16
                 type: array
@@ -1027,7 +1027,7 @@ spec:
                   x-kubernetes-validations:
                   - message: Hostname value must only contain valid characters (matching
                       ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$)
-                    rule: 'self.type == ''Hostname'' ? self.value.matches(''^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$''):
+                    rule: 'self.type == ''Hostname'' ? self.value.matches(r"""^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"""):
                       true'
                 maxItems: 16
                 type: array
@@ -1356,7 +1356,7 @@ spec:
                   x-kubernetes-validations:
                   - message: Hostname value must only contain valid characters (matching
                       ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$)
-                    rule: 'self.type == ''Hostname'' ? self.value.matches(''^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$''):
+                    rule: 'self.type == ''Hostname'' ? self.value.matches(r"""^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"""):
                       true'
                 maxItems: 16
                 type: array
@@ -1805,7 +1805,7 @@ spec:
                   x-kubernetes-validations:
                   - message: Hostname value must only contain valid characters (matching
                       ^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$)
-                    rule: 'self.type == ''Hostname'' ? self.value.matches(''^(\\*\\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$''):
+                    rule: 'self.type == ''Hostname'' ? self.value.matches(r"""^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"""):
                       true'
                 maxItems: 16
                 type: array
@@ -2060,7 +2060,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: grpcroutes.gateway.networking.k8s.io
@@ -2105,7 +2105,7 @@ spec:
           If the implementation does not support this, then it MUST set the \"Accepted\"
           condition to \"False\" for the affected listener with a reason of \"UnsupportedProtocol\".
           Implementations MAY also accept HTTP/2 connections with an upgrade from
-          HTTP/1, i.e. without prior knowledge. \n Support: Extended"
+          HTTP/1, i.e. without prior knowledge."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -2338,22 +2338,32 @@ spec:
                 maxItems: 32
                 type: array
                 x-kubernetes-validations:
+                - message: sectionName or port must be specified when parentRefs includes
+                    2 or more references to the same parent
+                  rule: 'self.all(p1, self.all(p2, p1.group == p2.group && p1.kind
+                    == p2.kind && p1.name == p2.name && ( ( (!has(p1.__namespace__)
+                    || p1.__namespace__ == '''') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '''') ) || ( has(p1.__namespace__) && has(p2.__namespace__)
+                    && p1.__namespace__ == p2.__namespace__ ) ) ? ( ( ( (!has(p1.sectionName)
+                    || p1.sectionName == '''') && (!has(p2.sectionName) || p2.sectionName
+                    == '''') && (!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0) ) || ( ( (has(p1.sectionName) && p1.sectionName
+                    != '''') || (has(p1.port) && p1.port != 0) ) && ( (has(p2.sectionName)
+                    && p2.sectionName != '''') || (has(p2.port) && p2.port != 0) )
+                    ) ) ): true ))'
                 - message: sectionName or port must be unique when parentRefs includes
                     2 or more references to the same parent
                   rule: self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind
-                    == p2.kind && ((!has(p1.__namespace__) && !has(p2.__namespace__))
-                    || (!has(p1.__namespace__) && p2.__namespace__ == '') || (p1.__namespace__
-                    == '' && !has(p2.__namespace__)) || (p1.__namespace__ == p2.__namespace__))
-                    && p1.name == p2.name && ((!has(p1.sectionName) && !has(p2.sectionName))
-                    || (!has(p1.sectionName) && p2.sectionName == '') || (p1.sectionName
-                    == '' && !has(p2.sectionName)) || (p1.sectionName == p2.sectionName))
-                    && ((!has(p1.port) && !has(p2.port)) || (!has(p1.port) && p2.port
-                    == 0) || (p1.port == 0 && !has(p2.port)) || (p1.port == p2.port))))
+                    == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__)
+                    || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '')) || (has(p1.__namespace__) && has(p2.__namespace__) &&
+                    p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName)
+                    || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName
+                    == '')) || ( has(p1.sectionName) && has(p2.sectionName) && p1.sectionName
+                    == p2.sectionName)) && (((!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0)) || (has(p1.port) && has(p2.port) && p1.port
+                    == p2.port))))
               rules:
-                default:
-                - matches:
-                  - method:
-                      type: Exact
                 description: Rules are a list of GRPC matchers, filters and actions.
                 items:
                   description: GRPCRouteRule defines the semantics for matching a
@@ -2498,6 +2508,7 @@ spec:
                                         type: string
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: set
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
@@ -2553,25 +2564,28 @@ spec:
                                   properties:
                                     backendRef:
                                       description: "BackendRef references a resource
-                                        where mirrored requests are sent. \n If the
-                                        referent cannot be found, this BackendRef
-                                        is invalid and must be dropped from the Gateway.
-                                        The controller must ensure the \"ResolvedRefs\"
-                                        condition on the Route status is set to `status:
-                                        False` and not configure this backend in the
-                                        underlying implementation. \n If there is
-                                        a cross-namespace reference to an *existing*
-                                        object that is not allowed by a ReferenceGrant,
-                                        the controller must ensure the \"ResolvedRefs\"
-                                        \ condition on the Route is set to `status:
-                                        False`, with the \"RefNotPermitted\" reason
-                                        and not configure this backend in the underlying
-                                        implementation. \n In either error case, the
-                                        Message of the `ResolvedRefs` Condition should
-                                        be used to provide more detail about the problem.
-                                        \n Support: Extended for Kubernetes Service
-                                        \n Support: Implementation-specific for any
-                                        other resource"
+                                        where mirrored requests are sent. \n Mirrored
+                                        requests must be sent only to a single destination
+                                        endpoint within this BackendRef, irrespective
+                                        of how many endpoints are present within this
+                                        BackendRef. \n If the referent cannot be found,
+                                        this BackendRef is invalid and must be dropped
+                                        from the Gateway. The controller must ensure
+                                        the \"ResolvedRefs\" condition on the Route
+                                        status is set to `status: False` and not configure
+                                        this backend in the underlying implementation.
+                                        \n If there is a cross-namespace reference
+                                        to an *existing* object that is not allowed
+                                        by a ReferenceGrant, the controller must ensure
+                                        the \"ResolvedRefs\"  condition on the Route
+                                        is set to `status: False`, with the \"RefNotPermitted\"
+                                        reason and not configure this backend in the
+                                        underlying implementation. \n In either error
+                                        case, the Message of the `ResolvedRefs` Condition
+                                        should be used to provide more detail about
+                                        the problem. \n Support: Extended for Kubernetes
+                                        Service \n Support: Implementation-specific
+                                        for any other resource"
                                       properties:
                                         group:
                                           default: ""
@@ -2708,6 +2722,7 @@ spec:
                                         type: string
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: set
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
@@ -2788,8 +2803,45 @@ spec:
                               required:
                               - type
                               type: object
+                              x-kubernetes-validations:
+                              - message: filter.requestHeaderModifier must be nil
+                                  if the filter.type is not RequestHeaderModifier
+                                rule: '!(has(self.requestHeaderModifier) && self.type
+                                  != ''RequestHeaderModifier'')'
+                              - message: filter.requestHeaderModifier must be specified
+                                  for RequestHeaderModifier filter.type
+                                rule: '!(!has(self.requestHeaderModifier) && self.type
+                                  == ''RequestHeaderModifier'')'
+                              - message: filter.responseHeaderModifier must be nil
+                                  if the filter.type is not ResponseHeaderModifier
+                                rule: '!(has(self.responseHeaderModifier) && self.type
+                                  != ''ResponseHeaderModifier'')'
+                              - message: filter.responseHeaderModifier must be specified
+                                  for ResponseHeaderModifier filter.type
+                                rule: '!(!has(self.responseHeaderModifier) && self.type
+                                  == ''ResponseHeaderModifier'')'
+                              - message: filter.requestMirror must be nil if the filter.type
+                                  is not RequestMirror
+                                rule: '!(has(self.requestMirror) && self.type != ''RequestMirror'')'
+                              - message: filter.requestMirror must be specified for
+                                  RequestMirror filter.type
+                                rule: '!(!has(self.requestMirror) && self.type ==
+                                  ''RequestMirror'')'
+                              - message: filter.extensionRef must be nil if the filter.type
+                                  is not ExtensionRef
+                                rule: '!(has(self.extensionRef) && self.type != ''ExtensionRef'')'
+                              - message: filter.extensionRef must be specified for
+                                  ExtensionRef filter.type
+                                rule: '!(!has(self.extensionRef) && self.type == ''ExtensionRef'')'
                             maxItems: 16
                             type: array
+                            x-kubernetes-validations:
+                            - message: RequestHeaderModifier filter cannot be repeated
+                              rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
+                                <= 1
+                            - message: ResponseHeaderModifier filter cannot be repeated
+                              rule: self.filter(f, f.type == 'ResponseHeaderModifier').size()
+                                <= 1
                           group:
                             default: ""
                             description: Group is the group of the referent. For example,
@@ -2989,6 +3041,7 @@ spec:
                                   type: string
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: set
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
@@ -3041,23 +3094,26 @@ spec:
                             properties:
                               backendRef:
                                 description: "BackendRef references a resource where
-                                  mirrored requests are sent. \n If the referent cannot
-                                  be found, this BackendRef is invalid and must be
-                                  dropped from the Gateway. The controller must ensure
-                                  the \"ResolvedRefs\" condition on the Route status
-                                  is set to `status: False` and not configure this
-                                  backend in the underlying implementation. \n If
-                                  there is a cross-namespace reference to an *existing*
-                                  object that is not allowed by a ReferenceGrant,
-                                  the controller must ensure the \"ResolvedRefs\"
-                                  \ condition on the Route is set to `status: False`,
-                                  with the \"RefNotPermitted\" reason and not configure
-                                  this backend in the underlying implementation. \n
-                                  In either error case, the Message of the `ResolvedRefs`
-                                  Condition should be used to provide more detail
-                                  about the problem. \n Support: Extended for Kubernetes
-                                  Service \n Support: Implementation-specific for
-                                  any other resource"
+                                  mirrored requests are sent. \n Mirrored requests
+                                  must be sent only to a single destination endpoint
+                                  within this BackendRef, irrespective of how many
+                                  endpoints are present within this BackendRef. \n
+                                  If the referent cannot be found, this BackendRef
+                                  is invalid and must be dropped from the Gateway.
+                                  The controller must ensure the \"ResolvedRefs\"
+                                  condition on the Route status is set to `status:
+                                  False` and not configure this backend in the underlying
+                                  implementation. \n If there is a cross-namespace
+                                  reference to an *existing* object that is not allowed
+                                  by a ReferenceGrant, the controller must ensure
+                                  the \"ResolvedRefs\"  condition on the Route is
+                                  set to `status: False`, with the \"RefNotPermitted\"
+                                  reason and not configure this backend in the underlying
+                                  implementation. \n In either error case, the Message
+                                  of the `ResolvedRefs` Condition should be used to
+                                  provide more detail about the problem. \n Support:
+                                  Extended for Kubernetes Service \n Support: Implementation-specific
+                                  for any other resource"
                                 properties:
                                   group:
                                     default: ""
@@ -3185,6 +3241,7 @@ spec:
                                   type: string
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: set
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
@@ -3259,8 +3316,44 @@ spec:
                         required:
                         - type
                         type: object
+                        x-kubernetes-validations:
+                        - message: filter.requestHeaderModifier must be nil if the
+                            filter.type is not RequestHeaderModifier
+                          rule: '!(has(self.requestHeaderModifier) && self.type !=
+                            ''RequestHeaderModifier'')'
+                        - message: filter.requestHeaderModifier must be specified
+                            for RequestHeaderModifier filter.type
+                          rule: '!(!has(self.requestHeaderModifier) && self.type ==
+                            ''RequestHeaderModifier'')'
+                        - message: filter.responseHeaderModifier must be nil if the
+                            filter.type is not ResponseHeaderModifier
+                          rule: '!(has(self.responseHeaderModifier) && self.type !=
+                            ''ResponseHeaderModifier'')'
+                        - message: filter.responseHeaderModifier must be specified
+                            for ResponseHeaderModifier filter.type
+                          rule: '!(!has(self.responseHeaderModifier) && self.type
+                            == ''ResponseHeaderModifier'')'
+                        - message: filter.requestMirror must be nil if the filter.type
+                            is not RequestMirror
+                          rule: '!(has(self.requestMirror) && self.type != ''RequestMirror'')'
+                        - message: filter.requestMirror must be specified for RequestMirror
+                            filter.type
+                          rule: '!(!has(self.requestMirror) && self.type == ''RequestMirror'')'
+                        - message: filter.extensionRef must be nil if the filter.type
+                            is not ExtensionRef
+                          rule: '!(has(self.extensionRef) && self.type != ''ExtensionRef'')'
+                        - message: filter.extensionRef must be specified for ExtensionRef
+                            filter.type
+                          rule: '!(!has(self.extensionRef) && self.type == ''ExtensionRef'')'
                       maxItems: 16
                       type: array
+                      x-kubernetes-validations:
+                      - message: RequestHeaderModifier filter cannot be repeated
+                        rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
+                          <= 1
+                      - message: ResponseHeaderModifier filter cannot be repeated
+                        rule: self.filter(f, f.type == 'ResponseHeaderModifier').size()
+                          <= 1
                     matches:
                       description: "Matches define conditions used for matching the
                         rule against incoming gRPC requests. Each match is independent,
@@ -3374,6 +3467,21 @@ spec:
                                 - RegularExpression
                                 type: string
                             type: object
+                            x-kubernetes-validations:
+                            - message: One or both of 'service' or 'method' must be
+                                specified
+                              rule: 'has(self.type) ? has(self.service) || has(self.method)
+                                : true'
+                            - message: service must only contain valid characters
+                                (matching ^(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*$)
+                              rule: '(!has(self.type) || self.type == ''Exact'') &&
+                                has(self.service) ? self.service.matches(r"""^(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*$"""):
+                                true'
+                            - message: method must only contain valid characters (matching
+                                ^[A-Za-z_][A-Za-z_0-9]*$)
+                              rule: '(!has(self.type) || self.type == ''Exact'') &&
+                                has(self.method) ? self.method.matches(r"""^[A-Za-z_][A-Za-z_0-9]*$"""):
+                                true'
                         type: object
                       maxItems: 8
                       type: array
@@ -3657,7 +3765,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
@@ -3922,17 +4030,31 @@ spec:
                 maxItems: 32
                 type: array
                 x-kubernetes-validations:
+                - message: sectionName or port must be specified when parentRefs includes
+                    2 or more references to the same parent
+                  rule: 'self.all(p1, self.all(p2, p1.group == p2.group && p1.kind
+                    == p2.kind && p1.name == p2.name && ( ( (!has(p1.__namespace__)
+                    || p1.__namespace__ == '''') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '''') ) || ( has(p1.__namespace__) && has(p2.__namespace__)
+                    && p1.__namespace__ == p2.__namespace__ ) ) ? ( ( ( (!has(p1.sectionName)
+                    || p1.sectionName == '''') && (!has(p2.sectionName) || p2.sectionName
+                    == '''') && (!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0) ) || ( ( (has(p1.sectionName) && p1.sectionName
+                    != '''') || (has(p1.port) && p1.port != 0) ) && ( (has(p2.sectionName)
+                    && p2.sectionName != '''') || (has(p2.port) && p2.port != 0) )
+                    ) ) ): true ))'
                 - message: sectionName or port must be unique when parentRefs includes
                     2 or more references to the same parent
                   rule: self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind
-                    == p2.kind && ((!has(p1.__namespace__) && !has(p2.__namespace__))
-                    || (!has(p1.__namespace__) && p2.__namespace__ == '') || (p1.__namespace__
-                    == '' && !has(p2.__namespace__)) || (p1.__namespace__ == p2.__namespace__))
-                    && p1.name == p2.name && ((!has(p1.sectionName) && !has(p2.sectionName))
-                    || (!has(p1.sectionName) && p2.sectionName == '') || (p1.sectionName
-                    == '' && !has(p2.sectionName)) || (p1.sectionName == p2.sectionName))
-                    && ((!has(p1.port) && !has(p2.port)) || (!has(p1.port) && p2.port
-                    == 0) || (p1.port == 0 && !has(p2.port)) || (p1.port == p2.port))))
+                    == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__)
+                    || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '')) || (has(p1.__namespace__) && has(p2.__namespace__) &&
+                    p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName)
+                    || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName
+                    == '')) || ( has(p1.sectionName) && has(p2.sectionName) && p1.sectionName
+                    == p2.sectionName)) && (((!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0)) || (has(p1.port) && has(p2.port) && p1.port
+                    == p2.port))))
               rules:
                 default:
                 - matches:
@@ -4082,6 +4204,7 @@ spec:
                                         type: string
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: set
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
@@ -4137,25 +4260,28 @@ spec:
                                   properties:
                                     backendRef:
                                       description: "BackendRef references a resource
-                                        where mirrored requests are sent. \n If the
-                                        referent cannot be found, this BackendRef
-                                        is invalid and must be dropped from the Gateway.
-                                        The controller must ensure the \"ResolvedRefs\"
-                                        condition on the Route status is set to `status:
-                                        False` and not configure this backend in the
-                                        underlying implementation. \n If there is
-                                        a cross-namespace reference to an *existing*
-                                        object that is not allowed by a ReferenceGrant,
-                                        the controller must ensure the \"ResolvedRefs\"
-                                        \ condition on the Route is set to `status:
-                                        False`, with the \"RefNotPermitted\" reason
-                                        and not configure this backend in the underlying
-                                        implementation. \n In either error case, the
-                                        Message of the `ResolvedRefs` Condition should
-                                        be used to provide more detail about the problem.
-                                        \n Support: Extended for Kubernetes Service
-                                        \n Support: Implementation-specific for any
-                                        other resource"
+                                        where mirrored requests are sent. \n Mirrored
+                                        requests must be sent only to a single destination
+                                        endpoint within this BackendRef, irrespective
+                                        of how many endpoints are present within this
+                                        BackendRef. \n If the referent cannot be found,
+                                        this BackendRef is invalid and must be dropped
+                                        from the Gateway. The controller must ensure
+                                        the \"ResolvedRefs\" condition on the Route
+                                        status is set to `status: False` and not configure
+                                        this backend in the underlying implementation.
+                                        \n If there is a cross-namespace reference
+                                        to an *existing* object that is not allowed
+                                        by a ReferenceGrant, the controller must ensure
+                                        the \"ResolvedRefs\"  condition on the Route
+                                        is set to `status: False`, with the \"RefNotPermitted\"
+                                        reason and not configure this backend in the
+                                        underlying implementation. \n In either error
+                                        case, the Message of the `ResolvedRefs` Condition
+                                        should be used to provide more detail about
+                                        the problem. \n Support: Extended for Kubernetes
+                                        Service \n Support: Implementation-specific
+                                        for any other resource"
                                       properties:
                                         group:
                                           default: ""
@@ -4455,6 +4581,7 @@ spec:
                                         type: string
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: set
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
@@ -4697,20 +4824,17 @@ spec:
                               rule: '!(self.exists(f, f.type == ''RequestRedirect'')
                                 && self.exists(f, f.type == ''URLRewrite''))'
                             - message: RequestHeaderModifier filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''RequestHeaderModifier'')
-                                ? self.exists_one(f, f.type == ''RequestHeaderModifier'')
-                                : true'
+                              rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
+                                <= 1
                             - message: ResponseHeaderModifier filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''ResponseHeaderModifier'')
-                                ? self.exists_one(f, f.type == ''ResponseHeaderModifier'')
-                                : true'
+                              rule: self.filter(f, f.type == 'ResponseHeaderModifier').size()
+                                <= 1
                             - message: RequestRedirect filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''RequestRedirect'')
-                                ? self.exists_one(f, f.type == ''RequestRedirect'')
-                                : true'
+                              rule: self.filter(f, f.type == 'RequestRedirect').size()
+                                <= 1
                             - message: URLRewrite filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''URLRewrite'') ? self.exists_one(f,
-                                f.type == ''URLRewrite'') : true'
+                              rule: self.filter(f, f.type == 'URLRewrite').size()
+                                <= 1
                           group:
                             default: ""
                             description: Group is the group of the referent. For example,
@@ -4912,6 +5036,7 @@ spec:
                                   type: string
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: set
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
@@ -4964,23 +5089,26 @@ spec:
                             properties:
                               backendRef:
                                 description: "BackendRef references a resource where
-                                  mirrored requests are sent. \n If the referent cannot
-                                  be found, this BackendRef is invalid and must be
-                                  dropped from the Gateway. The controller must ensure
-                                  the \"ResolvedRefs\" condition on the Route status
-                                  is set to `status: False` and not configure this
-                                  backend in the underlying implementation. \n If
-                                  there is a cross-namespace reference to an *existing*
-                                  object that is not allowed by a ReferenceGrant,
-                                  the controller must ensure the \"ResolvedRefs\"
-                                  \ condition on the Route is set to `status: False`,
-                                  with the \"RefNotPermitted\" reason and not configure
-                                  this backend in the underlying implementation. \n
-                                  In either error case, the Message of the `ResolvedRefs`
-                                  Condition should be used to provide more detail
-                                  about the problem. \n Support: Extended for Kubernetes
-                                  Service \n Support: Implementation-specific for
-                                  any other resource"
+                                  mirrored requests are sent. \n Mirrored requests
+                                  must be sent only to a single destination endpoint
+                                  within this BackendRef, irrespective of how many
+                                  endpoints are present within this BackendRef. \n
+                                  If the referent cannot be found, this BackendRef
+                                  is invalid and must be dropped from the Gateway.
+                                  The controller must ensure the \"ResolvedRefs\"
+                                  condition on the Route status is set to `status:
+                                  False` and not configure this backend in the underlying
+                                  implementation. \n If there is a cross-namespace
+                                  reference to an *existing* object that is not allowed
+                                  by a ReferenceGrant, the controller must ensure
+                                  the \"ResolvedRefs\"  condition on the Route is
+                                  set to `status: False`, with the \"RefNotPermitted\"
+                                  reason and not configure this backend in the underlying
+                                  implementation. \n In either error case, the Message
+                                  of the `ResolvedRefs` Condition should be used to
+                                  provide more detail about the problem. \n Support:
+                                  Extended for Kubernetes Service \n Support: Implementation-specific
+                                  for any other resource"
                                 properties:
                                   group:
                                     default: ""
@@ -5260,6 +5388,7 @@ spec:
                                   type: string
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: set
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
@@ -5482,19 +5611,16 @@ spec:
                         rule: '!(self.exists(f, f.type == ''RequestRedirect'') &&
                           self.exists(f, f.type == ''URLRewrite''))'
                       - message: RequestHeaderModifier filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''RequestHeaderModifier'')
-                          ? self.exists_one(f, f.type == ''RequestHeaderModifier'')
-                          : true'
+                        rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
+                          <= 1
                       - message: ResponseHeaderModifier filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''ResponseHeaderModifier'')
-                          ? self.exists_one(f, f.type == ''ResponseHeaderModifier'')
-                          : true'
+                        rule: self.filter(f, f.type == 'ResponseHeaderModifier').size()
+                          <= 1
                       - message: RequestRedirect filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''RequestRedirect'') ? self.exists_one(f,
-                          f.type == ''RequestRedirect'') : true'
+                        rule: self.filter(f, f.type == 'RequestRedirect').size() <=
+                          1
                       - message: URLRewrite filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''URLRewrite'') ? self.exists_one(f,
-                          f.type == ''URLRewrite'') : true'
+                        rule: self.filter(f, f.type == 'URLRewrite').size() <= 1
                     matches:
                       default:
                       - path:
@@ -5641,49 +5767,48 @@ spec:
                             x-kubernetes-validations:
                             - message: value must be an absolute path and start with
                                 '/' when type one of ['Exact', 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? self.value.startsWith(''/'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? self.value.startsWith(''/'')
+                                : true'
                             - message: must not contain '//' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''//'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''//'')
+                                : true'
                             - message: must not contain '/./' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''/./'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''/./'')
+                                : true'
                             - message: must not contain '/../' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''/../'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''/../'')
+                                : true'
                             - message: must not contain '%2f' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''%2f'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''%2f'')
+                                : true'
                             - message: must not contain '%2F' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''%2F'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''%2F'')
+                                : true'
                             - message: must not contain '#' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''#'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''#'')
+                                : true'
                             - message: must not end with '/..' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.endsWith(''/..'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.endsWith(''/..'')
+                                : true'
                             - message: must not end with '/.' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.endsWith(''/.'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.endsWith(''/.'')
+                                : true'
                             - message: type must be one of ['Exact', 'PathPrefix',
                                 'RegularExpression']
-                              rule: self.type == 'Exact' || self.type == 'PathPrefix'
-                                || self.type == 'RegularExpression'
+                              rule: self.type in ['Exact','PathPrefix'] || self.type
+                                == 'RegularExpression'
                             - message: must only contain valid characters (matching
                                 ^(?:[-A-Za-z0-9/._~!$&'()*+,;=:@]|[%][0-9a-fA-F]{2})+$)
                                 for types ['Exact', 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? self.value.matches(r"""^(?:[-A-Za-z0-9/._~!$&''()*+,;=:@]|[%][0-9a-fA-F]{2})+$""")
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? self.value.matches(r"""^(?:[-A-Za-z0-9/._~!$&''()*+,;=:@]|[%][0-9a-fA-F]{2})+$""")
                                 : true'
                           queryParams:
                             description: "QueryParams specifies HTTP query parameter
@@ -6304,17 +6429,31 @@ spec:
                 maxItems: 32
                 type: array
                 x-kubernetes-validations:
+                - message: sectionName or port must be specified when parentRefs includes
+                    2 or more references to the same parent
+                  rule: 'self.all(p1, self.all(p2, p1.group == p2.group && p1.kind
+                    == p2.kind && p1.name == p2.name && ( ( (!has(p1.__namespace__)
+                    || p1.__namespace__ == '''') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '''') ) || ( has(p1.__namespace__) && has(p2.__namespace__)
+                    && p1.__namespace__ == p2.__namespace__ ) ) ? ( ( ( (!has(p1.sectionName)
+                    || p1.sectionName == '''') && (!has(p2.sectionName) || p2.sectionName
+                    == '''') && (!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0) ) || ( ( (has(p1.sectionName) && p1.sectionName
+                    != '''') || (has(p1.port) && p1.port != 0) ) && ( (has(p2.sectionName)
+                    && p2.sectionName != '''') || (has(p2.port) && p2.port != 0) )
+                    ) ) ): true ))'
                 - message: sectionName or port must be unique when parentRefs includes
                     2 or more references to the same parent
                   rule: self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind
-                    == p2.kind && ((!has(p1.__namespace__) && !has(p2.__namespace__))
-                    || (!has(p1.__namespace__) && p2.__namespace__ == '') || (p1.__namespace__
-                    == '' && !has(p2.__namespace__)) || (p1.__namespace__ == p2.__namespace__))
-                    && p1.name == p2.name && ((!has(p1.sectionName) && !has(p2.sectionName))
-                    || (!has(p1.sectionName) && p2.sectionName == '') || (p1.sectionName
-                    == '' && !has(p2.sectionName)) || (p1.sectionName == p2.sectionName))
-                    && ((!has(p1.port) && !has(p2.port)) || (!has(p1.port) && p2.port
-                    == 0) || (p1.port == 0 && !has(p2.port)) || (p1.port == p2.port))))
+                    == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__)
+                    || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '')) || (has(p1.__namespace__) && has(p2.__namespace__) &&
+                    p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName)
+                    || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName
+                    == '')) || ( has(p1.sectionName) && has(p2.sectionName) && p1.sectionName
+                    == p2.sectionName)) && (((!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0)) || (has(p1.port) && has(p2.port) && p1.port
+                    == p2.port))))
               rules:
                 default:
                 - matches:
@@ -6464,6 +6603,7 @@ spec:
                                         type: string
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: set
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
@@ -6519,25 +6659,28 @@ spec:
                                   properties:
                                     backendRef:
                                       description: "BackendRef references a resource
-                                        where mirrored requests are sent. \n If the
-                                        referent cannot be found, this BackendRef
-                                        is invalid and must be dropped from the Gateway.
-                                        The controller must ensure the \"ResolvedRefs\"
-                                        condition on the Route status is set to `status:
-                                        False` and not configure this backend in the
-                                        underlying implementation. \n If there is
-                                        a cross-namespace reference to an *existing*
-                                        object that is not allowed by a ReferenceGrant,
-                                        the controller must ensure the \"ResolvedRefs\"
-                                        \ condition on the Route is set to `status:
-                                        False`, with the \"RefNotPermitted\" reason
-                                        and not configure this backend in the underlying
-                                        implementation. \n In either error case, the
-                                        Message of the `ResolvedRefs` Condition should
-                                        be used to provide more detail about the problem.
-                                        \n Support: Extended for Kubernetes Service
-                                        \n Support: Implementation-specific for any
-                                        other resource"
+                                        where mirrored requests are sent. \n Mirrored
+                                        requests must be sent only to a single destination
+                                        endpoint within this BackendRef, irrespective
+                                        of how many endpoints are present within this
+                                        BackendRef. \n If the referent cannot be found,
+                                        this BackendRef is invalid and must be dropped
+                                        from the Gateway. The controller must ensure
+                                        the \"ResolvedRefs\" condition on the Route
+                                        status is set to `status: False` and not configure
+                                        this backend in the underlying implementation.
+                                        \n If there is a cross-namespace reference
+                                        to an *existing* object that is not allowed
+                                        by a ReferenceGrant, the controller must ensure
+                                        the \"ResolvedRefs\"  condition on the Route
+                                        is set to `status: False`, with the \"RefNotPermitted\"
+                                        reason and not configure this backend in the
+                                        underlying implementation. \n In either error
+                                        case, the Message of the `ResolvedRefs` Condition
+                                        should be used to provide more detail about
+                                        the problem. \n Support: Extended for Kubernetes
+                                        Service \n Support: Implementation-specific
+                                        for any other resource"
                                       properties:
                                         group:
                                           default: ""
@@ -6837,6 +6980,7 @@ spec:
                                         type: string
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: set
                                     set:
                                       description: "Set overwrites the request with
                                         the given header (name, value) before the
@@ -7079,20 +7223,17 @@ spec:
                               rule: '!(self.exists(f, f.type == ''RequestRedirect'')
                                 && self.exists(f, f.type == ''URLRewrite''))'
                             - message: RequestHeaderModifier filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''RequestHeaderModifier'')
-                                ? self.exists_one(f, f.type == ''RequestHeaderModifier'')
-                                : true'
+                              rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
+                                <= 1
                             - message: ResponseHeaderModifier filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''ResponseHeaderModifier'')
-                                ? self.exists_one(f, f.type == ''ResponseHeaderModifier'')
-                                : true'
+                              rule: self.filter(f, f.type == 'ResponseHeaderModifier').size()
+                                <= 1
                             - message: RequestRedirect filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''RequestRedirect'')
-                                ? self.exists_one(f, f.type == ''RequestRedirect'')
-                                : true'
+                              rule: self.filter(f, f.type == 'RequestRedirect').size()
+                                <= 1
                             - message: URLRewrite filter cannot be repeated
-                              rule: 'self.exists(f, f.type == ''URLRewrite'') ? self.exists_one(f,
-                                f.type == ''URLRewrite'') : true'
+                              rule: self.filter(f, f.type == 'URLRewrite').size()
+                                <= 1
                           group:
                             default: ""
                             description: Group is the group of the referent. For example,
@@ -7294,6 +7435,7 @@ spec:
                                   type: string
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: set
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
@@ -7346,23 +7488,26 @@ spec:
                             properties:
                               backendRef:
                                 description: "BackendRef references a resource where
-                                  mirrored requests are sent. \n If the referent cannot
-                                  be found, this BackendRef is invalid and must be
-                                  dropped from the Gateway. The controller must ensure
-                                  the \"ResolvedRefs\" condition on the Route status
-                                  is set to `status: False` and not configure this
-                                  backend in the underlying implementation. \n If
-                                  there is a cross-namespace reference to an *existing*
-                                  object that is not allowed by a ReferenceGrant,
-                                  the controller must ensure the \"ResolvedRefs\"
-                                  \ condition on the Route is set to `status: False`,
-                                  with the \"RefNotPermitted\" reason and not configure
-                                  this backend in the underlying implementation. \n
-                                  In either error case, the Message of the `ResolvedRefs`
-                                  Condition should be used to provide more detail
-                                  about the problem. \n Support: Extended for Kubernetes
-                                  Service \n Support: Implementation-specific for
-                                  any other resource"
+                                  mirrored requests are sent. \n Mirrored requests
+                                  must be sent only to a single destination endpoint
+                                  within this BackendRef, irrespective of how many
+                                  endpoints are present within this BackendRef. \n
+                                  If the referent cannot be found, this BackendRef
+                                  is invalid and must be dropped from the Gateway.
+                                  The controller must ensure the \"ResolvedRefs\"
+                                  condition on the Route status is set to `status:
+                                  False` and not configure this backend in the underlying
+                                  implementation. \n If there is a cross-namespace
+                                  reference to an *existing* object that is not allowed
+                                  by a ReferenceGrant, the controller must ensure
+                                  the \"ResolvedRefs\"  condition on the Route is
+                                  set to `status: False`, with the \"RefNotPermitted\"
+                                  reason and not configure this backend in the underlying
+                                  implementation. \n In either error case, the Message
+                                  of the `ResolvedRefs` Condition should be used to
+                                  provide more detail about the problem. \n Support:
+                                  Extended for Kubernetes Service \n Support: Implementation-specific
+                                  for any other resource"
                                 properties:
                                   group:
                                     default: ""
@@ -7642,6 +7787,7 @@ spec:
                                   type: string
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: set
                               set:
                                 description: "Set overwrites the request with the
                                   given header (name, value) before the action. \n
@@ -7864,19 +8010,16 @@ spec:
                         rule: '!(self.exists(f, f.type == ''RequestRedirect'') &&
                           self.exists(f, f.type == ''URLRewrite''))'
                       - message: RequestHeaderModifier filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''RequestHeaderModifier'')
-                          ? self.exists_one(f, f.type == ''RequestHeaderModifier'')
-                          : true'
+                        rule: self.filter(f, f.type == 'RequestHeaderModifier').size()
+                          <= 1
                       - message: ResponseHeaderModifier filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''ResponseHeaderModifier'')
-                          ? self.exists_one(f, f.type == ''ResponseHeaderModifier'')
-                          : true'
+                        rule: self.filter(f, f.type == 'ResponseHeaderModifier').size()
+                          <= 1
                       - message: RequestRedirect filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''RequestRedirect'') ? self.exists_one(f,
-                          f.type == ''RequestRedirect'') : true'
+                        rule: self.filter(f, f.type == 'RequestRedirect').size() <=
+                          1
                       - message: URLRewrite filter cannot be repeated
-                        rule: 'self.exists(f, f.type == ''URLRewrite'') ? self.exists_one(f,
-                          f.type == ''URLRewrite'') : true'
+                        rule: self.filter(f, f.type == 'URLRewrite').size() <= 1
                     matches:
                       default:
                       - path:
@@ -8023,49 +8166,48 @@ spec:
                             x-kubernetes-validations:
                             - message: value must be an absolute path and start with
                                 '/' when type one of ['Exact', 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? self.value.startsWith(''/'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? self.value.startsWith(''/'')
+                                : true'
                             - message: must not contain '//' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''//'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''//'')
+                                : true'
                             - message: must not contain '/./' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''/./'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''/./'')
+                                : true'
                             - message: must not contain '/../' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''/../'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''/../'')
+                                : true'
                             - message: must not contain '%2f' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''%2f'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''%2f'')
+                                : true'
                             - message: must not contain '%2F' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''%2F'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''%2F'')
+                                : true'
                             - message: must not contain '#' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.contains(''#'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.contains(''#'')
+                                : true'
                             - message: must not end with '/..' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.endsWith(''/..'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.endsWith(''/..'')
+                                : true'
                             - message: must not end with '/.' when type one of ['Exact',
                                 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? !self.value.endsWith(''/.'') : true'
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? !self.value.endsWith(''/.'')
+                                : true'
                             - message: type must be one of ['Exact', 'PathPrefix',
                                 'RegularExpression']
-                              rule: self.type == 'Exact' || self.type == 'PathPrefix'
-                                || self.type == 'RegularExpression'
+                              rule: self.type in ['Exact','PathPrefix'] || self.type
+                                == 'RegularExpression'
                             - message: must only contain valid characters (matching
                                 ^(?:[-A-Za-z0-9/._~!$&'()*+,;=:@]|[%][0-9a-fA-F]{2})+$)
                                 for types ['Exact', 'PathPrefix']
-                              rule: '(self.type == ''Exact'' || self.type == ''PathPrefix'')
-                                ? self.value.matches(r"""^(?:[-A-Za-z0-9/._~!$&''()*+,;=:@]|[%][0-9a-fA-F]{2})+$""")
+                              rule: '(self.type in [''Exact'',''PathPrefix'']) ? self.value.matches(r"""^(?:[-A-Za-z0-9/._~!$&''()*+,;=:@]|[%][0-9a-fA-F]{2})+$""")
                                 : true'
                           queryParams:
                             description: "QueryParams specifies HTTP query parameter
@@ -8454,7 +8596,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: referencegrants.gateway.networking.k8s.io
@@ -8496,7 +8638,7 @@ spec:
           allowing users to assert which cross-namespace object references are permitted.
           Implementations that support ReferenceGrant MUST NOT permit cross-namespace
           references which have no grant, and MUST respond to the removal of a grant
-          by revoking the access that the grant allowed. \n Support: Core"
+          by revoking the access that the grant allowed."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -8621,7 +8763,7 @@ spec:
           users to assert which cross-namespace object references are permitted. Implementations
           that support ReferenceGrant MUST NOT permit cross-namespace references which
           have no grant, and MUST respond to the removal of a grant by revoking the
-          access that the grant allowed. \n Support: Core"
+          access that the grant allowed."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -8743,7 +8885,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tcproutes.gateway.networking.k8s.io
@@ -8943,17 +9085,31 @@ spec:
                 maxItems: 32
                 type: array
                 x-kubernetes-validations:
+                - message: sectionName or port must be specified when parentRefs includes
+                    2 or more references to the same parent
+                  rule: 'self.all(p1, self.all(p2, p1.group == p2.group && p1.kind
+                    == p2.kind && p1.name == p2.name && ( ( (!has(p1.__namespace__)
+                    || p1.__namespace__ == '''') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '''') ) || ( has(p1.__namespace__) && has(p2.__namespace__)
+                    && p1.__namespace__ == p2.__namespace__ ) ) ? ( ( ( (!has(p1.sectionName)
+                    || p1.sectionName == '''') && (!has(p2.sectionName) || p2.sectionName
+                    == '''') && (!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0) ) || ( ( (has(p1.sectionName) && p1.sectionName
+                    != '''') || (has(p1.port) && p1.port != 0) ) && ( (has(p2.sectionName)
+                    && p2.sectionName != '''') || (has(p2.port) && p2.port != 0) )
+                    ) ) ): true ))'
                 - message: sectionName or port must be unique when parentRefs includes
                     2 or more references to the same parent
                   rule: self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind
-                    == p2.kind && ((!has(p1.__namespace__) && !has(p2.__namespace__))
-                    || (!has(p1.__namespace__) && p2.__namespace__ == '') || (p1.__namespace__
-                    == '' && !has(p2.__namespace__)) || (p1.__namespace__ == p2.__namespace__))
-                    && p1.name == p2.name && ((!has(p1.sectionName) && !has(p2.sectionName))
-                    || (!has(p1.sectionName) && p2.sectionName == '') || (p1.sectionName
-                    == '' && !has(p2.sectionName)) || (p1.sectionName == p2.sectionName))
-                    && ((!has(p1.port) && !has(p2.port)) || (!has(p1.port) && p2.port
-                    == 0) || (p1.port == 0 && !has(p2.port)) || (p1.port == p2.port))))
+                    == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__)
+                    || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '')) || (has(p1.__namespace__) && has(p2.__namespace__) &&
+                    p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName)
+                    || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName
+                    == '')) || ( has(p1.sectionName) && has(p2.sectionName) && p1.sectionName
+                    == p2.sectionName)) && (((!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0)) || (has(p1.port) && has(p2.port) && p1.port
+                    == p2.port))))
               rules:
                 description: Rules are a list of TCP matchers and actions.
                 items:
@@ -9345,7 +9501,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tlsroutes.gateway.networking.k8s.io
@@ -9591,17 +9747,31 @@ spec:
                 maxItems: 32
                 type: array
                 x-kubernetes-validations:
+                - message: sectionName or port must be specified when parentRefs includes
+                    2 or more references to the same parent
+                  rule: 'self.all(p1, self.all(p2, p1.group == p2.group && p1.kind
+                    == p2.kind && p1.name == p2.name && ( ( (!has(p1.__namespace__)
+                    || p1.__namespace__ == '''') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '''') ) || ( has(p1.__namespace__) && has(p2.__namespace__)
+                    && p1.__namespace__ == p2.__namespace__ ) ) ? ( ( ( (!has(p1.sectionName)
+                    || p1.sectionName == '''') && (!has(p2.sectionName) || p2.sectionName
+                    == '''') && (!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0) ) || ( ( (has(p1.sectionName) && p1.sectionName
+                    != '''') || (has(p1.port) && p1.port != 0) ) && ( (has(p2.sectionName)
+                    && p2.sectionName != '''') || (has(p2.port) && p2.port != 0) )
+                    ) ) ): true ))'
                 - message: sectionName or port must be unique when parentRefs includes
                     2 or more references to the same parent
                   rule: self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind
-                    == p2.kind && ((!has(p1.__namespace__) && !has(p2.__namespace__))
-                    || (!has(p1.__namespace__) && p2.__namespace__ == '') || (p1.__namespace__
-                    == '' && !has(p2.__namespace__)) || (p1.__namespace__ == p2.__namespace__))
-                    && p1.name == p2.name && ((!has(p1.sectionName) && !has(p2.sectionName))
-                    || (!has(p1.sectionName) && p2.sectionName == '') || (p1.sectionName
-                    == '' && !has(p2.sectionName)) || (p1.sectionName == p2.sectionName))
-                    && ((!has(p1.port) && !has(p2.port)) || (!has(p1.port) && p2.port
-                    == 0) || (p1.port == 0 && !has(p2.port)) || (p1.port == p2.port))))
+                    == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__)
+                    || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '')) || (has(p1.__namespace__) && has(p2.__namespace__) &&
+                    p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName)
+                    || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName
+                    == '')) || ( has(p1.sectionName) && has(p2.sectionName) && p1.sectionName
+                    == p2.sectionName)) && (((!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0)) || (has(p1.port) && has(p2.port) && p1.port
+                    == p2.port))))
               rules:
                 description: Rules are a list of TLS matchers and actions.
                 items:
@@ -9996,7 +10166,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0-rc1
+    gateway.networking.k8s.io/bundle-version: v0.8.0-rc2
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: udproutes.gateway.networking.k8s.io
@@ -10196,17 +10366,31 @@ spec:
                 maxItems: 32
                 type: array
                 x-kubernetes-validations:
+                - message: sectionName or port must be specified when parentRefs includes
+                    2 or more references to the same parent
+                  rule: 'self.all(p1, self.all(p2, p1.group == p2.group && p1.kind
+                    == p2.kind && p1.name == p2.name && ( ( (!has(p1.__namespace__)
+                    || p1.__namespace__ == '''') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '''') ) || ( has(p1.__namespace__) && has(p2.__namespace__)
+                    && p1.__namespace__ == p2.__namespace__ ) ) ? ( ( ( (!has(p1.sectionName)
+                    || p1.sectionName == '''') && (!has(p2.sectionName) || p2.sectionName
+                    == '''') && (!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0) ) || ( ( (has(p1.sectionName) && p1.sectionName
+                    != '''') || (has(p1.port) && p1.port != 0) ) && ( (has(p2.sectionName)
+                    && p2.sectionName != '''') || (has(p2.port) && p2.port != 0) )
+                    ) ) ): true ))'
                 - message: sectionName or port must be unique when parentRefs includes
                     2 or more references to the same parent
                   rule: self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind
-                    == p2.kind && ((!has(p1.__namespace__) && !has(p2.__namespace__))
-                    || (!has(p1.__namespace__) && p2.__namespace__ == '') || (p1.__namespace__
-                    == '' && !has(p2.__namespace__)) || (p1.__namespace__ == p2.__namespace__))
-                    && p1.name == p2.name && ((!has(p1.sectionName) && !has(p2.sectionName))
-                    || (!has(p1.sectionName) && p2.sectionName == '') || (p1.sectionName
-                    == '' && !has(p2.sectionName)) || (p1.sectionName == p2.sectionName))
-                    && ((!has(p1.port) && !has(p2.port)) || (!has(p1.port) && p2.port
-                    == 0) || (p1.port == 0 && !has(p2.port)) || (p1.port == p2.port))))
+                    == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__)
+                    || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__
+                    == '')) || (has(p1.__namespace__) && has(p2.__namespace__) &&
+                    p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName)
+                    || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName
+                    == '')) || ( has(p1.sectionName) && has(p2.sectionName) && p1.sectionName
+                    == p2.sectionName)) && (((!has(p1.port) || p1.port == 0) && (!has(p2.port)
+                    || p2.port == 0)) || (has(p1.port) && has(p2.port) && p1.port
+                    == p2.port))))
               rules:
                 description: Rules are a list of UDP matchers and actions.
                 items:
@@ -10663,7 +10847,7 @@ spec:
     spec:
       containers:
       - name: webhook
-        image: registry.k8s.io/gateway-api/admission-server:v0.7.1
+        image: registry.k8s.io/gateway-api/admission-server:v0.8.0-rc2
         imagePullPolicy: IfNotPresent
         args:
         - -logtostderr
