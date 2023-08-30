@@ -1458,6 +1458,9 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		return nil
 	}
 
+	found := false
+	valid := false
+	var validationErr error
 	for i := range epList.Items {
 		ep := epList.Items[i]
 		r.log.Info("processing envoyproxy", "namespace", ep.Namespace, "name", ep.Name)
@@ -1470,9 +1473,12 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 				}
 				return nil
 			}
+			found = true
 			if err := validation.ValidateEnvoyProxy(&ep); err != nil {
-				return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, err)
+				validationErr = fmt.Errorf("invalid envoyproxy: %v", err)
+				continue
 			}
+			valid = true
 
 			if err := r.addFinalizer(ctx, &ep); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed adding finalizer to envoy proxy %s",
@@ -1484,6 +1490,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 			break
 		}
 
+		// Remove finalizer from EnvoyProxy when GatewayClass stops referencing it
 		if slice.ContainsString(ep.Finalizers, gatewayClassFinalizer) {
 			if err := r.removeFinalizer(ctx, &ep); err != nil {
 				r.log.Error(err, fmt.Sprintf("failed to remove finalizer from envoy proxy %s",
@@ -1492,6 +1499,14 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 			}
 			return nil
 		}
+	}
+
+	if !found {
+		return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
+	}
+
+	if !valid {
+		return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
 	}
 
 	return nil
