@@ -49,6 +49,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		svr.EnvoyGateway.Provider.Kubernetes != nil &&
 		(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
 		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
+		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
 		}
