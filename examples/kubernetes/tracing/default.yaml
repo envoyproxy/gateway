@@ -23,6 +23,7 @@ spec:
       provider:
         host: otel-collector.monitoring.svc.cluster.local
         port: 4317
+        type: OpenTelemetry
       customTags:
         # This is an example of using a literal as a tag value
         key1:
