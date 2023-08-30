@@ -8,6 +8,9 @@ A Kubernetes cluster.
 
 __Note:__ Refer to the [Compatibility Matrix](../intro/compatibility.rst) for supported Kubernetes versions.
 
+__Note:__ In case your Kubernetes cluster, does not have a LoadBalancer implementation, we recommend installing one
+so the `Gateway` resource has an Address associated with it. We recommend using [MetalLB](https://metallb.universe.tf/installation/).
+
 ## Installation
 
 Install the Gateway API CRDs and Envoy Gateway:
