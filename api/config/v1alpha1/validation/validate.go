@@ -205,8 +205,10 @@ func validateProxyAccessLog(accessLog *egcfgv1a1.ProxyAccessLog) []error {
 					errs = append(errs, err)
 				}
 			case egcfgv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
-				err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
-				errs = append(errs, err)
+				if sink.OpenTelemetry == nil {
+					err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
+					errs = append(errs, err)
+				}
 			}
 		}
 	}
