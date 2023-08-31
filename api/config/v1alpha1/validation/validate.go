@@ -56,6 +56,12 @@ func validateEnvoyProxySpec(spec *egcfgv1a1.EnvoyProxySpec) error {
 			errs = append(errs, err)
 		}
 	}
+
+	validateProxyTelemetryErrs := validateProxyTelemetry(spec)
+	if len(validateProxyTelemetryErrs) != 0 {
+		errs = append(errs, validateProxyTelemetryErrs...)
+	}
+
 	return utilerrors.NewAggregate(errs)
 }
 
@@ -155,4 +161,55 @@ func validateBootstrap(boostrapConfig *egcfgv1a1.ProxyBootstrap) error {
 	}
 
 	return nil
+}
+
+func validateProxyTelemetry(spec *egcfgv1a1.EnvoyProxySpec) []error {
+	var errs []error
+
+	if spec != nil && spec.Telemetry.AccessLog != nil {
+		accessLogErrs := validateProxyAccessLog(spec.Telemetry.AccessLog)
+		if len(accessLogErrs) > 0 {
+			errs = append(errs, accessLogErrs...)
+		}
+	}
+
+	return errs
+}
+
+func validateProxyAccessLog(accessLog *egcfgv1a1.ProxyAccessLog) []error {
+	if accessLog.Disable {
+		return nil
+	}
+
+	var errs []error
+
+	for _, setting := range accessLog.Settings {
+		switch setting.Format.Type {
+		case egcfgv1a1.ProxyAccessLogFormatTypeText:
+			if setting.Format.Text == nil {
+				err := fmt.Errorf("unable to configure access log when using Text format but \"text\" field being empty")
+				errs = append(errs, err)
+			}
+		case egcfgv1a1.ProxyAccessLogFormatTypeJSON:
+			if setting.Format.JSON == nil {
+				err := fmt.Errorf("unable to configure access log when using JSON format but \"json\" field being empty")
+				errs = append(errs, err)
+			}
+		}
+
+		for _, sink := range setting.Sinks {
+			switch sink.Type {
+			case egcfgv1a1.ProxyAccessLogSinkTypeFile:
+				if sink.File == nil {
+					err := fmt.Errorf("unable to configure access log when using File sink type but \"file\" field being empty")
+					errs = append(errs, err)
+				}
+			case egcfgv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
+				err := fmt.Errorf("unable to configure access log when using OpenTelemetry sink type but \"openTelemetry\" field being empty")
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	return errs
 }
