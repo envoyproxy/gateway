@@ -15,6 +15,7 @@ deployment:
     image:
       repository: gcr.io/kubebuilder/kube-rbac-proxy
       tag: v0.14.1
+    imagePullPolicy: Always
     resources:
       limits:
         cpu: 500m
