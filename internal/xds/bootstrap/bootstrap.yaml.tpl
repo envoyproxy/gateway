@@ -8,7 +8,7 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
-{{- if .EnableStatConfig }}
+{{- if .StatsMatcher  }}
 stats_config:
   stats_matcher:
     inclusion_list:

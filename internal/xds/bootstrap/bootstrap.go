@@ -36,9 +36,6 @@ const (
 	envoyReadinessAddress = "0.0.0.0"
 	EnvoyReadinessPort    = 19001
 	EnvoyReadinessPath    = "/ready"
-
-	// DefaultEnvoyStatsMatcherPrefixes is the default subset of Envoy stats added when setting StatsMatcher.
-	DefaultEnvoyStatsMatcherPrefixes = "cluster_manager,listener_manager,server,cluster.xds-grpc"
 )
 
 //go:embed bootstrap.yaml.tpl
@@ -70,7 +67,7 @@ type bootstrapParameters struct {
 	EnableStatConfig bool
 	// StatsMatcher is to control creation of custom Envoy stats with prefix,
 	// suffix, and regex expressions match on the name of the stats.
-	StatsMatcher StatsMatcherParameters
+	StatsMatcher *StatsMatcherParameters
 }
 
 type xdsServerParameters struct {
@@ -128,7 +125,6 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 		enablePrometheus bool
 		metricSinks      []metricSink
 		StatsMatcher     StatsMatcherParameters
-		enableStatConfig bool
 	)
 
 	if proxyMetrics != nil {
@@ -156,11 +152,8 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 		}
 
 		if proxyMetrics.Matches != nil {
-			enableStatConfig = true
-			// Set default envoy proxy Stats
-			StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, strings.Split(DefaultEnvoyStatsMatcherPrefixes, ",")...)
 
-			// Add additional custom envoy proxy stats
+			// Add custom envoy proxy stats
 			for _, match := range proxyMetrics.Matches {
 				switch match.Type {
 				case egcfgv1a1.Prefix:
@@ -193,9 +186,11 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			},
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
-			StatsMatcher:     StatsMatcher,
-			EnableStatConfig: enableStatConfig,
+			StatsMatcher:     &StatsMatcher,
 		},
+	}
+	if proxyMetrics == nil || proxyMetrics.Matches == nil {
+		cfg.parameters.StatsMatcher = nil
 	}
 
 	if err := cfg.render(); err != nil {

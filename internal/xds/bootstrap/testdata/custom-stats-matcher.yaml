@@ -12,10 +12,6 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
-      - prefix: cluster_manager
-      - prefix: listener_manager
-      - prefix: server
-      - prefix: cluster.xds-grpc
       - prefix: http
       - prefix: cluster
       - suffix: upstream_rq
