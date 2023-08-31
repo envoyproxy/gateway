@@ -23,11 +23,14 @@ func GetSelector(labels map[string]string) *metav1.LabelSelector {
 }
 
 // ExpectedServiceSpec returns service spec.
-func ExpectedServiceSpec(serviceType *egcfgv1a1.ServiceType) corev1.ServiceSpec {
+func ExpectedServiceSpec(service *egcfgv1a1.KubernetesServiceSpec) corev1.ServiceSpec {
 	serviceSpec := corev1.ServiceSpec{}
-	serviceSpec.Type = corev1.ServiceType(*serviceType)
+	serviceSpec.Type = corev1.ServiceType(*service.Type)
 	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
-	if *serviceType == egcfgv1a1.ServiceTypeLoadBalancer {
+	if *service.Type == egcfgv1a1.ServiceTypeLoadBalancer {
+		if service.LoadBalancerClass != nil {
+			serviceSpec.LoadBalancerClass = service.LoadBalancerClass
+		}
 		// Preserve the client source IP and avoid a second hop for LoadBalancer.
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 	}

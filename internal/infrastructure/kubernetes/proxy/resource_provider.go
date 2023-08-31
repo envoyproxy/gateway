@@ -97,7 +97,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	// Set the spec of gateway service
-	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig.Type)
+	serviceSpec := resource.ExpectedServiceSpec(envoyServiceConfig)
 	serviceSpec.Ports = ports
 	serviceSpec.Selector = resource.GetSelector(labels).MatchLabels
 	serviceSpec.ExternalIPs = r.infra.Addresses

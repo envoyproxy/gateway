@@ -116,4 +116,4 @@ xdsIR:
             weight: 1
           name: grpcroute/default/grpcroute-1/rule/0
         hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/-1-*
+        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*

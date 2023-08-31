@@ -516,9 +516,11 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					// if the redirect scheme is empty, the redirect port must be the Gateway Listener port.
 					routeRoute.Redirect.Port = &redirectPort
 				}
-
+				// Remove dots from the hostname before appending it to the IR Route name
+				// since dots are special chars used in stats tag extraction in Envoy
+				underscoredHost := strings.ReplaceAll(host, ".", "_")
 				hostRoute := &ir.HTTPRoute{
-					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
+					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
 					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
 					HeaderMatches:         routeRoute.HeaderMatches,

@@ -93,7 +93,7 @@ Verify logs from loki:
 curl -s "http://$LOKI_IP:3100/loki/api/v1/query_range" --data-urlencode "query={job=\"fluentbit\"}" | jq '.data.result[0].values'
 ```
 
-If you want to disable it, set the `telemetry.accesslog.disabled` to `true` in the `EnvoyProxy` CRD.
+If you want to disable it, set the `telemetry.accesslog.disable` to `true` in the `EnvoyProxy` CRD.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/accesslog/disable-accesslog.yaml

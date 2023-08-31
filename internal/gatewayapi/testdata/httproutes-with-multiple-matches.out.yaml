@@ -294,7 +294,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-2/rule/0
         hostname: example.com
-        name: httproute/envoy-gateway/httproute-2/rule/0/match/0-example.com
+        name: httproute/envoy-gateway/httproute-2/rule/0/match/0/example_com
         pathMatch:
           distinct: false
           name: ""
@@ -313,7 +313,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-3/rule/0
         hostname: example.com
-        name: httproute/envoy-gateway/httproute-3/rule/0/match/0-example.com
+        name: httproute/envoy-gateway/httproute-3/rule/0/match/0/example_com
         pathMatch:
           distinct: false
           name: ""
@@ -332,7 +332,7 @@ xdsIR:
           exact: one
           name: version
         hostname: example.net
-        name: httproute/envoy-gateway/httproute-4/rule/0/match/0-example.net
+        name: httproute/envoy-gateway/httproute-4/rule/0/match/0/example_net
         pathMatch:
           distinct: false
           name: ""
@@ -347,7 +347,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-5/rule/0
         hostname: example.net
-        name: httproute/envoy-gateway/httproute-5/rule/0/match/0-example.net
+        name: httproute/envoy-gateway/httproute-5/rule/0/match/0/example_net
         pathMatch:
           distinct: false
           name: ""
@@ -362,7 +362,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
         hostname: '*.com'
-        name: httproute/envoy-gateway/httproute-1/rule/0/match/0-*.com
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_com
         pathMatch:
           distinct: false
           name: ""
@@ -377,7 +377,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
         hostname: '*.net'
-        name: httproute/envoy-gateway/httproute-1/rule/0/match/0-*.net
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_net
         pathMatch:
           distinct: false
           name: ""
@@ -392,7 +392,7 @@ xdsIR:
             weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
         hostname: '*'
-        name: httproute/envoy-gateway/httproute-1/rule/0/match/0-*
+        name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
