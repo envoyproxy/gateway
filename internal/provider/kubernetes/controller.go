@@ -444,11 +444,11 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	if len(r.namespaceLabels) != 0 {
 		var rgs []gwapiv1a2.ReferenceGrant
 		for _, refGrant := range refGrants {
-			refGrant := refGrant
-			ok, err := r.checkObjectNamespaceLabels(&refGrant)
+			ns := refGrant.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for ReferenceGrant %s: %s", refGrant.GetName(), err)
+				return nil, fmt.Errorf("failed to check namespace labels for ReferenceGrant %s in namespace %s: %s", refGrant.GetName(), ns, err)
 			}
 			if !ok {
 				// TODO: should log?
@@ -488,11 +488,11 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 	if len(r.namespaceLabels) != 0 {
 		var gtws []gwapiv1b1.Gateway
 		for _, gtw := range gateways {
-			gtw := gtw
-			ok, err := r.checkObjectNamespaceLabels(&gtw)
+			ns := gtw.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return fmt.Errorf("failed to check namespace labels for gateway %s: %s", gtw.GetName(), err)
+				return fmt.Errorf("failed to check namespace labels for gateway %s in namespace %s: %s", gtw.GetName(), ns, err)
 			}
 
 			if ok {

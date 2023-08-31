@@ -1751,7 +1751,6 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		require.NoError(t, provider.Start(ctx))
 	}()
 
-	// Stop the kube provider.
 	defer func() {
 		cancel()
 		require.NoError(t, testEnv.Stop())
@@ -1810,5 +1809,4 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 
 	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName})
 	require.Equal(t, false, ok)
-
 }

@@ -24,11 +24,11 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 	if len(r.namespaceLabels) != 0 {
 		var as []egv1a1.AuthenticationFilter
 		for _, a := range authens {
-			a := a
-			ok, err := r.checkObjectNamespaceLabels(&a)
+			ns := a.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for AuthenicationFilter %s: %s", a.GetName(), err)
+				return nil, fmt.Errorf("failed to check namespace labels for AuthenicationFilter %s in namespace %s: %s", a.GetName(), ns, err)
 			}
 
 			if ok {
@@ -52,11 +52,11 @@ func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a
 	if len(r.namespaceLabels) != 0 {
 		var rls []egv1a1.RateLimitFilter
 		for _, rl := range rateLimits {
-			rl := rl
-			ok, err := r.checkObjectNamespaceLabels(&rl)
+			ns := rl.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
 			if err != nil {
 				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for RateLimitFilter %s: %s", rl.GetName(), err)
+				return nil, fmt.Errorf("failed to check namespace labels for RateLimitFilter %s in namespace %s: %s", rl.GetName(), ns, err)
 			}
 
 			if ok {
@@ -84,11 +84,11 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		if len(r.namespaceLabels) != 0 {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
-				extR := extR
-				ok, err := r.checkObjectNamespaceLabels(&extR)
+				ns := extR.GetNamespace()
+				ok, err := r.checkObjectNamespaceLabels(ns)
 				if err != nil {
 					// TODO: should return? or just proceed?
-					return nil, fmt.Errorf("failed to check namespace labels for ExtensionRefFilter %s: %s", extR.GetName(), err)
+					return nil, fmt.Errorf("failed to check namespace labels for ExtensionRefFilter %s in namespace %s: %s", extR.GetName(), ns, err)
 				}
 				if ok {
 					extRs = append(extRs, extR)
