@@ -3939,6 +3939,10 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      enableVirtualHostStats:
+                        description: EnableVirtualHostStats enables envoy stat metrics
+                          for virtual hosts.
+                        type: boolean
                       matches:
                         description: Matches defines configuration for selecting specific
                           metrics instead of generating all metrics stats that are

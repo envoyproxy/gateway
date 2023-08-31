@@ -16,6 +16,7 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
@@ -27,6 +28,8 @@ import (
 var (
 	ErrXdsClusterExists = errors.New("xds cluster exists")
 )
+
+const AuthorityHeaderKey = ":authority"
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
@@ -61,7 +64,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 
 	tCtx := new(types.ResourceVersionTable)
 
-	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog, ir.Tracing); err != nil {
+	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
 		return nil, err
 	}
 
@@ -94,7 +97,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, metrics *ir.Metrics) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
@@ -172,6 +175,25 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				vHost = &routev3.VirtualHost{
 					Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
 					Domains: []string{httpRoute.Hostname},
+				}
+				if metrics != nil && metrics.EnableVirtualHostStats {
+					vHost.VirtualClusters = []*routev3.VirtualCluster{
+						{
+							Name: underscoredHostname,
+							Headers: []*routev3.HeaderMatcher{
+								{
+									Name: AuthorityHeaderKey,
+									HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+										StringMatch: &matcherv3.StringMatcher{
+											MatchPattern: &matcherv3.StringMatcher_Exact{
+												Exact: httpRoute.Hostname,
+											},
+										},
+									},
+								},
+							},
+						},
+					}
 				}
 				vHosts[httpRoute.Hostname] = vHost
 				vHostsList = append(vHostsList, vHost)
