@@ -185,8 +185,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 									Name: AuthorityHeaderKey,
 									HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
 										StringMatch: &matcherv3.StringMatcher{
-											MatchPattern: &matcherv3.StringMatcher_Exact{
-												Exact: httpRoute.Hostname,
+											MatchPattern: &matcherv3.StringMatcher_Prefix{
+												Prefix: httpRoute.Hostname,
 											},
 										},
 									},
