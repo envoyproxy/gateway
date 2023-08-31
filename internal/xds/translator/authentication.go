@@ -135,7 +135,7 @@ func buildJwtAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					ClaimToHeaders:      claimToHeaders,
 				}
 
-				providerKey := fmt.Sprintf("%s-%s", route.Name, irProvider.Name)
+				providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
 				jwtProviders[providerKey] = jwtProvider
 				reqs = append(reqs, &jwtauthnv3.JwtRequirement{
 					RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{

@@ -133,7 +133,7 @@ metadata:
 spec:
   telemetry:
     accessLog:
-      disabled: true
+      disable: true
 ```
 
 2. The following is an example with text format access log.

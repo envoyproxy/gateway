@@ -4,8 +4,8 @@ set -euo pipefail
 
 # Setup default values
 CLUSTER_NAME=${CLUSTER_NAME:-"envoy-gateway"}
-METALLB_VERSION=${METALLB_VERSION:-"v0.13.7"}
-KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.26.0"}
+METALLB_VERSION=${METALLB_VERSION:-"v0.13.10"}
+KIND_NODE_TAG=${KIND_NODE_TAG:-"v1.28.0"}
 
 ## Create kind cluster.
 if [[ -z "${KIND_NODE_TAG}" ]]; then

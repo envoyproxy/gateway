@@ -10,6 +10,9 @@ type ProxyMetrics struct {
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
+	// Matches defines configuration for selecting specific metrics instead of generating all metrics stats
+	// that are enabled by default. This helps reduce CPU and memory overhead in Envoy.
+	Matches []Match `json:"matches,omitempty"`
 }
 
 type MetricSinkType string
@@ -28,6 +31,23 @@ type MetricSink struct {
 	// It's required if the sink type is OpenTelemetry.
 	OpenTelemetry *OpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
+
+// Match defines the stats match configuration.
+type Match struct {
+	// MatcherType defines the stats matcher type
+	//
+	// +kubebuilder:validation:Enum=RegularExpression;Prefix;Suffix
+	Type  MatcherType `json:"type"`
+	Value string      `json:"value"`
+}
+
+type MatcherType string
+
+const (
+	Prefix            MatcherType = "Prefix"
+	RegularExpression MatcherType = "RegularExpression"
+	Suffix            MatcherType = "Suffix"
+)
 
 type OpenTelemetrySink struct {
 	// Host define the service hostname.

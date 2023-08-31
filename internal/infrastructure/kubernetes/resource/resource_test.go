@@ -19,8 +19,9 @@ import (
 
 func TestExpectedServiceSpec(t *testing.T) {
 	type args struct {
-		serviceType *egcfgv1a1.ServiceType
+		service *egcfgv1a1.KubernetesServiceSpec
 	}
+	loadbalancerClass := "foobar"
 	tests := []struct {
 		name string
 		args args
@@ -28,7 +29,9 @@ func TestExpectedServiceSpec(t *testing.T) {
 	}{
 		{
 			name: "LoadBalancer",
-			args: args{serviceType: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer)},
+			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
+				Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeLoadBalancer,
 				SessionAffinity:       corev1.ServiceAffinityNone,
@@ -36,8 +39,23 @@ func TestExpectedServiceSpec(t *testing.T) {
 			},
 		},
 		{
+			name: "LoadBalancerWithClass",
+			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
+				Type:              egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+				LoadBalancerClass: &loadbalancerClass,
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				LoadBalancerClass:     &loadbalancerClass,
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
 			name: "ClusterIP",
-			args: args{serviceType: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP)},
+			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
+				Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+			}},
 			want: corev1.ServiceSpec{
 				Type:            corev1.ServiceTypeClusterIP,
 				SessionAffinity: corev1.ServiceAffinityNone,
@@ -46,7 +64,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equalf(t, tt.want, ExpectedServiceSpec(tt.args.serviceType), "expectedServiceSpec(%v)", tt.args.serviceType)
+			assert.Equalf(t, tt.want, ExpectedServiceSpec(tt.args.service), "expectedServiceSpec(%v)", tt.args.service)
 		})
 	}
 }

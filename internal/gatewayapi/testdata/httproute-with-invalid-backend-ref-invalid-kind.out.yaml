@@ -63,7 +63,7 @@ httpRoutes:
         status: "True"
         type: Accepted
       - lastTransitionTime: null
-        message: Kind is invalid, only Service is supported
+        message: Kind is invalid, only Service and MCS ServiceImport is supported
         reason: InvalidKind
         status: "False"
         type: ResolvedRefs
@@ -105,7 +105,7 @@ xdsIR:
         directResponse:
           statusCode: 500
         hostname: '*'
-        name: httproute/default/httproute-1/rule/0/match/0-*
+        name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           exact: /exact

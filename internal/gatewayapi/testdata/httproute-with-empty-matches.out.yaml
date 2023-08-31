@@ -106,4 +106,4 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/0
         hostname: '*'
-        name: httproute/default/httproute-1/rule/0/match/-1-*
+        name: httproute/default/httproute-1/rule/0/match/-1/*

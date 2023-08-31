@@ -9,14 +9,14 @@ xds:
         virtualHosts:
         - domains:
           - www.example.com
-          name: envoy-gateway-system/eg/http/www.example.com
+          name: envoy-gateway-system/eg/http/www_example_com
           routes:
           - match:
               pathSeparatedPrefix: /foo
-            name: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com
+            name: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
             route:
               cluster: httproute/envoy-gateway-system/backend/rule/0
             typedPerFilterConfig:
               envoy.filters.http.jwt_authn:
                 '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.PerRouteConfig
-                requirementName: httproute/envoy-gateway-system/backend/rule/0/match/0-www.example.com
+                requirementName: httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com
