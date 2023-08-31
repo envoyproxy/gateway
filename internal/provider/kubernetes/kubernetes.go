@@ -11,9 +11,11 @@ import (
 
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -38,14 +40,19 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		LeaderElection:         false,
 		HealthProbeBindAddress: ":8081",
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
-		MetricsBindAddress:     ":8080",
+		Metrics: metricsserver.Options{
+			BindAddress: ":8080",
+		},
 	}
 
 	if svr.EnvoyGateway.Provider != nil &&
 		svr.EnvoyGateway.Provider.Kubernetes != nil &&
 		(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
 		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
-		mgrOpts.Cache.Namespaces = svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces
+		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
+		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
+			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
+		}
 	}
 
 	mgr, err := ctrl.NewManager(cfg, mgrOpts)
