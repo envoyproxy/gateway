@@ -186,11 +186,10 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			},
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
-			StatsMatcher:     &StatsMatcher,
 		},
 	}
-	if proxyMetrics == nil || proxyMetrics.Matches == nil {
-		cfg.parameters.StatsMatcher = nil
+	if proxyMetrics != nil && proxyMetrics.Matches != nil {
+		cfg.parameters.StatsMatcher = &StatsMatcher
 	}
 
 	if err := cfg.render(); err != nil {
