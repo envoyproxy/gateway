@@ -193,7 +193,7 @@ func getInputBytes(inFile string) ([]byte, error) {
 	return os.ReadFile(inFile)
 }
 
-func validate(inFile, inType string, outTypes []string, resourceType string) error {
+func validateTranslateInputs(inFile, inType string, outTypes []string, resourceType string) error {
 	if !isValidInputType(inType) {
 		return fmt.Errorf("%s is not a valid input type. %s", inType, getValidInputTypesStr())
 	}
@@ -212,7 +212,7 @@ func validate(inFile, inType string, outTypes []string, resourceType string) err
 }
 
 func translate(w io.Writer, inFile, inType string, outTypes []string, output, resourceType string, addMissingResources bool, dnsDomain string) error {
-	if err := validate(inFile, inType, outTypes, resourceType); err != nil {
+	if err := validateTranslateInputs(inFile, inType, outTypes, resourceType); err != nil {
 		return err
 	}
 
