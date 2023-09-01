@@ -102,18 +102,21 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 		r.Logger.Error(err, "failed to listen on address", "address", addr)
 		return
 	}
+
+	go func() {
+		<-ctx.Done()
+		r.Logger.Info("grpc server shutting down")
+		// We don't use GracefulStop here because envoy
+		// has long-lived hanging xDS requests. There's no
+		// mechanism to make those pending requests fail,
+		// so we forcibly terminate the TCP sessions.
+		r.grpc.Stop()
+	}()
+
 	err = r.grpc.Serve(l)
 	if err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
-
-	<-ctx.Done()
-	r.Logger.Info("grpc server shutting down")
-	// We don't use GracefulStop here because envoy
-	// has long-lived hanging xDS requests. There's no
-	// mechanism to make those pending requests fail,
-	// so we forcibly terminate the TCP sessions.
-	r.grpc.Stop()
 }
 
 // registerServer registers the given xDS protocol Server with the gRPC
