@@ -113,8 +113,7 @@ func (r *Runner) serveXdsServer(ctx context.Context) {
 		r.grpc.Stop()
 	}()
 
-	err = r.grpc.Serve(l)
-	if err != nil {
+	if err = r.grpc.Serve(l); err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds server")
 	}
 }
