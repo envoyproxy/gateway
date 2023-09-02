@@ -80,6 +80,7 @@ spec:
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
         image: {{ .Values.deployment.kubeRbacProxy.image.repository }}:{{ .Values.deployment.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: {{ .Values.deployment.kubeRbacProxy.imagePullPolicy }}
         name: kube-rbac-proxy
         ports:
         - containerPort: 8443
