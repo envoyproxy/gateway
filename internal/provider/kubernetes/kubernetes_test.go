@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
 // The full text of the Apache license is available in the LICENSE file at
@@ -1756,16 +1759,14 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		require.NoError(t, testEnv.Stop())
 	}()
 
-	watchedNSName := "watched-ns"
-	noneWatchedNSName := "nonwatched-ns"
 	cli := provider.manager.GetClient()
-	ns1 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
-		Name:   watchedNSName,
+	watchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   "watched-ns",
 		Labels: map[string]string{"label-1": "true", "label-2": "true"},
 	}}
-	require.NoError(t, cli.Create(ctx, ns1))
-	noneWatchedNS1 := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: noneWatchedNSName}}
-	require.NoError(t, cli.Create(ctx, noneWatchedNS1))
+	require.NoError(t, cli.Create(ctx, watchedNS))
+	nonWatchedNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "non-watched-ns"}}
+	require.NoError(t, cli.Create(ctx, nonWatchedNS))
 
 	gcName := "gc-name"
 	gc := test.GetGatewayClass(gcName, egcfgv1a1.GatewayControllerName)
@@ -1790,16 +1791,16 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	}()
 
 	// Create the gateways
-	gw1 := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNSName}, gcName)
-	require.NoError(t, cli.Create(ctx, gw1))
+	watchedGateway := test.GetGateway(types.NamespacedName{Name: "watched-gateway", Namespace: watchedNS.Name}, gcName)
+	require.NoError(t, cli.Create(ctx, watchedGateway))
 	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw1))
+		require.NoError(t, cli.Delete(ctx, watchedGateway))
 	}()
 
-	gw2 := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName}, gcName)
-	require.NoError(t, cli.Create(ctx, gw2))
+	nonWatchedGateway := test.GetGateway(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name}, gcName)
+	require.NoError(t, cli.Create(ctx, nonWatchedGateway))
 	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw2))
+		require.NoError(t, cli.Delete(ctx, nonWatchedGateway))
 	}()
 
 	require.Eventually(t, func() bool {
@@ -1807,6 +1808,249 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		return res != nil && len(res.Gateways) == 1
 	}, defaultWait, defaultTick)
 
-	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: noneWatchedNSName})
+	_, ok := resources.GatewayStatuses.Load(types.NamespacedName{Name: "non-watched-gateway", Namespace: nonWatchedNS.Name})
 	require.Equal(t, false, ok)
+
+	watchedAuthenFilter := test.GetAuthenticationFilter("watched-authen", watchedNS.Name)
+	require.NoError(t, cli.Create(ctx, watchedAuthenFilter))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedAuthenFilter))
+	}()
+
+	nonWatchedAuthenFilter := test.GetAuthenticationFilter("non-watched-authen", nonWatchedNS.Name)
+	require.NoError(t, cli.Create(ctx, nonWatchedAuthenFilter))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedAuthenFilter))
+	}()
+
+	watchedRateLimitFilter := test.GetRateLimitFilter("watched-rate-limit-filter", watchedNS.Name)
+	require.NoError(t, cli.Create(ctx, watchedRateLimitFilter))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedRateLimitFilter))
+	}()
+
+	nonWatchedRateLimitFilter := test.GetRateLimitFilter("non-watched-rate-limit-filter", nonWatchedNS.Name)
+	require.NoError(t, cli.Create(ctx, nonWatchedRateLimitFilter))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedRateLimitFilter))
+	}()
+
+	watchedSvc := test.GetService(types.NamespacedName{Namespace: watchedNS.Name, Name: "watched-service"}, nil, map[string]int32{
+		"http":  80,
+		"https": 443,
+	})
+	require.NoError(t, cli.Create(ctx, watchedSvc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedSvc))
+	}()
+
+	nonWatchedSvc := test.GetService(types.NamespacedName{Namespace: nonWatchedNS.Name, Name: "non-watched-service"}, nil, map[string]int32{
+		"http":  8001,
+		"https": 44300,
+	})
+	require.NoError(t, cli.Create(ctx, nonWatchedSvc))
+
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedSvc))
+	}()
+
+	watchedHTTPRoute := test.GetHTTPRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-http-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name})
+	watchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1b1.HTTPRouteFilter{
+		{
+			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1b1.LocalObjectReference{
+				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
+				Name:  gwapiv1b1.ObjectName(watchedAuthenFilter.Name),
+			},
+		},
+		{
+			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1b1.LocalObjectReference{
+				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
+				Name:  gwapiv1b1.ObjectName(watchedRateLimitFilter.Name),
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, watchedHTTPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedHTTPRoute))
+	}()
+
+	nonWatchedHTTPRoute := test.GetHTTPRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-http-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedSvc.Name})
+	nonWatchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1b1.HTTPRouteFilter{
+		{
+			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1b1.LocalObjectReference{
+				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
+				Name:  gwapiv1b1.ObjectName(nonWatchedAuthenFilter.Name),
+			},
+		},
+		{
+			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1b1.LocalObjectReference{
+				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
+				Name:  gwapiv1b1.ObjectName(nonWatchedRateLimitFilter.Name),
+			},
+		},
+	}
+	require.NoError(t, cli.Create(ctx, nonWatchedHTTPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedHTTPRoute))
+	}()
+
+	watchedGRPCRoute := test.GetGRPCRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-grpc-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name})
+	require.NoError(t, cli.Create(ctx, watchedGRPCRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedGRPCRoute))
+	}()
+
+	nonWatchedGRPCRoute := test.GetGRPCRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-grpc-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name})
+	require.NoError(t, cli.Create(ctx, nonWatchedGRPCRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedGRPCRoute))
+	}()
+
+	watchedTCPRoute := test.GetTCPRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-tcp-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name})
+	require.NoError(t, cli.Create(ctx, watchedTCPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedTCPRoute))
+	}()
+
+	nonWatchedTCPRoute := test.GetTCPRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-tcp-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name})
+	require.NoError(t, cli.Create(ctx, nonWatchedTCPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedTCPRoute))
+	}()
+
+	watchedTLSRoute := test.GetTLSRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-tls-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name})
+	require.NoError(t, cli.Create(ctx, watchedTLSRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedTLSRoute))
+	}()
+
+	nonWatchedTLSRoute := test.GetTLSRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-tls-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name})
+	require.NoError(t, cli.Create(ctx, nonWatchedTLSRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedTLSRoute))
+	}()
+
+	watchedUDPRoute := test.GetUDPRoute(
+		types.NamespacedName{
+			Namespace: watchedNS.Name,
+			Name:      "watched-udp-route",
+		},
+		watchedGateway.Name,
+		types.NamespacedName{Name: watchedSvc.Name})
+	require.NoError(t, cli.Create(ctx, watchedUDPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, watchedUDPRoute))
+	}()
+
+	nonWatchedUDPRoute := test.GetUDPRoute(
+		types.NamespacedName{
+			Namespace: nonWatchedNS.Name,
+			Name:      "non-watched-udp-route",
+		},
+		nonWatchedGateway.Name,
+		types.NamespacedName{Name: nonWatchedNS.Name})
+	require.NoError(t, cli.Create(ctx, nonWatchedUDPRoute))
+	defer func() {
+		require.NoError(t, cli.Delete(ctx, nonWatchedUDPRoute))
+	}()
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		// The service number dependes on the service created and the backendRef
+		return res != nil && len(res.Services) == 5
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.HTTPRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.TCPRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.TLSRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.UDPRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.GRPCRoutes) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.AuthenticationFilters) == 1
+	}, defaultWait, defaultTick)
+
+	require.Eventually(t, func() bool {
+		res, _ := resources.GatewayAPIResources.Load(gc.Name)
+		return res != nil && len(res.RateLimitFilters) == 1
+	}, defaultWait, defaultTick)
 }

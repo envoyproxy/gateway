@@ -320,7 +320,9 @@ func (r *gatewayAPIReconciler) httpRoutesForAuthenticationFilter(obj client.Obje
 		return false
 	}
 
-	return len(httpRouteList.Items) != 0
+	httpRoutes := r.filterHTTPRoutesByNamespaceLabels(httpRouteList.Items)
+
+	return len(httpRoutes) != 0
 }
 
 // httpRoutesForRateLimitFilter tries finding HTTPRoute referents of the provided
@@ -342,7 +344,33 @@ func (r *gatewayAPIReconciler) httpRoutesForRateLimitFilter(obj client.Object) b
 		return false
 	}
 
-	return len(httpRouteList.Items) != 0
+	httpRoutes := r.filterHTTPRoutesByNamespaceLabels(httpRouteList.Items)
+
+	return len(httpRoutes) != 0
+}
+
+func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gwapiv1b1.HTTPRoute) []gwapiv1b1.HTTPRoute {
+	if len(r.namespaceLabels) == 0 {
+		return httpRoutes
+	}
+
+	var routes []gwapiv1b1.HTTPRoute
+	for _, route := range httpRoutes {
+		ns := route.GetNamespace()
+		ok, err := r.checkObjectNamespaceLabels(ns)
+		if err != nil {
+			r.log.Error(err, "failed to check namespace labels for HTTPRoute",
+				"namespace", ns,
+				"name", route.GetName(),
+			)
+			continue
+		}
+
+		if ok {
+			routes = append(routes, route)
+		}
+	}
+	return routes
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
