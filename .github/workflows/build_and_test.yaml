@@ -25,7 +25,7 @@ jobs:
     - run: make -k lint
 
   gen-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps

@@ -7,7 +7,7 @@ on:
 
 jobs:
   cherry_pick_release_v0_5:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Cherry pick into release-v0.5
     if: ${{ contains(github.event.pull_request.labels.*.name, 'cherrypick/release-v0.5') && github.event.pull_request.merged == true }}
     steps:
