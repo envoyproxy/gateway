@@ -13,16 +13,16 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
-      {{- range $a, $s := .StatsMatcher.Prefixs }}
-      - prefix: {{$s}}
+      {{- range $_, $item := .StatsMatcher.Prefixs }}
+      - prefix: {{$item}}
       {{- end}}
-      {{- range $a, $s := .StatsMatcher.Suffixs }}
-      - suffix: {{$s}}
+      {{- range $_, $item := .StatsMatcher.Suffixs }}
+      - suffix: {{$item}}
       {{- end}}
-      {{- range $a, $s := .StatsMatcher.RegularExpressions }}
+      {{- range $_, $item := .StatsMatcher.RegularExpressions }}
       - safe_regex:
           google_re2: {}
-          regex: {{js $s}}
+          regex: {{js $item}}
       {{- end}}
 {{- end }}
 dynamic_resources:
