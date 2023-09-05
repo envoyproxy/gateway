@@ -56,7 +56,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 
 				if backendNamespace != tlsRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
@@ -142,7 +142,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						name:      grpcRoute.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindService,
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -293,7 +293,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						name:      httpRoute.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindService,
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -360,7 +360,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							name:      httpRoute.Name,
 						}
 						to := ObjectKindNamespacedName{
-							kind:      gatewayapi.KindService,
+							kind:      gatewayapi.KindDerefOr(mirrorBackendRef.Kind, gatewayapi.KindService),
 							namespace: backendNamespace,
 							name:      string(mirrorBackendRef.Name),
 						}
@@ -468,7 +468,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 
 				if backendNamespace != tcpRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTCPRoute, namespace: tcpRoute.Namespace, name: tcpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
@@ -530,7 +530,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 
 				if backendNamespace != udpRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
