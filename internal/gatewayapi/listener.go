@@ -175,6 +175,10 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 		for _, sink := range accessLog.Sinks {
 			switch sink.Type {
 			case configv1a1.ProxyAccessLogSinkTypeFile:
+				if sink.File == nil {
+					continue
+				}
+
 				switch accessLog.Format.Type {
 				case configv1a1.ProxyAccessLogFormatTypeText:
 					al := &ir.TextAccessLog{

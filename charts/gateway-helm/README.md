@@ -69,6 +69,7 @@ To uninstall the chart:
 | deployment.envoyGateway.resources.requests.memory  | string | `"64Mi"`                                          |             |
 | deployment.kubeRbacProxy.image.repository          | string | `"gcr.io/kubebuilder/kube-rbac-proxy"`            |             |
 | deployment.kubeRbacProxy.image.tag                 | string | `"v0.11.0"`                                       |             |
+| deployment.kubeRbacProxy.imagePullPolicy           | string | `"IfNotPresent"`                                  |             |
 | deployment.kubeRbacProxy.resources.limits.cpu      | string | `"500m"`                                          |             |
 | deployment.kubeRbacProxy.resources.limits.memory   | string | `"128Mi"`                                         |             |
 | deployment.kubeRbacProxy.resources.requests.cpu    | string | `"5m"`                                            |             |
