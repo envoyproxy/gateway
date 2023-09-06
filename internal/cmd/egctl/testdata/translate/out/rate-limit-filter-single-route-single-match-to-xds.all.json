@@ -403,7 +403,7 @@
                             },
                             "routeConfigName": "envoy-gateway-system/eg/http"
                           },
-                          "statPrefix": "http",
+                          "statPrefix": "envoy-gateway-system/eg/http",
                           "upgradeConfigs": [
                             {
                               "upgradeType": "websocket"

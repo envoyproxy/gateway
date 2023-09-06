@@ -83,12 +83,7 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	// HTTP filter configuration
-	var statPrefix string
-	if irListener.TLS != nil {
-		statPrefix = "https"
-	} else {
-		statPrefix = "http"
-	}
+	statPrefix := irListener.Name
 	mgr := &hcmv3.HttpConnectionManager{
 		AccessLog:  al,
 		CodecType:  hcmv3.HttpConnectionManager_AUTO,
@@ -224,14 +219,7 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 
 	isTLSPassthrough := irListener.TLS != nil && irListener.TLS.Passthrough != nil
 	isTLSTerminate := irListener.TLS != nil && irListener.TLS.Terminate != nil
-	statPrefix := "tcp"
-	if isTLSPassthrough {
-		statPrefix = "passthrough"
-	}
-
-	if isTLSTerminate {
-		statPrefix = "terminate"
-	}
+	statPrefix := irListener.Name
 
 	mgr := &tcpv3.TcpProxy{
 		AccessLog:  buildXdsAccessLog(accesslog, false),
@@ -352,7 +340,7 @@ func buildXdsUDPListener(clusterName string, udpListener *ir.UDPListener, access
 		return nil, errors.New("udp listener is nil")
 	}
 
-	statPrefix := "service"
+	statPrefix := udpListener.Name
 
 	route := &udpv3.Route{
 		Cluster: clusterName,

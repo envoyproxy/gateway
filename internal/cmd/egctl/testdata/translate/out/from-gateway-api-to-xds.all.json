@@ -509,7 +509,7 @@
                             },
                             "routeConfigName": "default/eg/http"
                           },
-                          "statPrefix": "http",
+                          "statPrefix": "default/eg/http",
                           "upgradeConfigs": [
                             {
                               "upgradeType": "websocket"
@@ -616,7 +616,7 @@
                             },
                             "routeConfigName": "default/eg/grpc"
                           },
-                          "statPrefix": "http",
+                          "statPrefix": "default/eg/grpc",
                           "useRemoteAddress": true
                         }
                       }
@@ -685,7 +685,7 @@
                               }
                             ],
                             "cluster": "tlsroute/default/backend/rule/-1",
-                            "statPrefix": "passthrough"
+                            "statPrefix": "default/eg/tls-passthrough/backend"
                           }
                         }
                       ]
@@ -757,7 +757,7 @@
                               }
                             ],
                             "cluster": "tcproute/default/backend/rule/-1",
-                            "statPrefix": "tcp"
+                            "statPrefix": "default/eg/tcp/backend"
                           }
                         }
                       ]
@@ -830,7 +830,7 @@
                             }
                           }
                         },
-                        "statPrefix": "service"
+                        "statPrefix": "default/eg/udp/backend"
                       }
                     }
                   ],

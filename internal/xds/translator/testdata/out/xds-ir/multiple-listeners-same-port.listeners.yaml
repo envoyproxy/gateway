@@ -25,7 +25,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: third-listener
-        statPrefix: http
+        statPrefix: third-listener
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true
@@ -55,7 +55,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: first-listener
-        statPrefix: https
+        statPrefix: first-listener
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true
@@ -97,7 +97,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: second-listener
-        statPrefix: https
+        statPrefix: second-listener
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true
@@ -122,7 +122,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-dest
-        statPrefix: passthrough
+        statPrefix: fifth-listener
   - filterChainMatch:
       serverNames:
       - bar.net
@@ -131,7 +131,7 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tls-route-dest
-        statPrefix: passthrough
+        statPrefix: sixth-listener
   listenerFilters:
   - name: envoy.filters.listener.tls_inspector
     typedConfig:

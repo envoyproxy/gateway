@@ -14,5 +14,5 @@
             typedConfig:
               '@type': type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
               cluster: udp-route-dest
-      statPrefix: service
+      statPrefix: udp-route
   name: udp-route

@@ -8,6 +8,6 @@
       typedConfig:
         '@type': type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
         cluster: tcp-route-simple-dest
-        statPrefix: tcp
+        statPrefix: tcp-route-simple
   name: tcp-route-simple
   perConnectionBufferLimitBytes: 32768

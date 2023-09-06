@@ -25,7 +25,7 @@
             ads: {}
             resourceApiVersion: V3
           routeConfigName: extension-listener
-        statPrefix: http
+        statPrefix: extension-listener
         upgradeConfigs:
         - upgradeType: websocket
         useRemoteAddress: true

@@ -186,7 +186,7 @@ xds:
                       ads: {}
                       resourceApiVersion: V3
                     routeConfigName: default/eg/http
-                  statPrefix: http
+                  statPrefix: default/eg/http
                   upgradeConfigs:
                   - upgradeType: websocket
                   useRemoteAddress: true
