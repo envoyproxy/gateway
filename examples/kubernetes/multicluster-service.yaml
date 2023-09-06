@@ -4,9 +4,6 @@ metadata:
   name: custom-proxy-config
   namespace: envoy-gateway-system
 spec:
-  logging:
-    level:
-      default: warn
   provider:
     kubernetes:
       envoyService:
