@@ -4,7 +4,7 @@ The Multicluster Service API ServiceImport object can be used as part of the Gat
 
 We will use [Submariner project](https://github.com/submariner-io/submariner) for setting up the multicluster environment for exporting the service to be routed from peer clusters.
 
-# Setting KIND clusters and installing Submariner.
+## Setting KIND clusters and installing Submariner.
 
 - We will be using KIND clusters to demonstrate this example.
 
@@ -32,7 +32,7 @@ subctl join --kubeconfig output/kubeconfigs/kind-config-cluster2 broker-info.sub
 
 Once the above steps are done and all the pods are up in both the clusters. We are ready for installing envoy gateway.
 
-# Install EnvoyGateway
+## Install EnvoyGateway
 
 Install the Gateway API CRDs and Envoy Gateway in cluster1:
 
@@ -46,7 +46,7 @@ Wait for Envoy Gateway to become available:
 kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available --kubeconfig output/kubeconfigs/kind-config-cluster1
 ```
 
-# Install Application
+## Install Application
 
 Install the backend application in cluster2 and export it through subctl command.
 
@@ -55,9 +55,9 @@ kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/exa
 subctl export service backend --namespace default --kubeconfig output/kubeconfigs/kind-config-cluster2
 ```
 
-# Create GatewayAPI Objects
+## Create Gateway API Objects
 
-Create the GatewayAPI objects GatewayClass, Gateway and HTTPRoute in cluster1 to set up the routing.
+Create the Gateway API objects GatewayClass, Gateway and HTTPRoute in cluster1 to set up the routing.
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/multicluster-service.yaml --kubeconfig output/kubeconfigs/kind-config-cluster1
