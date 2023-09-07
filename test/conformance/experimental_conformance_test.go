@@ -53,10 +53,6 @@ func TestExperimentalConformance(t *testing.T) {
 	v1alpha2.AddToScheme(mgrClient.Scheme())
 	v1beta1.AddToScheme(mgrClient.Scheme())
 
-	// standard conformance flags
-	supportedFeatures = suite.AllFeatures
-	exemptFeatures = suite.MeshCoreFeatures
-
 	// experimental conformance flags
 	conformanceProfiles = sets.New(
 		suite.HTTPConformanceProfileName,
@@ -93,8 +89,6 @@ func experimentalConformance(t *testing.T) {
 				GatewayClassName:     *flags.GatewayClassName,
 				Debug:                *flags.ShowDebug,
 				CleanupBaseResources: *flags.CleanupBaseResources,
-				SupportedFeatures:    supportedFeatures,
-				ExemptFeatures:       exemptFeatures,
 				SkipTests:            skipTests,
 			},
 			Implementation:      *implementation,
