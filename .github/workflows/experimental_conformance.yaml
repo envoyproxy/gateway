@@ -1,0 +1,54 @@
+name: Experimental Conformance Test
+on:
+  push:
+    paths:
+    - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+  pull_request:
+    paths:
+    - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+
+  conformance-test:
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      matrix:
+        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
+
+    - name: Download EG Binaries
+      uses: actions/download-artifact@v3
+      with:
+        name: envoy-gateway
+        path: bin/
+
+    - name: Give Privileges To EG Binaries
+      run: |
+        chmod +x bin/linux/amd64/envoy-gateway
+        chmod +x bin/linux/arm64/envoy-gateway
+
+    # conformance
+    - name: Run Conformance Tests
+      env:
+        CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
+        KIND_NODE_TAG: ${{ matrix.version }}
+        IMAGE_PULL_POLICY: IfNotPresent
+      run: make experimental-conformance
+
+    - name: Upload Conformance Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: conformance-report-k8s-${{ matrix.version }}
+        path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml
+
+      - name: Comment Conformance Report
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '👋 Thanks for reporting!'
+            })
