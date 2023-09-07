@@ -95,6 +95,7 @@ jobs:
     # conformance
     - name: Run Conformance Tests
       env:
+        CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
       run: make experimental-conformance
@@ -103,7 +104,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: conformance-report-k8s-${{ matrix.version }}
-        path: ./test/conformance/conformance-report.yaml
+        path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml
 
   e2e-test:
     runs-on: ubuntu-latest
