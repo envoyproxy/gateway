@@ -31,8 +31,6 @@ var (
 	cfg                 *rest.Config
 	k8sClientset        *kubernetes.Clientset
 	mgrClient           client.Client
-	supportedFeatures   sets.Set[suite.SupportedFeature]
-	exemptFeatures      sets.Set[suite.SupportedFeature]
 	implementation      *confv1a1.Implementation
 	conformanceProfiles sets.Set[suite.ConformanceProfileName]
 	skipTests           []string
@@ -78,8 +76,8 @@ func TestExperimentalConformance(t *testing.T) {
 }
 
 func experimentalConformance(t *testing.T) {
-	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]\n conformance profiles: [%v]",
-		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, supportedFeatures, exemptFeatures, conformanceProfiles)
+	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n conformance profiles: [%v]",
+		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, conformanceProfiles)
 
 	cSuite, err := suite.NewExperimentalConformanceTestSuite(
 		suite.ExperimentalConformanceOptions{
