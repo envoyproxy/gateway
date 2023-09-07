@@ -1,6 +1,3 @@
-//go:build experimental
-// +build experimental
-
 // Copyright Envoy Gateway Authors
 // SPDX-License-Identifier: Apache-2.0
 // The full text of the Apache license is available in the LICENSE file at
@@ -61,7 +58,10 @@ func TestExperimentalConformance(t *testing.T) {
 	exemptFeatures = suite.MeshCoreFeatures
 
 	// experimental conformance flags
-	conformanceProfiles = suite.ParseConformanceProfiles(*flags.ConformanceProfiles)
+	conformanceProfiles = sets.New(
+		suite.HTTPConformanceProfileName,
+		suite.TLSConformanceProfileName,
+	)
 
 	// if some conformance profiles have been set, run the experimental conformance suite...
 	implementation, err = suite.ParseImplementation(
@@ -75,10 +75,10 @@ func TestExperimentalConformance(t *testing.T) {
 		t.Fatalf("Error parsing implementation's details: %v", err)
 	}
 
-	testExperimentalConformance(t)
+	experimentalConformance(t)
 }
 
-func testExperimentalConformance(t *testing.T) {
+func experimentalConformance(t *testing.T) {
 	t.Logf("Running experimental conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]\n conformance profiles: [%v]",
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, supportedFeatures, exemptFeatures, conformanceProfiles)
 
@@ -110,10 +110,10 @@ func testExperimentalConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating conformance profile report: %v", err)
 	}
-	writeReport(t.Logf, *report, *flags.ReportOutput)
+	experimentalConformanceReport(t.Logf, *report, *flags.ReportOutput)
 }
 
-func writeReport(logf func(string, ...any), report confv1a1.ConformanceReport, output string) error {
+func experimentalConformanceReport(logf func(string, ...any), report confv1a1.ConformanceReport, output string) error {
 	rawReport, err := yaml.Marshal(report)
 	if err != nil {
 		return err
