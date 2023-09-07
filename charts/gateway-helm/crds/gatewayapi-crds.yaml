@@ -11014,6 +11014,7 @@ metadata:
   name: gateway-api-admission-patch
   labels:
     name: gateway-api-webhook
+    test: test
   namespace: gateway-system
 spec:
   template:
