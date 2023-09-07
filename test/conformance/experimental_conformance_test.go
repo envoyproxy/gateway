@@ -100,7 +100,10 @@ func experimentalConformance(t *testing.T) {
 	}
 
 	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
+	err = cSuite.Run(t, tests.ConformanceTests)
+	if err != nil {
+		t.Fatalf("error running conformance profile report", err)
+	}
 	report, err := cSuite.Report()
 	if err != nil {
 		t.Fatalf("error generating conformance profile report: %v", err)
@@ -115,7 +118,7 @@ func experimentalConformanceReport(logf func(string, ...any), report confv1a1.Co
 	}
 
 	if output != "" {
-		if err = os.WriteFile(output, rawReport, 0644); err != nil {
+		if err = os.WriteFile(output, rawReport, 0600); err != nil {
 			return err
 		}
 	}
