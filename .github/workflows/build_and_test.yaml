@@ -103,7 +103,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: conformance-report-k8s-${{ matrix.version }}
-        path: ./conformance-report.yaml
+        path: ./test/conformance/conformance-report.yaml
 
   e2e-test:
     runs-on: ubuntu-latest
