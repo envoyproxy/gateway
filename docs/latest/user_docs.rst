@@ -31,3 +31,4 @@ Learn how to deploy, use, and operate Envoy Gateway.
   user/gateway-address
   user/gatewayapi-support
   user/proxy-observability
+  user/multicluster-service
