@@ -11021,7 +11021,6 @@ spec:
       name: gateway-api-admission-patch
       labels:
         name: gateway-api-webhook
-        test: test
     spec:
       containers:
       - name: patch
