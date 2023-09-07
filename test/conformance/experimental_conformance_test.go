@@ -33,7 +33,6 @@ var (
 	mgrClient           client.Client
 	supportedFeatures   sets.Set[suite.SupportedFeature]
 	exemptFeatures      sets.Set[suite.SupportedFeature]
-	namespaceLabels     map[string]string
 	implementation      *confv1a1.Implementation
 	conformanceProfiles sets.Set[suite.ConformanceProfileName]
 	skipTests           []string
@@ -60,9 +59,6 @@ func TestExperimentalConformance(t *testing.T) {
 	// standard conformance flags
 	supportedFeatures = suite.AllFeatures
 	exemptFeatures = suite.MeshCoreFeatures
-	for feature := range exemptFeatures {
-		supportedFeatures.Delete(feature)
-	}
 
 	skipTests = []string{
 		tests.HTTPRouteRedirectPortAndScheme.ShortName,
@@ -75,7 +71,7 @@ func TestExperimentalConformance(t *testing.T) {
 	implementation, err = suite.ParseImplementation(
 		*flags.ImplementationOrganization,
 		*flags.ImplementationProject,
-		*flags.ImplementationUrl,
+		*flags.ImplementationURL,
 		*flags.ImplementationVersion,
 		*flags.ImplementationContact,
 	)
