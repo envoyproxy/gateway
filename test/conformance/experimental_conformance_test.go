@@ -102,7 +102,7 @@ func experimentalConformance(t *testing.T) {
 	cSuite.Setup(t)
 	err = cSuite.Run(t, tests.ConformanceTests)
 	if err != nil {
-		t.Fatalf("error running conformance profile report", err)
+		t.Fatalf("error running conformance profile report: %v", err)
 	}
 	report, err := cSuite.Report()
 	if err != nil {
