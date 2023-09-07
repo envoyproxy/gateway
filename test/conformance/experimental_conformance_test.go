@@ -60,10 +60,6 @@ func TestExperimentalConformance(t *testing.T) {
 	supportedFeatures = suite.AllFeatures
 	exemptFeatures = suite.MeshCoreFeatures
 
-	skipTests = []string{
-		tests.HTTPRouteRedirectPortAndScheme.ShortName,
-	}
-
 	// experimental conformance flags
 	conformanceProfiles = suite.ParseConformanceProfiles(*flags.ConformanceProfiles)
 
