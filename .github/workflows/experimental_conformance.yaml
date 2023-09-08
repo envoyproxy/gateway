@@ -9,6 +9,7 @@ on:
 
 jobs:
   experimental-conformance-test:
+    permissions: write-all
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -46,9 +47,15 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const filePath = path.join(process.env.GITHUB_WORKSPACE, './test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml');
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '👋 Thanks for reporting!'
+            body: fileContent
           })
