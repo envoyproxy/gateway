@@ -8,6 +8,22 @@ on:
     - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
 
 jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
+
+    - name: Build EG Multiarch Binaries
+      run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
+
+    - name: Upload EG Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: envoy-gateway
+        path: bin/
+
   conformance-test:
     runs-on: ubuntu-latest
     strategy:
@@ -38,7 +54,6 @@ jobs:
             repo: context.repo.repo,
             body: '👋 Thanks for reporting!'
           })
-
 
     # conformance
     - name: Run Conformance Tests
