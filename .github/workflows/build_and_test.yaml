@@ -93,18 +93,11 @@ jobs:
         chmod +x bin/linux/arm64/envoy-gateway
 
     # conformance
-    - name: Run Conformance Tests
+    - name: Run Standard Conformance Tests
       env:
-        CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
-      run: make experimental-conformance
-
-    - name: Upload Conformance Report
-      uses: actions/upload-artifact@v3
-      with:
-        name: conformance-report-k8s-${{ matrix.version }}
-        path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml
+      run: make conformance
 
   e2e-test:
     runs-on: ubuntu-latest
