@@ -8,24 +8,7 @@ on:
     - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
 
 jobs:
-
-  build:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v3
-    - uses: ./tools/github-actions/setup-deps
-
-    - name: Build EG Multiarch Binaries
-      run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
-
-    - name: Upload EG Binaries
-      uses: actions/upload-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
-
   experimental-conformance-test:
-    needs: [build]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -33,17 +16,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: ./tools/github-actions/setup-deps
-
-    - name: Download EG Binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
-
-    - name: Give Privileges To EG Binaries
-      run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
 
     - name: Comment Conformance Report
       uses: actions/github-script@v6
@@ -56,7 +28,7 @@ jobs:
             body: '👋 Thanks for reporting!'
           })
 
-    # conformance
+    # gateway api experimental conformance
     - name: Run Experimental Conformance Tests
       env:
         CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
