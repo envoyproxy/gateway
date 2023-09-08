@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
     - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+  # Add workflow_dispatch to trigger this workflow manually by maintainers.
+  workflow_dispatch:
 
 jobs:
   experimental-conformance-test:
