@@ -24,7 +24,8 @@ jobs:
         name: envoy-gateway
         path: bin/
 
-  conformance-test:
+  experimental-conformance-test:
+    needs: [build]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -56,7 +57,7 @@ jobs:
           })
 
     # conformance
-    - name: Run Conformance Tests
+    - name: Run Experimental Conformance Tests
       env:
         CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
         KIND_NODE_TAG: ${{ matrix.version }}
