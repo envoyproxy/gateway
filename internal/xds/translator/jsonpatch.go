@@ -7,6 +7,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -28,6 +29,8 @@ const (
 	AddOperation = "add"
 	EmptyPath    = ""
 )
+
+var unescaper = strings.NewReplacer(`\u00a0`, ` `)
 
 // processJSONPatches applies each JSONPatch to the Xds Resources for a specific type.
 func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*ir.EnvoyPatchPolicy) error {
@@ -68,7 +71,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.ListenerType):
 					temp := &listenerv3.Listener{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, unescaper.Replace(err.Error()))
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -81,7 +84,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.RouteType):
 					temp := &routev3.RouteConfiguration{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, unescaper.Replace(err.Error()))
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -94,7 +97,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.ClusterType):
 					temp := &clusterv3.Cluster{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, unescaper.Replace(err.Error()))
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
@@ -107,7 +110,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 				case string(resourcev3.EndpointType):
 					temp := &endpointv3.ClusterLoadAssignment{}
 					if err = protojson.Unmarshal(jsonBytes, temp); err != nil {
-						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, err.Error())
+						msg := fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", p.Operation.Value, unescaper.Replace(err.Error()))
 						status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 						continue
 					}
