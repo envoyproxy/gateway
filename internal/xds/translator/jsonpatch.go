@@ -215,7 +215,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.ListenerType):
 				temp := &listenerv3.Listener{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := unmarshalErrorMessage(err, string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -232,7 +232,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.RouteType):
 				temp := &routev3.RouteConfiguration{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := unmarshalErrorMessage(err, string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -249,7 +249,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.ClusterType):
 				temp := &clusterv3.Cluster{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := unmarshalErrorMessage(err, string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -266,7 +266,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 			case string(resourcev3.EndpointType):
 				temp := &endpointv3.ClusterLoadAssignment{}
 				if err = protojson.Unmarshal(modifiedJSON, temp); err != nil {
-					msg := fmt.Sprintf("unable to unmarshal xds resource %s, err:%s", string(modifiedJSON), err.Error())
+					msg := unmarshalErrorMessage(err, string(modifiedJSON))
 					status.SetEnvoyPatchPolicyInvalid(e.Status, msg)
 					continue
 				}
@@ -293,7 +293,7 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 	return errs
 }
 
-var unescaper = strings.NewReplacer(`\u00a0`, ` `)
+var unescaper = strings.NewReplacer(" ", " ")
 
 func unmarshalErrorMessage(err error, xdsResource any) string {
 	return fmt.Sprintf("unable to unmarshal xds resource %+v, err:%s", xdsResource, unescaper.Replace(err.Error()))
