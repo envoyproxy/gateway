@@ -1,0 +1,35 @@
+name: Experimental Conformance Test
+on:
+  push:
+    paths:
+    - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+  pull_request:
+    paths:
+    - 'charts/gateway-helm/crds/gatewayapi-crds.yaml'
+    - 'test/conformance/*.go'
+  # Add workflow_dispatch to trigger this workflow manually by maintainers.
+  workflow_dispatch:
+
+jobs:
+  experimental-conformance-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./tools/github-actions/setup-deps
+
+    # gateway api experimental conformance
+    - name: Run Experimental Conformance Tests
+      env:
+        CONFORMANCE_REPORT_PATH: conformance-report-k8s-${{ matrix.version }}.yaml
+        KIND_NODE_TAG: ${{ matrix.version }}
+        IMAGE_PULL_POLICY: IfNotPresent
+      run: make experimental-conformance
+
+    - name: Upload Conformance Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: conformance-report-k8s-${{ matrix.version }}
+        path: ./test/conformance/conformance-report-k8s-${{ matrix.version }}.yaml
