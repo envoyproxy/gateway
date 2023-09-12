@@ -159,6 +159,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "tracing",
 		},
 		{
+			name: "metrics-virtual-host",
+		},
+		{
 			name:                      "jsonpatch",
 			requireEnvoyPatchPolicies: true,
 		},
