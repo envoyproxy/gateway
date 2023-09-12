@@ -81,7 +81,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	discoveryv3.RegisterAggregatedDiscoveryServiceServer(r.grpc, serverv3.NewServer(ctx, r.cache, cb))
 
 	// Start and listen xDS gRPC config Server.
-	go r.serverXdsConfigServer(ctx)
+	go r.serveXdsConfigServer(ctx)
 
 	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
@@ -90,20 +90,23 @@ func (r *Runner) Start(ctx context.Context) error {
 	return nil
 }
 
-func (r *Runner) serverXdsConfigServer(ctx context.Context) {
+func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 	addr := net.JoinHostPort(XdsGrpcSotwConfigServerAddress, strconv.Itoa(ratelimit.XdsGrpcSotwConfigServerPort))
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		r.Logger.Error(err, "failed to listen on address", "address", addr)
 		return
 	}
+
+	go func() {
+		<-ctx.Done()
+		r.Logger.Info("grpc server shutting down")
+		r.grpc.Stop()
+	}()
+
 	if err = r.grpc.Serve(l); err != nil {
 		r.Logger.Error(err, "failed to start grpc based xds config server")
 	}
-
-	<-ctx.Done()
-	r.Logger.Info("grpc config server shutting down")
-	r.grpc.Stop()
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
