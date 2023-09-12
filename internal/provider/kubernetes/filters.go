@@ -20,7 +20,26 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
 	}
 
-	return authenList.Items, nil
+	authens := authenList.Items
+	if len(r.namespaceLabels) != 0 {
+		var as []egv1a1.AuthenticationFilter
+		for _, a := range authens {
+			ns := a.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return nil, fmt.Errorf("failed to check namespace labels for AuthenicationFilter %s in namespace %s: %s", a.GetName(), ns, err)
+			}
+
+			if ok {
+				as = append(as, a)
+			}
+		}
+
+		authens = as
+	}
+
+	return authens, nil
 }
 
 func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a1.RateLimitFilter, error) {
@@ -29,20 +48,56 @@ func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a
 		return nil, fmt.Errorf("failed to list RateLimitFilters: %v", err)
 	}
 
-	return rateLimitList.Items, nil
+	rateLimits := rateLimitList.Items
+	if len(r.namespaceLabels) != 0 {
+		var rls []egv1a1.RateLimitFilter
+		for _, rl := range rateLimits {
+			ns := rl.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return nil, fmt.Errorf("failed to check namespace labels for RateLimitFilter %s in namespace %s: %s", rl.GetName(), ns, err)
+			}
+
+			if ok {
+				rls = append(rls, rl)
+			}
+		}
+
+		rateLimits = rls
+	}
+
+	return rateLimits, nil
 }
 
 func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured
 	for _, gvk := range r.extGVKs {
-		uExtResources := &unstructured.UnstructuredList{}
-		uExtResources.SetGroupVersionKind(gvk)
-		if err := r.client.List(ctx, uExtResources); err != nil {
+		uExtResourceList := &unstructured.UnstructuredList{}
+		uExtResourceList.SetGroupVersionKind(gvk)
+		if err := r.client.List(ctx, uExtResourceList); err != nil {
 			r.log.Info("no associated resources found for %s", gvk.String())
 			return nil, fmt.Errorf("failed to list %s: %v", gvk.String(), err)
 		}
 
-		resourceItems = append(resourceItems, uExtResources.Items...)
+		uExtResources := uExtResourceList.Items
+		if len(r.namespaceLabels) != 0 {
+			var extRs []unstructured.Unstructured
+			for _, extR := range uExtResources {
+				ns := extR.GetNamespace()
+				ok, err := r.checkObjectNamespaceLabels(ns)
+				if err != nil {
+					// TODO: should return? or just proceed?
+					return nil, fmt.Errorf("failed to check namespace labels for ExtensionRefFilter %s in namespace %s: %s", extR.GetName(), ns, err)
+				}
+				if ok {
+					extRs = append(extRs, extR)
+				}
+			}
+			uExtResources = extRs
+		}
+
+		resourceItems = append(resourceItems, uExtResources...)
 	}
 
 	return resourceItems, nil

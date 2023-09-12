@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,7 +34,25 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, tlsRoute := range tlsRouteList.Items {
+	tlsRoutes := tlsRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var rts []gwapiv1a2.TLSRoute
+		for _, rt := range tlsRoutes {
+			ns := rt.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for TLSRoute %s in namespace %s: %s", rt.GetName(), ns, err)
+			}
+
+			if ok {
+				rts = append(rts, rt)
+			}
+		}
+		tlsRoutes = rts
+	}
+
+	for _, tlsRoute := range tlsRoutes {
 		tlsRoute := tlsRoute
 		r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
@@ -115,7 +134,26 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		r.log.Error(err, "failed to list GRPCRoutes")
 		return err
 	}
-	for _, grpcRoute := range grpcRouteList.Items {
+
+	grpcRoutes := grpcRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var grs []gwapiv1a2.GRPCRoute
+		for _, gr := range grpcRoutes {
+			ns := gr.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s in namespace %s: %s", gr.GetName(), ns, err)
+			}
+			if ok {
+				grs = append(grs, gr)
+			}
+		}
+
+		grpcRoutes = grs
+	}
+
+	for _, grpcRoute := range grpcRoutes {
 		grpcRoute := grpcRoute
 		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 
@@ -268,7 +306,26 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		r.log.Error(err, "failed to list HTTPRoutes")
 		return err
 	}
-	for _, httpRoute := range httpRouteList.Items {
+
+	httpRoutes := httpRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var hrs []gwapiv1b1.HTTPRoute
+		for _, hr := range httpRoutes {
+			ns := hr.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s in namespace %s: %s", hr.GetName(), ns, err)
+			}
+
+			if ok {
+				hrs = append(hrs, hr)
+			}
+		}
+		httpRoutes = hrs
+	}
+
+	for _, httpRoute := range httpRoutes {
 		httpRoute := httpRoute
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
@@ -447,7 +504,26 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, tcpRoute := range tcpRouteList.Items {
+	tcpRoutes := tcpRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var trs []gwapiv1a2.TCPRoute
+		for _, tr := range tcpRoutes {
+			ns := tr.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for TCPRoute %s in namespace %s: %s", tr.GetName(), ns, err)
+			}
+
+			if ok {
+				trs = append(trs, tr)
+			}
+		}
+
+		tcpRoutes = trs
+	}
+
+	for _, tcpRoute := range tcpRoutes {
 		tcpRoute := tcpRoute
 		r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 
@@ -509,7 +585,26 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, udpRoute := range udpRouteList.Items {
+	udpRoutes := udpRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var urs []gwapiv1a2.UDPRoute
+		for _, ur := range udpRoutes {
+			ns := ur.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for UDPRoute %s in namespace %s: %s", ur.GetName(), ns, err)
+			}
+
+			if ok {
+				urs = append(urs, ur)
+			}
+		}
+
+		udpRoutes = urs
+	}
+
+	for _, udpRoute := range udpRoutes {
 		udpRoute := udpRoute
 		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 
