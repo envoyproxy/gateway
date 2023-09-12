@@ -89,12 +89,12 @@ func experimentalConformance(t *testing.T) {
 				RestConfig: cfg,
 				// This clientset is needed in addition to the client only because
 				// controller-runtime client doesn't support non CRUD sub-resources yet (https://github.com/kubernetes-sigs/controller-runtime/issues/452).
-				Clientset:                  k8sClientset,
-				GatewayClassName:           *flags.GatewayClassName,
-				Debug:                      *flags.ShowDebug,
-				CleanupBaseResources:       *flags.CleanupBaseResources,
-				SkipTests:                  skipTests,
-				EnableAllSupportedFeatures: true,
+				Clientset:            k8sClientset,
+				GatewayClassName:     *flags.GatewayClassName,
+				Debug:                *flags.ShowDebug,
+				CleanupBaseResources: *flags.CleanupBaseResources,
+				SkipTests:            skipTests,
+				SupportedFeatures:    sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
 			},
 			Implementation:      *implementation,
 			ConformanceProfiles: conformanceProfiles,
