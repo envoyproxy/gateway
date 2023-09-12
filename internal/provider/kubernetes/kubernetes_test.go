@@ -202,6 +202,20 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	res, ok := resources.GatewayAPIResources.Load(gc.Name)
 	assert.Equal(t, ok, true)
 	assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+
+	// Ensure the envoyproxy has been finalized.
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
+		return err == nil && slices.Contains(ep.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
+
+	//Ensure that envoyproxy finalizer will be removed when GatewayClass stops referencing it
+	gc.Spec.ParametersRef = nil
+	require.NoError(t, cli.Update(ctx, gc))
+	require.Eventually(t, func() bool {
+		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
+		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
+	}, defaultWait, defaultTick)
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
