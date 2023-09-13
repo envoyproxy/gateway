@@ -88,6 +88,10 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
+			name:           "mixed-tls-jwt-authn",
+			requireSecrets: true,
+		},
+		{
 			name: "tls-route-passthrough",
 		},
 		{

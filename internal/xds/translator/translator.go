@@ -200,7 +200,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
+			xdsRoute := buildXdsRoute(httpRoute)
 
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
