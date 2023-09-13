@@ -63,6 +63,11 @@ type bootstrapParameters struct {
 	EnablePrometheus bool
 	// OtelMetricSinks defines the configuration of the OpenTelemetry sinks.
 	OtelMetricSinks []metricSink
+	// EnableStatConfig defines whether to to customize the Envoy proxy stats.
+	EnableStatConfig bool
+	// StatsMatcher is to control creation of custom Envoy stats with prefix,
+	// suffix, and regex expressions match on the name of the stats.
+	StatsMatcher *StatsMatcherParameters
 }
 
 type xdsServerParameters struct {
@@ -97,6 +102,12 @@ type readyServerParameters struct {
 	ReadinessPath string
 }
 
+type StatsMatcherParameters struct {
+	Prefixs            []string
+	Suffixs            []string
+	RegularExpressions []string
+}
+
 // render the stringified bootstrap config in yaml format.
 func (b *bootstrapConfig) render() error {
 	buf := new(strings.Builder)
@@ -113,6 +124,7 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 	var (
 		enablePrometheus bool
 		metricSinks      []metricSink
+		StatsMatcher     StatsMatcherParameters
 	)
 
 	if proxyMetrics != nil {
@@ -138,6 +150,22 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 				Port:    sink.OpenTelemetry.Port,
 			})
 		}
+
+		if proxyMetrics.Matches != nil {
+
+			// Add custom envoy proxy stats
+			for _, match := range proxyMetrics.Matches {
+				switch match.Type {
+				case egcfgv1a1.Prefix:
+					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+				case egcfgv1a1.Suffix:
+					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+				case egcfgv1a1.RegularExpression:
+					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
+				}
+			}
+		}
+
 	}
 
 	cfg := &bootstrapConfig{
@@ -159,6 +187,9 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			EnablePrometheus: enablePrometheus,
 			OtelMetricSinks:  metricSinks,
 		},
+	}
+	if proxyMetrics != nil && proxyMetrics.Matches != nil {
+		cfg.parameters.StatsMatcher = &StatsMatcher
 	}
 
 	if err := cfg.render(); err != nil {
