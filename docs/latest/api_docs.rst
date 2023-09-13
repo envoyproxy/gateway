@@ -8,3 +8,4 @@ API reference documentation for Envoy Gateway.
 
   Config APIs <api/config_types>
   Extension APIs <api/extension_types>
+  API Depreaction Policy <api/deprecation-policy>
