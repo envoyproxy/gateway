@@ -13,7 +13,6 @@ import (
 	"net"
 	"os/signal"
 	"strconv"
-	"sync"
 	"syscall"
 
 	accesslogv3 "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v3"
@@ -31,19 +30,37 @@ const (
 
 func NewAccessLogsCommand() *cobra.Command {
 	var (
-		port int
+		port      int
+		gateway   string
+		listener  string
+		namespace string
 	)
 
 	accessLogsCommand := &cobra.Command{
 		Use:     "access-logs",
-		Short:   "Get access logs from Envoy.",
-		Example: ``,
+		Short:   "Streaming access logs from Envoy Proxy.",
+		Example: ``, // TODO(sh2): add example
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return accessLogs(port)
+			if len(args) < 1 {
+				return fmt.Errorf("missing the name of one gateway")
+			}
+
+			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+			defer stop()
+
+			gateway = args[0]
+			if err := accessLogs(ctx, port, gateway, listener, namespace); err != nil {
+				return err
+			}
+
+			<-ctx.Done()
+			return nil
 		},
 	}
 
 	accessLogsCommand.PersistentFlags().IntVarP(&port, "port", "p", accessLogServerPort, "Listening port of access-log server.")
+	accessLogsCommand.PersistentFlags().StringVarP(&listener, "listener", "l", "", "Listener name of the gateway.")
+	accessLogsCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Namespace of the gateway.")
 
 	return accessLogsCommand
 }
@@ -69,13 +86,11 @@ func (a *accessLogServer) StreamAccessLogs(server accesslogv3.AccessLogService_S
 			return err
 		}
 		str, _ := a.marshaler.MarshalToString(recv)
-		log.Println(str)
+		log.Println(str) // TODO(sh2): prettify the json output
 	}
 }
 
-func serveAccessLogServer(ctx context.Context, wg *sync.WaitGroup, server *grpc.Server, addr string) {
-	defer wg.Done()
-
+func serveAccessLogServer(ctx context.Context, server *grpc.Server, addr string) {
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Printf("failed to listen on address %s: %v\n", addr, err)
@@ -94,7 +109,7 @@ func serveAccessLogServer(ctx context.Context, wg *sync.WaitGroup, server *grpc.
 	}
 }
 
-func isValidatePort(port int) bool {
+func isValidPort(port int) bool {
 	if port < 1024 || port > 65535 {
 		return false
 	}
@@ -102,31 +117,25 @@ func isValidatePort(port int) bool {
 }
 
 func validateAccessLogsInputs(port int) error {
-	if !isValidatePort(port) {
+	if !isValidPort(port) {
 		return fmt.Errorf("%d is not a valid port", port)
 	}
 
 	return nil
 }
 
-func accessLogs(port int) error {
+func accessLogs(ctx context.Context, port int, gateway, listener, namespace string) error {
 	if err := validateAccessLogsInputs(port); err != nil {
 		return err
 	}
 
-	wg := &sync.WaitGroup{}
-	ctx, stop := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
-	defer stop()
+	// TODO(sh2): check whether the envoy patch policy is enabled, return err if not
 
 	grpcServer := grpc.NewServer()
 	accesslogv3.RegisterAccessLogServiceServer(grpcServer, newAccessLogServer())
+
 	addr := net.JoinHostPort(accessLogServerAddress, strconv.Itoa(port))
-
-	wg.Add(1)
-	go serveAccessLogServer(ctx, wg, grpcServer, addr)
-
-	wg.Wait()
+	go serveAccessLogServer(ctx, grpcServer, addr)
 
 	return nil
 }
