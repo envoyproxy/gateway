@@ -45,8 +45,8 @@ func TestProcessTracing(t *testing.T) {
 		},
 	}
 
-	for i := range cases {
-		c := cases[i]
+	for _, c := range cases {
+		c := c
 		t.Run("", func(t *testing.T) {
 			got := processTracing(&c.gw, c.proxy)
 			assert.Equal(t, c.expected, got)

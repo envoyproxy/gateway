@@ -37,8 +37,8 @@ func processJSONPatches(tCtx *types.ResourceVersionTable, envoyPatchPolicies []*
 		UseProtoNames: true,
 	}
 
-	for i := range envoyPatchPolicies {
-		e := envoyPatchPolicies[i]
+	for _, e := range envoyPatchPolicies {
+		e := e
 		for _, p := range e.JSONPatches {
 			var (
 				listener     *listenerv3.Listener
