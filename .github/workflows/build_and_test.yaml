@@ -93,7 +93,7 @@ jobs:
         chmod +x bin/linux/arm64/envoy-gateway
 
     # conformance
-    - name: Run Conformance Tests
+    - name: Run Standard Conformance Tests
       env:
         KIND_NODE_TAG: ${{ matrix.version }}
         IMAGE_PULL_POLICY: IfNotPresent
@@ -148,7 +148,7 @@ jobs:
     # build and push image
     - name: Login to DockerHub
       if: github.event_name == 'push'
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}

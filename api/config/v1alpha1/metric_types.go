@@ -18,6 +18,9 @@ type ProxyMetrics struct {
 	// https://github.com/envoyproxy/envoy/issues/14610
 	//
 	Matches []Match `json:"matches,omitempty"`
+
+	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
+	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
 }
 
 type MetricSinkType string

@@ -1,0 +1,18 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+    virtualClusters:
+    - headers:
+      - name: :authority
+        stringMatch:
+          prefix: '*'
+      name: '*'
