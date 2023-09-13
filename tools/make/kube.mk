@@ -96,6 +96,9 @@ kube-demo-undeploy: ## Uninstall the Kubernetes resources installed from the `ma
 .PHONY: conformance
 conformance: create-cluster kube-install-image kube-deploy run-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
 
+.PHONY: experimental-conformance ## Create a kind cluster, deploy EG into it, run Gateway API experimental conformance, and clean up.
+experimental-conformance: create-cluster kube-install-image kube-deploy run-experimental-conformance delete-cluster ## Create a kind cluster, deploy EG into it, run Gateway API conformance, and clean up.
+
 .PHONY: e2e
 e2e: create-cluster kube-install-image kube-deploy install-ratelimit run-e2e delete-cluster
 
@@ -172,6 +175,17 @@ run-conformance: ## Run Gateway API conformance.
 	kubectl wait --timeout=$(WAIT_TIMEOUT) -n gateway-system job/gateway-api-admission --for=condition=Complete
 	kubectl apply -f test/config/gatewayclass.yaml
 	go test -v -tags conformance ./test/conformance --gateway-class=envoy-gateway --debug=true
+
+CONFORMANCE_REPORT_PATH ?= 
+
+.PHONY: run-experimental-conformance
+run-experimental-conformance: ## Run Experimental Gateway API conformance.
+	@$(LOG_TARGET)
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n gateway-system deployment/gateway-api-admission-server --for=condition=Available
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n gateway-system job/gateway-api-admission --for=condition=Complete
+	kubectl apply -f test/config/gatewayclass.yaml
+	go test -v -tags experimental ./test/conformance -run TestExperimentalConformance --gateway-class=envoy-gateway --debug=true --organization=envoyproxy --project=envoy-gateway --url=https://github.com/envoyproxy/gateway --version=latest --report-output="$(CONFORMANCE_REPORT_PATH)" --contact=https://github.com/envoyproxy/gateway/blob/main/GOVERNANCE.md
 
 .PHONY: delete-cluster
 delete-cluster: $(tools/kind) ## Delete kind cluster.

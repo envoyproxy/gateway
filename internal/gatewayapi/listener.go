@@ -51,6 +51,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 		gwXdsIR.AccessLog = processAccessLog(gwInfraIR.Proxy.Config)
 		gwXdsIR.Tracing = processTracing(gateway.Gateway, gwInfraIR.Proxy.Config)
+		gwXdsIR.Metrics = processMetrics(gwInfraIR.Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -232,5 +233,14 @@ func processTracing(gw *v1beta1.Gateway, envoyproxy *configv1a1.EnvoyProxy) *ir.
 	return &ir.Tracing{
 		ServiceName:  naming.ServiceName(types.NamespacedName{Name: gw.Name, Namespace: gw.Namespace}),
 		ProxyTracing: *envoyproxy.Spec.Telemetry.Tracing,
+	}
+}
+
+func processMetrics(envoyproxy *configv1a1.EnvoyProxy) *ir.Metrics {
+	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Metrics == nil {
+		return nil
+	}
+	return &ir.Metrics{
+		EnableVirtualHostStats: envoyproxy.Spec.Telemetry.Metrics.EnableVirtualHostStats,
 	}
 }

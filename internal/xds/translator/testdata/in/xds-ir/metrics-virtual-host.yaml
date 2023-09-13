@@ -1,0 +1,17 @@
+name: "metrics"
+metrics:
+  enableVirtualHostStats: true
+http:
+- name: "first-listener"
+  address: "0.0.0.0"
+  port: 10080
+  hostnames:
+  - "*"
+  routes:
+  - name: "first-route"
+    hostname: "*"
+    destination:
+      name: "first-route-dest"
+      endpoints:
+      - host: "1.2.3.4"
+        port: 50000

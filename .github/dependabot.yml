@@ -13,6 +13,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      k8s.io:
+        patterns:
+          - "k8s.io/*"
   - package-ecosystem: pip
     directory: /tools/src/codespell
     schedule:

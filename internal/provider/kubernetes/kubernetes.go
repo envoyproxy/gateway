@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -45,10 +46,14 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		},
 	}
 
-	if svr.EnvoyGateway.Provider != nil &&
-		svr.EnvoyGateway.Provider.Kubernetes != nil &&
-		(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
-		(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0) {
+	// TODO: implement config validation on the watch mode config
+	byNamespace :=
+		svr.EnvoyGateway.Provider != nil &&
+			svr.EnvoyGateway.Provider.Kubernetes != nil &&
+			(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
+			(svr.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
+			(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0)
+	if byNamespace {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}

@@ -13,6 +13,9 @@ type ProxyMetrics struct {
 	// Matches defines configuration for selecting specific metrics instead of generating all metrics stats
 	// that are enabled by default. This helps reduce CPU and memory overhead in Envoy.
 	Matches []Match `json:"matches,omitempty"`
+
+	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
+	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
 }
 
 type MetricSinkType string
