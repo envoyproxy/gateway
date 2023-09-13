@@ -195,6 +195,7 @@ type KubernetesWatchMode struct {
 	// KubernetesWatchModeTypeNamespaceSelectors are currently supported
 	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
 	// from all namespaces.
+	// +kubebuilder:default=Namespaces
 	Type KubernetesWatchModeType
 
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
