@@ -104,7 +104,7 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
                
 
 
-| Envoy Proxy         | Address     | Port    |
-|:-----------------:  |:-----------:| :-----: |
-| Admin Server        | 127.0.0.1   | 19000   |
-| Heath Check Listener| 0.0.0.0     | 19001   |
+| Envoy Proxy                       | Address     | Port    |
+|:---------------------------------:|:-----------:| :-----: |
+| Admin Server                      | 127.0.0.1   | 19000   |
+| Heath Check & Prometheus Listener | 0.0.0.0     | 19001   |
