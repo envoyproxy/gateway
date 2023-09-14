@@ -14,7 +14,6 @@ import (
 	"log"
 	"net"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -32,7 +31,13 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	apisv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -50,7 +55,7 @@ const (
 
 func NewAccessLogsCommand() *cobra.Command {
 	var (
-		port      int
+		port      uint32
 		listener  string
 		namespace string
 	)
@@ -63,25 +68,11 @@ func NewAccessLogsCommand() *cobra.Command {
 			if len(args) < 1 {
 				return fmt.Errorf("missing the name of gateway")
 			}
-
-			ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-			defer stop()
-
-			wg := &sync.WaitGroup{}
-			gateway := args[0]
-			if err := accessLogs(ctx, wg, port, namespace, gateway, listener); err != nil {
-				return err
-			}
-
-			wg.Wait()
-
-			// TODO(sh2): recycle the created resources
-
-			return nil
+			return accessLogsCmd(namespace, args[0], listener, port)
 		},
 	}
 
-	accessLogsCommand.PersistentFlags().IntVarP(&port, "port", "p", accessLogServerPort, "Listening port of access-log server.")
+	accessLogsCommand.PersistentFlags().Uint32VarP(&port, "port", "p", accessLogServerPort, "Listening port of access-log server.")
 	accessLogsCommand.PersistentFlags().StringVarP(&listener, "listener", "l", "", "Listener name of the gateway.")
 	accessLogsCommand.PersistentFlags().StringVarP(&namespace, "namespace", "n", "default", "Namespace of the gateway.")
 
@@ -96,6 +87,29 @@ var _ alv3svc.AccessLogServiceServer = &accessLogServer{}
 
 func newAccessLogServer() alv3svc.AccessLogServiceServer {
 	return &accessLogServer{}
+}
+
+func newClient() (client.Client, error) {
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := gwv1b1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := gwv1a2.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+	if err := egv1a1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+
+	cli, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
+	if err != nil {
+		return nil, err
+	}
+
+	return cli, nil
 }
 
 func (a *accessLogServer) StreamAccessLogs(server alv3svc.AccessLogService_StreamAccessLogsServer) error {
@@ -134,14 +148,31 @@ func serveAccessLogServer(ctx context.Context, wg *sync.WaitGroup, server *grpc.
 	}
 }
 
-func isValidPort(port int) bool {
+// isValidGateway check the status of given gateway and return its first listener name.
+func isValidGateway(ctx context.Context, cli client.Client, namespace, gateway string) (string, error) {
+	gw := &gwv1b1.Gateway{}
+	nn := types.NamespacedName{
+		Namespace: namespace,
+		Name:      gateway,
+	}
+	if err := cli.Get(ctx, nn, gw); err != nil {
+		return "", fmt.Errorf("gateway '%s' not found", nn.String())
+	}
+	if len(gw.Spec.Listeners) == 0 {
+		return "", fmt.Errorf("gateway '%s' has no listeners", nn.String())
+	}
+
+	return string(gw.Spec.Listeners[0].Name), nil
+}
+
+func isValidPort(port uint32) bool {
 	if port < 1024 || port > 65535 {
 		return false
 	}
 	return true
 }
 
-func validateAccessLogsInputs(port int) error {
+func validateAccessLogsInputs(port uint32) error {
 	if !isValidPort(port) {
 		return fmt.Errorf("%d is not a valid port", port)
 	}
@@ -149,19 +180,62 @@ func validateAccessLogsInputs(port int) error {
 	return nil
 }
 
-func accessLogs(ctx context.Context, wg *sync.WaitGroup, port int, namespace, gateway, listener string) error {
+func accessLogsCmd(namespace, gateway, listener string, port uint32) error {
 	if err := validateAccessLogsInputs(port); err != nil {
 		return err
 	}
 
-	// TODO(sh2): check whether the envoy patch policy is enabled, return err if not
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	// TODO(sh2): check whether the gateway is exist, and its listener
+	cli, err := newClient()
+	if err != nil {
+		return err
+	}
 
+	// TODO(sh2): Checking out the status of envoy patch policy.
+
+	defaultListener, err := isValidGateway(ctx, cli, namespace, gateway)
+	if err != nil {
+		return err
+	}
+
+	if len(listener) == 0 {
+		listener = defaultListener
+		log.Printf("Using '%s' listener in gateway '%s' as default", listener, gateway)
+	}
+	clusterName := expectedAccessLogsClusterName()
+	address := "todo" // TODO(sh2): get address
+	policy, err := expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName, port)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Creating %s/envoy-patch-policy: %s\n", namespace, clusterName)
+	if err = createOrUpdateEnvoyPatchPolicy(ctx, cli, policy); err != nil {
+		return err
+	}
+
+	wg := &sync.WaitGroup{}
+	if err = runAccessLogServer(ctx, wg, port); err != nil {
+		return err
+	}
+
+	wg.Wait()
+	log.Printf("Deleting %s/envoy-patch-policy: %s\n", namespace, clusterName)
+	// Use new context instead of canceled old context.
+	if err = deleteEnvoyPatchPolicy(context.Background(), cli, policy); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func runAccessLogServer(ctx context.Context, wg *sync.WaitGroup, port uint32) error {
 	grpcServer := grpc.NewServer()
 	alv3svc.RegisterAccessLogServiceServer(grpcServer, newAccessLogServer())
 
-	addr := net.JoinHostPort(accessLogServerAddress, strconv.Itoa(port))
+	addr := net.JoinHostPort(accessLogServerAddress, fmt.Sprintf("%d", port))
 	wg.Add(1)
 	go serveAccessLogServer(ctx, wg, grpcServer, addr)
 
@@ -176,12 +250,12 @@ func expectedAccessLogsClusterName() string {
 	return fmt.Sprintf("%s-%s", accessLogServerClusterNamePrefix, hash)
 }
 
-func expectedJsonPatchListenerName(namespace, gateway, listener string) string {
+func expectedJSONPatchListenerName(namespace, gateway, listener string) string {
 	// The listener name is of the form <GatewayNamespace>/<GatewayName>/<GatewayListenerName>.
 	return fmt.Sprintf("%s/%s/%s", namespace, gateway, listener)
 }
 
-func expectedJsonPatchAccessLogHttpGrpcConfig(clusterName string) (string, error) {
+func expectedJSONPatchAccessLogHTTPGrpcConfig(clusterName string) (string, error) {
 	var buf bytes.Buffer
 
 	httpGrpcAccessLogConfig := &alv3ext.HttpGrpcAccessLogConfig{
@@ -219,7 +293,7 @@ func expectedJsonPatchAccessLogHttpGrpcConfig(clusterName string) (string, error
 	return buf.String(), nil
 }
 
-func expectedJsonPatchAccessLogClusterConfig(address, clusterName string, port uint32) (string, error) {
+func expectedJSONPatchAccessLogClusterConfig(address, clusterName string, port uint32) (string, error) {
 	var buf bytes.Buffer
 
 	endpoint := &endpointv3.LbEndpoint_Endpoint{
@@ -262,12 +336,12 @@ func expectedJsonPatchAccessLogClusterConfig(address, clusterName string, port u
 func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName string, port uint32) (*egv1a1.EnvoyPatchPolicy, error) {
 	ns := gwv1a2.Namespace(namespace)
 
-	accessLogHttpGrpcConfig, err := expectedJsonPatchAccessLogHttpGrpcConfig(clusterName)
+	accessLogHttpGrpcConfig, err := expectedJSONPatchAccessLogHTTPGrpcConfig(clusterName)
 	if err != nil {
 		return nil, err
 	}
 
-	accessLogClusterConfig, err := expectedJsonPatchAccessLogClusterConfig(address, clusterName, port)
+	accessLogClusterConfig, err := expectedJSONPatchAccessLogClusterConfig(address, clusterName, port)
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +366,7 @@ func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName
 			JSONPatches: []egv1a1.EnvoyJSONPatchConfig{
 				{
 					Type: egv1a1.ListenerEnvoyResourceType,
-					Name: expectedJsonPatchListenerName(namespace, gateway, listener),
+					Name: expectedJSONPatchListenerName(namespace, gateway, listener),
 					Operation: egv1a1.JSONPatchOperation{
 						Op:   "add",
 						Path: "/default_filter_chain/filters/0/typed_config/access_log/0",
@@ -317,4 +391,36 @@ func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName
 	}
 
 	return policy, nil
+}
+
+func createOrUpdateEnvoyPatchPolicy(ctx context.Context, cli client.Client, policy *egv1a1.EnvoyPatchPolicy) error {
+	key := types.NamespacedName{
+		Namespace: policy.Namespace,
+		Name:      policy.Name,
+	}
+	cur := &egv1a1.EnvoyPatchPolicy{}
+	if err := cli.Get(ctx, key, cur); err != nil {
+		if kerrors.IsNotFound(err) {
+			if err = cli.Create(ctx, policy); err != nil {
+				return err
+			}
+		}
+	} else {
+		if err = cli.Update(ctx, policy); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func deleteEnvoyPatchPolicy(ctx context.Context, cli client.Client, policy *egv1a1.EnvoyPatchPolicy) error {
+	if err := cli.Delete(ctx, policy); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	return nil
 }

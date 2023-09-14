@@ -35,15 +35,15 @@ func TestExpectedEnvoyPatchPolicy(t *testing.T) {
 		actualPatchValues := actual.Spec.JSONPatches[i].Operation.Value
 		expectPatchValues := expect.Spec.JSONPatches[i].Operation.Value
 
-		actualJson, err := actualPatchValues.MarshalJSON()
+		actualJSON, err := actualPatchValues.MarshalJSON()
 		assert.NoError(t, err)
-		expectJson, err := expectPatchValues.MarshalJSON()
+		expectJSON, err := expectPatchValues.MarshalJSON()
 		assert.NoError(t, err)
 
 		var actualMap, expectMap map[string]interface{}
-		err = json.Unmarshal(actualJson, &actualMap)
+		err = json.Unmarshal(actualJSON, &actualMap)
 		assert.NoError(t, err)
-		err = json.Unmarshal(expectJson, &expectMap)
+		err = json.Unmarshal(expectJSON, &expectMap)
 		assert.NoError(t, err)
 
 		assert.Equal(t, expectMap, actualMap)
