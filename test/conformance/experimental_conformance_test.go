@@ -93,7 +93,7 @@ func experimentalConformance(t *testing.T) {
 				Debug:                *flags.ShowDebug,
 				CleanupBaseResources: *flags.CleanupBaseResources,
 				SkipTests: []string{
-					// Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
+					// TODO: Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
 					tests.HTTPRouteRequestMultipleMirrors.ShortName,
 				},
 				SupportedFeatures: sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),

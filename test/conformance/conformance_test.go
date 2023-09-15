@@ -46,7 +46,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
 		SkipTests: []string{
-			// Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
+			// TODO: Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
 			tests.HTTPRouteRequestMultipleMirrors.ShortName,
 		},
 		ExemptFeatures: suite.MeshCoreFeatures,
