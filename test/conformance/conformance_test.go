@@ -45,7 +45,11 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Clientset:            clientset,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
-		ExemptFeatures:       suite.MeshCoreFeatures,
+		SkipTests: []string{
+			// Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
+			tests.HTTPRouteRequestMultipleMirrors.ShortName,
+		},
+		ExemptFeatures: suite.MeshCoreFeatures,
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)
