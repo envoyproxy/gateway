@@ -12,19 +12,17 @@ import (
 	"net/http"
 	"sync"
 
-	kube "github.com/envoyproxy/gateway/internal/kubernetes"
 	"github.com/spf13/cobra"
 	"github.com/tetratelabs/multierror"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
+
+	"github.com/envoyproxy/gateway/internal/kubernetes"
 )
 
 const (
-	summaryOutput          = "short"
-	prometheusOutput       = "prom"
-	prometheusMergedOutput = "prom-merged"
-
-	defaultProxyAdminPort = 15000
+	summaryOutput    = "statsd"
+	prometheusOutput = "prom"
 )
 
 var (
@@ -73,27 +71,28 @@ func newEnvoyStatsConfigCmd() *cobra.Command {
 			}
 			var errs error
 			var wg sync.WaitGroup
-			if statsType == "" || statsType == "server" {
+			switch statsType {
+			case "", "server":
 				wg.Add(len(pods))
 				for _, pod := range pods {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyServerStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
-						multierror.Append(errs, err)
+						errs = multierror.Append(errs, err)
 						wg.Done()
 					}(pod)
 				}
 				wg.Wait()
-			} else if statsType == "cluster" || statsType == "clusters" {
+			case "cluster", "clusters":
 				wg.Add(len(pods))
 				for _, pod := range pods {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyClusterStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
-						multierror.Append(errs, err)
+						errs = multierror.Append(errs, err)
 						wg.Done()
 					}(pod)
 				}
 				wg.Wait()
-			} else {
+			default:
 				return fmt.Errorf("unknown stats type %s", statsType)
 			}
 
@@ -109,7 +108,7 @@ func newEnvoyStatsConfigCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				if out, err = yaml.JSONToYAML([]byte(statsBytes)); err != nil {
+				if out, err = yaml.JSONToYAML(statsBytes); err != nil {
 					return err
 				}
 				_, _ = fmt.Fprint(c.OutOrStdout(), string(out))
@@ -131,7 +130,7 @@ func newEnvoyStatsConfigCmd() *cobra.Command {
 	return statsConfigCmd
 }
 
-func setupEnvoyServerStatsConfig(kubeClient kube.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
+func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
 	path := "stats"
 	port := 19000
 	if outputFormat == jsonOutput || outputFormat == yamlOutput {
@@ -142,6 +141,9 @@ func setupEnvoyServerStatsConfig(kubeClient kube.CLIClient, podName, podNamespac
 	}
 
 	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, port)
+	if err != nil {
+		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
+	}
 	err = fw.Start()
 	if err != nil {
 		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %v", podNamespace, podName, err)
@@ -155,7 +157,7 @@ func setupEnvoyServerStatsConfig(kubeClient kube.CLIClient, podName, podNamespac
 	return string(result), nil
 }
 
-func setupEnvoyClusterStatsConfig(kubeClient kube.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
+func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
 	path := "clusters"
 	port := 19000
 	if outputFormat == jsonOutput || outputFormat == yamlOutput {
@@ -163,6 +165,9 @@ func setupEnvoyClusterStatsConfig(kubeClient kube.CLIClient, podName, podNamespa
 		path += "?format=json"
 	}
 	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, port)
+	if err != nil {
+		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
+	}
 	err = fw.Start()
 	if err != nil {
 		return "", fmt.Errorf("failed to start port forwarding for pod %s/%s: %v", podNamespace, podName, err)
