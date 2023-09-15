@@ -981,46 +981,70 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 		return nil, weight
 	}
 
-	service := resources.GetService(backendNamespace, string(backendRef.Name))
-	var servicePort corev1.ServicePort
-	for _, port := range service.Spec.Ports {
-		if port.Port == int32(*backendRef.Port) {
-			servicePort = port
-			break
+	switch KindDerefOr(backendRef.Kind, KindService) {
+	// TODO: Use EndpointSlice for ServiceImport
+	case KindServiceImport:
+		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+		for _, ip := range backendIps {
+			var ep *ir.DestinationEndpoint
+			// Weights are not relevant for TCP and UDP Routes
+			if routeType == KindTCPRoute || routeType == KindUDPRoute {
+				ep = ir.NewDestEndpoint(
+					ip,
+					uint32(*backendRef.Port))
+			} else {
+				ep = ir.NewDestEndpointWithWeight(
+					ip,
+					uint32(*backendRef.Port),
+					weight)
+			}
+			endpoints = append(endpoints, ep)
 		}
-	}
+		return endpoints, weight
+	case KindService:
+		service := resources.GetService(backendNamespace, string(backendRef.Name))
+		var servicePort corev1.ServicePort
+		for _, port := range service.Spec.Ports {
+			if port.Port == int32(*backendRef.Port) {
+				servicePort = port
+				break
+			}
+		}
 
-	endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
+		endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
 
-	for _, endpointSlice := range endpointSlices {
-		for _, endpoint := range endpointSlice.Endpoints {
-			for _, endpointPort := range endpointSlice.Ports {
-				// Check if the endpoint port matches the service port
-				// and if endpoint is Ready
-				if *endpointPort.Port == servicePort.Port &&
-					*endpointPort.Protocol == servicePort.Protocol &&
-					*endpoint.Conditions.Ready {
-					for _, address := range endpoint.Addresses {
-						var ep *ir.DestinationEndpoint
-						// Weights are not relevant for TCP and UDP Routes
-						if routeType == KindTCPRoute ||
-							routeType == KindUDPRoute {
-							ep = ir.NewDestEndpoint(
-								address,
-								uint32(servicePort.TargetPort.IntVal))
-						} else {
-							ep = ir.NewDestEndpointWithWeight(
-								address,
-								uint32(servicePort.TargetPort.IntVal),
-								weight)
+		for _, endpointSlice := range endpointSlices {
+			for _, endpoint := range endpointSlice.Endpoints {
+				for _, endpointPort := range endpointSlice.Ports {
+					// Check if the endpoint port matches the service port
+					// and if endpoint is Ready
+					if *endpointPort.Port == servicePort.Port &&
+						*endpointPort.Protocol == servicePort.Protocol &&
+						*endpoint.Conditions.Ready {
+						for _, address := range endpoint.Addresses {
+							var ep *ir.DestinationEndpoint
+							// Weights are not relevant for TCP and UDP Routes
+							if routeType == KindTCPRoute ||
+								routeType == KindUDPRoute {
+								ep = ir.NewDestEndpoint(
+									address,
+									uint32(servicePort.TargetPort.IntVal))
+							} else {
+								ep = ir.NewDestEndpointWithWeight(
+									address,
+									uint32(servicePort.TargetPort.IntVal),
+									weight)
+							}
+							endpoints = append(endpoints, ep)
 						}
-						endpoints = append(endpoints, ep)
 					}
 				}
 			}
 		}
+		return endpoints, weight
 	}
-	return endpoints, weight
+
+	return nil, 0 // shouldnt reach here
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
