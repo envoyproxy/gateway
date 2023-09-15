@@ -180,8 +180,14 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 }
 
 // portForwarder returns a port forwarder instance for a single Pod.
-func portForwarder(cli kube.CLIClient, nn types.NamespacedName) (kube.PortForwarder, error) {
-	fw, err := kube.NewLocalPortForwarder(cli, nn, 0, adminPort)
+func portForwarder(cli kube.CLIClient, nn types.NamespacedName, port ...int) (kube.PortForwarder, error) {
+	var err error
+	var fw kube.PortForwarder
+	if len(port) == 0 {
+		fw, err = kube.NewLocalPortForwarder(cli, nn, 0, adminPort)
+	} else {
+		fw, err = kube.NewLocalPortForwarder(cli, nn, 0, port[0])
+	}
 	if err != nil {
 		return nil, err
 	}
