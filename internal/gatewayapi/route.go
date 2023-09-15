@@ -981,6 +981,7 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 		return nil, weight
 	}
 
+	service := resources.GetService(backendNamespace, string(backendRef.Name))
 	var servicePort corev1.ServicePort
 	for _, port := range service.Spec.Ports {
 		if port.Port == int32(*backendRef.Port) {
@@ -1000,26 +1001,26 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 					*endpointPort.Protocol == servicePort.Protocol &&
 					*endpoint.Conditions.Ready {
 					for _, address := range endpoint.Addresses {
-						var dest *ir.RouteDestination
+						var ep *ir.DestinationEndpoint
 						// Weights are not relevant for TCP and UDP Routes
 						if routeType == KindTCPRoute ||
 							routeType == KindUDPRoute {
-							dest = ir.NewRouteDest(
+							ep = ir.NewDestEndpoint(
 								address,
 								uint32(servicePort.TargetPort.IntVal))
 						} else {
-							dest = ir.NewRouteDestWithWeight(
+							ep = ir.NewDestEndpointWithWeight(
 								address,
 								uint32(servicePort.TargetPort.IntVal),
 								weight)
 						}
-						destinations = append(destinations, dest)
+						endpoints = append(endpoints, ep)
 					}
 				}
 			}
 		}
 	}
-	return destinations, weight
+	return endpoints, weight
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
