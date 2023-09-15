@@ -24,7 +24,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gatewayclasses.gateway.networking.k8s.io
@@ -469,7 +469,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: gateways.gateway.networking.k8s.io
@@ -964,7 +964,7 @@ spec:
                     for each listener
                   rule: 'self.all(l1, self.exists_one(l2, l1.port == l2.port && l1.protocol
                     == l2.protocol && (has(l1.hostname) && has(l2.hostname) ? l1.hostname
-                    == l2.hostname : true)))'
+                    == l2.hostname : !has(l1.hostname) && !has(l2.hostname))))'
             required:
             - gatewayClassName
             - listeners
@@ -1742,7 +1742,7 @@ spec:
                     for each listener
                   rule: 'self.all(l1, self.exists_one(l2, l1.port == l2.port && l1.protocol
                     == l2.protocol && (has(l1.hostname) && has(l2.hostname) ? l1.hostname
-                    == l2.hostname : true)))'
+                    == l2.hostname : !has(l1.hostname) && !has(l2.hostname))))'
             required:
             - gatewayClassName
             - listeners
@@ -2060,7 +2060,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: grpcroutes.gateway.networking.k8s.io
@@ -3765,7 +3765,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: httproutes.gateway.networking.k8s.io
@@ -8596,7 +8596,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: referencegrants.gateway.networking.k8s.io
@@ -8885,7 +8885,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tcproutes.gateway.networking.k8s.io
@@ -9501,7 +9501,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: tlsroutes.gateway.networking.k8s.io
@@ -10166,7 +10166,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     api-approved.kubernetes.io: https://github.com/kubernetes-sigs/gateway-api/pull/2245
-    gateway.networking.k8s.io/bundle-version: v0.8.0
+    gateway.networking.k8s.io/bundle-version: v0.8.1
     gateway.networking.k8s.io/channel: experimental
   creationTimestamp: null
   name: udproutes.gateway.networking.k8s.io
@@ -10847,7 +10847,7 @@ spec:
     spec:
       containers:
       - name: webhook
-        image: registry.k8s.io/gateway-api/admission-server:v0.8.0
+        image: registry.k8s.io/gateway-api/admission-server:v0.8.1
         imagePullPolicy: IfNotPresent
         args:
         - -logtostderr
