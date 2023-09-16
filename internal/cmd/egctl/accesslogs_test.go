@@ -6,16 +6,38 @@
 package egctl
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kapisv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
+
+func newTestClient() (client.Client, error) {
+	scheme, err := newScheme()
+	if err != nil {
+		return nil, err
+	}
+
+	cli := fakeclient.NewClientBuilder().WithScheme(scheme).Build()
+	return cli, nil
+}
+
+func findEnvoyPatchPolicy(ctx context.Context, cli client.Client, key types.NamespacedName) bool {
+	policy := &v1alpha1.EnvoyPatchPolicy{}
+	if err := cli.Get(ctx, key, policy); err != nil {
+		return false
+	}
+	return true
+}
 
 func TestExpectedEnvoyPatchPolicy(t *testing.T) {
 	actual, err := expectedEnvoyPatchPolicy("abc", "eg", "http", "1.2.3.4", "test", 9001)
@@ -49,9 +71,32 @@ func TestExpectedEnvoyPatchPolicy(t *testing.T) {
 		assert.Equal(t, expectMap, actualMap)
 
 		// Compare other field except this field.
-		actual.Spec.JSONPatches[i].Operation.Value = v1.JSON{}
-		expect.Spec.JSONPatches[i].Operation.Value = v1.JSON{}
+		actual.Spec.JSONPatches[i].Operation.Value = kapisv1.JSON{}
+		expect.Spec.JSONPatches[i].Operation.Value = kapisv1.JSON{}
 	}
 
 	assert.Equal(t, expect, actual)
+}
+
+func TestEnvoyPatchPolicyOperations(t *testing.T) {
+	cli, err := newTestClient()
+	assert.NoError(t, err)
+
+	policy, err := expectedEnvoyPatchPolicy("abc", "eg", "http", "foo", "test", 9001)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	err = createOrUpdateEnvoyPatchPolicy(ctx, cli, policy)
+	assert.NoError(t, err)
+	assert.Equal(t, true, findEnvoyPatchPolicy(ctx, cli, types.NamespacedName{
+		Namespace: policy.Namespace,
+		Name:      policy.Name,
+	}))
+
+	err = deleteEnvoyPatchPolicy(ctx, cli, policy)
+	assert.NoError(t, err)
+	assert.Equal(t, false, findEnvoyPatchPolicy(ctx, cli, types.NamespacedName{
+		Namespace: policy.Namespace,
+		Name:      policy.Name,
+	}))
 }

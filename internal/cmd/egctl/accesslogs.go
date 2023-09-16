@@ -13,6 +13,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"os/signal"
 	"sync"
 	"syscall"
@@ -30,9 +31,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
-	apisv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	kcorev1 "k8s.io/api/core/v1"
+	kapisv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kmetav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -61,14 +63,25 @@ func NewAccessLogsCommand() *cobra.Command {
 	)
 
 	accessLogsCommand := &cobra.Command{
-		Use:     "access-logs",
-		Short:   "Streaming access logs from Envoy Proxy.",
-		Example: ``, // TODO(sh2): add example
+		Use:   "access-logs",
+		Short: "Streaming access logs from Envoy Proxy.",
+		Example: `  # Start streaming access logs from the Envoy Proxy of one gateway.
+  egctl experimental access-logs <gateway-name>
+
+  # Start streaming access logs from the Envoy Proxy of one gateway in specific namespace.
+  egctl experimental access-logs <gateway-name> -n <namespace>
+
+  # Start streaming access logs from the Envoy Proxy of one gateway with specific listener.
+  egctl experimental access-logs <gateway-name> -l <listener-name>
+
+  # Start access-log server with specific port.
+  egctl experimental access-logs <gateway-name> -p <port>
+    `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) < 1 {
 				return fmt.Errorf("missing the name of gateway")
 			}
-			return accessLogsCmd(namespace, args[0], listener, port)
+			return accessLogs(namespace, args[0], listener, port)
 		},
 	}
 
@@ -89,7 +102,7 @@ func newAccessLogServer() alv3svc.AccessLogServiceServer {
 	return &accessLogServer{}
 }
 
-func newClient() (client.Client, error) {
+func newScheme() (*runtime.Scheme, error) {
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		return nil, err
@@ -104,6 +117,15 @@ func newClient() (client.Client, error) {
 		return nil, err
 	}
 
+	return scheme, nil
+}
+
+func newClient() (client.Client, error) {
+	scheme, err := newScheme()
+	if err != nil {
+		return nil, err
+	}
+
 	cli, err := client.New(config.GetConfigOrDie(), client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, err
@@ -113,7 +135,6 @@ func newClient() (client.Client, error) {
 }
 
 func (a *accessLogServer) StreamAccessLogs(server alv3svc.AccessLogService_StreamAccessLogsServer) error {
-	log.Println("Start streaming access logs from server")
 	for {
 		recv, err := server.Recv()
 		if err == io.EOF {
@@ -122,8 +143,15 @@ func (a *accessLogServer) StreamAccessLogs(server alv3svc.AccessLogService_Strea
 		if err != nil {
 			return err
 		}
-		str, _ := a.marshaler.MarshalToString(recv)
-		log.Println(str) // TODO(sh2): prettify the json output
+
+		nodeID := recv.GetIdentifier().GetNode().GetId()
+		entry := recv.GetHttpLogs().GetLogEntry()
+		n := len(entry)
+		log.Printf("Streaming %d access log entry from %s", n, nodeID)
+		for i := 0; i < n; i++ {
+			str, _ := a.marshaler.MarshalToString(entry[i])
+			log.Println(str)
+		}
 	}
 }
 
@@ -132,7 +160,7 @@ func serveAccessLogServer(ctx context.Context, wg *sync.WaitGroup, server *grpc.
 
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Printf("failed to listen on address %s: %v\n", addr, err)
+		log.Printf("failed to listen on address %s: %v", addr, err)
 		return
 	}
 
@@ -142,9 +170,9 @@ func serveAccessLogServer(ctx context.Context, wg *sync.WaitGroup, server *grpc.
 		server.Stop()
 	}()
 
-	log.Printf("Serving access-log server on %s\n", addr)
+	log.Printf("Serving access-log server on %s", addr)
 	if err = server.Serve(listener); err != nil {
-		log.Printf("failed to start access-log server: %v\n", err)
+		log.Printf("failed to start access-log server: %v", err)
 	}
 }
 
@@ -180,7 +208,7 @@ func validateAccessLogsInputs(port uint32) error {
 	return nil
 }
 
-func accessLogsCmd(namespace, gateway, listener string, port uint32) error {
+func accessLogs(namespace, gateway, listener string, port uint32) error {
 	if err := validateAccessLogsInputs(port); err != nil {
 		return err
 	}
@@ -190,28 +218,41 @@ func accessLogsCmd(namespace, gateway, listener string, port uint32) error {
 
 	cli, err := newClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create kube client: %v", err)
 	}
 
-	// TODO(sh2): Checking out the status of envoy patch policy.
+	// TODO(sh2): Checking the status of EnvoyPatchPolicy.
+	log.Println("NOTE: PLEASE MAKE SURE THE ENVOY PATCH POLICY IS ENABLED, " +
+		"YOU CAN REFER TO https://gateway.envoyproxy.io/latest/user/envoy-patch-policy.html FOR MORE INFO.")
 
+	// Checking the status of gateway and its listeners.
 	defaultListener, err := isValidGateway(ctx, cli, namespace, gateway)
 	if err != nil {
 		return err
 	}
-
 	if len(listener) == 0 {
 		listener = defaultListener
 		log.Printf("Using '%s' listener in gateway '%s' as default", listener, gateway)
 	}
+
+	// Preparing EnvoyPatchPolicy.
 	clusterName := expectedAccessLogsClusterName()
-	address := "todo" // TODO(sh2): get address
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+
+	address, err := getNodeIP(ctx, cli, hostname)
+	if err != nil {
+		return err
+	}
+
 	policy, err := expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName, port)
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Creating %s/envoy-patch-policy: %s\n", namespace, clusterName)
+	log.Printf("Creating %s/envoy-patch-policy: %s", namespace, clusterName)
 	if err = createOrUpdateEnvoyPatchPolicy(ctx, cli, policy); err != nil {
 		return err
 	}
@@ -222,8 +263,8 @@ func accessLogsCmd(namespace, gateway, listener string, port uint32) error {
 	}
 
 	wg.Wait()
-	log.Printf("Deleting %s/envoy-patch-policy: %s\n", namespace, clusterName)
-	// Use new context instead of canceled old context.
+	log.Printf("Deleting %s/envoy-patch-policy: %s", namespace, clusterName)
+	// Using new context instead of old context (may get canceled).
 	if err = deleteEnvoyPatchPolicy(context.Background(), cli, policy); err != nil {
 		return err
 	}
@@ -310,8 +351,12 @@ func expectedJSONPatchAccessLogClusterConfig(address, clusterName string, port u
 	}
 
 	cluster := &clusterv3.Cluster{
-		Name:           clusterName,
-		ConnectTimeout: durationpb.New(10 * time.Second),
+		Name:                 clusterName,
+		ConnectTimeout:       durationpb.New(10 * time.Second),
+		Http2ProtocolOptions: &corev3.Http2ProtocolOptions{},
+		ClusterDiscoveryType: &clusterv3.Cluster_Type{
+			Type: clusterv3.Cluster_STRICT_DNS,
+		},
 		LoadAssignment: &endpointv3.ClusterLoadAssignment{
 			ClusterName: clusterName,
 			Endpoints: []*endpointv3.LocalityLbEndpoints{
@@ -336,7 +381,7 @@ func expectedJSONPatchAccessLogClusterConfig(address, clusterName string, port u
 func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName string, port uint32) (*egv1a1.EnvoyPatchPolicy, error) {
 	ns := gwv1a2.Namespace(namespace)
 
-	accessLogHttpGrpcConfig, err := expectedJSONPatchAccessLogHTTPGrpcConfig(clusterName)
+	accessLogHTTPGrpcConfig, err := expectedJSONPatchAccessLogHTTPGrpcConfig(clusterName)
 	if err != nil {
 		return nil, err
 	}
@@ -347,11 +392,11 @@ func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName
 	}
 
 	policy := &egv1a1.EnvoyPatchPolicy{
-		TypeMeta: metav1.TypeMeta{
+		TypeMeta: kmetav1.TypeMeta{
 			Kind:       egv1a1.KindEnvoyPatchPolicy,
 			APIVersion: egv1a1.GroupVersion.String(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: kmetav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      clusterName,
 		},
@@ -370,8 +415,8 @@ func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName
 					Operation: egv1a1.JSONPatchOperation{
 						Op:   "add",
 						Path: "/default_filter_chain/filters/0/typed_config/access_log/0",
-						Value: apisv1.JSON{
-							Raw: []byte(accessLogHttpGrpcConfig),
+						Value: kapisv1.JSON{
+							Raw: []byte(accessLogHTTPGrpcConfig),
 						},
 					},
 				},
@@ -381,7 +426,7 @@ func expectedEnvoyPatchPolicy(namespace, gateway, listener, address, clusterName
 					Operation: egv1a1.JSONPatchOperation{
 						Op:   "add",
 						Path: "",
-						Value: apisv1.JSON{
+						Value: kapisv1.JSON{
 							Raw: []byte(accessLogClusterConfig),
 						},
 					},
@@ -423,4 +468,21 @@ func deleteEnvoyPatchPolicy(ctx context.Context, cli client.Client, policy *egv1
 	}
 
 	return nil
+}
+
+func getNodeIP(ctx context.Context, cli client.Client, name string) (string, error) {
+	key := types.NamespacedName{Name: name}
+	node := &kcorev1.Node{}
+	if err := cli.Get(ctx, key, node); err != nil {
+		return "", err
+	}
+
+	var ip string
+	for _, address := range node.Status.Addresses {
+		if address.Type == kcorev1.NodeInternalIP {
+			ip = address.Address
+		}
+	}
+
+	return ip, nil
 }

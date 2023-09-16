@@ -33,7 +33,9 @@ spec:
         path: ""
         value:
           name: test
+          type: STRICT_DNS
           connect_timeout: 10s
+          http2_protocol_options: {}
           load_assignment:
             cluster_name: test
             endpoints:
