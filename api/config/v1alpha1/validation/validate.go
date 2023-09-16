@@ -75,6 +75,9 @@ func validateProvider(spec *egcfgv1a1.EnvoyProxySpec) []error {
 		if len(validateServiceTypeErrs) != 0 {
 			errs = append(errs, validateServiceTypeErrs...)
 		}
+		if err := validateServiceAllocateLoadBalancerNodePorts(spec); err != nil {
+			errs = append(errs, err)
+		}
 	}
 	return errs
 }
@@ -91,6 +94,18 @@ func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
 		}
 	}
 	return errs
+}
+
+func validateServiceAllocateLoadBalancerNodePorts(spec *egcfgv1a1.EnvoyProxySpec) error {
+	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
+		if serviceType, serviceAllocateLoadBalancerNodePorts :=
+			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.AllocateLoadBalancerNodePorts; serviceType != nil && serviceAllocateLoadBalancerNodePorts != nil {
+			if *serviceType != egcfgv1a1.ServiceTypeLoadBalancer {
+				return fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egcfgv1a1.ServiceTypeLoadBalancer)
+			}
+		}
+	}
+	return nil
 }
 
 func validateBootstrap(boostrapConfig *egcfgv1a1.ProxyBootstrap) error {

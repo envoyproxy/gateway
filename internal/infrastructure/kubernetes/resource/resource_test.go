@@ -22,6 +22,7 @@ func TestExpectedServiceSpec(t *testing.T) {
 		service *egcfgv1a1.KubernetesServiceSpec
 	}
 	loadbalancerClass := "foobar"
+	allocateLoadBalancerNodePorts := true
 	tests := []struct {
 		name string
 		args args
@@ -49,6 +50,19 @@ func TestExpectedServiceSpec(t *testing.T) {
 				LoadBalancerClass:     &loadbalancerClass,
 				SessionAffinity:       corev1.ServiceAffinityNone,
 				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
+			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
+			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
+				Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+				AllocateLoadBalancerNodePorts: &allocateLoadBalancerNodePorts,
+			}},
+			want: corev1.ServiceSpec{
+				Type:                          corev1.ServiceTypeLoadBalancer,
+				AllocateLoadBalancerNodePorts: &allocateLoadBalancerNodePorts,
+				SessionAffinity:               corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy:         corev1.ServiceExternalTrafficPolicyTypeLocal,
 			},
 		},
 		{
