@@ -246,6 +246,58 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "should invalid when accesslog enabled using Text format, but `text` field being empty",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: egcfgv1a1.ProxyTelemetry{
+						AccessLog: &egcfgv1a1.ProxyAccessLog{
+							Settings: []egcfgv1a1.ProxyAccessLogSetting{
+								{
+									Format: egcfgv1a1.ProxyAccessLogFormat{
+										Type: egcfgv1a1.ProxyAccessLogFormatTypeText,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should invalid when accesslog enabled using File sink, but `file` field being empty",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: egcfgv1a1.ProxyTelemetry{
+						AccessLog: &egcfgv1a1.ProxyAccessLog{
+							Settings: []egcfgv1a1.ProxyAccessLogSetting{
+								{
+									Format: egcfgv1a1.ProxyAccessLogFormat{
+										Type: egcfgv1a1.ProxyAccessLogFormatTypeText,
+										Text: pointer.String("[%START_TIME%]"),
+									},
+									Sinks: []egcfgv1a1.ProxyAccessLogSink{
+										{
+											Type: egcfgv1a1.ProxyAccessLogSinkTypeFile,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 	}
 
 	for i := range testCases {

@@ -3864,10 +3864,9 @@ spec:
                                   type: object
                                 text:
                                   description: Text defines the text accesslog format,
-                                    following Envoy accesslog formatting, empty value
-                                    results in proxy's default access log format.
-                                    It's required when the format type is "Text".
-                                    Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
+                                    following Envoy accesslog formatting, It's required
+                                    when the format type is "Text". Envoy [command
+                                    operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators)
                                     may be used in the format. The [format string
                                     documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings)
                                     provides more information.
@@ -3890,7 +3889,7 @@ spec:
                                       path:
                                         description: Path defines the file path used
                                           to expose envoy access log(e.g. /dev/stdout).
-                                          Empty value disables accesslog.
+                                        minLength: 1
                                         type: string
                                     type: object
                                   openTelemetry:
@@ -3939,11 +3938,20 @@ spec:
                     description: Metrics defines metrics configuration for managed
                       proxies.
                     properties:
+                      enableVirtualHostStats:
+                        description: EnableVirtualHostStats enables envoy stat metrics
+                          for virtual hosts.
+                        type: boolean
                       matches:
-                        description: Matches defines configuration for selecting specific
-                          metrics instead of generating all metrics stats that are
-                          enabled by default. This helps reduce CPU and memory overhead
-                          in Envoy.
+                        description: 'Matches defines configuration for selecting
+                          specific metrics instead of generating all metrics stats
+                          that are enabled by default. This helps reduce CPU and memory
+                          overhead in Envoy, but eliminating some stats may after
+                          critical functionality. Here are the stats that we strongly
+                          recommend not disabling: `cluster_manager.warming_clusters`,
+                          `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`,
+                          `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,
+                          https://github.com/envoyproxy/envoy/issues/14610'
                         items:
                           description: Match defines the stats match configuration.
                           properties:

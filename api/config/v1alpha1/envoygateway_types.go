@@ -177,15 +177,37 @@ type EnvoyGatewayKubernetesProvider struct {
 	OverwriteControlPlaneCerts bool `json:"overwrite_control_plane_certs,omitempty"`
 }
 
+const (
+	// KubernetesWatchModeTypeNamespaces indicates that the namespace watch mode is used.
+	KubernetesWatchModeTypeNamespaces = "Namespaces"
+
+	// KubernetesWatchModeTypeNamespaceSelectors indicates that namespaceSelectors watch
+	// mode is used.
+	KubernetesWatchModeTypeNamespaceSelectors = "NamespaceSelectors"
+)
+
+// KubernetesWatchModeType defines the type of KubernetesWatchMode
+type KubernetesWatchModeType string
+
 // KubernetesWatchMode holds the configuration for which input resources to watch and reconcile.
 type KubernetesWatchMode struct {
+	// Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and
+	// KubernetesWatchModeTypeNamespaceSelectors are currently supported
+	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
+	// from all namespaces.
+	Type KubernetesWatchModeType
+
 	// Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped
 	// resources such as Gateway, HTTPRoute and Service.
 	// Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as
-	// GatewayClass that it is linked to.
-	// By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources
-	// from all namespaces.
-	Namespaces []string `json:"namespaces,omitempty"`
+	// GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set
+	Namespaces []string
+
+	// NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched.
+	// Note this doesn't set the informer to watch the namespaces with the given labels. Informer still
+	// watches all namespaces. But the events for objects whois namespce have no given labels
+	// will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set
+	NamespaceSelectors []string `json:"namespaces,omitempty"`
 }
 
 // KubernetesDeployMode holds configuration for how to deploy managed resources such as the Envoy Proxy

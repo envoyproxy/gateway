@@ -43,6 +43,65 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 	return false
 }
 
+// hasMatchingNamespaceLabels returns true if the namespace of provided object has
+// the provided labels or false otherwise.
+func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
+	ok, err := r.checkObjectNamespaceLabels(obj.GetNamespace())
+	if err != nil {
+		r.log.Error(
+			err, "failed to get Namespace",
+			"object", obj.GetObjectKind().GroupVersionKind().String(),
+			"name", obj.GetName())
+		return false
+	}
+	return ok
+}
+
+type NamespaceGetter interface {
+	GetNamespace() string
+}
+
+// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
+// TODO: check if param can be an interface, so the caller doesn't need to get the namespace before calling
+// this function.
+func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool, error) {
+	// TODO: add validation here because some objects don't have namespace
+	ns := &corev1.Namespace{}
+	if err := r.client.Get(
+		context.Background(),
+		client.ObjectKey{
+			Namespace: "", // Namespace object should have empty Namespace
+			Name:      nsString,
+		},
+		ns,
+	); err != nil {
+		return false, err
+	}
+	return containAll(ns.Labels, r.namespaceLabels), nil
+}
+
+func containAll(labels map[string]string, labelsToCheck []string) bool {
+	if len(labels) < len(labelsToCheck) {
+		return false
+	}
+	for _, l := range labelsToCheck {
+		if !contains(labels, l) {
+			return false
+		}
+	}
+	return true
+}
+
+func contains(m map[string]string, i string) bool {
+	for k := range m {
+		if k == i {
+			return true
+		}
+	}
+
+	return false
+}
+
 // validateGatewayForReconcile returns true if the provided object is a Gateway
 // using a GatewayClass matching the configured gatewayclass controller name.
 func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bool {
@@ -60,6 +119,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	}
 
 	if gc.Spec.ControllerName != r.classController {
+		r.log.Info("gatewayclass controller name", gc.Spec.ControllerName, "class controller name", r.classController)
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false
@@ -260,7 +320,9 @@ func (r *gatewayAPIReconciler) httpRoutesForAuthenticationFilter(obj client.Obje
 		return false
 	}
 
-	return len(httpRouteList.Items) != 0
+	httpRoutes := r.filterHTTPRoutesByNamespaceLabels(httpRouteList.Items)
+
+	return len(httpRoutes) != 0
 }
 
 // httpRoutesForRateLimitFilter tries finding HTTPRoute referents of the provided
@@ -282,7 +344,33 @@ func (r *gatewayAPIReconciler) httpRoutesForRateLimitFilter(obj client.Object) b
 		return false
 	}
 
-	return len(httpRouteList.Items) != 0
+	httpRoutes := r.filterHTTPRoutesByNamespaceLabels(httpRouteList.Items)
+
+	return len(httpRoutes) != 0
+}
+
+func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gwapiv1b1.HTTPRoute) []gwapiv1b1.HTTPRoute {
+	if len(r.namespaceLabels) == 0 {
+		return httpRoutes
+	}
+
+	var routes []gwapiv1b1.HTTPRoute
+	for _, route := range httpRoutes {
+		ns := route.GetNamespace()
+		ok, err := r.checkObjectNamespaceLabels(ns)
+		if err != nil {
+			r.log.Error(err, "failed to check namespace labels for HTTPRoute",
+				"namespace", ns,
+				"name", route.GetName(),
+			)
+			continue
+		}
+
+		if ok {
+			routes = append(routes, route)
+		}
+	}
+	return routes
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
