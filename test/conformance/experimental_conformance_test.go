@@ -34,7 +34,6 @@ var (
 	mgrClient           client.Client
 	implementation      *confv1a1.Implementation
 	conformanceProfiles sets.Set[suite.ConformanceProfileName]
-	skipTests           []string
 )
 
 func TestExperimentalConformance(t *testing.T) {
@@ -93,8 +92,11 @@ func experimentalConformance(t *testing.T) {
 				GatewayClassName:     *flags.GatewayClassName,
 				Debug:                *flags.ShowDebug,
 				CleanupBaseResources: *flags.CleanupBaseResources,
-				SkipTests:            skipTests,
-				SupportedFeatures:    sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
+				SkipTests: []string{
+					// TODO: Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
+					tests.HTTPRouteRequestMultipleMirrors.ShortName,
+				},
+				SupportedFeatures: sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
 			},
 			Implementation:      *implementation,
 			ConformanceProfiles: conformanceProfiles,
