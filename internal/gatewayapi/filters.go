@@ -836,12 +836,10 @@ func (t *Translator) processRequestMirrorFilter(
 	mirrorEndpoints, _ := t.processDestEndpoints(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
 	newMirror := &ir.RouteDestination{
-		Name: fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
+		Name:      fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
+		Endpoints: mirrorEndpoints,
 	}
 	filterContext.Mirror = append(filterContext.Mirror, newMirror)
-	// Get the index of the last mirror added
-	lastMirrorIdx := len(filterContext.Mirror) - 1
-	filterContext.Mirror[lastMirrorIdx].Endpoints = append(filterContext.Mirror[lastMirrorIdx].Endpoints, mirrorEndpoints...)
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {

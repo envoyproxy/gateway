@@ -18,3 +18,13 @@
             portValue: 0
     loadBalancingWeight: 1
     locality: {}
+- clusterName: mirror-route-dest1
+  endpoints:
+  - lbEndpoints:
+    - endpoint:
+        address:
+          socketAddress:
+            address: 3.4.5.6
+            portValue: 0
+    loadBalancingWeight: 1
+    locality: {}
