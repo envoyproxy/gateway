@@ -287,7 +287,7 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 		irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 	}
 	if httpFiltersContext.Mirror != nil {
-		irRoute.Mirror = httpFiltersContext.Mirror
+		irRoute.Mirrors = httpFiltersContext.Mirror
 	}
 	if httpFiltersContext.RequestAuthentication != nil {
 		irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
@@ -533,7 +533,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Redirect:              routeRoute.Redirect,
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
-					Mirror:                routeRoute.Mirror,
+					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
 					ExtensionRefs:         routeRoute.ExtensionRefs,

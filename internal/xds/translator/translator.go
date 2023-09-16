@@ -200,8 +200,8 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				}
 			}
 
-			if httpRoute.Mirror != nil {
-				for _, mirrorDest := range httpRoute.Mirror {
+			if httpRoute.Mirrors != nil {
+				for _, mirrorDest := range httpRoute.Mirrors {
 					if err := addXdsCluster(tCtx, addXdsClusterArgs{
 						name:         mirrorDest.Name,
 						endpoints:    mirrorDest.Endpoints,

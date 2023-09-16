@@ -351,8 +351,8 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	if h.Mirror != nil {
-		for _, mirror := range h.Mirror {
+	if h.Mirrors != nil {
+		for _, mirror := range h.Mirrors {
 			if err := mirror.Validate(); err != nil {
 				errs = multierror.Append(errs, err)
 			}
