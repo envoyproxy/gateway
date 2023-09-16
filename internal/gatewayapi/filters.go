@@ -56,7 +56,7 @@ type HTTPFilterIR struct {
 	AddResponseHeaders    []ir.AddHeader
 	RemoveResponseHeaders []string
 
-	Mirror []*ir.RouteDestination
+	Mirrors []*ir.RouteDestination
 
 	RequestAuthentication *ir.RequestAuthentication
 	RateLimit             *ir.RateLimit
@@ -839,7 +839,7 @@ func (t *Translator) processRequestMirrorFilter(
 		Name:      fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
 		Endpoints: mirrorEndpoints,
 	}
-	filterContext.Mirror = append(filterContext.Mirror, newMirror)
+	filterContext.Mirrors = append(filterContext.Mirrors, newMirror)
 }
 
 func (t *Translator) processUnresolvedHTTPFilter(errMsg string, filterContext *HTTPFiltersContext) {

@@ -286,8 +286,8 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
 		irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 	}
-	if httpFiltersContext.Mirror != nil {
-		irRoute.Mirrors = httpFiltersContext.Mirror
+	if httpFiltersContext.Mirrors != nil {
+		irRoute.Mirrors = httpFiltersContext.Mirrors
 	}
 	if httpFiltersContext.RequestAuthentication != nil {
 		irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
