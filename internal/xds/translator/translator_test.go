@@ -63,6 +63,9 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-mirror",
 		},
 		{
+			name: "http-route-multiple-mirrors",
+		},
+		{
 			name: "http-route-multiple-matches",
 		},
 		{
@@ -85,6 +88,10 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name:           "simple-tls",
+			requireSecrets: true,
+		},
+		{
+			name:           "mixed-tls-jwt-authn",
 			requireSecrets: true,
 		},
 		{
@@ -157,6 +164,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "tracing",
+		},
+		{
+			name: "metrics-virtual-host",
 		},
 		{
 			name:                      "jsonpatch",

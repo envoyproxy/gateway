@@ -18,4 +18,4 @@ metadata:
 spec:
   telemetry:
     accessLog:
-      disabled: true
+      disable: true

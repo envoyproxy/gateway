@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -42,6 +43,65 @@ func (r *gatewayAPIReconciler) hasMatchingController(obj client.Object) bool {
 	return false
 }
 
+// hasMatchingNamespaceLabels returns true if the namespace of provided object has
+// the provided labels or false otherwise.
+func (r *gatewayAPIReconciler) hasMatchingNamespaceLabels(obj client.Object) bool {
+	ok, err := r.checkObjectNamespaceLabels(obj.GetNamespace())
+	if err != nil {
+		r.log.Error(
+			err, "failed to get Namespace",
+			"object", obj.GetObjectKind().GroupVersionKind().String(),
+			"name", obj.GetName())
+		return false
+	}
+	return ok
+}
+
+type NamespaceGetter interface {
+	GetNamespace() string
+}
+
+// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
+// TODO: check if param can be an interface, so the caller doesn't need to get the namespace before calling
+// this function.
+func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool, error) {
+	// TODO: add validation here because some objects don't have namespace
+	ns := &corev1.Namespace{}
+	if err := r.client.Get(
+		context.Background(),
+		client.ObjectKey{
+			Namespace: "", // Namespace object should have empty Namespace
+			Name:      nsString,
+		},
+		ns,
+	); err != nil {
+		return false, err
+	}
+	return containAll(ns.Labels, r.namespaceLabels), nil
+}
+
+func containAll(labels map[string]string, labelsToCheck []string) bool {
+	if len(labels) < len(labelsToCheck) {
+		return false
+	}
+	for _, l := range labelsToCheck {
+		if !contains(labels, l) {
+			return false
+		}
+	}
+	return true
+}
+
+func contains(m map[string]string, i string) bool {
+	for k := range m {
+		if k == i {
+			return true
+		}
+	}
+
+	return false
+}
+
 // validateGatewayForReconcile returns true if the provided object is a Gateway
 // using a GatewayClass matching the configured gatewayclass controller name.
 func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bool {
@@ -59,6 +119,7 @@ func (r *gatewayAPIReconciler) validateGatewayForReconcile(obj client.Object) bo
 	}
 
 	if gc.Spec.ControllerName != r.classController {
+		r.log.Info("gatewayclass controller name", gc.Spec.ControllerName, "class controller name", r.classController)
 		r.log.Info("gatewayclass name for gateway doesn't match configured name",
 			"namespace", gw.Namespace, "name", gw.Name)
 		return false
@@ -116,16 +177,30 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 	}
 
 	nsName := utils.NamespacedName(svc)
-	return r.isRouteReferencingService(&nsName)
+	return r.isRouteReferencingBackend(&nsName)
 }
 
-// isRouteReferencingService returns true if the service is referenced by any of the xRoutes
+// validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
+// if it exists, finds the Gateway's Deployment, and further updates the Gateway
+// status Ready condition. All Services are pushed for reconciliation.
+func (r *gatewayAPIReconciler) validateServiceImportForReconcile(obj client.Object) bool {
+	svcImport, ok := obj.(*mcsapi.ServiceImport)
+	if !ok {
+		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
+		return false
+	}
+
+	nsName := utils.NamespacedName(svcImport)
+	return r.isRouteReferencingBackend(&nsName)
+}
+
+// isRouteReferencingBackend returns true if the backend(service and serviceImport) is referenced by any of the xRoutes
 // in the system, else returns false.
-func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.NamespacedName) bool {
+func (r *gatewayAPIReconciler) isRouteReferencingBackend(nsName *types.NamespacedName) bool {
 	ctx := context.Background()
 	httpRouteList := &gwapiv1b1.HTTPRouteList{}
 	if err := r.client.List(ctx, httpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceHTTPRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendHTTPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated HTTPRoutes")
 		return false
@@ -133,7 +208,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceGRPCRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendGRPCRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated GRPCRoutes")
 		return false
@@ -141,7 +216,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	tlsRouteList := &gwapiv1a2.TLSRouteList{}
 	if err := r.client.List(ctx, tlsRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTLSRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendTLSRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated TLSRoutes")
 		return false
@@ -149,7 +224,7 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	tcpRouteList := &gwapiv1a2.TCPRouteList{}
 	if err := r.client.List(ctx, tcpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceTCPRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendTCPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated TCPRoutes")
 		return false
@@ -157,13 +232,13 @@ func (r *gatewayAPIReconciler) isRouteReferencingService(nsName *types.Namespace
 
 	udpRouteList := &gwapiv1a2.UDPRouteList{}
 	if err := r.client.List(ctx, udpRouteList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(serviceUDPRouteIndex, nsName.String()),
+		FieldSelector: fields.OneTermEqualSelector(backendUDPRouteIndex, nsName.String()),
 	}); err != nil {
 		r.log.Error(err, "unable to find associated UDPRoutes")
 		return false
 	}
 
-	// Check how many Route objects refer this Service
+	// Check how many Route objects refer this Backend
 	allAssociatedRoutes := len(httpRouteList.Items) +
 		len(grpcRouteList.Items) +
 		len(tlsRouteList.Items) +
@@ -183,8 +258,9 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 	}
 
 	svcName, ok := ep.GetLabels()[discoveryv1.LabelServiceName]
-	if !ok {
-		r.log.Info("endpointslice is missing kubernetes.io/service-name label", "object", obj)
+	multiClusterSvcName, isMCS := ep.GetLabels()[mcsapi.LabelServiceName]
+	if !ok && !isMCS {
+		r.log.Info("endpointslice is missing kubernetes.io/service-name or multicluster.kubernetes.io/service-name label", "object", obj)
 		return false
 	}
 
@@ -193,7 +269,11 @@ func (r *gatewayAPIReconciler) validateEndpointSliceForReconcile(obj client.Obje
 		Name:      svcName,
 	}
 
-	return r.isRouteReferencingService(&nsName)
+	if isMCS {
+		nsName.Name = multiClusterSvcName
+	}
+
+	return r.isRouteReferencingBackend(&nsName)
 }
 
 // validateDeploymentForReconcile tries finding the owning Gateway of the Deployment
@@ -240,7 +320,9 @@ func (r *gatewayAPIReconciler) httpRoutesForAuthenticationFilter(obj client.Obje
 		return false
 	}
 
-	return len(httpRouteList.Items) != 0
+	httpRoutes := r.filterHTTPRoutesByNamespaceLabels(httpRouteList.Items)
+
+	return len(httpRoutes) != 0
 }
 
 // httpRoutesForRateLimitFilter tries finding HTTPRoute referents of the provided
@@ -262,7 +344,33 @@ func (r *gatewayAPIReconciler) httpRoutesForRateLimitFilter(obj client.Object) b
 		return false
 	}
 
-	return len(httpRouteList.Items) != 0
+	httpRoutes := r.filterHTTPRoutesByNamespaceLabels(httpRouteList.Items)
+
+	return len(httpRoutes) != 0
+}
+
+func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gwapiv1b1.HTTPRoute) []gwapiv1b1.HTTPRoute {
+	if len(r.namespaceLabels) == 0 {
+		return httpRoutes
+	}
+
+	var routes []gwapiv1b1.HTTPRoute
+	for _, route := range httpRoutes {
+		ns := route.GetNamespace()
+		ok, err := r.checkObjectNamespaceLabels(ns)
+		if err != nil {
+			r.log.Error(err, "failed to check namespace labels for HTTPRoute",
+				"namespace", ns,
+				"name", route.GetName(),
+			)
+			continue
+		}
+
+		if ok {
+			routes = append(routes, route)
+		}
+	}
+	return routes
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.

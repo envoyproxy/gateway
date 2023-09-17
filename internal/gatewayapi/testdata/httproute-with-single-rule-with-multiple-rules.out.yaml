@@ -142,7 +142,7 @@ xdsIR:
           name: Header-1
           safeRegex: '*regex*'
         hostname: '*'
-        name: httproute/default/httproute-1/rule/2/match/0-*
+        name: httproute/default/httproute-1/rule/2/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -161,7 +161,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/1
         hostname: '*'
-        name: httproute/default/httproute-1/rule/1/match/0-*
+        name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
           name: ""
@@ -180,7 +180,7 @@ xdsIR:
           exact: exact
           name: Header-1
         hostname: '*'
-        name: httproute/default/httproute-1/rule/0/match/0-*
+        name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           exact: /exact

@@ -8,6 +8,7 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,7 +34,25 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, tlsRoute := range tlsRouteList.Items {
+	tlsRoutes := tlsRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var rts []gwapiv1a2.TLSRoute
+		for _, rt := range tlsRoutes {
+			ns := rt.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for TLSRoute %s in namespace %s: %s", rt.GetName(), ns, err)
+			}
+
+			if ok {
+				rts = append(rts, rt)
+			}
+		}
+		tlsRoutes = rts
+	}
+
+	for _, tlsRoute := range tlsRoutes {
 		tlsRoute := tlsRoute
 		r.log.Info("processing TLSRoute", "namespace", tlsRoute.Namespace, "name", tlsRoute.Name)
 
@@ -47,14 +66,16 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != tlsRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTLSRoute, namespace: tlsRoute.Namespace, name: tlsRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
@@ -113,7 +134,26 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 		r.log.Error(err, "failed to list GRPCRoutes")
 		return err
 	}
-	for _, grpcRoute := range grpcRouteList.Items {
+
+	grpcRoutes := grpcRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var grs []gwapiv1a2.GRPCRoute
+		for _, gr := range grpcRoutes {
+			ns := gr.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for GRPCRoute %s in namespace %s: %s", gr.GetName(), ns, err)
+			}
+			if ok {
+				grs = append(grs, gr)
+			}
+		}
+
+		grpcRoutes = grs
+	}
+
+	for _, grpcRoute := range grpcRoutes {
 		grpcRoute := grpcRoute
 		r.log.Info("processing GRPCRoute", "namespace", grpcRoute.Namespace, "name", grpcRoute.Name)
 
@@ -126,9 +166,11 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != grpcRoute.Namespace {
@@ -138,7 +180,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						name:      grpcRoute.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindService,
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -178,6 +220,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						authFilter, ok := resourceMap.authenFilters[key]
 						if !ok {
 							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
+							continue
 						}
 
 						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
@@ -189,6 +232,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
 						if !ok {
 							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
+							continue
 						}
 
 						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
@@ -262,7 +306,26 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		r.log.Error(err, "failed to list HTTPRoutes")
 		return err
 	}
-	for _, httpRoute := range httpRouteList.Items {
+
+	httpRoutes := httpRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var hrs []gwapiv1b1.HTTPRoute
+		for _, hr := range httpRoutes {
+			ns := hr.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for HTTPRoute %s in namespace %s: %s", hr.GetName(), ns, err)
+			}
+
+			if ok {
+				hrs = append(hrs, hr)
+			}
+		}
+		httpRoutes = hrs
+	}
+
+	for _, httpRoute := range httpRoutes {
 		httpRoute := httpRoute
 		r.log.Info("processing HTTPRoute", "namespace", httpRoute.Namespace, "name", httpRoute.Name)
 
@@ -275,9 +338,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != httpRoute.Namespace {
@@ -287,7 +352,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						name:      httpRoute.Name,
 					}
 					to := ObjectKindNamespacedName{
-						kind:      gatewayapi.KindService,
+						kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
 						namespace: backendNamespace,
 						name:      string(backendRef.Name),
 					}
@@ -340,9 +405,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					}
 
 					backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
-					resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-						Namespace: backendNamespace,
-						Name:      string(mirrorBackendRef.Name),
+					resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+						Group:     mirrorBackendRef.BackendObjectReference.Group,
+						Kind:      mirrorBackendRef.BackendObjectReference.Kind,
+						Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+						Name:      mirrorBackendRef.Name,
 					}] = struct{}{}
 
 					if backendNamespace != httpRoute.Namespace {
@@ -352,7 +419,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							name:      httpRoute.Name,
 						}
 						to := ObjectKindNamespacedName{
-							kind:      gatewayapi.KindService,
+							kind:      gatewayapi.KindDerefOr(mirrorBackendRef.Kind, gatewayapi.KindService),
 							namespace: backendNamespace,
 							name:      string(mirrorBackendRef.Name),
 						}
@@ -437,7 +504,26 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, tcpRoute := range tcpRouteList.Items {
+	tcpRoutes := tcpRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var trs []gwapiv1a2.TCPRoute
+		for _, tr := range tcpRoutes {
+			ns := tr.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for TCPRoute %s in namespace %s: %s", tr.GetName(), ns, err)
+			}
+
+			if ok {
+				trs = append(trs, tr)
+			}
+		}
+
+		tcpRoutes = trs
+	}
+
+	for _, tcpRoute := range tcpRoutes {
 		tcpRoute := tcpRoute
 		r.log.Info("processing TCPRoute", "namespace", tcpRoute.Namespace, "name", tcpRoute.Name)
 
@@ -451,14 +537,16 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tcpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != tcpRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindTCPRoute, namespace: tcpRoute.Namespace, name: tcpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:
@@ -497,7 +585,26 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		return err
 	}
 
-	for _, udpRoute := range udpRouteList.Items {
+	udpRoutes := udpRouteList.Items
+	if len(r.namespaceLabels) != 0 {
+		var urs []gwapiv1a2.UDPRoute
+		for _, ur := range udpRoutes {
+			ns := ur.GetNamespace()
+			ok, err := r.checkObjectNamespaceLabels(ns)
+			if err != nil {
+				// TODO: should return? or just proceed?
+				return fmt.Errorf("failed to check namespace labels for UDPRoute %s in namespace %s: %s", ur.GetName(), ns, err)
+			}
+
+			if ok {
+				urs = append(urs, ur)
+			}
+		}
+
+		udpRoutes = urs
+	}
+
+	for _, udpRoute := range udpRoutes {
 		udpRoute := udpRoute
 		r.log.Info("processing UDPRoute", "namespace", udpRoute.Namespace, "name", udpRoute.Name)
 
@@ -511,14 +618,16 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[types.NamespacedName{
-					Namespace: backendNamespace,
-					Name:      string(backendRef.Name),
+				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+					Group:     backendRef.BackendObjectReference.Group,
+					Kind:      backendRef.BackendObjectReference.Kind,
+					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
+					Name:      backendRef.Name,
 				}] = struct{}{}
 
 				if backendNamespace != udpRoute.Namespace {
 					from := ObjectKindNamespacedName{kind: gatewayapi.KindUDPRoute, namespace: udpRoute.Namespace, name: udpRoute.Name}
-					to := ObjectKindNamespacedName{kind: gatewayapi.KindService, namespace: backendNamespace, name: string(backendRef.Name)}
+					to := ObjectKindNamespacedName{kind: gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService), namespace: backendNamespace, name: string(backendRef.Name)}
 					refGrant, err := r.findReferenceGrant(ctx, from, to)
 					switch {
 					case err != nil:

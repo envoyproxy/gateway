@@ -8,6 +8,7 @@ package translator
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -15,6 +16,7 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
 
@@ -26,6 +28,8 @@ import (
 var (
 	ErrXdsClusterExists = errors.New("xds cluster exists")
 )
+
+const AuthorityHeaderKey = ":authority"
 
 // Translator translates the xDS IR into xDS resources.
 type Translator struct {
@@ -60,7 +64,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 
 	tCtx := new(types.ResourceVersionTable)
 
-	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog, ir.Tracing); err != nil {
+	if err := t.processHTTPListenerXdsTranslation(tCtx, ir.HTTP, ir.AccessLog, ir.Tracing, ir.Metrics); err != nil {
 		return nil, err
 	}
 
@@ -93,7 +97,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 }
 
 func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersionTable, httpListeners []*ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, metrics *ir.Metrics) error {
 	for _, httpListener := range httpListeners {
 		addFilterChain := true
 		var xdsRouteCfg *routev3.RouteConfiguration
@@ -164,17 +168,39 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			// 1:1 between IR HTTPRoute Hostname and xDS VirtualHost.
 			vHost := vHosts[httpRoute.Hostname]
 			if vHost == nil {
+				// Remove dots from the hostname before appending it to the virtualHost name
+				// since dots are special chars used in stats tag extraction in Envoy
+				underscoredHostname := strings.ReplaceAll(httpRoute.Hostname, ".", "_")
 				// Allocate virtual host for this httpRoute.
 				vHost = &routev3.VirtualHost{
-					Name:    fmt.Sprintf("%s/%s", httpListener.Name, httpRoute.Hostname),
+					Name:    fmt.Sprintf("%s/%s", httpListener.Name, underscoredHostname),
 					Domains: []string{httpRoute.Hostname},
+				}
+				if metrics != nil && metrics.EnableVirtualHostStats {
+					vHost.VirtualClusters = []*routev3.VirtualCluster{
+						{
+							Name: underscoredHostname,
+							Headers: []*routev3.HeaderMatcher{
+								{
+									Name: AuthorityHeaderKey,
+									HeaderMatchSpecifier: &routev3.HeaderMatcher_StringMatch{
+										StringMatch: &matcherv3.StringMatcher{
+											MatchPattern: &matcherv3.StringMatcher_Prefix{
+												Prefix: httpRoute.Hostname,
+											},
+										},
+									},
+								},
+							},
+						},
+					}
 				}
 				vHosts[httpRoute.Hostname] = vHost
 				vHostsList = append(vHostsList, vHost)
 			}
 
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute := buildXdsRoute(httpRoute, xdsListener)
+			xdsRoute := buildXdsRoute(httpRoute)
 
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
@@ -196,15 +222,17 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				}
 			}
 
-			if httpRoute.Mirror != nil {
-				if err := addXdsCluster(tCtx, addXdsClusterArgs{
-					name:         httpRoute.Mirror.Name,
-					endpoints:    httpRoute.Mirror.Endpoints,
-					tSocket:      nil,
-					protocol:     protocol,
-					endpointType: Static,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-					return err
+			if httpRoute.Mirrors != nil {
+				for _, mirrorDest := range httpRoute.Mirrors {
+					if err := addXdsCluster(tCtx, addXdsClusterArgs{
+						name:         mirrorDest.Name,
+						endpoints:    mirrorDest.Endpoints,
+						tSocket:      nil,
+						protocol:     protocol,
+						endpointType: Static,
+					}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+						return err
+					}
 				}
 			}
 		}

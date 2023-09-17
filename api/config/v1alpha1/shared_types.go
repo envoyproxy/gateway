@@ -172,6 +172,11 @@ type KubernetesServiceSpec struct {
 	// +optional
 	Type *ServiceType `json:"type,omitempty"`
 
+	// LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider
+	// implementation if more than one are available or is otherwise expected to be specified
+	// +optional
+	LoadBalancerClass *string `json:"loadBalancerClass,omitempty"`
+
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 

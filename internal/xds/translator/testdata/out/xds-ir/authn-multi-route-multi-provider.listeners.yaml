@@ -18,7 +18,7 @@
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.jwt_authn.v3.JwtAuthentication
             providers:
-              first-route-www.test.com-example:
+              first-route-www.test.com/example:
                 audiences:
                 - foo.com
                 claimToHeaders:
@@ -34,7 +34,7 @@
                     timeout: 5s
                     uri: https://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
-              first-route-www.test.com-example2:
+              first-route-www.test.com/example2:
                 audiences:
                 - one.foo.com
                 - two.foo.com
@@ -53,7 +53,7 @@
                     timeout: 5s
                     uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
                   retryPolicy: {}
-              second-route-www.test.com-example:
+              second-route-www.test.com/example:
                 audiences:
                 - foo.com
                 claimToHeaders:
@@ -69,7 +69,7 @@
                     timeout: 5s
                     uri: https://localhost/jwt/public-key/jwks.json
                   retryPolicy: {}
-              second-route-www.test.com-example2:
+              second-route-www.test.com/example2:
                 audiences:
                 - one.foo.com
                 - two.foo.com
@@ -87,13 +87,13 @@
               first-route-www.test.com:
                 requiresAny:
                   requirements:
-                  - providerName: first-route-www.test.com-example
-                  - providerName: first-route-www.test.com-example2
+                  - providerName: first-route-www.test.com/example
+                  - providerName: first-route-www.test.com/example2
               second-route-www.test.com:
                 requiresAny:
                   requirements:
-                  - providerName: second-route-www.test.com-example
-                  - providerName: second-route-www.test.com-example2
+                  - providerName: second-route-www.test.com/example
+                  - providerName: second-route-www.test.com/example2
         - name: envoy.filters.http.router
           typedConfig:
             '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

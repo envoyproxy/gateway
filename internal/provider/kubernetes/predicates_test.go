@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -28,6 +30,7 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 	testCases := []struct {
 		name   string
 		obj    client.Object
+		client client.Client
 		expect bool
 	}{
 		{
@@ -54,6 +57,76 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.hasMatchingController(tc.obj)
+			require.Equal(t, tc.expect, res)
+		})
+	}
+}
+
+// TestGatewayClassHasMatchingNamespaceLabels tests the hasMatchingNamespaceLabels
+// predicate function.
+func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
+	ns := "namespace-1"
+	testCases := []struct {
+		name            string
+		labels          []string
+		namespaceLabels []string
+		expect          bool
+	}{
+		{
+			name:            "matching one label when namespace has one label",
+			labels:          []string{"label-1"},
+			namespaceLabels: []string{"label-1"},
+			expect:          true,
+		},
+		{
+			name:            "matching one label when namespace has two labels",
+			labels:          []string{"label-1"},
+			namespaceLabels: []string{"label-1", "label-2"},
+			expect:          true,
+		},
+		{
+			name:            "namespace has less labels than the specified labels",
+			labels:          []string{"label-1", "label-2"},
+			namespaceLabels: []string{"label-1"},
+			expect:          false,
+		},
+	}
+
+	logger := logging.DefaultLogger(v1alpha1.LogLevelInfo)
+
+	for _, tc := range testCases {
+		tc := tc
+
+		namespaceLabelsToMap := make(map[string]string)
+		for _, l := range tc.namespaceLabels {
+			namespaceLabelsToMap[l] = ""
+		}
+
+		r := gatewayAPIReconciler{
+			classController: v1alpha1.GatewayControllerName,
+			namespaceLabels: tc.labels,
+			log:             logger,
+			client: fakeclient.NewClientBuilder().
+				WithScheme(envoygateway.GetScheme()).
+				WithObjects(&corev1.Namespace{
+					TypeMeta: v1.TypeMeta{
+						Kind:       "Namespace",
+						APIVersion: "v1",
+					},
+					ObjectMeta: v1.ObjectMeta{Name: ns, Labels: namespaceLabelsToMap},
+				}).
+				Build(),
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			res := r.hasMatchingNamespaceLabels(
+				test.GetHTTPRoute(
+					types.NamespacedName{
+						Namespace: ns,
+						Name:      "httproute-test",
+					},
+					"scheduled-status-test",
+					types.NamespacedName{Name: "service"},
+				))
 			require.Equal(t, tc.expect, res)
 		})
 	}
@@ -220,11 +293,11 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
-			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
+			WithIndex(&gwapiv1b1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateEndpointSliceForReconcile(tc.endpointSlice)
@@ -360,11 +433,11 @@ func TestValidateServiceForReconcile(t *testing.T) {
 		r.client = fakeclient.NewClientBuilder().
 			WithScheme(envoygateway.GetScheme()).
 			WithObjects(tc.configs...).
-			WithIndex(&gwapiv1b1.HTTPRoute{}, serviceHTTPRouteIndex, serviceHTTPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.GRPCRoute{}, serviceGRPCRouteIndex, serviceGRPCRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TLSRoute{}, serviceTLSRouteIndex, serviceTLSRouteIndexFunc).
-			WithIndex(&gwapiv1a2.TCPRoute{}, serviceTCPRouteIndex, serviceTCPRouteIndexFunc).
-			WithIndex(&gwapiv1a2.UDPRoute{}, serviceUDPRouteIndex, serviceUDPRouteIndexFunc).
+			WithIndex(&gwapiv1b1.HTTPRoute{}, backendHTTPRouteIndex, backendHTTPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.GRPCRoute{}, backendGRPCRouteIndex, backendGRPCRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TLSRoute{}, backendTLSRouteIndex, backendTLSRouteIndexFunc).
+			WithIndex(&gwapiv1a2.TCPRoute{}, backendTCPRouteIndex, backendTCPRouteIndexFunc).
+			WithIndex(&gwapiv1a2.UDPRoute{}, backendUDPRouteIndex, backendUDPRouteIndexFunc).
 			Build()
 		t.Run(tc.name, func(t *testing.T) {
 			res := r.validateServiceForReconcile(tc.service)

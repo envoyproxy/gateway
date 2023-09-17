@@ -86,6 +86,8 @@ You should see the below response
 
 Envoy Gateway also supports [gRPC-Web][] requests for this configuration. The below `curl` command can be used to send a grpc-Web request with over HTTP/2. You should receive the same response seen in the previous command.
 
+The data in the body `AAAAAAA=` is a base64 encoded representation of an empty message (data length 0) that the Ping RPC accepts.
+
 ```shell
 curl --http2-prior-knowledge -s ${GATEWAY_HOST}:80/yages.Echo/Ping -H 'Host: grpc-example.com'   -H 'Content-Type: application/grpc-web-text'   -H 'Accept: application/grpc-web-text' -XPOST -d'AAAAAAA=' | base64 -d
 ```

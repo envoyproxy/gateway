@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	jwtauthnv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/jwt_authn/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -135,7 +134,7 @@ func buildJwtAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 					ClaimToHeaders:      claimToHeaders,
 				}
 
-				providerKey := fmt.Sprintf("%s-%s", route.Name, irProvider.Name)
+				providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
 				jwtProviders[providerKey] = jwtProvider
 				reqs = append(reqs, &jwtauthnv3.JwtRequirement{
 					RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{
@@ -195,17 +194,13 @@ func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
 }
 
 // patchRouteWithJwtConfig patches the provided route with a JWT PerRouteConfig, if the
-// route doesn't contain it. The listener is used to create the PerRouteConfig JWT
-// requirement.
-func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute, listener *listenerv3.Listener) error { //nolint:unparam
+// route doesn't contain it.
+func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
 	if irRoute == nil {
 		return errors.New("ir route is nil")
-	}
-	if listener == nil {
-		return errors.New("listener is nil")
 	}
 
 	filterCfg := route.GetTypedPerFilterConfig()
@@ -214,10 +209,8 @@ func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute, listen
 			return nil
 		}
 
-		routeCfgProto, err := buildJwtPerRouteConfig(irRoute, listener)
-		if err != nil {
-			return fmt.Errorf("failed to build per route config for ir route %s", irRoute.Name)
-		}
+		routeCfgProto := &jwtauthnv3.PerRouteConfig{
+			RequirementSpecifier: &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: irRoute.Name}}
 
 		routeCfgAny, err := anypb.New(routeCfgProto)
 		if err != nil {
@@ -232,78 +225,6 @@ func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute, listen
 	}
 
 	return nil
-}
-
-// buildJwtPerRouteConfig returns a JWT PerRouteConfig based on the provided IR route and HCM.
-func buildJwtPerRouteConfig(irRoute *ir.HTTPRoute, listener *listenerv3.Listener) (*jwtauthnv3.PerRouteConfig, error) {
-	if irRoute == nil {
-		return nil, errors.New("ir route is nil")
-	}
-	if irRoute == nil {
-		return nil, errors.New("ir route does not contain jwt authn")
-	}
-	if listener == nil {
-		return nil, errors.New("listener is nil")
-	}
-
-	filterCh := listener.GetDefaultFilterChain()
-	if filterCh == nil {
-		return nil, fmt.Errorf("listener %s does not contain the default filterchain", listener.Name)
-	}
-
-	for _, filter := range filterCh.Filters {
-		if filter.Name == wellknown.HTTPConnectionManager {
-			// Unmarshal the filter to a jwt authn config and validate it.
-			hcmProto := new(hcmv3.HttpConnectionManager)
-			hcmAny := filter.GetTypedConfig()
-			if err := hcmAny.UnmarshalTo(hcmProto); err != nil {
-				return nil, err
-			}
-			if err := hcmProto.ValidateAll(); err != nil {
-				return nil, err
-			}
-			//
-			req, err := getJwtRequirement(hcmProto.GetHttpFilters(), irRoute.Name)
-			if err != nil {
-				return nil, err
-			}
-
-			return &jwtauthnv3.PerRouteConfig{
-				RequirementSpecifier: req,
-			}, nil
-		}
-	}
-
-	return nil, errors.New("failed to find HTTP connection manager filter")
-}
-
-// getJwtRequirement iterates through the provided filters, returning a JWT requirement
-// name if one exists.
-func getJwtRequirement(filters []*hcmv3.HttpFilter, name string) (*jwtauthnv3.PerRouteConfig_RequirementName, error) {
-	if len(filters) == 0 {
-		return nil, errors.New("no hcmv3 http filters")
-	}
-
-	for _, filter := range filters {
-		if filter.Name == jwtAuthenFilter {
-			// Unmarshal the filter to a jwt authn config and validate it.
-			jwtAuthnProto := new(jwtauthnv3.JwtAuthentication)
-			jwtAuthnAny := filter.GetTypedConfig()
-			if err := jwtAuthnAny.UnmarshalTo(jwtAuthnProto); err != nil {
-				return nil, err
-			}
-			if err := jwtAuthnProto.ValidateAll(); err != nil {
-				return nil, err
-			}
-			// Return the requirement name if it's found.
-			if _, found := jwtAuthnProto.RequirementMap[name]; found {
-				return &jwtauthnv3.PerRouteConfig_RequirementName{RequirementName: name}, nil
-			}
-			return nil, fmt.Errorf("failed to find jwt requirement %s", name)
-		}
-	}
-
-	return nil, errors.New("failed to find jwt authn filter")
 }
 
 type jwksCluster struct {

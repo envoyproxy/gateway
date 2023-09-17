@@ -119,13 +119,13 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/0
         hostname: gateway.envoyproxy.io
-        mirror:
-          endpoints:
+        mirrors:
+        - endpoints:
           - host: 7.7.7.7
             port: 8080
             weight: 1
-          name: httproute/default/httproute-1/rule/0-mirror
-        name: httproute/default/httproute-1/rule/0/match/0-gateway.envoyproxy.io
+          name: httproute/default/httproute-1/rule/0-mirror-0
+        name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
           name: ""

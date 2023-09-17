@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -17,7 +16,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *routev3.Route {
+func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 	router := &routev3.Route{
 		Name:  httpRoute.Name,
 		Match: buildXdsRouteMatch(httpRoute.PathMatch, httpRoute.HeaderMatches, httpRoute.QueryParamMatches),
@@ -44,8 +43,8 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite)
-		if httpRoute.Mirror != nil {
-			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
+		if httpRoute.Mirrors != nil {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -53,14 +52,14 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
 			routeAction := buildXdsWeightedRouteAction(httpRoute)
-			if httpRoute.Mirror != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
+			if httpRoute.Mirrors != nil {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
 			routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
-			if httpRoute.Mirror != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
+			if httpRoute.Mirrors != nil {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
@@ -73,7 +72,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute, listener *listenerv3.Listener) *rout
 	}
 
 	// Add the jwt per route config to the route, if needed.
-	if err := patchRouteWithJwtConfig(router, httpRoute, listener); err != nil {
+	if err := patchRouteWithJwtConfig(router, httpRoute); err != nil {
 		return nil
 	}
 
@@ -293,11 +292,13 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(destName string) []*routev3.RouteAction_RequestMirrorPolicy {
-	mirrorPolicies := []*routev3.RouteAction_RequestMirrorPolicy{
-		{
-			Cluster: destName,
-		},
+func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
+	var mirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
+
+	for _, mirrorDest := range mirrorDestinations {
+		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+			Cluster: mirrorDest.Name,
+		})
 	}
 
 	return mirrorPolicies

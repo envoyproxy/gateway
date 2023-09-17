@@ -426,7 +426,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). Empty value disables accesslog. |
+| `path` _string_ | Path defines the file path used to expose envoy access log(e.g. /dev/stdout). |
 
 
 ## Gateway
@@ -550,6 +550,7 @@ _Appears in:_
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations that should be appended to the service. By default, no annotations are appended. |
 | `type` _[ServiceType](#servicetype)_ | Type determines how the Service is exposed. Defaults to LoadBalancer. Valid options are ClusterIP, LoadBalancer and NodePort. "LoadBalancer" means a service will be exposed via an external load balancer (if the cloud provider supports it). "ClusterIP" means a service will only be accessible inside the cluster, via the cluster IP. "NodePort" means a service will be exposed on a static Port on all Nodes of the cluster. |
+| `loadBalancerClass` _string_ | LoadBalancerClass, when specified, allows for choosing the LoadBalancer provider implementation if more than one are available or is otherwise expected to be specified |
 
 
 ## KubernetesWatchMode
@@ -563,7 +564,20 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+| `Type` _[KubernetesWatchModeType](#kuberneteswatchmodetype)_ | Type indicates what watch mode to use. KubernetesWatchModeTypeNamespaces and KubernetesWatchModeTypeNamespaceSelectors are currently supported By default, when this field is unset or empty, Envoy Gateway will watch for input namespaced resources from all namespaces. |
+| `Namespaces` _string array_ | Namespaces holds the list of namespaces that Envoy Gateway will watch for namespaced scoped resources such as Gateway, HTTPRoute and Service. Note that Envoy Gateway will continue to reconcile relevant cluster scoped resources such as GatewayClass that it is linked to. Precisely one of Namespaces and NamespaceSelectors must be set |
+| `namespaces` _string array_ | NamespaceSelectors holds a list of labels that namespaces have to have in order to be watched. Note this doesn't set the informer to watch the namespaces with the given labels. Informer still watches all namespaces. But the events for objects whois namespce have no given labels will be filtered out. Precisely one of Namespaces and NamespaceSelectors must be set |
+
+
+## KubernetesWatchModeType
+
+_Underlying type:_ `string`
+
+KubernetesWatchModeType defines the type of KubernetesWatchMode
+
+_Appears in:_
+- [KubernetesWatchMode](#kuberneteswatchmode)
+
 
 
 ## LiteralCustomTag
@@ -600,6 +614,32 @@ LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs. This 
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
+
+
+
+## Match
+
+
+
+Match defines the stats match configuration.
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MatcherType](#matchertype)_ | MatcherType defines the stats matcher type |
+| `value` _string_ |  |
+
+
+## MatcherType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [Match](#match)
 
 
 
@@ -702,7 +742,7 @@ _Appears in:_
 
 
 
-ProxyAccessLogFormat defines the format of accesslog.
+ProxyAccessLogFormat defines the format of accesslog. By default accesslogs are written to standard output.
 
 _Appears in:_
 - [ProxyAccessLogSetting](#proxyaccesslogsetting)
@@ -710,7 +750,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `type` _[ProxyAccessLogFormatType](#proxyaccesslogformattype)_ | Type defines the type of accesslog format. |
-| `text` _string_ | Text defines the text accesslog format, following Envoy accesslog formatting, empty value results in proxy's default access log format. It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
+| `text` _string_ | Text defines the text accesslog format, following Envoy accesslog formatting, It's required when the format type is "Text". Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) may be used in the format. The [format string documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#config-access-log-format-strings) provides more information. |
 | `json` _object (keys:string, values:string)_ | JSON is additional attributes that describe the specific event occurrence. Structured format for the envoy access logs. Envoy [command operators](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators) can be used as values for fields within the Struct. It's required when the format type is "JSON". |
 
 
@@ -809,6 +849,8 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
+| `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 
 
 ## ProxyTelemetry

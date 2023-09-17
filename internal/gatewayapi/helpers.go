@@ -130,6 +130,13 @@ func GroupDerefOr(group *v1beta1.Group, defaultGroup string) string {
 	return defaultGroup
 }
 
+func KindDerefOr(kind *v1beta1.Kind, defaultKind string) string {
+	if kind != nil && *kind != "" {
+		return string(*kind)
+	}
+	return defaultKind
+}
+
 // IsRefToGateway returns whether the provided parent ref is a reference
 // to a Gateway with the given namespace/name, irrespective of whether a
 // section/listener name has been specified (i.e. a parent ref to a listener

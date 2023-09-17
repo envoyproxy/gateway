@@ -286,8 +286,8 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if len(httpFiltersContext.RemoveResponseHeaders) > 0 {
 		irRoute.RemoveResponseHeaders = httpFiltersContext.RemoveResponseHeaders
 	}
-	if httpFiltersContext.Mirror != nil {
-		irRoute.Mirror = httpFiltersContext.Mirror
+	if httpFiltersContext.Mirrors != nil {
+		irRoute.Mirrors = httpFiltersContext.Mirrors
 	}
 	if httpFiltersContext.RequestAuthentication != nil {
 		irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
@@ -516,9 +516,11 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					// if the redirect scheme is empty, the redirect port must be the Gateway Listener port.
 					routeRoute.Redirect.Port = &redirectPort
 				}
-
+				// Remove dots from the hostname before appending it to the IR Route name
+				// since dots are special chars used in stats tag extraction in Envoy
+				underscoredHost := strings.ReplaceAll(host, ".", "_")
 				hostRoute := &ir.HTTPRoute{
-					Name:                  fmt.Sprintf("%s-%s", routeRoute.Name, host),
+					Name:                  fmt.Sprintf("%s/%s", routeRoute.Name, underscoredHost),
 					Hostname:              host,
 					PathMatch:             routeRoute.PathMatch,
 					HeaderMatches:         routeRoute.HeaderMatches,
@@ -531,7 +533,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Redirect:              routeRoute.Redirect,
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
-					Mirror:                routeRoute.Mirror,
+					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
@@ -967,27 +969,36 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 		weight = uint32(*backendRef.Weight)
 	}
 
-	serviceNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
-	service := resources.GetService(serviceNamespace, string(backendRef.Name))
+	backendNamespace := NamespaceDerefOr(backendRef.Namespace, route.GetNamespace())
 
 	routeType := GetRouteType(route)
-	if !t.validateBackendRef(&backendRef, parentRef, route, resources, serviceNamespace, routeType) {
+	if !t.validateBackendRef(&backendRef, parentRef, route, resources, backendNamespace, routeType) {
 		return nil, weight
 	}
 
-	var ep *ir.DestinationEndpoint
-	// Weights are not relevant for TCP and UDP Routes
-	if routeType == KindTCPRoute || routeType == KindUDPRoute {
-		ep = ir.NewDestEndpoint(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port))
-	} else {
-		ep = ir.NewDestEndpointWithWeight(
-			service.Spec.ClusterIP,
-			uint32(*backendRef.Port),
-			weight)
+	var backendIps []string
+	switch KindDerefOr(backendRef.Kind, KindService) {
+	case KindServiceImport:
+		backendIps = resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+	case KindService:
+		backendIps = []string{resources.GetService(backendNamespace, string(backendRef.Name)).Spec.ClusterIP}
 	}
-	endpoints = append(endpoints, ep)
+
+	for _, ip := range backendIps {
+		var ep *ir.DestinationEndpoint
+		// Weights are not relevant for TCP and UDP Routes
+		if routeType == KindTCPRoute || routeType == KindUDPRoute {
+			ep = ir.NewDestEndpoint(
+				ip,
+				uint32(*backendRef.Port))
+		} else {
+			ep = ir.NewDestEndpointWithWeight(
+				ip,
+				uint32(*backendRef.Port),
+				weight)
+		}
+		endpoints = append(endpoints, ep)
+	}
 	return endpoints, weight
 }
 

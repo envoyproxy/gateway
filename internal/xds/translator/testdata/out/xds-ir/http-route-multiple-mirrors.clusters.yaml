@@ -1,0 +1,39 @@
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: route-dest
+  name: route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: mirror-route-dest
+  name: mirror-route-dest
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS
+- commonLbConfig:
+    localityWeightedLbConfig: {}
+  connectTimeout: 10s
+  dnsLookupFamily: V4_ONLY
+  edsClusterConfig:
+    edsConfig:
+      ads: {}
+      resourceApiVersion: V3
+    serviceName: mirror-route-dest1
+  name: mirror-route-dest1
+  outlierDetection: {}
+  perConnectionBufferLimitBytes: 32768
+  type: EDS

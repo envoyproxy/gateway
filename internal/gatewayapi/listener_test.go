@@ -46,8 +46,43 @@ func TestProcessTracing(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		c := c
 		t.Run("", func(t *testing.T) {
 			got := processTracing(&c.gw, c.proxy)
+			assert.Equal(t, c.expected, got)
+		})
+	}
+}
+
+func TestProcessMetrics(t *testing.T) {
+	cases := []struct {
+		name  string
+		proxy *egcfgv1a1.EnvoyProxy
+
+		expected *ir.Metrics
+	}{
+		{
+			name: "nil proxy config",
+		},
+		{
+			name: "virtual host stats enabled",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Telemetry: egcfgv1a1.ProxyTelemetry{
+						Metrics: &egcfgv1a1.ProxyMetrics{
+							EnableVirtualHostStats: true,
+						},
+					},
+				},
+			},
+			expected: &ir.Metrics{
+				EnableVirtualHostStats: true,
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := processMetrics(c.proxy)
 			assert.Equal(t, c.expected, got)
 		})
 	}

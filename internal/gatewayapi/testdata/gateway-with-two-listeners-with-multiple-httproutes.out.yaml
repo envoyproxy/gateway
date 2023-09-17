@@ -171,7 +171,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-2/rule/0
         hostname: foo.com
-        name: httproute/default/httproute-2/rule/0/match/0-foo.com
+        name: httproute/default/httproute-2/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
           name: ""
@@ -186,7 +186,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/0
         hostname: foo.com
-        name: httproute/default/httproute-1/rule/0/match/0-foo.com
+        name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
           name: ""
@@ -208,7 +208,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-2/rule/0
         hostname: bar.com
-        name: httproute/default/httproute-2/rule/0/match/0-bar.com
+        name: httproute/default/httproute-2/rule/0/match/0/bar_com
         pathMatch:
           distinct: false
           name: ""
@@ -223,7 +223,7 @@ xdsIR:
             weight: 1
           name: httproute/default/httproute-1/rule/0
         hostname: bar.com
-        name: httproute/default/httproute-1/rule/0/match/0-bar.com
+        name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
           distinct: false
           name: ""

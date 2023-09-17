@@ -8,6 +8,23 @@ admin:
     socket_address:
       address: {{ .AdminServer.Address }}
       port_value: {{ .AdminServer.Port }}
+{{- if .StatsMatcher  }}
+stats_config:
+  stats_matcher:
+    inclusion_list:
+      patterns:
+      {{- range $_, $item := .StatsMatcher.Prefixs }}
+      - prefix: {{$item}}
+      {{- end}}
+      {{- range $_, $item := .StatsMatcher.Suffixs }}
+      - suffix: {{$item}}
+      {{- end}}
+      {{- range $_, $item := .StatsMatcher.RegularExpressions }}
+      - safe_regex:
+          google_re2: {}
+          regex: {{js $item}}
+      {{- end}}
+{{- end }}
 dynamic_resources:
   ads_config:
     api_type: DELTA_GRPC

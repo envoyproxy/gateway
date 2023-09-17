@@ -12,6 +12,7 @@ import (
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -25,8 +26,8 @@ const (
 	RedisSocketTypeEnvVar = "REDIS_SOCKET_TYPE"
 	// RedisURLEnvVar is the redis url.
 	RedisURLEnvVar = "REDIS_URL"
-	// RedisTLS is the redis tls.
-	RedisTLS = "REDIS_TLS"
+	// RedisTLSEnvVar is the redis tls.
+	RedisTLSEnvVar = "REDIS_TLS"
 	// RedisTLSClientCertEnvVar is the redis tls client cert.
 	RedisTLSClientCertEnvVar = "REDIS_TLS_CLIENT_CERT"
 	// RedisTLSClientCertFilename is the redis tls client cert file.
@@ -69,21 +70,27 @@ const (
 	LogLevelEnvVar = "LOG_LEVEL"
 	// UseStatsdEnvVar is the use statsd.
 	UseStatsdEnvVar = "USE_STATSD"
+	// ForceStartWithoutInitialConfigEnvVar enables start the ratelimit server without initial config.
+	ForceStartWithoutInitialConfigEnvVar = "FORCE_START_WITHOUT_INITIAL_CONFIG"
+	// ConfigTypeEnvVar is the configuration loading method for ratelimit.
+	ConfigTypeEnvVar = "CONFIG_TYPE"
+	// ConfigGrpcXdsServerURLEnvVar is the url of ratelimit config xds server.
+	ConfigGrpcXdsServerURLEnvVar = "CONFIG_GRPC_XDS_SERVER_URL"
+	// ConfigGrpcXdsNodeIDEnvVar is the id of ratelimit node.
+	ConfigGrpcXdsNodeIDEnvVar = "CONFIG_GRPC_XDS_NODE_ID"
+
 	// InfraName is the name for rate-limit resources.
 	InfraName = "envoy-ratelimit"
 	// InfraGRPCPort is the grpc port that the rate limit service listens on.
 	InfraGRPCPort = 8081
-	// ConfigType is the configuration loading method for ratelimit.
-	ConfigType = "CONFIG_TYPE"
-	// ConfigGrpcXdsServerURL is the url of ratelimit config xds server.
-	ConfigGrpcXdsServerURL = "CONFIG_GRPC_XDS_SERVER_URL"
-	// ConfigGrpcXdsNodeID is the id of ratelimit node.
-	ConfigGrpcXdsNodeID = "CONFIG_GRPC_XDS_NODE_ID"
-
 	// XdsGrpcSotwConfigServerPort is the listening port of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerPort = 18001
 	// XdsGrpcSotwConfigServerHost is the hostname of the ratelimit xDS config server.
 	XdsGrpcSotwConfigServerHost = "envoy-gateway"
+	// ReadinessPath is readiness path for readiness probe.
+	ReadinessPath = "/healthcheck"
+	// ReadinessPort is readiness port for readiness probe.
+	ReadinessPort = 8080
 )
 
 // GetServiceURL returns the URL for the rate limit service.
@@ -104,7 +111,7 @@ func rateLimitLabels() map[string]string {
 func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Container {
 	ports := []corev1.ContainerPort{
 		{
-			Name:          "http",
+			Name:          "grpc",
 			ContainerPort: InfraGRPCPort,
 			Protocol:      corev1.ProtocolTCP,
 		},
@@ -125,6 +132,19 @@ func expectedRateLimitContainers(rateLimit *egcfgv1a1.RateLimit, rateLimitDeploy
 			VolumeMounts:             expectedContainerVolumeMounts(rateLimit, rateLimitDeployment),
 			TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			TerminationMessagePath:   "/dev/termination-log",
+			ReadinessProbe: &corev1.Probe{
+				ProbeHandler: corev1.ProbeHandler{
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   ReadinessPath,
+						Port:   intstr.IntOrString{Type: intstr.Int, IntVal: ReadinessPort},
+						Scheme: corev1.URISchemeHTTP,
+					},
+				},
+				TimeoutSeconds:   1,
+				PeriodSeconds:    10,
+				SuccessThreshold: 1,
+				FailureThreshold: 3,
+			},
 		},
 	}
 
@@ -218,15 +238,15 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 			Value: "false",
 		},
 		{
-			Name:  ConfigType,
+			Name:  ConfigTypeEnvVar,
 			Value: "GRPC_XDS_SOTW",
 		},
 		{
-			Name:  ConfigGrpcXdsServerURL,
+			Name:  ConfigGrpcXdsServerURLEnvVar,
 			Value: net.JoinHostPort(XdsGrpcSotwConfigServerHost, strconv.Itoa(XdsGrpcSotwConfigServerPort)),
 		},
 		{
-			Name:  ConfigGrpcXdsNodeID,
+			Name:  ConfigGrpcXdsNodeIDEnvVar,
 			Value: InfraName,
 		},
 		{
@@ -261,11 +281,15 @@ func expectedRateLimitContainerEnv(rateLimit *egcfgv1a1.RateLimit, rateLimitDepl
 			Name:  ConfigGRPCXDSServerTLSCACertEnvVar,
 			Value: GRPCTLSCACertFilename,
 		},
+		{
+			Name:  ForceStartWithoutInitialConfigEnvVar,
+			Value: "true",
+		},
 	}
 
 	if rateLimit.Backend.Redis.TLS != nil {
 		env = append(env, corev1.EnvVar{
-			Name:  RedisTLS,
+			Name:  RedisTLSEnvVar,
 			Value: "true",
 		})
 
