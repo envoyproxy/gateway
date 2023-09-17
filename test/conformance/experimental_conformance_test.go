@@ -92,11 +92,8 @@ func experimentalConformance(t *testing.T) {
 				GatewayClassName:     *flags.GatewayClassName,
 				Debug:                *flags.ShowDebug,
 				CleanupBaseResources: *flags.CleanupBaseResources,
-				SkipTests: []string{
-					// TODO: Remove once https://github.com/envoyproxy/gateway/issues/1811 is fixed
-					tests.HTTPRouteRequestMultipleMirrors.ShortName,
-				},
-				SupportedFeatures: sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
+				SkipTests:            []string{},
+				SupportedFeatures:    sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
 			},
 			Implementation:      *implementation,
 			ConformanceProfiles: conformanceProfiles,

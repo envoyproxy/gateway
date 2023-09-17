@@ -319,10 +319,16 @@ func (in *HTTPRoute) DeepCopyInto(out *HTTPRoute) {
 		*out = new(Redirect)
 		(*in).DeepCopyInto(*out)
 	}
-	if in.Mirror != nil {
-		in, out := &in.Mirror, &out.Mirror
-		*out = new(RouteDestination)
-		(*in).DeepCopyInto(*out)
+	if in.Mirrors != nil {
+		in, out := &in.Mirrors, &out.Mirrors
+		*out = make([]*RouteDestination, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(RouteDestination)
+				(*in).DeepCopyInto(*out)
+			}
+		}
 	}
 	if in.Destination != nil {
 		in, out := &in.Destination, &out.Destination
