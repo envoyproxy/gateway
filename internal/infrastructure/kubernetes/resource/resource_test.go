@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestExpectedServiceSpec(t *testing.T) {
@@ -22,7 +23,6 @@ func TestExpectedServiceSpec(t *testing.T) {
 		service *egcfgv1a1.KubernetesServiceSpec
 	}
 	loadbalancerClass := "foobar"
-	allocateLoadBalancerNodePorts := true
 	tests := []struct {
 		name string
 		args args
@@ -56,11 +56,11 @@ func TestExpectedServiceSpec(t *testing.T) {
 			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
 			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
 				Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
-				AllocateLoadBalancerNodePorts: &allocateLoadBalancerNodePorts,
+				AllocateLoadBalancerNodePorts: ptr.To[bool](true),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                          corev1.ServiceTypeLoadBalancer,
-				AllocateLoadBalancerNodePorts: &allocateLoadBalancerNodePorts,
+				AllocateLoadBalancerNodePorts: ptr.To[bool](true),
 				SessionAffinity:               corev1.ServiceAffinityNone,
 				ExternalTrafficPolicy:         corev1.ServiceExternalTrafficPolicyTypeLocal,
 			},
