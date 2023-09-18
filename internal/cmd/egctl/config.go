@@ -79,7 +79,7 @@ func retrieveConfigDump(args []string, includeEds bool, configType envoyConfigTy
 	for _, pod := range pods {
 		pod := pod
 		go func() {
-			fw, err := portForwarder(cli, pod)
+			fw, err := portForwarder(cli, pod, adminPort)
 			if err != nil {
 				errs = multierror.Append(errs, err)
 				return
@@ -180,14 +180,8 @@ func fetchRunningEnvoyPods(c kube.CLIClient, nn types.NamespacedName, labelSelec
 }
 
 // portForwarder returns a port forwarder instance for a single Pod.
-func portForwarder(cli kube.CLIClient, nn types.NamespacedName, port ...int) (kube.PortForwarder, error) {
-	var err error
-	var fw kube.PortForwarder
-	if len(port) == 0 {
-		fw, err = kube.NewLocalPortForwarder(cli, nn, 0, adminPort)
-	} else {
-		fw, err = kube.NewLocalPortForwarder(cli, nn, 0, port[0])
-	}
+func portForwarder(cli kube.CLIClient, nn types.NamespacedName, port int) (kube.PortForwarder, error) {
+	fw, err := kube.NewLocalPortForwarder(cli, nn, 0, port)
 	if err != nil {
 		return nil, err
 	}
