@@ -43,8 +43,8 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
 		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite)
-		if httpRoute.Mirror != nil {
-			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
+		if httpRoute.Mirrors != nil {
+			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
 
 		router.Action = &routev3.Route_Route{Route: routeAction}
@@ -52,14 +52,14 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 		if httpRoute.BackendWeights.Invalid != 0 {
 			// If there are invalid backends then a weighted cluster is required for the route
 			routeAction := buildXdsWeightedRouteAction(httpRoute)
-			if httpRoute.Mirror != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
+			if httpRoute.Mirrors != nil {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		} else {
 			routeAction := buildXdsRouteAction(httpRoute.Destination.Name)
-			if httpRoute.Mirror != nil {
-				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirror.Name)
+			if httpRoute.Mirrors != nil {
+				routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
@@ -292,11 +292,13 @@ func buildXdsDirectResponseAction(res *ir.DirectResponse) *routev3.DirectRespons
 	return routeAction
 }
 
-func buildXdsRequestMirrorPolicies(destName string) []*routev3.RouteAction_RequestMirrorPolicy {
-	mirrorPolicies := []*routev3.RouteAction_RequestMirrorPolicy{
-		{
-			Cluster: destName,
-		},
+func buildXdsRequestMirrorPolicies(mirrorDestinations []*ir.RouteDestination) []*routev3.RouteAction_RequestMirrorPolicy {
+	var mirrorPolicies []*routev3.RouteAction_RequestMirrorPolicy
+
+	for _, mirrorDest := range mirrorDestinations {
+		mirrorPolicies = append(mirrorPolicies, &routev3.RouteAction_RequestMirrorPolicy{
+			Cluster: mirrorDest.Name,
+		})
 	}
 
 	return mirrorPolicies
