@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -183,7 +184,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
 								Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
-								AllocateLoadBalancerNodePorts: toPointer[bool](false),
+								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
 							},
 						},
 					},
@@ -204,7 +205,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
 								Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
-								AllocateLoadBalancerNodePorts: toPointer[bool](false),
+								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
 							},
 						},
 					},
@@ -643,8 +644,4 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 			require.Equal(t, tc.expected, got)
 		})
 	}
-}
-
-func toPointer[T any](t T) *T {
-	return &t
 }
