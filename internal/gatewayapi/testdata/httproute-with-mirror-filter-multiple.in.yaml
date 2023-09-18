@@ -35,6 +35,18 @@ httpRoutes:
       - name: service-1
         port: 8080
       filters:
+      - type: RequestHeaderModifier
+        requestHeaderModifier:
+          set:
+          - name: X-Header-Set
+            value: set-overwrites-values
+          add:
+          - name: X-Header-Add
+            value: header-val-1
+          - name: X-Header-Add-Append
+            value: header-val-2
+          remove:
+          - X-Header-Remove
       - type: RequestMirror
         requestMirror:
           backendRef:

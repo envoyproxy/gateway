@@ -45,6 +45,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Clientset:            clientset,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
+		SkipTests:            []string{},
 		ExemptFeatures:       suite.MeshCoreFeatures,
 	})
 	cSuite.Setup(t)

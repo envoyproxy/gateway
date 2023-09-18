@@ -222,15 +222,17 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				}
 			}
 
-			if httpRoute.Mirror != nil {
-				if err := addXdsCluster(tCtx, addXdsClusterArgs{
-					name:         httpRoute.Mirror.Name,
-					endpoints:    httpRoute.Mirror.Endpoints,
-					tSocket:      nil,
-					protocol:     protocol,
-					endpointType: Static,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-					return err
+			if httpRoute.Mirrors != nil {
+				for _, mirrorDest := range httpRoute.Mirrors {
+					if err := addXdsCluster(tCtx, addXdsClusterArgs{
+						name:         mirrorDest.Name,
+						endpoints:    mirrorDest.Endpoints,
+						tSocket:      nil,
+						protocol:     protocol,
+						endpointType: Static,
+					}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+						return err
+					}
 				}
 			}
 		}

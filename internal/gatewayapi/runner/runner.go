@@ -117,27 +117,33 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 
 			// Update Status
 			for _, gateway := range result.Gateways {
+				gateway := gateway
 				key := utils.NamespacedName(gateway)
 				r.ProviderResources.GatewayStatuses.Store(key, &gateway.Status)
 			}
 			for _, httpRoute := range result.HTTPRoutes {
+				httpRoute := httpRoute
 				key := utils.NamespacedName(httpRoute)
 				r.ProviderResources.HTTPRouteStatuses.Store(key, &httpRoute.Status)
 			}
 			for _, grpcRoute := range result.GRPCRoutes {
+				grpcRoute := grpcRoute
 				key := utils.NamespacedName(grpcRoute)
 				r.ProviderResources.GRPCRouteStatuses.Store(key, &grpcRoute.Status)
 			}
 
 			for _, tlsRoute := range result.TLSRoutes {
+				tlsRoute := tlsRoute
 				key := utils.NamespacedName(tlsRoute)
 				r.ProviderResources.TLSRouteStatuses.Store(key, &tlsRoute.Status)
 			}
 			for _, tcpRoute := range result.TCPRoutes {
+				tcpRoute := tcpRoute
 				key := utils.NamespacedName(tcpRoute)
 				r.ProviderResources.TCPRouteStatuses.Store(key, &tcpRoute.Status)
 			}
 			for _, udpRoute := range result.UDPRoutes {
+				udpRoute := udpRoute
 				key := utils.NamespacedName(udpRoute)
 				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 			}

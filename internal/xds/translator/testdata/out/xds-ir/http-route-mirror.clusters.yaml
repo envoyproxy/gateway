@@ -11,16 +11,3 @@
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   type: EDS
-- commonLbConfig:
-    localityWeightedLbConfig: {}
-  connectTimeout: 10s
-  dnsLookupFamily: V4_ONLY
-  edsClusterConfig:
-    edsConfig:
-      ads: {}
-      resourceApiVersion: V3
-    serviceName: mirror-route-dest
-  name: mirror-route-dest
-  outlierDetection: {}
-  perConnectionBufferLimitBytes: 32768
-  type: EDS
