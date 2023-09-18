@@ -82,6 +82,8 @@ spec:
               readOnly: true
             - mountPath: /sds
               name: sds
+            - mountPath: /cores/
+              name: coredump
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -102,5 +104,9 @@ spec:
             name: envoy-default-37a8eec1
             optional: false
           name: sds
+        - name: coredump
+          hostPath:
+            path: /var/gateway/proxy/data/
+            type: DirectoryOrCreate
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 600

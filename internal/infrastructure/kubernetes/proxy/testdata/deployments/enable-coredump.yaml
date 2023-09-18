@@ -37,7 +37,6 @@ spec:
             - --config-yaml test bootstrap config
             - --log-level warn
             - --cpuset-threads
-            - --concurrency 4
           command:
             - envoy
           env:
@@ -84,6 +83,15 @@ spec:
               name: sds
             - mountPath: /cores/
               name: coredump
+      initContainers:
+        - name: condig-core-dump
+          image: envoyproxy/envoy-dev:latest
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - sysctl -w kernel.core_pattern=/cores/core-%e-%p-%t && ulimit -c unlimited
+          imagePullPolicy: IfNotPresent
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler

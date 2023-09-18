@@ -62,13 +62,14 @@ func TestDeployment(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		caseName     string
-		infra        *ir.Infra
-		deploy       *egcfgv1a1.KubernetesDeploymentSpec
-		proxyLogging map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
-		bootstrap    string
-		telemetry    *egcfgv1a1.ProxyTelemetry
-		concurrency  *int32
+		caseName       string
+		infra          *ir.Infra
+		deploy         *egcfgv1a1.KubernetesDeploymentSpec
+		proxyLogging   map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel
+		bootstrap      string
+		telemetry      *egcfgv1a1.ProxyTelemetry
+		concurrency    *int32
+		enableCoreDump *bool
 	}{
 		{
 			caseName: "default",
@@ -270,6 +271,13 @@ func TestDeployment(t *testing.T) {
 			concurrency: pointer.Int32(4),
 			bootstrap:   `test bootstrap config`,
 		},
+		{
+			caseName:       "enable-coredump",
+			infra:          newTestInfra(),
+			deploy:         nil,
+			enableCoreDump: pointer.Bool(true),
+			bootstrap:      `test bootstrap config`,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {
@@ -297,6 +305,9 @@ func TestDeployment(t *testing.T) {
 
 			if tc.concurrency != nil {
 				tc.infra.Proxy.Config.Spec.Concurrency = tc.concurrency
+			}
+			if tc.enableCoreDump != nil {
+				tc.infra.Proxy.Config.Spec.EnableCoreDump = *tc.enableCoreDump
 			}
 
 			r := NewResourceRender(cfg.Namespace, tc.infra.GetProxyInfra())

@@ -63,6 +63,14 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
+
+	// Enables core dumps for the managed Envoy Proxy fleet.
+	//
+	// If set, the managed Envoy Proxy fleet will generate core dumps
+	// when they crash or experience a segmentation fault.
+	//
+	// +optional
+	EnableCoreDump bool `json:"enableCoreDump,omitempty"`
 }
 
 type ProxyTelemetry struct {

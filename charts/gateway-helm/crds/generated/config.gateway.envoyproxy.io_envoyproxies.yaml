@@ -70,6 +70,11 @@ spec:
                   If unset, it defaults to the number of cpuset threads on the platform.
                 format: int32
                 type: integer
+              enableCoreDump:
+                description: "Enables core dumps for the managed Envoy Proxy fleet.
+                  \n If set, the managed Envoy Proxy fleet will generate core dumps
+                  when they crash or experience a segmentation fault."
+                type: boolean
               logging:
                 default:
                   level:
