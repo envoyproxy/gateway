@@ -231,6 +231,7 @@
                   },
                   "serviceName": "httproute/envoy-gateway-system/http-ratelimit/rule/0"
                 },
+                "lbPolicy": "LEAST_REQUEST",
                 "name": "httproute/envoy-gateway-system/http-ratelimit/rule/0",
                 "outlierDetection": {},
                 "perConnectionBufferLimitBytes": 32768,
@@ -246,6 +247,7 @@
                 "connectTimeout": "10s",
                 "dnsLookupFamily": "V4_ONLY",
                 "dnsRefreshRate": "30s",
+                "lbPolicy": "LEAST_REQUEST",
                 "loadAssignment": {
                   "clusterName": "ratelimit_cluster",
                   "endpoints": [
