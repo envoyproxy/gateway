@@ -8,7 +8,9 @@ package gatewayapi
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	"google.golang.org/protobuf/types/known/durationpb"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -187,6 +189,22 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return routeRoutes
 }
 
+func processTimeout(irRoute *ir.HTTPRoute, rule v1beta1.HTTPRouteRule) {
+	if rule.Timeouts != nil {
+		if rule.Timeouts.Request != nil {
+			// TODO: handle parse errors
+			d, _ := time.ParseDuration(string(*rule.Timeouts.Request))
+			irRoute.Timeout = durationpb.New(d)
+		}
+
+		if rule.Timeouts.BackendRequest != nil {
+			// TODO: handle parse errors
+			d, _ := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			irRoute.PerTryTimeout = durationpb.New(d)
+		}
+	}
+}
+
 func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule v1beta1.HTTPRouteRule) []*ir.HTTPRoute {
 	var ruleRoutes []*ir.HTTPRoute
 
@@ -195,6 +213,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
+		processTimeout(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -206,6 +225,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, matchIdx),
 		}
+		processTimeout(irRoute, rule)
 
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, v1beta1.PathMatchPathPrefix) {
@@ -297,6 +317,7 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.RateLimit != nil {
 		irRoute.RateLimit = httpFiltersContext.RateLimit
 	}
+
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
 	}
@@ -538,6 +559,8 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
+					Timeout:               routeRoute.Timeout,
+					PerTryTimeout:         routeRoute.PerTryTimeout,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.

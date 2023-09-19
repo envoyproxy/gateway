@@ -65,6 +65,17 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 		}
 	}
 
+	// Timeouts
+	if httpRoute.Timeout != nil {
+		router.GetRoute().Timeout = httpRoute.Timeout
+	}
+
+	if httpRoute.PerTryTimeout != nil {
+		router.GetRoute().RetryPolicy = &routev3.RetryPolicy{
+			PerTryTimeout: httpRoute.PerTryTimeout,
+		}
+	}
+
 	// TODO: Convert this into a generic interface for API Gateway features.
 	//       https://github.com/envoyproxy/gateway/issues/882
 	if err := patchRouteWithRateLimit(router.GetRoute(), httpRoute); err != nil {
