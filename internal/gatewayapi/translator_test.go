@@ -75,21 +75,25 @@ func TestTranslate(t *testing.T) {
 							ClusterIP: "1.1.1.1",
 							Ports: []corev1.ServicePort{
 								{
+									Name:       "http",
 									Port:       8080,
 									TargetPort: intstr.IntOrString{IntVal: 8080},
 									Protocol:   corev1.ProtocolTCP,
 								},
 								{
+									Name:       "https",
 									Port:       8443,
 									TargetPort: intstr.IntOrString{IntVal: 8443},
 									Protocol:   corev1.ProtocolTCP,
 								},
 								{
+									Name:       "tcp",
 									Port:       8163,
 									TargetPort: intstr.IntOrString{IntVal: 8163},
 									Protocol:   corev1.ProtocolTCP,
 								},
 								{
+									Name:       "udp",
 									Port:       8162,
 									TargetPort: intstr.IntOrString{IntVal: 8162},
 									Protocol:   corev1.ProtocolUDP,
@@ -154,6 +158,7 @@ func TestTranslate(t *testing.T) {
 						ClusterIP: "2.2.2.2",
 						Ports: []corev1.ServicePort{
 							{
+								Name:       "http",
 								Port:       8080,
 								TargetPort: intstr.IntOrString{IntVal: 8080},
 								Protocol:   corev1.ProtocolTCP,
@@ -258,21 +263,25 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 							ClusterIP: "1.1.1.1",
 							Ports: []corev1.ServicePort{
 								{
+									Name:       "http",
 									Port:       8080,
 									TargetPort: intstr.IntOrString{IntVal: 8080},
 									Protocol:   corev1.ProtocolTCP,
 								},
 								{
+									Name:       "https",
 									Port:       8443,
 									TargetPort: intstr.IntOrString{IntVal: 8443},
 									Protocol:   corev1.ProtocolTCP,
 								},
 								{
+									Name:       "tcp",
 									Port:       8163,
 									TargetPort: intstr.IntOrString{IntVal: 8163},
 									Protocol:   corev1.ProtocolTCP,
 								},
 								{
+									Name:       "udp",
 									Port:       8162,
 									TargetPort: intstr.IntOrString{IntVal: 8162},
 									Protocol:   corev1.ProtocolUDP,
