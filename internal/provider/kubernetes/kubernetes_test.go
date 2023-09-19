@@ -37,6 +37,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/message"
 	"github.com/envoyproxy/gateway/internal/provider/kubernetes/test"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 const (
@@ -568,8 +569,8 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/ratelimitfilter/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/ratelimitfilter/"),
 									},
 								},
 							},
@@ -744,8 +745,8 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/authenfilter/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/authenfilter/"),
 									},
 								},
 							},
@@ -926,8 +927,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/"),
 									},
 								},
 							},
@@ -966,8 +967,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/redirect/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/redirect/"),
 									},
 								},
 							},
@@ -984,11 +985,11 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 								{
 									Type: gwapiv1b1.HTTPRouteFilterType("RequestRedirect"),
 									RequestRedirect: &gwapiv1b1.HTTPRequestRedirectFilter{
-										Scheme:   gatewayapi.StringPtr("https"),
+										Scheme:   ptr.To("https"),
 										Hostname: &redirectHostname,
 										Path: &gwapiv1b1.HTTPPathModifier{
 											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
-											ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+											ReplaceFullPath: ptr.To("/newpath"),
 										},
 										Port:       &redirectPort,
 										StatusCode: &redirectStatus,
@@ -1021,8 +1022,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/rewrite/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/rewrite/"),
 									},
 								},
 							},
@@ -1042,7 +1043,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 										Hostname: &rewriteHostname,
 										Path: &gwapiv1b1.HTTPPathModifier{
 											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
-											ReplaceFullPath: gatewayapi.StringPtr("/newpath"),
+											ReplaceFullPath: ptr.To("/newpath"),
 										},
 									},
 								},
@@ -1073,8 +1074,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/addheader/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/addheader/"),
 									},
 								},
 							},
@@ -1136,8 +1137,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/remheader/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/remheader/"),
 									},
 								},
 							},
@@ -1188,8 +1189,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/addheader/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/addheader/"),
 									},
 								},
 							},
@@ -1251,8 +1252,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/remheader/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/remheader/"),
 									},
 								},
 							},
@@ -1303,8 +1304,8 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 							Matches: []gwapiv1b1.HTTPRouteMatch{
 								{
 									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-										Value: gatewayapi.StringPtr("/mirror/"),
+										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+										Value: ptr.To("/mirror/"),
 									},
 								},
 							},
@@ -1618,8 +1619,8 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 			Rules: []gwapiv1b1.HTTPRouteRule{{
 				Matches: []gwapiv1b1.HTTPRouteMatch{{
 					Path: &gwapiv1b1.HTTPPathMatch{
-						Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-						Value: gatewayapi.StringPtr("/"),
+						Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+						Value: ptr.To("/"),
 					},
 				}},
 				BackendRefs: []gwapiv1b1.HTTPBackendRef{{
