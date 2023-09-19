@@ -31,6 +31,7 @@ import (
 	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -109,24 +110,24 @@ func TestTranslate(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     StringPtr("http"),
-								Port:     Int32Ptr(8080),
-								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+								Name:     ptr.To("http"),
+								Port:     ptr.To(int32(8080)),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
-								Name:     StringPtr("https"),
-								Port:     Int32Ptr(8443),
-								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+								Name:     ptr.To("https"),
+								Port:     ptr.To(int32(8443)),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
-								Name:     StringPtr("tcp"),
-								Port:     Int32Ptr(8163),
-								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+								Name:     ptr.To("tcp"),
+								Port:     ptr.To(int32(8163)),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
-								Name:     StringPtr("udp"),
-								Port:     Int32Ptr(8162),
-								Protocol: ProtocolPtr(corev1.ProtocolUDP),
+								Name:     ptr.To("udp"),
+								Port:     ptr.To(int32(8162)),
+								Protocol: ptr.To(corev1.ProtocolUDP),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -135,7 +136,7 @@ func TestTranslate(t *testing.T) {
 									"7.7.7.7",
 								},
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: BoolPtr(true),
+									Ready: ptr.To(true),
 								},
 							},
 						},
@@ -173,9 +174,9 @@ func TestTranslate(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:     StringPtr("http"),
-							Port:     Int32Ptr(8080),
-							Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							Name:     ptr.To("http"),
+							Port:     ptr.To(int32(8080)),
+							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},
 					Endpoints: []discoveryv1.Endpoint{
@@ -184,7 +185,7 @@ func TestTranslate(t *testing.T) {
 								"7.6.5.4",
 							},
 							Conditions: discoveryv1.EndpointConditions{
-								Ready: BoolPtr(true),
+								Ready: ptr.To(true),
 							},
 						},
 					},
@@ -292,24 +293,24 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
 							{
-								Name:     StringPtr("http"),
-								Port:     Int32Ptr(8080),
-								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+								Name:     ptr.To("http"),
+								Port:     ptr.To(int32(8080)),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
-								Name:     StringPtr("https"),
-								Port:     Int32Ptr(8443),
-								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+								Name:     ptr.To("https"),
+								Port:     ptr.To(int32(8443)),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
-								Name:     StringPtr("tcp"),
-								Port:     Int32Ptr(8163),
-								Protocol: ProtocolPtr(corev1.ProtocolTCP),
+								Name:     ptr.To("tcp"),
+								Port:     ptr.To(int32(8163)),
+								Protocol: ptr.To(corev1.ProtocolTCP),
 							},
 							{
-								Name:     StringPtr("udp"),
-								Port:     Int32Ptr(8162),
-								Protocol: ProtocolPtr(corev1.ProtocolUDP),
+								Name:     ptr.To("udp"),
+								Port:     ptr.To(int32(8162)),
+								Protocol: ptr.To(corev1.ProtocolUDP),
 							},
 						},
 						Endpoints: []discoveryv1.Endpoint{
@@ -318,7 +319,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 									"7.7.7.7",
 								},
 								Conditions: discoveryv1.EndpointConditions{
-									Ready: BoolPtr(true),
+									Ready: ptr.To(true),
 								},
 							},
 						},
@@ -356,9 +357,9 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 					AddressType: discoveryv1.AddressTypeIPv4,
 					Ports: []discoveryv1.EndpointPort{
 						{
-							Name:     StringPtr("http"),
-							Port:     Int32Ptr(8080),
-							Protocol: ProtocolPtr(corev1.ProtocolTCP),
+							Name:     ptr.To("http"),
+							Port:     ptr.To(int32(8080)),
+							Protocol: ptr.To(corev1.ProtocolTCP),
 						},
 					},
 					Endpoints: []discoveryv1.Endpoint{
@@ -367,7 +368,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 								"7.6.5.4",
 							},
 							Conditions: discoveryv1.EndpointConditions{
-								Ready: BoolPtr(true),
+								Ready: ptr.To(true),
 							},
 						},
 					},

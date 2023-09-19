@@ -262,9 +262,10 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:  egv1alpha1.GatewayControllerName,
-		GatewayClassName:       v1beta1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled: true,
+		GatewayControllerName:   egv1alpha1.GatewayControllerName,
+		GatewayClassName:        v1beta1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 	// Update the status of the GatewayClass based on EnvoyProxy validation
@@ -292,9 +293,10 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:  egv1alpha1.GatewayControllerName,
-		GatewayClassName:       v1beta1.ObjectName(resources.GatewayClass.Name),
-		GlobalRateLimitEnabled: true,
+		GatewayControllerName:   egv1alpha1.GatewayControllerName,
+		GatewayClassName:        v1beta1.ObjectName(resources.GatewayClass.Name),
+		GlobalRateLimitEnabled:  true,
+		EndpointRoutingDisabled: true,
 	}
 	gRes := gTranslator.Translate(resources)
 

@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -227,12 +228,12 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			case v1beta1.HeaderMatchExact:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:  string(headerMatch.Name),
-					Exact: StringPtr(headerMatch.Value),
+					Exact: ptr.To(headerMatch.Value),
 				})
 			case v1beta1.HeaderMatchRegularExpression:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
-					SafeRegex: StringPtr(headerMatch.Value),
+					SafeRegex: ptr.To(headerMatch.Value),
 				})
 			}
 		}
@@ -241,12 +242,12 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 			case v1beta1.QueryParamMatchExact:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:  string(queryParamMatch.Name),
-					Exact: StringPtr(queryParamMatch.Value),
+					Exact: ptr.To(queryParamMatch.Value),
 				})
 			case v1beta1.QueryParamMatchRegularExpression:
 				irRoute.QueryParamMatches = append(irRoute.QueryParamMatches, &ir.StringMatch{
 					Name:      string(queryParamMatch.Name),
-					SafeRegex: StringPtr(queryParamMatch.Value),
+					SafeRegex: ptr.To(queryParamMatch.Value),
 				})
 			}
 		}
@@ -254,7 +255,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		if match.Method != nil {
 			irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 				Name:  ":method",
-				Exact: StringPtr(string(*match.Method)),
+				Exact: ptr.To(string(*match.Method)),
 			})
 		}
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
@@ -425,12 +426,12 @@ func (t *Translator) processGRPCRouteRule(grpcRoute *GRPCRouteContext, ruleIdx i
 			case v1beta1.HeaderMatchExact:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:  string(headerMatch.Name),
-					Exact: StringPtr(headerMatch.Value),
+					Exact: ptr.To(headerMatch.Value),
 				})
 			case v1beta1.HeaderMatchRegularExpression:
 				irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 					Name:      string(headerMatch.Name),
-					SafeRegex: StringPtr(headerMatch.Value),
+					SafeRegex: ptr.To(headerMatch.Value),
 				})
 			}
 		}
@@ -455,17 +456,17 @@ func (t *Translator) processGRPCRouteMethodExact(method *v1alpha2.GRPCMethodMatc
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			Exact: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+			Exact: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
 	case method.Method != nil:
 		// Use a header match since the PathMatch doesn't support Suffix matching
 		irRoute.HeaderMatches = append(irRoute.HeaderMatches, &ir.StringMatch{
 			Name:   ":path",
-			Suffix: StringPtr(fmt.Sprintf("/%s", *method.Method)),
+			Suffix: ptr.To(fmt.Sprintf("/%s", *method.Method)),
 		})
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			Prefix: StringPtr(fmt.Sprintf("/%s", *method.Service)),
+			Prefix: ptr.To(fmt.Sprintf("/%s", *method.Service)),
 		}
 	}
 }
@@ -474,15 +475,15 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *v1alpha2.GR
 	switch {
 	case method.Service != nil && method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
+			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, *method.Method)),
 		}
 	case method.Method != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
+			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", validServiceName, *method.Method)),
 		}
 	case method.Service != nil:
 		irRoute.PathMatch = &ir.StringMatch{
-			SafeRegex: StringPtr(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
+			SafeRegex: ptr.To(fmt.Sprintf("/%s/%s", *method.Service, validMethodName)),
 		}
 	}
 }
@@ -1000,7 +1001,6 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 			}
 			endpoints = append(endpoints, ep)
 		}
-		return endpoints, weight
 	case KindService:
 		service := resources.GetService(backendNamespace, string(backendRef.Name))
 		var servicePort corev1.ServicePort
@@ -1011,40 +1011,56 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 			}
 		}
 
-		endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
+		// Route to endpoints by default
+		if !t.EndpointRoutingDisabled {
+			endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
 
-		for _, endpointSlice := range endpointSlices {
-			for _, endpoint := range endpointSlice.Endpoints {
-				for _, endpointPort := range endpointSlice.Ports {
-					// Check if the endpoint port matches the service port
-					// and if endpoint is Ready
-					if *endpointPort.Port == servicePort.Port &&
-						*endpointPort.Protocol == servicePort.Protocol &&
-						*endpoint.Conditions.Ready {
-						for _, address := range endpoint.Addresses {
-							var ep *ir.DestinationEndpoint
-							// Weights are not relevant for TCP and UDP Routes
-							if routeType == KindTCPRoute ||
-								routeType == KindUDPRoute {
-								ep = ir.NewDestEndpoint(
-									address,
-									uint32(servicePort.TargetPort.IntVal))
-							} else {
-								ep = ir.NewDestEndpointWithWeight(
-									address,
-									uint32(servicePort.TargetPort.IntVal),
-									weight)
+			for _, endpointSlice := range endpointSlices {
+				for _, endpoint := range endpointSlice.Endpoints {
+					for _, endpointPort := range endpointSlice.Ports {
+						// Check if the endpoint port matches the service port
+						// and if endpoint is Ready
+						if *endpointPort.Port == servicePort.Port &&
+							*endpointPort.Protocol == servicePort.Protocol &&
+							*endpoint.Conditions.Ready {
+							for _, address := range endpoint.Addresses {
+								var ep *ir.DestinationEndpoint
+								// Weights are not relevant for TCP and UDP Routes
+								if routeType == KindTCPRoute ||
+									routeType == KindUDPRoute {
+									ep = ir.NewDestEndpoint(
+										address,
+										uint32(servicePort.TargetPort.IntVal))
+								} else {
+									ep = ir.NewDestEndpointWithWeight(
+										address,
+										uint32(servicePort.TargetPort.IntVal),
+										weight)
+								}
+								endpoints = append(endpoints, ep)
 							}
-							endpoints = append(endpoints, ep)
 						}
 					}
 				}
 			}
+		} else {
+			// Fall back to Service CluserIP routing
+			var ep *ir.DestinationEndpoint
+			if routeType == KindTCPRoute ||
+				routeType == KindUDPRoute {
+				ep = ir.NewDestEndpoint(
+					service.Spec.ClusterIP,
+					uint32(*backendRef.Port))
+			} else {
+				ep = ir.NewDestEndpointWithWeight(
+					service.Spec.ClusterIP,
+					uint32(*backendRef.Port),
+					weight)
+			}
+			endpoints = append(endpoints, ep)
 		}
-		return endpoints, weight
 	}
-
-	return nil, 0 // shouldnt reach here
+	return endpoints, weight
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our

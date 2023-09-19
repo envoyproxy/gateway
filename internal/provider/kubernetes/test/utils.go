@@ -16,7 +16,7 @@ import (
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/internal/gatewayapi"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 type ObjectKindNamespacedName struct {
@@ -71,7 +71,7 @@ func GetGateway(nsname types.NamespacedName, gwclass string) *gwapiv1b1.Gateway 
 func GetSecureGateway(nsname types.NamespacedName, gwclass string, secretKindNSName ObjectKindNamespacedName) *gwapiv1b1.Gateway {
 	secureGateway := GetGateway(nsname, gwclass)
 	secureGateway.Spec.Listeners[0].TLS = &gwapiv1b1.GatewayTLSConfig{
-		Mode: gatewayapi.TLSModeTypePtr(gwapiv1b1.TLSModeTerminate),
+		Mode: ptr.To(gwapiv1b1.TLSModeTerminate),
 		CertificateRefs: []gwapiv1b1.SecretObjectReference{{
 			Kind:      (*gwapiv1b1.Kind)(&secretKindNSName.Kind),
 			Namespace: (*gwapiv1b1.Namespace)(&secretKindNSName.Namespace),
@@ -374,7 +374,7 @@ func GetRateLimitGlobalRule(val string) egv1a1.RateLimitRule {
 				Headers: []egv1a1.HeaderMatch{
 					{
 						Name:  "x-user-id",
-						Value: gatewayapi.StringPtr(val),
+						Value: ptr.To(val),
 					},
 				},
 			},

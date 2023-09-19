@@ -47,9 +47,9 @@ endpointSlices:
     kind: EndpointSlice
     metadata:
       name: endpointslice-service-1
-      namespace: envoy-gateway 
+      namespace: envoy-gateway
       labels:
-        kubernetes.io/service-name: service-1 
+        kubernetes.io/service-name: service-1
     addressType: IPv4
     ports:
       - name: http
@@ -59,4 +59,4 @@ endpointSlices:
       - addresses:
           - "7.7.7.7"
         conditions:
-          ready: true     
+          ready: true

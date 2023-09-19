@@ -145,7 +145,7 @@ services:
     namespace: envoy-gateway
     name: service-2
   spec:
-    clusterIP: 2.2.2.2 
+    clusterIP: 2.2.2.2
     ports:
     - port: 8080
       protocol: TCP
@@ -155,9 +155,9 @@ endpointSlices:
   kind: EndpointSlice
   metadata:
     name: endpointslice-service-1
-    namespace: envoy-gateway 
+    namespace: envoy-gateway
     labels:
-      kubernetes.io/service-name: service-1 
+      kubernetes.io/service-name: service-1
   addressType: IPv4
   ports:
   - name: http
@@ -172,7 +172,7 @@ endpointSlices:
   kind: EndpointSlice
   metadata:
     name: endpointslice-service-2
-    namespace: envoy-gateway 
+    namespace: envoy-gateway
     labels:
       kubernetes.io/service-name: service-2
   addressType: IPv4
@@ -184,4 +184,4 @@ endpointSlices:
   - addresses:
     - "8.8.8.8"
     conditions:
-      ready: true            
+      ready: true

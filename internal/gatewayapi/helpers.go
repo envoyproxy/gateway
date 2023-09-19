@@ -57,22 +57,6 @@ func SectionNamePtr(name string) *v1beta1.SectionName {
 	return &sectionName
 }
 
-func TLSModeTypePtr(mode v1beta1.TLSModeType) *v1beta1.TLSModeType {
-	return &mode
-}
-
-func BoolPtr(val bool) *bool {
-	return &val
-}
-
-func StringPtr(val string) *string {
-	return &val
-}
-
-func Int32Ptr(val int32) *int32 {
-	return &val
-}
-
 func PortNumPtr(val int32) *v1beta1.PortNumber {
 	portNum := v1beta1.PortNumber(val)
 	return &portNum
@@ -81,18 +65,6 @@ func PortNumPtr(val int32) *v1beta1.PortNumber {
 func ObjectNamePtr(val string) *v1alpha2.ObjectName {
 	objectName := v1alpha2.ObjectName(val)
 	return &objectName
-}
-
-func PathMatchTypePtr(pType v1beta1.PathMatchType) *v1beta1.PathMatchType {
-	return &pType
-}
-
-func GatewayAddressTypePtr(addr v1beta1.AddressType) *v1beta1.AddressType {
-	return &addr
-}
-
-func ProtocolPtr(val v1.Protocol) *v1.Protocol {
-	return &val
 }
 
 func PathMatchTypeDerefOr(matchType *v1beta1.PathMatchType, defaultType v1beta1.PathMatchType) v1beta1.PathMatchType {

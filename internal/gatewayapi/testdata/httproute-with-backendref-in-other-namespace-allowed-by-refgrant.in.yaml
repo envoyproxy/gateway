@@ -49,9 +49,9 @@ endpointSlices:
     kind: EndpointSlice
     metadata:
       name: endpointslice-service-1
-      namespace: backends 
+      namespace: backends
       labels:
-        kubernetes.io/service-name: service-1 
+        kubernetes.io/service-name: service-1
     addressType: IPv4
     ports:
       - name: http

@@ -50,7 +50,7 @@ endpointSlices:
       name: endpointslice-service-1
       namespace: test-service-namespace
       labels:
-        kubernetes.io/service-name: service-1 
+        kubernetes.io/service-name: service-1
     addressType: IPv4
     ports:
       - name: http
