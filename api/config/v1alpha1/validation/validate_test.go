@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -111,7 +112,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "unsupported envoy service type 'NodePort'",
+			name: "valid envoy service type 'NodePort'",
 			proxy: &egcfgv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
@@ -169,6 +170,48 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with allocateLoadBalancerNodePorts",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "non envoy service type 'LoadBalancer' with allocateLoadBalancerNodePorts",
+			proxy: &egcfgv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egcfgv1a1.EnvoyProxySpec{
+					Provider: &egcfgv1a1.EnvoyProxyProvider{
+						Type: egcfgv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
+								Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
 		},
 		{
 			name: "valid user bootstrap replace type",

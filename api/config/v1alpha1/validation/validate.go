@@ -71,15 +71,15 @@ func validateProvider(spec *egcfgv1a1.EnvoyProxySpec) []error {
 		if spec.Provider.Type != egcfgv1a1.ProviderTypeKubernetes {
 			errs = append(errs, fmt.Errorf("unsupported provider type %v", spec.Provider.Type))
 		}
-		validateServiceTypeErrs := validateServiceType(spec)
-		if len(validateServiceTypeErrs) != 0 {
-			errs = append(errs, validateServiceTypeErrs...)
+		validateServiceErrs := validateService(spec)
+		if len(validateServiceErrs) != 0 {
+			errs = append(errs, validateServiceErrs...)
 		}
 	}
 	return errs
 }
 
-func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
+func validateService(spec *egcfgv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
 		if serviceType := spec.Provider.Kubernetes.EnvoyService.Type; serviceType != nil {
@@ -87,6 +87,12 @@ func validateServiceType(spec *egcfgv1a1.EnvoyProxySpec) []error {
 				*serviceType != egcfgv1a1.ServiceTypeClusterIP &&
 				*serviceType != egcfgv1a1.ServiceTypeNodePort {
 				errs = append(errs, fmt.Errorf("unsupported envoy service type %v", serviceType))
+			}
+		}
+		if serviceType, serviceAllocateLoadBalancerNodePorts :=
+			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.AllocateLoadBalancerNodePorts; serviceType != nil && serviceAllocateLoadBalancerNodePorts != nil {
+			if *serviceType != egcfgv1a1.ServiceTypeLoadBalancer {
+				errs = append(errs, fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egcfgv1a1.ServiceTypeLoadBalancer))
 			}
 		}
 	}
