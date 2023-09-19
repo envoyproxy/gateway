@@ -67,7 +67,7 @@ type Translator struct {
 	GlobalRateLimitEnabled bool
 
 	// EndpointRoutingDisabled can be set to true to use
-	// the Service Cluser IP for routing to the backend
+	// the Service Cluster IP for routing to the backend
 	// instead.
 	EndpointRoutingDisabled bool
 
