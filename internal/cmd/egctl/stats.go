@@ -11,8 +11,8 @@ import (
 
 func statsCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:     "stats",
-		Long:    "Retrieve stats from envoy proxy.",
+		Use:  "stats",
+		Long: "Retrieve stats from envoy proxy.",
 	}
 
 	c.AddCommand(newEnvoyStatsCmd())

@@ -74,17 +74,22 @@ func newEnvoyStatsCmd() *cobra.Command {
 				for _, pod := range pods {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyServerStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
-						errs = multierror.Append(errs, err)
+						if err != nil {
+							errs = multierror.Append(errs, err)
+						}
 						wg.Done()
 					}(pod)
 				}
+
 				wg.Wait()
 			case "cluster", "clusters":
 				wg.Add(len(pods))
 				for _, pod := range pods {
 					go func(pod types.NamespacedName) {
 						stats[pod.Namespace+"/"+pod.Name], err = setupEnvoyClusterStatsConfig(kubeClient, pod.Name, pod.Namespace, outputFormat)
-						errs = multierror.Append(errs, err)
+						if err != nil {
+							errs = multierror.Append(errs, err)
+						}
 						wg.Done()
 					}(pod)
 				}
