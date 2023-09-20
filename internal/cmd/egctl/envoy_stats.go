@@ -29,26 +29,23 @@ var (
 	statsType, outputFormat string
 )
 
-func newEnvoyStatsConfigCmd() *cobra.Command {
+func newEnvoyStatsCmd() *cobra.Command {
 	var podName, podNamespace string
 
 	statsConfigCmd := &cobra.Command{
-		Use:   "envoy-stats [<type>/]<name>[.<namespace>]",
+		Use:   "envoy-proxy [<type>/]<name>[.<namespace>]",
 		Short: "Retrieves Envoy metrics in the specified pod",
 		Long:  `Retrieve Envoy emitted metrics for the specified pod.`,
 		Example: `  # Retrieve Envoy emitted metrics for the specified pod.
-  egctl experimental envoy-stats <pod-name[.namespace]>
+  egctl experimental stats <pod-name[.namespace]>
 
   # Retrieve Envoy server metrics in prometheus format
-  egctl experimental envoy-stats <pod-name[.namespace]> --output prom
-
-  # Retrieve Envoy server metrics in prometheus format with merged application metrics
-  egctl experimental envoy-stats <pod-name[.namespace]> --output prom-merged
+  egctl experimental stats envoy-proxy <pod-name[.namespace]> --output prom
 
   # Retrieve Envoy cluster metrics
-  egctl experimental envoy-stats <pod-name[.namespace]> --type clusters
+  egctl experimental stats  envoy-proxy <pod-name[.namespace]> --type clusters
 `,
-		Aliases: []string{"es"},
+		Aliases: []string{"ep"},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 && len(labelSelectors) == 0 {
 				cmd.Println(cmd.UsageString())
@@ -132,7 +129,6 @@ func newEnvoyStatsConfigCmd() *cobra.Command {
 
 func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
 	path := "stats"
-	port := 19000
 	if outputFormat == jsonOutput || outputFormat == yamlOutput {
 		// for yaml output we will convert the json to yaml when printed
 		path += "?format=json"
@@ -140,7 +136,7 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 		path += "/prometheus"
 	}
 
-	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, port)
+	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
 	}
@@ -159,12 +155,11 @@ func setupEnvoyServerStatsConfig(kubeClient kubernetes.CLIClient, podName, podNa
 
 func setupEnvoyClusterStatsConfig(kubeClient kubernetes.CLIClient, podName, podNamespace string, outputFormat string) (string, error) {
 	path := "clusters"
-	port := 19000
 	if outputFormat == jsonOutput || outputFormat == yamlOutput {
 		// for yaml output we will convert the json to yaml when printed
 		path += "?format=json"
 	}
-	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName}, port)
+	fw, err := portForwarder(kubeClient, types.NamespacedName{Namespace: podNamespace, Name: podName})
 	if err != nil {
 		return "", fmt.Errorf("failed to initialize pod-forwarding for %s/%s: %v", podNamespace, podName, err)
 	}

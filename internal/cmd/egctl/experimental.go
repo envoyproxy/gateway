@@ -23,7 +23,7 @@ func newExperimentalCommand() *cobra.Command {
 	}
 
 	experimentalCommand.AddCommand(NewTranslateCommand())
-	experimentalCommand.AddCommand(newEnvoyStatsConfigCmd())
+	experimentalCommand.AddCommand(statsCommand())
 
 	return experimentalCommand
 }
