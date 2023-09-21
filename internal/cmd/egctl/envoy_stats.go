@@ -33,17 +33,17 @@ func newEnvoyStatsCmd() *cobra.Command {
 	var podName, podNamespace string
 
 	statsConfigCmd := &cobra.Command{
-		Use:   "envoy-proxy [<type>/]<name>[.<namespace>]",
+		Use:   "envoy-proxy <name> -n <namespace>",
 		Short: "Retrieves Envoy metrics in the specified pod",
 		Long:  `Retrieve Envoy emitted metrics for the specified pod.`,
 		Example: `  # Retrieve Envoy emitted metrics for the specified pod.
-  egctl experimental stats <pod-name[.namespace]>
+  egctl experimental stats <pod-name> -n <namespace>
 
   # Retrieve Envoy server metrics in prometheus format
-  egctl experimental stats envoy-proxy <pod-name[.namespace]> --output prom
+  egctl experimental stats envoy-proxy <pod-name> -n <namespace> --output prom
 
   # Retrieve Envoy cluster metrics
-  egctl experimental stats  envoy-proxy <pod-name[.namespace]> --type clusters
+  egctl experimental stats  envoy-proxy <pod-name> -n <namespace> --type clusters
 `,
 		Aliases: []string{"ep"},
 		Args: func(cmd *cobra.Command, args []string) error {
