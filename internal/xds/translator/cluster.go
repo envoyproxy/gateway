@@ -31,7 +31,7 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 	cluster := &clusterv3.Cluster{
 		Name:            clusterName,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
-		LbPolicy:        clusterv3.Cluster_ROUND_ROBIN,
+		LbPolicy:        clusterv3.Cluster_LEAST_REQUEST,
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
