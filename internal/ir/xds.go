@@ -439,8 +439,8 @@ type RouteDestination struct {
 	// Name of the destination. This field allows the xds layer
 	// to check if this route destination already exists and can be
 	// reused
-	Name      string                 `json:"name" yaml:"name"`
-	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Name     string                `json:"name" yaml:"name"`
+	Settings []*DestinationSetting `json:"settings,omitempty" yaml:"settings,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -449,7 +449,29 @@ func (r RouteDestination) Validate() error {
 	if len(r.Name) == 0 {
 		errs = multierror.Append(errs, ErrDestinationNameEmpty)
 	}
-	for _, ep := range r.Endpoints {
+	for _, s := range r.Settings {
+		if err := s.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
+	return errs
+
+}
+
+// DestinationSetting holds the settings associated with the desination
+// +kubebuilder:object:generate=true
+type DestinationSetting struct {
+	// Weight associated with this destination.
+	// Note: Weight is not used in TCP/UDP route.
+	Weight    *uint32                `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+}
+
+// Validate the fields within the RouteDestination structure
+func (d DestinationSetting) Validate() error {
+	var errs error
+	for _, ep := range d.Endpoints {
 		if err := ep.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
@@ -466,9 +488,6 @@ type DestinationEndpoint struct {
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
 	Port uint32 `json:"port" yaml:"port"`
-	// Weight associated with this destination.
-	// Note: Weight is not used in TCP/UDP route.
-	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
@@ -493,14 +512,6 @@ func NewDestEndpoint(host string, port uint32) *DestinationEndpoint {
 	}
 }
 
-func NewDestEndpointWithWeight(host string, port uint32, weight uint32) *DestinationEndpoint {
-	return &DestinationEndpoint{
-		Host:   host,
-		Port:   port,
-		Weight: &weight,
-	}
-}
-
 // AddHeader configures a header to be added to a request or response.
 // +k8s:deepcopy-gen=true
 type AddHeader struct {
@@ -509,7 +520,7 @@ type AddHeader struct {
 	Append bool   `json:"append" yaml:"append"`
 }
 
-// Validate the fields within the AddHeader structure
+// / Validate the fields within the AddHeader structure
 func (h AddHeader) Validate() error {
 	var errs error
 	if h.Name == "" {

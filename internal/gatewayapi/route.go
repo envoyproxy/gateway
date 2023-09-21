@@ -147,18 +147,18 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 		var ruleRoutes = t.processHTTPRouteRule(httpRoute, ruleIdx, httpFiltersContext, rule)
 
 		for _, backendRef := range rule.BackendRefs {
-			endpoints, backendWeight := t.processDestEndpoints(backendRef.BackendRef, parentRef, httpRoute, resources)
+			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, httpRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
 				if route.DirectResponse == nil && route.Redirect == nil {
-					if len(endpoints) > 0 {
+					if ds != nil && len(ds.Endpoints) > 0 {
 						if route.Destination == nil {
 							route.Destination = &ir.RouteDestination{
 								Name: irRouteDestinationName(httpRoute, ruleIdx),
 							}
 						}
-						route.Destination.Endpoints = append(route.Destination.Endpoints, endpoints...)
+						route.Destination.Settings = append(route.Destination.Settings, ds)
 						route.BackendWeights.Valid += backendWeight
 
 					} else {
@@ -361,18 +361,18 @@ func (t *Translator) processGRPCRouteRules(grpcRoute *GRPCRouteContext, parentRe
 		var ruleRoutes = t.processGRPCRouteRule(grpcRoute, ruleIdx, httpFiltersContext, rule)
 
 		for _, backendRef := range rule.BackendRefs {
-			endpoints, backendWeight := t.processDestEndpoints(backendRef.BackendRef, parentRef, grpcRoute, resources)
+			ds, backendWeight := t.processDestination(backendRef.BackendRef, parentRef, grpcRoute, resources)
 			for _, route := range ruleRoutes {
 				// If the route already has a direct response or redirect configured, then it was from a filter so skip
 				// processing any destinations for this route.
 				if route.DirectResponse == nil && route.Redirect == nil {
-					if len(endpoints) > 0 {
+					if ds != nil && len(ds.Endpoints) > 0 {
 						if route.Destination == nil {
 							route.Destination = &ir.RouteDestination{
 								Name: irRouteDestinationName(grpcRoute, ruleIdx),
 							}
 						}
-						route.Destination.Endpoints = append(route.Destination.Endpoints, endpoints...)
+						route.Destination.Settings = append(route.Destination.Settings, ds)
 						route.BackendWeights.Valid += backendWeight
 
 					} else {
@@ -601,14 +601,14 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		var destEndpoints []*ir.DestinationEndpoint
+		var destSettings []*ir.DestinationSetting
 
 		// compute backends
 		for _, rule := range tlsRoute.Spec.Rules {
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
-				endpoints, _ := t.processDestEndpoints(backendRef, parentRef, tlsRoute, resources)
-				destEndpoints = append(destEndpoints, endpoints...)
+				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
+				destSettings = append(destSettings, ds)
 			}
 
 			// TODO handle:
@@ -654,8 +654,8 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 					SNIs: hosts,
 				}},
 				Destination: &ir.RouteDestination{
-					Name:      irRouteDestinationName(tlsRoute, -1 /*rule index*/),
-					Endpoints: destEndpoints,
+					Name:     irRouteDestinationName(tlsRoute, -1 /*rule index*/),
+					Settings: destSettings,
 				},
 			}
 			gwXdsIR := xdsIR[irKey]
@@ -664,7 +664,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			// Theoretically there should only be one parent ref per
 			// Route that attaches to a given Listener, so fine to just increment here, but we
 			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Endpoints) > 0 {
+			if len(irListener.Destination.Settings) > 0 {
 				listener.IncrementAttachedRoutes()
 			}
 		}
@@ -725,7 +725,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		var destEndpoints []*ir.DestinationEndpoint
+		var destSettings []*ir.DestinationSetting
 
 		// compute backends
 		if len(udpRoute.Spec.Rules) != 1 {
@@ -748,13 +748,13 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		}
 
 		backendRef := udpRoute.Spec.Rules[0].BackendRefs[0]
-		endpoints, _ := t.processDestEndpoints(backendRef, parentRef, udpRoute, resources)
+		ds, _ := t.processDestination(backendRef, parentRef, udpRoute, resources)
 		// Skip further processing if route destination is not valid
-		if len(endpoints) == 0 {
+		if ds == nil || len(ds.Endpoints) == 0 {
 			continue
 		}
 
-		destEndpoints = append(destEndpoints, endpoints...)
+		destSettings = append(destSettings, ds)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(udpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(udpRoute,
@@ -789,8 +789,8 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 				Address: "0.0.0.0",
 				Port:    uint32(containerPort),
 				Destination: &ir.RouteDestination{
-					Name:      irRouteDestinationName(udpRoute, -1 /*rule index*/),
-					Endpoints: destEndpoints,
+					Name:     irRouteDestinationName(udpRoute, -1 /*rule index*/),
+					Settings: destSettings,
 				},
 			}
 			gwXdsIR := xdsIR[irKey]
@@ -799,7 +799,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			// Theoretically there should only be one parent ref per
 			// Route that attaches to a given Listener, so fine to just increment here, but we
 			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Endpoints) > 0 {
+			if len(irListener.Destination.Settings) > 0 {
 				listener.IncrementAttachedRoutes()
 			}
 		}
@@ -861,7 +861,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
-		var destEndpoints []*ir.DestinationEndpoint
+		var destSettings []*ir.DestinationSetting
 
 		// compute backends
 		if len(tcpRoute.Spec.Rules) != 1 {
@@ -884,12 +884,12 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		}
 
 		backendRef := tcpRoute.Spec.Rules[0].BackendRefs[0]
-		endpoints, _ := t.processDestEndpoints(backendRef, parentRef, tcpRoute, resources)
+		ds, _ := t.processDestination(backendRef, parentRef, tcpRoute, resources)
 		// Skip further processing if route destination is not valid
-		if len(endpoints) == 0 {
+		if ds == nil || len(ds.Endpoints) == 0 {
 			continue
 		}
-		destEndpoints = append(destEndpoints, endpoints...)
+		destSettings = append(destSettings, ds)
 		// If no negative condition has been set for ResolvedRefs, set "ResolvedRefs=True"
 		if !parentRef.HasCondition(tcpRoute, v1beta1.RouteConditionResolvedRefs, metav1.ConditionFalse) {
 			parentRef.SetCondition(tcpRoute,
@@ -924,8 +924,8 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				Address: "0.0.0.0",
 				Port:    uint32(containerPort),
 				Destination: &ir.RouteDestination{
-					Name:      irRouteDestinationName(tcpRoute, -1 /*rule index*/),
-					Endpoints: destEndpoints,
+					Name:     irRouteDestinationName(tcpRoute, -1 /*rule index*/),
+					Settings: destSettings,
 				},
 				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
 			}
@@ -935,7 +935,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			// Theoretically there should only be one parent ref per
 			// Route that attaches to a given Listener, so fine to just increment here, but we
 			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Endpoints) > 0 {
+			if len(irListener.Destination.Settings) > 0 {
 				listener.IncrementAttachedRoutes()
 			}
 		}
@@ -962,13 +962,13 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 	}
 }
 
-// processDestEndpoints takes a backendRef and translates it into destination endpoints or sets error statuses and
+// processDestination takes a backendRef and translates it into destination setting or sets error statuses and
 // returns the weight for the backend so that 500 error responses can be returned for invalid backends in
 // the same proportion as the backend would have otherwise received
-func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
+func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 	parentRef *RouteParentContext,
 	route RouteContext,
-	resources *Resources) (endpoints []*ir.DestinationEndpoint, backendWeight uint32) {
+	resources *Resources) (ds *ir.DestinationSetting, backendWeight uint32) {
 
 	weight := uint32(1)
 	if backendRef.Weight != nil {
@@ -982,23 +982,15 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 		return nil, weight
 	}
 
+	var endpoints []*ir.DestinationEndpoint
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	// TODO: Use EndpointSlice for ServiceImport
 	case KindServiceImport:
 		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 		for _, ip := range backendIps {
-			var ep *ir.DestinationEndpoint
-			// Weights are not relevant for TCP and UDP Routes
-			if routeType == KindTCPRoute || routeType == KindUDPRoute {
-				ep = ir.NewDestEndpoint(
-					ip,
-					uint32(*backendRef.Port))
-			} else {
-				ep = ir.NewDestEndpointWithWeight(
-					ip,
-					uint32(*backendRef.Port),
-					weight)
-			}
+			ep := ir.NewDestEndpoint(
+				ip,
+				uint32(*backendRef.Port))
 			endpoints = append(endpoints, ep)
 		}
 	case KindService:
@@ -1024,19 +1016,9 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 							*endpointPort.Protocol == servicePort.Protocol &&
 							*endpoint.Conditions.Ready {
 							for _, address := range endpoint.Addresses {
-								var ep *ir.DestinationEndpoint
-								// Weights are not relevant for TCP and UDP Routes
-								if routeType == KindTCPRoute ||
-									routeType == KindUDPRoute {
-									ep = ir.NewDestEndpoint(
-										address,
-										uint32(servicePort.TargetPort.IntVal))
-								} else {
-									ep = ir.NewDestEndpointWithWeight(
-										address,
-										uint32(servicePort.TargetPort.IntVal),
-										weight)
-								}
+								ep := ir.NewDestEndpoint(
+									address,
+									uint32(servicePort.TargetPort.IntVal))
 								endpoints = append(endpoints, ep)
 							}
 						}
@@ -1045,22 +1027,18 @@ func (t *Translator) processDestEndpoints(backendRef v1beta1.BackendRef,
 			}
 		} else {
 			// Fall back to Service CluserIP routing
-			var ep *ir.DestinationEndpoint
-			if routeType == KindTCPRoute ||
-				routeType == KindUDPRoute {
-				ep = ir.NewDestEndpoint(
-					service.Spec.ClusterIP,
-					uint32(*backendRef.Port))
-			} else {
-				ep = ir.NewDestEndpointWithWeight(
-					service.Spec.ClusterIP,
-					uint32(*backendRef.Port),
-					weight)
-			}
+			ep := ir.NewDestEndpoint(
+				service.Spec.ClusterIP,
+				uint32(*backendRef.Port))
 			endpoints = append(endpoints, ep)
 		}
 	}
-	return endpoints, weight
+
+	ds = &ir.DestinationSetting{
+		Weight:    &weight,
+		Endpoints: endpoints,
+	}
+	return ds, weight
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our

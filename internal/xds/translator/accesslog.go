@@ -21,6 +21,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -240,10 +241,13 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 	for _, otel := range al.OpenTelemetry {
 		clusterName := buildClusterName("accesslog", otel.Host, otel.Port)
 
-		endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)}
+		ds := &ir.DestinationSetting{
+			Weight:    ptr.To(uint32(1)),
+			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
+		}
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         clusterName,
-			endpoints:    endpoints,
+			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      nil,
 			protocol:     HTTP2,
 			endpointType: DefaultEndpointType,
