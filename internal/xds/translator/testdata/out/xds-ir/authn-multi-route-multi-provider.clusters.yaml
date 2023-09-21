@@ -7,6 +7,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: first-route-www.test.com-dest
+  lbPolicy: LEAST_REQUEST
   name: first-route-www.test.com-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -20,6 +21,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: second-route-www.test.com-dest
+  lbPolicy: LEAST_REQUEST
   name: second-route-www.test.com-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -29,6 +31,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: localhost_443
     endpoints:
@@ -62,6 +65,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: "192_168_1_250_8080"
+  lbPolicy: LEAST_REQUEST
   name: "192_168_1_250_8080"
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

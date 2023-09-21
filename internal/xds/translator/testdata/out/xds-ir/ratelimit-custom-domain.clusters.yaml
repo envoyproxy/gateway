@@ -7,6 +7,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: first-route-dest
+  lbPolicy: LEAST_REQUEST
   name: first-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -20,6 +21,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: second-route-dest
+  lbPolicy: LEAST_REQUEST
   name: second-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -33,6 +35,7 @@
       ads: {}
       resourceApiVersion: V3
     serviceName: third-route-dest
+  lbPolicy: LEAST_REQUEST
   name: third-route-dest
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
@@ -42,6 +45,7 @@
   connectTimeout: 10s
   dnsLookupFamily: V4_ONLY
   dnsRefreshRate: 30s
+  lbPolicy: LEAST_REQUEST
   loadAssignment:
     clusterName: ratelimit_cluster
     endpoints:
