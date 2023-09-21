@@ -148,7 +148,7 @@ const (
 	// is syntactically or semantically invalid.
 	PolicyReasonInvalid gwapiv1a2.PolicyConditionReason = "Invalid"
 
-	// PolicyReasonTargetNotFound is used with the "Programmed" condition when the
+	// PolicyReasonResourceNotFound is used with the "Programmed" condition when the
 	// policy cannot find the resource type to patch to.
 	PolicyReasonResourceNotFound gwapiv1a2.PolicyConditionReason = "ResourceNotFound"
 )

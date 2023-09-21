@@ -25,7 +25,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable EnvoyPatchPolicy
 
-* By default EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
+* By default [EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attaches it
 using a `ConfigMap`. In the next step, we will update this resource to enable EnvoyPatchPolicy. 
