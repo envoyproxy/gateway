@@ -547,7 +547,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 		}
 
 		irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
+		irListener := xdsIR[irKey].GetHTTPListener(irListenerName(listener))
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
 				irListener.IsHTTP2 = true
@@ -641,29 +641,27 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			hasHostnameIntersection = true
 
 			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the TCP Listener while parsing the TLSRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.TCPListener{
-				Name:    irTLSListenerName(listener, tlsRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
-					SNIs: hosts,
-				}},
-				Destination: &ir.RouteDestination{
-					Name:      irRouteDestinationName(tlsRoute, -1 /*rule index*/),
-					Endpoints: destEndpoints,
-				},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.TCPRoute{
+					Name: irTLSRouteName(listener, tlsRoute),
+					TLS: &ir.TLS{Passthrough: &ir.TLSInspectorConfig{
+						SNIs: hosts,
+					}},
+					Destination: &ir.RouteDestination{
+						Name:      irRouteDestinationName(tlsRoute, -1 /*rule index*/),
+						Endpoints: destEndpoints,
+					},
+				}
+				irListener.Routes = append(irListener.Routes, irRoute)
 
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Endpoints) > 0 {
-				listener.IncrementAttachedRoutes()
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				if len(irRoute.Destination.Endpoints) > 0 {
+					listener.IncrementAttachedRoutes()
+				}
 			}
 		}
 
@@ -672,7 +670,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 				v1beta1.RouteConditionAccepted,
 				metav1.ConditionFalse,
 				v1beta1.RouteReasonNoMatchingListenerHostname,
-				"There were no hostname intersections between the HTTPRoute and this parent ref's Listener(s).",
+				"There were no hostname intersections between the TLSRoute and this parent ref's Listener(s).",
 			)
 		}
 
@@ -914,27 +912,25 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			}
 			accepted = true
 			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-			containerPort := servicePortToContainerPort(int32(listener.Port))
-			// Create the TCP Listener while parsing the TCPRoute since
-			// the listener directly links to a routeDestination.
-			irListener := &ir.TCPListener{
-				Name:    irTCPListenerName(listener, tcpRoute),
-				Address: "0.0.0.0",
-				Port:    uint32(containerPort),
-				Destination: &ir.RouteDestination{
-					Name:      irRouteDestinationName(tcpRoute, -1 /*rule index*/),
-					Endpoints: destEndpoints,
-				},
-				TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
-			}
 			gwXdsIR := xdsIR[irKey]
-			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
+			irListener := gwXdsIR.GetTCPListener(irListenerName(listener))
+			if irListener != nil {
+				irRoute := &ir.TCPRoute{
+					Name: irTCPRouteName(listener, tcpRoute),
+					Destination: &ir.RouteDestination{
+						Name:      irRouteDestinationName(tcpRoute, -1 /*rule index*/),
+						Endpoints: destEndpoints,
+					},
+					TLS: &ir.TLS{Terminate: irTLSConfigs(listener.tlsSecrets)},
+				}
+				irListener.Routes = append(irListener.Routes, irRoute)
 
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Endpoints) > 0 {
-				listener.IncrementAttachedRoutes()
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				if len(irRoute.Destination.Endpoints) > 0 {
+					listener.IncrementAttachedRoutes()
+				}
 			}
 		}
 

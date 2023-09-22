@@ -704,7 +704,7 @@
                       }
                     }
                   ],
-                  "name": "default/eg/tls-passthrough/backend",
+                  "name": "default/eg/tls-passthrough",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
@@ -768,7 +768,7 @@
                       ]
                     }
                   ],
-                  "name": "default/eg/tcp/backend",
+                  "name": "default/eg/tcp",
                   "perConnectionBufferLimitBytes": 32768
                 }
               }
