@@ -20,9 +20,10 @@ http:
       exact: "foo/bar"
     destination:
       name: "first-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
   - name: "second-route"
     hostname: "*"
     rateLimit:
@@ -38,9 +39,10 @@ http:
       exact: "example"
     destination:
       name: "second-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
   - name: "third-route"
     hostname: "*"
     rateLimit:
@@ -53,6 +55,7 @@ http:
       exact: "test"
     destination:
       name: "third-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

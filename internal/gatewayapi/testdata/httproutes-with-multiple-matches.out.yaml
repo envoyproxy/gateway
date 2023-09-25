@@ -288,11 +288,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-2/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
         hostname: example.com
         name: httproute/envoy-gateway/httproute-2/rule/0/match/0/example_com
         pathMatch:
@@ -307,11 +308,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 8.8.8.8
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-3/rule/0
+          settings:
+          - endpoints:
+            - host: 8.8.8.8
+              port: 8080
+            weight: 1
         hostname: example.com
         name: httproute/envoy-gateway/httproute-3/rule/0/match/0/example_com
         pathMatch:
@@ -322,11 +324,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-4/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
         headerMatches:
         - distinct: false
           exact: one
@@ -341,11 +344,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 8.8.8.8
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-5/rule/0
+          settings:
+          - endpoints:
+            - host: 8.8.8.8
+              port: 8080
+            weight: 1
         hostname: example.net
         name: httproute/envoy-gateway/httproute-5/rule/0/match/0/example_net
         pathMatch:
@@ -356,11 +360,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
         hostname: '*.com'
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_com
         pathMatch:
@@ -371,11 +376,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
         hostname: '*.net'
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*_net
         pathMatch:
@@ -386,11 +392,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/envoy-gateway/httproute-1/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
         hostname: '*'
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:

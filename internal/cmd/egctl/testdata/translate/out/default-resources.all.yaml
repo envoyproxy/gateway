@@ -64,8 +64,10 @@ envoyProxy:
             load_assignment:
               cluster_name: xds_cluster
               endpoints:
-              - lb_endpoints:
-                - endpoint:
+              - load_balancing_weight: 1
+                lb_endpoints:
+                - load_balancing_weight: 1
+                  endpoint:
                     address:
                       socket_address:
                         address: envoy-gateway
@@ -479,6 +481,8 @@ xds:
                       socketAddress:
                         address: envoy-gateway
                         portValue: 18000
+                  loadBalancingWeight: 1
+                loadBalancingWeight: 1
             name: xds_cluster
             transportSocket:
               name: envoy.transport_sockets.tls
@@ -582,6 +586,7 @@ xds:
                   socketAddress:
                     address: 127.0.0.1
                     portValue: 3000
+              loadBalancingWeight: 1
             loadBalancingWeight: 1
             locality: {}
       - endpointConfig:
@@ -594,6 +599,7 @@ xds:
                   socketAddress:
                     address: 127.0.0.1
                     portValue: 3000
+              loadBalancingWeight: 1
             loadBalancingWeight: 1
             locality: {}
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump

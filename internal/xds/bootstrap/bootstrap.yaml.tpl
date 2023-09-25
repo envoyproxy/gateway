@@ -129,8 +129,10 @@ static_resources:
     load_assignment:
       cluster_name: xds_cluster
       endpoints:
-      - lb_endpoints:
-        - endpoint:
+      - load_balancing_weight: 1
+        lb_endpoints:
+        - load_balancing_weight: 1
+          endpoint:
             address:
               socket_address:
                 address: {{ .XdsServer.Address }}

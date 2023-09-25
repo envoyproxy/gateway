@@ -27,6 +27,7 @@
             socketAddress:
               address: localhost
               portValue: 443
+        loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality: {}
   name: localhost_443

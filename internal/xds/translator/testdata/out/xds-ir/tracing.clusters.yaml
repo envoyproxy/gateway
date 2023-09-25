@@ -27,6 +27,7 @@
             socketAddress:
               address: otel-collector.monitoring.svc.cluster.local
               portValue: 4317
+        loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality: {}
   name: tracing|otel-collector.monitoring.svc.cluster.local|4317

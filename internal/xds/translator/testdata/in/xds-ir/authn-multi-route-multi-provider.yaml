@@ -35,9 +35,10 @@ http:
             claim: name
     destination:
       name: "first-route-www.test.com-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
   - name: "second-route-www.test.com"
     hostname: "*"
     pathMatch:
@@ -63,6 +64,7 @@ http:
             uri: https://192.168.1.250:8080/jwt/public-key/jwks.json
     destination:
       name: "second-route-www.test.com-dest"
-      endpoints:
-      - host: "5.6.7.8"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "5.6.7.8"
+          port: 50000

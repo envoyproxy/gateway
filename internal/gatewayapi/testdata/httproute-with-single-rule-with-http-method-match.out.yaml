@@ -100,11 +100,12 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
         headerMatches:
         - distinct: false
           exact: POST

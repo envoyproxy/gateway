@@ -98,11 +98,20 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		}
 
 		locality := &endpointv3.LocalityLbEndpoints{
-			Locality:            &corev3.Locality{},
-			LbEndpoints:         endpoints,
-			Priority:            0,
-			LoadBalancingWeight: &wrapperspb.UInt32Value{Value: *ds.Weight},
+			Locality:    &corev3.Locality{},
+			LbEndpoints: endpoints,
+			Priority:    0,
 		}
+
+		// Set locality weight
+		var weight uint32
+		if ds.Weight != nil {
+			weight = *ds.Weight
+		} else {
+			weight = 1
+		}
+		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
+
 		localities = append(localities, locality)
 	}
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}

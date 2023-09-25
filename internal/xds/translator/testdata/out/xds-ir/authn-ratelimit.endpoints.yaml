@@ -6,6 +6,7 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality: {}
 - clusterName: second-route-dest
@@ -16,6 +17,7 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality: {}
 - clusterName: third-route-dest
@@ -26,6 +28,7 @@
           socketAddress:
             address: 1.2.3.4
             portValue: 50000
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality: {}
 - clusterName: "192_168_1_250_443"
@@ -36,5 +39,6 @@
           socketAddress:
             address: 192.168.1.250
             portValue: 443
+      loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality: {}

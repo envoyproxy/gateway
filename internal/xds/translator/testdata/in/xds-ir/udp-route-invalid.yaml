@@ -3,7 +3,8 @@ udp:
   port: 10080
   destination:
     name: "udp-reoute-dest"
-    endpoints:
-    - host: ""
-    - host: "5.6.7.8"
-      port: 50001
+    settings:
+    - endpoints:
+      - host: ""
+      - host: "5.6.7.8"
+        port: 50001

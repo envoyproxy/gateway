@@ -51,6 +51,7 @@ xds:
                 socketAddress:
                   address: 1.1.1.1
                   portValue: 3000
+            loadBalancingWeight: 1
           loadBalancingWeight: 1
           locality: {}
     - endpointConfig:
@@ -63,5 +64,6 @@ xds:
                 socketAddress:
                   address: 1.1.1.1
                   portValue: 3000
+            loadBalancingWeight: 1
           loadBalancingWeight: 1
           locality: {}

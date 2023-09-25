@@ -108,17 +108,20 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          endpoints:
-          - host: 7.7.7.7
-            port: 8080
-            weight: 1
-          - host: 7.7.7.7
-            port: 8080
-            weight: 2
-          - host: 7.7.7.7
-            port: 8080
-            weight: 3
           name: httproute/default/httproute-1/rule/0
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 2
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 3
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:

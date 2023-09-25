@@ -50,6 +50,8 @@ xds:
                     socketAddress:
                       address: envoy-gateway
                       portValue: 18000
+                loadBalancingWeight: 1
+              loadBalancingWeight: 1
           name: xds_cluster
           transportSocket:
             name: envoy.transport_sockets.tls
