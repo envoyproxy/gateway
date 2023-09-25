@@ -11,8 +11,10 @@ import (
 
 func statsCommand() *cobra.Command {
 	c := &cobra.Command{
-		Use:  "stats",
-		Long: "Retrieve stats from envoy proxy.",
+		Use:     "stats",
+		Long:    "Retrieve Prometheus Stats from envoy proxy.",
+		Short:   "Retrieve stats from envoy proxy.",
+		Aliases: []string{"proxy"},
 	}
 
 	c.AddCommand(newEnvoyStatsCmd())
