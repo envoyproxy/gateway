@@ -63,6 +63,14 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	Concurrency *int32 `json:"concurrency,omitempty"`
+
+	// MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure.
+	// Setting this field to true would merge all Gateway Listeners under the parent Gateway Class.
+	// This means that the port, protocol and hostname tuple must be unique for every listener.
+	// If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition.
+	//
+	// +optional
+	MergeGateways *bool `json:"mergeGateways,omitempty"`
 }
 
 type ProxyTelemetry struct {
