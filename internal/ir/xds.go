@@ -13,8 +13,8 @@ import (
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
 
-	"google.golang.org/protobuf/types/known/durationpb"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
@@ -275,9 +275,7 @@ type HTTPRoute struct {
 	// RequestAuthentication defines the schema for authenticating HTTP requests.
 	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
-	Timeout *durationpb.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	// PerTryTimeout is the timeout per retry attempt. Number of retries defaults to 1.
-	PerTryTimeout *durationpb.Duration `json:"perTryTimeout,omitempty" yaml:"perTryTimeout,omitempty"`
+	Timeout *v1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }

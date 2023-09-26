@@ -194,13 +194,15 @@ func processTimeout(irRoute *ir.HTTPRoute, rule v1beta1.HTTPRouteRule) {
 		if rule.Timeouts.Request != nil {
 			// TODO: handle parse errors
 			d, _ := time.ParseDuration(string(*rule.Timeouts.Request))
-			irRoute.Timeout = durationpb.New(d)
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 
+		// Also set the IR Route Timeout to the backend request timeout
+		// until we introduce retries, then set it to per try timeout
 		if rule.Timeouts.BackendRequest != nil {
 			// TODO: handle parse errors
 			d, _ := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
-			irRoute.PerTryTimeout = durationpb.New(d)
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
 		}
 	}
 }
@@ -560,7 +562,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
 					Timeout:               routeRoute.Timeout,
-					PerTryTimeout:         routeRoute.PerTryTimeout,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
