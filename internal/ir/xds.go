@@ -459,7 +459,7 @@ func (r RouteDestination) Validate() error {
 
 }
 
-// DestinationSetting holds the settings associated with the desination
+// DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
 	// Weight associated with this destination.
