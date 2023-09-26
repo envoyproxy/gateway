@@ -51,6 +51,8 @@ xds:
                       socketAddress:
                         address: envoy-gateway
                         portValue: 18000
+                  loadBalancingWeight: 1
+                loadBalancingWeight: 1
             name: xds_cluster
             transportSocket:
               name: envoy.transport_sockets.tls
@@ -153,6 +155,7 @@ xds:
                     socketAddress:
                       address: envoy-ratelimit.envoy-gateway.svc.cluster.local
                       portValue: 8081
+                loadBalancingWeight: 1
               loadBalancingWeight: 1
               locality: {}
           name: ratelimit_cluster

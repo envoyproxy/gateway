@@ -104,3 +104,14 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 
 	return nil
 }
+
+func (r *Resources) GetEndpointSlicesForService(svcNamespace, svcName string) []*discoveryv1.EndpointSlice {
+	endpointSlices := []*discoveryv1.EndpointSlice{}
+	for _, endpointSlice := range r.EndpointSlices {
+		if svcNamespace == endpointSlice.Namespace &&
+			endpointSlice.GetLabels()[discoveryv1.LabelServiceName] == svcName {
+			endpointSlices = append(endpointSlices, endpointSlice)
+		}
+	}
+	return endpointSlices
+}

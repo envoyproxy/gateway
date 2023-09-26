@@ -55,10 +55,14 @@ func TestRunner(t *testing.T) {
 						},
 						Destination: &ir.RouteDestination{
 							Name: "test-dest",
-							Endpoints: []*ir.DestinationEndpoint{
+							Settings: []*ir.DestinationSetting{
 								{
-									Host: "10.11.12.13",
-									Port: 8080,
+									Endpoints: []*ir.DestinationEndpoint{
+										{
+											Host: "10.11.12.13",
+											Port: 8080,
+										},
+									},
 								},
 							},
 						},

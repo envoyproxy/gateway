@@ -20,6 +20,7 @@ http:
             uri: https://localhost/jwt/public-key/jwks.json
     destination:
       name: "first-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000

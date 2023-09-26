@@ -35,6 +35,7 @@ xds:
                   socketAddress:
                     address: raw.githubusercontent.com
                     portValue: 443
+              loadBalancingWeight: 1
             loadBalancingWeight: 1
             locality: {}
         name: raw_githubusercontent_com_443

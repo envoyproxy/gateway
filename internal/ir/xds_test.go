@@ -462,10 +462,14 @@ var (
 	// RouteDestination
 	happyRouteDestination = RouteDestination{
 		Name: "happy-dest",
-		Endpoints: []*DestinationEndpoint{
+		Settings: []*DestinationSetting{
 			{
-				Host: "10.11.12.13",
-				Port: 8080,
+				Endpoints: []*DestinationEndpoint{
+					{
+						Host: "10.11.12.13",
+						Port: 8080,
+					},
+				},
 			},
 		},
 	}
@@ -972,10 +976,14 @@ func TestValidateRouteDestination(t *testing.T) {
 			name: "invalid ip",
 			input: RouteDestination{
 				Name: "invalid ip",
-				Endpoints: []*DestinationEndpoint{
+				Settings: []*DestinationSetting{
 					{
-						Host: "example.com",
-						Port: 8080,
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com",
+								Port: 8080,
+							},
+						},
 					},
 				},
 			},
@@ -985,9 +993,13 @@ func TestValidateRouteDestination(t *testing.T) {
 			name: "missing ip",
 			input: RouteDestination{
 				Name: "missing ip",
-				Endpoints: []*DestinationEndpoint{
+				Settings: []*DestinationSetting{
 					{
-						Port: 8080,
+						Endpoints: []*DestinationEndpoint{
+							{
+								Port: 8080,
+							},
+						},
 					},
 				},
 			},
@@ -997,9 +1009,13 @@ func TestValidateRouteDestination(t *testing.T) {
 			name: "missing port",
 			input: RouteDestination{
 				Name: "missing port",
-				Endpoints: []*DestinationEndpoint{
+				Settings: []*DestinationSetting{
 					{
-						Host: "10.11.12.13",
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+							},
+						},
 					},
 				},
 			},
@@ -1008,10 +1024,14 @@ func TestValidateRouteDestination(t *testing.T) {
 		{
 			name: "missing name",
 			input: RouteDestination{
-				Endpoints: []*DestinationEndpoint{
+				Settings: []*DestinationSetting{
 					{
-						Host: "10.11.12.13",
-						Port: 8080,
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "10.11.12.13",
+								Port: 8080,
+							},
+						},
 					},
 				},
 			},

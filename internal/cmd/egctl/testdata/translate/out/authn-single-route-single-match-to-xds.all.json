@@ -81,9 +81,11 @@
                                   "portValue": 18000
                                 }
                               }
-                            }
+                            },
+                            "loadBalancingWeight": 1
                           }
-                        ]
+                        ],
+                        "loadBalancingWeight": 1
                       }
                     ]
                   },
@@ -261,7 +263,8 @@
                                 "portValue": 443
                               }
                             }
-                          }
+                          },
+                          "loadBalancingWeight": 1
                         }
                       ],
                       "loadBalancingWeight": 1,

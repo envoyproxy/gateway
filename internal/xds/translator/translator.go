@@ -213,7 +213,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			if httpRoute.Destination != nil {
 				if err := addXdsCluster(tCtx, addXdsClusterArgs{
 					name:         httpRoute.Destination.Name,
-					endpoints:    httpRoute.Destination.Endpoints,
+					settings:     httpRoute.Destination.Settings,
 					tSocket:      nil,
 					protocol:     protocol,
 					endpointType: Static,
@@ -226,7 +226,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 				for _, mirrorDest := range httpRoute.Mirrors {
 					if err := addXdsCluster(tCtx, addXdsClusterArgs{
 						name:         mirrorDest.Name,
-						endpoints:    mirrorDest.Endpoints,
+						settings:     mirrorDest.Settings,
 						tSocket:      nil,
 						protocol:     protocol,
 						endpointType: Static,
@@ -272,7 +272,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		// 1:1 between IR TCPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         tcpListener.Destination.Name,
-			endpoints:    tcpListener.Destination.Endpoints,
+			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
 			endpointType: Static,
@@ -309,7 +309,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 		// 1:1 between IR UDPListener and xDS Cluster
 		if err := addXdsCluster(tCtx, addXdsClusterArgs{
 			name:         udpListener.Destination.Name,
-			endpoints:    udpListener.Destination.Endpoints,
+			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
 			protocol:     DefaultProtocol,
 			endpointType: Static,
@@ -421,7 +421,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) err
 	}
 
 	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpointType)
-	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.endpoints)
+	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	// Use EDS for static endpoints
 	if args.endpointType == Static {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
@@ -438,7 +438,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) err
 
 type addXdsClusterArgs struct {
 	name         string
-	endpoints    []*ir.DestinationEndpoint
+	settings     []*ir.DestinationSetting
 	tSocket      *corev3.TransportSocket
 	protocol     ProtocolType
 	endpointType EndpointType

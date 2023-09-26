@@ -13,6 +13,9 @@ routes:
           unit: second
   pathMatch:
     exact: "foo/bar"
-  destinations:
-  - host: "1.2.3.4"
-    port: 50000
+  destination:
+    name: "first-route-dest"
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000

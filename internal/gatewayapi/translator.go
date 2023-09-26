@@ -66,6 +66,11 @@ type Translator struct {
 	// ratelimiting has been configured by the admin.
 	GlobalRateLimitEnabled bool
 
+	// EndpointRoutingDisabled can be set to true to use
+	// the Service Cluster IP for routing to the backend
+	// instead.
+	EndpointRoutingDisabled bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.

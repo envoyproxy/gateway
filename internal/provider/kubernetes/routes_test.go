@@ -27,6 +27,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestProcessHTTPRoutes(t *testing.T) {
@@ -90,8 +91,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1b1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+											Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
@@ -134,8 +135,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1b1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+											Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
@@ -213,8 +214,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1b1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+											Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
@@ -264,7 +265,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 											Headers: []egv1a1.HeaderMatch{
 												{
 													Name:  "x-user-id",
-													Value: gatewayapi.StringPtr("one"),
+													Value: ptr.To("one"),
 												},
 											},
 										},
@@ -302,8 +303,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1b1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+											Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
@@ -378,7 +379,7 @@ func TestProcessHTTPRoutes(t *testing.T) {
 											Headers: []egv1a1.HeaderMatch{
 												{
 													Name:  "x-user-id",
-													Value: gatewayapi.StringPtr("one"),
+													Value: ptr.To("one"),
 												},
 											},
 										},
@@ -416,8 +417,8 @@ func TestProcessHTTPRoutes(t *testing.T) {
 								Matches: []gwapiv1b1.HTTPRouteMatch{
 									{
 										Path: &gwapiv1b1.HTTPPathMatch{
-											Type:  gatewayapi.PathMatchTypePtr(gwapiv1b1.PathMatchPathPrefix),
-											Value: gatewayapi.StringPtr("/"),
+											Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+											Value: ptr.To("/"),
 										},
 									},
 								},
@@ -612,7 +613,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								Matches: []gwapiv1a2.GRPCRouteMatch{
 									{
 										Method: &gwapiv1a2.GRPCMethodMatch{
-											Method: gatewayapi.StringPtr("Ping"),
+											Method: ptr.To("Ping"),
 										},
 									},
 								},
@@ -655,7 +656,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								Matches: []gwapiv1a2.GRPCRouteMatch{
 									{
 										Method: &gwapiv1a2.GRPCMethodMatch{
-											Method: gatewayapi.StringPtr("Ping"),
+											Method: ptr.To("Ping"),
 										},
 									},
 								},
@@ -733,7 +734,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 								Matches: []gwapiv1a2.GRPCRouteMatch{
 									{
 										Method: &gwapiv1a2.GRPCMethodMatch{
-											Method: gatewayapi.StringPtr("Ping"),
+											Method: ptr.To("Ping"),
 										},
 									},
 								},
@@ -783,7 +784,7 @@ func TestProcessGRPCRoutes(t *testing.T) {
 											Headers: []egv1a1.HeaderMatch{
 												{
 													Name:  "x-user-id",
-													Value: gatewayapi.StringPtr("one"),
+													Value: ptr.To("one"),
 												},
 											},
 										},

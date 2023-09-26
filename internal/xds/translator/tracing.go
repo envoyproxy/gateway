@@ -18,6 +18,7 @@ import (
 	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -122,10 +123,13 @@ func processClusterForTracing(tCtx *types.ResourceVersionTable, tracing *ir.Trac
 
 	clusterName := buildClusterName("tracing", tracing.Provider.Host, uint32(tracing.Provider.Port))
 
-	endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))}
+	ds := &ir.DestinationSetting{
+		Weight:    ptr.To(uint32(1)),
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(tracing.Provider.Host, uint32(tracing.Provider.Port))},
+	}
 	if err := addXdsCluster(tCtx, addXdsClusterArgs{
 		name:         clusterName,
-		endpoints:    endpoints,
+		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      nil,
 		protocol:     HTTP2,
 		endpointType: DefaultEndpointType,

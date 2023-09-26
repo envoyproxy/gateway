@@ -10,9 +10,10 @@ http:
     hostname: "*"
     destination:
       name: "redirect-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     redirect:
       scheme: https
       statusCode: 302

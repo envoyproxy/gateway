@@ -25,6 +25,7 @@ import (
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -255,14 +256,17 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 				if err != nil {
 					return err
 				}
-				endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)}
+				ds := &ir.DestinationSetting{
+					Weight:    ptr.To(uint32(1)),
+					Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
+				}
 				tSocket, err := buildXdsUpstreamTLSSocket()
 				if err != nil {
 					return err
 				}
 				if err := addXdsCluster(tCtx, addXdsClusterArgs{
 					name:         jwks.name,
-					endpoints:    endpoints,
+					settings:     []*ir.DestinationSetting{ds},
 					tSocket:      tSocket,
 					protocol:     DefaultProtocol,
 					endpointType: epType,

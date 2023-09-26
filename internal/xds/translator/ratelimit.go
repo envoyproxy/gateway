@@ -27,6 +27,7 @@ import (
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
@@ -429,7 +430,10 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	clusterName := getRateLimitServiceClusterName()
 	// Create cluster if it does not exist
 	host, port := t.getRateLimitServiceGrpcHostPort()
-	endpoints := []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))}
+	ds := &ir.DestinationSetting{
+		Weight:    ptr.To(uint32(1)),
+		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))},
+	}
 
 	tSocket, err := buildRateLimitTLSocket()
 	if err != nil {
@@ -438,7 +442,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 
 	if err := addXdsCluster(tCtx, addXdsClusterArgs{
 		name:         clusterName,
-		endpoints:    endpoints,
+		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
 		protocol:     HTTP2,
 		endpointType: DefaultEndpointType,

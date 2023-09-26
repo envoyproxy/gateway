@@ -55,6 +55,7 @@
             socketAddress:
               address: envoy-ratelimit.envoy-gateway-system.svc.example-cluster.local
               portValue: 8081
+        loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality: {}
   name: ratelimit_cluster

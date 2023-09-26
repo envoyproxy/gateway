@@ -15,9 +15,10 @@ http:
     hostname: "*"
     destination:
       name: "first-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "second-listener"
   address: "0.0.0.0"
   port: 10080
@@ -34,9 +35,10 @@ http:
     hostname: "*"
     destination:
       name: "second-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "third-listener"
   address: "0.0.0.0"
   port: 10080
@@ -47,9 +49,10 @@ http:
     hostname: "*"
     destination:
       name: "third-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 - name: "fourth-listener"
   address: "0.0.0.0"
   port: 10080
@@ -60,9 +63,10 @@ http:
     hostname: "*"
     destination:
       name: "fourth-route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
 tcp:
 - name: "fifth-listener"
   address: "0.0.0.0"
@@ -73,9 +77,10 @@ tcp:
       - bar.com
   destination:
     name: "tcp-route-dest"
-    endpoints:
-    - host: "1.2.3.4"
-      port: 50000
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000
 - name: "sixth-listener"
   address: "0.0.0.0"
   port: 10080
@@ -85,6 +90,7 @@ tcp:
       - bar.net
   destination:
     name: "tls-route-dest"
-    endpoints:
-    - host: "1.2.3.4"
-      port: 50000
+    settings:
+    - endpoints:
+      - host: "1.2.3.4"
+        port: 50000

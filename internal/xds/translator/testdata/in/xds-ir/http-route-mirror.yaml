@@ -10,10 +10,12 @@ http:
     hostname: "*"
     destination:
       name: "route-dest"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     mirror:
       name: "mirror-route-dest"
-      endpoints:
-      - host: "2.3.4.5"
+      settings:
+      - endpoints:
+        - host: "2.3.4.5"

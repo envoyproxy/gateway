@@ -12,9 +12,10 @@ http:
     hostname: gateway.envoyproxy.io
     destination:
       name: "rewrite-route"
-      endpoints:
-      - host: "1.2.3.4"
-        port: 50000
+      settings:
+      - endpoints:
+        - host: "1.2.3.4"
+          port: 50000
     urlRewrite:
       path:
         fullReplace: /rewrite

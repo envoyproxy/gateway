@@ -118,9 +118,11 @@ xdsIR:
     udp:
     - address: 0.0.0.0
       destination:
-        endpoints:
-        - host: 7.7.7.7
-          port: 8162
         name: udproute/default/udproute-1/rule/-1
+        settings:
+        - endpoints:
+          - host: 7.7.7.7
+            port: 8162
+          weight: 1
       name: envoy-gateway/gateway-1/udp/udproute-1
       port: 10162

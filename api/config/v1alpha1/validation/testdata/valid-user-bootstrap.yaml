@@ -36,8 +36,10 @@ staticResources:
     loadAssignment:
       clusterName: xds_cluster
       endpoints:
-      - lbEndpoints:
-        - endpoint:
+      - loadBalancingWeight: 1
+        lbEndpoints:
+        - loadBalancingWeight: 1
+          endpoint:
             address:
               socketAddress:
                 address: envoy-gateway

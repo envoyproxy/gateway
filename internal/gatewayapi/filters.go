@@ -833,11 +833,11 @@ func (t *Translator) processRequestMirrorFilter(
 		return
 	}
 
-	mirrorEndpoints, _ := t.processDestEndpoints(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
+	ds, _ := t.processDestination(mirrorBackendRef, filterContext.ParentRef, filterContext.Route, resources)
 
 	newMirror := &ir.RouteDestination{
-		Name:      fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
-		Endpoints: mirrorEndpoints,
+		Name:     fmt.Sprintf("%s-mirror-%d", irRouteDestinationName(filterContext.Route, filterContext.RuleIdx), filterIdx),
+		Settings: []*ir.DestinationSetting{ds},
 	}
 	filterContext.Mirrors = append(filterContext.Mirrors, newMirror)
 }

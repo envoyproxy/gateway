@@ -7,9 +7,10 @@ http:
   routes:
   - destination:
       name: "first-route-dest"
-      endpoints:
-      - host: 7.7.7.7
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 7.7.7.7
+          port: 8080
     hostname: example.com
     name: envoy-gateway/httproute-2/rule/0/match/0/example.com
     pathMatch:
@@ -19,18 +20,20 @@ http:
       name: debug
   - destination:
       name: "second-route-dest"
-      endpoints:
-      - host: 8.8.8.8
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 8.8.8.8
+          port: 8080
     hostname: example.com
     name: envoy-gateway/httproute-3/rule/0/match/0/example.com
     pathMatch:
       prefix: /v1/example
   - destination:
       name: "third-route-dest"
-      endpoints:
-      - host: 7.7.7.7
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 7.7.7.7
+          port: 8080
     headerMatches:
     - exact: one
       name: version
@@ -40,36 +43,40 @@ http:
       prefix: /v1/status
   - destination:
       name: "fourth-route-dest"
-      endpoints:
-      - host: 8.8.8.8
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 8.8.8.8
+          port: 8080
     hostname: example.net
     name: envoy-gateway/httproute-5/rule/0/match/0/example.net
     pathMatch:
       prefix: /v1/status
   - destination:
       name: "fifth-route-dest"
-      endpoints:
-      - host: 7.7.7.7
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 7.7.7.7
+          port: 8080
     hostname: '*.com'
     name: envoy-gateway/httproute-1/rule/0/match/0/*.com
     pathMatch:
       prefix: /foo
   - destination:
       name: "sixth-route-dest"
-      endpoints:
-      - host: 7.7.7.7
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 7.7.7.7
+          port: 8080
     hostname: '*.net'
     name: envoy-gateway/httproute-1/rule/0/match/0/*.net
     pathMatch:
       prefix: /foo
   - destination:
       name: "seventh-route-dest"
-      endpoints:
-      - host: 7.7.7.7
-        port: 8080
+      settings:
+      - endpoints:
+        - host: 7.7.7.7
+          port: 8080
     hostname: "*"
     name: envoy-gateway/httproute-1/rule/0/match/0/*
     pathMatch:

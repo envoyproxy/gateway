@@ -68,43 +68,52 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 	return cluster
 }
 
-func buildXdsClusterLoadAssignment(clusterName string, irEndpoints []*ir.DestinationEndpoint) *endpointv3.ClusterLoadAssignment {
-	endpoints := make([]*endpointv3.LbEndpoint, 0, len(irEndpoints))
-	for _, irEp := range irEndpoints {
-		lbEndpoint := &endpointv3.LbEndpoint{
-			HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
-				Endpoint: &endpointv3.Endpoint{
-					Address: &corev3.Address{
-						Address: &corev3.Address_SocketAddress{
-							SocketAddress: &corev3.SocketAddress{
-								Protocol: corev3.SocketAddress_TCP,
-								Address:  irEp.Host,
-								PortSpecifier: &corev3.SocketAddress_PortValue{
-									PortValue: irEp.Port,
+func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
+	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
+	for _, ds := range destSettings {
+
+		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
+
+		for _, irEp := range ds.Endpoints {
+			lbEndpoint := &endpointv3.LbEndpoint{
+				HostIdentifier: &endpointv3.LbEndpoint_Endpoint{
+					Endpoint: &endpointv3.Endpoint{
+						Address: &corev3.Address{
+							Address: &corev3.Address_SocketAddress{
+								SocketAddress: &corev3.SocketAddress{
+									Protocol: corev3.SocketAddress_TCP,
+									Address:  irEp.Host,
+									PortSpecifier: &corev3.SocketAddress_PortValue{
+										PortValue: irEp.Port,
+									},
 								},
 							},
 						},
 					},
 				},
-			},
+			}
+			// Set default weight of 1 for all endpoints.
+			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: 1}
+			endpoints = append(endpoints, lbEndpoint)
 		}
-		if irEp.Weight != nil {
-			lbEndpoint.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: *irEp.Weight}
+
+		locality := &endpointv3.LocalityLbEndpoints{
+			Locality:    &corev3.Locality{},
+			LbEndpoints: endpoints,
+			Priority:    0,
 		}
-		endpoints = append(endpoints, lbEndpoint)
+
+		// Set locality weight
+		var weight uint32
+		if ds.Weight != nil {
+			weight = *ds.Weight
+		} else {
+			weight = 1
+		}
+		locality.LoadBalancingWeight = &wrapperspb.UInt32Value{Value: weight}
+
+		localities = append(localities, locality)
 	}
-
-	localities := make([]*endpointv3.LocalityLbEndpoints, 0, 1)
-	locality := &endpointv3.LocalityLbEndpoints{
-		Locality:    &corev3.Locality{},
-		LbEndpoints: endpoints,
-		Priority:    0,
-		// Each locality gets the same weight 1. There is a single locality
-		// per priority, so the weight value does not really matter, but some
-		// load balancers need the value to be set.
-		LoadBalancingWeight: &wrapperspb.UInt32Value{Value: 1}}
-	localities = append(localities, locality)
-
 	return &endpointv3.ClusterLoadAssignment{ClusterName: clusterName, Endpoints: localities}
 }
 
