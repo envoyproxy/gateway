@@ -608,7 +608,9 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			for _, backendRef := range rule.BackendRefs {
 				backendRef := backendRef
 				ds, _ := t.processDestination(backendRef, parentRef, tlsRoute, resources)
-				destSettings = append(destSettings, ds)
+				if ds != nil {
+					destSettings = append(destSettings, ds)
+				}
 			}
 
 			// TODO handle:
