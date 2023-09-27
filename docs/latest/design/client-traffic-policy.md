@@ -14,7 +14,7 @@ client and Envoy Proxy listener.
 
 ## Implementation
 `ClientTrafficPolicy` is a [Direct Policy Attachment][] type API that can be used to extend [Gateway API][]
-to define configuration that affect the connecton between the downstream client and Envoy Proxy listener.
+to define configuration that affect the connection between the downstream client and Envoy Proxy listener.
 
 ### Example
 Here is an example highlighting how a user can configure this API.
@@ -87,7 +87,9 @@ Here is a list of features that can be included in this API
 * This API resource MUST be part of same namespace as the `Gateway` resource
 * There can be only be ONE policy resource attached to a specific `Listener` (section)  within a `Gateway`
 * If the policy targets a resource but cannot attach to it, this information should be reflected
-in the Policy Status field using the `Programmed=False` condition.
+in the Policy Status field using the `Conflicted=True` condition.
+* If multiple polices target the same resource, the oldest resource (based on creation timestamp) will
+attach to the Gateway Listeners, the others wont.
 * If Policy A has a `targetRef` that includes a `sectionName` i.e. 
 it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same
 entire Gateway then
@@ -100,7 +102,7 @@ but is unable to attach to all listeners within a `Gateway`, because another pol
 a specific section (`Listener`) within that `Gateway` ?
 
 ## Alternatives
-* The project can indefintely wait for these configuration paramters to be part of the [Gateway API].
+* The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
 
 [Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment 
 [Gateway API]: https://gateway-api.sigs.k8s.io/
