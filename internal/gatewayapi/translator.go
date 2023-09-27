@@ -130,6 +130,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process EnvoyPatchPolicies
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
+	// Process ClientTrafficPolicies
+	t.ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, xdsIR)
+
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
 

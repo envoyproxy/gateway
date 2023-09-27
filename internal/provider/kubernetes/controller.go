@@ -294,6 +294,21 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 	}
 
+	// Add all ClientTrafficPolicies
+	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing clienttrafficpolicies: %v", err)
+	}
+
+	for _, policy := range clientTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
+
+	}
+
 	// For this particular Gateway, and all associated objects, check whether the
 	// namespace exists. Add to the resourceTree.
 	for ns := range resourceMap.allAssociatedNamespaces {
@@ -1510,6 +1525,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		); err != nil {
 			return err
 		}
+	}
+
+	// Watch ClientTrafficPolicy
+	ctpPredicates := []predicate.Predicate{}
+	if len(r.namespaceLabels) != 0 {
+		ctpPredicates = append(ctpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.ClientTrafficPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		ctpPredicates...,
+	); err != nil {
+		return err
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")

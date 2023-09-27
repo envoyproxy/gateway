@@ -79,6 +79,7 @@ apiGroups:
 resources:
 - authenticationfilters
 - envoypatchpolicies
+- clienttrafficpolicies
 - ratelimitfilters
 verbs:
 - get
@@ -93,6 +94,7 @@ apiGroups:
 - gateway.envoyproxy.io
 resources:
 - envoypatchpolicies/status
+- clienttrafficpolicies/status
 verbs:
 - update
 {{- end }}

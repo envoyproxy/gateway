@@ -11,6 +11,8 @@ Package v1alpha1 contains API schema definitions for the gateway.envoyproxy.io A
 
 ### Resource Types
 - [AuthenticationFilter](#authenticationfilter)
+- [ClientTrafficPolicy](#clienttrafficpolicy)
+- [ClientTrafficPolicyList](#clienttrafficpolicylist)
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [RateLimitFilter](#ratelimitfilter)
@@ -72,6 +74,55 @@ _Appears in:_
 | --- | --- |
 | `header` _string_ | Header defines the name of the HTTP request header that the JWT Claim will be saved into. |
 | `claim` _string_ | Claim is the JWT Claim that should be saved into the header : it can be a nested claim of type (eg. "claim.nested.key", "sub"). The nested claim name must use dot "." to separate the JSON name path. |
+
+
+## ClientTrafficPolicy
+
+
+
+ClientTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+
+_Appears in:_
+- [ClientTrafficPolicyList](#clienttrafficpolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `ClientTrafficPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[ClientTrafficPolicySpec](#clienttrafficpolicyspec)_ | Spec defines the desired state of ClientTrafficPolicy. |
+
+
+## ClientTrafficPolicyList
+
+
+
+ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `ClientTrafficPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[ClientTrafficPolicy](#clienttrafficpolicy) array_ |  |
+
+
+## ClientTrafficPolicySpec
+
+
+
+ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
+
+_Appears in:_
+- [ClientTrafficPolicy](#clienttrafficpolicy)
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+
+
 
 
 ## EnvoyJSONPatchConfig
