@@ -22,6 +22,14 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: gomod
+    directory: /tools/src/helm-docs
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
+    directory: /tools/src/buf
+    schedule:
+      interval: weekly
+  - package-ecosystem: gomod
     directory: /tools/src/golangci-lint
     schedule:
       interval: weekly
