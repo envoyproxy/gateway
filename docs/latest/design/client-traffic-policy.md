@@ -89,7 +89,7 @@ Here is a list of features that can be included in this API
 * If the policy targets a resource but cannot attach to it, this information should be reflected
 in the Policy Status field using the `Conflicted=True` condition.
 * If multiple polices target the same resource, the oldest resource (based on creation timestamp) will
-attach to the Gateway Listeners, the others wont.
+attach to the Gateway Listeners, the others will not.
 * If Policy A has a `targetRef` that includes a `sectionName` i.e. 
 it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same
 entire Gateway then
