@@ -2,8 +2,8 @@
 
 ## Overview
 
-This design introduces the `ClientTrafficPolicy` API allowing system administrators to configure
-behavior for how the Envoy Proxy server behaves with downstream clients.
+This design document introduces the `ClientTrafficPolicy` API allowing system administrators to configure
+the behavior for how the Envoy Proxy server behaves with downstream clients.
 
 ## Goals
 * Add an API definition to hold settings for configuring behavior of the connection between the downstream
@@ -94,12 +94,8 @@ attach to the Gateway Listeners, the others wont.
 it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same
 entire Gateway then
   * Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
-  * Policy B will be applied to the remaining Listeners within the Gateway
-
-## Open Questions
-* How should we highlight partial attachments of a Policy i.e. a Policy targets the entire `Gateway`
-but is unable to attach to all listeners within a `Gateway`, because another policy exists that targets
-a specific section (`Listener`) within that `Gateway` ?
+  * Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional
+  status condition `Overriden=True`.
 
 ## Alternatives
 * The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
