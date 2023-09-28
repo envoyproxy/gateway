@@ -1,0 +1,17 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        headers:
+        - name: user
+          stringMatch:
+            exact: jason
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+        timeout: 5s

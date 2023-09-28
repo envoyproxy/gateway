@@ -11,6 +11,7 @@ import (
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -63,6 +64,11 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 			}
 			router.Action = &routev3.Route_Route{Route: routeAction}
 		}
+	}
+
+	// Timeouts
+	if httpRoute.Timeout != nil {
+		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.Duration)
 	}
 
 	// TODO: Convert this into a generic interface for API Gateway features.

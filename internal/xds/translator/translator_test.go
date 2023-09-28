@@ -138,6 +138,10 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-rewrite-url-host",
 		},
 		{
+			name: "http-route-timeout",
+		},
+
+		{
 			name: "ratelimit",
 		},
 		{
