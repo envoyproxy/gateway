@@ -41,9 +41,6 @@ config:
       controllerName: gateway.envoyproxy.io/gatewayclass-controller
     provider:
       type: Kubernetes
-      kubernetes:
-        watch:
-          namespaces: {}
     logging:
       level:
         default: info

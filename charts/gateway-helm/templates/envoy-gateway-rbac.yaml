@@ -1,9 +1,14 @@
 {{ $watchedNamespaces := list }}
 {{ if $kube := .Values.config.envoyGateway.provider.kubernetes }}
-{{ if and $kube.watch (gt (len $kube.watch.namespaces) 0) }}
+{{ if $kube.watch }}
+{{ if or (not $kube.watch.namespaces) (eq (len $kube.watch.namespaces) 0) }}
+{{ $watchedNamespaces = list }}
+{{ else }}
 {{ $watchedNamespaces = $kube.watch.namespaces }}
 {{ end }}
 {{ end }}
+{{ end }}
+
 {{ if gt (len $watchedNamespaces) 0 }}
 {{ range $_, $ns := $watchedNamespaces }}
 ---
