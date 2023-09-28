@@ -45,7 +45,6 @@ config:
       level:
         default: info
 
-
 envoyGatewayMetricsService:
   ports:
     - name: https
