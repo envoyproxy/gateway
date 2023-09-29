@@ -8,6 +8,8 @@ package gatewayapi
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
@@ -89,6 +91,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	tlsRoutes []*TLSRouteContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
+	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -114,6 +117,8 @@ func newTranslateResult(gateways []*GatewayContext,
 		translateResult.UDPRoutes = append(translateResult.UDPRoutes, udpRoute.UDPRoute)
 	}
 
+	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
+
 	return translateResult
 }
 
@@ -131,7 +136,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	t.ProcessEnvoyPatchPolicies(resources.EnvoyPatchPolicies, xdsIR)
 
 	// Process ClientTrafficPolicies
-	t.ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR)
+	clientTrafficPolicies := ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
@@ -154,7 +159,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

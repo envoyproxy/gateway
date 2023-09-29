@@ -11,6 +11,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -18,17 +19,26 @@ import (
 	"github.com/envoyproxy/gateway/internal/status"
 )
 
+const (
+	// Use an invalid string to represent all sections (listeners) within a Gateway
+	AllSections = "/"
+)
+
 func hasSectionName(policy *egv1a1.ClientTrafficPolicy) bool {
 	return policy.Spec.TargetRef.SectionName != nil
 }
 
-func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficPolicy, gateways []*GatewayContext, xdsIR XdsIRMap) {
+func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+	gateways []*GatewayContext,
+	xdsIR XdsIRMap) []*egv1a1.ClientTrafficPolicy {
+	var res []*egv1a1.ClientTrafficPolicy
+
 	// Sort based on timestamp
 	sort.Slice(clientTrafficPolicies, func(i, j int) bool {
 		return clientTrafficPolicies[i].CreationTimestamp.Before(&(clientTrafficPolicies[j].CreationTimestamp))
 	})
 
-	noSectionNamePolicyMap := make(map[types.NamespacedName]string)
+	policyMap := make(map[types.NamespacedName]sets.Set[string])
 
 	// Translate
 	// 1. First translate Policies with a sectionName set
@@ -37,30 +47,10 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 	// before policy with no section so below loops can be flattened into 1.
 
 	for _, policy := range clientTrafficPolicies {
-		policy := policy.DeepCopy()
 		if hasSectionName(policy) {
-			gateway := getGatewayTargetRef(policy, gateways)
+			policy := policy.DeepCopy()
+			res = append(res, policy)
 
-			// Negative statuses have already been assigned so its safe to skip
-			if gateway == nil {
-				continue
-			}
-
-			translateClientTrafficPolicy(policy, xdsIR)
-
-			// Set Accepted=True
-			status.SetClientTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"ClientTrafficPolicy has been accepted.",
-			)
-		}
-	}
-
-	for _, policy := range clientTrafficPolicies {
-		policy := policy.DeepCopy()
-		if !hasSectionName(policy) {
 			gateway := getGatewayTargetRef(policy, gateways)
 
 			// Negative statuses have already been assigned so its safe to skip
@@ -74,9 +64,11 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 				Namespace: gateway.Namespace,
 			}
 
-			if val, ok := noSectionNamePolicyMap[key]; ok {
-				message := fmt.Sprintf("Unable to target Gateway, ClientTrafficPolicy %s has already attached to it",
-					val)
+			// Check if another policy targeting the same section exists
+			section := string(*(policy.Spec.TargetRef.SectionName))
+			s, ok := policyMap[key]
+			if ok && s.Has(section) {
+				message := "Unable to target section, another ClientTrafficPolicy has already attached to it"
 
 				status.SetClientTrafficPolicyCondition(policy,
 					gwv1a2.PolicyConditionAccepted,
@@ -84,12 +76,14 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 					gwv1a2.PolicyReasonConflicted,
 					message,
 				)
-
 				continue
-
 			}
 
-			noSectionNamePolicyMap[key] = policy.Name
+			// Add section to policy map
+			if s == nil {
+				policyMap[key] = sets.New[string]()
+			}
+			policyMap[key].Insert(section)
 
 			translateClientTrafficPolicy(policy, xdsIR)
 
@@ -102,6 +96,73 @@ func (t *Translator) ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a
 			)
 		}
 	}
+
+	// Policy with no section set (targeting all sections)
+	for _, policy := range clientTrafficPolicies {
+		if !hasSectionName(policy) {
+
+			policy := policy.DeepCopy()
+			res = append(res, policy)
+
+			gateway := getGatewayTargetRef(policy, gateways)
+
+			// Negative statuses have already been assigned so its safe to skip
+			if gateway == nil {
+				continue
+			}
+
+			// Check for conflicts
+			key := types.NamespacedName{
+				Name:      gateway.Name,
+				Namespace: gateway.Namespace,
+			}
+			s, ok := policyMap[key]
+			// Check if another policy targeting the same Gateway exists
+			if ok && s.Has(AllSections) {
+				message := "Unable to target Gateway, another ClientTrafficPolicy has already attached to it"
+
+				status.SetClientTrafficPolicyCondition(policy,
+					gwv1a2.PolicyConditionAccepted,
+					metav1.ConditionFalse,
+					gwv1a2.PolicyReasonConflicted,
+					message,
+				)
+
+				continue
+
+			}
+
+			// Check if another policy targeting the same Gateway exists
+			if ok && (s.Len() > 0) {
+				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", s.UnsortedList())
+
+				status.SetClientTrafficPolicyCondition(policy,
+					egv1a1.PolicyConditionOverridden,
+					metav1.ConditionTrue,
+					egv1a1.PolicyReasonOverridden,
+					message,
+				)
+			}
+
+			// Add section to policy map
+			if s == nil {
+				policyMap[key] = sets.New[string]()
+			}
+			policyMap[key].Insert(AllSections)
+
+			translateClientTrafficPolicy(policy, xdsIR)
+
+			// Set Accepted=True
+			status.SetClientTrafficPolicyCondition(policy,
+				gwv1a2.PolicyConditionAccepted,
+				metav1.ConditionTrue,
+				gwv1a2.PolicyReasonAccepted,
+				"ClientTrafficPolicy has been accepted.",
+			)
+		}
+	}
+
+	return res
 }
 
 func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*GatewayContext) *GatewayContext {

@@ -54,6 +54,21 @@ type ClientTrafficPolicyStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
+const (
+	// PolicyConditionOverridden indicates whether the policy has
+	// completely attached to all the sections within the target or not.
+	//
+	// Possible reasons for this condition to be True are:
+	//
+	// * "Overridden"
+	//
+	PolicyConditionOverridden gwapiv1a2.PolicyConditionType = "Overridden"
+
+	// PolicyReasonOverridden is used with the "Overridden" condition when the policy
+	// has been overridden by another policy targeting a section within the same target.
+	PolicyReasonOverridden gwapiv1a2.PolicyConditionReason = "Overridden"
+)
+
 //+kubebuilder:object:root=true
 
 // ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
