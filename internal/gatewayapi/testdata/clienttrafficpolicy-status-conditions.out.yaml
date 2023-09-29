@@ -114,7 +114,7 @@ clientTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: There are existing ClientTrafficPolicies that are overridding these
+      message: There are existing ClientTrafficPolicies that are overriding these
         sections [http https]
       reason: Overridden
       status: "True"
