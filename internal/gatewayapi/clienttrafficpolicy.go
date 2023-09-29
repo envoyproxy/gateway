@@ -193,5 +193,5 @@ func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Gateway
 }
 
 func translateClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy, xdsIR XdsIRMap) {
-	//TODO
+	// TODO
 }
