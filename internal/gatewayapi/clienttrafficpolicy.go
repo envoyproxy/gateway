@@ -134,7 +134,10 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 
 			// Check if another policy targeting the same Gateway exists
 			if ok && (s.Len() > 0) {
-				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", s.UnsortedList())
+				// Mantain order here to ensure status/string doesnt change with same data
+				sections := s.UnsortedList()
+				sort.Strings(sections)
+				message := fmt.Sprintf("There are existing ClientTrafficPolicies that are overriding these sections %v", sections)
 
 				status.SetClientTrafficPolicyCondition(policy,
 					egv1a1.PolicyConditionOverridden,

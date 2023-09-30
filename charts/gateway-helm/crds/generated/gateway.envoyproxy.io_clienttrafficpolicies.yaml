@@ -16,7 +16,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.conditions[?(@.type=="Programmed")].reason
+    - jsonPath: .status.conditions[?(@.type=="Accepted")].reason
       name: Status
       type: string
     - jsonPath: .metadata.creationTimestamp
