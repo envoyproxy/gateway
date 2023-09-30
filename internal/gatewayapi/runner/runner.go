@@ -147,6 +147,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(udpRoute)
 				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 			}
+			for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
+				clientTrafficPolicy := clientTrafficPolicy
+				key := utils.NamespacedName(clientTrafficPolicy)
+				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+			}
+
 		},
 	)
 	r.Logger.Info("shutting down")

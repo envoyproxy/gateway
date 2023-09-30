@@ -1262,6 +1262,35 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		)
 		r.log.Info("envoyPatchPolicy status subscriber shutting down")
 	}()
+
+	// ClientTrafficPolicy object status updater
+	go func() {
+		message.HandleSubscription(r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.ClientTrafficPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.ClientTrafficPolicy)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("clientTrafficPolicy status subscriber shutting down")
+	}()
+
 }
 
 // watchResources watches gateway api resources.
