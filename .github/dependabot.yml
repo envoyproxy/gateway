@@ -38,10 +38,6 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: gomod
-    directory: /tools/src/kustomize
-    schedule:
-      interval: weekly
-  - package-ecosystem: gomod
     directory: /tools/src/setup-envtest
     schedule:
       interval: weekly
