@@ -47,11 +47,11 @@ type ClientTrafficPolicySpec struct {
 	// Disabled by default.
 	//
 	// +optional
-	TcpKeepalive *TcpKeepalive `json:"tcpKeepalive,omitempty"`
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
 }
 
-// TcpKeepalive define the TCP Keepalive configuration.
-type TcpKeepalive struct {
+// TCPKeepalive define the TCP Keepalive configuration.
+type TCPKeepalive struct {
 	// The total number of unacknowledged probes to send before deciding
 	// the connection is dead.
 	// Defaults to 9.

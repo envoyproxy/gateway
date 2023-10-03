@@ -135,7 +135,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
-| `tcpKeepalive` _[TcpKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
+| `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 
 
 
@@ -1423,11 +1423,11 @@ _Appears in:_
 
 
 
-## TcpKeepalive
+## TCPKeepalive
 
 
 
-TcpKeepalive define the TCP Keepalive configuration.
+TCPKeepalive define the TCP Keepalive configuration.
 
 _Appears in:_
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
