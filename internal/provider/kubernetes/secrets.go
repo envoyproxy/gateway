@@ -96,6 +96,8 @@ func CreateOrUpdateSecrets(ctx context.Context, client client.Client, secrets []
 				if err := client.Create(ctx, &secret); err != nil {
 					return nil, fmt.Errorf("failed to create secret %s/%s: %w", secret.Namespace, secret.Name, err)
 				}
+			} else {
+				return nil, fmt.Errorf("failed to get secret %s/%s: %w", secret.Namespace, secret.Name, err)
 			}
 			// Update if current value is different and update arg is set.
 		} else {
