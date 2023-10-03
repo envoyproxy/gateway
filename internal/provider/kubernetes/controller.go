@@ -282,7 +282,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
 		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %v", err)
 		}
 
 		for _, policy := range envoyPatchPolicies.Items {
@@ -297,7 +297,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	// Add all ClientTrafficPolicies
 	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
 	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
-		return reconcile.Result{}, fmt.Errorf("error listing clienttrafficpolicies: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error listing ClientTrafficPolicies: %v", err)
 	}
 
 	for _, policy := range clientTrafficPolicies.Items {
