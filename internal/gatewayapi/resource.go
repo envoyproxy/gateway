@@ -45,6 +45,7 @@ type Resources struct {
 	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
 	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies    []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
+	ClientTrafficPolicies []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -62,6 +63,7 @@ func NewResources() *Resources {
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
 		ExtensionRefFilters:   []unstructured.Unstructured{},
 		EnvoyPatchPolicies:    []*egv1a1.EnvoyPatchPolicy{},
+		ClientTrafficPolicies: []*egv1a1.ClientTrafficPolicy{},
 	}
 }
 

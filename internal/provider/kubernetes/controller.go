@@ -282,7 +282,7 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
 		envoyPatchPolicies := egv1a1.EnvoyPatchPolicyList{}
 		if err := r.client.List(ctx, &envoyPatchPolicies); err != nil {
-			return reconcile.Result{}, fmt.Errorf("error listing envoypatchpolicies: %v", err)
+			return reconcile.Result{}, fmt.Errorf("error listing EnvoyPatchPolicies: %v", err)
 		}
 
 		for _, policy := range envoyPatchPolicies.Items {
@@ -292,6 +292,21 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			policy.Status = egv1a1.EnvoyPatchPolicyStatus{}
 			resourceTree.EnvoyPatchPolicies = append(resourceTree.EnvoyPatchPolicies, &policy)
 		}
+	}
+
+	// Add all ClientTrafficPolicies
+	clientTrafficPolicies := egv1a1.ClientTrafficPolicyList{}
+	if err := r.client.List(ctx, &clientTrafficPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing ClientTrafficPolicies: %v", err)
+	}
+
+	for _, policy := range clientTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.ClientTrafficPolicyStatus{}
+		resourceTree.ClientTrafficPolicies = append(resourceTree.ClientTrafficPolicies, &policy)
+
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the
@@ -1247,6 +1262,35 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		)
 		r.log.Info("envoyPatchPolicy status subscriber shutting down")
 	}()
+
+	// ClientTrafficPolicy object status updater
+	go func() {
+		message.HandleSubscription(r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.ClientTrafficPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.ClientTrafficPolicy)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("clientTrafficPolicy status subscriber shutting down")
+	}()
+
 }
 
 // watchResources watches gateway api resources.
@@ -1510,6 +1554,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		); err != nil {
 			return err
 		}
+	}
+
+	// Watch ClientTrafficPolicy
+	ctpPredicates := []predicate.Predicate{}
+	if len(r.namespaceLabels) != 0 {
+		ctpPredicates = append(ctpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.ClientTrafficPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		ctpPredicates...,
+	); err != nil {
+		return err
 	}
 
 	r.log.Info("Watching gatewayAPI related objects")
