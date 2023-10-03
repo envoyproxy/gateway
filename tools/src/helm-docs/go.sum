@@ -82,8 +82,8 @@ github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh
 github.com/mitchellh/reflectwalk v1.0.0 h1:9D+8oIskB4VJBN5SFlmc27fSlIBZaov1Wpk/IfikLNY=
 github.com/mitchellh/reflectwalk v1.0.0/go.mod h1:mSTlrgnPZtwu0c4WaC2kGObEpuNDbx0jmZXqmk4esnw=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
-github.com/norwoodj/helm-docs v1.11.0 h1:y6pakrWOPTfe1Mpt0UyR4KrDzIV3V7EDTu5NW4a2BS8=
-github.com/norwoodj/helm-docs v1.11.0/go.mod h1:rLqec59NO7YF57Rq9VlubQHMp7wcRTJhzpkcgs4lOG4=
+github.com/norwoodj/helm-docs v1.11.2 h1:S1PzImgWVZ+PRLsz3yVsvsIGqFaePOu1e4bDqYuasD4=
+github.com/norwoodj/helm-docs v1.11.2/go.mod h1:rLqec59NO7YF57Rq9VlubQHMp7wcRTJhzpkcgs4lOG4=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
