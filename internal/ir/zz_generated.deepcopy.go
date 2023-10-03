@@ -11,8 +11,7 @@
 package ir
 
 import (
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
-	apiv1alpha1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -177,7 +176,7 @@ func (in *EnvoyPatchPolicyStatus) DeepCopyInto(out *EnvoyPatchPolicyStatus) {
 	*out = *in
 	if in.Status != nil {
 		in, out := &in.Status, &out.Status
-		*out = new(apiv1alpha1.EnvoyPatchPolicyStatus)
+		*out = new(v1alpha1.EnvoyPatchPolicyStatus)
 		(*in).DeepCopyInto(*out)
 	}
 }
@@ -506,7 +505,7 @@ func (in *JwtRequestAuthentication) DeepCopyInto(out *JwtRequestAuthentication) 
 	*out = *in
 	if in.Providers != nil {
 		in, out := &in.Providers, &out.Providers
-		*out = make([]apiv1alpha1.JwtAuthenticationFilterProvider, len(*in))
+		*out = make([]v1alpha1.JwtAuthenticationFilterProvider, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}

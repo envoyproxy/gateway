@@ -15,7 +15,7 @@ import (
 	xdstype "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/pkg/errors"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/protocov"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
@@ -48,7 +48,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 	// TODO: consider add some default tags for better UX
 	for k, v := range tracing.CustomTags {
 		switch v.Type {
-		case egcfgv1a1.CustomTagTypeLiteral:
+		case egv1a1.CustomTagTypeLiteral:
 			tags = append(tags, &tracingtype.CustomTag{
 				Tag: k,
 				Type: &tracingtype.CustomTag_Literal_{
@@ -57,7 +57,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 					},
 				},
 			})
-		case egcfgv1a1.CustomTagTypeEnvironment:
+		case egv1a1.CustomTagTypeEnvironment:
 			defaultVal := ""
 			if v.Environment.DefaultValue != nil {
 				defaultVal = *v.Environment.DefaultValue
@@ -72,7 +72,7 @@ func buildHCMTracing(tracing *ir.Tracing) (*hcm.HttpConnectionManager_Tracing, e
 					},
 				},
 			})
-		case egcfgv1a1.CustomTagTypeRequestHeader:
+		case egv1a1.CustomTagTypeRequestHeader:
 			defaultVal := ""
 			if v.RequestHeader.DefaultValue != nil {
 				defaultVal = *v.RequestHeader.DefaultValue

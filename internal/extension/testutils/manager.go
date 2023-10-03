@@ -8,7 +8,7 @@ package testutils
 import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	extType "github.com/envoyproxy/gateway/internal/extension/types"
 )
 

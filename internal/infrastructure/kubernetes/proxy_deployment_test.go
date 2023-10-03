@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -78,13 +78,13 @@ func TestCreateOrUpdateProxyDeployment(t *testing.T) {
 							gatewayapi.OwningGatewayNameLabel:      infra.Proxy.Name,
 						},
 					},
-					Config: &egcfgv1a1.EnvoyProxy{
-						Spec: egcfgv1a1.EnvoyProxySpec{
-							Provider: &egcfgv1a1.EnvoyProxyProvider{
-								Type: egcfgv1a1.ProviderTypeKubernetes,
-								Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-									EnvoyDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
-										Container: &egcfgv1a1.KubernetesContainerSpec{
+					Config: &egv1a1.EnvoyProxy{
+						Spec: egv1a1.EnvoyProxySpec{
+							Provider: &egv1a1.EnvoyProxyProvider{
+								Type: egv1a1.ProviderTypeKubernetes,
+								Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+									EnvoyDeployment: &egv1a1.KubernetesDeploymentSpec{
+										Container: &egv1a1.KubernetesContainerSpec{
 											Image: pointer.String("envoyproxy/envoy-dev:v1.2.3"),
 										},
 									},

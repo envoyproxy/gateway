@@ -29,9 +29,8 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -69,7 +68,7 @@ type gatewayAPIReconciler struct {
 	store           *kubernetesProviderStore
 	namespace       string
 	namespaceLabels []string
-	envoyGateway    *egcfgv1a1.EnvoyGateway
+	envoyGateway    *egv1a1.EnvoyGateway
 
 	resources                *message.ProviderResources
 	envoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
@@ -94,7 +93,7 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
+		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == egv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
 		len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0
 	if byNamespaceSelector {
 		namespaceLabels = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
@@ -1030,7 +1029,7 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, obj client.Obje
 			}
 		}
 		return nil
-	case *egcfgv1a1.EnvoyProxy:
+	case *egv1a1.EnvoyProxy:
 		if !slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
 			base := client.MergeFrom(objType.DeepCopy())
 			objType.Finalizers = append(objType.Finalizers, gatewayClassFinalizer)
@@ -1056,7 +1055,7 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.O
 			}
 		}
 		return nil
-	case *egcfgv1a1.EnvoyProxy:
+	case *egv1a1.EnvoyProxy:
 		if slice.ContainsString(objType.Finalizers, gatewayClassFinalizer) {
 			base := client.MergeFrom(objType.DeepCopy())
 			objType.Finalizers = slice.RemoveString(objType.Finalizers, gatewayClassFinalizer)
@@ -1312,7 +1311,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egcfgv1a1.EnvoyProxy{}),
+		source.Kind(mgr.GetCache(), &egv1a1.EnvoyProxy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		epPredicates...,
 	); err != nil {
@@ -1598,7 +1597,7 @@ func (r *gatewayAPIReconciler) enqueueClass(_ context.Context, _ client.Object) 
 }
 
 func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
-	ep, ok := obj.(*egcfgv1a1.EnvoyProxy)
+	ep, ok := obj.(*egv1a1.EnvoyProxy)
 	if !ok {
 		panic(fmt.Sprintf("unsupported object type %T", obj))
 	}
@@ -1637,7 +1636,7 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 			return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
 		}
 	}
-	epList := new(egcfgv1a1.EnvoyProxyList)
+	epList := new(egv1a1.EnvoyProxyList)
 	// The EnvoyProxy must be in the same namespace as EG.
 	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
 		return fmt.Errorf("failed to list envoyproxies in namespace %s: %v", r.namespace, err)

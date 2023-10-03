@@ -15,7 +15,7 @@ run::sed() {
   fi
 }
 
-files=(docs/latest/api/config_types.md docs/latest/api/extension_types.md)
+files=(docs/latest/api/extension_types.md)
 
 # Required since Sphinx mst does not link to h4 headings.
 for file in "${files[@]}" ; do

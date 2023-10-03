@@ -14,7 +14,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/sets"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 const (
@@ -120,7 +120,7 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, error) {
+func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, error) {
 	var (
 		enablePrometheus bool
 		metricSinks      []metricSink
@@ -156,11 +156,11 @@ func GetRenderedBootstrapConfig(proxyMetrics *egcfgv1a1.ProxyMetrics) (string, e
 			// Add custom envoy proxy stats
 			for _, match := range proxyMetrics.Matches {
 				switch match.Type {
-				case egcfgv1a1.Prefix:
+				case egv1a1.Prefix:
 					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
-				case egcfgv1a1.Suffix:
+				case egv1a1.Suffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
-				case egcfgv1a1.RegularExpression:
+				case egv1a1.RegularExpression:
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 				}
 			}

@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: envoyproxies.config.gateway.envoyproxy.io
+  name: envoyproxies.gateway.envoyproxy.io
 spec:
-  group: config.gateway.envoyproxy.io
+  group: gateway.envoyproxy.io
   names:
     kind: EnvoyProxy
     listKind: EnvoyProxyList

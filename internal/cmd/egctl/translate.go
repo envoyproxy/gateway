@@ -30,9 +30,8 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
-	"github.com/envoyproxy/gateway/api/config/v1alpha1/validation"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -262,7 +261,7 @@ func translateGatewayAPIToGatewayAPI(resources *gatewayapi.Resources) (gatewayap
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1alpha1.GatewayControllerName,
+		GatewayControllerName:   egv1a1.GatewayControllerName,
 		GatewayClassName:        v1beta1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -293,7 +292,7 @@ func translateGatewayAPIToXds(dnsDomain string, resourceType string, resources *
 
 	// Translate from Gateway API to Xds IR
 	gTranslator := &gatewayapi.Translator{
-		GatewayControllerName:   egv1alpha1.GatewayControllerName,
+		GatewayControllerName:   egv1a1.GatewayControllerName,
 		GatewayClassName:        v1beta1.ObjectName(resources.GatewayClass.Name),
 		GlobalRateLimitEnabled:  true,
 		EndpointRoutingDisabled: true,
@@ -628,12 +627,12 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 		switch gvk.Kind {
 		case gatewayapi.KindEnvoyProxy:
 			typedSpec := spec.Interface()
-			envoyProxy := &egv1alpha1.EnvoyProxy{
+			envoyProxy := &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: namespace,
 				},
-				Spec: typedSpec.(egv1alpha1.EnvoyProxySpec),
+				Spec: typedSpec.(egv1a1.EnvoyProxySpec),
 			}
 			resources.EnvoyProxy = envoyProxy
 		case gatewayapi.KindGatewayClass:
@@ -878,13 +877,13 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 	if err != nil {
 		return err
 	}
-	ep := &egv1alpha1.EnvoyProxy{
+	ep := &egv1a1.EnvoyProxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      defaultEnvoyProxyName,
 		},
-		Spec: egv1alpha1.EnvoyProxySpec{
-			Bootstrap: &egv1alpha1.ProxyBootstrap{
+		Spec: egv1a1.EnvoyProxySpec{
+			Bootstrap: &egv1a1.ProxyBootstrap{
 				Value: defaultBootstrapStr,
 			},
 		},
@@ -892,7 +891,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 	resources.EnvoyProxy = ep
 	ns := v1beta1.Namespace(namespace)
 	resources.GatewayClass.Spec.ParametersRef = &v1beta1.ParametersReference{
-		Group:     v1beta1.Group(egv1alpha1.GroupVersion.Group),
+		Group:     v1beta1.Group(egv1a1.GroupVersion.Group),
 		Kind:      gatewayapi.KindEnvoyProxy,
 		Name:      defaultEnvoyProxyName,
 		Namespace: &ns,

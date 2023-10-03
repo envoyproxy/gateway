@@ -45,12 +45,6 @@ helm-readme-gen: $(tools/helm-docs)
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/crd-ref-docs)
 	$(tools/crd-ref-docs) \
-	--source-path=api/config \
-	--config=tools/crd-ref-docs/config.yaml \
-	--output-path=docs/latest/api/config_types.md \
-	--max-depth 10 \
-	--renderer=markdown
-	$(tools/crd-ref-docs) \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
 	--output-path=docs/latest/api/extension_types.md \
