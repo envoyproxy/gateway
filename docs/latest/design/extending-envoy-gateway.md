@@ -48,7 +48,7 @@ Information about the extension that Envoy Gateway needs to load is configured i
 An example configuration:
 
 ```yaml
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 extensionManager:
   resources:

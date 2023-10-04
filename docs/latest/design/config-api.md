@@ -35,14 +35,14 @@ The `EnvoyGateway` API defines the control plane configuration, e.g. Envoy Gatew
 * Since EnvoyGateway does not surface status, EnvoyGatewaySpec is inlined.
 * If data plane static configuration is required in the future, Envoy Gateway will use a separate file for this purpose.
 
-The `v1alpha1` version and `config.gateway.envoyproxy.io` API group get generated:
+The `v1alpha1` version and `gateway.envoyproxy.io` API group get generated:
 
 ```go
 // gateway/api/config/v1alpha1/doc.go
 
-// Package v1alpha1 contains API Schema definitions for the config.gateway.envoyproxy.io API group.
+// Package v1alpha1 contains API Schema definitions for the gateway.envoyproxy.io API group.
 //
-// +groupName=config.gateway.envoyproxy.io
+// +groupName=gateway.envoyproxy.io
 package v1alpha1
 ```
 
@@ -166,7 +166,7 @@ The Kubernetes provider can be configured explicitly using `provider.kubernetes`
 
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: Kubernetes
@@ -180,7 +180,7 @@ The Kubernetes provider can be configured using the `provider` field. For exampl
 
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: Kubernetes
@@ -197,7 +197,7 @@ File provider:
 
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: File
@@ -215,7 +215,7 @@ manage GatewayClasses with controllerName `foo` instead of the default `gateway.
 
 ```yaml
 $ cat << EOF > /etc/envoy-gateway/config.yaml
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
   controllerName: foo
@@ -317,7 +317,7 @@ spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
     name: example-config
-    group: config.gateway.envoyproxy.io
+    group: gateway.envoyproxy.io
     kind: EnvoyProxy
 ---
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -331,7 +331,7 @@ spec:
     protocol: HTTP
     port: 80
 ---
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: example-config

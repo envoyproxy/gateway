@@ -125,7 +125,7 @@ type OpenTelemetryEnvoyProxyAccessLog struct {
 - The following is an example to disable access log.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/accesslog/disable-accesslog.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: disable-accesslog
@@ -139,7 +139,7 @@ spec:
 - The following is an example with text format access log.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/accesslog/text-accesslog.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: text-access-logging
@@ -161,7 +161,7 @@ spec:
 - The following is an example with json format access log.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/accesslog/json-accesslog.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: json-access-logging
@@ -184,7 +184,7 @@ spec:
 - The following is an example with OpenTelemetry format access log.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/accesslog/otel-accesslog.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: otel-access-logging
@@ -209,7 +209,7 @@ spec:
 - The following is an example of sending same format to different sinks.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/accesslog/multi-sinks.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: multi-sinks

@@ -7,6 +7,6 @@ metadata:
   {{- include "eg.labels" . | nindent 4 }}
 data:
   envoy-gateway.yaml: |
-    apiVersion: config.gateway.envoyproxy.io/v1alpha1
+    apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
     {{- toYaml .Values.config.envoyGateway | nindent 4 }}

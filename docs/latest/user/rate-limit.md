@@ -100,7 +100,7 @@ metadata:
   namespace: envoy-gateway-system
 data:
   envoy-gateway.yaml: |
-    apiVersion: config.gateway.envoyproxy.io/v1alpha1
+    apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
     provider:
       type: Kubernetes
@@ -1014,7 +1014,7 @@ metadata:
   namespace: envoy-gateway-system
 data:
   envoy-gateway.yaml: |
-    apiVersion: config.gateway.envoyproxy.io/v1alpha1
+    apiVersion: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyGateway
     provider:
       type: Kubernetes

@@ -125,7 +125,7 @@ type RequestHeaderCustomTag struct {
 1. The following is an example to config tracing.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/tracing/default.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: tracing

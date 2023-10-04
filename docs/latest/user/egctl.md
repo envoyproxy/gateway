@@ -525,7 +525,7 @@ gatewayClass:
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
     parametersRef:
-      group: config.gateway.envoyproxy.io
+      group: gateway.envoyproxy.io
       kind: EnvoyProxy
       name: default-envoy-proxy
       namespace: envoy-gateway-system
