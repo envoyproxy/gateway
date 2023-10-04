@@ -17,6 +17,7 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 const (
@@ -170,16 +171,9 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 
 func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*GatewayContext) *GatewayContext {
 	targetNs := policy.Spec.TargetRef.Namespace
-
-	// Ensure Namespace is set
+	// If empty, default to namespace of policy
 	if targetNs == nil {
-		status.SetClientTrafficPolicyCondition(policy,
-			gwv1a2.PolicyConditionAccepted,
-			metav1.ConditionFalse,
-			gwv1a2.PolicyReasonInvalid,
-			"TargetRef.Namespace must be set",
-		)
-		return nil
+		targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
 	}
 
 	// Ensure policy can only target a Gateway
