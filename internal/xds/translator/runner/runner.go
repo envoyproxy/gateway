@@ -80,22 +80,21 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				result, err := t.Translate(val)
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir")
-					return
-				}
-
-				// Publish EnvoyPatchPolicyStatus
-				for _, e := range result.EnvoyPatchPolicyStatuses {
-					key := ktypes.NamespacedName{
-						Name:      e.Name,
-						Namespace: e.Namespace,
+				} else {
+					// Publish EnvoyPatchPolicyStatus
+					for _, e := range result.EnvoyPatchPolicyStatuses {
+						key := ktypes.NamespacedName{
+							Name:      e.Name,
+							Namespace: e.Namespace,
+						}
+						r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 					}
-					r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
-				}
-				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
-				result.EnvoyPatchPolicyStatuses = nil
+					// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
+					result.EnvoyPatchPolicyStatuses = nil
 
-				// Publish
-				r.Xds.Store(key, result)
+					// Publish
+					r.Xds.Store(key, result)
+				}
 			}
 		},
 	)
