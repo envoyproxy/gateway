@@ -77,7 +77,7 @@ We now have to patch the example Gateway to reference cert-manager:
 $ kubectl patch gateway/eg --patch-file - <<EOF
 metadata:
   annotations:
-    cert-manager.io/clusterissuer: selfsigned
+    cert-manager.io/cluster-issuer: selfsigned
     cert-manager.io/common-name: "Hello World!"
 spec:
   listeners:
