@@ -8,7 +8,7 @@ package types
 import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // Manager handles and maintains registered extensions and returns clients for

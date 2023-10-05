@@ -20,7 +20,7 @@ import (
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extTypes "github.com/envoyproxy/gateway/internal/extension/types"

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/naming"
 )
@@ -152,7 +152,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	}
 }
 
-func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
+func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	if envoyproxy == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
 		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
@@ -175,19 +175,19 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 	for _, accessLog := range envoyproxy.Spec.Telemetry.AccessLog.Settings {
 		for _, sink := range accessLog.Sinks {
 			switch sink.Type {
-			case configv1a1.ProxyAccessLogSinkTypeFile:
+			case egv1a1.ProxyAccessLogSinkTypeFile:
 				if sink.File == nil {
 					continue
 				}
 
 				switch accessLog.Format.Type {
-				case configv1a1.ProxyAccessLogFormatTypeText:
+				case egv1a1.ProxyAccessLogFormatTypeText:
 					al := &ir.TextAccessLog{
 						Format: accessLog.Format.Text,
 						Path:   sink.File.Path,
 					}
 					irAccessLog.Text = append(irAccessLog.Text, al)
-				case configv1a1.ProxyAccessLogFormatTypeJSON:
+				case egv1a1.ProxyAccessLogFormatTypeJSON:
 					if len(accessLog.Format.JSON) == 0 {
 						// TODO: use a default JSON format if not specified?
 						continue
@@ -199,7 +199,7 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 					}
 					irAccessLog.JSON = append(irAccessLog.JSON, al)
 				}
-			case configv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
+			case egv1a1.ProxyAccessLogSinkTypeOpenTelemetry:
 				if sink.OpenTelemetry == nil {
 					continue
 				}
@@ -211,9 +211,9 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 				}
 
 				switch accessLog.Format.Type {
-				case configv1a1.ProxyAccessLogFormatTypeJSON:
+				case egv1a1.ProxyAccessLogFormatTypeJSON:
 					al.Attributes = accessLog.Format.JSON
-				case configv1a1.ProxyAccessLogFormatTypeText:
+				case egv1a1.ProxyAccessLogFormatTypeText:
 					al.Text = accessLog.Format.Text
 				}
 
@@ -225,7 +225,7 @@ func processAccessLog(envoyproxy *configv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *v1beta1.Gateway, envoyproxy *configv1a1.EnvoyProxy) *ir.Tracing {
+func processTracing(gw *v1beta1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
 	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
@@ -236,7 +236,7 @@ func processTracing(gw *v1beta1.Gateway, envoyproxy *configv1a1.EnvoyProxy) *ir.
 	}
 }
 
-func processMetrics(envoyproxy *configv1a1.EnvoyProxy) *ir.Metrics {
+func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
 	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Metrics == nil {
 		return nil
 	}

@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -148,7 +148,7 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// Get the EnvoyProxy config to configure the deployment.
 	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
-	if provider.Type != egcfgv1a1.ProviderTypeKubernetes {
+	if provider.Type != egv1a1.ProviderTypeKubernetes {
 		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment

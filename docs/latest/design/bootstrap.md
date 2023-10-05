@@ -70,11 +70,11 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
-    group: config.gateway.envoyproxy.io/v1alpha1
+    group: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyProxy
     name: with-bootstrap-config
 ---
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: with-bootstrap-config
@@ -178,11 +178,11 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
-    group: config.gateway.envoyproxy.io/v1alpha1
+    group: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyProxy
     name: with-bootstrap-config
 ---
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: with-bootstrap-config
@@ -280,11 +280,11 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
-    group: config.gateway.envoyproxy.io/v1alpha1
+    group: gateway.envoyproxy.io/v1alpha1
     kind: EnvoyProxy
     name: with-bootstrap-config
 ---
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: with-bootstrap-config

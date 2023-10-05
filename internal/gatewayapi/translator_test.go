@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
-	egv1alpha1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
@@ -56,7 +56,7 @@ func TestTranslate(t *testing.T) {
 			mustUnmarshal(t, input, resources)
 
 			translator := &Translator{
-				GatewayControllerName:  egv1alpha1.GatewayControllerName,
+				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
 			}
@@ -243,7 +243,7 @@ func TestTranslateWithExtensionKinds(t *testing.T) {
 			mustUnmarshal(t, input, resources)
 
 			translator := &Translator{
-				GatewayControllerName:  egv1alpha1.GatewayControllerName,
+				GatewayControllerName:  egv1a1.GatewayControllerName,
 				GatewayClassName:       "envoy-gateway-class",
 				GlobalRateLimitEnabled: true,
 				ExtensionGroupKinds:    []schema.GroupKind{{Group: "foo.example.io", Kind: "Foo"}},

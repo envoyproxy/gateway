@@ -16,7 +16,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -36,7 +36,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 					Name: "test-gc",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: egcfgv1a1.GatewayControllerName,
+					ControllerName: egv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{gatewayClassFinalizer},
@@ -49,7 +49,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{"fooFinalizer"},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: egcfgv1a1.GatewayControllerName,
+					ControllerName: egv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{"fooFinalizer", gatewayClassFinalizer},
@@ -62,7 +62,7 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{gatewayClassFinalizer},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: egcfgv1a1.GatewayControllerName,
+					ControllerName: egv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{gatewayClassFinalizer},
@@ -90,12 +90,12 @@ func TestAddGatewayClassFinalizer(t *testing.T) {
 func TestAddEnvoyProxyFinalizer(t *testing.T) {
 	testCases := []struct {
 		name   string
-		ep     *egcfgv1a1.EnvoyProxy
+		ep     *egv1a1.EnvoyProxy
 		expect []string
 	}{
 		{
 			name: "envoyproxy with no finalizers",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -104,7 +104,7 @@ func TestAddEnvoyProxyFinalizer(t *testing.T) {
 		},
 		{
 			name: "envoyproxy with a different finalizer",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-ep",
 					Finalizers: []string{"fooFinalizer"},
@@ -114,7 +114,7 @@ func TestAddEnvoyProxyFinalizer(t *testing.T) {
 		},
 		{
 			name: "envoyproxy with existing gatewayclass finalizer",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-ep",
 					Finalizers: []string{gatewayClassFinalizer},
@@ -144,12 +144,12 @@ func TestAddEnvoyProxyFinalizer(t *testing.T) {
 func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
 	testCases := []struct {
 		name   string
-		ep     *egcfgv1a1.EnvoyProxy
+		ep     *egv1a1.EnvoyProxy
 		expect []string
 	}{
 		{
 			name: "envoyproxy with no finalizers",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -158,7 +158,7 @@ func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
 		},
 		{
 			name: "envoyproxy with a different finalizer",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-ep",
 					Finalizers: []string{"fooFinalizer"},
@@ -168,7 +168,7 @@ func TestRemoveEnvoyProxyFinalizer(t *testing.T) {
 		},
 		{
 			name: "envoyproxy with existing gatewayclass finalizer",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-ep",
 					Finalizers: []string{gatewayClassFinalizer},
@@ -208,7 +208,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 					Name: "test-gc",
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: egcfgv1a1.GatewayControllerName,
+					ControllerName: egv1a1.GatewayControllerName,
 				},
 			},
 			expect: nil,
@@ -221,7 +221,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{"fooFinalizer"},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: egcfgv1a1.GatewayControllerName,
+					ControllerName: egv1a1.GatewayControllerName,
 				},
 			},
 			expect: []string{"fooFinalizer"},
@@ -234,7 +234,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 					Finalizers: []string{gatewayClassFinalizer},
 				},
 				Spec: gwapiv1b1.GatewayClassSpec{
-					ControllerName: egcfgv1a1.GatewayControllerName,
+					ControllerName: egv1a1.GatewayControllerName,
 				},
 			},
 			expect: nil,
@@ -260,7 +260,7 @@ func TestRemoveGatewayClassFinalizer(t *testing.T) {
 }
 
 func TestHasManagedClass(t *testing.T) {
-	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
+	gcCtrlName := gwapiv1b1.GatewayController(egv1a1.GatewayControllerName)
 
 	testCases := []struct {
 		name     string
@@ -270,7 +270,7 @@ func TestHasManagedClass(t *testing.T) {
 	}{
 		{
 			name: "no matching gatewayclasses",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.DefaultNamespace,
 					Name:      "test-envoyproxy",
@@ -284,8 +284,8 @@ func TestHasManagedClass(t *testing.T) {
 					Spec: gwapiv1b1.GatewayClassSpec{
 						ControllerName: "SomeOtherController",
 						ParametersRef: &gwapiv1b1.ParametersReference{
-							Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-							Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+							Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+							Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 							Name:      "test-envoyproxy",
 							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 						},
@@ -304,7 +304,7 @@ func TestHasManagedClass(t *testing.T) {
 		},
 		{
 			name: "match one gatewayclass",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.DefaultNamespace,
 					Name:      "test-envoyproxy",
@@ -318,8 +318,8 @@ func TestHasManagedClass(t *testing.T) {
 					Spec: gwapiv1b1.GatewayClassSpec{
 						ControllerName: gcCtrlName,
 						ParametersRef: &gwapiv1b1.ParametersReference{
-							Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-							Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+							Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+							Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 							Name:      "test-envoyproxy",
 							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 						},
@@ -338,7 +338,7 @@ func TestHasManagedClass(t *testing.T) {
 		},
 		{
 			name: "envoyproxy in different namespace as eg",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "not-eg-ns",
 					Name:      "test-envoyproxy",
@@ -356,7 +356,7 @@ func TestHasManagedClass(t *testing.T) {
 		},
 		{
 			name: "multiple gatewayclasses one with accepted status",
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.DefaultNamespace,
 					Name:      "test-envoyproxy",
@@ -370,8 +370,8 @@ func TestHasManagedClass(t *testing.T) {
 					Spec: gwapiv1b1.GatewayClassSpec{
 						ControllerName: gcCtrlName,
 						ParametersRef: &gwapiv1b1.ParametersReference{
-							Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-							Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+							Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+							Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 							Name:      "test-envoyproxy",
 							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 						},
@@ -392,8 +392,8 @@ func TestHasManagedClass(t *testing.T) {
 					Spec: gwapiv1b1.GatewayClassSpec{
 						ControllerName: gcCtrlName,
 						ParametersRef: &gwapiv1b1.ParametersReference{
-							Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-							Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+							Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+							Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 							Name:      "test-envoyproxy",
 							Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 						},
@@ -416,7 +416,7 @@ func TestHasManagedClass(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger := logging.DefaultLogger(egcfgv1a1.LogLevelInfo)
+		logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 		r := &gatewayAPIReconciler{
 			log:             logger,
 			classController: gcCtrlName,
@@ -445,12 +445,12 @@ func TestHasManagedClass(t *testing.T) {
 }
 
 func TestProcessParamsRef(t *testing.T) {
-	gcCtrlName := gwapiv1b1.GatewayController(egcfgv1a1.GatewayControllerName)
+	gcCtrlName := gwapiv1b1.GatewayController(egv1a1.GatewayControllerName)
 
 	testCases := []struct {
 		name     string
 		gc       *gwapiv1b1.GatewayClass
-		ep       *egcfgv1a1.EnvoyProxy
+		ep       *egv1a1.EnvoyProxy
 		expected bool
 	}{
 		{
@@ -462,14 +462,14 @@ func TestProcessParamsRef(t *testing.T) {
 				Spec: gwapiv1b1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1b1.ParametersReference{
-						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 						Name:      "test",
 						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 					},
 				},
 			},
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  config.DefaultNamespace,
 					Name:       "test",
@@ -487,8 +487,8 @@ func TestProcessParamsRef(t *testing.T) {
 				Spec: gwapiv1b1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1b1.ParametersReference{
-						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 						Name:      "test",
 						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 					},
@@ -505,14 +505,14 @@ func TestProcessParamsRef(t *testing.T) {
 				Spec: gwapiv1b1.GatewayClassSpec{
 					ControllerName: gcCtrlName,
 					ParametersRef: &gwapiv1b1.ParametersReference{
-						Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-						Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+						Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+						Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 						Name:      "non-exist",
 						Namespace: gatewayapi.NamespacePtr(config.DefaultNamespace),
 					},
 				},
 			},
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.DefaultNamespace,
 					Name:      "test",
@@ -536,7 +536,7 @@ func TestProcessParamsRef(t *testing.T) {
 					},
 				},
 			},
-			ep: &egcfgv1a1.EnvoyProxy{
+			ep: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: config.DefaultNamespace,
 					Name:      "test",
@@ -550,7 +550,7 @@ func TestProcessParamsRef(t *testing.T) {
 		tc := testCases[i]
 
 		// Create the reconciler.
-		logger := logging.DefaultLogger(egcfgv1a1.LogLevelInfo)
+		logger := logging.DefaultLogger(egv1a1.LogLevelInfo)
 
 		r := &gatewayAPIReconciler{
 			log:             logger,

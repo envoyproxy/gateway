@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 

@@ -11,7 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 // GetSelector returns a label selector used to select resources
@@ -23,11 +23,11 @@ func GetSelector(labels map[string]string) *metav1.LabelSelector {
 }
 
 // ExpectedServiceSpec returns service spec.
-func ExpectedServiceSpec(service *egcfgv1a1.KubernetesServiceSpec) corev1.ServiceSpec {
+func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSpec {
 	serviceSpec := corev1.ServiceSpec{}
 	serviceSpec.Type = corev1.ServiceType(*service.Type)
 	serviceSpec.SessionAffinity = corev1.ServiceAffinityNone
-	if *service.Type == egcfgv1a1.ServiceTypeLoadBalancer {
+	if *service.Type == egv1a1.ServiceTypeLoadBalancer {
 		if service.LoadBalancerClass != nil {
 			serviceSpec.LoadBalancerClass = service.LoadBalancerClass
 		}
@@ -48,7 +48,7 @@ func CompareSvc(currentSvc, originalSvc *corev1.Service) bool {
 }
 
 // ExpectedProxyContainerEnv returns expected container envs.
-func ExpectedProxyContainerEnv(container *egcfgv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
+func ExpectedProxyContainerEnv(container *egv1a1.KubernetesContainerSpec, env []corev1.EnvVar) []corev1.EnvVar {
 	amendFunc := func(envVar corev1.EnvVar) {
 		for index, e := range env {
 			if e.Name == envVar.Name {
@@ -67,7 +67,7 @@ func ExpectedProxyContainerEnv(container *egcfgv1a1.KubernetesContainerSpec, env
 }
 
 // ExpectedDeploymentVolumes returns expected deployment volumes.
-func ExpectedDeploymentVolumes(pod *egcfgv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
+func ExpectedDeploymentVolumes(pod *egv1a1.KubernetesPodSpec, volumes []corev1.Volume) []corev1.Volume {
 	amendFunc := func(volume corev1.Volume) {
 		for index, e := range volumes {
 			if e.Name == volume.Name {
@@ -87,7 +87,7 @@ func ExpectedDeploymentVolumes(pod *egcfgv1a1.KubernetesPodSpec, volumes []corev
 }
 
 // ExpectedContainerVolumeMounts returns expected container volume mounts.
-func ExpectedContainerVolumeMounts(container *egcfgv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
+func ExpectedContainerVolumeMounts(container *egv1a1.KubernetesContainerSpec, volumeMounts []corev1.VolumeMount) []corev1.VolumeMount {
 	amendFunc := func(volumeMount corev1.VolumeMount) {
 		for index, e := range volumeMounts {
 			if e.Name == volumeMount.Name {

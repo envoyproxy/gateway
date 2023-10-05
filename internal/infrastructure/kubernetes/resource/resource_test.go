@@ -14,13 +14,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestExpectedServiceSpec(t *testing.T) {
 	type args struct {
-		service *egcfgv1a1.KubernetesServiceSpec
+		service *egv1a1.KubernetesServiceSpec
 	}
 	loadbalancerClass := "foobar"
 	tests := []struct {
@@ -30,8 +30,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 	}{
 		{
 			name: "LoadBalancer",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                  corev1.ServiceTypeLoadBalancer,
@@ -41,8 +41,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 		},
 		{
 			name: "LoadBalancerWithClass",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type:              egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:              egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				LoadBalancerClass: &loadbalancerClass,
 			}},
 			want: corev1.ServiceSpec{
@@ -54,8 +54,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 		},
 		{
 			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 				AllocateLoadBalancerNodePorts: ptr.To[bool](true),
 			}},
 			want: corev1.ServiceSpec{
@@ -67,8 +67,8 @@ func TestExpectedServiceSpec(t *testing.T) {
 		},
 		{
 			name: "ClusterIP",
-			args: args{service: &egcfgv1a1.KubernetesServiceSpec{
-				Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 			}},
 			want: corev1.ServiceSpec{
 				Type:            corev1.ServiceTypeClusterIP,
@@ -272,7 +272,7 @@ func TestCompareSvc(t *testing.T) {
 
 func TestExpectedProxyContainerEnv(t *testing.T) {
 	type args struct {
-		container *egcfgv1a1.KubernetesContainerSpec
+		container *egv1a1.KubernetesContainerSpec
 		env       []corev1.EnvVar
 	}
 	tests := []struct {
@@ -283,7 +283,7 @@ func TestExpectedProxyContainerEnv(t *testing.T) {
 		{
 			name: "TestExpectedProxyContainerEnv",
 			args: args{
-				container: &egcfgv1a1.KubernetesContainerSpec{
+				container: &egv1a1.KubernetesContainerSpec{
 					Env: []corev1.EnvVar{
 						{
 							Name:  "env_a",
@@ -343,7 +343,7 @@ func TestExpectedProxyContainerEnv(t *testing.T) {
 
 func TestExpectedDeploymentVolumes(t *testing.T) {
 	type args struct {
-		pod     *egcfgv1a1.KubernetesPodSpec
+		pod     *egv1a1.KubernetesPodSpec
 		volumes []corev1.Volume
 	}
 	tests := []struct {
@@ -354,7 +354,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 		{
 			name: "TestExpectedDeploymentVolumes",
 			args: args{
-				pod: &egcfgv1a1.KubernetesPodSpec{
+				pod: &egv1a1.KubernetesPodSpec{
 					Volumes: []corev1.Volume{
 						{
 							Name: "certs",
@@ -414,7 +414,7 @@ func TestExpectedDeploymentVolumes(t *testing.T) {
 
 func TestExpectedContainerVolumeMounts(t *testing.T) {
 	type args struct {
-		container    *egcfgv1a1.KubernetesContainerSpec
+		container    *egv1a1.KubernetesContainerSpec
 		volumeMounts []corev1.VolumeMount
 	}
 	tests := []struct {
@@ -425,7 +425,7 @@ func TestExpectedContainerVolumeMounts(t *testing.T) {
 		{
 			name: "TestExpectedContainerVolumeMounts",
 			args: args{
-				container: &egcfgv1a1.KubernetesContainerSpec{
+				container: &egv1a1.KubernetesContainerSpec{
 					VolumeMounts: []corev1.VolumeMount{
 						{
 							Name:      "certs",

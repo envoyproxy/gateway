@@ -19,7 +19,7 @@ import (
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -47,15 +47,15 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 	cfg, err := config.New()
 	require.NoError(t, err)
 
-	cfg.EnvoyGateway = &egcfgv1a1.EnvoyGateway{
+	cfg.EnvoyGateway = &egv1a1.EnvoyGateway{
 		TypeMeta: metav1.TypeMeta{},
-		EnvoyGatewaySpec: egcfgv1a1.EnvoyGatewaySpec{
-			RateLimit: &egcfgv1a1.RateLimit{
-				Backend: egcfgv1a1.RateLimitDatabaseBackend{
-					Type: egcfgv1a1.RedisBackendType,
-					Redis: &egcfgv1a1.RateLimitRedisSettings{
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{
+			RateLimit: &egv1a1.RateLimit{
+				Backend: egv1a1.RateLimitDatabaseBackend{
+					Type: egv1a1.RedisBackendType,
+					Redis: &egv1a1.RateLimitRedisSettings{
 						URL: "",
-						TLS: &egcfgv1a1.RedisTLSSettings{
+						TLS: &egv1a1.RedisTLSSettings{
 							CertificateRef: &gwapiv1b1.SecretObjectReference{
 								Name: "ratelimit-cert",
 							},

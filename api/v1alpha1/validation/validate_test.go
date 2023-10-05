@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
@@ -37,22 +37,22 @@ var (
 func TestValidateEnvoyProxy(t *testing.T) {
 	testCases := []struct {
 		name     string
-		proxy    *egcfgv1a1.EnvoyProxy
+		proxy    *egv1a1.EnvoyProxy
 		expected bool
 	}{
 		{
-			name:     "nil egcfgv1a1.EnvoyProxy",
+			name:     "nil egv1a1.EnvoyProxy",
 			proxy:    nil,
 			expected: false,
 		},
 		{
 			name: "nil provider",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
+				Spec: egv1a1.EnvoyProxySpec{
 					Provider: nil,
 				},
 			},
@@ -60,14 +60,14 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported provider",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeFile,
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeFile,
 					},
 				},
 			},
@@ -75,15 +75,15 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "nil envoy service",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: nil,
 						},
 					},
@@ -93,17 +93,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "unsupported envoy service type \"\" ",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(""),
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(""),
 							},
 						},
 					},
@@ -113,17 +113,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'NodePort'",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceType(corev1.ServiceTypeNodePort)),
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceType(corev1.ServiceTypeNodePort)),
 							},
 						},
 					},
@@ -133,17 +133,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'LoadBalancer'",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 							},
 						},
 					},
@@ -153,17 +153,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid envoy service type 'ClusterIP'",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 							},
 						},
 					},
@@ -173,17 +173,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "envoy service type 'LoadBalancer' with allocateLoadBalancerNodePorts",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer),
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
 								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
 							},
 						},
@@ -194,17 +194,17 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "non envoy service type 'LoadBalancer' with allocateLoadBalancerNodePorts",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Provider: &egcfgv1a1.EnvoyProxyProvider{
-						Type: egcfgv1a1.ProviderTypeKubernetes,
-						Kubernetes: &egcfgv1a1.EnvoyProxyKubernetesProvider{
-							EnvoyService: &egcfgv1a1.KubernetesServiceSpec{
-								Type:                          egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
 							},
 						},
@@ -215,13 +215,13 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid user bootstrap replace type",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+				Spec: egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
 						Value: validUserBootstrap,
 					},
 				},
@@ -230,14 +230,14 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "valid user bootstrap merge type",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &egcfgv1a1.ProxyBootstrap{
-						Type:  (*egcfgv1a1.BootstrapType)(pointer.String(string(egcfgv1a1.BootstrapTypeMerge))),
+				Spec: egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
+						Type:  (*egv1a1.BootstrapType)(pointer.String(string(egv1a1.BootstrapTypeMerge))),
 						Value: mergeUserBootstrap,
 					},
 				},
@@ -246,13 +246,13 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with missing admin address",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+				Spec: egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
 						Value: missingAdminAddressUserBootstrap,
 					},
 				},
@@ -261,13 +261,13 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with different dynamic resources",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+				Spec: egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
 						Value: differentDynamicResourcesUserBootstrap,
 					},
 				},
@@ -276,13 +276,13 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "user bootstrap with different xds_cluster endpoint",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Bootstrap: &egcfgv1a1.ProxyBootstrap{
+				Spec: egv1a1.EnvoyProxySpec{
+					Bootstrap: &egv1a1.ProxyBootstrap{
 						Value: differentXdsClusterAddressBootstrap,
 					},
 				},
@@ -291,18 +291,18 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "should invalid when accesslog enabled using Text format, but `text` field being empty",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Telemetry: egcfgv1a1.ProxyTelemetry{
-						AccessLog: &egcfgv1a1.ProxyAccessLog{
-							Settings: []egcfgv1a1.ProxyAccessLogSetting{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egcfgv1a1.ProxyAccessLogFormat{
-										Type: egcfgv1a1.ProxyAccessLogFormatTypeText,
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
 									},
 								},
 							},
@@ -314,23 +314,23 @@ func TestValidateEnvoyProxy(t *testing.T) {
 		},
 		{
 			name: "should invalid when accesslog enabled using File sink, but `file` field being empty",
-			proxy: &egcfgv1a1.EnvoyProxy{
+			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 					Name:      "test",
 				},
-				Spec: egcfgv1a1.EnvoyProxySpec{
-					Telemetry: egcfgv1a1.ProxyTelemetry{
-						AccessLog: &egcfgv1a1.ProxyAccessLog{
-							Settings: []egcfgv1a1.ProxyAccessLogSetting{
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
-									Format: egcfgv1a1.ProxyAccessLogFormat{
-										Type: egcfgv1a1.ProxyAccessLogFormatTypeText,
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
 										Text: pointer.String("[%START_TIME%]"),
 									},
-									Sinks: []egcfgv1a1.ProxyAccessLogSink{
+									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
-											Type: egcfgv1a1.ProxyAccessLogSinkTypeFile,
+											Type: egv1a1.ProxyAccessLogSinkTypeFile,
 										},
 									},
 								},
@@ -357,74 +357,74 @@ func TestValidateEnvoyProxy(t *testing.T) {
 }
 
 func TestEnvoyGateway(t *testing.T) {
-	envoyGateway := egcfgv1a1.DefaultEnvoyGateway()
+	envoyGateway := egv1a1.DefaultEnvoyGateway()
 	assert.True(t, envoyGateway.Provider != nil)
 	assert.True(t, envoyGateway.Gateway != nil)
 	assert.True(t, envoyGateway.Logging != nil)
 	envoyGateway.SetEnvoyGatewayDefaults()
-	assert.Equal(t, envoyGateway.Logging, egcfgv1a1.DefaultEnvoyGatewayLogging())
+	assert.Equal(t, envoyGateway.Logging, egv1a1.DefaultEnvoyGatewayLogging())
 
-	logging := egcfgv1a1.DefaultEnvoyGatewayLogging()
+	logging := egv1a1.DefaultEnvoyGatewayLogging()
 	assert.True(t, logging != nil)
-	assert.True(t, logging.Level[egcfgv1a1.LogComponentGatewayDefault] == egcfgv1a1.LogLevelInfo)
+	assert.True(t, logging.Level[egv1a1.LogComponentGatewayDefault] == egv1a1.LogLevelInfo)
 
-	gatewayLogging := &egcfgv1a1.EnvoyGatewayLogging{
+	gatewayLogging := &egv1a1.EnvoyGatewayLogging{
 		Level: logging.Level,
 	}
 	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
 	assert.True(t, gatewayLogging != nil)
-	assert.True(t, gatewayLogging.Level[egcfgv1a1.LogComponentGatewayDefault] == egcfgv1a1.LogLevelInfo)
+	assert.True(t, gatewayLogging.Level[egv1a1.LogComponentGatewayDefault] == egv1a1.LogLevelInfo)
 }
 
 func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 	type args struct {
 		component string
-		level     egcfgv1a1.LogLevel
+		level     egv1a1.LogLevel
 	}
 	tests := []struct {
 		name string
 		args args
-		want egcfgv1a1.LogLevel
+		want egv1a1.LogLevel
 	}{
 		{
 			name: "test default info level for empty level",
 			args: args{component: "", level: ""},
-			want: egcfgv1a1.LogLevelInfo,
+			want: egv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default info level for empty level",
-			args: args{component: string(egcfgv1a1.LogComponentGatewayDefault), level: ""},
-			want: egcfgv1a1.LogLevelInfo,
+			args: args{component: string(egv1a1.LogComponentGatewayDefault), level: ""},
+			want: egv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default info level for info level",
-			args: args{component: string(egcfgv1a1.LogComponentGatewayDefault), level: egcfgv1a1.LogLevelInfo},
-			want: egcfgv1a1.LogLevelInfo,
+			args: args{component: string(egv1a1.LogComponentGatewayDefault), level: egv1a1.LogLevelInfo},
+			want: egv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default error level for error level",
-			args: args{component: string(egcfgv1a1.LogComponentGatewayDefault), level: egcfgv1a1.LogLevelError},
-			want: egcfgv1a1.LogLevelError,
+			args: args{component: string(egv1a1.LogComponentGatewayDefault), level: egv1a1.LogLevelError},
+			want: egv1a1.LogLevelError,
 		},
 		{
 			name: "test gateway-api error level for error level",
-			args: args{component: string(egcfgv1a1.LogComponentGatewayAPIRunner), level: egcfgv1a1.LogLevelError},
-			want: egcfgv1a1.LogLevelError,
+			args: args{component: string(egv1a1.LogComponentGatewayAPIRunner), level: egv1a1.LogLevelError},
+			want: egv1a1.LogLevelError,
 		},
 		{
 			name: "test gateway-api info level for info level",
-			args: args{component: string(egcfgv1a1.LogComponentGatewayAPIRunner), level: egcfgv1a1.LogLevelInfo},
-			want: egcfgv1a1.LogLevelInfo,
+			args: args{component: string(egv1a1.LogComponentGatewayAPIRunner), level: egv1a1.LogLevelInfo},
+			want: egv1a1.LogLevelInfo,
 		},
 		{
 			name: "test default gateway-api warn level for info level",
-			args: args{component: string(egcfgv1a1.LogComponentGatewayAPIRunner), level: ""},
-			want: egcfgv1a1.LogLevelInfo,
+			args: args{component: string(egv1a1.LogComponentGatewayAPIRunner), level: ""},
+			want: egv1a1.LogLevelInfo,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			logging := &egcfgv1a1.EnvoyGatewayLogging{}
+			logging := &egv1a1.EnvoyGatewayLogging{}
 			if got := logging.DefaultEnvoyGatewayLoggingLevel(tt.args.level); got != tt.want {
 				t.Errorf("defaultLevel() = %v, want %v", got, tt.want)
 			}
@@ -433,9 +433,9 @@ func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
 }
 
 func TestEnvoyGatewayProvider(t *testing.T) {
-	envoyGateway := &egcfgv1a1.EnvoyGateway{
+	envoyGateway := &egv1a1.EnvoyGateway{
 		TypeMeta:         metav1.TypeMeta{},
-		EnvoyGatewaySpec: egcfgv1a1.EnvoyGatewaySpec{Provider: egcfgv1a1.DefaultEnvoyGatewayProvider()},
+		EnvoyGatewaySpec: egv1a1.EnvoyGatewaySpec{Provider: egv1a1.DefaultEnvoyGatewayProvider()},
 	}
 	assert.True(t, envoyGateway.Provider != nil)
 
@@ -443,14 +443,14 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.True(t, envoyGatewayProvider.Kubernetes == nil)
 	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
 
-	envoyGatewayProvider.Kubernetes = egcfgv1a1.DefaultEnvoyGatewayKubeProvider()
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egcfgv1a1.DefaultKubernetesDeployment(egcfgv1a1.DefaultRateLimitImage))
+	envoyGatewayProvider.Kubernetes = egv1a1.DefaultEnvoyGatewayKubeProvider()
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage))
 
-	envoyGatewayProvider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{}
+	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{}
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment == nil)
 
-	envoyGatewayProvider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
 			Replicas:  nil,
 			Pod:       nil,
 			Container: nil,
@@ -460,11 +460,11 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container == nil)
 	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
 
-	envoyGatewayProvider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
-		RateLimitDeployment: &egcfgv1a1.KubernetesDeploymentSpec{
+	envoyGatewayProvider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: &egv1a1.KubernetesDeploymentSpec{
 			Replicas: nil,
 			Pod:      nil,
-			Container: &egcfgv1a1.KubernetesContainerSpec{
+			Container: &egv1a1.KubernetesContainerSpec{
 				Resources:       nil,
 				SecurityContext: nil,
 				Image:           nil,
@@ -477,23 +477,23 @@ func TestEnvoyGatewayProvider(t *testing.T) {
 	assert.Equal(t, envoyGatewayProvider.Kubernetes, envoyGatewayKubeProvider)
 
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egcfgv1a1.DefaultKubernetesDeployment(egcfgv1a1.DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultRateLimitImage))
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, egcfgv1a1.DefaultKubernetesDeploymentReplicas())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, egv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, egcfgv1a1.DefaultKubernetesPod())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, egv1a1.DefaultKubernetesPod())
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, egcfgv1a1.DefaultKubernetesContainer(egcfgv1a1.DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, egv1a1.DefaultKubernetesContainer(egv1a1.DefaultRateLimitImage))
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, egcfgv1a1.DefaultResourceRequirements())
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, egv1a1.DefaultResourceRequirements())
 	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image != nil)
-	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, egcfgv1a1.DefaultKubernetesContainerImage(egcfgv1a1.DefaultRateLimitImage))
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, egv1a1.DefaultKubernetesContainerImage(egv1a1.DefaultRateLimitImage))
 }
 
 func TestEnvoyProxyProvider(t *testing.T) {
-	envoyProxy := &egcfgv1a1.EnvoyProxy{
-		Spec: egcfgv1a1.EnvoyProxySpec{
-			Provider: egcfgv1a1.DefaultEnvoyProxyProvider(),
+	envoyProxy := &egv1a1.EnvoyProxy{
+		Spec: egv1a1.EnvoyProxySpec{
+			Provider: egv1a1.DefaultEnvoyProxyProvider(),
 		},
 	}
 	assert.True(t, envoyProxy.Spec.Provider != nil)
@@ -510,25 +510,25 @@ func TestEnvoyProxyProvider(t *testing.T) {
 	envoyProxyProvider.GetEnvoyProxyKubeProvider()
 
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egcfgv1a1.DefaultKubernetesDeployment(egcfgv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment, egv1a1.DefaultKubernetesDeployment(egv1a1.DefaultEnvoyProxyImage))
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egcfgv1a1.DefaultKubernetesDeploymentReplicas())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Replicas, egv1a1.DefaultKubernetesDeploymentReplicas())
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egcfgv1a1.DefaultKubernetesPod())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Pod, egv1a1.DefaultKubernetesPod())
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, egcfgv1a1.DefaultKubernetesContainer(egcfgv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container, egv1a1.DefaultKubernetesContainer(egv1a1.DefaultEnvoyProxyImage))
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, egcfgv1a1.DefaultResourceRequirements())
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Resources, egv1a1.DefaultResourceRequirements())
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image != nil)
-	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, egcfgv1a1.DefaultKubernetesContainerImage(egcfgv1a1.DefaultEnvoyProxyImage))
+	assert.Equal(t, envoyProxyProvider.Kubernetes.EnvoyDeployment.Container.Image, egv1a1.DefaultKubernetesContainerImage(egv1a1.DefaultEnvoyProxyImage))
 
 	assert.True(t, envoyProxyProvider.Kubernetes.EnvoyService != nil)
-	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeLoadBalancer)))
+	assert.True(t, reflect.DeepEqual(envoyProxyProvider.Kubernetes.EnvoyService.Type, egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer)))
 }
 
 func TestEnvoyGatewayAdmin(t *testing.T) {
 	// default envoygateway config admin should not be nil
-	eg := egcfgv1a1.DefaultEnvoyGateway()
+	eg := egv1a1.DefaultEnvoyGateway()
 	assert.True(t, eg.Admin != nil)
 
 	// get default admin config from envoygateway
@@ -536,16 +536,16 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	egAdmin := eg.GetEnvoyGatewayAdmin()
 	assert.True(t, egAdmin != nil)
 	assert.True(t, egAdmin.Debug == false)
-	assert.True(t, egAdmin.Address.Port == egcfgv1a1.GatewayAdminPort)
-	assert.True(t, egAdmin.Address.Host == egcfgv1a1.GatewayAdminHost)
+	assert.True(t, egAdmin.Address.Port == egv1a1.GatewayAdminPort)
+	assert.True(t, egAdmin.Address.Host == egv1a1.GatewayAdminHost)
 
 	// override the admin config
 	// values should be updated
 	eg.Admin.Debug = true
 	eg.Admin.Address = nil
 	assert.True(t, eg.Admin.Debug == true)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == egcfgv1a1.GatewayAdminPort)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == egcfgv1a1.GatewayAdminHost)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == egv1a1.GatewayAdminPort)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == egv1a1.GatewayAdminHost)
 
 	// set eg defaults when admin is nil
 	// the admin should not be nil
@@ -553,31 +553,31 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	eg.SetEnvoyGatewayDefaults()
 	assert.True(t, eg.Admin != nil)
 	assert.True(t, eg.Admin.Debug == false)
-	assert.True(t, eg.Admin.Address.Port == egcfgv1a1.GatewayAdminPort)
-	assert.True(t, eg.Admin.Address.Host == egcfgv1a1.GatewayAdminHost)
+	assert.True(t, eg.Admin.Address.Port == egv1a1.GatewayAdminPort)
+	assert.True(t, eg.Admin.Address.Host == egv1a1.GatewayAdminHost)
 }
 
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 	cases := []struct {
-		logging   egcfgv1a1.ProxyLogging
-		component egcfgv1a1.LogComponent
-		expected  egcfgv1a1.LogLevel
+		logging   egv1a1.ProxyLogging
+		component egv1a1.LogComponent
+		expected  egv1a1.LogLevel
 	}{
 		{
-			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
-					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
-			expected: egcfgv1a1.LogLevelInfo,
+			expected: egv1a1.LogLevelInfo,
 		},
 		{
-			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
-					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
-			expected: egcfgv1a1.LogLevelInfo,
+			expected: egv1a1.LogLevelInfo,
 		},
 	}
 
@@ -591,47 +591,47 @@ func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 
 func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 	cases := []struct {
-		logging  egcfgv1a1.ProxyLogging
+		logging  egv1a1.ProxyLogging
 		expected string
 	}{
 		{
-			logging:  egcfgv1a1.ProxyLogging{},
+			logging:  egv1a1.ProxyLogging{},
 			expected: "",
 		},
 		{
-			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
-					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
 			expected: "",
 		},
 		{
-			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
-					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
-					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 				},
 			},
 			expected: "admin:warn",
 		},
 		{
-			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
-					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
-					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
-					egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelDebug,
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
+					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,
 				},
 			},
 			expected: "admin:warn,filter:debug",
 		},
 		{
-			logging: egcfgv1a1.ProxyLogging{
-				Level: map[egcfgv1a1.LogComponent]egcfgv1a1.LogLevel{
-					egcfgv1a1.LogComponentDefault: egcfgv1a1.LogLevelInfo,
-					egcfgv1a1.LogComponentAdmin:   egcfgv1a1.LogLevelWarn,
-					egcfgv1a1.LogComponentFilter:  egcfgv1a1.LogLevelDebug,
-					egcfgv1a1.LogComponentClient:  "",
+			logging: egv1a1.ProxyLogging{
+				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
+					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
+					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,
+					egv1a1.LogComponentClient:  "",
 				},
 			},
 			expected: "admin:warn,filter:debug",

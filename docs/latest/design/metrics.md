@@ -76,7 +76,7 @@ type PrometheusProvider struct {
 1. The following is an example to enable prometheus metric.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/prometheus.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: prometheus
@@ -90,7 +90,7 @@ spec:
 1. The following is an example to send metric via Open Telemetry sink.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/otel-sink.yaml"
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: otel-sink

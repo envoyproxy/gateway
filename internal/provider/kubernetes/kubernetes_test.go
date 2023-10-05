@@ -31,7 +31,6 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -105,7 +104,7 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-controllername", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-controllername", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -121,7 +120,7 @@ func testGatewayClassController(ctx context.Context, t *testing.T, provider *Pro
 func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("test-gc-accepted-status", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("test-gc-accepted-status", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -171,10 +170,10 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		require.NoError(t, cli.Delete(ctx, ep))
 	}()
 
-	gc := test.GetGatewayClass("gc-with-param-ref", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName)
 	gc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-		Group:     gwapiv1b1.Group(egcfgv1a1.GroupVersion.Group),
-		Kind:      gwapiv1b1.Kind(egcfgv1a1.KindEnvoyProxy),
+		Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
+		Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
 		Name:      epName,
 		Namespace: gatewayapi.NamespacePtr(testNs),
 	}
@@ -222,7 +221,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("gc-scheduled-status-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("gc-scheduled-status-test", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -375,7 +374,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("envoy-gateway-class", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("envoy-gateway-class", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports "Ready".
@@ -477,7 +476,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("ratelimit-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("ratelimit-test", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -653,7 +652,7 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("authen-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("authen-test", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -829,7 +828,7 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("httproute-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("httproute-test", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Ensure the GatewayClass reports ready.
@@ -1396,7 +1395,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("tlsroute-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("tlsroute-test", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	defer func() {
@@ -1537,7 +1536,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
-	gc := test.GetGatewayClass("service-cleanup-test", egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass("service-cleanup-test", egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, gc))
@@ -1692,9 +1691,9 @@ func TestNamespacedProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
-	svr.EnvoyGateway.Provider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
-		Watch: &egcfgv1a1.KubernetesWatchMode{
-			Type:       egcfgv1a1.KubernetesWatchModeTypeNamespaces,
+	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+		Watch: &egv1a1.KubernetesWatchMode{
+			Type:       egv1a1.KubernetesWatchModeTypeNamespaces,
 			Namespaces: []string{"ns1", "ns2"},
 		},
 	}
@@ -1713,7 +1712,7 @@ func TestNamespacedProvider(t *testing.T) {
 
 	cli := provider.manager.GetClient()
 	gcName := "gc-watch-ns"
-	gc := test.GetGatewayClass(gcName, egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	// Create the namespaces.
@@ -1753,9 +1752,9 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	// config to watch a subset of namespaces
-	svr.EnvoyGateway.Provider.Kubernetes = &egcfgv1a1.EnvoyGatewayKubernetesProvider{
-		Watch: &egcfgv1a1.KubernetesWatchMode{
-			Type:               egcfgv1a1.KubernetesWatchModeTypeNamespaceSelectors,
+	svr.EnvoyGateway.Provider.Kubernetes = &egv1a1.EnvoyGatewayKubernetesProvider{
+		Watch: &egv1a1.KubernetesWatchMode{
+			Type:               egv1a1.KubernetesWatchModeTypeNamespaceSelectors,
 			NamespaceSelectors: []string{"label-1", "label-2"},
 		},
 	}
@@ -1784,7 +1783,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	require.NoError(t, cli.Create(ctx, nonWatchedNS))
 
 	gcName := "gc-name"
-	gc := test.GetGatewayClass(gcName, egcfgv1a1.GatewayControllerName)
+	gc := test.GetGatewayClass(gcName, egv1a1.GatewayControllerName)
 	require.NoError(t, cli.Create(ctx, gc))
 
 	require.Eventually(t, func() bool {

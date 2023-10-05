@@ -10,7 +10,7 @@ import (
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"

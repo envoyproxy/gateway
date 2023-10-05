@@ -12,7 +12,6 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
@@ -31,9 +30,6 @@ func init() {
 		panic(err)
 	}
 	// Add Envoy Gateway types.
-	if err := egcfgv1a1.AddToScheme(scheme); err != nil {
-		panic(err)
-	}
 	if err := egv1a1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}

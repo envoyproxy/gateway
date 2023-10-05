@@ -22,7 +22,7 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
-    group: config.gateway.envoyproxy.io
+    group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: custom-proxy-config
     namespace: envoy-gateway-system
@@ -35,7 +35,7 @@ You can customize the EnvoyProxy Deployment Replicas via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -62,7 +62,7 @@ You can customize the EnvoyProxy Image via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -85,7 +85,7 @@ You can customize the EnvoyProxy Pod Annotations via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -110,7 +110,7 @@ You can customize the EnvoyProxy Deployment Resources via EnvoyProxy Config like
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -137,7 +137,7 @@ You can customize the EnvoyProxy Deployment Env via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -166,7 +166,7 @@ You can customize the EnvoyProxy Deployment Volumes or VolumeMounts via EnvoyPro
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -197,7 +197,7 @@ You can customize the EnvoyProxy Service Annotations via EnvoyProxy Config like:
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
@@ -226,7 +226,7 @@ There are two ways to customize it:
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: custom-proxy-config
