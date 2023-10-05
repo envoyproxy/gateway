@@ -135,6 +135,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 
 
 
@@ -1420,6 +1421,22 @@ _Underlying type:_ `string`
 _Appears in:_
 - [SourceMatch](#sourcematch)
 
+
+
+## TCPKeepalive
+
+
+
+TCPKeepalive define the TCP Keepalive configuration.
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `probes` _integer_ | The total number of unacknowledged probes to send before deciding the connection is dead. Defaults to 9. |
+| `idleTime` _Duration_ | The duration a connection needs to be idle before keep-alive probes start being sent. The duration format is Defaults to `7200s`. |
+| `interval` _Duration_ | The duration between keep-alive probes. Defaults to `75s`. |
 
 
 ## TracingProvider
