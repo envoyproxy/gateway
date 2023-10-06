@@ -8,7 +8,7 @@ will be rejected if it contains invalid authentication information, based on the
 proposed in this design document.
 
 Envoy Gateway leverages [Gateway API][] for configuring managed Envoy proxies. Gateway API defines core, extended, and
-implementation-specific API [support levels][] for implementors such as Envoy Gateway to expose features. Since
+implementation-specific API [support levels][] for implementers such as Envoy Gateway to expose features. Since
 implementing request authentication is not covered by `Core` or `Extended` APIs, an `Implementation-specific` API will
 be created for this purpose.
 

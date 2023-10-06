@@ -141,7 +141,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the manged Envoy deployment resource are applied. |
+| `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
 
 
 ## LogComponent

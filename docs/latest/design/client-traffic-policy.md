@@ -95,7 +95,7 @@ it targets a specific Listener within a `Gateway` and Policy B has a `targetRef`
 entire Gateway then
   * Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
   * Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional
-  status condition `Overriden=True`.
+  status condition `Overridden=True`.
 
 ## Alternatives
 * The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
