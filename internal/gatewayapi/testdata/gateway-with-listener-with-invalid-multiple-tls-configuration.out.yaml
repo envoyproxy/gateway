@@ -32,7 +32,7 @@ gateways:
       conditions:
       - lastTransitionTime: null
         message: Secret envoy-gateway/tls-secret-ecdsa-2 public key algorithm must
-          be unique, matched cerificate FQDN [foo.bar.com] has a conficting algorithm
+          be unique, matched certificate FQDN [foo.bar.com] has a conflicting algorithm
           [ECDSA].
         reason: InvalidCertificateRef
         status: "False"
