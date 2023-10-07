@@ -265,7 +265,7 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 ### Global Rate limiting
 
 * [Global rate limiting][] in Envoy Proxy can be achieved using the following -
-  * [Actions][] can be conifgured per [xDS Route][].
+  * [Actions][] can be configured per [xDS Route][].
   * If the match criteria defined within these actions is met for a specific HTTP Request, a set of key value pairs called [descriptors][]
   defined within the above actions is sent to a remote [rate limit service][], whose configuration (such as the URL for the rate limit service) is defined 
   using a [rate limit filter][].

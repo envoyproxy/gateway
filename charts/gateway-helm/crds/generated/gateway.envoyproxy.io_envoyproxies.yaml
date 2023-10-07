@@ -119,7 +119,7 @@ spec:
                       envoyDeployment:
                         description: EnvoyDeployment defines the desired state of
                           the Envoy deployment resource. If unspecified, default settings
-                          for the manged Envoy deployment resource are applied.
+                          for the managed Envoy deployment resource are applied.
                         properties:
                           container:
                             description: Container defines the resources and securityContext
@@ -3800,7 +3800,7 @@ spec:
                       envoyService:
                         description: EnvoyService defines the desired state of the
                           Envoy service resource. If unspecified, default settings
-                          for the manged Envoy service resource are applied.
+                          for the managed Envoy service resource are applied.
                         properties:
                           allocateLoadBalancerNodePorts:
                             description: AllocateLoadBalancerNodePorts defines if

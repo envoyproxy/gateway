@@ -18,7 +18,7 @@ not exposed by Envoy Gateway APIs today.
 
 ## Quickstart
 
-### Prerequistes
+### Prerequisites
 
 * Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.

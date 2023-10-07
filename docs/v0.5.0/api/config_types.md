@@ -177,7 +177,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the manged Envoy ratelimit deployment resource are applied. |
+| `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the managed Envoy ratelimit deployment resource are applied. |
 | `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
 | `overwrite_control_plane_certs` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
@@ -288,8 +288,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the manged Envoy deployment resource are applied. |
-| `envoyService` _[KubernetesServiceSpec](#kubernetesservicespec)_ | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the manged Envoy service resource are applied. |
+| `envoyDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | EnvoyDeployment defines the desired state of the Envoy deployment resource. If unspecified, default settings for the managed Envoy deployment resource are applied. |
+| `envoyService` _[KubernetesServiceSpec](#kubernetesservicespec)_ | EnvoyService defines the desired state of the Envoy service resource. If unspecified, default settings for the managed Envoy service resource are applied. |
 
 
 ## EnvoyProxyProvider

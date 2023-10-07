@@ -109,14 +109,14 @@ type EnvoyProxyProvider struct {
 // provider.
 type EnvoyProxyKubernetesProvider struct {
 	// EnvoyDeployment defines the desired state of the Envoy deployment resource.
-	// If unspecified, default settings for the manged Envoy deployment resource
+	// If unspecified, default settings for the managed Envoy deployment resource
 	// are applied.
 	//
 	// +optional
 	EnvoyDeployment *KubernetesDeploymentSpec `json:"envoyDeployment,omitempty"`
 
 	// EnvoyService defines the desired state of the Envoy service resource.
-	// If unspecified, default settings for the manged Envoy service resource
+	// If unspecified, default settings for the managed Envoy service resource
 	// are applied.
 	//
 	// +optional

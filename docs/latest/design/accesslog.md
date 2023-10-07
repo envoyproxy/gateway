@@ -4,7 +4,7 @@
 
 Envoy supports extensible accesslog to different sinks, File, gRPC etc. Envoy supports customizable access log formats using predefined fields as well as arbitrary HTTP request and response headers. Envoy supports several built-in access log filters and extension filters that are registered at runtime.
 
-Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels) for implementors such as Envoy Gateway to expose features. Since accesslog is not covered by `Core` or `Extended` APIs, EG should provide an easy to config access log formats and sinks per `EnvoyProxy`.
+Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels) for implementers such as Envoy Gateway to expose features. Since accesslog is not covered by `Core` or `Extended` APIs, EG should provide an easy to config access log formats and sinks per `EnvoyProxy`.
 
 ## Goals
 

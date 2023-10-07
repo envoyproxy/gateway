@@ -160,7 +160,7 @@ type EnvoyGatewayProvider struct {
 // EnvoyGatewayKubernetesProvider defines configuration for the Kubernetes provider.
 type EnvoyGatewayKubernetesProvider struct {
 	// RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource.
-	// If unspecified, default settings for the manged Envoy ratelimit deployment resource
+	// If unspecified, default settings for the managed Envoy ratelimit deployment resource
 	// are applied.
 	//
 	// +optional
