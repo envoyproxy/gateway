@@ -124,16 +124,14 @@ func setupRunners(cfg *config.Server) error {
 	}
 
 	pResources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
 	// Start the Provider Service
 	// It fetches the resources from the configured provider type
 	// and publishes it
 	// It also subscribes to status resources and once it receives
 	// a status resource back, it writes it out.
 	providerRunner := providerrunner.New(&providerrunner.Config{
-		Server:                   *cfg,
-		ProviderResources:        pResources,
-		EnvoyPatchPolicyStatuses: ePatchPolicyStatuses,
+		Server:            *cfg,
+		ProviderResources: pResources,
 	})
 	if err := providerRunner.Start(ctx); err != nil {
 		return err
@@ -160,11 +158,11 @@ func setupRunners(cfg *config.Server) error {
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
 	// It also computes the EnvoyPatchPolicy statuses and publishes it.
 	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server:                   *cfg,
-		XdsIR:                    xdsIR,
-		Xds:                      xds,
-		ExtensionManager:         extMgr,
-		EnvoyPatchPolicyStatuses: ePatchPolicyStatuses,
+		Server:            *cfg,
+		XdsIR:             xdsIR,
+		Xds:               xds,
+		ExtensionManager:  extMgr,
+		ProviderResources: pResources,
 	})
 	if err := xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
@@ -212,7 +210,6 @@ func setupRunners(cfg *config.Server) error {
 	<-ctx.Done()
 	// Close messages
 	pResources.Close()
-	ePatchPolicyStatuses.Close()
 	xdsIR.Close()
 	infraIR.Close()
 	xds.Close()

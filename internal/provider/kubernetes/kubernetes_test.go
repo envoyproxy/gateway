@@ -53,8 +53,7 @@ func TestProvider(t *testing.T) {
 	svr, err := config.New()
 	require.NoError(t, err)
 	resources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
-	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
 	go func() {
@@ -1699,8 +1698,7 @@ func TestNamespacedProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
-	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -1760,8 +1758,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 	}
 
 	resources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
-	provider, err := New(cliCfg, svr, resources, ePatchPolicyStatuses)
+	provider, err := New(cliCfg, svr, resources)
 	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {

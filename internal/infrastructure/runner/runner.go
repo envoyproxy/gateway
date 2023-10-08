@@ -34,8 +34,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) error {
-	var err error
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	r.mgr, err = infrastructure.NewManager(&r.Config.Server)
 	if err != nil {
@@ -50,7 +49,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	}
 
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {

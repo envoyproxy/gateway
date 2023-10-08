@@ -71,7 +71,7 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the xds-server runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
@@ -92,7 +92,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	// Start message Subscription.
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) serveXdsServer(ctx context.Context) {
