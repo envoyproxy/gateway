@@ -70,14 +70,13 @@ type gatewayAPIReconciler struct {
 	namespaceLabels []string
 	envoyGateway    *egv1a1.EnvoyGateway
 
-	resources                *message.ProviderResources
-	envoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
-	extGVKs                  []schema.GroupVersionKind
+	resources *message.ProviderResources
+	extGVKs   []schema.GroupVersionKind
 }
 
 // newGatewayAPIController
 func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.Updater,
-	resources *message.ProviderResources, eStatuses *message.EnvoyPatchPolicyStatuses) error {
+	resources *message.ProviderResources) error {
 	ctx := context.Background()
 
 	// Gather additional resources to watch from registered extensions
@@ -100,17 +99,16 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 	}
 
 	r := &gatewayAPIReconciler{
-		client:                   mgr.GetClient(),
-		log:                      cfg.Logger,
-		classController:          gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		namespace:                cfg.Namespace,
-		namespaceLabels:          namespaceLabels,
-		statusUpdater:            su,
-		resources:                resources,
-		envoyPatchPolicyStatuses: eStatuses,
-		extGVKs:                  extGVKs,
-		store:                    newProviderStore(),
-		envoyGateway:             cfg.EnvoyGateway,
+		client:          mgr.GetClient(),
+		log:             cfg.Logger,
+		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		namespace:       cfg.Namespace,
+		namespaceLabels: namespaceLabels,
+		statusUpdater:   su,
+		resources:       resources,
+		extGVKs:         extGVKs,
+		store:           newProviderStore(),
+		envoyGateway:    cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -1236,7 +1234,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// EnvoyPatchPolicy object status updater
 	go func() {
-		message.HandleSubscription(r.envoyPatchPolicyStatuses.Subscribe(ctx),
+		message.HandleSubscription(r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]) {
 				// skip delete updates.
 				if update.Delete {

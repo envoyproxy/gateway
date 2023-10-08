@@ -21,10 +21,10 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR                    *message.XdsIR
-	Xds                      *message.Xds
-	EnvoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
-	ExtensionManager         extension.Manager
+	XdsIR             *message.XdsIR
+	Xds               *message.Xds
+	ExtensionManager  extension.Manager
+	ProviderResources *message.ProviderResources
 }
 
 type Runner struct {
@@ -40,11 +40,11 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the xds-translator runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
@@ -89,7 +89,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						Name:      e.Name,
 						Namespace: e.Namespace,
 					}
-					r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
 				result.EnvoyPatchPolicyStatuses = nil

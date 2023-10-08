@@ -65,7 +65,7 @@ func New(cfg *Config) *Runner {
 }
 
 // Start starts the infrastructure runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 
 	// Set up the gRPC server and register the xDS handler.
@@ -87,7 +87,7 @@ func (r *Runner) Start(ctx context.Context) error {
 	go r.subscribeAndTranslate(ctx)
 
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) serveXdsConfigServer(ctx context.Context) {

@@ -41,11 +41,11 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the gateway-api translator runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
