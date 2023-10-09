@@ -283,6 +283,12 @@ func GatewayOwnerLabels(namespace, name string) map[string]string {
 	}
 }
 
+// GatewayClassOwnerLabel returns the GatewayCLass Owner label using
+// the provided name as the value.
+func GatewayClassOwnerLabel(name string) map[string]string {
+	return map[string]string{OwningGatewayClassLabel: name}
+}
+
 // servicePortToContainerPort translates a service port into an ephemeral
 // container port.
 func servicePortToContainerPort(servicePort int32) int32 {

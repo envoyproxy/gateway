@@ -6,6 +6,7 @@
 package gatewayapi
 
 import (
+	"github.com/envoyproxy/gateway/internal/ir"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -31,6 +32,7 @@ const (
 	// The value should be the namespace of the accepted Envoy Gateway.
 	OwningGatewayNamespaceLabel = "gateway.envoyproxy.io/owning-gateway-namespace"
 
+	OwningGatewayClassLabel = "gateway.envoyproxy.io/owning-gatewayclass"
 	// OwningGatewayNameLabel is the owner reference label used for managed infra.
 	// The value should be the name of the accepted Envoy Gateway.
 	OwningGatewayNameLabel = "gateway.envoyproxy.io/owning-gateway-name"
@@ -123,11 +125,11 @@ func newTranslateResult(gateways []*GatewayContext,
 }
 
 func (t *Translator) Translate(resources *Resources) *TranslateResult {
-	xdsIR := make(XdsIRMap)
-	infraIR := make(InfraIRMap)
-
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
+
+	// Build IR maps.
+	xdsIR, infraIR := t.InitIRs(gateways, resources)
 
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
@@ -183,4 +185,28 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 	}
 
 	return relevant
+}
+
+func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (map[string]*ir.Xds, map[string]*ir.Infra) {
+	xdsIR := make(XdsIRMap)
+	infraIR := make(InfraIRMap)
+
+	var irKey string
+	for _, gateway := range gateways {
+		gwXdsIR := &ir.Xds{}
+		gwInfraIR := ir.NewInfra()
+		if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways {
+			irKey = string(t.GatewayClassName)
+			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
+		} else {
+			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
+			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
+		}
+
+		// save the IR references in the map before the translation starts
+		xdsIR[irKey] = gwXdsIR
+		infraIR[irKey] = gwInfraIR
+	}
+
+	return xdsIR, infraIR
 }
