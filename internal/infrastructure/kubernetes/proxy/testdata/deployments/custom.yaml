@@ -34,6 +34,7 @@ spec:
         prometheus.io/scrape: "true"
     spec:
       automountServiceAccountToken: false
+      hostNetwork: true
       containers:
         - args:
             - --service-cluster default

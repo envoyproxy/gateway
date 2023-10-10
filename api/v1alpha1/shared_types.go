@@ -102,6 +102,10 @@ type KubernetesPodSpec struct {
 	//
 	// +optional
 	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// HostNetwork, If this is set to true, the pod will use host's network namespace.
+	// +optional
+	HostNetwork bool `json:"hostNetwork,omitempty"`
 }
 
 // KubernetesContainerSpec defines the desired state of the Kubernetes container resource.

@@ -177,6 +177,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 					RestartPolicy:                 corev1.RestartPolicyAlways,
 					SchedulerName:                 "default-scheduler",
 					SecurityContext:               r.rateLimitDeployment.Pod.SecurityContext,
+					HostNetwork:                   r.rateLimitDeployment.Pod.HostNetwork,
 					Volumes:                       expectedDeploymentVolumes(r.rateLimit, r.rateLimitDeployment),
 					Affinity:                      r.rateLimitDeployment.Pod.Affinity,
 					Tolerations:                   r.rateLimitDeployment.Pod.Tolerations,
