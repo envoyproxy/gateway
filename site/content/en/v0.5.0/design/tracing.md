@@ -1,5 +1,5 @@
 ---
-title: "Observability: Accesslog"
+title: "Observability: Tracing"
 ---
 
 ## Overview
