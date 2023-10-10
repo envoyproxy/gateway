@@ -22,7 +22,7 @@ The high-level goal of the Envoy Gateway project is to attract more users to Env
 
 {{% /blocks/section %}}
 
-{{% blocks/section color="secondary" %}}
+{{% blocks/section color="dark" %}}
 
 ### ***Expressive API***
 
@@ -102,7 +102,7 @@ with Envoy Proxy, xDS, or go-control-plane.
 
 {{% /blocks/section %}}
 
-{{% blocks/section color="secondary" %}}
+{{% blocks/section color="dark" %}}
 
 ## Personas
 
@@ -123,4 +123,14 @@ The infrastructure administrators are responsible for the installation, maintena
 API gateways appliances in infrastructure, such as CRDs, roles, service accounts, certificates, etc.
 Infrastructure administrators support the needs of application developers by managing instances of Envoy Gateway.
 
+---
+
 {{% /blocks/section %}}
+
+{{% blocks/lead type="row" color="white" %}}
+
+<img src="/img/cncf.svg" alt="CNCF" width="40%">
+
+---
+Member of the [Envoy Proxy](https://www.envoyproxy.io/) family aimed at significantly decreasing the barrier to entry when using Envoy for **API Gateway**.
+{{% /blocks/lead %}}
