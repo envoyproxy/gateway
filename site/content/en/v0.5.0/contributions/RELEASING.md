@@ -131,7 +131,28 @@ export GITHUB_REMOTE=origin
    4. Generate the versioned release docs:
 
    ``` shell
-      make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}
+      make docs-release TAG=v${MAJOR_VERSION}.${MINOR_VERSION}.0
+   ```
+
+   5. Update the `Get Started` and `Contributing` button referred link in `site/content/en/_index.md`:
+
+   ```shell
+      <a class="btn btn-lg btn-primary me-3 mb-4" href="/v0.5.0">
+      Get Started <i class="fas fa-arrow-alt-circle-right ms-2"></i>
+      </a>
+      <a class="btn btn-lg btn-secondary me-3 mb-4" href="/v0.5.0/contributions">
+      Contributing <i class="fa fa-heartbeat ms-2 "></i>
+      </a>
+   ```
+
+   6. Uodate the `Documentation` referred link on the menu in `site/hugo.toml`:
+
+   ```shell
+   [[menu.main]]
+      name = "Documentation"
+      weight = -101
+      pre = "<i class='fas fa-book pr-2'></i>"
+      url = "/v0.5.0"
    ```
 
 3. Sign, commit, and push your changes to your fork.

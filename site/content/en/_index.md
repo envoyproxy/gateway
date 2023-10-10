@@ -3,11 +3,11 @@ title: Envoy Gateway
 ---
 
 {{< blocks/cover title="Welcome to Envoy Gateway!" image_anchor="top" height="full" >}}
-<a class="btn btn-lg btn-primary me-3 mb-4" href="/latest">
-  Get Started <i class="fas fa-arrow-alt-circle-right ms-2"></i>
+<a class="btn btn-lg btn-primary me-3 mb-4" href="/v0.5.0">
+  GET STARTED <i class="fas fa-arrow-alt-circle-right ms-2"></i>
 </a>
-<a class="btn btn-lg btn-secondary me-3 mb-4" href="/latest/contributions">
-  Contributing <i class="fa fa-heartbeat ms-2 "></i>
+<a class="btn btn-lg btn-secondary me-3 mb-4" href="/v0.5.0/contributions">
+  CONTRIBUTING <i class="fa fa-heartbeat ms-2 "></i>
 </a>
 <p class="lead mt-5">Manages Envoy Proxy as a Standalone or Kubernetes-based Application Gateway</p>
 {{< blocks/link-down color="white" >}}
@@ -19,7 +19,7 @@ Manage **Envoy Proxy** as a **Standalone** or **Kubernetes-based** Application G
 **Gateway API** are used to **dynamically** provision and configure the managed Envoy Proxies.
 {{% /blocks/lead %}}
 
-{{% blocks/section type="row" color="secondary" %}}
+{{% blocks/section type="row" color="dark" %}}
 
 {{% blocks/feature icon="fa fa-commenting" title="Expressive API" %}}
 Based on Gateway API, with reasonable default settings to simplify the Envoy user experience, without knowing details of Envoy proxy.
@@ -59,7 +59,7 @@ fundamental interactions.
 
 {{% /blocks/lead %}}
 
-{{% blocks/section type="row" color="secondary" %}}
+{{% blocks/section type="row" color="dark" %}}
 
 {{% blocks/feature icon="fab fa-app-store-ios" title="Download **from Github**" url="https://github.com/envoyproxy/gateway/releases" %}}
 Try Envoy Gateway in GitHub Releases
@@ -78,3 +78,10 @@ For announcement of latest features etc.
 
 {{% /blocks/section %}}
 
+{{% blocks/lead type="row" color="white" %}}
+
+<img src="/img/cncf.svg" alt="CNCF" width="40%">
+
+---
+Member of the [Envoy Proxy](https://www.envoyproxy.io/) family aimed at significantly **decreasing the barrier** to entry when using Envoy for **API Gateway**.
+{{% /blocks/lead %}}

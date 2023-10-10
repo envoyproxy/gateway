@@ -166,6 +166,21 @@ no = 'Sorry to hear that. Please <a href="https://github.com/envoyproxy/gateway/
 [params.ui.readingtime]
 enable = true
 
+# hugo module configuration
+
+[module]
+  # uncomment line below for temporary local development of module
+  # replacements = "github.com/envoyproxy/gateway -> ../../docsy"
+  [module.hugoVersion]
+    extended = true
+    min = "0.110.0"
+  [[module.imports]]
+    path = "github.com/google/docsy"
+    disable = false
+  [[module.imports]]
+    path = "github.com/google/docsy/dependencies"
+    disable = false
+
 [params.links]
 # End user relevant links. These will show up on left side of footer and in the community page if you have one.
 [[params.links.user]]
@@ -190,27 +205,7 @@ enable = true
   icon = "fab fa-slack"
   desc = "Chat with other project developers"
 
-# hugo module configuration
-
-[module]
-  # uncomment line below for temporary local development of module
-  # replacements = "github.com/envoyproxy/gateway -> ../../docsy"
-  [module.hugoVersion]
-    extended = true
-    min = "0.110.0"
-  [[module.imports]]
-    path = "github.com/google/docsy"
-    disable = false
-  [[module.imports]]
-    path = "github.com/google/docsy/dependencies"
-    disable = false
-
 [menu]
-  [[menu.main]]
-    name = "Documentation"
-    weight = -101
-    pre = "<i class='fas fa-book pr-2'></i>"
-    url = "/latest"
   [[menu.main]]
     name = "Blog"
     weight = -100
@@ -226,6 +221,11 @@ enable = true
     weight = -99
     pre = "<i class='fab fa-github pr-2'></i>"
     url = "https://github.com/envoyproxy/gateway"
+  [[menu.main]]
+    name = "Documentation"
+    weight = -101
+    pre = "<i class='fas fa-book pr-2'></i>"
+    url = "/v0.5.0"
 
 [[params.versions]]
   version = "latest"
