@@ -8,16 +8,15 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http
-      port: 80
-      protocol: HTTP
-      allowedRoutes:
+    - allowedRoutes:
         namespaces:
           from: Same
+      name: http
+      port: 80
+      protocol: HTTP
   status:
     listeners:
     - attachedRoutes: 0
-      name: http
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -29,6 +28,7 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
@@ -43,16 +43,15 @@ gateways:
   spec:
     gatewayClassName: envoy-gateway-class
     listeners:
-    - name: http-2
-      port: 8888
-      protocol: HTTP
-      allowedRoutes:
+    - allowedRoutes:
         namespaces:
           from: Same
+      name: http-2
+      port: 8888
+      protocol: HTTP
   status:
     listeners:
     - attachedRoutes: 0
-      name: http-2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -64,6 +63,7 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      name: http-2
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
