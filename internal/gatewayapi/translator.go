@@ -6,11 +6,11 @@
 package gatewayapi
 
 import (
-	"github.com/envoyproxy/gateway/internal/ir"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (

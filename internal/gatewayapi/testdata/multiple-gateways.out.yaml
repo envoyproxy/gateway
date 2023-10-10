@@ -48,7 +48,7 @@ gateways:
       protocol: HTTP
       allowedRoutes:
         namespaces:
-          from: Same      
+          from: Same
   status:
     listeners:
     - attachedRoutes: 0
@@ -63,12 +63,12 @@ gateways:
         message: Listener has been successfully translated
         reason: Accepted
         status: "True"
-        type: Accepted    
+        type: Accepted
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
-        kind: GRPCRoute         
+        kind: GRPCRoute
 infraIR:
   envoy-gateway/gateway-1:
     proxy:
@@ -97,7 +97,7 @@ infraIR:
         labels:
           gateway.envoyproxy.io/owning-gateway-name: gateway-2
           gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway
-      name: envoy-gateway/gateway-2     
+      name: envoy-gateway/gateway-2
 xdsIR:
   envoy-gateway/gateway-1:
     accessLog:

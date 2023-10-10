@@ -7,12 +7,12 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-      - name: http
-        port: 80
-        protocol: HTTP
-        allowedRoutes:
-          namespaces:
-            from: Same
+        - name: http
+          port: 80
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: Same
   - apiVersion: gateway.networking.k8s.io/v1beta1
     kind: Gateway
     metadata:
@@ -21,9 +21,9 @@ gateways:
     spec:
       gatewayClassName: envoy-gateway-class
       listeners:
-      - name: http-2
-        port: 8888
-        protocol: HTTP
-        allowedRoutes:
-          namespaces:
-            from: Same
+        - name: http-2
+          port: 8888
+          protocol: HTTP
+          allowedRoutes:
+            namespaces:
+              from: Same
