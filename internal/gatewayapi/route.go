@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
@@ -1009,14 +1010,44 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 
 	var endpoints []*ir.DestinationEndpoint
 	switch KindDerefOr(backendRef.Kind, KindService) {
-	// TODO: Use EndpointSlice for ServiceImport
 	case KindServiceImport:
-		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
-		for _, ip := range backendIps {
-			ep := ir.NewDestEndpoint(
-				ip,
-				uint32(*backendRef.Port))
-			endpoints = append(endpoints, ep)
+		serviceImports := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+		var servicePort mcsapi.ServicePort
+		for _, port := range serviceImports.Spec.Ports {
+			if port.Port == int32(*backendRef.Port) {
+				servicePort = port
+				break
+			}
+		}
+		if !t.EndpointRoutingDisabled {
+			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+
+			for _, endpointSlice := range endpointSlices {
+				for _, endpoint := range endpointSlice.Endpoints {
+					for _, endpointPort := range endpointSlice.Ports {
+						// Check if the endpoint port matches the service port
+						// and if endpoint is Ready
+						if *endpointPort.Name == servicePort.Name &&
+							*endpointPort.Protocol == servicePort.Protocol &&
+							*endpoint.Conditions.Ready {
+							for _, address := range endpoint.Addresses {
+								ep := ir.NewDestEndpoint(
+									address,
+									uint32(*endpointPort.Port))
+								endpoints = append(endpoints, ep)
+							}
+						}
+					}
+				}
+			}
+		} else {
+			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+			for _, ip := range backendIps {
+				ep := ir.NewDestEndpoint(
+					ip,
+					uint32(*backendRef.Port))
+				endpoints = append(endpoints, ep)
+			}
 		}
 	case KindService:
 		service := resources.GetService(backendNamespace, string(backendRef.Name))
@@ -1030,7 +1061,7 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
-			endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
+			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 
 			for _, endpointSlice := range endpointSlices {
 				for _, endpoint := range endpointSlice.Endpoints {
