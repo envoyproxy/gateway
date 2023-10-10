@@ -185,7 +185,7 @@ func TestTranslateXds(t *testing.T) {
 			requireEnvoyPatchPolicies: true,
 		},
 		{
-			name: "listener-tcp-keep-alive",
+			name: "listener-tcp-keepalive",
 		},
 	}
 
