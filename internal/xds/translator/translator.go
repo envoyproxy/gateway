@@ -105,7 +105,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, accesslog)
+			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accesslog)
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				return err
 			}
@@ -291,7 +291,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, accesslog)
+			xdsListener = buildXdsTCPListener(tcpListener.Name, tcpListener.Address, tcpListener.Port, tcpListener.TCPKeepalive, accesslog)
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				return err
 			}
