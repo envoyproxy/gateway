@@ -1,26 +1,21 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o pipefail
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <input_file>"
+    exit 1
+fi
 
-# Wrap sed to deal with GNU and BSD sed flags.
-run::sed() {
-  if sed --version </dev/null 2>&1 | grep -q GNU; then
-    # GNU sed
-    sed -i "$@"
-  else
-    # assume BSD sed
-    sed -i '' "$@"
-  fi
+input_file=$1
+
+temp_file=$(mktemp)
+
+sed -n '
+/^# / {
+    s/^# \(.*\)/+++\ntitle = "\1"\n+++\n/
+    p
+    d
 }
+p
+' "$input_file" > "$temp_file"
 
-files=(docs/latest/api/extension_types.md)
-
-# Required since Sphinx mst does not link to h4 headings.
-for file in "${files[@]}" ; do
-  run::sed \
-    "-es|####|##|" \
-    "$file"
-  echo "updated markdown headings for $file"
-done
+mv "$temp_file" "$input_file"
