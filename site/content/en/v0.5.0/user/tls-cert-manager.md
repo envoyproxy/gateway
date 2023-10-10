@@ -182,6 +182,7 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 The important parts are
@@ -209,7 +210,7 @@ Status:
 Now we're ready to update the Gateway annotation to use this issuer instead:
 
 ```console
-$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt-staging
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/cluster-issuer=letsencrypt-staging
 ```
 
 The Gateway should be picked up by cert-manager, which will create a new certificate for you, and replace the Secret.
@@ -262,12 +263,13 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 And now you can update the Gateway listener to point to `letsencrypt` instead:
 
 ```console
-$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/cluster-issuer=letsencrypt
 ```
 
 As before, track it by looking at CertificateRequests.
@@ -304,7 +306,7 @@ They are not bound to any namespace, and will read annotations from Gateways in 
 You could also use [Issuer](https://cert-manager.io/docs/concepts/issuer/), which is bound to a namespace.
 This is useful e.g. if you want to use different ACME accounts for different namespaces.
 
-If you change the issuer kind, you also need to change the annotation key from `cert-manager.io/clusterissuer` to `cert-manager.io/issuer`.
+If you change the issuer kind, you also need to change the annotation key from `cert-manager.io/cluster-issuer` to `cert-manager.io/issuer`.
 
 ## Using ExternalDNS
 
@@ -405,7 +407,7 @@ NAME                                                                    STATE   
 challenge.acme.cert-manager.io/envoy-https-xxxxx-123456789-1234567890   pending   www.example.com   42m
 ```
 
-Using `kubetctl get -o wide` or `kubectl describe` on the Challenge will explain its state more.
+Using `kubectl get -o wide` or `kubectl describe` on the Challenge will explain its state more.
 
 ```console
 $ kubectl get order --all-namespaces -o wide
