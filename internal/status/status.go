@@ -168,6 +168,7 @@ func (u *UpdateWriter) Send(update Update) {
 //	UDPRoute
 //	GRPCRoute
 //	EnvoyPatchPolicy
+//	ClientTrafficPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
@@ -219,6 +220,13 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
+	case *egv1a1.ClientTrafficPolicy:
+		if b, ok := objB.(*egv1a1.ClientTrafficPolicy); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
 	}
+
 	return false
 }
