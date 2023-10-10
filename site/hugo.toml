@@ -115,7 +115,7 @@ github_repo = "https://github.com/envoyproxy/gateway"
 github_project_repo = "https://github.com/envoyproxy/gateway"
 
 # Specify a value here if your content directory is not in your repo's root directory
-# github_subdir = ""
+github_subdir = "/site/"
 
 # Uncomment this if your GitHub repo does not have "main" as the default branch,
 # or specify a new value if you want to reference another branch in your GitHub links
