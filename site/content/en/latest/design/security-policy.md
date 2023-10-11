@@ -104,8 +104,9 @@ entire Gateway then
   * Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
   * Policy B will be applied to the remaining Listeners within the Gateway. Policy B will have an additional
   status condition `Overridden=True`.
-* A Policy targeting a xRoute (`HTTPRoute` or `GRPCRoute`) overrides a Policy targeting a Listener that is
-this route's parentRef.
+* A Policy targeting the most specific scope wins over a policy targeting a lesser specific scope.
+  i.e. A Policy targeting a xRoute (`HTTPRoute` or `GRPCRoute`) overrides a Policy targeting a Listener that is
+this route's parentRef which in turn overrides a Policy targeting the Gateway the listener/section is a part of. 
 
 ## Alternatives
 * The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
