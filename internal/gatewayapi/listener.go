@@ -138,11 +138,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					proto = ir.UDPProtocolType
 				}
 
-				var infraPortName string
-				if isMergeGatewaysEnabled(resources) {
+				infraPortName := string(listener.Name)
+				if t.MergeGateways {
 					infraPortName = irInfraPortName(listener)
-				} else {
-					infraPortName = string(listener.Name)
 				}
 
 				infraPort := ir.ListenerPort{
