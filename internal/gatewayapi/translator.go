@@ -75,6 +75,10 @@ type Translator struct {
 	// instead.
 	EndpointRoutingDisabled bool
 
+	// MergeGateways is true when all Gateway Listeners
+	// should be merged under the parent GatewayClass.
+	MergeGateways bool
+
 	// ExtensionGroupKinds stores the group/kind for all resources
 	// introduced by an Extension so that the translator can
 	// store referenced resources in the IR for later use.
@@ -196,6 +200,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
 		if isMergeGatewaysEnabled(resources) {
+			t.MergeGateways = true
 			irKey = string(t.GatewayClassName)
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
 		} else {

@@ -113,7 +113,7 @@ func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, res
 			continue
 		}
 
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR, resources)
+		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(httpRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(httpRoute,
 				gwapiv1.RouteConditionAccepted,
@@ -348,7 +348,7 @@ func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, res
 		if parentRef.HasCondition(grpcRoute, gwapiv1.RouteConditionAccepted, metav1.ConditionFalse) {
 			continue
 		}
-		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR, resources)
+		var hasHostnameIntersection = t.processHTTPRouteParentRefListener(grpcRoute, routeRoutes, parentRef, xdsIR)
 		if !hasHostnameIntersection {
 			parentRef.SetCondition(grpcRoute,
 				gwapiv1.RouteConditionAccepted,
@@ -512,7 +512,7 @@ func (t *Translator) processGRPCRouteMethodRegularExpression(method *gwapiv1a1.G
 	}
 }
 
-func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap, resources *Resources) bool {
+func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, routeRoutes []*ir.HTTPRoute, parentRef *RouteParentContext, xdsIR XdsIRMap) bool {
 	var hasHostnameIntersection bool
 
 	for _, listener := range parentRef.listeners {
@@ -572,11 +572,9 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
-		var irKey string
-		if isMergeGatewaysEnabled(resources) {
+		irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
+		if t.MergeGateways {
 			irKey = string(t.GatewayClassName)
-		} else {
-			irKey = irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 		}
 
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
@@ -674,11 +672,9 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			hasHostnameIntersection = true
 
-			var irKey string
-			if isMergeGatewaysEnabled(resources) {
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
+			if t.MergeGateways {
 				irKey = string(t.GatewayClassName)
-			} else {
-				irKey = irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			}
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
@@ -819,11 +815,9 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			}
 			accepted = true
 
-			var irKey string
-			if isMergeGatewaysEnabled(resources) {
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
+			if t.MergeGateways {
 				irKey = string(t.GatewayClassName)
-			} else {
-				irKey = irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			}
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
@@ -961,11 +955,9 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			}
 			accepted = true
 
-			var irKey string
-			if isMergeGatewaysEnabled(resources) {
+			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
+			if t.MergeGateways {
 				irKey = string(t.GatewayClassName)
-			} else {
-				irKey = irStringKey(listener.gateway.Namespace, listener.gateway.Name)
 			}
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))

@@ -27,7 +27,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
-	if isMergeGatewaysEnabled(resources) {
+	if t.MergeGateways {
 		t.validateConflictedMergedListeners(gateways)
 	}
 
@@ -37,13 +37,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	for _, gateway := range gateways {
 		// Infra IR proxy ports must be unique.
 		var foundPorts []*protocolPort
-		var irKey string
 
-		if isMergeGatewaysEnabled(resources) {
-			t.validateConflictedMergedListeners(gateways)
+		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
+		if t.MergeGateways {
 			irKey = string(t.GatewayClassName)
-		} else {
-			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
 		}
 
 		if resources.EnvoyProxy != nil {

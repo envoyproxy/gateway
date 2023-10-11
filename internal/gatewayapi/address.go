@@ -18,11 +18,9 @@ type AddressesTranslator interface {
 func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	for _, gateway := range gateways {
 		// Infra IR already exist
-		var irKey string
-		if isMergeGatewaysEnabled(resources) {
+		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
+		if t.MergeGateways {
 			irKey = string(t.GatewayClassName)
-		} else {
-			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
 		}
 
 		gwInfraIR := infraIR[irKey]
