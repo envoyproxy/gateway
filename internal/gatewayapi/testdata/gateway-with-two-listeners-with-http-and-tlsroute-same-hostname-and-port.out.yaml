@@ -38,6 +38,11 @@ gateways:
         reason: Invalid
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http-1
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -56,6 +61,11 @@ gateways:
         reason: Invalid
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls-1
       supportedKinds:
       - group: gateway.networking.k8s.io
