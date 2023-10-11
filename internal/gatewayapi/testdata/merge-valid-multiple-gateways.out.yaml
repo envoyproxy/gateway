@@ -108,7 +108,7 @@ infraIR:
   envoy-gateway-class:
     proxy:
       config:
-        apiVersion: config.gateway.envoyproxy.io/v1alpha1
+        apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
           creationTimestamp: null
