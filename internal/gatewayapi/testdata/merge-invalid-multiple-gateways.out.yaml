@@ -101,11 +101,11 @@ infraIR:
       - address: ""
         ports:
         - containerPort: 10080
-          name: envoy-gateway/http/gateway-1
+          name: http-envoy-gateway-gateway-1
           protocol: HTTP
           servicePort: 80
         - containerPort: 10080
-          name: envoy-gateway/udp/gateway-2
+          name: udp-envoy-gateway-gateway-2
           protocol: UDP
           servicePort: 80
       metadata:

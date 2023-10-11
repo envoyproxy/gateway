@@ -45,7 +45,7 @@ func (r *ResourceRender) Name() string {
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -84,7 +84,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -123,7 +123,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -169,7 +169,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// Set the labels based on the owning gateway name.
 	labels := r.infra.GetProxyMetadata().Labels
 	dpLabels := envoyLabels(labels)
-	if len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(dpLabels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 

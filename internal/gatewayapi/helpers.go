@@ -406,8 +406,8 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
-func irInfraPortName(listener *ListenerContext) string {
-	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.Name, listener.gateway.Name)
+func irMergedInfraPortName(listener *ListenerContext) string {
+	return fmt.Sprintf("%s-%s-%s", listener.Name, listener.gateway.Namespace, listener.gateway.Name)
 }
 
 func irHTTPListenerName(listener *ListenerContext) string {
