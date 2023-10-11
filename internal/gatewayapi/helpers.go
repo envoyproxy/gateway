@@ -406,6 +406,10 @@ func irStringKey(gatewayNs, gatewayName string) string {
 	return fmt.Sprintf("%s/%s", gatewayNs, gatewayName)
 }
 
+func irInfraPortName(listener *ListenerContext) string {
+	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.Name, listener.gateway.Name)
+}
+
 func irHTTPListenerName(listener *ListenerContext) string {
 	return fmt.Sprintf("%s/%s/%s", listener.gateway.Namespace, listener.gateway.Name, listener.Name)
 }
@@ -448,6 +452,9 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {
 
 func irTLSListenerConfigName(secret *v1.Secret) string {
 	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
+}
+func isMergeGatewaysEnabled(resources *Resources) bool {
+	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
 }
 
 func protocolSliceToStringSlice(protocols []gwapiv1.ProtocolType) []string {

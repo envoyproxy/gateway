@@ -195,7 +195,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 	for _, gateway := range gateways {
 		gwXdsIR := &ir.Xds{}
 		gwInfraIR := ir.NewInfra()
-		if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways {
+		if isMergeGatewaysEnabled(resources) {
 			irKey = string(t.GatewayClassName)
 			gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayClassOwnerLabel(string(t.GatewayClassName))
 		} else {

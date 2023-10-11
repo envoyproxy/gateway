@@ -533,6 +533,29 @@ type portListeners struct {
 	hostnames map[string]int
 }
 
+func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContext) {
+	listenerSets := sets.Set[string]{}
+	for _, gateway := range gateways {
+		for _, listener := range gateway.listeners {
+			var hostname string
+			if listener.Hostname != nil {
+				hostname = string(*listener.Hostname)
+			}
+
+			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, hostname, listener.Port)
+			if listenerSets.Has(portProtocolHostname) {
+				listener.SetCondition(
+					v1beta1.ListenerConditionConflicted,
+					metav1.ConditionTrue,
+					v1beta1.ListenerReasonHostnameConflict,
+					"Port, protocol and hostname tuple must be unique for every listener",
+				)
+			}
+			listenerSets.Insert(portProtocolHostname)
+		}
+	}
+}
+
 func (t *Translator) validateConflictedLayer7Listeners(gateways []*GatewayContext) {
 	// Iterate through all layer-7 (HTTP, HTTPS, TLS) listeners and collect info about protocols
 	// and hostnames per port.

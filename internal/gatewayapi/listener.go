@@ -27,6 +27,9 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	if isMergeGatewaysEnabled(resources) {
+		t.validateConflictedMergedListeners(gateways)
+	}
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
@@ -36,7 +39,8 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 		var foundPorts []*protocolPort
 		var irKey string
 
-		if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways {
+		if isMergeGatewaysEnabled(resources) {
+			t.validateConflictedMergedListeners(gateways)
 			irKey = string(t.GatewayClassName)
 		} else {
 			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
@@ -136,8 +140,16 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				case gwapiv1.UDPProtocolType:
 					proto = ir.UDPProtocolType
 				}
+
+				var infraPortName string
+				if isMergeGatewaysEnabled(resources) {
+					infraPortName = irInfraPortName(listener)
+				} else {
+					infraPortName = string(listener.Name)
+				}
+
 				infraPort := ir.ListenerPort{
-					Name:          string(listener.Name),
+					Name:          infraPortName,
 					Protocol:      proto,
 					ServicePort:   servicePort.port,
 					ContainerPort: containerPort,

@@ -19,11 +19,12 @@ func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap
 	for _, gateway := range gateways {
 		// Infra IR already exist
 		var irKey string
-		if resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways {
+		if isMergeGatewaysEnabled(resources) {
 			irKey = string(t.GatewayClassName)
 		} else {
 			irKey = irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
 		}
+
 		gwInfraIR := infraIR[irKey]
 
 		var ipAddr []string
