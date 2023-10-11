@@ -84,6 +84,8 @@ func GetKubernetesServiceType(serviceType ServiceType) *ServiceType {
 func (deployment *KubernetesDeploymentSpec) defaultKubernetesDeploymentSpec(image string) {
 	if deployment.Replicas == nil {
 		deployment.Replicas = DefaultKubernetesDeploymentReplicas()
+	} else if *deployment.Replicas == -1 { // -1 means auto-scale
+		deployment.Replicas = nil
 	}
 
 	if deployment.Strategy == nil {
