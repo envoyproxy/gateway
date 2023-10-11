@@ -942,10 +942,13 @@ type Metrics struct {
 type TCPKeepalive struct {
 	// The total number of unacknowledged probes to send before deciding
 	// the connection is dead.
+	// Defaults to 9.
 	Probes *uint32 `json:"probes,omitempty" yaml:"probes,omitempty"`
 	// The duration, in seconds, a connection needs to be idle before keep-alive
 	// probes start being sent.
+	// Defaults to `7200s`.
 	IdleTime *uint32 `json:"idleTime,omitempty" yaml:"idleTime,omitempty"`
 	// The duration, in seconds, between keep-alive probes.
+	// Defaults to `75s`.
 	Interval *uint32 `json:"interval,omitempty" yaml:"interval,omitempty"`
 }
