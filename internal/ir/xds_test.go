@@ -43,13 +43,6 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
-	invalidRouteMatchHTTPListener = HTTPListener{
-		Name:      "invalid-route-match",
-		Address:   "0.0.0.0",
-		Port:      80,
-		Hostnames: []string{"example.com"},
-		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
-	}
 	invalidBackendHTTPListener = HTTPListener{
 		Name:      "invalid-backend-match",
 		Address:   "0.0.0.0",
@@ -144,11 +137,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("example"),
 		},
-		Destination: &happyRouteDestination,
-	}
-	emptyMatchHTTPRoute = HTTPRoute{
-		Name:        "empty-match",
-		Hostname:    "*",
 		Destination: &happyRouteDestination,
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
@@ -510,9 +498,9 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "invalid listener",
 			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
+				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener},
 			},
-			want: []error{ErrListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
+			want: []error{ErrListenerAddressInvalid},
 		},
 		{
 			name: "invalid backend",
@@ -578,11 +566,6 @@ func TestValidateHTTPListener(t *testing.T) {
 				Routes:  []*HTTPRoute{&happyHTTPRoute},
 			},
 			want: []error{ErrListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
-		},
-		{
-			name:  "invalid route match",
-			input: invalidRouteMatchHTTPListener,
-			want:  []error{ErrHTTPRouteMatchEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -836,11 +819,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 				Destination: &happyRouteDestination,
 			},
 			want: []error{ErrHTTPRouteHostnameEmpty},
-		},
-		{
-			name:  "empty match",
-			input: emptyMatchHTTPRoute,
-			want:  []error{ErrHTTPRouteMatchEmpty},
 		},
 		{
 			name:  "invalid backend",
