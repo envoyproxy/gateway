@@ -320,7 +320,20 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		// It will be recomputed by the gateway-api layer
 		policy.Status = egv1a1.BackendTrafficPolicyStatus{}
 		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
+	}
 
+	// Add all SecurityPolicies
+	securityPolicies := egv1a1.SecurityPolicyList{}
+	if err := r.client.List(ctx, &securityPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing SecurityPolicies: %v", err)
+	}
+
+	for _, policy := range securityPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.SecurityPolicyStatus{}
+		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
 	}
 
 	// For this particular Gateway, and all associated objects, check whether the

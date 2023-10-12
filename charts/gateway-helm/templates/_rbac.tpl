@@ -68,6 +68,7 @@ resources:
 - envoypatchpolicies
 - clienttrafficpolicies
 - backendtrafficpolicies
+- securitypolicies
 - ratelimitfilters
 verbs:
 - get
