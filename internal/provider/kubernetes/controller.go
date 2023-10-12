@@ -407,16 +407,20 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	if r.statusUpdater == nil {
 		return
 	}
-
+	var merged bool
+	res, _ := r.resources.GatewayAPIResources.Load(string(gtw.Spec.GatewayClassName))
+	if res.EnvoyProxy != nil && res.EnvoyProxy.Spec.MergeGateways != nil && *res.EnvoyProxy.Spec.MergeGateways {
+		merged = true
+	}
 	// Get deployment
-	deploy, err := r.envoyDeploymentForGateway(ctx, gtw)
+	deploy, err := r.envoyDeploymentForGateway(ctx, gtw, merged)
 	if err != nil {
 		r.log.Info("failed to get Deployment for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
 
 	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw)
+	svc, err := r.envoyServiceForGateway(ctx, gtw, merged)
 	if err != nil {
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)

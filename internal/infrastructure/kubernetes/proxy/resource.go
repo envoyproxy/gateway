@@ -57,8 +57,8 @@ func ExpectedResourceHashedName(name string) string {
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }
 
-// ExpectedServiceHashedName returns expected service name with max length of 15 characters.
-func ExpectedServiceHashedName(name string) string {
+// ExpectedContainerPortHashedName returns expected service name with max length of 15 characters.
+func ExpectedContainerPortHashedName(name string) string {
 	if len(name) > 15 {
 		hashedName := providerutils.HashString(name)
 		listenerName := strings.Split(name, "-")
@@ -114,7 +114,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.Kube
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				Name:          ExpectedServiceHashedName(p.Name),
+				Name:          ExpectedContainerPortHashedName(p.Name),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}
