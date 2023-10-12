@@ -30,6 +30,11 @@ gateways:
         reason: UnsupportedTLSMode
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io
