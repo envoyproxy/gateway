@@ -11,6 +11,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -1011,9 +1012,9 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 	var endpoints []*ir.DestinationEndpoint
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindServiceImport:
-		serviceImports := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
 		var servicePort mcsapi.ServicePort
-		for _, port := range serviceImports.Spec.Ports {
+		for _, port := range serviceImport.Spec.Ports {
 			if port.Port == int32(*backendRef.Port) {
 				servicePort = port
 				break
@@ -1021,25 +1022,7 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 		}
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-
-			for _, endpointSlice := range endpointSlices {
-				for _, endpoint := range endpointSlice.Endpoints {
-					for _, endpointPort := range endpointSlice.Ports {
-						// Check if the endpoint port matches the service port
-						// and if endpoint is Ready
-						if *endpointPort.Name == servicePort.Name &&
-							*endpointPort.Protocol == servicePort.Protocol &&
-							*endpoint.Conditions.Ready {
-							for _, address := range endpoint.Addresses {
-								ep := ir.NewDestEndpoint(
-									address,
-									uint32(*endpointPort.Port))
-								endpoints = append(endpoints, ep)
-							}
-						}
-					}
-				}
-			}
+			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
 			for _, ip := range backendIps {
@@ -1062,25 +1045,7 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
-
-			for _, endpointSlice := range endpointSlices {
-				for _, endpoint := range endpointSlice.Endpoints {
-					for _, endpointPort := range endpointSlice.Ports {
-						// Check if the endpoint port matches the service port
-						// and if endpoint is Ready
-						if *endpointPort.Name == servicePort.Name &&
-							*endpointPort.Protocol == servicePort.Protocol &&
-							*endpoint.Conditions.Ready {
-							for _, address := range endpoint.Addresses {
-								ep := ir.NewDestEndpoint(
-									address,
-									uint32(servicePort.TargetPort.IntVal))
-								endpoints = append(endpoints, ep)
-							}
-						}
-					}
-				}
-			}
+			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			// Fall back to Service CluserIP routing
 			ep := ir.NewDestEndpoint(
@@ -1165,4 +1130,28 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		)
 	}
 	return relevantRoute
+}
+
+func getIREndpointsFromEndpointSlice(endpointSlices []*v1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+	endpoints := []*ir.DestinationEndpoint{}
+	for _, endpointSlice := range endpointSlices {
+		for _, endpoint := range endpointSlice.Endpoints {
+			for _, endpointPort := range endpointSlice.Ports {
+				// Check if the endpoint port matches the service port
+				// and if endpoint is Ready
+				if *endpointPort.Name == portName &&
+					*endpointPort.Protocol == portProtocol &&
+					*endpoint.Conditions.Ready {
+					for _, address := range endpoint.Addresses {
+						ep := ir.NewDestEndpoint(
+							address,
+							uint32(*endpointPort.Port))
+						endpoints = append(endpoints, ep)
+					}
+				}
+			}
+		}
+	}
+
+	return endpoints
 }
