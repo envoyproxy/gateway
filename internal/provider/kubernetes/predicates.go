@@ -411,10 +411,10 @@ func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gw
 }
 
 // envoyDeploymentForGateway returns the Envoy Deployment, returning nil if the Deployment doesn't exist.
-func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway, merged bool) (*appsv1.Deployment, error) {
+func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraDeploymentName(gateway, merged),
+		Name:      infraDeploymentName(gateway, r.mergeGateways),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -427,10 +427,10 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 }
 
 // envoyServiceForGateway returns the Envoy service, returning nil if the service doesn't exist.
-func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway, merged bool) (*corev1.Service, error) {
+func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraServiceName(gateway, merged),
+		Name:      infraServiceName(gateway, r.mergeGateways),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {
