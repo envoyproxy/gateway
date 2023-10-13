@@ -44,3 +44,23 @@ serviceImports:
         - 7.7.7.7
       ports:
         - port: 8080
+          name: http
+          protocol: TCP
+endpointSlices:
+  - apiVersion: discovery.k8s.io/v1
+    kind: EndpointSlice
+    metadata:
+      name: service-import-1
+      namespace: default
+      labels:
+        multicluster.kubernetes.io/service-name: service-import-1
+    addressType: IPv4
+    ports:
+      - name: http
+        protocol: TCP
+        port: 8080
+    endpoints:
+      - addresses:
+          - "8.8.8.8"
+        conditions:
+          ready: true
