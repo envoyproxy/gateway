@@ -306,6 +306,21 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	}
 
+	// Add all BackendTrafficPolicies
+	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
+	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing BackendTrafficPolicies: %v", err)
+	}
+
+	for _, policy := range backendTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.BackendTrafficPolicyStatus{}
+		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
+
+	}
+
 	// For this particular Gateway, and all associated objects, check whether the
 	// namespace exists. Add to the resourceTree.
 	for ns := range resourceMap.allAssociatedNamespaces {

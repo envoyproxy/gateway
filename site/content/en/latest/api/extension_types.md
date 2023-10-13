@@ -15,6 +15,8 @@ API group.
 
 ### Resource Types
 - [AuthenticationFilter](#authenticationfilter)
+- [BackendTrafficPolicy](#backendtrafficpolicy)
+- [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
 - [ClientTrafficPolicyList](#clienttrafficpolicylist)
 - [EnvoyGateway](#envoygateway)
@@ -64,6 +66,55 @@ AuthenticationFilterType is a type of authentication provider.
 
 _Appears in:_
 - [AuthenticationFilterSpec](#authenticationfilterspec)
+
+
+
+#### BackendTrafficPolicy
+
+
+
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+
+_Appears in:_
+- [BackendTrafficPolicyList](#backendtrafficpolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `BackendTrafficPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ | spec defines the desired state of BackendTrafficPolicy. |
+
+
+#### BackendTrafficPolicyList
+
+
+
+BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `BackendTrafficPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[BackendTrafficPolicy](#backendtrafficpolicy) array_ |  |
+
+
+#### BackendTrafficPolicySpec
+
+
+
+spec defines the desired state of BackendTrafficPolicy.
+
+_Appears in:_
+- [BackendTrafficPolicy](#backendtrafficpolicy)
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
+
 
 
 

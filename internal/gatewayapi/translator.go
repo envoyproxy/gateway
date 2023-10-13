@@ -7,6 +7,8 @@ package gatewayapi
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -92,6 +94,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -118,6 +121,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
+	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
 
 	return translateResult
 }
@@ -129,6 +133,15 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Get Gateways belonging to our GatewayClass.
 	gateways := t.GetRelevantGateways(resources.Gateways)
 
+	// Get Routes belonging to our GatewayClass.
+	routes := t.GetRelevantRoutes(gateways,
+		resources.HTTPRoutes,
+		resources.GRPCRoutes,
+		resources.TLSRoutes,
+		resources.TCPRoutes,
+		resources.UDPRoutes,
+	)
+
 	// Process all Listeners for all relevant Gateways.
 	t.ProcessListeners(gateways, xdsIR, infraIR, resources)
 
@@ -137,6 +150,9 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 	// Process ClientTrafficPolicies
 	clientTrafficPolicies := ProcessClientTrafficPolicies(resources.ClientTrafficPolicies, gateways, xdsIR)
+
+	// Process BackendTrafficPolicies
+	backendTrafficPolicies := ProcessBackendTrafficPolicies(resources.BackendTrafficPolicies, gateways, routes, xdsIR)
 
 	// Process all Addresses for all relevant Gateways.
 	t.ProcessAddresses(gateways, xdsIR, infraIR, resources)
@@ -159,7 +175,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
@@ -183,4 +199,104 @@ func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*Gateway
 	}
 
 	return relevant
+}
+
+func (t *Translator) GetRelevantRoutes(relevantGateways []*GatewayContext,
+	httpRoutes []*v1beta1.HTTPRoute,
+	grpcRoutes []*v1alpha2.GRPCRoute,
+	tlsRoutes []*v1alpha2.TLSRoute,
+	tcpRoutes []*v1alpha2.TCPRoute,
+	udpRoutes []*v1alpha2.UDPRoute) []RouteContext {
+
+	relevantRoutes := []RouteContext{}
+
+	// build a map of the relevant Gateways for faster lookup
+	gateways := map[types.NamespacedName]bool{}
+	for _, gw := range relevantGateways {
+		gw := gw
+		gateways[types.NamespacedName{Name: gw.Name, Namespace: gw.Namespace}] = true
+	}
+
+	// Check all the different types of routes to see if any belong to one of our relevant gateways
+	for _, httpRoute := range httpRoutes {
+		for _, parentGW := range httpRoute.Spec.ParentRefs {
+			key := types.NamespacedName{Name: string(parentGW.Name)}
+			if parentGW.Namespace != nil {
+				key.Namespace = string(*parentGW.Namespace)
+			}
+			if _, ok := gateways[key]; ok {
+				relevantRoutes = append(relevantRoutes, &HTTPRouteContext{
+					GatewayControllerName: t.GatewayControllerName,
+					HTTPRoute:             httpRoute.DeepCopy(),
+				})
+				break
+			}
+		}
+	}
+
+	for _, grpcRoute := range grpcRoutes {
+		for _, parentGW := range grpcRoute.Spec.ParentRefs {
+			key := types.NamespacedName{Name: string(parentGW.Name)}
+			if parentGW.Namespace != nil {
+				key.Namespace = string(*parentGW.Namespace)
+			}
+			if _, ok := gateways[key]; ok {
+				relevantRoutes = append(relevantRoutes, &GRPCRouteContext{
+					GatewayControllerName: t.GatewayControllerName,
+					GRPCRoute:             grpcRoute.DeepCopy(),
+				})
+				break
+			}
+		}
+	}
+
+	for _, tlsRoute := range tlsRoutes {
+		for _, parentGW := range tlsRoute.Spec.ParentRefs {
+			key := types.NamespacedName{Name: string(parentGW.Name)}
+			if parentGW.Namespace != nil {
+				key.Namespace = string(*parentGW.Namespace)
+			}
+			if _, ok := gateways[key]; ok {
+				relevantRoutes = append(relevantRoutes, &TLSRouteContext{
+					GatewayControllerName: t.GatewayControllerName,
+					TLSRoute:              tlsRoute.DeepCopy(),
+				})
+				break
+			}
+		}
+	}
+
+	for _, tcpRoute := range tcpRoutes {
+		for _, parentGW := range tcpRoute.Spec.ParentRefs {
+			key := types.NamespacedName{Name: string(parentGW.Name)}
+			if parentGW.Namespace != nil {
+				key.Namespace = string(*parentGW.Namespace)
+			}
+			if _, ok := gateways[key]; ok {
+				relevantRoutes = append(relevantRoutes, &TCPRouteContext{
+					GatewayControllerName: t.GatewayControllerName,
+					TCPRoute:              tcpRoute.DeepCopy(),
+				})
+				break
+			}
+		}
+	}
+
+	for _, udpRoute := range udpRoutes {
+		for _, parentGW := range udpRoute.Spec.ParentRefs {
+			key := types.NamespacedName{Name: string(parentGW.Name)}
+			if parentGW.Namespace != nil {
+				key.Namespace = string(*parentGW.Namespace)
+			}
+			if _, ok := gateways[key]; ok {
+				relevantRoutes = append(relevantRoutes, &UDPRouteContext{
+					GatewayControllerName: t.GatewayControllerName,
+					UDPRoute:              udpRoute.DeepCopy(),
+				})
+				break
+			}
+		}
+	}
+
+	return relevantRoutes
 }

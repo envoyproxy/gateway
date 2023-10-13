@@ -52,7 +52,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			policy := policy.DeepCopy()
 			res = append(res, policy)
 
-			gateway := getGatewayTargetRef(policy, gateways)
+			gateway := resolveCTPolicyTargetRef(policy, gateways)
 
 			// Negative statuses have already been assigned so its safe to skip
 			if gateway == nil {
@@ -105,7 +105,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			policy := policy.DeepCopy()
 			res = append(res, policy)
 
-			gateway := getGatewayTargetRef(policy, gateways)
+			gateway := resolveCTPolicyTargetRef(policy, gateways)
 
 			// Negative statuses have already been assigned so its safe to skip
 			if gateway == nil {
@@ -169,7 +169,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 	return res
 }
 
-func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*GatewayContext) *GatewayContext {
+func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*GatewayContext) *GatewayContext {
 	targetNs := policy.Spec.TargetRef.Namespace
 	// If empty, default to namespace of policy
 	if targetNs == nil {

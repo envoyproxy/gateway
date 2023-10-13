@@ -152,6 +152,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(clientTrafficPolicy)
 				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
 			}
+			for _, backendTrafficPolicy := range result.BackendTrafficPolicies {
+				backendTrafficPolicy := backendTrafficPolicy
+				key := utils.NamespacedName(backendTrafficPolicy)
+				r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
+			}
 
 		},
 	)

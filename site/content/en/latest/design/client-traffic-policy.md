@@ -8,17 +8,21 @@ This design document introduces the `ClientTrafficPolicy` API allowing system ad
 the behavior for how the Envoy Proxy server behaves with downstream clients.
 
 ## Goals
+
 * Add an API definition to hold settings for configuring behavior of the connection between the downstream
 client and Envoy Proxy listener.
 
 ## Non Goals
+
 * Define the API configuration fields in this API.
 
 ## Implementation
+
 `ClientTrafficPolicy` is a [Direct Policy Attachment][] type API that can be used to extend [Gateway API][]
 to define configuration that affect the connection between the downstream client and Envoy Proxy listener.
 
 ### Example
+
 Here is an example highlighting how a user can configure this API.
 
 ```
@@ -78,13 +82,16 @@ spec:
 ```
 
 ## Features / API Fields
+
 Here is a list of features that can be included in this API
+
 * Downstream ProxyProtocol
 * Downstream Keep Alives
 * IP Blocking
 * Downstream HTTP3
 
 ## Design Decisions
+
 * This API will only support a single `targetRef` and can bind to only a `Gateway` resource.
 * This API resource MUST be part of same namespace as the `Gateway` resource
 * There can be only be ONE policy resource attached to a specific `Listener` (section)  within a `Gateway`
@@ -92,7 +99,7 @@ Here is a list of features that can be included in this API
 in the Policy Status field using the `Conflicted=True` condition.
 * If multiple polices target the same resource, the oldest resource (based on creation timestamp) will
 attach to the Gateway Listeners, the others will not.
-* If Policy A has a `targetRef` that includes a `sectionName` i.e. 
+* If Policy A has a `targetRef` that includes a `sectionName` i.e.
 it targets a specific Listener within a `Gateway` and Policy B has a `targetRef` that targets the same
 entire Gateway then
   * Policy A will be applied/attached to the specific Listener defined in the `targetRef.SectionName`
@@ -100,7 +107,8 @@ entire Gateway then
   status condition `Overridden=True`.
 
 ## Alternatives
+
 * The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
 
-[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment 
+[Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/
