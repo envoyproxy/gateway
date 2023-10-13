@@ -11,8 +11,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-// buildTCPKeepaliveSocketOptions converts listener downstream tcpKeepAlive settings to xds socketOptions
-func buildTCPKeepaliveSocketOptions(keepAlive *ir.TCPKeepalive) []*corev3.SocketOption {
+// buildTCPSocketOptions converts listener downstream settings to xds socketOptions
+func buildTCPSocketOptions(keepAlive *ir.TCPKeepalive) []*corev3.SocketOption {
 	if keepAlive == nil {
 		return nil
 	}

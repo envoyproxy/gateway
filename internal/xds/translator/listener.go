@@ -53,8 +53,10 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	}
 }
 
+// buildXdsTCPListener creates a xds Listener resource
+// TODO: Improve function parameters
 func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, accesslog *ir.AccessLog) *listenerv3.Listener {
-	socketOptions := buildTCPKeepaliveSocketOptions(keepalive)
+	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, true)
 	return &listenerv3.Listener{
 		Name:                          name,
