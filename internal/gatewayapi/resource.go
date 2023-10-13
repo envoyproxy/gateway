@@ -106,11 +106,18 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 	return nil
 }
 
-func (r *Resources) GetEndpointSlicesForService(svcNamespace, svcName string) []*discoveryv1.EndpointSlice {
+func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, backendKind string) []*discoveryv1.EndpointSlice {
 	endpointSlices := []*discoveryv1.EndpointSlice{}
 	for _, endpointSlice := range r.EndpointSlices {
+		var backendSelectorLabel string
+		switch backendKind {
+		case KindService:
+			backendSelectorLabel = discoveryv1.LabelServiceName
+		case KindServiceImport:
+			backendSelectorLabel = mcsapi.LabelServiceName
+		}
 		if svcNamespace == endpointSlice.Namespace &&
-			endpointSlice.GetLabels()[discoveryv1.LabelServiceName] == svcName {
+			endpointSlice.GetLabels()[backendSelectorLabel] == svcName {
 			endpointSlices = append(endpointSlices, endpointSlice)
 		}
 	}

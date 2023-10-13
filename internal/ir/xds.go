@@ -31,7 +31,6 @@ var (
 	ErrTLSPrivateKey                 = errors.New("field PrivateKey must be specified")
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
-	ErrHTTPRouteMatchEmpty           = errors.New("either PathMatch, HeaderMatches or QueryParamMatches fields must be specified")
 	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
 	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP address")
 	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
@@ -316,9 +315,6 @@ func (h HTTPRoute) Validate() error {
 	}
 	if h.Hostname == "" {
 		errs = multierror.Append(errs, ErrHTTPRouteHostnameEmpty)
-	}
-	if h.PathMatch == nil && (len(h.HeaderMatches) == 0) && (len(h.QueryParamMatches) == 0) {
-		errs = multierror.Append(errs, ErrHTTPRouteMatchEmpty)
 	}
 	if h.PathMatch != nil {
 		if err := h.PathMatch.Validate(); err != nil {
