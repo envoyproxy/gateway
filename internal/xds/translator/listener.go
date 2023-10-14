@@ -53,11 +53,15 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	}
 }
 
-func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+// buildXdsTCPListener creates a xds Listener resource
+// TODO: Improve function parameters
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, accesslog *ir.AccessLog) *listenerv3.Listener {
+	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, true)
 	return &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
+		SocketOptions:                 socketOptions,
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{

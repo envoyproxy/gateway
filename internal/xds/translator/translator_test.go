@@ -184,6 +184,9 @@ func TestTranslateXds(t *testing.T) {
 			name:                      "jsonpatch-invalid-patch",
 			requireEnvoyPatchPolicies: true,
 		},
+		{
+			name: "listener-tcp-keepalive",
+		},
 	}
 
 	for _, tc := range testCases {
