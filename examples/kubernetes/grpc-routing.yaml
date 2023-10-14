@@ -39,7 +39,7 @@ spec:
     spec:
       containers:
         - name: grpcsrv
-          image: quay.io/mhausenblas/yages:0.1.0
+          image: ghcr.io/projectcontour/yages:v0.1.0
           ports:
             - containerPort: 9000
               protocol: TCP
