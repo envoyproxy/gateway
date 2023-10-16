@@ -270,6 +270,69 @@ func TestDeployment(t *testing.T) {
 			concurrency: pointer.Int32(4),
 			bootstrap:   `test bootstrap config`,
 		},
+		{
+			caseName: "custom_with_initcontainers",
+			infra:    newTestInfra(),
+			deploy: &egv1a1.KubernetesDeploymentSpec{
+				Replicas: pointer.Int32(3),
+				Strategy: egv1a1.DefaultKubernetesDeploymentStrategy(),
+				Pod: &egv1a1.KubernetesPodSpec{
+					Annotations: map[string]string{
+						"prometheus.io/scrape": "true",
+					},
+					Labels: map[string]string{
+						"foo.bar": "custom-label",
+					},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: pointer.Int64(1000),
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "custom-libs",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+				},
+				Container: &egv1a1.KubernetesContainerSpec{
+					Image: pointer.String("envoyproxy/envoy:v1.2.3"),
+					Resources: &corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("400m"),
+							corev1.ResourceMemory: resource.MustParse("2Gi"),
+						},
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("200m"),
+							corev1.ResourceMemory: resource.MustParse("1Gi"),
+						},
+					},
+					SecurityContext: &corev1.SecurityContext{
+						Privileged: pointer.Bool(true),
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "custom-libs",
+							MountPath: "/lib/filter_foo.so",
+						},
+					},
+				},
+				InitContainers: []corev1.Container{
+					{
+						Name:    "install-filter-foo",
+						Image:   "alpine:3.11.3",
+						Command: []string{"/bin/sh", "-c"},
+						Args:    []string{"echo \"Installing filter-foo\"; wget -q https://example.com/download/filter_foo_v1.0.0.tgz -O - | tar -xz --directory=/lib filter_foo.so; echo \"Done\";"},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "custom-libs",
+								MountPath: "/lib",
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.caseName, func(t *testing.T) {

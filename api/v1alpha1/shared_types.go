@@ -56,15 +56,21 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
 
-	// Pod defines the desired annotations and securityContext of container.
+	// Pod defines the desired specification of pod.
 	//
 	// +optional
 	Pod *KubernetesPodSpec `json:"pod,omitempty"`
 
-	// Container defines the resources and securityContext of container.
+	// Container defines the desired specification of main container.
 	//
 	// +optional
 	Container *KubernetesContainerSpec `json:"container,omitempty"`
+
+	// List of initialization containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	//
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
