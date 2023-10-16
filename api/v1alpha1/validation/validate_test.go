@@ -535,15 +535,12 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	// values should be set in default
 	egAdmin := eg.GetEnvoyGatewayAdmin()
 	assert.True(t, egAdmin != nil)
-	assert.True(t, egAdmin.Debug == false)
 	assert.True(t, egAdmin.Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, egAdmin.Address.Host == egv1a1.GatewayAdminHost)
 
 	// override the admin config
 	// values should be updated
-	eg.Admin.Debug = true
 	eg.Admin.Address = nil
-	assert.True(t, eg.Admin.Debug == true)
 	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == egv1a1.GatewayAdminHost)
 
@@ -552,20 +549,54 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	eg.Admin = nil
 	eg.SetEnvoyGatewayDefaults()
 	assert.True(t, eg.Admin != nil)
-	assert.True(t, eg.Admin.Debug == false)
 	assert.True(t, eg.Admin.Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, eg.Admin.Address.Host == egv1a1.GatewayAdminHost)
+}
+
+func TestEnvoyGatewayDebug(t *testing.T) {
+	// default envoygateway config debug should not be nil
+	eg := egv1a1.DefaultEnvoyGateway()
+	assert.True(t, eg.Debug != nil)
+
+	// get default debug config from envoygateway
+	// values should be set in default
+	egDebug := eg.GetEnvoyGatewayDebug()
+	assert.True(t, egDebug != nil)
+	assert.True(t, eg.Debug.Address.Host == egv1a1.GatewayDebugHost)
+	assert.True(t, eg.Debug.Address.Port == egv1a1.GatewayDebugPort)
+	assert.True(t, egDebug.EnableDumpConfig == false)
+	assert.True(t, egDebug.EnablePprof == false)
+
+	// override the debug config
+	// values should be updated
+	eg.Debug.Address = &egv1a1.EnvoyGatewayDebugAddress{
+		Host: "0.0.0.0",
+		Port: 8899,
+	}
+	eg.Debug.EnableDumpConfig = true
+	eg.Debug.EnablePprof = true
+	assert.True(t, eg.GetEnvoyGatewayDebug().Address.Port == 8899)
+	assert.True(t, eg.GetEnvoyGatewayDebug().Address.Host == "0.0.0.0")
+	assert.True(t, egDebug.EnableDumpConfig == true)
+	assert.True(t, egDebug.EnablePprof == true)
+
+	// set eg defaults when debug is nil
+	// the debug should not be nil
+	eg.Debug = nil
+	eg.SetEnvoyGatewayDefaults()
+	assert.True(t, eg.Debug != nil)
+	assert.True(t, eg.Debug.Address != nil)
 }
 
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 	cases := []struct {
 		logging   egv1a1.ProxyLogging
-		component egv1a1.LogComponent
+		component egv1a1.ProxyLogComponent
 		expected  egv1a1.LogLevel
 	}{
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
@@ -573,7 +604,7 @@ func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
@@ -600,7 +631,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
@@ -608,7 +639,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 				},
@@ -617,7 +648,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,
@@ -627,7 +658,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,

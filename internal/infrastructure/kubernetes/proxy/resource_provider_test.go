@@ -65,7 +65,7 @@ func TestDeployment(t *testing.T) {
 		caseName     string
 		infra        *ir.Infra
 		deploy       *egv1a1.KubernetesDeploymentSpec
-		proxyLogging map[egv1a1.LogComponent]egv1a1.LogLevel
+		proxyLogging map[egv1a1.ProxyLogComponent]egv1a1.LogLevel
 		bootstrap    string
 		telemetry    *egv1a1.ProxyTelemetry
 		concurrency  *int32
@@ -248,7 +248,7 @@ func TestDeployment(t *testing.T) {
 			caseName: "component-level",
 			infra:    newTestInfra(),
 			deploy:   nil,
-			proxyLogging: map[egv1a1.LogComponent]egv1a1.LogLevel{
+			proxyLogging: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 				egv1a1.LogComponentDefault: egv1a1.LogLevelError,
 				egv1a1.LogComponentFilter:  egv1a1.LogLevelInfo,
 			},
