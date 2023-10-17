@@ -19,10 +19,6 @@ const (
 	GatewayAdminPort = 19000
 	// GatewayAdminHost is the host of envoy gateway admin server.
 	GatewayAdminHost = "127.0.0.1"
-	// GatewayDebugPort is the port which envoy gateway debug server is listening on.
-	GatewayDebugPort = 19010
-	// GatewayDebugHost is the host of envoy gateway debug server.
-	GatewayDebugHost = "127.0.0.1"
 )
 
 // +kubebuilder:object:root=true
@@ -62,12 +58,6 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	Admin *EnvoyGatewayAdmin `json:"admin,omitempty"`
-
-	// Debug defines the desired debug related abilities.
-	// If unspecified, the debug will not be running, including pprof, dump config etc.
-	//
-	// +optional
-	Debug *EnvoyGatewayDebug `json:"debug,omitempty"`
 
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
@@ -435,26 +425,14 @@ type EnvoyGatewayAdmin struct {
 	//
 	// +optional
 	Address *EnvoyGatewayAdminAddress `json:"address,omitempty"`
-}
-
-// EnvoyGatewayDebug defines the Envoy Gateway Debug configuration.
-type EnvoyGatewayDebug struct {
-
-	// EnableDumpConfig defines if enables dump the Envoy Gateway config in logs.
+	// EnableDumpConfig defines if enable dump config in Envoy Gateway logs.
 	//
 	// +optional
-	EnableDumpConfig bool `json:"enableDumpConfig,omitempty"`
-
-	// EnablePprof defines if enables pprof in Envoy Gateway debug server.
+	EnableDumpConfig bool
+	// EnablePprof defines if enable pprof in Envoy Gateway Admin Server.
 	//
 	// +optional
-	EnablePprof bool `json:"enablePprof,omitempty"`
-
-	// Address defines the address of Envoy Gateway Debug Server.
-	// Pprof will use the debug address, if you set it to non-nil.
-	//
-	// +optional
-	Address *EnvoyGatewayDebugAddress `json:"address,omitempty"`
+	EnablePprof bool
 }
 
 // EnvoyGatewayAdminAddress defines the Envoy Gateway Admin Address configuration.
@@ -466,21 +444,6 @@ type EnvoyGatewayAdminAddress struct {
 	// +kubebuilder:default=19000
 	Port int `json:"port,omitempty"`
 	// Host defines the admin server hostname.
-	//
-	// +optional
-	// +kubebuilder:default="127.0.0.1"
-	Host string `json:"host,omitempty"`
-}
-
-// EnvoyGatewayDebugAddress defines the Envoy Gateway Debug Address configuration.
-type EnvoyGatewayDebugAddress struct {
-	// Port defines the port the debug server is exposed on.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=19010
-	Port int `json:"port,omitempty"`
-	// Host defines the debug server hostname.
 	//
 	// +optional
 	// +kubebuilder:default="127.0.0.1"

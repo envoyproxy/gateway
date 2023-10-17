@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package debug
+package admin
 
 import (
 	"net/http"
@@ -18,11 +18,11 @@ import (
 )
 
 var (
-	debugLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("debug")
+	debugLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("admin")
 )
 
 func Init(cfg *config.Server) error {
-	if cfg.EnvoyGateway.GetEnvoyGatewayDebug().EnableDumpConfig {
+	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnableDumpConfig {
 		spewConfig := spew.NewDefaultConfig()
 		spewConfig.DisableMethods = true
 		spewConfig.Dump(cfg)
@@ -33,10 +33,10 @@ func Init(cfg *config.Server) error {
 
 func start(cfg *config.Server) error {
 	handlers := http.NewServeMux()
-	address := cfg.EnvoyGateway.GetEnvoyGatewayDebugAddress()
-	enablePprof := cfg.EnvoyGateway.GetEnvoyGatewayDebug().EnablePprof
+	address := cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
+	enablePprof := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
 
-	debugLogger.Info("starting debug server", "address", address, "enablePprof", enablePprof)
+	debugLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
 
 	if enablePprof {
 		// Serve pprof endpoints to aid in live debugging.
@@ -56,10 +56,10 @@ func start(cfg *config.Server) error {
 		IdleTimeout:       15 * time.Second,
 	}
 
-	// Listen And Serve Debug Server.
+	// Listen And Serve Admin Server.
 	go func() {
 		if err := debugServer.ListenAndServe(); err != nil {
-			cfg.Logger.Error(err, "start debug server failed")
+			cfg.Logger.Error(err, "start admin server failed")
 		}
 	}()
 

@@ -4,15 +4,15 @@ title: "Debug support in Envoy Gateway"
 
 ## Overview
 
-Envoy Gateway exposes endpoints at `localhost:19010/debug/pprof` to run Golang profiles to aid in live debugging.
+Envoy Gateway exposes endpoints at `localhost:19000/debug/pprof` to run Golang profiles to aid in live debugging.
 
 The endpoints are equivalent to those found in the http/pprof package. `/debug/pprof/` returns an HTML page listing the available profiles.
 
 ## Goals
 
-* Add debug server to Envoy Gateway control plane, separated with admin server.
+* Add admin server to Envoy Gateway control plane, separated with admin server.
 * Add pprof support to Envoy Gateway control plane.
-* Define an API to allow Envoy Gateway to custom debug server configuration.
+* Define an API to allow Envoy Gateway to custom admin server configuration.
 * Define an API to allow Envoy Gateway to open envoy gateway config dump in logs.
 
 The following are the different types of profiles end-user can run:
@@ -34,13 +34,13 @@ PROFILE	| FUNCTION
 
 ## API
 
-* Add `debug` field in EnvoyGateway config.
-* Add `address` field under `debug` field.
+* Add `admin` field in EnvoyGateway config.
+* Add `address` field under `admin` field.
 * Add `port` and `host` under `address` field.
-* Add `enableDumpConfig` field under `debug field.
-* Add `enablePprof` field under `debug field.
+* Add `enableDumpConfig` field under `admin field.
+* Add `enablePprof` field under `admin field.
 
-Here is an example configuration to open debug server and enable Pprof:
+Here is an example configuration to open admin server and enable Pprof:
 
 ``` yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -49,11 +49,11 @@ gateway:
 kind: EnvoyGateway
 provider:
     type: "Kubernetes"
-debug:
+admin:
   enablePprof: true
   address:
     host: 127.0.0.1
-    port: 19010
+    port: 19000
 ```
 
 Here is an example configuration to open envoy gateway config dump in logs:
@@ -65,6 +65,6 @@ gateway:
 kind: EnvoyGateway
 provider:
     type: "Kubernetes"
-debug:
+admin:
    enableDumpConfig: true
 ```

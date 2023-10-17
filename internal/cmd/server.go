@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/envoyproxy/gateway/internal/debug"
+	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
@@ -50,8 +50,8 @@ func server() error {
 		return err
 	}
 
-	// Init eg debug servers.
-	if err := debug.Init(cfg); err != nil {
+	// Init eg admin servers.
+	if err := admin.Init(cfg); err != nil {
 		return err
 	}
 	// init eg runners.

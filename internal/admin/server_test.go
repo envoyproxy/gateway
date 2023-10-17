@@ -3,7 +3,7 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-package debug
+package admin
 
 import (
 	"testing"
@@ -14,19 +14,10 @@ import (
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 )
 
-func TestInitDebugServer(t *testing.T) {
+func TestInitAdminServer(t *testing.T) {
 	svrConfig := &config.Server{
 		EnvoyGateway: &v1alpha1.EnvoyGateway{
-			EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
-				Debug: &v1alpha1.EnvoyGatewayDebug{
-					EnableDumpConfig: true,
-					EnablePprof:      true,
-					Address: &v1alpha1.EnvoyGatewayDebugAddress{
-						Host: "127.0.0.1",
-						Port: 19010,
-					},
-				},
-			},
+			EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{},
 		},
 	}
 	err := Init(svrConfig)

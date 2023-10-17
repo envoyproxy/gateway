@@ -202,7 +202,6 @@ EnvoyGateway is the schema for the envoygateways API.
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
-| `debug` _[EnvoyGatewayDebug](#envoygatewaydebug)_ | Debug defines the desired debug related abilities. If unspecified, the debug will not be running, including pprof, dump config etc. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
@@ -221,6 +220,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `address` _[EnvoyGatewayAdminAddress](#envoygatewayadminaddress)_ | Address defines the address of Envoy Gateway Admin Server. |
+| `EnableDumpConfig` _boolean_ | EnableDumpConfig defines if enable dump config in Envoy Gateway logs. |
+| `EnablePprof` _boolean_ | EnablePprof defines if enable pprof in Envoy Gateway Admin Server. |
 
 
 #### EnvoyGatewayAdminAddress
@@ -251,38 +252,6 @@ _Appears in:_
 | --- | --- |
 | `resource` _[EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)_ | Resource defines the desired resource provider. This provider is used to specify the provider to be used to retrieve the resource configurations such as Gateway API resources |
 | `infrastructure` _[EnvoyGatewayInfrastructureProvider](#envoygatewayinfrastructureprovider)_ | Infrastructure defines the desired infrastructure provider. This provider is used to specify the provider to be used to provide an environment to deploy the out resources like the Envoy Proxy data plane. |
-
-
-#### EnvoyGatewayDebug
-
-
-
-EnvoyGatewayDebug defines the Envoy Gateway Debug configuration.
-
-_Appears in:_
-- [EnvoyGateway](#envoygateway)
-- [EnvoyGatewaySpec](#envoygatewayspec)
-
-| Field | Description |
-| --- | --- |
-| `enableDumpConfig` _boolean_ | EnableDumpConfig defines if enables dump the Envoy Gateway config in logs. |
-| `enablePprof` _boolean_ | EnablePprof defines if enables pprof in Envoy Gateway debug server. |
-| `address` _[EnvoyGatewayDebugAddress](#envoygatewaydebugaddress)_ | Address defines the address of Envoy Gateway Debug Server. Pprof will use the debug address, if you set it to non-nil. |
-
-
-#### EnvoyGatewayDebugAddress
-
-
-
-EnvoyGatewayDebugAddress defines the Envoy Gateway Debug Address configuration.
-
-_Appears in:_
-- [EnvoyGatewayDebug](#envoygatewaydebug)
-
-| Field | Description |
-| --- | --- |
-| `port` _integer_ | Port defines the port the debug server is exposed on. |
-| `host` _string_ | Host defines the debug server hostname. |
 
 
 #### EnvoyGatewayFileResourceProvider
@@ -415,7 +384,6 @@ _Appears in:_
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
-| `debug` _[EnvoyGatewayDebug](#envoygatewaydebug)_ | Debug defines the desired debug related abilities. If unspecified, the debug will not be running, including pprof, dump config etc. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |

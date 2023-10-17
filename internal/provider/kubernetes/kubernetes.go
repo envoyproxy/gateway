@@ -15,7 +15,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -41,12 +40,6 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		LeaderElection:         false,
 		HealthProbeBindAddress: ":8081",
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
-	}
-
-	if address := svr.EnvoyGateway.GetEnvoyGatewayAdminAddress(); address != "" {
-		mgrOpts.Metrics = server.Options{
-			BindAddress: address,
-		}
 	}
 
 	// TODO: implement config validation on the watch mode config
