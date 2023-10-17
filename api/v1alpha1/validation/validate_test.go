@@ -537,12 +537,24 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	assert.True(t, egAdmin != nil)
 	assert.True(t, egAdmin.Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, egAdmin.Address.Host == egv1a1.GatewayAdminHost)
+	assert.True(t, egAdmin.EnableDumpConfig == false)
+	assert.True(t, egAdmin.EnablePprof == false)
 
 	// override the admin config
 	// values should be updated
-	eg.Admin.Address = nil
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == egv1a1.GatewayAdminPort)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == egv1a1.GatewayAdminHost)
+	eg.Admin = &egv1a1.EnvoyGatewayAdmin{
+		Address: &egv1a1.EnvoyGatewayAdminAddress{
+			Host: "0.0.0.0",
+			Port: 19010,
+		},
+		EnableDumpConfig: true,
+		EnablePprof:      true,
+	}
+
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == 19010)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == "0.0.0.0")
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnableDumpConfig == true)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnablePprof == true)
 
 	// set eg defaults when admin is nil
 	// the admin should not be nil
@@ -551,41 +563,8 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	assert.True(t, eg.Admin != nil)
 	assert.True(t, eg.Admin.Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, eg.Admin.Address.Host == egv1a1.GatewayAdminHost)
-}
-
-func TestEnvoyGatewayDebug(t *testing.T) {
-	// default envoygateway config debug should not be nil
-	eg := egv1a1.DefaultEnvoyGateway()
-	assert.True(t, eg.Debug != nil)
-
-	// get default debug config from envoygateway
-	// values should be set in default
-	egDebug := eg.GetEnvoyGatewayDebug()
-	assert.True(t, egDebug != nil)
-	assert.True(t, eg.Debug.Address.Host == egv1a1.GatewayDebugHost)
-	assert.True(t, eg.Debug.Address.Port == egv1a1.GatewayDebugPort)
-	assert.True(t, egDebug.EnableDumpConfig == false)
-	assert.True(t, egDebug.EnablePprof == false)
-
-	// override the debug config
-	// values should be updated
-	eg.Debug.Address = &egv1a1.EnvoyGatewayDebugAddress{
-		Host: "0.0.0.0",
-		Port: 8899,
-	}
-	eg.Debug.EnableDumpConfig = true
-	eg.Debug.EnablePprof = true
-	assert.True(t, eg.GetEnvoyGatewayDebug().Address.Port == 8899)
-	assert.True(t, eg.GetEnvoyGatewayDebug().Address.Host == "0.0.0.0")
-	assert.True(t, egDebug.EnableDumpConfig == true)
-	assert.True(t, egDebug.EnablePprof == true)
-
-	// set eg defaults when debug is nil
-	// the debug should not be nil
-	eg.Debug = nil
-	eg.SetEnvoyGatewayDefaults()
-	assert.True(t, eg.Debug != nil)
-	assert.True(t, eg.Debug.Address != nil)
+	assert.True(t, eg.Admin.EnableDumpConfig == false)
+	assert.True(t, eg.Admin.EnablePprof == false)
 }
 
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {

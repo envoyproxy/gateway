@@ -23,7 +23,6 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			Provider: DefaultEnvoyGatewayProvider(),
 			Logging:  DefaultEnvoyGatewayLogging(),
 			Admin:    DefaultEnvoyGatewayAdmin(),
-			Debug:    DefaultEnvoyGatewayDebug(),
 		},
 	}
 }
@@ -48,9 +47,6 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	if e.Admin == nil {
 		e.Admin = DefaultEnvoyGatewayAdmin()
 	}
-	if e.Debug == nil {
-		e.Debug = DefaultEnvoyGatewayDebug()
-	}
 }
 
 // GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
@@ -69,26 +65,6 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 // GetEnvoyGatewayAdminAddress returns the EnvoyGateway Admin Address.
 func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	address := e.GetEnvoyGatewayAdmin().Address
-	if address != nil {
-		return fmt.Sprintf("%s:%d", address.Host, address.Port)
-	}
-
-	return ""
-}
-
-// GetEnvoyGatewayDebug returns the EnvoyGatewayDebug of EnvoyGateway or a default EnvoyGatewayDebug if unspecified.
-func (e *EnvoyGateway) GetEnvoyGatewayDebug() *EnvoyGatewayDebug {
-	if e.Debug != nil {
-		return e.Debug
-	}
-	e.Debug = DefaultEnvoyGatewayDebug()
-
-	return e.Debug
-}
-
-// GetEnvoyGatewayDebugAddress returns the EnvoyGateway Debug Address.
-func (e *EnvoyGateway) GetEnvoyGatewayDebugAddress() string {
-	address := e.GetEnvoyGatewayDebug().Address
 	if address != nil {
 		return fmt.Sprintf("%s:%d", address.Host, address.Port)
 	}
@@ -139,7 +115,9 @@ func DefaultEnvoyGatewayKubeProvider() *EnvoyGatewayKubernetesProvider {
 // DefaultEnvoyGatewayAdmin returns a new EnvoyGatewayAdmin with default configuration parameters.
 func DefaultEnvoyGatewayAdmin() *EnvoyGatewayAdmin {
 	return &EnvoyGatewayAdmin{
-		Address: DefaultEnvoyGatewayAdminAddress(),
+		Address:          DefaultEnvoyGatewayAdminAddress(),
+		EnableDumpConfig: false,
+		EnablePprof:      false,
 	}
 }
 
@@ -148,23 +126,6 @@ func DefaultEnvoyGatewayAdminAddress() *EnvoyGatewayAdminAddress {
 	return &EnvoyGatewayAdminAddress{
 		Port: GatewayAdminPort,
 		Host: GatewayAdminHost,
-	}
-}
-
-// DefaultEnvoyGatewayDebug returns a new EnvoyGatewayDebug with default configuration parameters.
-func DefaultEnvoyGatewayDebug() *EnvoyGatewayDebug {
-	return &EnvoyGatewayDebug{
-		EnableDumpConfig: false,
-		EnablePprof:      false,
-		Address:          DefaultEnvoyGatewayDebugAddress(),
-	}
-}
-
-// DefaultEnvoyGatewayDebugAddress returns a new EnvoyGatewayDebugAddress with default configuration parameters.
-func DefaultEnvoyGatewayDebugAddress() *EnvoyGatewayDebugAddress {
-	return &EnvoyGatewayDebugAddress{
-		Port: GatewayDebugPort,
-		Host: GatewayDebugHost,
 	}
 }
 
