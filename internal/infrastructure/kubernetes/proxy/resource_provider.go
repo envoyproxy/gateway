@@ -212,6 +212,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 				},
 				Spec: corev1.PodSpec{
 					Containers:                    containers,
+					InitContainers:                deploymentConfig.InitContainers,
 					ServiceAccountName:            ExpectedResourceHashedName(r.infra.Name),
 					AutomountServiceAccountToken:  pointer.Bool(false),
 					TerminationGracePeriodSeconds: pointer.Int64(int64(300)),
