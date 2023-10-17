@@ -216,3 +216,12 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 
 	return xdsIR, infraIR
 }
+
+func (t *Translator) getIRKey(gateway *v1beta1.Gateway) string {
+	irKey := irStringKey(gateway.Namespace, gateway.Name)
+	if t.MergeGateways {
+		return string(t.GatewayClassName)
+	}
+
+	return irKey
+}

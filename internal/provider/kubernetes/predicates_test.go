@@ -334,7 +334,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
-				test.GetGatewayDeployment(types.NamespacedName{Name: infraDeploymentName(sampleGateway, false)}, nil),
+				test.GetGatewayDeployment(types.NamespacedName{Name: infraName(sampleGateway, false)}, nil),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, map[string]string{
 				gatewayapi.OwningGatewayNameLabel:      "scheduled-status-test",

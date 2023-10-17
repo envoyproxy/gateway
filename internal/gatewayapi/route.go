@@ -572,11 +572,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 				perHostRoutes = append(perHostRoutes, hostRoute)
 			}
 		}
-		irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-		if t.MergeGateways {
-			irKey = string(t.GatewayClassName)
-		}
-
+		irKey := t.getIRKey(listener.gateway)
 		irListener := xdsIR[irKey].GetHTTPListener(irHTTPListenerName(listener))
 		if irListener != nil {
 			if GetRouteType(route) == KindGRPCRoute {
@@ -672,10 +668,7 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 
 			hasHostnameIntersection = true
 
-			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-			if t.MergeGateways {
-				irKey = string(t.GatewayClassName)
-			}
+			irKey := t.getIRKey(listener.gateway)
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the TCP Listener while parsing the TLSRoute since
@@ -815,10 +808,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			}
 			accepted = true
 
-			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-			if t.MergeGateways {
-				irKey = string(t.GatewayClassName)
-			}
+			irKey := t.getIRKey(listener.gateway)
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the UDP Listener while parsing the UDPRoute since
@@ -954,11 +944,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 				continue
 			}
 			accepted = true
-
-			irKey := irStringKey(listener.gateway.Namespace, listener.gateway.Name)
-			if t.MergeGateways {
-				irKey = string(t.GatewayClassName)
-			}
+			irKey := t.getIRKey(listener.gateway)
 
 			containerPort := servicePortToContainerPort(int32(listener.Port))
 			// Create the TCP Listener while parsing the TCPRoute since

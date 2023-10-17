@@ -7,7 +7,6 @@ package proxy
 
 import (
 	"fmt"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -57,17 +56,6 @@ func ExpectedResourceHashedName(name string) string {
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }
 
-// ExpectedContainerPortHashedName returns expected service name with max length of 15 characters.
-func ExpectedContainerPortHashedName(name string) string {
-	if len(name) > 15 {
-		hashedName := providerutils.HashString(name)
-		listenerName := strings.Split(name, "-")
-
-		return fmt.Sprintf("%s-%s", listenerName[0], hashedName[0:14-len(listenerName)])
-	}
-	return name
-}
-
 // EnvoyAppLabel returns the labels used for all Envoy resources.
 func EnvoyAppLabel() map[string]string {
 	return map[string]string{
@@ -114,7 +102,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.Kube
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				Name:          ExpectedContainerPortHashedName(p.Name),
+				Name:          providerutils.ExpectedContainerPortHashedName(p.Name),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}

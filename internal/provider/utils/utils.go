@@ -40,3 +40,15 @@ func HashString(str string) string {
 	h.Write([]byte(str))
 	return strings.ToLower(fmt.Sprintf("%x", h.Sum(nil)))
 }
+
+// ExpectedContainerPortHashedName returns expected service name with max length of 15 characters.
+func ExpectedContainerPortHashedName(name string) string {
+	if len(name) > 15 {
+		hashedName := HashString(name)
+		resourceName := strings.ReplaceAll(name, "/", "-")
+		listenerName := strings.Split(resourceName, "-")
+
+		return fmt.Sprintf("%s-%s", listenerName[0], hashedName[0:14-len(listenerName)])
+	}
+	return name
+}

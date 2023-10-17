@@ -37,11 +37,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	for _, gateway := range gateways {
 		// Infra IR proxy ports must be unique.
 		var foundPorts []*protocolPort
-
-		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
-		if t.MergeGateways {
-			irKey = string(t.GatewayClassName)
-		}
+		irKey := t.getIRKey(gateway.Gateway)
 
 		if resources.EnvoyProxy != nil {
 			infraIR[irKey].Proxy.Config = resources.EnvoyProxy

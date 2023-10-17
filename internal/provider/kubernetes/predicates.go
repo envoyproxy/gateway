@@ -169,19 +169,16 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 	labels := svc.GetLabels()
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	gclass := labels[gatewayapi.OwningGatewayClassLabel]
+	res, ok := r.resources.GatewayAPIResources.Load(gclass)
 	if ok {
-		gtw := r.findGateways(ctx, gclass)
-		if len(gtw.Items) != 0 {
-			for _, gw := range gtw.Items {
-				gw := gw
-				r.statusUpdateForGateway(ctx, &gw)
-			}
+		for _, gw := range res.Gateways {
+			gw := gw
+			r.statusUpdateForGateway(ctx, gw)
 		}
-
-		nsName := utils.NamespacedName(svc)
-		return r.isRouteReferencingBackend(&nsName)
+		return false
 	}
+
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
 	gtw := r.findOwningGateway(ctx, svc.GetLabels())
 	if gtw != nil {
@@ -191,19 +188,6 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 
 	nsName := utils.NamespacedName(svc)
 	return r.isRouteReferencingBackend(&nsName)
-}
-
-// findGateways attempts finds a GatewayList using accepted GatewayClass name.
-func (r *gatewayAPIReconciler) findGateways(ctx context.Context, class string) *gwapiv1b1.GatewayList {
-	gatewayList := &gwapiv1b1.GatewayList{}
-	if err := r.client.List(ctx, gatewayList, &client.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(classGatewayIndex, class),
-	}); err != nil {
-		r.log.Info("no associated Gateways found for GatewayClass", "name", class)
-		return nil
-	}
-
-	return gatewayList
 }
 
 // validateServiceImportForReconcile tries finding the owning Gateway of the ServiceImport
@@ -313,17 +297,16 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		return false
 	}
 	labels := deployment.GetLabels()
-	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	gclass := labels[gatewayapi.OwningGatewayClassLabel]
+	res, ok := r.resources.GatewayAPIResources.Load(gclass)
 	if ok {
-		gtw := r.findGateways(ctx, gclass)
-		if len(gtw.Items) != 0 {
-			for _, gw := range gtw.Items {
-				gw := gw
-				r.statusUpdateForGateway(ctx, &gw)
-			}
+		for _, gw := range res.Gateways {
+			gw := gw
+			r.statusUpdateForGateway(ctx, gw)
 		}
 		return false
 	}
+
 	// Only deployments in the configured namespace should be reconciled.
 	if deployment.Namespace == r.namespace {
 		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
@@ -414,7 +397,7 @@ func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gw
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraDeploymentName(gateway, r.mergeGateways),
+		Name:      infraName(gateway, r.mergeGateways),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -430,7 +413,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1b1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraServiceName(gateway, r.mergeGateways),
+		Name:      infraName(gateway, r.mergeGateways),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {

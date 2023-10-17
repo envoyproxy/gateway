@@ -35,3 +35,6 @@ gateways:
           allowedRoutes:
             namespaces:
               from: Same
+        - name: http-3
+          port: 8888
+          protocol: HTTP
