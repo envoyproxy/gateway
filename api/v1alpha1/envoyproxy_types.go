@@ -73,6 +73,15 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
+
+	// OverloadManager defines the configuration for the Overload Manager in envoy.
+	// Visit https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/overload_manager/overload_manager#config-overload-manager
+	// to learn more about the syntax.
+	// Overload manager is disabled by default.
+	// After the feature is enabled, following two overload actions are configured to Envoy:
+	// 1.Shrink heap action is executed when 95% of the maximum heap size is reached.
+	// 2.Envoy will stop accepting requests when 98% of the maximum heap size is reached.
+	OverloadManager *OverloadManager `json:"overloadManager,omitempty"`
 }
 
 type ProxyTelemetry struct {
@@ -211,6 +220,14 @@ type EnvoyProxyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []EnvoyProxy `json:"items"`
+}
+
+// OverloadManager defines the configuration for the Overload Manager in envoy.
+type OverloadManager struct {
+	// The appropriate number of bytes can be different from system to system.
+	// Use this value to set the approximate fixed heap value of your system, you can find
+	// that out by running this command "TODO"
+	MaxHeapSizeBytes int64 `json:"maxHeapSizeBytes,omitempty"`
 }
 
 func init() {

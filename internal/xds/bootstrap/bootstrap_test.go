@@ -18,8 +18,9 @@ import (
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
-		name         string
-		proxyMetrics *egv1a1.ProxyMetrics
+		name            string
+		proxyMetrics    *egv1a1.ProxyMetrics
+		overloadManager *egv1a1.OverloadManager
 	}{
 		{
 			name: "disable-prometheus",
@@ -75,11 +76,22 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "overload-manager",
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			},
+			overloadManager: &egv1a1.OverloadManager{
+				MaxHeapSizeBytes: 1073741824,
+			},
+		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := GetRenderedBootstrapConfig(tc.proxyMetrics)
+			got, err := GetRenderedBootstrapConfig(tc.proxyMetrics, tc.overloadManager)
 			assert.NoError(t, err)
 			expected, err := readTestData(tc.name)
 			assert.NoError(t, err)

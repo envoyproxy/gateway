@@ -139,7 +139,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 	// Get the default Bootstrap
-	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(proxyMetrics)
+	bootstrapConfigurations, err := bootstrap.GetRenderedBootstrapConfig(proxyMetrics, infra.Config.Spec.OverloadManager)
 	if err != nil {
 		return nil, err
 	}
