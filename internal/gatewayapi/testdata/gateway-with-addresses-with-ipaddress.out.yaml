@@ -14,6 +14,7 @@ gateways:
     - type: Hostname
       value: foo.bar
     gatewayClassName: envoy-gateway-class
+    infrastructure: {}
     listeners:
     - name: tcp
       port: 80

@@ -35,7 +35,8 @@
             "port": 80,
             "protocol": "HTTP"
           }
-        ]
+        ],
+        "infrastructure": {}
       },
       "status": {
         "listeners": [
