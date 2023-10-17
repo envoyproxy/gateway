@@ -453,6 +453,7 @@ func irTLSConfigs(tlsSecrets []*v1.Secret) []*ir.TLSListenerConfig {
 func irTLSListenerConfigName(secret *v1.Secret) string {
 	return fmt.Sprintf("%s-%s", secret.Namespace, secret.Name)
 }
+
 func isMergeGatewaysEnabled(resources *Resources) bool {
 	return resources.EnvoyProxy != nil && resources.EnvoyProxy.Spec.MergeGateways != nil && *resources.EnvoyProxy.Spec.MergeGateways
 }

@@ -177,9 +177,10 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 
-	gclass := labels[gatewayapi.OwningGatewayClassLabel]
-	res, ok := r.resources.GatewayAPIResources.Load(gclass)
+	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok {
+		res, _ := r.resources.GatewayAPIResources.Load(gclass)
 		for _, gw := range res.Gateways {
 			gw := gw
 			r.statusUpdateForGateway(ctx, gw)
@@ -309,12 +310,13 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		}
 	}
 
-	gclass := labels[gatewayapi.OwningGatewayClassLabel]
-	res, ok := r.resources.GatewayAPIResources.Load(gclass)
+	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
 	if ok {
-		for _, gw := range res.Gateways {
-			gw := gw
-			r.statusUpdateForGateway(ctx, gw)
+		res, _ := r.resources.GatewayAPIResources.Load(gclass)
+		for _, gtw := range res.Gateways {
+			gtw := gtw
+			r.statusUpdateForGateway(ctx, gtw)
 		}
 		return false
 	}

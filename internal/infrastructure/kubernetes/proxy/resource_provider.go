@@ -73,9 +73,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			if port.Protocol == ir.UDPProtocolType {
 				protocol = corev1.ProtocolUDP
 			}
-			name := strings.ReplaceAll(port.Name, "/", "-")
+			// Listeners on merged gateways will have a port name {ListenerName}/{GatewayNamespace}/{GatewayName}.
+			portName := strings.ReplaceAll(port.Name, "/", "-")
 			p := corev1.ServicePort{
-				Name:       name,
+				Name:       portName,
 				Protocol:   protocol,
 				Port:       port.ServicePort,
 				TargetPort: target,

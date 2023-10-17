@@ -533,16 +533,16 @@ type portListeners struct {
 	hostnames map[string]int
 }
 
+// Port, protocol and hostname tuple should be unique across all listeners on merged Gateways.
 func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContext) {
 	listenerSets := sets.Set[string]{}
 	for _, gateway := range gateways {
 		for _, listener := range gateway.listeners {
-			var hostname string
+			hostname := new(v1beta1.Hostname)
 			if listener.Hostname != nil {
-				hostname = string(*listener.Hostname)
+				hostname = listener.Hostname
 			}
-
-			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, hostname, listener.Port)
+			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, *hostname, listener.Port)
 			if listenerSets.Has(portProtocolHostname) {
 				listener.SetCondition(
 					v1beta1.ListenerConditionConflicted,

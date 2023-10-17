@@ -41,7 +41,8 @@ func HashString(str string) string {
 	return strings.ToLower(fmt.Sprintf("%x", h.Sum(nil)))
 }
 
-// ExpectedContainerPortHashedName returns expected service name with max length of 15 characters.
+// ExpectedContainerPortHashedName returns expected container port name with max length of 15 characters.
+// If mergedGateways is enabled or listener port name is larger than 15 characters it will return partially hashed name.
 func ExpectedContainerPortHashedName(name string) string {
 	if len(name) > 15 {
 		hashedName := HashString(name)

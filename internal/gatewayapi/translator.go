@@ -191,6 +191,7 @@ func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*Gateway
 	return relevant
 }
 
+// InitIRs checks if mergeGateways is enabled in EnvoyProxy config and initializes XdsIR and InfraIR maps with adequate keys.
 func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (map[string]*ir.Xds, map[string]*ir.Infra) {
 	xdsIR := make(XdsIRMap)
 	infraIR := make(InfraIRMap)
@@ -217,6 +218,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 	return xdsIR, infraIR
 }
 
+// XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
 func (t *Translator) getIRKey(gateway *v1beta1.Gateway) string {
 	irKey := irStringKey(gateway.Namespace, gateway.Name)
 	if t.MergeGateways {
