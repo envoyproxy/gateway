@@ -322,7 +322,7 @@ func validatePortOverlapForClientTrafficPolicy(l *ListenerContext, xds *ir.Xds, 
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range xds.HTTP {
 		if http.Name == irListenerName {
@@ -372,7 +372,7 @@ func (t *Translator) translateClientTrafficPolicyForListener(policy *egv1a1.Clie
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range gwXdsIR.HTTP {
 		if http.Name == irListenerName {

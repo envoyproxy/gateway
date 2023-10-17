@@ -383,13 +383,13 @@ func findXdsHTTPRouteConfigName(xdsListener *listenerv3.Listener) string {
 	return ""
 }
 
-func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPListener, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
-	if irListener == nil {
+func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irRoute *ir.TCPRoute, clusterName string, accesslog *ir.AccessLog, connection *ir.Connection) error {
+	if irRoute == nil {
 		return errors.New("tcp listener is nil")
 	}
 
-	isTLSPassthrough := irListener.TLS != nil && irListener.TLS.Passthrough != nil
-	isTLSTerminate := irListener.TLS != nil && irListener.TLS.Terminate != nil
+	isTLSPassthrough := irRoute.TLS != nil && irRoute.TLS.Passthrough != nil
+	isTLSTerminate := irRoute.TLS != nil && irRoute.TLS.Terminate != nil
 	statPrefix := "tcp"
 	if isTLSPassthrough {
 		statPrefix = "passthrough"
@@ -403,9 +403,9 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 		AccessLog:  buildXdsAccessLog(accesslog, false),
 		StatPrefix: statPrefix,
 		ClusterSpecifier: &tcpv3.TcpProxy_Cluster{
-			Cluster: clusterName,
+			Cluster: irRoute.Destination.Name,
 		},
-		HashPolicy: buildTCPProxyHashPolicy(irListener.LoadBalancer),
+		HashPolicy: buildTCPProxyHashPolicy(irRoute.LoadBalancer),
 	}
 
 	var filters []*listenerv3.Filter
@@ -430,13 +430,13 @@ func addXdsTCPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.TCPLi
 	}
 
 	if isTLSPassthrough {
-		if err := addServerNamesMatch(xdsListener, filterChain, irListener.TLS.Passthrough.SNIs); err != nil {
+		if err := addServerNamesMatch(xdsListener, filterChain, irRoute.TLS.Passthrough.SNIs); err != nil {
 			return err
 		}
 	}
 
 	if isTLSTerminate {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS.Terminate)
+		tSocket, err := buildXdsDownstreamTLSSocket(irRoute.TLS.Terminate)
 		if err != nil {
 			return err
 		}

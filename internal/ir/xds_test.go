@@ -63,6 +63,13 @@ var (
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
 	}
+	invalidRouteMatchHTTPListener = HTTPListener{
+		Name:      "invalid-route-match",
+		Address:   "0.0.0.0",
+		Port:      80,
+		Hostnames: []string{"example.com"},
+		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
+	}
 	invalidBackendHTTPListener = HTTPListener{
 		Name:      "invalid-backend-match",
 		Address:   "0.0.0.0",
@@ -79,49 +86,53 @@ var (
 	}
 
 	// TCPListener
-	happyTCPListenerTLSPassthrough = TCPListener{
-		Name:        "happy",
-		Address:     "0.0.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
-		Destination: &happyRouteDestination,
-	}
-
-	happyTCPListenerTLSTerminate = TCPListener{
+	happyTCPListener = TCPListener{
 		Name:    "happy",
 		Address: "0.0.0.0",
 		Port:    80,
-		TLS: &TLS{Terminate: &TLSConfig{
-			Certificates: []TLSCertificate{{
-				Name:              "happy",
-				ServerCertificate: []byte("server-cert"),
-				PrivateKey:        []byte("priv-key"),
-			}}}},
-		Destination: &happyRouteDestination,
+	}
+	happyTCPListenerWithRoute = TCPListener{
+		Name:    "happy",
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRoute},
+	}
+	invalidNameTCPListener = TCPListener{
+		Address: "0.0.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRoute},
+	}
+	invalidAddrTCPListener = TCPListener{
+		Name:    "invalid-addr",
+		Address: "1.0.0",
+		Port:    80,
+		Routes:  []*TCPRoute{&happyTCPRoute},
 	}
 
-	emptySNITCPListenerTLSPassthrough = TCPListener{
-		Name:        "empty-sni",
-		Address:     "0.0.0.0",
-		Port:        80,
+	// TCPRoute
+	happyTCPRoute = TCPRoute{
+		Name:        "happy",
 		Destination: &happyRouteDestination,
 	}
-	invalidNameTCPListenerTLSPassthrough = TCPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
+	happyTCPRouteTLSPassthrough = TCPRoute{
+		Name:        "happy-tls-passthrough",
 		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
 		Destination: &happyRouteDestination,
 	}
-	invalidAddrTCPListenerTLSPassthrough = TCPListener{
-		Name:        "invalid-addr",
-		Address:     "1.0.0",
-		Port:        80,
-		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{"example.com"}}},
+	happyTCPRouteTLSTermination = TCPRoute{
+		Name: "happy-tls-termination",
+		TLS: &TLS{Terminate: &TLSConfig{Certificates: []TLSCertificate{{
+			Name:              "happy",
+			ServerCertificate: []byte("server-cert"),
+			PrivateKey:        []byte("priv-key"),
+		}}}},
 		Destination: &happyRouteDestination,
 	}
-	invalidSNITCPListenerTLSPassthrough = TCPListener{
-		Address:     "0.0.0.0",
-		Port:        80,
+	invalidNameTCPRoute = TCPRoute{
+		Destination: &happyRouteDestination,
+	}
+	invalidSNITCPRoute = TCPRoute{
+		Name:        "invalid-sni-route",
 		TLS:         &TLS{Passthrough: &TLSInspectorConfig{SNIs: []string{}}},
 		Destination: &happyRouteDestination,
 	}
@@ -158,6 +169,11 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptr.To("example"),
 		},
+		Destination: &happyRouteDestination,
+	}
+	emptyMatchHTTPRoute = HTTPRoute{
+		Name:        "empty-match",
+		Hostname:    "*",
 		Destination: &happyRouteDestination,
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
@@ -500,21 +516,31 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "happy tls passthrough",
 			input: Xds{
-				TCP: []*TCPListener{&happyTCPListenerTLSPassthrough},
+				TCP: []*TCPListener{{
+					Name:    "happy-tls-passthrough",
+					Address: "0.0.0.0",
+					Port:    80,
+					Routes:  []*TCPRoute{&happyTCPRouteTLSPassthrough},
+				}},
 			},
 			want: nil,
 		},
 		{
 			name: "happy tls terminate",
 			input: Xds{
-				TCP: []*TCPListener{&happyTCPListenerTLSTerminate},
+				TCP: []*TCPListener{{
+					Name:    "happy-tls-terminate",
+					Address: "0.0.0.0",
+					Port:    80,
+					Routes:  []*TCPRoute{&happyTCPRouteTLSTermination},
+				}},
 			},
 			want: nil,
 		},
 		{
 			name: "invalid listener",
 			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener},
+				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
 			},
 			want: []error{ErrListenerAddressInvalid},
 		},
@@ -606,29 +632,24 @@ func TestValidateTCPListener(t *testing.T) {
 		want  []error
 	}{
 		{
-			name:  "tls passthrough happy",
-			input: happyTCPListenerTLSPassthrough,
+			name:  "happy",
+			input: happyTCPListener,
 			want:  nil,
 		},
 		{
-			name:  "tcp empty SNIs",
-			input: emptySNITCPListenerTLSPassthrough,
+			name:  "happy with route",
+			input: happyTCPListenerWithRoute,
 			want:  nil,
 		},
 		{
-			name:  "tls passthrough invalid name",
-			input: invalidNameTCPListenerTLSPassthrough,
+			name:  "invalid name",
+			input: invalidNameTCPListener,
 			want:  []error{ErrListenerNameEmpty},
 		},
 		{
-			name:  "tls passthrough invalid addr",
-			input: invalidAddrTCPListenerTLSPassthrough,
+			name:  "invalid addr",
+			input: invalidAddrTCPListener,
 			want:  []error{ErrListenerAddressInvalid},
-		},
-		{
-			name:  "tls passthrough empty SNIs",
-			input: invalidSNITCPListenerTLSPassthrough,
-			want:  []error{ErrTCPListenerSNIsEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -826,7 +847,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				},
 				Destination: &happyRouteDestination,
 			},
-			want: []error{ErrHTTPRouteNameEmpty},
+			want: []error{ErrRouteNameEmpty},
 		},
 		{
 			name: "invalid hostname",
@@ -856,7 +877,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 				HeaderMatches: []*StringMatch{ptr.To(StringMatch{})},
 				Destination:   &happyRouteDestination,
 			},
-			want: []error{ErrHTTPRouteNameEmpty, ErrStringMatchConditionInvalid},
+			want: []error{ErrRouteNameEmpty, ErrStringMatchConditionInvalid},
 		},
 		{
 			name:  "redirect-httproute",
@@ -952,6 +973,53 @@ func TestValidateHTTPRoute(t *testing.T) {
 				got := test.input.Validate()
 				for _, w := range test.want {
 					require.ErrorContains(t, got, w.Error())
+				}
+			}
+		})
+	}
+}
+
+func TestValidateTCPRoute(t *testing.T) {
+	tests := []struct {
+		name  string
+		input TCPRoute
+		want  []error
+	}{
+		{
+			name:  "happy",
+			input: happyTCPRoute,
+			want:  nil,
+		},
+		{
+			name:  "tls passthrough happy",
+			input: happyTCPRouteTLSPassthrough,
+			want:  nil,
+		},
+		{
+			name:  "tls terminatation happy",
+			input: happyTCPRouteTLSTermination,
+			want:  nil,
+		},
+		{
+			name:  "invalid name",
+			input: invalidNameTCPRoute,
+			want:  []error{ErrRouteNameEmpty},
+		},
+		{
+			name:  "invalid sni",
+			input: invalidSNITCPRoute,
+			want:  []error{ErrTCPRouteSNIsEmpty},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				got := test.input.Validate()
+				for _, w := range test.want {
+					assert.ErrorContains(t, got, w.Error())
 				}
 			}
 		})
