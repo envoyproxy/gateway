@@ -9,15 +9,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
 )
 
 var (
-	TLSSecretKind       = v1beta1.Kind("Secret")
-	TLSUnrecognizedKind = v1beta1.Kind("Unrecognized")
+	TLSSecretKind       = v1.Kind("Secret")
+	TLSUnrecognizedKind = v1.Kind("Unrecognized")
 )
 
 func TestValidate(t *testing.T) {
@@ -247,9 +247,9 @@ func TestValidate(t *testing.T) {
 								Host: "foo.extension",
 								Port: 443,
 								TLS: &v1alpha1.ExtensionTLS{
-									CertificateRef: v1beta1.SecretObjectReference{
+									CertificateRef: v1.SecretObjectReference{
 										Kind: &TLSSecretKind,
-										Name: v1beta1.ObjectName("certificate"),
+										Name: v1.ObjectName("certificate"),
 									},
 								},
 							},
@@ -283,9 +283,9 @@ func TestValidate(t *testing.T) {
 								Host: "foo.extension",
 								Port: 443,
 								TLS: &v1alpha1.ExtensionTLS{
-									CertificateRef: v1beta1.SecretObjectReference{
+									CertificateRef: v1.SecretObjectReference{
 										Kind: &TLSSecretKind,
-										Name: v1beta1.ObjectName("certificate"),
+										Name: v1.ObjectName("certificate"),
 									},
 								},
 							},
@@ -326,9 +326,9 @@ func TestValidate(t *testing.T) {
 								Host: "foo.extension",
 								Port: 8080,
 								TLS: &v1alpha1.ExtensionTLS{
-									CertificateRef: v1beta1.SecretObjectReference{
+									CertificateRef: v1.SecretObjectReference{
 										Kind: &TLSUnrecognizedKind,
-										Name: v1beta1.ObjectName("certificate"),
+										Name: v1.ObjectName("certificate"),
 									},
 								},
 							},

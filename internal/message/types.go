@@ -8,8 +8,8 @@ package message
 import (
 	"github.com/telepresenceio/watchable"
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -59,8 +59,8 @@ func (p *ProviderResources) Close() {
 
 // GatewayAPIStatuses contains gateway API resources statuses
 type GatewayAPIStatuses struct {
-	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.GatewayStatus]
-	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]
+	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1.GatewayStatus]
+	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1.HTTPRouteStatus]
 	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
 	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
 	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]

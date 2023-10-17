@@ -7,7 +7,7 @@ package gatewayapi
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -46,7 +46,7 @@ var _ TranslatorManager = (*Translator)(nil)
 
 type TranslatorManager interface {
 	Translate(resources *Resources) *TranslateResult
-	GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext
+	GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext
 
 	RoutesTranslator
 	ListenersTranslator
@@ -62,7 +62,7 @@ type Translator struct {
 
 	// GatewayClassName is the name of the GatewayClass
 	// to process Gateways for.
-	GatewayClassName v1beta1.ObjectName
+	GatewayClassName gwapiv1.ObjectName
 
 	// GlobalRateLimitEnabled is true when global
 	// ratelimiting has been configured by the admin.
@@ -164,7 +164,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
 // Gateway with the Listener statuses reset.
-func (t *Translator) GetRelevantGateways(gateways []*v1beta1.Gateway) []*GatewayContext {
+func (t *Translator) GetRelevantGateways(gateways []*gwapiv1.Gateway) []*GatewayContext {
 	var relevant []*GatewayContext
 
 	for _, gateway := range gateways {

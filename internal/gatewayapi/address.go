@@ -6,7 +6,7 @@
 package gatewayapi
 
 import (
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var _ AddressesTranslator = (*Translator)(nil)
@@ -23,7 +23,7 @@ func (t *Translator) ProcessAddresses(gateways []*GatewayContext, xdsIR XdsIRMap
 
 		var ipAddr []string
 		for _, addr := range gateway.Spec.Addresses {
-			if *addr.Type == v1beta1.IPAddressType {
+			if *addr.Type == v1.IPAddressType {
 				ipAddr = append(ipAddr, addr.Value)
 			}
 		}

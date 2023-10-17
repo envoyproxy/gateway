@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 	confv1a1 "sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
@@ -53,7 +53,7 @@ func TestExperimentalConformance(t *testing.T) {
 
 	err = v1alpha2.AddToScheme(mgrClient.Scheme())
 	assert.NoError(t, err)
-	err = v1beta1.AddToScheme(mgrClient.Scheme())
+	err = v1.AddToScheme(mgrClient.Scheme())
 	assert.NoError(t, err)
 
 	// experimental conformance flags

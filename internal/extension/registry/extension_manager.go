@@ -18,7 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8scli "sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclicfg "sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -76,11 +76,11 @@ func NewManager(cfg *config.Server) (extTypes.Manager, error) {
 
 // HasExtension checks to see whether a given Group and Kind has an
 // associated extension registered for it.
-func (m *Manager) HasExtension(g v1beta1.Group, k v1beta1.Kind) bool {
+func (m *Manager) HasExtension(g v1.Group, k v1.Kind) bool {
 	extension := m.extension
 	// TODO: not currently checking the version since extensionRef only supports group and kind.
 	for _, gvk := range extension.Resources {
-		if g == v1beta1.Group(gvk.Group) && k == v1beta1.Kind(gvk.Kind) {
+		if g == v1.Group(gvk.Group) && k == v1.Kind(gvk.Kind) {
 			return true
 		}
 	}

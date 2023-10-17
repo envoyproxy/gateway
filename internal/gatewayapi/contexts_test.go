@@ -10,17 +10,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestContexts(t *testing.T) {
-	gateway := &v1beta1.Gateway{
+	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
 			Name:      "gateway-1",
 		},
-		Spec: v1beta1.GatewaySpec{
-			Listeners: []v1beta1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			Listeners: []gwapiv1.Listener{
 				{
 					Name: "http",
 				},
@@ -37,17 +37,17 @@ func TestContexts(t *testing.T) {
 	lctx := gctx.listeners[0]
 	require.NotNil(t, lctx)
 
-	lctx.SetCondition(v1beta1.ListenerConditionAccepted, metav1.ConditionFalse, v1beta1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
+	lctx.SetCondition(gwapiv1.ListenerConditionAccepted, metav1.ConditionFalse, gwapiv1.ListenerReasonUnsupportedProtocol, "HTTPS protocol is not supported yet")
 
 	require.Len(t, gateway.Status.Listeners, 1)
 	require.EqualValues(t, gateway.Status.Listeners[0].Name, "http")
 	require.Len(t, gateway.Status.Listeners[0].Conditions, 1)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Type, v1beta1.ListenerConditionAccepted)
+	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Type, gwapiv1.ListenerConditionAccepted)
 	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Status, metav1.ConditionFalse)
-	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Reason, v1beta1.ListenerReasonUnsupportedProtocol)
+	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Reason, gwapiv1.ListenerReasonUnsupportedProtocol)
 	require.EqualValues(t, gateway.Status.Listeners[0].Conditions[0].Message, "HTTPS protocol is not supported yet")
 
-	lctx.SetSupportedKinds(v1beta1.RouteGroupKind{Group: GroupPtr(v1beta1.GroupName), Kind: "HTTPRoute"})
+	lctx.SetSupportedKinds(gwapiv1.RouteGroupKind{Group: GroupPtr(gwapiv1.GroupName), Kind: "HTTPRoute"})
 
 	require.Len(t, gateway.Status.Listeners, 1)
 	require.Len(t, gateway.Status.Listeners[0].SupportedKinds, 1)
@@ -58,13 +58,13 @@ func TestContexts(t *testing.T) {
 }
 
 func TestContextsStaleListener(t *testing.T) {
-	gateway := &v1beta1.Gateway{
+	gateway := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "envoy-gateway",
 			Name:      "gateway-1",
 		},
-		Spec: v1beta1.GatewaySpec{
-			Listeners: []v1beta1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			Listeners: []gwapiv1.Listener{
 				{
 					Name: "https",
 				},
@@ -73,13 +73,13 @@ func TestContextsStaleListener(t *testing.T) {
 				},
 			},
 		},
-		Status: v1beta1.GatewayStatus{
-			Listeners: []v1beta1.ListenerStatus{
+		Status: gwapiv1.GatewayStatus{
+			Listeners: []gwapiv1.ListenerStatus{
 				{
 					Name: "https",
 					Conditions: []metav1.Condition{
 						{
-							Status: metav1.ConditionStatus(v1beta1.ListenerConditionProgrammed),
+							Status: metav1.ConditionStatus(gwapiv1.ListenerConditionProgrammed),
 						},
 					},
 				},
@@ -87,7 +87,7 @@ func TestContextsStaleListener(t *testing.T) {
 					Name: "http",
 					Conditions: []metav1.Condition{
 						{
-							Status: metav1.ConditionStatus(v1beta1.ListenerConditionProgrammed),
+							Status: metav1.ConditionStatus(gwapiv1.ListenerConditionProgrammed),
 						},
 					},
 				},
@@ -98,7 +98,7 @@ func TestContextsStaleListener(t *testing.T) {
 	gCtx := &GatewayContext{Gateway: gateway}
 
 	httpsListenerCtx := &ListenerContext{
-		Listener: &v1beta1.Listener{
+		Listener: &gwapiv1.Listener{
 			Name: "https",
 		},
 		gateway:           gateway,
@@ -106,7 +106,7 @@ func TestContextsStaleListener(t *testing.T) {
 	}
 
 	httpListenerCtx := &ListenerContext{
-		Listener: &v1beta1.Listener{
+		Listener: &gwapiv1.Listener{
 			Name: "http",
 		},
 		gateway:           gateway,
@@ -125,7 +125,7 @@ func TestContextsStaleListener(t *testing.T) {
 
 	require.Len(t, gCtx.Status.Listeners, 2)
 
-	expectedListenerStatuses := []v1beta1.ListenerStatus{
+	expectedListenerStatuses := []gwapiv1.ListenerStatus{
 		{
 			Name: "https",
 		},
@@ -142,7 +142,7 @@ func TestContextsStaleListener(t *testing.T) {
 
 	// Ensure the listener status has been updated and the stale listener has been
 	// removed.
-	expectedListenerStatus := []v1beta1.ListenerStatus{{Name: "https"}}
+	expectedListenerStatus := []gwapiv1.ListenerStatus{{Name: "https"}}
 	require.EqualValues(t, expectedListenerStatus, gCtx.Gateway.Status.Listeners)
 
 	// Ensure that the listeners within GatewayContext have been properly updated.

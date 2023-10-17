@@ -7,8 +7,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
@@ -64,12 +64,12 @@ type TCPKeepalive struct {
 	// Defaults to `7200s`.
 	//
 	// +optional
-	IdleTime *gwapiv1b1.Duration `json:"idleTime,omitempty"`
+	IdleTime *gwapiv1.Duration `json:"idleTime,omitempty"`
 	// The duration between keep-alive probes.
 	// Defaults to `75s`.
 	//
 	// +optional
-	Interval *gwapiv1b1.Duration `json:"interval,omitempty"`
+	Interval *gwapiv1.Duration `json:"interval,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy

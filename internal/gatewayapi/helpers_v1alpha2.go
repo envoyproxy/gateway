@@ -13,11 +13,11 @@ package gatewayapi
 
 import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 )
 
-// TODO: [v1alpha2-v1beta1]
-// This file can be removed once TLSRoute graduates to v1beta1.
+// TODO: [v1alpha2-v1]
+// This file can be removed once TLSRoute graduates to v1.
 
 func GroupPtrV1Alpha2(group string) *v1alpha2.Group {
 	gwGroup := v1alpha2.Group(group)
@@ -44,17 +44,17 @@ func PortNumPtrV1Alpha2(port int) *v1alpha2.PortNumber {
 	return &pn
 }
 
-func UpgradeParentReferences(old []v1alpha2.ParentReference) []v1beta1.ParentReference {
-	newParentReferences := make([]v1beta1.ParentReference, len(old))
+func UpgradeParentReferences(old []v1alpha2.ParentReference) []v1.ParentReference {
+	newParentReferences := make([]v1.ParentReference, len(old))
 	for i, o := range old {
 		newParentReferences[i] = UpgradeParentReference(o)
 	}
 	return newParentReferences
 }
 
-// UpgradeParentReference converts v1alpha2.ParentReference to v1beta1.ParentReference
-func UpgradeParentReference(old v1alpha2.ParentReference) v1beta1.ParentReference {
-	upgraded := v1beta1.ParentReference{}
+// UpgradeParentReference converts v1alpha2.ParentReference to v1.ParentReference
+func UpgradeParentReference(old v1alpha2.ParentReference) v1.ParentReference {
+	upgraded := v1.ParentReference{}
 
 	if old.Group != nil {
 		upgraded.Group = GroupPtr(string(*old.Group))
@@ -81,7 +81,7 @@ func UpgradeParentReference(old v1alpha2.ParentReference) v1beta1.ParentReferenc
 	return upgraded
 }
 
-func DowngradeParentReference(old v1beta1.ParentReference) v1alpha2.ParentReference {
+func DowngradeParentReference(old v1.ParentReference) v1alpha2.ParentReference {
 	downgraded := v1alpha2.ParentReference{}
 
 	if old.Group != nil {
@@ -109,11 +109,11 @@ func DowngradeParentReference(old v1beta1.ParentReference) v1alpha2.ParentRefere
 	return downgraded
 }
 
-func UpgradeRouteParentStatuses(routeParentStatuses []v1alpha2.RouteParentStatus) []v1beta1.RouteParentStatus {
-	var res []v1beta1.RouteParentStatus
+func UpgradeRouteParentStatuses(routeParentStatuses []v1alpha2.RouteParentStatus) []v1.RouteParentStatus {
+	var res []v1.RouteParentStatus
 
 	for _, rps := range routeParentStatuses {
-		res = append(res, v1beta1.RouteParentStatus{
+		res = append(res, v1.RouteParentStatus{
 			ParentRef:      UpgradeParentReference(rps.ParentRef),
 			ControllerName: rps.ControllerName,
 			Conditions:     rps.Conditions,
@@ -123,7 +123,7 @@ func UpgradeRouteParentStatuses(routeParentStatuses []v1alpha2.RouteParentStatus
 	return res
 }
 
-func DowngradeRouteParentStatuses(routeParentStatuses []v1beta1.RouteParentStatus) []v1alpha2.RouteParentStatus {
+func DowngradeRouteParentStatuses(routeParentStatuses []v1.RouteParentStatus) []v1alpha2.RouteParentStatus {
 	var res []v1alpha2.RouteParentStatus
 
 	for _, rps := range routeParentStatuses {
@@ -137,9 +137,9 @@ func DowngradeRouteParentStatuses(routeParentStatuses []v1beta1.RouteParentStatu
 	return res
 }
 
-// UpgradeBackendRef converts v1alpha2.BackendRef to v1beta1.BackendRef
-func UpgradeBackendRef(old v1alpha2.BackendRef) v1beta1.BackendRef {
-	upgraded := v1beta1.BackendRef{}
+// UpgradeBackendRef converts v1alpha2.BackendRef to v1.BackendRef
+func UpgradeBackendRef(old v1alpha2.BackendRef) v1.BackendRef {
+	upgraded := v1.BackendRef{}
 
 	if old.Group != nil {
 		upgraded.Group = GroupPtr(string(*old.Group))
@@ -162,7 +162,7 @@ func UpgradeBackendRef(old v1alpha2.BackendRef) v1beta1.BackendRef {
 	return upgraded
 }
 
-func DowngradeBackendRef(old v1beta1.BackendRef) v1alpha2.BackendRef {
+func DowngradeBackendRef(old v1.BackendRef) v1alpha2.BackendRef {
 	downgraded := v1alpha2.BackendRef{}
 
 	if old.Group != nil {

@@ -11,12 +11,12 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // validateTLSSecretData ensures the cert and key provided in a secret
 // is not malformed and can be properly parsed
-func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) error {
+func validateTLSSecretsData(secrets []*corev1.Secret, host *v1.Hostname) error {
 	var publicKeyAlgorithm string
 	var parseErr error
 
@@ -81,7 +81,7 @@ func validateTLSSecretsData(secrets []*corev1.Secret, host *v1beta1.Hostname) er
 }
 
 // verifyHostname checks if the listener Hostname matches any domain in the certificate, returns a list of matched hosts.
-func verifyHostname(cert *x509.Certificate, host *v1beta1.Hostname) ([]string, error) {
+func verifyHostname(cert *x509.Certificate, host *v1.Hostname) ([]string, error) {
 	var matchedHosts []string
 
 	if len(cert.DNSNames) > 0 {

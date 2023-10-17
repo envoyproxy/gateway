@@ -22,12 +22,12 @@ the IR translator:
    ```go
    type ResourceTable struct {
        // gateway classes are cluster-scoped; no namespace
-       GatewayClasses watchable.Map[string, *gwapiv1b1.GatewayClass]
+       GatewayClasses watchable.Map[string, *gwapiv1.GatewayClass]
 
        // gateways are namespace-scoped, so use a k8s.io/apimachinery/pkg/types.NamespacedName as the map key.
-       Gateways watchable.Map[types.NamespacedName, *gwapiv1b1.Gateway]
+       Gateways watchable.Map[types.NamespacedName, *gwapiv1.Gateway]
 
-       HTTPRoutes watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRoute]
+       HTTPRoutes watchable.Map[types.NamespacedName, *gwapiv1.HTTPRoute]
    }
    ```
 
