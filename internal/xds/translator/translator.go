@@ -264,24 +264,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog) error {
 	for _, tcpListener := range tcpListeners {
-		// 1:1 between IR TCPListener and xDS Cluster
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         tcpListener.Destination.Name,
-			settings:     tcpListener.Destination.Settings,
-			tSocket:      nil,
-			endpointType: Static,
-		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			return err
-		}
-
-		if tcpListener.TLS != nil && tcpListener.TLS.Terminate != nil {
-			for _, s := range tcpListener.TLS.Terminate {
-				secret := buildXdsDownstreamTLSSecret(s)
-				if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
-					return err
-				}
-			}
-		}
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, tcpListener.Address, tcpListener.Port, corev3.SocketAddress_TCP)
 		if xdsListener == nil {
@@ -291,8 +273,26 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			}
 		}
 
-		if err := addXdsTCPFilterChain(xdsListener, tcpListener, tcpListener.Destination.Name, accesslog); err != nil {
-			return err
+		for _, route := range tcpListener.Routes {
+			if err := addXdsCluster(tCtx, &xdsClusterArgs{
+				name:         route.Destination.Name,
+				settings:     route.Destination.Settings,
+				tSocket:      nil,
+				endpointType: Static,
+			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+				return err
+			}
+			if route.TLS != nil && route.TLS.Terminate != nil {
+				for _, s := range route.TLS.Terminate {
+					secret := buildXdsDownstreamTLSSecret(s)
+					if err := tCtx.AddXdsResource(resourcev3.SecretType, secret); err != nil {
+						return err
+					}
+				}
+			}
+			if err := addXdsTCPFilterChain(xdsListener, route, accesslog); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

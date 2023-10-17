@@ -18,5 +18,5 @@
   - name: envoy.filters.listener.tls_inspector
     typedConfig:
       '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-  name: tcp-route-weighted-backend
+  name: tcp-listener-weighted-backend
   perConnectionBufferLimitBytes: 32768

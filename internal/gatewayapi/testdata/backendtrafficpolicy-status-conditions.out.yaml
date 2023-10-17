@@ -380,3 +380,7 @@ xdsIR:
           name: magic
         hostname: '*'
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
+    tcp:
+    - address: 0.0.0.0
+      name: envoy-gateway/gateway-2/tcp
+      port: 10053

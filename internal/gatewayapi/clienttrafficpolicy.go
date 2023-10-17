@@ -275,7 +275,7 @@ func translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPol
 	// TODO: Support TLSRoute and TCPRoute once
 	// https://github.com/envoyproxy/gateway/issues/1635 is completed
 
-	irListenerName := irHTTPListenerName(l)
+	irListenerName := irListenerName(l)
 	var httpIR *ir.HTTPListener
 	for _, http := range gwXdsIR.HTTP {
 		if http.Name == irListenerName {
