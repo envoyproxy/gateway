@@ -169,6 +169,14 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		return false
 	}
 	labels := svc.GetLabels()
+
+	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
+	gtw := r.findOwningGateway(ctx, labels)
+	if gtw != nil {
+		r.statusUpdateForGateway(ctx, gtw)
+		return false
+	}
+
 	gclass := labels[gatewayapi.OwningGatewayClassLabel]
 	res, ok := r.resources.GatewayAPIResources.Load(gclass)
 	if ok {
@@ -176,13 +184,6 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 			gw := gw
 			r.statusUpdateForGateway(ctx, gw)
 		}
-		return false
-	}
-
-	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
-	gtw := r.findOwningGateway(ctx, svc.GetLabels())
-	if gtw != nil {
-		r.statusUpdateForGateway(ctx, gtw)
 		return false
 	}
 
@@ -297,6 +298,17 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		return false
 	}
 	labels := deployment.GetLabels()
+
+	// Only deployments in the configured namespace should be reconciled.
+	if deployment.Namespace == r.namespace {
+		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
+		gtw := r.findOwningGateway(ctx, labels)
+		if gtw != nil {
+			r.statusUpdateForGateway(ctx, gtw)
+			return false
+		}
+	}
+
 	gclass := labels[gatewayapi.OwningGatewayClassLabel]
 	res, ok := r.resources.GatewayAPIResources.Load(gclass)
 	if ok {
@@ -305,16 +317,6 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 			r.statusUpdateForGateway(ctx, gw)
 		}
 		return false
-	}
-
-	// Only deployments in the configured namespace should be reconciled.
-	if deployment.Namespace == r.namespace {
-		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
-		gtw := r.findOwningGateway(ctx, deployment.GetLabels())
-		if gtw != nil {
-			r.statusUpdateForGateway(ctx, gtw)
-			return false
-		}
 	}
 
 	// There is no need to reconcile the Deployment any further.
