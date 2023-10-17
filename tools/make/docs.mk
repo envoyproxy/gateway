@@ -27,7 +27,7 @@ docs.clean:
 	rm -rf $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs-api
-docs-api: docs-api-gen docs-api-headings
+docs-api: docs-api-gen helm-readme-gen docs-api-headings
 
 .PHONY: helm-readme-gen
 helm-readme-gen: $(tools/helm-docs)
