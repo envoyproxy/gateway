@@ -369,7 +369,7 @@ within `ratelimit-per-user` will get activated for `baz`, and `baz`'s requests w
 * The initial design uses an Extension filter to apply the Rate Limit functionality on a specific [HTTPRoute][].
 This was preferred over the [PolicyAttachment][] extension mechanism, because it is unclear whether Rate Limit
 will be required to be enforced or overridden by the platform administrator or not.
-* The RateLimitFilter can only be applied as a filter to a [HTTPRouteRule[], applying it across all backends within a [HTTPRoute][]
+* The RateLimitFilter can only be applied as a filter to a [HTTPRouteRule][], applying it across all backends within a [HTTPRoute][]
 and cannot be applied a filter within a [HTTPBackendRef][] for a specific backend.
 * The [HTTPRoute][] API has a [matches][] field within each [rule][] to select a specific traffic flow to be routed to
 the destination backend. The RateLimitFilter API that can be attached to an HTTPRoute via an [extensionRef][] filter,
@@ -403,6 +403,7 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 
 [PolicyAttachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
+[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
 [HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPBackendRef
 [matches]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
 [rule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
