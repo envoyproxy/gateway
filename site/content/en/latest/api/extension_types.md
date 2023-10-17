@@ -37,7 +37,7 @@ API group.
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `AuthenticationFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AuthenticationFilterSpec](#authenticationfilterspec)_ | Spec defines the desired state of the AuthenticationFilter type. |
 
 
@@ -106,7 +106,7 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `ClientTrafficPolicy`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[ClientTrafficPolicySpec](#clienttrafficpolicyspec)_ | Spec defines the desired state of ClientTrafficPolicy. |
 
 
@@ -122,7 +122,7 @@ ClientTrafficPolicyList contains a list of ClientTrafficPolicy resources.
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `ClientTrafficPolicyList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[ClientTrafficPolicy](#clienttrafficpolicy) array_ |  |
 
 
@@ -418,7 +418,7 @@ _Appears in:_
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyPatchPolicy`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EnvoyPatchPolicySpec](#envoypatchpolicyspec)_ | Spec defines the desired state of EnvoyPatchPolicy. |
 
 
@@ -434,7 +434,7 @@ EnvoyPatchPolicyList contains a list of EnvoyPatchPolicy resources.
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyPatchPolicyList`
-| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `items` _[EnvoyPatchPolicy](#envoypatchpolicy) array_ |  |
 
 
@@ -480,7 +480,7 @@ EnvoyProxy is the schema for the envoyproxies API.
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `EnvoyProxy`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EnvoyProxySpec](#envoyproxyspec)_ | EnvoyProxySpec defines the desired state of EnvoyProxy. |
 
 
@@ -619,7 +619,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[SecretObjectReference](#secretobjectreference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef contains a references to objects (Kubernetes objects or otherwise) that contains a TLS certificate and private keys. These certificates are used to establish a TLS handshake to the extension server. 
  CertificateRef can only reference a Kubernetes Secret at this time. |
 
 
@@ -776,11 +776,11 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#envvar-v1-core) array_ | List of environment variables to set in the container. |
-| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#resourcerequirements-v1-core)_ | Resources required by this container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
-| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#envvar-v1-core) array_ | List of environment variables to set in the container. |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#resourcerequirements-v1-core)_ | Resources required by this container. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
+| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#securitycontext-v1-core)_ | SecurityContext defines the security options the container should be run with. If set, the fields of SecurityContext override the equivalent fields of PodSecurityContext. More info: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/ |
 | `image` _string_ | Image specifies the EnvoyProxy container image to be used, instead of the default image. |
-| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#volumemount-v1-core) array_ | VolumeMounts are volumes to mount into the container's filesystem. Cannot be updated. |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volumemount-v1-core) array_ | VolumeMounts are volumes to mount into the container's filesystem. Cannot be updated. |
 
 
 #### KubernetesDeployMode
@@ -807,10 +807,10 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `replicas` _integer_ | Replicas is the number of desired pods. Defaults to 1. |
-| `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
+| `strategy` _[DeploymentStrategy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#deploymentstrategy-v1-apps)_ | The deployment strategy to use to replace existing pods with new ones. |
 | `pod` _[KubernetesPodSpec](#kubernetespodspec)_ | Pod defines the desired specification of pod. |
 | `container` _[KubernetesContainerSpec](#kubernetescontainerspec)_ | Container defines the desired specification of main container. |
-| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#container-v1-core) array_ | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
+| `initContainers` _[Container](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#container-v1-core) array_ | List of initialization containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/ |
 
 
 #### KubernetesPodSpec
@@ -826,10 +826,10 @@ _Appears in:_
 | --- | --- |
 | `annotations` _object (keys:string, values:string)_ | Annotations are the annotations that should be appended to the pods. By default, no pod annotations are appended. |
 | `labels` _object (keys:string, values:string)_ | Labels are the additional labels that should be tagged to the pods. By default, no additional pod labels are tagged. |
-| `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
-| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
-| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#volume-v1-core) array_ | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
+| `securityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#podsecuritycontext-v1-core)_ | SecurityContext holds pod-level security attributes and common container settings. Optional: Defaults to empty.  See type description for default values of each field. |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#affinity-v1-core)_ | If specified, the pod's scheduling constraints. |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#toleration-v1-core) array_ | If specified, the pod's tolerations. |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#volume-v1-core) array_ | Volumes that can be mounted by containers belonging to the pod. More info: https://kubernetes.io/docs/concepts/storage/volumes |
 
 
 #### KubernetesServiceSpec
@@ -1194,7 +1194,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `backend` _[RateLimitDatabaseBackend](#ratelimitdatabasebackend)_ | Backend holds the configuration associated with the database backend used by the rate limit service to store state associated with global ratelimiting. |
-| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#duration-v1-meta)_ | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
+| `timeout` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | Timeout specifies the timeout period for the proxy to access the ratelimit server If not set, timeout is 20ms. |
 | `failClosed` _boolean_ | FailClosed is a switch used to control the flow of traffic when the response from the ratelimit server cannot be obtained. If FailClosed is false, let the traffic pass, otherwise, don't let the traffic pass and return 500. If not set, FailClosed is False. |
 
 
@@ -1236,7 +1236,7 @@ RateLimitFilter allows the user to limit the number of incoming requests to a pr
 | --- | --- |
 | `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
 | `kind` _string_ | `RateLimitFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | Spec defines the desired state of RateLimitFilter. |
 
 
@@ -1348,7 +1348,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _SecretObjectReference_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
+| `certificateRef` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | CertificateRef defines the client certificate reference for TLS connections. Currently only a Kubernetes Secret of type TLS is supported. |
 
 
 #### RemoteJWKS
