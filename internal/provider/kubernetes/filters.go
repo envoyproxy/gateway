@@ -21,7 +21,7 @@ func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]
 	}
 
 	authens := authenList.Items
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		var as []egv1a1.AuthenticationFilter
 		for _, a := range authens {
 			ns := a.GetNamespace()
@@ -49,7 +49,7 @@ func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a
 	}
 
 	rateLimits := rateLimitList.Items
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		var rls []egv1a1.RateLimitFilter
 		for _, rl := range rateLimits {
 			ns := rl.GetNamespace()
@@ -81,7 +81,7 @@ func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]un
 		}
 
 		uExtResources := uExtResourceList.Items
-		if len(r.namespaceLabels) != 0 {
+		if len(r.k8sResourceNamespaceLabels) != 0 {
 			var extRs []unstructured.Unstructured
 			for _, extR := range uExtResources {
 				ns := extR.GetNamespace()

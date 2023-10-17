@@ -29,8 +29,17 @@ func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := cli.Client.Get(ctx, key, current); err != nil {
 			if kerrors.IsNotFound(err) {
+				infraManagerResourcesCreated.With(
+					k8sResourceTypeLabel.Value(specific.GetObjectKind().GroupVersionKind().Kind),
+					k8sResourceNameLabel.Value(key.Name),
+					k8sResourceNamespaceLabel.Value(key.Namespace)).Increment()
 				// Create if it does not exist.
 				if err := cli.Client.Create(ctx, specific); err != nil {
+					infraManagerResourcesErrors.With(
+						k8sResourceTypeLabel.Value(specific.GetObjectKind().GroupVersionKind().Kind),
+						operationLabel.Value("created"),
+						k8sResourceNameLabel.Value(key.Name),
+						k8sResourceNamespaceLabel.Value(key.Namespace)).Increment()
 					return errors.Wrap(err, "for Create")
 				}
 			}
@@ -39,7 +48,16 @@ func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey
 			// just perform an update for now.
 			if updateChecker() {
 				specific.SetUID(current.GetUID())
+				infraManagerResourcesUpdated.With(
+					k8sResourceTypeLabel.Value(specific.GetObjectKind().GroupVersionKind().Kind),
+					k8sResourceNameLabel.Value(key.Name),
+					k8sResourceNamespaceLabel.Value(key.Namespace)).Increment()
 				if err := cli.Client.Update(ctx, specific); err != nil {
+					infraManagerResourcesErrors.With(
+						k8sResourceTypeLabel.Value(specific.GetObjectKind().GroupVersionKind().Kind),
+						operationLabel.Value("updated"),
+						k8sResourceNameLabel.Value(key.Name),
+						k8sResourceNamespaceLabel.Value(key.Namespace)).Increment()
 					return errors.Wrap(err, "for Update")
 				}
 			}
@@ -50,10 +68,19 @@ func (cli *InfraClient) CreateOrUpdate(ctx context.Context, key client.ObjectKey
 }
 
 func (cli *InfraClient) Delete(ctx context.Context, object client.Object) error {
+	infraManagerResourcesDeleted.With(
+		k8sResourceTypeLabel.Value(object.GetObjectKind().GroupVersionKind().Kind),
+		k8sResourceNameLabel.Value(object.GetName()),
+		k8sResourceNamespaceLabel.Value(object.GetNamespace())).Increment()
 	if err := cli.Client.Delete(ctx, object); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil
 		}
+		infraManagerResourcesErrors.With(
+			k8sResourceTypeLabel.Value(object.GetObjectKind().GroupVersionKind().Kind),
+			operationLabel.Value("deleted"),
+			k8sResourceNameLabel.Value(object.GetName()),
+			k8sResourceNamespaceLabel.Value(object.GetNamespace())).Increment()
 		return err
 	}
 

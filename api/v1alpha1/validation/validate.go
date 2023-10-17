@@ -161,8 +161,7 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 		}
 	}
 
-	// nolint // Circumvents this error "Error: copylocks: call of reflect.DeepEqual copies lock value:"
-	if userXdsCluster == nil || !reflect.DeepEqual(*userXdsCluster.LoadAssignment, *defaultXdsCluster.LoadAssignment) {
+	if userXdsCluster == nil || !reflect.DeepEqual(userXdsCluster.LoadAssignment, defaultXdsCluster.LoadAssignment) {
 		return fmt.Errorf("xds_cluster's loadAssigntment cannot be modified")
 	}
 

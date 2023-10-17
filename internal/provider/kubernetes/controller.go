@@ -61,14 +61,14 @@ const (
 )
 
 type gatewayAPIReconciler struct {
-	client          client.Client
-	log             logging.Logger
-	statusUpdater   status.Updater
-	classController gwapiv1b1.GatewayController
-	store           *kubernetesProviderStore
-	namespace       string
-	namespaceLabels []string
-	envoyGateway    *egv1a1.EnvoyGateway
+	client                     client.Client
+	log                        logging.Logger
+	statusUpdater              status.Updater
+	classController            gwapiv1b1.GatewayController
+	store                      *kubernetesProviderStore
+	namespace                  string
+	k8sResourceNamespaceLabels []string
+	envoyGateway               *egv1a1.EnvoyGateway
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -88,27 +88,27 @@ func newGatewayAPIController(mgr manager.Manager, cfg *config.Server, su status.
 		}
 	}
 
-	var namespaceLabels []string
+	var k8sResourceNamespaceLabels []string
 	byNamespaceSelector := cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes.Watch != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes.Watch.Type == egv1a1.KubernetesWatchModeTypeNamespaceSelectors &&
 		len(cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors) != 0
 	if byNamespaceSelector {
-		namespaceLabels = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
+		k8sResourceNamespaceLabels = cfg.EnvoyGateway.Provider.Kubernetes.Watch.NamespaceSelectors
 	}
 
 	r := &gatewayAPIReconciler{
-		client:          mgr.GetClient(),
-		log:             cfg.Logger,
-		classController: gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
-		namespace:       cfg.Namespace,
-		namespaceLabels: namespaceLabels,
-		statusUpdater:   su,
-		resources:       resources,
-		extGVKs:         extGVKs,
-		store:           newProviderStore(),
-		envoyGateway:    cfg.EnvoyGateway,
+		client:                     mgr.GetClient(),
+		log:                        cfg.Logger,
+		classController:            gwapiv1b1.GatewayController(cfg.EnvoyGateway.Gateway.ControllerName),
+		namespace:                  cfg.Namespace,
+		k8sResourceNamespaceLabels: k8sResourceNamespaceLabels,
+		statusUpdater:              su,
+		resources:                  resources,
+		extGVKs:                    extGVKs,
+		store:                      newProviderStore(),
+		envoyGateway:               cfg.EnvoyGateway,
 	}
 
 	c, err := controller.New("gatewayapi", mgr, controller.Options{Reconciler: r})
@@ -450,7 +450,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	}
 
 	refGrants := refGrantList.Items
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		var rgs []gwapiv1a2.ReferenceGrant
 		for _, refGrant := range refGrants {
 			ns := refGrant.GetNamespace()
@@ -494,7 +494,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 	}
 
 	gateways := gatewayList.Items
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		var gtws []gwapiv1b1.Gateway
 		for _, gtw := range gateways {
 			ns := gtw.GetNamespace()
@@ -1072,8 +1072,8 @@ func (r *gatewayAPIReconciler) removeFinalizer(ctx context.Context, obj client.O
 func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Gateway object status updater
 	go func() {
-		message.HandleSubscription(r.resources.GatewayStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.GatewayStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "gateway-status"}, r.resources.GatewayStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1b1.GatewayStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1082,6 +1082,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 				gtw := new(gwapiv1b1.Gateway)
 				if err := r.client.Get(ctx, update.Key, gtw); err != nil {
 					r.log.Error(err, "gateway not found", "namespace", gtw.Namespace, "name", gtw.Name)
+					errChans <- err
 					return
 				}
 				// Set the updated Status and call the status update
@@ -1094,8 +1095,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// HTTPRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.HTTPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "httproute-status"}, r.resources.HTTPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1108,7 +1109,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						h, ok := obj.(*gwapiv1b1.HTTPRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						hCopy := h.DeepCopy()
 						hCopy.Status.Parents = val.Parents
@@ -1122,8 +1125,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// GRPCRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.GRPCRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1136,7 +1139,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						h, ok := obj.(*gwapiv1a2.GRPCRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						hCopy := h.DeepCopy()
 						hCopy.Status.Parents = val.Parents
@@ -1150,8 +1155,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// TLSRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.TLSRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "tlsroute-status"}, r.resources.TLSRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1164,7 +1169,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.TLSRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status.Parents = val.Parents
@@ -1178,8 +1185,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// TCPRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.TCPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "tcproute-status"}, r.resources.TCPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1192,7 +1199,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.TCPRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status.Parents = val.Parents
@@ -1206,8 +1215,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// UDPRoute object status updater
 	go func() {
-		message.HandleSubscription(r.resources.UDPRouteStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "udproute-status"}, r.resources.UDPRouteStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1220,7 +1229,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*gwapiv1a2.UDPRoute)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status.Parents = val.Parents
@@ -1234,8 +1245,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// EnvoyPatchPolicy object status updater
 	go func() {
-		message.HandleSubscription(r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "envoypatchpolicy-status"}, r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1248,7 +1259,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.EnvoyPatchPolicy)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status = *val
@@ -1262,8 +1275,8 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// ClientTrafficPolicy object status updater
 	go func() {
-		message.HandleSubscription(r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
-			func(update message.Update[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]) {
+		message.HandleSubscription(message.UpdateMetadata{Component: "provider", Resource: "clienttrafficpolicy-status"}, r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus], errChans chan error) {
 				// skip delete updates.
 				if update.Delete {
 					return
@@ -1276,7 +1289,9 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
 						t, ok := obj.(*egv1a1.ClientTrafficPolicy)
 						if !ok {
-							panic(fmt.Sprintf("unsupported object type %T", obj))
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChans <- err
+							panic(err)
 						}
 						tCopy := t.DeepCopy()
 						tCopy.Status = *val
@@ -1305,7 +1320,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		predicate.ResourceVersionChangedPredicate{},
 		predicate.NewPredicateFuncs(r.hasManagedClass),
 	}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		epPredicates = append(epPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1318,7 +1333,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
 	gPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateGatewayForReconcile)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		gPredicates = append(gPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1334,7 +1349,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch HTTPRoute CRUDs and process affected Gateways.
 	httprPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		httprPredicates = append(httprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1350,7 +1365,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch GRPCRoute CRUDs and process affected Gateways.
 	grpcrPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		grpcrPredicates = append(grpcrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1366,7 +1381,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TLSRoute CRUDs and process affected Gateways.
 	tlsrPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		tlsrPredicates = append(tlsrPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1382,7 +1397,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch UDPRoute CRUDs and process affected Gateways.
 	udprPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		udprPredicates = append(udprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1398,7 +1413,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch TCPRoute CRUDs and process affected Gateways.
 	tcprPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		tcprPredicates = append(tcprPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1414,7 +1429,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Service CRUDs and process affected *Route objects.
 	servicePredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateServiceForReconcile)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		servicePredicates = append(servicePredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1443,7 +1458,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
 	esPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		esPredicates = append(esPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1457,7 +1472,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
 	nPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.handleNode)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		nPredicates = append(nPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	// resource address.
@@ -1471,7 +1486,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Secret CRUDs and process affected Gateways.
 	secretPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateSecretForReconcile)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		secretPredicates = append(secretPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1484,7 +1499,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ReferenceGrant CRUDs and process affected Gateways.
 	rgPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		rgPredicates = append(rgPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1500,7 +1515,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Deployment CRUDs and process affected Gateways.
 	dPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateDeploymentForReconcile)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		dPredicates = append(dPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1513,7 +1528,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
 	afPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		afPredicates = append(afPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
@@ -1525,7 +1540,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	rfPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		rfPredicates = append(rfPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
@@ -1539,7 +1554,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch EnvoyPatchPolicy if enabled in config
 	eppPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		eppPredicates = append(eppPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if r.envoyGateway.ExtensionAPIs != nil && r.envoyGateway.ExtensionAPIs.EnableEnvoyPatchPolicy {
@@ -1555,7 +1570,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch ClientTrafficPolicy
 	ctpPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		ctpPredicates = append(ctpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 
@@ -1571,7 +1586,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch any additional GVKs from the registered extension.
 	uPredicates := []predicate.Predicate{}
-	if len(r.namespaceLabels) != 0 {
+	if len(r.k8sResourceNamespaceLabels) != 0 {
 		uPredicates = append(uPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	for _, gvk := range r.extGVKs {

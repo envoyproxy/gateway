@@ -54,19 +54,21 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(r.InfraIR.Subscribe(ctx),
-		func(update message.Update[string, *ir.Infra]) {
+	message.HandleSubscription(message.UpdateMetadata{Component: r.Name()}, r.InfraIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Infra], errChans chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value
 
 			if update.Delete {
 				if err := r.mgr.DeleteProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to delete infra")
+					errChans <- err
 				}
 			} else {
 				// Manage the proxy infra.
 				if err := r.mgr.CreateOrUpdateProxyInfra(ctx, val); err != nil {
 					r.Logger.Error(err, "failed to create new infra")
+					errChans <- err
 				}
 			}
 		},

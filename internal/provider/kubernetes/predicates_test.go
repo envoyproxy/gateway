@@ -67,28 +67,28 @@ func TestGatewayClassHasMatchingController(t *testing.T) {
 func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 	ns := "namespace-1"
 	testCases := []struct {
-		name            string
-		labels          []string
-		namespaceLabels []string
-		expect          bool
+		name                       string
+		labels                     []string
+		k8sResourceNamespaceLabels []string
+		expect                     bool
 	}{
 		{
-			name:            "matching one label when namespace has one label",
-			labels:          []string{"label-1"},
-			namespaceLabels: []string{"label-1"},
-			expect:          true,
+			name:                       "matching one label when namespace has one label",
+			labels:                     []string{"label-1"},
+			k8sResourceNamespaceLabels: []string{"label-1"},
+			expect:                     true,
 		},
 		{
-			name:            "matching one label when namespace has two labels",
-			labels:          []string{"label-1"},
-			namespaceLabels: []string{"label-1", "label-2"},
-			expect:          true,
+			name:                       "matching one label when namespace has two labels",
+			labels:                     []string{"label-1"},
+			k8sResourceNamespaceLabels: []string{"label-1", "label-2"},
+			expect:                     true,
 		},
 		{
-			name:            "namespace has less labels than the specified labels",
-			labels:          []string{"label-1", "label-2"},
-			namespaceLabels: []string{"label-1"},
-			expect:          false,
+			name:                       "namespace has less labels than the specified labels",
+			labels:                     []string{"label-1", "label-2"},
+			k8sResourceNamespaceLabels: []string{"label-1"},
+			expect:                     false,
 		},
 	}
 
@@ -97,15 +97,15 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 
-		namespaceLabelsToMap := make(map[string]string)
-		for _, l := range tc.namespaceLabels {
-			namespaceLabelsToMap[l] = ""
+		k8sResourceNamespaceLabelsToMap := make(map[string]string)
+		for _, l := range tc.k8sResourceNamespaceLabels {
+			k8sResourceNamespaceLabelsToMap[l] = ""
 		}
 
 		r := gatewayAPIReconciler{
-			classController: v1alpha1.GatewayControllerName,
-			namespaceLabels: tc.labels,
-			log:             logger,
+			classController:            v1alpha1.GatewayControllerName,
+			k8sResourceNamespaceLabels: tc.labels,
+			log:                        logger,
 			client: fakeclient.NewClientBuilder().
 				WithScheme(envoygateway.GetScheme()).
 				WithObjects(&corev1.Namespace{
@@ -113,7 +113,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 						Kind:       "Namespace",
 						APIVersion: "v1",
 					},
-					ObjectMeta: v1.ObjectMeta{Name: ns, Labels: namespaceLabelsToMap},
+					ObjectMeta: v1.ObjectMeta{Name: ns, Labels: k8sResourceNamespaceLabelsToMap},
 				}).
 				Build(),
 		}

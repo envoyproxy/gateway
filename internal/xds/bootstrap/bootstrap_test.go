@@ -27,7 +27,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "enable-prometheus",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Prometheus: &egv1a1.PrometheusProvider{},
+				Prometheus: &egv1a1.ProxyPrometheusProvider{},
 			},
 		},
 		{
@@ -65,7 +65,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Value: "cluster",
 					},
 				},
-				Prometheus: &egv1a1.PrometheusProvider{},
+				Prometheus: &egv1a1.ProxyPrometheusProvider{},
 			},
 		},
 	}

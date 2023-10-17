@@ -61,7 +61,7 @@ type NamespaceGetter interface {
 	GetNamespace() string
 }
 
-// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of namespaceLabels
+// checkObjectNamespaceLabels checks if labels of namespace of the object is a subset of k8sResourceNamespaceLabels
 // TODO: check if param can be an interface, so the caller doesn't need to get the namespace before calling
 // this function.
 func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool, error) {
@@ -77,7 +77,7 @@ func (r *gatewayAPIReconciler) checkObjectNamespaceLabels(nsString string) (bool
 	); err != nil {
 		return false, err
 	}
-	return containAll(ns.Labels, r.namespaceLabels), nil
+	return containAll(ns.Labels, r.k8sResourceNamespaceLabels), nil
 }
 
 func containAll(labels map[string]string, labelsToCheck []string) bool {
@@ -350,7 +350,7 @@ func (r *gatewayAPIReconciler) httpRoutesForRateLimitFilter(obj client.Object) b
 }
 
 func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gwapiv1b1.HTTPRoute) []gwapiv1b1.HTTPRoute {
-	if len(r.namespaceLabels) == 0 {
+	if len(r.k8sResourceNamespaceLabels) == 0 {
 		return httpRoutes
 	}
 
