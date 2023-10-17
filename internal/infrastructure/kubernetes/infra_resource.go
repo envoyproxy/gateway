@@ -105,6 +105,9 @@ func (i *Infra) deleteServiceAccount(ctx context.Context, r ResourceRender) erro
 			Namespace: i.Namespace,
 			Name:      r.Name(),
 		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "ServiceAccount",
+		},
 	}
 
 	return i.Client.Delete(ctx, sa)
@@ -116,6 +119,9 @@ func (i *Infra) deleteDeployment(ctx context.Context, r ResourceRender) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      r.Name(),
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "Deployment",
 		},
 	}
 
@@ -129,6 +135,9 @@ func (i *Infra) deleteConfigMap(ctx context.Context, r ResourceRender) error {
 			Namespace: i.Namespace,
 			Name:      r.Name(),
 		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "ConfigMap",
+		},
 	}
 
 	return i.Client.Delete(ctx, cm)
@@ -140,6 +149,9 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: i.Namespace,
 			Name:      r.Name(),
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind: "Service",
 		},
 	}
 

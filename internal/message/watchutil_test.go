@@ -23,8 +23,9 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 
 	var calls int
 	message.HandleSubscription[string, any](
+		message.UpdateMetadata{Component: "test-component"},
 		ch,
-		func(message.Update[string, any]) { calls++ },
+		func(update message.Update[string, any], errChans chan error) { calls++ },
 	)
 	assert.Equal(t, 0, calls)
 }
@@ -47,8 +48,9 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	var storeCalls int
 	var deleteCalls int
 	message.HandleSubscription[string, any](
+		message.UpdateMetadata{Component: "test-component"},
 		m.Subscribe(context.Background()),
-		func(update message.Update[string, any]) {
+		func(update message.Update[string, any], errChans chan error) {
 			end()
 			if update.Delete {
 				deleteCalls++
@@ -121,7 +123,7 @@ func TestXdsIRUpdates(t *testing.T) {
 			}()
 
 			updates := 0
-			message.HandleSubscription(snapshotC, func(u message.Update[string, *ir.Xds]) {
+			message.HandleSubscription(message.UpdateMetadata{Component: "test-component"}, snapshotC, func(u message.Update[string, *ir.Xds], errChans chan error) {
 				end()
 				if u.Key == "test" {
 					updates += 1

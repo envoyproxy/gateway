@@ -202,6 +202,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
+| `telemetry` _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ | Telemetry defines the desired control plane telemetry related abilities. If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
@@ -337,6 +338,68 @@ _Appears in:_
 | `level` _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ | Level is the logging level. If unspecified, defaults to "info". EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit. LogLevel options: debug/info/error/warn. |
 
 
+#### EnvoyGatewayMetricSink
+
+
+
+EnvoyGatewayMetricSink defines control plane metric sinks where metrics are sent to.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG control plane currently supports OpenTelemetry. |
+| `host` _string_ | Host define the sink service hostname. |
+| `protocol` _string_ | Protocol define the sink service protocol. |
+| `port` _integer_ | Port defines the port the sink service is exposed on. |
+
+
+#### EnvoyGatewayMetrics
+
+
+
+EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `Address` _[EnvoyGatewayMetricsAddress](#envoygatewaymetricsaddress)_ | Address defines the address of Envoy Gateway Metrics Server. |
+| `sinks` _[EnvoyGatewayMetricSink](#envoygatewaymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `prometheus` _[EnvoyGatewayPrometheusProvider](#envoygatewayprometheusprovider)_ | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### EnvoyGatewayMetricsAddress
+
+
+
+EnvoyGatewayMetricsAddress defines the Envoy Gateway Metrics Address configuration.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `port` _integer_ | Port defines the port the metrics server is exposed on. |
+| `host` _string_ | Host defines the metrics server hostname. |
+
+
+#### EnvoyGatewayPrometheusProvider
+
+
+
+EnvoyGatewayPrometheusProvider will expose prometheus endpoint in pull mode.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `enable` _boolean_ | Enable defines if enables the prometheus metrics in pull mode. Default is true. |
+
+
 #### EnvoyGatewayProvider
 
 
@@ -384,9 +447,25 @@ _Appears in:_
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
+| `telemetry` _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ | Telemetry defines the desired control plane telemetry related abilities. If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
+
+
+#### EnvoyGatewayTelemetry
+
+
+
+EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane. Control plane will focus on metrics observability telemetry and tracing telemetry later.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `metrics` _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ | Metrics defines metrics configuration for envoy gateway. |
 
 
 #### EnvoyJSONPatchConfig
@@ -950,6 +1029,7 @@ _Underlying type:_ `string`
 
 
 _Appears in:_
+- [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
 - [MetricSink](#metricsink)
 
 
@@ -983,17 +1063,6 @@ _Appears in:_
 | --- | --- |
 | `host` _string_ | Host define the service hostname. |
 | `port` _integer_ | Port defines the port the service is exposed on. |
-
-
-#### PrometheusProvider
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
 
 
 #### ProviderType
@@ -1143,10 +1212,21 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
+| `prometheus` _[ProxyPrometheusProvider](#proxyprometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+
+
+#### ProxyPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
 
 
 #### ProxyTelemetry

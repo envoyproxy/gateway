@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	clusterv3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -43,12 +44,17 @@ func processExtensionPostRouteHook(route *routev3.Route, vHost *routev3.VirtualH
 	for refIdx, ref := range irRoute.ExtensionRefs {
 		unstructuredResources[refIdx] = ref.Object
 	}
+
+	startHookTime := time.Now()
 	modifiedRoute, err := extRouteHookClient.PostRouteModifyHook(
 		route,
 		vHost.Domains,
 		unstructuredResources,
 	)
+	extensionManagerPostHookTimeSeconds.With(targetLabel.Value(routeTarget)).Record(time.Since(startHookTime).Seconds())
+	extensionManagerPostHookCalls.With(targetLabel.Value(routeTarget)).Increment()
 	if err != nil {
+		extensionManagerPostHookCallErrors.With(targetLabel.Value(routeTarget)).Increment()
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
 		return err
@@ -75,8 +81,13 @@ func processExtensionPostVHostHook(vHost *routev3.VirtualHost, em *extensionType
 	if extVHHookClient == nil {
 		return nil
 	}
+
+	startHookTime := time.Now()
 	modifiedVH, err := extVHHookClient.PostVirtualHostModifyHook(vHost)
+	extensionManagerPostHookTimeSeconds.With(targetLabel.Value(virtualHostTarget)).Record(time.Since(startHookTime).Seconds())
+	extensionManagerPostHookCalls.With(targetLabel.Value(virtualHostTarget)).Increment()
 	if err != nil {
+		extensionManagerPostHookCallErrors.With(targetLabel.Value(virtualHostTarget)).Increment()
 		// Maybe logging the error is better here, but this only happens when an extension is in-use
 		// so if modification fails then we should probably treat that as a serious problem.
 		return err
@@ -102,8 +113,12 @@ func processExtensionPostListenerHook(tCtx *types.ResourceVersionTable, xdsListe
 	extManager := *em
 	extListenerHookClient := extManager.GetPostXDSHookClient(v1alpha1.XDSHTTPListener)
 	if extListenerHookClient != nil {
+		startHookTime := time.Now()
 		modifiedListener, err := extListenerHookClient.PostHTTPListenerModifyHook(xdsListener)
+		extensionManagerPostHookTimeSeconds.With(targetLabel.Value(listenerTarget)).Record(time.Since(startHookTime).Seconds())
+		extensionManagerPostHookCalls.With(targetLabel.Value(listenerTarget)).Increment()
 		if err != nil {
+			extensionManagerPostHookCallErrors.With(targetLabel.Value(listenerTarget)).Increment()
 			return err
 		} else if modifiedListener != nil {
 			// Use the resource table to update the listener with the modified version returned by the extension
@@ -152,9 +167,12 @@ func processExtensionPostTranslationHook(tCtx *types.ResourceVersionTable, em *e
 	for idx, secret := range secrets {
 		oldSecrets[idx] = secret.(*tlsv3.Secret)
 	}
-
+	startHookTime := time.Now()
 	newClusters, newSecrets, err := extensionInsertHookClient.PostTranslateModifyHook(oldClusters, oldSecrets)
+	extensionManagerPostHookTimeSeconds.With(targetLabel.Value(clusterTarget)).Record(time.Since(startHookTime).Seconds())
+	extensionManagerPostHookCalls.With(targetLabel.Value(clusterTarget)).Increment()
 	if err != nil {
+		extensionManagerPostHookCallErrors.With(targetLabel.Value(clusterTarget)).Increment()
 		return err
 	}
 

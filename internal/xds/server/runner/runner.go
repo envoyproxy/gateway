@@ -133,8 +133,8 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(r.Xds.Subscribe(ctx),
-		func(update message.Update[string, *xdstypes.ResourceVersionTable]) {
+	message.HandleSubscription(message.UpdateMetadata{Component: r.Name()}, r.Xds.Subscribe(ctx),
+		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChans chan error) {
 			key := update.Key
 			val := update.Value
 
@@ -145,6 +145,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			} else if val != nil && val.XdsResources != nil {
 				if r.cache == nil {
 					r.Logger.Error(err, "failed to init snapshot cache")
+					errChans <- err
 				} else {
 					// Update snapshot cache
 					err = r.cache.GenerateNewSnapshot(key, val.XdsResources)
@@ -152,6 +153,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			}
 			if err != nil {
 				r.Logger.Error(err, "failed to generate a snapshot")
+				errChans <- err
 			}
 		},
 	)

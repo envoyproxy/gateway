@@ -5,9 +5,15 @@
 
 package v1alpha1
 
+type MetricSinkType string
+
+const (
+	MetricSinkTypeOpenTelemetry MetricSinkType = "OpenTelemetry"
+)
+
 type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
-	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
+	Prometheus *ProxyPrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
 	// Matches defines configuration for selecting specific metrics instead of generating all metrics stats
@@ -22,12 +28,6 @@ type ProxyMetrics struct {
 	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
 }
-
-type MetricSinkType string
-
-const (
-	MetricSinkTypeOpenTelemetry MetricSinkType = "OpenTelemetry"
-)
 
 type MetricSink struct {
 	// Type defines the metric sink type.
@@ -71,5 +71,5 @@ type OpenTelemetrySink struct {
 	// TODO: add support for customizing OpenTelemetry sink in https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto#envoy-v3-api-msg-extensions-stat-sinks-open-telemetry-v3-sinkconfig
 }
 
-type PrometheusProvider struct {
+type ProxyPrometheusProvider struct {
 }

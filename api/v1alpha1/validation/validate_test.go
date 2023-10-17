@@ -567,6 +567,64 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	assert.True(t, eg.Admin.EnablePprof == false)
 }
 
+func TestEnvoyGatewayTelemetry(t *testing.T) {
+	// default envoygateway config telemetry should not be nil
+	eg := egv1a1.DefaultEnvoyGateway()
+	assert.True(t, eg.Telemetry != nil)
+
+	// get default telemetry config from envoygateway
+	// values should be set in default
+	egTelemetry := eg.GetEnvoyGatewayTelemetry()
+	assert.True(t, egTelemetry != nil)
+	assert.True(t, egTelemetry.Metrics != nil)
+	assert.True(t, egTelemetry.Metrics.Address != nil)
+	assert.True(t, egTelemetry.Metrics.Address.Host == egv1a1.GatewayMetricsHost)
+	assert.True(t, egTelemetry.Metrics.Address.Port == egv1a1.GatewayMetricsPort)
+	assert.True(t, egTelemetry.Metrics.Prometheus.Enable == true)
+	assert.True(t, egTelemetry.Metrics.Sinks == nil)
+
+	// override the telemetry config
+	// values should be updated
+	eg.Telemetry.Metrics = &egv1a1.EnvoyGatewayMetrics{
+		Address: &egv1a1.EnvoyGatewayMetricsAddress{
+			Host: "127.0.0.1",
+			Port: 19011,
+		},
+		Prometheus: &egv1a1.EnvoyGatewayPrometheusProvider{
+			Enable: false,
+		},
+		Sinks: []egv1a1.EnvoyGatewayMetricSink{
+			{
+				Type:     egv1a1.MetricSinkTypeOpenTelemetry,
+				Host:     "otel-collector.monitoring.svc.cluster.local",
+				Protocol: "grpc",
+				Port:     4317,
+			}, {
+				Type:     egv1a1.MetricSinkTypeOpenTelemetry,
+				Host:     "otel-collector.monitoring.svc.cluster.local",
+				Protocol: "http",
+				Port:     4318,
+			},
+		},
+	}
+
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Enable == false)
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Address.Host == "127.0.0.1")
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Address.Port == 19011)
+	assert.True(t, len(eg.GetEnvoyGatewayTelemetry().Metrics.Sinks) == 2)
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks[0].Type == egv1a1.MetricSinkTypeOpenTelemetry)
+
+	// set eg defaults when telemetry is nil
+	// the telemetry should not be nil
+	eg.Telemetry = nil
+	eg.SetEnvoyGatewayDefaults()
+	assert.True(t, eg.Telemetry != nil)
+	assert.True(t, eg.Telemetry.Metrics != nil)
+	assert.True(t, egTelemetry.Metrics.Address != nil)
+	assert.True(t, eg.Telemetry.Metrics.Prometheus.Enable == true)
+	assert.True(t, eg.Telemetry.Metrics.Sinks == nil)
+}
+
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 	cases := []struct {
 		logging   egv1a1.ProxyLogging

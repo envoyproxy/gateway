@@ -49,8 +49,8 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	message.HandleSubscription(r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
-		func(update message.Update[string, *gatewayapi.Resources]) {
+	message.HandleSubscription(message.UpdateMetadata{Component: r.Name()}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+		func(update message.Update[string, *gatewayapi.Resources], errChans chan error) {
 			r.Logger.Info("received an update")
 
 			val := update.Value
@@ -93,6 +93,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for key, val := range result.InfraIR {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate infra ir, skipped sending it")
+					errChans <- err
 				} else {
 					r.InfraIR.Store(key, val)
 					newKeys = append(newKeys, key)
@@ -102,6 +103,7 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 			for key, val := range result.XdsIR {
 				if err := val.Validate(); err != nil {
 					r.Logger.Error(err, "unable to validate xds ir, skipped sending it")
+					errChans <- err
 				} else {
 					r.XdsIR.Store(key, val)
 				}
@@ -152,7 +154,6 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(clientTrafficPolicy)
 				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
 			}
-
 		},
 	)
 	r.Logger.Info("shutting down")
