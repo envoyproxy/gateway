@@ -135,7 +135,7 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 | Envoy Proxy                       | Address     | Port    |
 |:---------------------------------:|:-----------:| :-----: |
 | Admin Server                      | 127.0.0.1   | 19000   |
-| Heath Check & Prometheus Listener | 0.0.0.0     | 19001   |
+| Heath Check  | 0.0.0.0     | 19001   |
 
 {{% alert title="Next Steps" color="warning" %}}
 Envoy Gateway should now be successfully installed and running, but in order to experience more abilities of Envoy Gateway, you can refer to [User Guides](../../user).
