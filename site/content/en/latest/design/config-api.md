@@ -221,6 +221,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
   controllerName: foo
+EOF
 ```
 
 With any of the above configuration examples, Envoy Gateway can be started without any additional arguments:
