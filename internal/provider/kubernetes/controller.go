@@ -1418,10 +1418,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Service CRUDs and process affected *Route objects.
-	servicePredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
-		predicate.NewPredicateFuncs(r.validateServiceForReconcile),
-	}
+	servicePredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateServiceForReconcile)}
 	if len(r.namespaceLabels) != 0 {
 		servicePredicates = append(servicePredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1451,7 +1448,10 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch EndpointSlice CRUDs and process affected *Route objects.
-	esPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile)}
+	esPredicates := []predicate.Predicate{
+		predicate.GenerationChangedPredicate{},
+		predicate.NewPredicateFuncs(r.validateEndpointSliceForReconcile),
+	}
 	if len(r.namespaceLabels) != 0 {
 		esPredicates = append(esPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1514,10 +1514,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
-	dPredicates := []predicate.Predicate{
-		predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
-		predicate.GenerationChangedPredicate{},
-	}
+	dPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateDeploymentForReconcile)}
 	if len(r.namespaceLabels) != 0 {
 		dPredicates = append(dPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1546,8 +1543,8 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	rfPredicates := []predicate.Predicate{
-		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter),
 		predicate.GenerationChangedPredicate{},
+		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter),
 	}
 	if len(r.namespaceLabels) != 0 {
 		rfPredicates = append(rfPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
