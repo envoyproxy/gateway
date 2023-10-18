@@ -124,11 +124,13 @@ These are the ports used by Envoy Gateway and the managed Envoy Proxy.
 
 ### Envoy Gateway
 
-| Envoy Gateway          | Address   |  Port  |
-|:----------------------:|:---------:|:------:|
-| Xds EnvoyProxy Server  | 0.0.0.0   | 18000  |
-| Xds RateLimit Server   | 0.0.0.0   | 18001  |
-| Admin Server           | 127.0.0.1 | 19000  |
+| Envoy Gateway          | Address   |  Port  |  Configurable  |
+|:----------------------:|:---------:|:------:|:--------------:|
+| Xds EnvoyProxy Server  | 0.0.0.0   | 18000  |       Yes      |
+| Xds RateLimit Server   | 0.0.0.0   | 18001  |       Yes      |
+| Admin Server           | 127.0.0.1 | 19000  |       Yes      |
+| Metrics Server         |  0.0.0.0  | 19001  |       Yes      |
+| Health Check           | 127.0.0.1 |  8081  |        No      |
 
 ### EnvoyProxy
 
