@@ -6,10 +6,9 @@ metadata:
   labels:
   {{- include "eg.labels" . | nindent 4 }}
   annotations:
+    "helm.sh/hook": pre-install
   {{- if .Values.certgen.job.annotations }}
     {{- toYaml .Values.certgen.job.annotations | nindent 4 -}}
-  {{ else }}
-    "helm.sh/hook": pre-install
   {{- end }}
 spec:
   backoffLimit: 1
