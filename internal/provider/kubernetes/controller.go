@@ -1303,6 +1303,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	// Only enqueue EnvoyProxy objects that match this Envoy Gateway's GatewayClass.
 	epPredicates := []predicate.Predicate{
 		predicate.ResourceVersionChangedPredicate{},
+		predicate.GenerationChangedPredicate{},
 		predicate.NewPredicateFuncs(r.hasManagedClass),
 	}
 	if len(r.namespaceLabels) != 0 {
@@ -1317,7 +1318,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Gateway CRUDs and reconcile affected GatewayClass.
+<<<<<<< HEAD
 	gPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateGatewayForReconcile)}
+=======
+	gPredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.validateGatewayForReconcile),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		gPredicates = append(gPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1413,7 +1421,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Service CRUDs and process affected *Route objects.
+<<<<<<< HEAD
 	servicePredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateServiceForReconcile)}
+=======
+	servicePredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.validateServiceForReconcile),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		servicePredicates = append(servicePredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1456,7 +1471,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 
 	// Watch Node CRUDs to update Gateway Address exposed by Service of type NodePort.
 	// Node creation/deletion and ExternalIP updates would require update in the Gateway
+<<<<<<< HEAD
 	nPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.handleNode)}
+=======
+	nPredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.handleNode),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		nPredicates = append(nPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1470,7 +1492,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Secret CRUDs and process affected Gateways.
+<<<<<<< HEAD
 	secretPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateSecretForReconcile)}
+=======
+	secretPredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.validateSecretForReconcile),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		secretPredicates = append(secretPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1499,7 +1528,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch Deployment CRUDs and process affected Gateways.
+<<<<<<< HEAD
 	dPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.validateDeploymentForReconcile)}
+=======
+	dPredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.validateDeploymentForReconcile),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		dPredicates = append(dPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1512,7 +1548,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 	}
 
 	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
+<<<<<<< HEAD
 	afPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter)}
+=======
+	afPredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		afPredicates = append(afPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
@@ -1524,7 +1567,14 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+<<<<<<< HEAD
 	rfPredicates := []predicate.Predicate{predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter)}
+=======
+	rfPredicates := []predicate.Predicate{
+		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter),
+		predicate.GenerationChangedPredicate{},
+	}
+>>>>>>> 1d861d38 (add GenerationChanged predicate filter to all resources)
 	if len(r.namespaceLabels) != 0 {
 		rfPredicates = append(rfPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
