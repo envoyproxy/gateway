@@ -1629,11 +1629,6 @@ func (r *gatewayAPIReconciler) hasManagedClass(obj client.Object) bool {
 
 // processParamsRef processes the parametersRef of the provided GatewayClass.
 func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1b1.GatewayClass, resourceTree *gatewayapi.Resources) error {
-	if gc.Spec.ParametersRef != nil {
-		if !refsEnvoyProxy(gc) {
-			return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
-		}
-	}
 	epList := new(egv1a1.EnvoyProxyList)
 	// The EnvoyProxy must be in the same namespace as EG.
 	if err := r.client.List(ctx, epList, &client.ListOptions{Namespace: r.namespace}); err != nil {
@@ -1688,12 +1683,16 @@ func (r *gatewayAPIReconciler) processParamsRef(ctx context.Context, gc *gwapiv1
 		}
 	}
 
-	if !found {
-		return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
-	}
-
-	if !valid {
-		return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
+	if gc.Spec.ParametersRef != nil {
+		if !refsEnvoyProxy(gc) {
+			return fmt.Errorf("unsupported parametersRef for gatewayclass %s", gc.Name)
+		}
+		if !found {
+			return fmt.Errorf("failed to find envoyproxy referenced by gatewayclass: %s", gc.Name)
+		}
+		if !valid {
+			return fmt.Errorf("invalid gatewayclass %s: %v", gc.Name, validationErr)
+		}
 	}
 
 	return nil
