@@ -56,7 +56,7 @@ spec:
             type: PathPrefix
             value: /
 ---
-apiVersion: gateway.networking.k8s.io/v1
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   namespace: submariner-operator
