@@ -43,13 +43,15 @@ func HashString(str string) string {
 
 // ExpectedContainerPortHashedName returns expected container port name with max length of 15 characters.
 // If mergedGateways is enabled or listener port name is larger than 15 characters it will return partially hashed name.
+// Listeners on merged gateways have a infraIR port name {GatewayNamespace}/{GatewayName}/{ListenerName}.
 func ExpectedContainerPortHashedName(name string) string {
 	if len(name) > 15 {
 		hashedName := HashString(name)
+		// replace `/` with `-` to create a valid K8s resource name
 		resourceName := strings.ReplaceAll(name, "/", "-")
-		listenerName := strings.Split(resourceName, "-")
+		listenerName := string(resourceName[2])
 
-		return fmt.Sprintf("%s-%s", listenerName[0], hashedName[0:14-len(listenerName)])
+		return fmt.Sprintf("%s-%s", listenerName, hashedName[0:14-len(listenerName)])
 	}
 	return name
 }

@@ -136,7 +136,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				infraPortName := string(listener.Name)
 				if t.MergeGateways {
-					infraPortName = irMergedInfraPortName(listener)
+					infraPortName = irHTTPListenerName(listener)
 				}
 
 				infraPort := ir.ListenerPort{
