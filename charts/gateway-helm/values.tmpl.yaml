@@ -55,3 +55,9 @@ envoyGatewayMetricsService:
 createNamespace: false
 
 kubernetesClusterDomain: cluster.local
+
+certgen:
+  ttlSecondsAfterFinished: 0
+  annotations:
+    job: []
+    rbac: []
