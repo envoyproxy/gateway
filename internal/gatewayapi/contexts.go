@@ -90,6 +90,10 @@ func (l *ListenerContext) SetSupportedKinds(kinds ...v1beta1.RouteGroupKind) {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds = kinds
 }
 
+func (l *ListenerContext) GetSupportedKinds() []v1beta1.RouteGroupKind {
+	return l.gateway.Status.Listeners[l.listenerStatusIdx].SupportedKinds
+}
+
 func (l *ListenerContext) IncrementAttachedRoutes() {
 	l.gateway.Status.Listeners[l.listenerStatusIdx].AttachedRoutes++
 }

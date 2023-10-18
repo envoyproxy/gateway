@@ -209,12 +209,16 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 	if !(lConditions[0].Type == string(v1beta1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
 		hasProgrammedCond := false
 		hasRefsCond := false
+		hasAcceptedCond := false
 		for _, existing := range lConditions {
 			if existing.Type == string(v1beta1.ListenerConditionProgrammed) {
 				hasProgrammedCond = true
 			}
 			if existing.Type == string(v1beta1.ListenerConditionResolvedRefs) {
 				hasRefsCond = true
+			}
+			if existing.Type == string(v1beta1.ListenerConditionAccepted) {
+				hasAcceptedCond = true
 			}
 		}
 		// set "Programmed: false" if it's not set already.
@@ -233,6 +237,15 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 				metav1.ConditionTrue,
 				v1beta1.ListenerReasonResolvedRefs,
 				"Listener references have been resolved",
+			)
+		}
+		// set "Accepted: true" if it's not set already.
+		if !hasAcceptedCond {
+			listener.SetCondition(
+				v1beta1.ListenerConditionAccepted,
+				metav1.ConditionTrue,
+				v1beta1.ListenerReasonAccepted,
+				"Listener has been successfully translated",
 			)
 		}
 		// skip computing IR

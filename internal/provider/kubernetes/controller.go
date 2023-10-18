@@ -531,7 +531,7 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 						)
 						if err != nil && !kerrors.IsNotFound(err) {
 							r.log.Error(err, "unable to find Secret")
-							return err
+							continue
 						}
 
 						r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(certRef.Name))

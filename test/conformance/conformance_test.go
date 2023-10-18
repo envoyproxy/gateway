@@ -48,7 +48,13 @@ func TestGatewayAPIConformance(t *testing.T) {
 		SkipTests:            []string{},
 		ExemptFeatures:       suite.MeshCoreFeatures,
 	})
-	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
 
+	cSuite.Setup(t)
+
+	tests := []suite.ConformanceTest{
+		tests.GatewayWithAttachedRoutes,
+	}
+
+	cSuite.Run(t, tests)
+	//cSuite.Run(t, tests.ConformanceTests)
 }

@@ -93,6 +93,18 @@ func (t *Translator) ProcessGRPCRoutes(grpcRoutes []*v1alpha2.GRPCRoute, gateway
 
 func (t *Translator) processHTTPRouteParentRefs(httpRoute *HTTPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range httpRoute.ParentRefs {
+		for _, listener := range parentRef.listeners {
+			// Theoretically there should only be one parent ref per
+			// Route that attaches to a given Listener, so fine to just increment here, but we
+			// might want to check to ensure we're not double-counting.
+			kinds := listener.GetSupportedKinds()
+			for _, kind := range kinds {
+				if kind.Group != nil && kind.Group == GroupPtr(v1beta1.GroupName) && kind.Kind == KindHTTPRoute {
+					listener.IncrementAttachedRoutes()
+				}
+			}
+		}
+
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -329,6 +341,17 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 
 func (t *Translator) processGRPCRouteParentRefs(grpcRoute *GRPCRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range grpcRoute.ParentRefs {
+		for _, listener := range parentRef.listeners {
+			// Theoretically there should only be one parent ref per
+			// Route that attaches to a given Listener, so fine to just increment here, but we
+			// might want to check to ensure we're not double-counting.
+			kinds := listener.GetSupportedKinds()
+			for _, kind := range kinds {
+				if kind.Group != nil && kind.Group == GroupPtr(v1beta1.GroupName) && kind.Kind == KindGRPCRoute {
+					listener.IncrementAttachedRoutes()
+				}
+			}
+		}
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -581,12 +604,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
-		// Theoretically there should only be one parent ref per
-		// Route that attaches to a given Listener, so fine to just increment here, but we
-		// might want to check to ensure we're not double-counting.
-		if len(routeRoutes) > 0 {
-			listener.IncrementAttachedRoutes()
-		}
 	}
 
 	return hasHostnameIntersection
@@ -622,6 +639,17 @@ func (t *Translator) ProcessTLSRoutes(tlsRoutes []*v1alpha2.TLSRoute, gateways [
 
 func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tlsRoute.ParentRefs {
+		for _, listener := range parentRef.listeners {
+			// Theoretically there should only be one parent ref per
+			// Route that attaches to a given Listener, so fine to just increment here, but we
+			// might want to check to ensure we're not double-counting.
+			kinds := listener.GetSupportedKinds()
+			for _, kind := range kinds {
+				if kind.Group != nil && kind.Group == GroupPtr(v1beta1.GroupName) && kind.Kind == KindTLSRoute {
+					listener.IncrementAttachedRoutes()
+				}
+			}
+		}
 
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
@@ -687,13 +715,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
-
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Settings) > 0 {
-				listener.IncrementAttachedRoutes()
-			}
 		}
 
 		if !hasHostnameIntersection {
@@ -749,6 +770,22 @@ func (t *Translator) ProcessUDPRoutes(udpRoutes []*v1alpha2.UDPRoute, gateways [
 
 func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range udpRoute.ParentRefs {
+		for _, listener := range parentRef.listeners {
+			// only one route is allowed for a UDP listener
+			if listener.AttachedRoutes() > 0 {
+				continue
+			} else {
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				kinds := listener.GetSupportedKinds()
+				for _, kind := range kinds {
+					if kind.Group != nil && kind.Group == GroupPtr(v1beta1.GroupName) && kind.Kind == KindUDPRoute {
+						listener.IncrementAttachedRoutes()
+					}
+				}
+			}
+		}
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -799,10 +836,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
-			// only one route is allowed for a UDP listener
-			if listener.AttachedRoutes() > 0 {
-				continue
-			}
 			if !listener.IsReady() {
 				continue
 			}
@@ -822,13 +855,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.UDP = append(gwXdsIR.UDP, irListener)
-
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Settings) > 0 {
-				listener.IncrementAttachedRoutes()
-			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -884,7 +910,22 @@ func (t *Translator) ProcessTCPRoutes(tcpRoutes []*v1alpha2.TCPRoute, gateways [
 
 func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resources *Resources, xdsIR XdsIRMap) {
 	for _, parentRef := range tcpRoute.ParentRefs {
-
+		for _, listener := range parentRef.listeners {
+			// only one route is allowed for a TCP listener
+			if listener.AttachedRoutes() > 0 {
+				continue
+			} else {
+				// Theoretically there should only be one parent ref per
+				// Route that attaches to a given Listener, so fine to just increment here, but we
+				// might want to check to ensure we're not double-counting.
+				kinds := listener.GetSupportedKinds()
+				for _, kind := range kinds {
+					if kind.Group != nil && kind.Group == GroupPtr(v1beta1.GroupName) && kind.Kind == KindTCPRoute {
+						listener.IncrementAttachedRoutes()
+					}
+				}
+			}
+		}
 		// Need to compute Route rules within the parentRef loop because
 		// any conditions that come out of it have to go on each RouteParentStatus,
 		// not on the Route as a whole.
@@ -934,10 +975,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 
 		accepted := false
 		for _, listener := range parentRef.listeners {
-			// only one route is allowed for a TCP listener
-			if listener.AttachedRoutes() > 0 {
-				continue
-			}
 			if !listener.IsReady() {
 				continue
 			}
@@ -958,13 +995,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			}
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
-
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Settings) > 0 {
-				listener.IncrementAttachedRoutes()
-			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1098,7 +1128,6 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 				"NoReadyListeners",
 				"There are no ready listeners for this parent ref",
 			)
-			continue
 		}
 
 		var allowedListeners []*ListenerContext

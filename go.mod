@@ -2,6 +2,8 @@ module github.com/envoyproxy/gateway
 
 go 1.20
 
+replace sigs.k8s.io/gateway-api => ../../../sigs.k8s.io/gateway-api
+
 require (
 	github.com/cncf/xds/go v0.0.0-20230607035331-e9ce68804cb4
 	github.com/davecgh/go-spew v1.1.1
