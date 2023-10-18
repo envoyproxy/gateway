@@ -5,11 +5,13 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
-  {{- if .Values.certgen.annotations.rbac }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
   annotations:
-    {{- toYaml .Values.certgen.annotations.rbac | nindent 4 -}}
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{ else }}
-  annotations:
     "helm.sh/hook": pre-install
   {{- end }}
 ---
@@ -20,11 +22,13 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
-  {{- if .Values.certgen.annotations.rbac }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
   annotations:
-    {{- toYaml .Values.certgen.annotations.rbac | nindent 4 -}}
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{ else }}
-  annotations:
     "helm.sh/hook": pre-install
   {{- end }}
 rules:
@@ -44,11 +48,13 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
-  {{- if .Values.certgen.annotations.rbac }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
   annotations:
-    {{- toYaml .Values.certgen.annotations.rbac | nindent 4 -}}
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
   {{ else }}
-  annotations:
     "helm.sh/hook": pre-install
   {{- end }}
 roleRef:

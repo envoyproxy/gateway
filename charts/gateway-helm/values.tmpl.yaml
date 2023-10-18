@@ -57,7 +57,9 @@ createNamespace: false
 kubernetesClusterDomain: cluster.local
 
 certgen:
-  ttlSecondsAfterFinished: 0
-  annotations:
-    job: []
-    rbac: []
+  job:
+    annotations: {}
+    ttlSecondsAfterFinished: 0
+  rbac:
+    annotations: {}
+    labels: {}
