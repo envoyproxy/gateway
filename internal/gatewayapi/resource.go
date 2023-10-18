@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
@@ -42,9 +41,10 @@ type Resources struct {
 	Secrets               []*v1.Secret                   `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	AuthenticationFilters []*egv1a1.AuthenticationFilter `json:"authenticationFilters,omitempty" yaml:"authenticationFilters,omitempty"`
 	RateLimitFilters      []*egv1a1.RateLimitFilter      `json:"rateLimitFilters,omitempty" yaml:"rateLimitFilters,omitempty"`
-	EnvoyProxy            *egcfgv1a1.EnvoyProxy          `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
+	EnvoyProxy            *egv1a1.EnvoyProxy             `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
 	ExtensionRefFilters   []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies    []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
+	ClientTrafficPolicies []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -62,6 +62,7 @@ func NewResources() *Resources {
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},
 		ExtensionRefFilters:   []unstructured.Unstructured{},
 		EnvoyPatchPolicies:    []*egv1a1.EnvoyPatchPolicy{},
+		ClientTrafficPolicies: []*egv1a1.ClientTrafficPolicy{},
 	}
 }
 
@@ -105,11 +106,18 @@ func (r *Resources) GetSecret(namespace, name string) *v1.Secret {
 	return nil
 }
 
-func (r *Resources) GetEndpointSlicesForService(svcNamespace, svcName string) []*discoveryv1.EndpointSlice {
+func (r *Resources) GetEndpointSlicesForBackend(svcNamespace, svcName string, backendKind string) []*discoveryv1.EndpointSlice {
 	endpointSlices := []*discoveryv1.EndpointSlice{}
 	for _, endpointSlice := range r.EndpointSlices {
+		var backendSelectorLabel string
+		switch backendKind {
+		case KindService:
+			backendSelectorLabel = discoveryv1.LabelServiceName
+		case KindServiceImport:
+			backendSelectorLabel = mcsapi.LabelServiceName
+		}
 		if svcNamespace == endpointSlice.Namespace &&
-			endpointSlice.GetLabels()[discoveryv1.LabelServiceName] == svcName {
+			endpointSlice.GetLabels()[backendSelectorLabel] == svcName {
 			endpointSlices = append(endpointSlices, endpointSlice)
 		}
 	}

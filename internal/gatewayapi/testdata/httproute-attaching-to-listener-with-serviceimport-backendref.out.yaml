@@ -28,6 +28,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -108,7 +113,7 @@ xdsIR:
           name: httproute/default/httproute-1/rule/0
           settings:
           - endpoints:
-            - host: 7.7.7.7
+            - host: 8.8.8.8
               port: 8080
             weight: 1
         hostname: '*'

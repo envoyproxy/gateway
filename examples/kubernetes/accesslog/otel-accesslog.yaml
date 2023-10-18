@@ -5,12 +5,12 @@ metadata:
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   parametersRef:
-    group: config.gateway.envoyproxy.io
+    group: gateway.envoyproxy.io
     kind: EnvoyProxy
     name: otel-access-logging
     namespace: envoy-gateway-system
 ---
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: otel-access-logging

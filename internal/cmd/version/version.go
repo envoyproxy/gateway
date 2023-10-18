@@ -14,7 +14,7 @@ import (
 
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 type Info struct {

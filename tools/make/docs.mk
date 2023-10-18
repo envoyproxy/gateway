@@ -1,20 +1,13 @@
-DOCS_OUTPUT_DIR := docs/html
+DOCS_OUTPUT_DIR := site/public
 RELEASE_VERSIONS ?= $(foreach v,$(wildcard ${ROOT_DIR}/docs/*),$(notdir ${v}))
 
 ##@ Docs
 
 .PHONY: docs
-docs: docs.clean $(tools/sphinx-build) docs-api helm-readme-gen ## Generate Envoy Gateway Docs Sources
+docs: docs.clean helm-readme-gen docs-api docs-api-headings ## Generate Envoy Gateway Docs Sources
 	@$(LOG_TARGET)
-	mkdir -p $(DOCS_OUTPUT_DIR)
-	cp docs/index.html $(DOCS_OUTPUT_DIR)/index.html
-	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)/get-egctl.sh
-	@for VERSION in $(RELEASE_VERSIONS); do \
-		env BUILD_VERSION=$$VERSION \
-		ENVOY_PROXY_VERSION=$(shell go run ./cmd/envoy-gateway versions -o json | jq -r ".envoyProxyVersion") \
-		GATEWAYAPI_VERSION=$(shell go run ./cmd/envoy-gateway versions -o json | jq -r ".gatewayAPIVersion") \
-		$(tools/sphinx-build) -j auto -b html docs/$$VERSION $(DOCS_OUTPUT_DIR)/$$VERSION; \
-	done
+	cd $(ROOT_DIR)/site && npm install
+	cd $(ROOT_DIR)/site && npm run build:production
 
 .PHONY: docs-release
 docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gateway Release Docs
@@ -22,7 +15,7 @@ docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gate
 .PHONY: docs-serve
 docs-serve: ## Start Envoy Gateway Site Locally
 	@$(LOG_TARGET)
-	python3 -m http.server -d $(DOCS_OUTPUT_DIR)
+	cd $(ROOT_DIR)/site && npm run serve
 
 .PHONY: clean
 clean: ## Remove all files that are created during builds.
@@ -32,35 +25,35 @@ clean: docs.clean
 docs.clean:
 	@$(LOG_TARGET)
 	rm -rf $(DOCS_OUTPUT_DIR)
+	rm -rf site/node_modules
+	rm -rf site/resources
+	rm -f site/package-lock.json
+	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
-docs-api: docs-api-gen docs-api-headings
+docs-api: docs-api-gen helm-readme-gen docs-api-headings
 
 .PHONY: helm-readme-gen
 helm-readme-gen: $(tools/helm-docs)
 	@$(LOG_TARGET)
 	$(tools/helm-docs) charts/gateway-helm/ -f values.tmpl.yaml -o api.md
-	mv charts/gateway-helm/api.md docs/latest/helm/api.md
+	mv charts/gateway-helm/api.md site/content/en/latest/install/api.md
 
 .PHONY: docs-api-gen
 docs-api-gen: $(tools/crd-ref-docs)
-	$(tools/crd-ref-docs) \
-	--source-path=api/config \
-	--config=tools/crd-ref-docs/config.yaml \
-	--output-path=docs/latest/api/config_types.md \
-	--max-depth 10 \
-	--renderer=markdown
+	@$(LOG_TARGET)
 	$(tools/crd-ref-docs) \
 	--source-path=api/v1alpha1 \
 	--config=tools/crd-ref-docs/config.yaml \
-	--output-path=docs/latest/api/extension_types.md \
+	--output-path=site/content/en/latest/api/extension_types.md \
 	--max-depth 10 \
 	--renderer=markdown
 
 .PHONY: docs-api-headings # Required since sphinx mst does not link to h4 headings.
 docs-api-headings:
 	@$(LOG_TARGET)
-	tools/hack/docs-headings.sh
+	tools/hack/docs-headings.sh site/content/en/latest/api/extension_types.md
+	tools/hack/docs-headings.sh site/content/en/latest/install/api.md
 
 .PHONY: docs-release-prepare
 docs-release-prepare:
@@ -68,18 +61,20 @@ docs-release-prepare:
 	mkdir -p $(OUTPUT_DIR)
 	@$(call log, "Updated Release Version: $(TAG)")
 	$(eval LAST_VERSION := $(shell cat VERSION))
-	cat docs/index.html | sed "s;$(LAST_VERSION);$(TAG);g" > $(OUTPUT_DIR)/index.html
-	mv $(OUTPUT_DIR)/index.html docs/index.html
 	echo $(TAG) > VERSION
 
 .PHONY: docs-release-gen
 docs-release-gen:
 	@$(LOG_TARGET)
-	@$(call log, "Added Release Doc: docs/$(TAG)")
-	cp -r docs/latest docs/$(TAG)
-	@for DOC in $(shell ls docs/latest/user); do \
-		cp docs/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
+	@$(call log, "Added Release Doc: site/content/en/$(TAG)")
+	cp -r site/content/en/latest site/content/en/$(TAG)
+	@for DOC in $(shell ls site/content/en/latest/user); do \
+		cp site/content/en/$(TAG)/user/$$DOC $(OUTPUT_DIR)/$$DOC ; \
 		cat $(OUTPUT_DIR)/$$DOC | sed "s;v0.0.0-latest;$(TAG);g" | sed "s;latest;$(TAG);g" > $(OUTPUT_DIR)/$(TAG)-$$DOC ; \
-		mv $(OUTPUT_DIR)/$(TAG)-$$DOC docs/$(TAG)/user/$$DOC ; \
-		$(call log, "Updated: docs/$(TAG)/user/$$DOC") ; \
+		mv $(OUTPUT_DIR)/$(TAG)-$$DOC site/content/en/$(TAG)/user/$$DOC ; \
+		$(call log, "Updated: site/content/en/$(TAG)/user/$$DOC") ; \
 	done
+
+	@echo '[[params.versions]]' >> site/hugo.toml
+	@echo '  version = "$(TAG)"' >> site/hugo.toml
+	@echo '  url = "/$(TAG)"' >> site/hugo.toml

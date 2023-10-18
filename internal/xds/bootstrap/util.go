@@ -6,14 +6,14 @@
 package bootstrap
 
 import (
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	yamlutils "github.com/envoyproxy/gateway/internal/utils/yaml"
 )
 
 // ApplyBootstrapConfig applies the bootstrap config to the default bootstrap config and return the result config.
-func ApplyBootstrapConfig(boostrapConfig *egcfgv1a1.ProxyBootstrap, defaultBootstrap string) (string, error) {
+func ApplyBootstrapConfig(boostrapConfig *egv1a1.ProxyBootstrap, defaultBootstrap string) (string, error) {
 	bootstrapType := boostrapConfig.Type
-	if bootstrapType != nil && *bootstrapType == egcfgv1a1.BootstrapTypeMerge {
+	if bootstrapType != nil && *bootstrapType == egv1a1.BootstrapTypeMerge {
 		mergedBootstrap, err := yamlutils.MergeYAML(defaultBootstrap, boostrapConfig.Value)
 		if err != nil {
 			return "", err

@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -41,11 +41,11 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the gateway-api translator runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
@@ -147,6 +147,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(udpRoute)
 				r.ProviderResources.UDPRouteStatuses.Store(key, &udpRoute.Status)
 			}
+			for _, clientTrafficPolicy := range result.ClientTrafficPolicies {
+				clientTrafficPolicy := clientTrafficPolicy
+				key := utils.NamespacedName(clientTrafficPolicy)
+				r.ProviderResources.ClientTrafficPolicyStatuses.Store(key, &clientTrafficPolicy.Status)
+			}
+
 		},
 	)
 	r.Logger.Info("shutting down")

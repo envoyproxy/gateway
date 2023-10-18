@@ -5,7 +5,6 @@ All namespaced resources for Envoy Gateway RBAC.
 - {{ include "eg.rbac.namespaced.basic" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.apps" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.discovery" . | nindent 2 | trim }}
-- {{ include "eg.rbac.namespaced.config.envoyproxy" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.envoyproxy" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.envoyproxy.status" . | nindent 2 | trim }}
 - {{ include "eg.rbac.namespaced.gateway.networking" . | nindent 2 | trim }}
@@ -60,25 +59,14 @@ verbs:
 - watch
 {{- end }}
 
-{{- define "eg.rbac.namespaced.config.envoyproxy" -}}
-apiGroups:
-- config.gateway.envoyproxy.io
-resources:
-- envoyproxies
-verbs:
-- get
-- list
-- update
-- watch
-- patch
-{{- end }}
-
 {{- define "eg.rbac.namespaced.gateway.envoyproxy" -}}
 apiGroups:
 - gateway.envoyproxy.io
 resources:
+- envoyproxies
 - authenticationfilters
 - envoypatchpolicies
+- clienttrafficpolicies
 - ratelimitfilters
 verbs:
 - get
@@ -93,6 +81,7 @@ apiGroups:
 - gateway.envoyproxy.io
 resources:
 - envoypatchpolicies/status
+- clienttrafficpolicies/status
 verbs:
 - update
 {{- end }}

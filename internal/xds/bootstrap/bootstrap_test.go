@@ -13,30 +13,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
 		name         string
-		proxyMetrics *egcfgv1a1.ProxyMetrics
+		proxyMetrics *egv1a1.ProxyMetrics
 	}{
 		{
 			name: "default",
 		},
 		{
 			name: "enable-prometheus",
-			proxyMetrics: &egcfgv1a1.ProxyMetrics{
-				Prometheus: &egcfgv1a1.PrometheusProvider{},
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.PrometheusProvider{},
 			},
 		},
 		{
 			name: "otel-metrics",
-			proxyMetrics: &egcfgv1a1.ProxyMetrics{
-				Sinks: []egcfgv1a1.MetricSink{
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Sinks: []egv1a1.MetricSink{
 					{
-						Type: egcfgv1a1.MetricSinkTypeOpenTelemetry,
-						OpenTelemetry: &egcfgv1a1.OpenTelemetrySink{
+						Type: egv1a1.MetricSinkTypeOpenTelemetry,
+						OpenTelemetry: &egv1a1.OpenTelemetrySink{
 							Host: "otel-collector.monitoring.svc",
 							Port: 4317,
 						},
@@ -46,26 +46,26 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "custom-stats-matcher",
-			proxyMetrics: &egcfgv1a1.ProxyMetrics{
-				Matches: []egcfgv1a1.Match{
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Matches: []egv1a1.Match{
 					{
-						Type:  egcfgv1a1.Prefix,
+						Type:  egv1a1.Prefix,
 						Value: "http",
 					},
 					{
-						Type:  egcfgv1a1.Suffix,
+						Type:  egv1a1.Suffix,
 						Value: "upstream_rq",
 					},
 					{
-						Type:  egcfgv1a1.RegularExpression,
+						Type:  egv1a1.RegularExpression,
 						Value: "virtual.*",
 					},
 					{
-						Type:  egcfgv1a1.Prefix,
+						Type:  egv1a1.Prefix,
 						Value: "cluster",
 					},
 				},
-				Prometheus: &egcfgv1a1.PrometheusProvider{},
+				Prometheus: &egv1a1.PrometheusProvider{},
 			},
 		},
 	}

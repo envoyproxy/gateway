@@ -15,9 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/message"
@@ -33,7 +32,7 @@ type Provider struct {
 }
 
 // New creates a new Provider from the provided EnvoyGateway.
-func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources, eStatuses *message.EnvoyPatchPolicyStatuses) (*Provider, error) {
+func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResources) (*Provider, error) {
 	// TODO: Decide which mgr opts should be exposed through envoygateway.provider.kubernetes API.
 	mgrOpts := manager.Options{
 		Scheme:                 envoygateway.GetScheme(),
@@ -41,19 +40,16 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 		LeaderElection:         false,
 		HealthProbeBindAddress: ":8081",
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
-		Metrics: metricsserver.Options{
-			BindAddress: ":8080",
-		},
 	}
 
 	// TODO: implement config validation on the watch mode config
-	byNamespace :=
+	namespacedMode :=
 		svr.EnvoyGateway.Provider != nil &&
 			svr.EnvoyGateway.Provider.Kubernetes != nil &&
 			(svr.EnvoyGateway.Provider.Kubernetes.Watch != nil) &&
 			(svr.EnvoyGateway.Provider.Kubernetes.Watch.Type == v1alpha1.KubernetesWatchModeTypeNamespaces) &&
 			(len(svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces) > 0)
-	if byNamespace {
+	if namespacedMode {
 		mgrOpts.Cache.DefaultNamespaces = make(map[string]cache.Config)
 		for _, watchNS := range svr.EnvoyGateway.Provider.Kubernetes.Watch.Namespaces {
 			mgrOpts.Cache.DefaultNamespaces[watchNS] = cache.Config{}
@@ -71,7 +67,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	}
 
 	// Create and register the controllers with the manager.
-	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources, eStatuses); err != nil {
+	if err := newGatewayAPIController(mgr, svr, updateHandler.Writer(), resources); err != nil {
 		return nil, fmt.Errorf("failted to create gatewayapi controller: %w", err)
 	}
 

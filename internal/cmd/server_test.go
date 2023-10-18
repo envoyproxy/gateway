@@ -14,7 +14,7 @@ import (
 
 var (
 	validGatewayConfig = `
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 provider:
   type: Kubernetes
@@ -23,7 +23,7 @@ gateway:
 `
 	invalidGatewayConfig = `
 kind: EnvoyGateway
-apiVersion: config.gateway.envoyproxy.io/v1alpha1
+apiVersion: gateway.envoyproxy.io/v1alpha1
 gateway: {}
 `
 )

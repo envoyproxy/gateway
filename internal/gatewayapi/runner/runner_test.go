@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	egv1a1cfg "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -33,7 +33,7 @@ func TestRunner(t *testing.T) {
 		ProviderResources: pResources,
 		XdsIR:             xdsIR,
 		InfraIR:           infraIR,
-		ExtensionManager:  testutils.NewManager(egv1a1cfg.ExtensionManager{}),
+		ExtensionManager:  testutils.NewManager(egv1a1.ExtensionManager{}),
 	})
 	ctx := context.Background()
 	// Start

@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -85,7 +85,7 @@ func envoyLabels(extraLabels map[string]string) map[string]string {
 }
 
 // expectedProxyContainers returns expected proxy containers.
-func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
+func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.KubernetesDeploymentSpec) ([]corev1.Container, error) {
 	// Define slice to hold container ports
 	var ports []corev1.ContainerPort
 
@@ -110,7 +110,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 		}
 	}
 
-	var proxyMetrics *egcfgv1a1.ProxyMetrics
+	var proxyMetrics *egv1a1.ProxyMetrics
 	if infra.Config != nil {
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
@@ -193,7 +193,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egcfgv1a1.K
 }
 
 // expectedContainerVolumeMounts returns expected proxy container volume mounts.
-func expectedContainerVolumeMounts(deploymentSpec *egcfgv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
+func expectedContainerVolumeMounts(deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "certs",
@@ -210,7 +210,7 @@ func expectedContainerVolumeMounts(deploymentSpec *egcfgv1a1.KubernetesDeploymen
 }
 
 // expectedDeploymentVolumes returns expected proxy deployment volumes.
-func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.KubernetesDeploymentSpec) []corev1.Volume {
+func expectedDeploymentVolumes(name string, deploymentSpec *egv1a1.KubernetesDeploymentSpec) []corev1.Volume {
 	volumes := []corev1.Volume{
 		{
 			Name: "certs",
@@ -249,7 +249,7 @@ func expectedDeploymentVolumes(name string, deploymentSpec *egcfgv1a1.Kubernetes
 }
 
 // expectedProxyContainerEnv returns expected proxy container envs.
-func expectedProxyContainerEnv(deploymentConfig *egcfgv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
+func expectedProxyContainerEnv(deploymentConfig *egv1a1.KubernetesDeploymentSpec) []corev1.EnvVar {
 	env := []corev1.EnvVar{
 		{
 			Name: envoyNsEnvVar,

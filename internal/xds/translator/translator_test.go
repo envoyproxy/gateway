@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/extension/testutils"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -138,6 +138,10 @@ func TestTranslateXds(t *testing.T) {
 			name: "http-route-rewrite-url-host",
 		},
 		{
+			name: "http-route-timeout",
+		},
+
+		{
 			name: "ratelimit",
 		},
 		{
@@ -179,6 +183,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name:                      "jsonpatch-invalid-patch",
 			requireEnvoyPatchPolicies: true,
+		},
+		{
+			name: "listener-tcp-keepalive",
 		},
 	}
 

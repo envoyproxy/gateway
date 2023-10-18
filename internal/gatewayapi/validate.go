@@ -200,25 +200,39 @@ func (t *Translator) validateListenerConditions(listener *ListenerContext) (isRe
 			"Sending translated listener configuration to the data plane")
 		listener.SetCondition(v1beta1.ListenerConditionAccepted, metav1.ConditionTrue, v1beta1.ListenerReasonAccepted,
 			"Listener has been successfully translated")
+		listener.SetCondition(v1beta1.ListenerConditionResolvedRefs, metav1.ConditionTrue, v1beta1.ListenerReasonResolvedRefs,
+			"Listener references have been resolved")
 		return true
 
 	}
 	// Any condition on the listener apart from Programmed=true indicates an error.
 	if !(lConditions[0].Type == string(v1beta1.ListenerConditionProgrammed) && lConditions[0].Status == metav1.ConditionTrue) {
-		// set "Programmed: false" if it's not set already.
-		var hasReadyCond bool
+		hasProgrammedCond := false
+		hasRefsCond := false
 		for _, existing := range lConditions {
 			if existing.Type == string(v1beta1.ListenerConditionProgrammed) {
-				hasReadyCond = true
-				break
+				hasProgrammedCond = true
+			}
+			if existing.Type == string(v1beta1.ListenerConditionResolvedRefs) {
+				hasRefsCond = true
 			}
 		}
-		if !hasReadyCond {
+		// set "Programmed: false" if it's not set already.
+		if !hasProgrammedCond {
 			listener.SetCondition(
 				v1beta1.ListenerConditionProgrammed,
 				metav1.ConditionFalse,
 				v1beta1.ListenerReasonInvalid,
 				"Listener is invalid, see other Conditions for details.",
+			)
+		}
+		// set "ResolvedRefs: true" if it's not set already.
+		if !hasRefsCond {
+			listener.SetCondition(
+				v1beta1.ListenerConditionResolvedRefs,
+				metav1.ConditionTrue,
+				v1beta1.ListenerReasonResolvedRefs,
+				"Listener references have been resolved",
 			)
 		}
 		// skip computing IR

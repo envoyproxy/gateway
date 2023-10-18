@@ -21,7 +21,7 @@ gatewayClass:
   spec:
     controllerName: gateway.envoyproxy.io/gatewayclass-controller
     parametersRef:
-      group: config.gateway.envoyproxy.io
+      group: gateway.envoyproxy.io
       kind: EnvoyProxy
       name: example
       namespace: default
@@ -80,6 +80,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -96,6 +101,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -112,6 +122,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls-passthrough
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -128,6 +143,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -144,6 +164,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: grpc
       supportedKinds:
       - group: gateway.networking.k8s.io

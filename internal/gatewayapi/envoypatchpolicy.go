@@ -16,6 +16,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.EnvoyPatchPolicy, xdsIR XdsIRMap) {
@@ -27,18 +28,10 @@ func (t *Translator) ProcessEnvoyPatchPolicies(envoyPatchPolicies []*egv1a1.Envo
 	for _, policy := range envoyPatchPolicies {
 		policy := policy.DeepCopy()
 		targetNs := policy.Spec.TargetRef.Namespace
-		if targetNs == nil {
-			// This status condition will not get updated in the resource because
-			// we dont have access to the IR yet, but it has been kept here in case we publish
-			// the status from this layer instead of the xds layer.
 
-			status.SetEnvoyPatchPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionFalse,
-				gwv1a2.PolicyReasonInvalid,
-				"TargetRef.Namespace must be set",
-			)
-			continue
+		// If empty, default to namespace of policy
+		if targetNs == nil {
+			targetNs = ptr.To(gwv1b1.Namespace(policy.Namespace))
 		}
 
 		// Get the IR

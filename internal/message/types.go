@@ -20,15 +20,15 @@ import (
 // ProviderResources message
 type ProviderResources struct {
 	// GatewayAPIResources is a map from a GatewayClass name to
-	// a group of gateway API resources.
+	// a group of gateway API and other related resources.
 	GatewayAPIResources watchable.Map[string, *gatewayapi.Resources]
 
-	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.GatewayStatus]
-	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]
-	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
-	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
-	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
-	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+	// GatewayAPIStatuses is a group of gateway api
+	// resource statuses maps.
+	GatewayAPIStatuses
+
+	// PolicyStatuses is a group of policy statuses maps.
+	PolicyStatuses
 }
 
 func (p *ProviderResources) GetResources() *gatewayapi.Resources {
@@ -53,17 +53,38 @@ func (p *ProviderResources) GetResourcesKey() string {
 
 func (p *ProviderResources) Close() {
 	p.GatewayAPIResources.Close()
-	p.GatewayStatuses.Close()
-	p.HTTPRouteStatuses.Close()
-	p.GRPCRouteStatuses.Close()
-	p.TLSRouteStatuses.Close()
-	p.TCPRouteStatuses.Close()
-	p.UDPRouteStatuses.Close()
+	p.GatewayAPIStatuses.Close()
+	p.PolicyStatuses.Close()
 }
 
-// EnvoyPatchPolicyStatuses message
-type EnvoyPatchPolicyStatuses struct {
-	watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
+// GatewayAPIStatuses contains gateway API resources statuses
+type GatewayAPIStatuses struct {
+	GatewayStatuses   watchable.Map[types.NamespacedName, *gwapiv1b1.GatewayStatus]
+	HTTPRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1b1.HTTPRouteStatus]
+	GRPCRouteStatuses watchable.Map[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus]
+	TLSRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TLSRouteStatus]
+	TCPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.TCPRouteStatus]
+	UDPRouteStatuses  watchable.Map[types.NamespacedName, *gwapiv1a2.UDPRouteStatus]
+}
+
+func (s *GatewayAPIStatuses) Close() {
+	s.GatewayStatuses.Close()
+	s.HTTPRouteStatuses.Close()
+	s.GRPCRouteStatuses.Close()
+	s.TLSRouteStatuses.Close()
+	s.TCPRouteStatuses.Close()
+	s.UDPRouteStatuses.Close()
+}
+
+// PolicyStatuses contains policy related resources statuses
+type PolicyStatuses struct {
+	ClientTrafficPolicyStatuses watchable.Map[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]
+	EnvoyPatchPolicyStatuses    watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
+}
+
+func (p *PolicyStatuses) Close() {
+	p.ClientTrafficPolicyStatuses.Close()
+	p.EnvoyPatchPolicyStatuses.Close()
 }
 
 // XdsIR message

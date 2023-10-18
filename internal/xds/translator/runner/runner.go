@@ -10,7 +10,7 @@ import (
 
 	ktypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/envoyproxy/gateway/api/config/v1alpha1"
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extension "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
@@ -21,10 +21,10 @@ import (
 
 type Config struct {
 	config.Server
-	XdsIR                    *message.XdsIR
-	Xds                      *message.Xds
-	EnvoyPatchPolicyStatuses *message.EnvoyPatchPolicyStatuses
-	ExtensionManager         extension.Manager
+	XdsIR             *message.XdsIR
+	Xds               *message.Xds
+	ExtensionManager  extension.Manager
+	ProviderResources *message.ProviderResources
 }
 
 type Runner struct {
@@ -40,11 +40,11 @@ func (r *Runner) Name() string {
 }
 
 // Start starts the xds-translator runner
-func (r *Runner) Start(ctx context.Context) error {
+func (r *Runner) Start(ctx context.Context) (err error) {
 	r.Logger = r.Logger.WithName(r.Name()).WithValues("runner", r.Name())
 	go r.subscribeAndTranslate(ctx)
 	r.Logger.Info("started")
-	return nil
+	return
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
@@ -78,6 +78,10 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				}
 
 				result, err := t.Translate(val)
+				if err != nil {
+					r.Logger.Error(err, "failed to translate xds ir")
+					return
+				}
 
 				// Publish EnvoyPatchPolicyStatus
 				for _, e := range result.EnvoyPatchPolicyStatuses {
@@ -85,17 +89,13 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 						Name:      e.Name,
 						Namespace: e.Namespace,
 					}
-					r.EnvoyPatchPolicyStatuses.Store(key, e.Status)
+					r.ProviderResources.EnvoyPatchPolicyStatuses.Store(key, e.Status)
 				}
 				// Discard the EnvoyPatchPolicyStatuses to reduce memory footprint
 				result.EnvoyPatchPolicyStatuses = nil
 
-				if err != nil {
-					r.Logger.Error(err, "failed to translate xds ir")
-				} else {
-					// Publish
-					r.Xds.Store(key, result)
-				}
+				// Publish
+				r.Xds.Store(key, result)
 			}
 		},
 	)

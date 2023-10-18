@@ -16,7 +16,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
@@ -227,7 +227,7 @@ func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
 }
 
 // classRefsEnvoyProxy returns true if the provided GatewayClass references the provided EnvoyProxy.
-func classRefsEnvoyProxy(gc *gwapiv1b1.GatewayClass, ep *egcfgv1a1.EnvoyProxy) bool {
+func classRefsEnvoyProxy(gc *gwapiv1b1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
 	if gc == nil || ep == nil {
 		return false
 	}
@@ -244,8 +244,8 @@ func refsEnvoyProxy(gc *gwapiv1b1.GatewayClass) bool {
 	}
 
 	return gc.Spec.ParametersRef != nil &&
-		string(gc.Spec.ParametersRef.Group) == egcfgv1a1.GroupVersion.Group &&
-		gc.Spec.ParametersRef.Kind == egcfgv1a1.KindEnvoyProxy &&
+		string(gc.Spec.ParametersRef.Group) == egv1a1.GroupVersion.Group &&
+		gc.Spec.ParametersRef.Kind == egv1a1.KindEnvoyProxy &&
 		gc.Spec.ParametersRef.Namespace != nil &&
 		len(gc.Spec.ParametersRef.Name) > 0
 }

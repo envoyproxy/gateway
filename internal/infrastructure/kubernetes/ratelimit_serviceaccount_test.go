@@ -19,17 +19,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/ratelimit"
 )
 
 func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
-	rl := &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
-			Type: egcfgv1a1.RedisBackendType,
-			Redis: &egcfgv1a1.RateLimitRedisSettings{
+	rl := &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",
 			},
 		},
@@ -127,10 +127,10 @@ func TestCreateOrUpdateRateLimitServiceAccount(t *testing.T) {
 }
 
 func TestDeleteRateLimitServiceAccount(t *testing.T) {
-	rl := &egcfgv1a1.RateLimit{
-		Backend: egcfgv1a1.RateLimitDatabaseBackend{
-			Type: egcfgv1a1.RedisBackendType,
-			Redis: &egcfgv1a1.RateLimitRedisSettings{
+	rl := &egv1a1.RateLimit{
+		Backend: egv1a1.RateLimitDatabaseBackend{
+			Type: egv1a1.RedisBackendType,
+			Redis: &egv1a1.RateLimitRedisSettings{
 				URL: "redis.redis.svc:6379",
 			},
 		},

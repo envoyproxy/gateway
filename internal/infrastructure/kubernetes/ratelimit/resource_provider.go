@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	egcfgv1a1 "github.com/envoyproxy/gateway/api/config/v1alpha1"
+	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
 
@@ -29,15 +29,15 @@ type ResourceRender struct {
 	// Namespace is the Namespace used for managed infra.
 	Namespace string
 
-	rateLimit           *egcfgv1a1.RateLimit
-	rateLimitDeployment *egcfgv1a1.KubernetesDeploymentSpec
+	rateLimit           *egv1a1.RateLimit
+	rateLimitDeployment *egv1a1.KubernetesDeploymentSpec
 
 	// ownerReferenceUID store the uid of its owner reference.
 	ownerReferenceUID map[string]types.UID
 }
 
 // NewResourceRender returns a new ResourceRender.
-func NewResourceRender(ns string, gateway *egcfgv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
+func NewResourceRender(ns string, gateway *egv1a1.EnvoyGateway, ownerReferenceUID map[string]types.UID) *ResourceRender {
 	return &ResourceRender{
 		Namespace:           ns,
 		rateLimit:           gateway.RateLimit,
@@ -69,8 +69,8 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 	}
 
 	labels := rateLimitLabels()
-	kubernetesServiceSpec := &egcfgv1a1.KubernetesServiceSpec{
-		Type: egcfgv1a1.GetKubernetesServiceType(egcfgv1a1.ServiceTypeClusterIP),
+	kubernetesServiceSpec := &egv1a1.KubernetesServiceSpec{
+		Type: egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
 	}
 	serviceSpec := resource.ExpectedServiceSpec(kubernetesServiceSpec)
 	serviceSpec.Ports = ports

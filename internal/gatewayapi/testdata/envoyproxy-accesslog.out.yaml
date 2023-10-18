@@ -28,6 +28,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -38,7 +43,7 @@ infraIR:
   envoy-gateway/gateway-1:
     proxy:
       config:
-        apiVersion: config.gateway.envoyproxy.io/v1alpha1
+        apiVersion: gateway.envoyproxy.io/v1alpha1
         kind: EnvoyProxy
         metadata:
           creationTimestamp: null

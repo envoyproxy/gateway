@@ -8,11 +8,14 @@ package gatewayapi
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
@@ -187,6 +190,24 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 	return routeRoutes
 }
 
+func processTimeout(irRoute *ir.HTTPRoute, rule v1beta1.HTTPRouteRule) {
+	if rule.Timeouts != nil {
+		if rule.Timeouts.Request != nil {
+			// TODO: handle parse errors
+			d, _ := time.ParseDuration(string(*rule.Timeouts.Request))
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
+		}
+
+		// Also set the IR Route Timeout to the backend request timeout
+		// until we introduce retries, then set it to per try timeout
+		if rule.Timeouts.BackendRequest != nil {
+			// TODO: handle parse errors
+			d, _ := time.ParseDuration(string(*rule.Timeouts.BackendRequest))
+			irRoute.Timeout = ptr.To(metav1.Duration{Duration: d})
+		}
+	}
+}
+
 func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx int, httpFiltersContext *HTTPFiltersContext, rule v1beta1.HTTPRouteRule) []*ir.HTTPRoute {
 	var ruleRoutes []*ir.HTTPRoute
 
@@ -195,6 +216,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, -1),
 		}
+		processTimeout(irRoute, rule)
 		applyHTTPFiltersContextToIRRoute(httpFiltersContext, irRoute)
 		ruleRoutes = append(ruleRoutes, irRoute)
 	}
@@ -206,6 +228,7 @@ func (t *Translator) processHTTPRouteRule(httpRoute *HTTPRouteContext, ruleIdx i
 		irRoute := &ir.HTTPRoute{
 			Name: irRouteName(httpRoute, ruleIdx, matchIdx),
 		}
+		processTimeout(irRoute, rule)
 
 		if match.Path != nil {
 			switch PathMatchTypeDerefOr(match.Path.Type, v1beta1.PathMatchPathPrefix) {
@@ -297,6 +320,7 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.RateLimit != nil {
 		irRoute.RateLimit = httpFiltersContext.RateLimit
 	}
+
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs
 	}
@@ -538,6 +562,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Mirrors:               routeRoute.Mirrors,
 					RequestAuthentication: routeRoute.RequestAuthentication,
 					RateLimit:             routeRoute.RateLimit,
+					Timeout:               routeRoute.Timeout,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
@@ -986,14 +1011,26 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 
 	var endpoints []*ir.DestinationEndpoint
 	switch KindDerefOr(backendRef.Kind, KindService) {
-	// TODO: Use EndpointSlice for ServiceImport
 	case KindServiceImport:
-		backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
-		for _, ip := range backendIps {
-			ep := ir.NewDestEndpoint(
-				ip,
-				uint32(*backendRef.Port))
-			endpoints = append(endpoints, ep)
+		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
+		var servicePort mcsapi.ServicePort
+		for _, port := range serviceImport.Spec.Ports {
+			if port.Port == int32(*backendRef.Port) {
+				servicePort = port
+				break
+			}
+		}
+		if !t.EndpointRoutingDisabled {
+			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
+		} else {
+			backendIps := resources.GetServiceImport(backendNamespace, string(backendRef.Name)).Spec.IPs
+			for _, ip := range backendIps {
+				ep := ir.NewDestEndpoint(
+					ip,
+					uint32(*backendRef.Port))
+				endpoints = append(endpoints, ep)
+			}
 		}
 	case KindService:
 		service := resources.GetService(backendNamespace, string(backendRef.Name))
@@ -1007,26 +1044,8 @@ func (t *Translator) processDestination(backendRef v1beta1.BackendRef,
 
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
-			endpointSlices := resources.GetEndpointSlicesForService(backendNamespace, string(backendRef.Name))
-
-			for _, endpointSlice := range endpointSlices {
-				for _, endpoint := range endpointSlice.Endpoints {
-					for _, endpointPort := range endpointSlice.Ports {
-						// Check if the endpoint port matches the service port
-						// and if endpoint is Ready
-						if *endpointPort.Name == servicePort.Name &&
-							*endpointPort.Protocol == servicePort.Protocol &&
-							*endpoint.Conditions.Ready {
-							for _, address := range endpoint.Addresses {
-								ep := ir.NewDestEndpoint(
-									address,
-									uint32(servicePort.TargetPort.IntVal))
-								endpoints = append(endpoints, ep)
-							}
-						}
-					}
-				}
-			}
+			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
+			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
 			// Fall back to Service CluserIP routing
 			ep := ir.NewDestEndpoint(
@@ -1111,4 +1130,28 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		)
 	}
 	return relevantRoute
+}
+
+func getIREndpointsFromEndpointSlice(endpointSlices []*v1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+	endpoints := []*ir.DestinationEndpoint{}
+	for _, endpointSlice := range endpointSlices {
+		for _, endpoint := range endpointSlice.Endpoints {
+			for _, endpointPort := range endpointSlice.Ports {
+				// Check if the endpoint port matches the service port
+				// and if endpoint is Ready
+				if *endpointPort.Name == portName &&
+					*endpointPort.Protocol == portProtocol &&
+					*endpoint.Conditions.Ready {
+					for _, address := range endpoint.Addresses {
+						ep := ir.NewDestEndpoint(
+							address,
+							uint32(*endpointPort.Port))
+						endpoints = append(endpoints, ep)
+					}
+				}
+			}
+		}
+	}
+
+	return endpoints
 }

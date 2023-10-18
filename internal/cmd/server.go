@@ -6,17 +6,10 @@
 package cmd
 
 import (
-	"fmt"
-	"net"
-	"net/http"
-	"net/http/pprof"
-	"time"
-
-	"github.com/davecgh/go-spew/spew"
-
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
 
+	"github.com/envoyproxy/gateway/internal/admin"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	extensionregistry "github.com/envoyproxy/gateway/internal/extension/registry"
 	gatewayapirunner "github.com/envoyproxy/gateway/internal/gatewayapi/runner"
@@ -57,12 +50,11 @@ func server() error {
 		return err
 	}
 
-	if cfg.EnvoyGateway.Admin.Debug {
-		spewConfig := spew.NewDefaultConfig()
-		spewConfig.DisableMethods = true
-		spewConfig.Dump(cfg)
+	// Init eg admin servers.
+	if err := admin.Init(cfg); err != nil {
+		return err
 	}
-
+	// init eg runners.
 	if err := setupRunners(cfg); err != nil {
 		return err
 	}
@@ -124,16 +116,14 @@ func setupRunners(cfg *config.Server) error {
 	}
 
 	pResources := new(message.ProviderResources)
-	ePatchPolicyStatuses := new(message.EnvoyPatchPolicyStatuses)
 	// Start the Provider Service
 	// It fetches the resources from the configured provider type
 	// and publishes it
 	// It also subscribes to status resources and once it receives
 	// a status resource back, it writes it out.
 	providerRunner := providerrunner.New(&providerrunner.Config{
-		Server:                   *cfg,
-		ProviderResources:        pResources,
-		EnvoyPatchPolicyStatuses: ePatchPolicyStatuses,
+		Server:            *cfg,
+		ProviderResources: pResources,
 	})
 	if err := providerRunner.Start(ctx); err != nil {
 		return err
@@ -160,11 +150,11 @@ func setupRunners(cfg *config.Server) error {
 	// It subscribes to the xdsIR, translates it into xds Resources and publishes it.
 	// It also computes the EnvoyPatchPolicy statuses and publishes it.
 	xdsTranslatorRunner := xdstranslatorrunner.New(&xdstranslatorrunner.Config{
-		Server:                   *cfg,
-		XdsIR:                    xdsIR,
-		Xds:                      xds,
-		ExtensionManager:         extMgr,
-		EnvoyPatchPolicyStatuses: ePatchPolicyStatuses,
+		Server:            *cfg,
+		XdsIR:             xdsIR,
+		Xds:               xds,
+		ExtensionManager:  extMgr,
+		ProviderResources: pResources,
 	})
 	if err := xdsTranslatorRunner.Start(ctx); err != nil {
 		return err
@@ -205,14 +195,10 @@ func setupRunners(cfg *config.Server) error {
 		}
 	}
 
-	// Start the admin server
-	go setupAdminServer(cfg)
-
 	// Wait until done
 	<-ctx.Done()
 	// Close messages
 	pResources.Close()
-	ePatchPolicyStatuses.Close()
 	xdsIR.Close()
 	infraIR.Close()
 	xds.Close()
@@ -225,34 +211,4 @@ func setupRunners(cfg *config.Server) error {
 	}
 
 	return nil
-}
-
-func setupAdminServer(cfg *config.Server) {
-	adminHandlers := http.NewServeMux()
-
-	address := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Address
-
-	if cfg.EnvoyGateway.GetEnvoyGatewayAdmin().Debug {
-		// Serve pprof endpoints to aid in live debugging.
-		adminHandlers.HandleFunc("/debug/pprof/", pprof.Index)
-		adminHandlers.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		adminHandlers.HandleFunc("/debug/pprof/trace", pprof.Trace)
-		adminHandlers.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		adminHandlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	}
-
-	adminServer := &http.Server{
-		Handler:           adminHandlers,
-		Addr:              net.JoinHostPort(address.Host, fmt.Sprint(address.Port)),
-		ReadTimeout:       5 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       15 * time.Second,
-	}
-
-	// Listen And Serve Admin Server.
-	if err := adminServer.ListenAndServe(); err != nil {
-		cfg.Logger.Error(err, "start debug server failed")
-	}
-
 }
