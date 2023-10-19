@@ -1,5 +1,5 @@
 ---
-title: 'Observability: Metrics'
+title: "Observability: Metrics"
 ---
 
 ## Overview
