@@ -54,7 +54,7 @@ func TestExperimentalConformance(t *testing.T) {
 
 	err = v1alpha2.AddToScheme(mgrClient.Scheme())
 	assert.NoError(t, err)
-	err = v1beta1.AddToScheme(client.Scheme())
+	err = v1beta1.AddToScheme(mgrClient.Scheme())
 	assert.NoError(t, err)
 	err = v1.AddToScheme(mgrClient.Scheme())
 	assert.NoError(t, err)
