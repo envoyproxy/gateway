@@ -5,8 +5,14 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
   annotations:
     "helm.sh/hook": pre-install
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -15,8 +21,14 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
   annotations:
     "helm.sh/hook": pre-install
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
 rules:
 - apiGroups:
   - ""
@@ -34,8 +46,14 @@ metadata:
   namespace: '{{ .Release.Namespace }}'
   labels:
   {{- include "eg.labels" . | nindent 4 }}
+  {{- if .Values.certgen.rbac.labels }}
+  {{- toYaml .Values.certgen.rbac.labels | nindent 4 }}
+  {{- end }}
   annotations:
     "helm.sh/hook": pre-install
+  {{- if .Values.certgen.rbac.annotations }}
+    {{- toYaml .Values.certgen.rbac.annotations | nindent 4 -}}
+  {{- end }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
