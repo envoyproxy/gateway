@@ -538,16 +538,16 @@ func (t *Translator) validateConflictedMergedListeners(gateways []*GatewayContex
 	listenerSets := sets.Set[string]{}
 	for _, gateway := range gateways {
 		for _, listener := range gateway.listeners {
-			hostname := new(v1beta1.Hostname)
+			hostname := new(gwapiv1.Hostname)
 			if listener.Hostname != nil {
 				hostname = listener.Hostname
 			}
 			portProtocolHostname := fmt.Sprintf("%s:%s:%d", listener.Protocol, *hostname, listener.Port)
 			if listenerSets.Has(portProtocolHostname) {
 				listener.SetCondition(
-					v1beta1.ListenerConditionConflicted,
+					gwapiv1.ListenerConditionConflicted,
 					metav1.ConditionTrue,
-					v1beta1.ListenerReasonHostnameConflict,
+					gwapiv1.ListenerReasonHostnameConflict,
 					"Port, protocol and hostname tuple must be unique for every listener",
 				)
 			}

@@ -199,7 +199,7 @@ func refsSecret(ref *gwapiv1.SecretObjectReference) bool {
 // infraName returns expected name for the EnvoyProxy infra resources.
 // By default it returns hashed string from {GatewayNamespace}/{GatewayName},
 // but if mergeGateways is set, it will return hashed string of {GatewayClassName}.
-func infraName(gateway *gwapiv1b1.Gateway, merged bool) string {
+func infraName(gateway *gwapiv1.Gateway, merged bool) string {
 	if merged {
 		return proxy.ExpectedResourceHashedName(string(gateway.Spec.GatewayClassName))
 	}

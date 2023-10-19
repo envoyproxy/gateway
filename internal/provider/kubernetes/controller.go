@@ -70,6 +70,7 @@ type gatewayAPIReconciler struct {
 	namespace       string
 	namespaceLabels []string
 	envoyGateway    *egv1a1.EnvoyGateway
+	mergeGateways   bool
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -334,6 +335,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		}
 	}
 
+	if resourceTree.EnvoyProxy != nil && resourceTree.EnvoyProxy.Spec.MergeGateways != nil {
+		r.mergeGateways = *resourceTree.EnvoyProxy.Spec.MergeGateways
+	}
+
 	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {
 		r.log.Error(err, "unable to update GatewayClass status")
 		return reconcile.Result{}, err
@@ -407,20 +412,16 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	if r.statusUpdater == nil {
 		return
 	}
-	var merged bool
-	res, _ := r.resources.GatewayAPIResources.Load(string(gtw.Spec.GatewayClassName))
-	if res.EnvoyProxy != nil && res.EnvoyProxy.Spec.MergeGateways != nil && *res.EnvoyProxy.Spec.MergeGateways {
-		merged = true
-	}
+
 	// Get deployment
-	deploy, err := r.envoyDeploymentForGateway(ctx, gtw, merged)
+	deploy, err := r.envoyDeploymentForGateway(ctx, gtw)
 	if err != nil {
 		r.log.Info("failed to get Deployment for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)
 	}
 
 	// Get service
-	svc, err := r.envoyServiceForGateway(ctx, gtw, merged)
+	svc, err := r.envoyServiceForGateway(ctx, gtw)
 	if err != nil {
 		r.log.Info("failed to get Service for gateway",
 			"namespace", gtw.Namespace, "name", gtw.Name)

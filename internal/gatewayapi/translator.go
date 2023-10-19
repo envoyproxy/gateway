@@ -219,7 +219,7 @@ func (t *Translator) InitIRs(gateways []*GatewayContext, resources *Resources) (
 }
 
 // XdsIR and InfraIR map keys by default are {GatewayNamespace}/{GatewayName}, but if mergeGateways is set, they are merged under {GatewayClassName} key.
-func (t *Translator) getIRKey(gateway *v1beta1.Gateway) string {
+func (t *Translator) getIRKey(gateway *gwapiv1.Gateway) string {
 	irKey := irStringKey(gateway.Namespace, gateway.Name)
 	if t.MergeGateways {
 		return string(t.GatewayClassName)
