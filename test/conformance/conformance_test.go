@@ -47,7 +47,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 		SupportedFeatures:    suite.AllFeatures,
 		SkipTests: []string{
 			tests.GatewaySecretInvalidReferenceGrant.ShortName,
-			tests.HTTPRouteReferenceGrant.ShortName,
 			tests.HTTPRouteRewritePath.ShortName,
 			tests.GatewayStaticAddresses.ShortName,
 		},
