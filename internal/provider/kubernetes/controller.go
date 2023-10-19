@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -133,7 +134,7 @@ type resourceMappings struct {
 	// Map for storing backendRefs' NamespaceNames referred by various Route objects.
 	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
-	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1a2.ReferenceGrant
+	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1b1.ReferenceGrant
 	// authenFilters is a map of AuthenticationFilters, where the key is the
 	// namespaced name of the AuthenticationFilter.
 	authenFilters map[types.NamespacedName]*egv1a1.AuthenticationFilter
@@ -150,7 +151,7 @@ func newResourceMapping() *resourceMappings {
 	return &resourceMappings{
 		allAssociatedNamespaces:  map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
-		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1a2.ReferenceGrant{},
+		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1b1.ReferenceGrant{},
 		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
 		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
@@ -445,8 +446,8 @@ func (r *gatewayAPIReconciler) statusUpdateForGateway(ctx context.Context, gtw *
 	})
 }
 
-func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1a2.ReferenceGrant, error) {
-	refGrantList := new(gwapiv1a2.ReferenceGrantList)
+func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to ObjectKindNamespacedName) (*gwapiv1b1.ReferenceGrant, error) {
+	refGrantList := new(gwapiv1b1.ReferenceGrantList)
 	opts := &client.ListOptions{FieldSelector: fields.OneTermEqualSelector(targetRefGrantRouteIndex, to.kind)}
 	if err := r.client.List(ctx, refGrantList, opts); err != nil {
 		return nil, fmt.Errorf("failed to list ReferenceGrants: %v", err)
@@ -454,7 +455,7 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 
 	refGrants := refGrantList.Items
 	if len(r.namespaceLabels) != 0 {
-		var rgs []gwapiv1a2.ReferenceGrant
+		var rgs []gwapiv1b1.ReferenceGrant
 		for _, refGrant := range refGrants {
 			ns := refGrant.GetNamespace()
 			ok, err := r.checkObjectNamespaceLabels(ns)
@@ -607,8 +608,8 @@ func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *
 }
 
 func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
-		refGrant := rawObj.(*gwapiv1a2.ReferenceGrant)
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1b1.ReferenceGrant{}, targetRefGrantRouteIndex, func(rawObj client.Object) []string {
+		refGrant := rawObj.(*gwapiv1b1.ReferenceGrant)
 		var referredServices []string
 		for _, target := range refGrant.Spec.To {
 			referredServices = append(referredServices, string(target.Kind))
@@ -1478,7 +1479,7 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		rgPredicates = append(rgPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
 	}
 	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &gwapiv1a2.ReferenceGrant{}),
+		source.Kind(mgr.GetCache(), &gwapiv1b1.ReferenceGrant{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		rgPredicates...,
 	); err != nil {
