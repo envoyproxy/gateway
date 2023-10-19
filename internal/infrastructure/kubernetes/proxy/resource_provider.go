@@ -153,11 +153,9 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
-	enablePrometheus := false
-	if r.infra.Config != nil &&
-		r.infra.Config.Spec.Telemetry.Metrics != nil &&
-		r.infra.Config.Spec.Telemetry.Metrics.Prometheus != nil {
-		enablePrometheus = true
+	enablePrometheus := true
+	if r.infra.Config != nil {
+		enablePrometheus = !r.infra.Config.Spec.Telemetry.Metrics.Prometheus.Disabled
 	}
 
 	// Get expected bootstrap configurations rendered ProxyContainers

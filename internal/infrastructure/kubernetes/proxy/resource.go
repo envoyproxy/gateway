@@ -110,12 +110,9 @@ func expectedProxyContainers(infra *ir.ProxyInfra, deploymentConfig *egv1a1.Kube
 		}
 	}
 
-	var proxyMetrics *egv1a1.ProxyMetrics
-	if infra.Config != nil {
-		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
-	}
+	proxyMetrics := infra.Config.Spec.Telemetry.Metrics
 
-	if proxyMetrics != nil && proxyMetrics.Prometheus != nil {
+	if !proxyMetrics.Prometheus.Disabled {
 		ports = append(ports, corev1.ContainerPort{
 			Name:          "metrics",
 			ContainerPort: bootstrap.EnvoyReadinessPort, // TODO: make this configurable

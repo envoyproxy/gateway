@@ -120,52 +120,44 @@ func (b *bootstrapConfig) render() error {
 }
 
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
-func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, error) {
+func GetRenderedBootstrapConfig(proxyMetrics egv1a1.ProxyMetrics) (string, error) {
 	var (
-		enablePrometheus bool
+		enablePrometheus = !proxyMetrics.Prometheus.Disabled
 		metricSinks      []metricSink
 		StatsMatcher     StatsMatcherParameters
 	)
 
-	if proxyMetrics != nil {
-		if proxyMetrics.Prometheus != nil {
-			enablePrometheus = true
+	addresses := sets.NewString()
+	for _, sink := range proxyMetrics.Sinks {
+		if sink.OpenTelemetry == nil {
+			continue
 		}
 
-		addresses := sets.NewString()
-		for _, sink := range proxyMetrics.Sinks {
-			if sink.OpenTelemetry == nil {
-				continue
-			}
-
-			// skip duplicate sinks
-			addr := fmt.Sprintf("%s:%d", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
-			if addresses.Has(addr) {
-				continue
-			}
-			addresses.Insert(addr)
-
-			metricSinks = append(metricSinks, metricSink{
-				Address: sink.OpenTelemetry.Host,
-				Port:    sink.OpenTelemetry.Port,
-			})
+		// skip duplicate sinks
+		addr := fmt.Sprintf("%s:%d", sink.OpenTelemetry.Host, sink.OpenTelemetry.Port)
+		if addresses.Has(addr) {
+			continue
 		}
+		addresses.Insert(addr)
 
-		if proxyMetrics.Matches != nil {
+		metricSinks = append(metricSinks, metricSink{
+			Address: sink.OpenTelemetry.Host,
+			Port:    sink.OpenTelemetry.Port,
+		})
+	}
 
-			// Add custom envoy proxy stats
-			for _, match := range proxyMetrics.Matches {
-				switch match.Type {
-				case egv1a1.Prefix:
-					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
-				case egv1a1.Suffix:
-					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
-				case egv1a1.RegularExpression:
-					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
-				}
+	if proxyMetrics.Matches != nil {
+		// Add custom envoy proxy stats
+		for _, match := range proxyMetrics.Matches {
+			switch match.Type {
+			case egv1a1.Prefix:
+				StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
+			case egv1a1.Suffix:
+				StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
+			case egv1a1.RegularExpression:
+				StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 			}
 		}
-
 	}
 
 	cfg := &bootstrapConfig{
@@ -188,7 +180,7 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 			OtelMetricSinks:  metricSinks,
 		},
 	}
-	if proxyMetrics != nil && proxyMetrics.Matches != nil {
+	if proxyMetrics.Matches != nil {
 		cfg.parameters.StatsMatcher = &StatsMatcher
 	}
 

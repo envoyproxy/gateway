@@ -69,7 +69,7 @@ func TestProcessMetrics(t *testing.T) {
 			proxy: &egcfgv1a1.EnvoyProxy{
 				Spec: egcfgv1a1.EnvoyProxySpec{
 					Telemetry: egcfgv1a1.ProxyTelemetry{
-						Metrics: &egcfgv1a1.ProxyMetrics{
+						Metrics: egcfgv1a1.ProxyMetrics{
 							EnableVirtualHostStats: true,
 						},
 					},

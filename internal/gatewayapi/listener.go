@@ -237,7 +237,7 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Trac
 }
 
 func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
-	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Metrics == nil {
+	if envoyproxy == nil {
 		return nil
 	}
 	return &ir.Metrics{
