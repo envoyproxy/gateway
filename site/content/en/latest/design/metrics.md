@@ -1,5 +1,5 @@
 ---
-title: "Observability: Metrics"
+title: 'Observability: Metrics'
 ---
 
 ## Overview
@@ -34,7 +34,7 @@ Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for conf
 ```golang mdox-exec="sed '1,7d' api/v1alpha1/metric_types.go"
 type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
-	Prometheus PrometheusProvider `json:"prometheus,omitempty"`
+	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
 }
@@ -71,8 +71,8 @@ type OpenTelemetrySink struct {
 }
 
 type PrometheusProvider struct {
-	// Disabled disables the Prometheus endpoint.
-	Disabled bool `json:"disabled,omitempty"`
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
 }
 ```
 
@@ -90,7 +90,7 @@ spec:
   telemetry:
     metrics:
       prometheus:
-        disabled: true
+        disable: true
 ```
 
 1. The following is an example to send metric via Open Telemetry sink.

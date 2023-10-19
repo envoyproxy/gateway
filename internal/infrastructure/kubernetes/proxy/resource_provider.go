@@ -153,11 +153,6 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	}
 	deploymentConfig := provider.GetEnvoyProxyKubeProvider().EnvoyDeployment
 
-	enablePrometheus := true
-	if r.infra.Config != nil {
-		enablePrometheus = !r.infra.Config.Spec.Telemetry.Metrics.Prometheus.Disabled
-	}
-
 	// Get expected bootstrap configurations rendered ProxyContainers
 	containers, err := expectedProxyContainers(r.infra, deploymentConfig)
 	if err != nil {
@@ -180,7 +175,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	if deploymentConfig.Pod.Annotations != nil {
 		annotations = deploymentConfig.Pod.Annotations
 	}
-	if enablePrometheus {
+	if enablePrometheus(r.infra) {
 		if annotations == nil {
 			annotations = make(map[string]string, 2)
 		}

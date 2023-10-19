@@ -19,27 +19,27 @@ import (
 func TestGetRenderedBootstrapConfig(t *testing.T) {
 	cases := []struct {
 		name         string
-		proxyMetrics egv1a1.ProxyMetrics
+		proxyMetrics *egv1a1.ProxyMetrics
 	}{
 		{
 			name: "disable-prometheus",
-			proxyMetrics: egv1a1.ProxyMetrics{
-				Prometheus: egv1a1.PrometheusProvider{
-					Disabled: true,
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.PrometheusProvider{
+					Disable: true,
 				},
 			},
 		},
 		{
 			name: "enable-prometheus",
-			proxyMetrics: egv1a1.ProxyMetrics{
-				Prometheus: egv1a1.PrometheusProvider{},
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.PrometheusProvider{},
 			},
 		},
 		{
 			name: "otel-metrics",
-			proxyMetrics: egv1a1.ProxyMetrics{
-				Prometheus: egv1a1.PrometheusProvider{
-					Disabled: true,
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.PrometheusProvider{
+					Disable: true,
 				},
 				Sinks: []egv1a1.MetricSink{
 					{
@@ -54,7 +54,7 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		},
 		{
 			name: "custom-stats-matcher",
-			proxyMetrics: egv1a1.ProxyMetrics{
+			proxyMetrics: &egv1a1.ProxyMetrics{
 				Matches: []egv1a1.Match{
 					{
 						Type:  egv1a1.Prefix,

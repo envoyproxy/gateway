@@ -5426,8 +5426,8 @@ spec:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
                         properties:
-                          disabled:
-                            description: Disabled disables the Prometheus endpoint.
+                          disable:
+                            description: Disable the Prometheus endpoint.
                             type: boolean
                         type: object
                       sinks:

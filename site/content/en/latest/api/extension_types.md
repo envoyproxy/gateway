@@ -996,7 +996,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `disabled` _boolean_ | Disabled disables the Prometheus endpoint. |
+| `disable` _boolean_ | Disable the Prometheus endpoint. |
 
 
 #### ProviderType

@@ -16,7 +16,6 @@ import (
 	"google.golang.org/protobuf/proto"
 	"sigs.k8s.io/yaml"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/xds/bootstrap"
 )
@@ -52,7 +51,7 @@ func TestBuildXdsClusterLoadAssignment(t *testing.T) {
 
 func getXdsClusterObjFromBootstrap(t *testing.T) *clusterv3.Cluster {
 	bootstrapObj := &bootstrapv3.Bootstrap{}
-	bootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(egv1a1.ProxyMetrics{})
+	bootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	require.NoError(t, err)
 	jsonData, err := yaml.YAMLToJSON([]byte(bootstrapStr))
 	require.NoError(t, err)

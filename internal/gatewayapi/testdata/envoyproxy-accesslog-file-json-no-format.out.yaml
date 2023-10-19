@@ -109,8 +109,6 @@ infraIR:
                 - file:
                     path: /dev/stdout
                   type: File
-            metrics:
-              prometheus: {}
         status: {}
       listeners:
       - address: ""
@@ -134,5 +132,3 @@ xdsIR:
       isHTTP2: false
       name: envoy-gateway/gateway-1/http
       port: 10080
-    metrics:
-      enableVirtualHostStats: false

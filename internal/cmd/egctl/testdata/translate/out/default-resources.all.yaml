@@ -133,9 +133,7 @@ envoyProxy:
                 resource_api_version: V3
               name: runtime-0
     logging: {}
-    telemetry:
-      metrics:
-        prometheus: {}
+    telemetry: {}
   status: {}
 gatewayClass:
   metadata:

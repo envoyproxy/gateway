@@ -102,7 +102,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 	defaultBootstrap := &bootstrapv3.Bootstrap{}
 	// TODO: need validate when enable prometheus?
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(egv1a1.ProxyMetrics{})
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	if err != nil {
 		return err
 	}

@@ -388,7 +388,7 @@ func constructConfigDump(resources *gatewayapi.Resources, tCtx *xds_types.Resour
 	// construct bootstrap config
 	var bootstrapConfigurations string
 	var err error
-	if bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(egv1a1.ProxyMetrics{}); err != nil {
+	if bootstrapConfigurations, err = bootstrap.GetRenderedBootstrapConfig(nil); err != nil {
 		return nil, err
 	}
 
@@ -873,7 +873,7 @@ func addDefaultEnvoyProxy(resources *gatewayapi.Resources) error {
 
 	defaultEnvoyProxyName := "default-envoy-proxy"
 	namespace := resources.GatewayClass.Namespace
-	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(egv1a1.ProxyMetrics{})
+	defaultBootstrapStr, err := bootstrap.GetRenderedBootstrapConfig(nil)
 	if err != nil {
 		return err
 	}
