@@ -184,7 +184,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
+								AllocateLoadBalancerNodePorts: ptr.To(false),
 							},
 						},
 					},
@@ -205,7 +205,49 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
-								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
+								AllocateLoadBalancerNodePorts: ptr.To(false),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with valid loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("10.11.12.13"),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with invalid loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("invalid-ip"),
 							},
 						},
 					},
