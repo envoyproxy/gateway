@@ -20,6 +20,7 @@ helm upgrade --install prometheus prometheus-community/prometheus -n monitoring 
 
 [Grafana](https://grafana.com/grafana/) is used to visualise the metrics exposed by the envoy proxy instances.
 Install Grafana:
+
 ```shell
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
