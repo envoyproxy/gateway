@@ -264,7 +264,7 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 				if err != nil {
 					return err
 				}
-				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+				if err := addXdsCluster(tCtx, &xdsClusterArgs{
 					name:         jwks.name,
 					settings:     []*ir.DestinationSetting{ds},
 					tSocket:      tSocket,

@@ -1110,6 +1110,40 @@ func TestValidateJwtRequestAuthentication(t *testing.T) {
 	}
 }
 
+func TestValidateLoadBalancer(t *testing.T) {
+	tests := []struct {
+		name  string
+		input LoadBalancer
+		want  error
+	}{
+		{
+			name: "random",
+			input: LoadBalancer{
+				Random: &Random{},
+			},
+			want: nil,
+		},
+		{
+			name: "least request and random set",
+			input: LoadBalancer{
+				Random:       &Random{},
+				LeastRequest: &LeastRequest{},
+			},
+			want: ErrLoadBalancerInvalid,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
 func TestPrintable(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -187,6 +187,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "listener-tcp-keepalive",
 		},
+		{
+			name: "load-balancer",
+		},
 	}
 
 	for _, tc := range testCases {

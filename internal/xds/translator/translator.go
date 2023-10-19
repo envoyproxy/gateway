@@ -211,12 +211,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				if err := addXdsCluster(tCtx, addXdsClusterArgs{
+				if err := addXdsCluster(tCtx, &xdsClusterArgs{
 					name:         httpRoute.Destination.Name,
 					settings:     httpRoute.Destination.Settings,
 					tSocket:      nil,
 					protocol:     protocol,
 					endpointType: Static,
+					loadBalancer: httpRoute.LoadBalancer,
 				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 					return err
 				}
@@ -224,7 +225,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 			if httpRoute.Mirrors != nil {
 				for _, mirrorDest := range httpRoute.Mirrors {
-					if err := addXdsCluster(tCtx, addXdsClusterArgs{
+					if err := addXdsCluster(tCtx, &xdsClusterArgs{
 						name:         mirrorDest.Name,
 						settings:     mirrorDest.Settings,
 						tSocket:      nil,
@@ -270,7 +271,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog) error {
 	for _, tcpListener := range tcpListeners {
 		// 1:1 between IR TCPListener and xDS Cluster
-		if err := addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
@@ -307,7 +308,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListeners []*ir.UDPListener, accesslog *ir.AccessLog) error {
 	for _, udpListener := range udpListeners {
 		// 1:1 between IR UDPListener and xDS Cluster
-		if err := addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
@@ -414,13 +415,13 @@ func findXdsEndpoint(tCtx *types.ResourceVersionTable, name string) *endpointv3.
 	return nil
 }
 
-func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) error {
+func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error {
 	// Return early if cluster with the same name exists
 	if c := findXdsCluster(tCtx, args.name); c != nil {
 		return ErrXdsClusterExists
 	}
 
-	xdsCluster := buildXdsCluster(args.name, args.tSocket, args.protocol, args.endpointType)
+	xdsCluster := buildXdsCluster(args)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	// Use EDS for static endpoints
 	if args.endpointType == Static {
@@ -436,12 +437,13 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args addXdsClusterArgs) err
 	return nil
 }
 
-type addXdsClusterArgs struct {
+type xdsClusterArgs struct {
 	name         string
 	settings     []*ir.DestinationSetting
 	tSocket      *corev3.TransportSocket
 	protocol     ProtocolType
 	endpointType EndpointType
+	loadBalancer *ir.LoadBalancer
 }
 
 type ProtocolType int
