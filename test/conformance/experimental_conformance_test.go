@@ -96,7 +96,6 @@ func experimentalConformance(t *testing.T) {
 				Debug:                *flags.ShowDebug,
 				CleanupBaseResources: *flags.CleanupBaseResources,
 				SkipTests: []string{
-					tests.GatewaySecretInvalidReferenceGrant.ShortName,
 					tests.HTTPRouteRewritePath.ShortName,
 					tests.GatewayStaticAddresses.ShortName,
 				},

@@ -48,7 +48,6 @@ func TestGatewayAPIConformance(t *testing.T) {
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
 		SkipTests: []string{
-			tests.GatewaySecretInvalidReferenceGrant.ShortName,
 			tests.HTTPRouteRewritePath.ShortName,
 			tests.GatewayStaticAddresses.ShortName,
 		},
