@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -33,7 +34,7 @@ type Resources struct {
 	TLSRoutes             []*gwapiv1a2.TLSRoute          `json:"tlsRoutes,omitempty" yaml:"tlsRoutes,omitempty"`
 	TCPRoutes             []*gwapiv1a2.TCPRoute          `json:"tcpRoutes,omitempty" yaml:"tcpRoutes,omitempty"`
 	UDPRoutes             []*gwapiv1a2.UDPRoute          `json:"udpRoutes,omitempty" yaml:"udpRoutes,omitempty"`
-	ReferenceGrants       []*gwapiv1a2.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
+	ReferenceGrants       []*gwapiv1b1.ReferenceGrant    `json:"referenceGrants,omitempty" yaml:"referenceGrants,omitempty"`
 	Namespaces            []*v1.Namespace                `json:"namespaces,omitempty" yaml:"namespaces,omitempty"`
 	Services              []*v1.Service                  `json:"services,omitempty" yaml:"services,omitempty"`
 	ServiceImports        []*mcsapi.ServiceImport        `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
@@ -56,7 +57,7 @@ func NewResources() *Resources {
 		Services:              []*v1.Service{},
 		EndpointSlices:        []*discoveryv1.EndpointSlice{},
 		Secrets:               []*v1.Secret{},
-		ReferenceGrants:       []*gwapiv1a2.ReferenceGrant{},
+		ReferenceGrants:       []*gwapiv1b1.ReferenceGrant{},
 		Namespaces:            []*v1.Namespace{},
 		RateLimitFilters:      []*egv1a1.RateLimitFilter{},
 		AuthenticationFilters: []*egv1a1.AuthenticationFilter{},

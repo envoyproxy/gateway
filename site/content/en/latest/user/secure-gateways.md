@@ -173,7 +173,7 @@ namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
 ```console
 $ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   name: example
