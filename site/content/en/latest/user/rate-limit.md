@@ -734,11 +734,17 @@ for i in {1..4}; do grpcurl -plaintext -authority=grpc-example.com ${GATEWAY_HOS
 ```
 
 ```console
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
+{
+  "text": "pong"
+}
 
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
+{
+  "text": "pong"
+}
 
-Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
+{
+  "text": "pong"
+}
 
 Error invoking method "yages.Echo/Ping": rpc error: code = Unavailable desc = failed to query for service descriptor "yages.Echo":
 
