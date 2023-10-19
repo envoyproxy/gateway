@@ -5423,8 +5423,6 @@ spec:
                           type: object
                         type: array
                       prometheus:
-                        default:
-                          disabled: false
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
                         properties:

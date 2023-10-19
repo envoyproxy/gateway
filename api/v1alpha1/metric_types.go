@@ -7,7 +7,6 @@ package v1alpha1
 
 type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
-	// +kubebuilder:default={disabled: false}
 	Prometheus PrometheusProvider `json:"prometheus,omitempty"`
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []MetricSink `json:"sinks,omitempty"`
