@@ -11,7 +11,9 @@ envoyProxy:
           annotations:
             custom1: svc-annotation1
       type: Kubernetes
-    telemetry: {}
+    telemetry:
+      metrics:
+        prometheus: {}
   status: {}
 gatewayClass:
   metadata:

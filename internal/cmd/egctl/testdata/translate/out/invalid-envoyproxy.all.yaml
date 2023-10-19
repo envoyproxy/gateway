@@ -18,7 +18,9 @@ envoyProxy:
               address: 127.0.0.1
               port_value: 19000
     logging: {}
-    telemetry: {}
+    telemetry:
+      metrics:
+        prometheus: {}
   status: {}
 gatewayClass:
   metadata:
