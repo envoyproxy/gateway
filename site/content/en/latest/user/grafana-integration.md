@@ -32,33 +32,25 @@ Expose endpoints:
 GRAFANA_IP=$(kubectl get svc grafana -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 ```
 
-## Configure Prometheus for scraping metrics
-Following the steps in [Proxy Observability](proxy-observability.md#Metrics), we have exposed the metrics from
-envoy proxies on port `19001` and path `/stats/prometheus`.
+## Connecting Grafana with Prometheus datasource
+To visualise metrics from Prometheus, we have to connect Grafana with Prometheus. If you installed Grafana from the command
+from prerequisites sections, the prometheus datasource should be already configured.
 
-Now we need to configure Prometheus to scrape the metrics from this port and path for all the envoy proxy pods.
-There are many ways to configure prometheus: by adding annotations to envoy proxy pods,
-by using prometheus-operator and associated CRDs to generate scrape configs or by writing the scrape configs manually.
-
-In this guide, we will add the required annotations on Envoy Proxy pods by updating EnvoyProxy configuration.
-
-Update the Envoy Proxy spec by:
-
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/metric/prometheus-annotations.yaml
-```
+You can also add the data source manually by following the instructions from [Grafana Docs](https://grafana.com/docs/grafana/latest/datasources/prometheus/configure-prometheus-data-source/).
 
 ## Accessing Grafana
-If you installed Grafana in your cluster using the command from prerequisites section,
-you should have prometheus configured as a data source automatically.
-
-You can access the Grafana instance by visiting http://{GRAFANA_IP}
+You can access the Grafana instance by visiting http://{GRAFANA_IP}, derived in prerequisites.
 
 To log in to Grafana, use the credentials `admin:admin`.
 
 Envoy Gateway has examples of dashboard for you to get started:
 - [Envoy Global](https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/dashboards/envoy-global.json)
-- [Envoy Clusters]((https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/dashboards/envoy-clusters.json))
-- [Envoy Pod Resources]((https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/dashboards/envoy-pod-resource.json))
+![Envoy Global](/img/envoy-global-dashboard.png)
 
-You can load the above dashboards in your Grafana to get started.
+- [Envoy Clusters]((https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/dashboards/envoy-clusters.json))
+![Envoy Clusters](/img/envoy-clusters-dashboard.png)
+
+- [Envoy Pod Resources]((https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/dashboards/envoy-pod-resource.json))
+![Envoy Pod Resources](/img/envoy-pod-resources-dashboard.png)
+
+You can load the above dashboards in your Grafana to get started. Please refer to Grafana docs for [importing dashboards](https://grafana.com/docs/grafana/latest/dashboards/manage-dashboards/#import-a-dashboard).
