@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -14,6 +14,7 @@ gateways:
     - type: Hostname
       value: foo.bar
     gatewayClassName: envoy-gateway-class
+    infrastructure: {}
     listeners:
     - name: tcp
       port: 80

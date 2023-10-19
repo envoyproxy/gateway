@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"net/url"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/logging"
@@ -119,7 +119,7 @@ func (s *Server) Validate() error {
 				return fmt.Errorf("certificateRef empty in extension service server TLS settings")
 			}
 
-			if *certificateRefKind != gwapiv1b1.Kind("Secret") {
+			if *certificateRefKind != gwapiv1.Kind("Secret") {
 				return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
 			}
 		}

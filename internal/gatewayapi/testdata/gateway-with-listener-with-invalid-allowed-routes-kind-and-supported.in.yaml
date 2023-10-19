@@ -1,5 +1,5 @@
 gateways:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
+  - apiVersion: gateway.networking.k8s.io/v1
     kind: Gateway
     metadata:
       namespace: envoy-gateway
@@ -19,7 +19,7 @@ gateways:
               - group:
                 kind: HTTPRoute
 httpRoutes:
-  - apiVersion: gateway.networking.k8s.io/v1beta1
+  - apiVersion: gateway.networking.k8s.io/v1
     kind: HTTPRoute
     metadata:
       namespace: default

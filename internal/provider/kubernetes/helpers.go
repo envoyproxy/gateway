@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	gatewayClassFinalizer = gwapiv1b1.GatewayClassFinalizerGatewaysExist
+	gatewayClassFinalizer = gwapiv1.GatewayClassFinalizerGatewaysExist
 )
 
 type ObjectKindNamespacedName struct {
@@ -36,16 +36,16 @@ type ObjectKindNamespacedName struct {
 // referenced Gateways managed by Envoy Gateway. The only supported parentRef
 // is a Gateway.
 func validateParentRefs(ctx context.Context, client client.Client, namespace string,
-	gatewayClassController gwapiv1b1.GatewayController,
-	routeParentReferences []gwapiv1b1.ParentReference) ([]gwapiv1b1.Gateway, error) {
+	gatewayClassController gwapiv1.GatewayController,
+	routeParentReferences []gwapiv1.ParentReference) ([]gwapiv1.Gateway, error) {
 
-	var gateways []gwapiv1b1.Gateway
+	var gateways []gwapiv1.Gateway
 	for i := range routeParentReferences {
 		ref := routeParentReferences[i]
 		if ref.Kind != nil && *ref.Kind != "Gateway" {
 			return nil, fmt.Errorf("invalid Kind %q", *ref.Kind)
 		}
-		if ref.Group != nil && *ref.Group != gwapiv1b1.GroupName {
+		if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
 			return nil, fmt.Errorf("invalid Group %q", *ref.Group)
 		}
 
@@ -60,13 +60,13 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 			Name:      string(ref.Name),
 		}
 
-		gw := new(gwapiv1b1.Gateway)
+		gw := new(gwapiv1.Gateway)
 		if err := client.Get(ctx, gwKey, gw); err != nil {
 			return nil, fmt.Errorf("failed to get gateway %s/%s: %v", gwKey.Namespace, gwKey.Name, err)
 		}
 
 		gcKey := types.NamespacedName{Name: string(gw.Spec.GatewayClassName)}
-		gc := new(gwapiv1b1.GatewayClass)
+		gc := new(gwapiv1.GatewayClass)
 		if err := client.Get(ctx, gcKey, gc); err != nil {
 			return nil, fmt.Errorf("failed to get gatewayclass %s: %v", gcKey.Name, err)
 		}
@@ -80,15 +80,15 @@ func validateParentRefs(ctx context.Context, client client.Client, namespace str
 
 type controlledClasses struct {
 	// matchedClasses holds all GatewayClass objects with matching controllerName.
-	matchedClasses []*gwapiv1b1.GatewayClass
+	matchedClasses []*gwapiv1.GatewayClass
 
 	// oldestClass stores the first GatewayClass encountered with matching
 	// controllerName. This is maintained so that the oldestClass does not change
 	// during reboots.
-	oldestClass *gwapiv1b1.GatewayClass
+	oldestClass *gwapiv1.GatewayClass
 }
 
-func (cc *controlledClasses) addMatch(gc *gwapiv1b1.GatewayClass) {
+func (cc *controlledClasses) addMatch(gc *gwapiv1.GatewayClass) {
 	cc.matchedClasses = append(cc.matchedClasses, gc)
 
 	switch {
@@ -102,7 +102,7 @@ func (cc *controlledClasses) addMatch(gc *gwapiv1b1.GatewayClass) {
 	}
 }
 
-func (cc *controlledClasses) removeMatch(gc *gwapiv1b1.GatewayClass) {
+func (cc *controlledClasses) removeMatch(gc *gwapiv1.GatewayClass) {
 	// First remove gc from matchedClasses.
 	for i, matchedGC := range cc.matchedClasses {
 		if matchedGC.Name == gc.Name {
@@ -133,12 +133,12 @@ func (cc *controlledClasses) removeMatch(gc *gwapiv1b1.GatewayClass) {
 	}
 }
 
-func (cc *controlledClasses) acceptedClass() *gwapiv1b1.GatewayClass {
+func (cc *controlledClasses) acceptedClass() *gwapiv1.GatewayClass {
 	return cc.oldestClass
 }
 
-func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1b1.GatewayClass {
-	var res []*gwapiv1b1.GatewayClass
+func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1.GatewayClass {
+	var res []*gwapiv1.GatewayClass
 	for _, gc := range cc.matchedClasses {
 		// skip the oldest one since it will be accepted.
 		if gc.Name != cc.oldestClass.Name {
@@ -151,12 +151,12 @@ func (cc *controlledClasses) notAcceptedClasses() []*gwapiv1b1.GatewayClass {
 
 // isAccepted returns true if the provided gatewayclass contains the Accepted=true
 // status condition.
-func isAccepted(gc *gwapiv1b1.GatewayClass) bool {
+func isAccepted(gc *gwapiv1.GatewayClass) bool {
 	if gc == nil {
 		return false
 	}
 	for _, cond := range gc.Status.Conditions {
-		if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+		if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 			return true
 		}
 	}
@@ -164,8 +164,8 @@ func isAccepted(gc *gwapiv1b1.GatewayClass) bool {
 }
 
 // gatewaysOfClass returns a list of gateways that reference gc from the provided gwList.
-func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) []gwapiv1b1.Gateway {
-	var gateways []gwapiv1b1.Gateway
+func gatewaysOfClass(gc *gwapiv1.GatewayClass, gwList *gwapiv1.GatewayList) []gwapiv1.Gateway {
+	var gateways []gwapiv1.Gateway
 	if gwList == nil || gc == nil {
 		return gateways
 	}
@@ -180,29 +180,29 @@ func gatewaysOfClass(gc *gwapiv1b1.GatewayClass, gwList *gwapiv1b1.GatewayList) 
 
 // terminatesTLS returns true if the provided gateway contains a listener configured
 // for TLS termination.
-func terminatesTLS(listener *gwapiv1b1.Listener) bool {
+func terminatesTLS(listener *gwapiv1.Listener) bool {
 	if listener.TLS != nil &&
-		(listener.Protocol == gwapiv1b1.HTTPSProtocolType ||
-			listener.Protocol == gwapiv1b1.TLSProtocolType) &&
+		(listener.Protocol == gwapiv1.HTTPSProtocolType ||
+			listener.Protocol == gwapiv1.TLSProtocolType) &&
 		listener.TLS.Mode != nil &&
-		*listener.TLS.Mode == gwapiv1b1.TLSModeTerminate {
+		*listener.TLS.Mode == gwapiv1.TLSModeTerminate {
 		return true
 	}
 	return false
 }
 
 // refsSecret returns true if ref refers to a Secret.
-func refsSecret(ref *gwapiv1b1.SecretObjectReference) bool {
+func refsSecret(ref *gwapiv1.SecretObjectReference) bool {
 	return (ref.Group == nil || *ref.Group == corev1.GroupName) &&
 		(ref.Kind == nil || *ref.Kind == gatewayapi.KindSecret)
 }
 
-func infraServiceName(gateway *gwapiv1b1.Gateway) string {
+func infraServiceName(gateway *gwapiv1.Gateway) string {
 	infraName := utils.GetHashedName(fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name))
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
 }
 
-func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
+func infraDeploymentName(gateway *gwapiv1.Gateway) string {
 	infraName := utils.GetHashedName(fmt.Sprintf("%s/%s", gateway.Namespace, gateway.Name))
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, infraName)
 }
@@ -212,7 +212,7 @@ func infraDeploymentName(gateway *gwapiv1b1.Gateway) string {
 //   - Validating weights.
 //   - Validating ports.
 //   - Referencing HTTPRoutes.
-func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
+func validateBackendRef(ref *gwapiv1.BackendRef) error {
 	switch {
 	case ref == nil:
 		return nil
@@ -227,7 +227,7 @@ func validateBackendRef(ref *gwapiv1b1.BackendRef) error {
 }
 
 // classRefsEnvoyProxy returns true if the provided GatewayClass references the provided EnvoyProxy.
-func classRefsEnvoyProxy(gc *gwapiv1b1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
+func classRefsEnvoyProxy(gc *gwapiv1.GatewayClass, ep *egv1a1.EnvoyProxy) bool {
 	if gc == nil || ep == nil {
 		return false
 	}
@@ -238,7 +238,7 @@ func classRefsEnvoyProxy(gc *gwapiv1b1.GatewayClass, ep *egv1a1.EnvoyProxy) bool
 }
 
 // refsEnvoyProxy returns true if the provided GatewayClass references an EnvoyProxy.
-func refsEnvoyProxy(gc *gwapiv1b1.GatewayClass) bool {
+func refsEnvoyProxy(gc *gwapiv1.GatewayClass) bool {
 	if gc == nil {
 		return false
 	}
@@ -251,13 +251,13 @@ func refsEnvoyProxy(gc *gwapiv1b1.GatewayClass) bool {
 }
 
 // classAccepted returns true if the provided GatewayClass is accepted.
-func classAccepted(gc *gwapiv1b1.GatewayClass) bool {
+func classAccepted(gc *gwapiv1.GatewayClass) bool {
 	if gc == nil {
 		return false
 	}
 
 	for _, cond := range gc.Status.Conditions {
-		if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) &&
+		if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) &&
 			cond.Status == metav1.ConditionTrue {
 			return true
 		}
