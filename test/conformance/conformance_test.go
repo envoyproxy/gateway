@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/gateway-api/apis/v1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
@@ -50,9 +50,18 @@ func TestGatewayAPIConformance(t *testing.T) {
 		SkipTests: []string{
 			tests.GatewaySecretInvalidReferenceGrant.ShortName,
 			tests.HTTPRouteRewritePath.ShortName,
-			tests.GatewayStaticAddresses.ShortName,
 		},
 		ExemptFeatures: suite.MeshCoreFeatures,
+		UsableNetworkAddresses: []v1.GatewayAddress{
+			{
+				Value: "1.2.3.4",
+			},
+		},
+		UnusableNetworkAddresses: []v1.GatewayAddress{
+			{
+				Value: "4.3.2.1",
+			},
+		},
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)
