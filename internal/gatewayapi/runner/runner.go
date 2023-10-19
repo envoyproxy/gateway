@@ -9,7 +9,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/gateway-api/apis/v1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
