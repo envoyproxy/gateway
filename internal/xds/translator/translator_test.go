@@ -190,6 +190,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "load-balancer",
 		},
+		{
+			name: "cors",
+		},
 	}
 
 	for _, tc := range testCases {

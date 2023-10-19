@@ -1,0 +1,24 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        path: foo/bar
+      name: first-route
+      route:
+        cluster: first-route-dest
+      typedPerFilterConfig:
+        envoy.filters.http.cors:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+          allowHeaders: x-header-1, x-header-2
+          allowMethods: GET, POST
+          allowOriginStringMatch:
+          - safeRegex:
+              regex: '*.example.com'
+          - exact: foo.bar.com
+          allowPrivateNetworkAccess: false
+          exposeHeaders: x-header-3, x-header-4
+          maxAge: "1000"

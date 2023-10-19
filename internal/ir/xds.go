@@ -279,6 +279,8 @@ type HTTPRoute struct {
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
+	// Cors policy for the route.
+	Cors *Cors `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -310,6 +312,26 @@ type RequestAuthentication struct {
 type JwtRequestAuthentication struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JwtAuthenticationFilterProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// Cors holds the Cross-Origin Resource Sharing (CORS) policy for the route.
+//
+// +k8s:deepcopy-gen=true
+type Cors struct {
+	// AllowOrigins defines the origins that are allowed to make requests.
+	AllowOrigins []*StringMatch `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
+	// AllowMethods defines the methods that are allowed to make requests.
+	AllowMethods []string `json:"allowMethods,omitempty" yaml:"allowMethods,omitempty"`
+	// AllowHeaders defines the headers that are allowed to be sent with requests.
+	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
+	// ExposeHeaders defines the headers that can be exposed in the responses.
+	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
+	// MaxAge defines how long the results of a preflight request can be cached.
+	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+	// AllowPrivateNetwork defines whether allow whose target server’s IP address
+	// is more private than that from which the request initiator was fetched.
+	// Defaults to false.
+	AllowPrivateNetworkAccess bool `json:"allowPrivateNetwork,omitempty" yaml:"allowPrivateNetwork,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
