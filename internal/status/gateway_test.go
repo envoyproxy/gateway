@@ -13,17 +13,17 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 	type args struct {
-		gw         *gwapiv1b1.Gateway
+		gw         *gwapiv1.Gateway
 		svc        *corev1.Service
 		deployment *appsv1.Deployment
-		addresses  []gwapiv1b1.GatewayStatusAddress
+		addresses  []gwapiv1.GatewayStatusAddress
 	}
 	tests := []struct {
 		name string
@@ -32,7 +32,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		{
 			name: "nil svc",
 			args: args{
-				gw:        &gwapiv1b1.Gateway{},
+				gw:        &gwapiv1.Gateway{},
 				svc:       nil,
 				addresses: nil,
 			},
@@ -40,7 +40,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		{
 			name: "LoadBalancer svc with ingress ip",
 			args: args{
-				gw: &gwapiv1b1.Gateway{},
+				gw: &gwapiv1.Gateway{},
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{},
@@ -58,9 +58,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						},
 					},
 				},
-				addresses: []gwapiv1b1.GatewayStatusAddress{
+				addresses: []gwapiv1.GatewayStatusAddress{
 					{
-						Type:  ptr.To(gwapiv1b1.IPAddressType),
+						Type:  ptr.To(gwapiv1.IPAddressType),
 						Value: "127.0.0.1",
 					},
 				},
@@ -69,7 +69,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		{
 			name: "LoadBalancer svc with ingress hostname",
 			args: args{
-				gw: &gwapiv1b1.Gateway{},
+				gw: &gwapiv1.Gateway{},
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{},
@@ -87,13 +87,13 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						},
 					},
 				},
-				addresses: []gwapiv1b1.GatewayStatusAddress{
+				addresses: []gwapiv1.GatewayStatusAddress{
 					{
-						Type:  ptr.To(gwapiv1b1.IPAddressType),
+						Type:  ptr.To(gwapiv1.IPAddressType),
 						Value: "127.0.0.1",
 					},
 					{
-						Type:  ptr.To(gwapiv1b1.HostnameAddressType),
+						Type:  ptr.To(gwapiv1.HostnameAddressType),
 						Value: "localhost",
 					},
 				},
@@ -102,7 +102,7 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 		{
 			name: "ClusterIP svc",
 			args: args{
-				gw: &gwapiv1b1.Gateway{},
+				gw: &gwapiv1.Gateway{},
 				svc: &corev1.Service{
 					TypeMeta:   metav1.TypeMeta{},
 					ObjectMeta: metav1.ObjectMeta{},
@@ -111,9 +111,9 @@ func TestUpdateGatewayStatusProgrammedCondition(t *testing.T) {
 						Type:       corev1.ServiceTypeClusterIP,
 					},
 				},
-				addresses: []gwapiv1b1.GatewayStatusAddress{
+				addresses: []gwapiv1.GatewayStatusAddress{
 					{
-						Type:  ptr.To(gwapiv1b1.IPAddressType),
+						Type:  ptr.To(gwapiv1.IPAddressType),
 						Value: "127.0.0.1",
 					},
 				},

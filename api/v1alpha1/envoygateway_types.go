@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -123,7 +123,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -341,7 +341,7 @@ type RedisTLSSettings struct {
 	// CertificateRef defines the client certificate reference for TLS connections.
 	// Currently only a Kubernetes Secret of type TLS is supported.
 	// +optional
-	CertificateRef *gwapiv1b1.SecretObjectReference `json:"certificateRef,omitempty"`
+	CertificateRef *gwapiv1.SecretObjectReference `json:"certificateRef,omitempty"`
 }
 
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
@@ -415,7 +415,7 @@ type ExtensionTLS struct {
 	// CertificateRef can only reference a Kubernetes Secret at this time.
 	//
 	// +kubebuilder:validation:Required
-	CertificateRef gwapiv1b1.SecretObjectReference `json:"certificateRef"`
+	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
 }
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.

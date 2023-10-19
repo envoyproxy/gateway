@@ -19,6 +19,7 @@ gateways:
     namespace: envoy-gateway-system
   spec:
     gatewayClassName: eg
+    infrastructure: {}
     listeners:
     - name: http
       port: 80

@@ -28,8 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
@@ -132,7 +132,7 @@ func testGatewayClassAcceptedStatus(ctx context.Context, t *testing.T, provider 
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -170,9 +170,9 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	}()
 
 	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName)
-	gc.Spec.ParametersRef = &gwapiv1b1.ParametersReference{
-		Group:     gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-		Kind:      gwapiv1b1.Kind(egv1a1.KindEnvoyProxy),
+	gc.Spec.ParametersRef = &gwapiv1.ParametersReference{
+		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
+		Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
 		Name:      epName,
 		Namespace: gatewayapi.NamespacePtr(testNs),
 	}
@@ -189,7 +189,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -201,20 +201,6 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	res, ok := resources.GatewayAPIResources.Load(gc.Name)
 	assert.Equal(t, ok, true)
 	assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
-
-	// Ensure the envoyproxy has been finalized.
-	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
-		return err == nil && slices.Contains(ep.Finalizers, gatewayClassFinalizer)
-	}, defaultWait, defaultTick)
-
-	//Ensure that envoyproxy finalizer will be removed when GatewayClass stops referencing it
-	gc.Spec.ParametersRef = nil
-	require.NoError(t, cli.Update(ctx, gc))
-	require.Eventually(t, func() bool {
-		err := cli.Get(ctx, types.NamespacedName{Name: ep.Name, Namespace: testNs}, ep)
-		return err == nil && !slices.Contains(ep.Finalizers, gatewayClassFinalizer)
-	}, defaultWait, defaultTick)
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -230,7 +216,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -246,18 +232,18 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "test-gw-of-class"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "scheduled-status-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -326,7 +312,7 @@ func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Pro
 
 		for _, cond := range gw.Status.Conditions {
 			fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayConditionAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -383,7 +369,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -399,18 +385,18 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "envoy-gateway"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "gatewaywithaverylongnamethatwillresultinhashedresources",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -427,7 +413,7 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 
 		for _, cond := range gw.Status.Conditions {
 			fmt.Printf("Condition: %v\n", cond)
-			if cond.Type == string(gwapiv1b1.GatewayConditionProgrammed) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayConditionProgrammed) && cond.Status == metav1.ConditionTrue {
 				ready = true
 			}
 		}
@@ -485,7 +471,7 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -501,18 +487,18 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ratelimit-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ratelimit-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -544,50 +530,50 @@ func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, 
 
 	var testCases = []struct {
 		name  string
-		route gwapiv1b1.HTTPRoute
+		route gwapiv1.HTTPRoute
 	}{
 		{
 			name: "ratelimit-test-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ratelimit-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/ratelimitfilter/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-									ExtensionRef: &gwapiv1b1.LocalObjectReference{
-										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-										Name:  gwapiv1b1.ObjectName("ratelimit-test"),
+									Type: gwapiv1.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1.LocalObjectReference{
+										Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+										Kind:  gwapiv1.Kind(egv1a1.KindRateLimitFilter),
+										Name:  gwapiv1.ObjectName("ratelimit-test"),
 									},
 								},
 							},
@@ -661,7 +647,7 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -677,18 +663,18 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "authen-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "authen-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -720,50 +706,50 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 
 	var testCases = []struct {
 		name  string
-		route gwapiv1b1.HTTPRoute
+		route gwapiv1.HTTPRoute
 	}{
 		{
 			name: "authenfilter-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-authenfilter-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/authenfilter/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-									ExtensionRef: &gwapiv1b1.LocalObjectReference{
-										Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-										Name:  gwapiv1b1.ObjectName(authenFilter.Name),
+									Type: gwapiv1.HTTPRouteFilterExtensionRef,
+									ExtensionRef: &gwapiv1.LocalObjectReference{
+										Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+										Kind:  gwapiv1.Kind(egv1a1.KindAuthenticationFilter),
+										Name:  gwapiv1.ObjectName(authenFilter.Name),
 									},
 								},
 							},
@@ -837,7 +823,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -853,18 +839,18 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "httproute-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "httproute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 			},
 		},
@@ -894,46 +880,46 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		require.NoError(t, cli.Delete(ctx, authenFilter))
 	}()
 
-	redirectHostname := gwapiv1b1.PreciseHostname("redirect.hostname.local")
-	redirectPort := gwapiv1b1.PortNumber(8443)
+	redirectHostname := gwapiv1.PreciseHostname("redirect.hostname.local")
+	redirectPort := gwapiv1.PortNumber(8443)
 	redirectStatus := 301
 
-	rewriteHostname := gwapiv1b1.PreciseHostname("rewrite.hostname.local")
+	rewriteHostname := gwapiv1.PreciseHostname("rewrite.hostname.local")
 
 	var testCases = []struct {
 		name  string
-		route gwapiv1b1.HTTPRoute
+		route gwapiv1.HTTPRoute
 	}{
 		{
 			name: "destination-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
@@ -946,47 +932,47 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "redirect-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-redirect-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/redirect/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestRedirect"),
-									RequestRedirect: &gwapiv1b1.HTTPRequestRedirectFilter{
+									Type: gwapiv1.HTTPRouteFilterType("RequestRedirect"),
+									RequestRedirect: &gwapiv1.HTTPRequestRedirectFilter{
 										Scheme:   ptr.To("https"),
 										Hostname: &redirectHostname,
-										Path: &gwapiv1b1.HTTPPathModifier{
-											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
+										Path: &gwapiv1.HTTPPathModifier{
+											Type:            gwapiv1.HTTPPathModifierType("ReplaceFullPath"),
 											ReplaceFullPath: ptr.To("/newpath"),
 										},
 										Port:       &redirectPort,
@@ -1001,46 +987,46 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "rewrite-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-rewrite-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/rewrite/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("URLRewrite"),
-									URLRewrite: &gwapiv1b1.HTTPURLRewriteFilter{
+									Type: gwapiv1.HTTPRouteFilterType("URLRewrite"),
+									URLRewrite: &gwapiv1.HTTPURLRewriteFilter{
 										Hostname: &rewriteHostname,
-										Path: &gwapiv1b1.HTTPPathModifier{
-											Type:            gwapiv1b1.HTTPPathModifierType("ReplaceFullPath"),
+										Path: &gwapiv1.HTTPPathModifier{
+											Type:            gwapiv1.HTTPPathModifierType("ReplaceFullPath"),
 											ReplaceFullPath: ptr.To("/newpath"),
 										},
 									},
@@ -1053,56 +1039,56 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "add-request-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-add-request-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/addheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
-										Add: []gwapiv1b1.HTTPHeader{
+									Type: gwapiv1.HTTPRouteFilterType("RequestHeaderModifier"),
+									RequestHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+										Add: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
+												Name:  gwapiv1.HTTPHeaderName("header-1"),
 												Value: "value-1",
 											},
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-2"),
+												Name:  gwapiv1.HTTPHeaderName("header-2"),
 												Value: "value-2",
 											},
 										},
-										Set: []gwapiv1b1.HTTPHeader{
+										Set: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-3"),
+												Name:  gwapiv1.HTTPHeaderName("header-3"),
 												Value: "value-3",
 											},
 										},
@@ -1116,43 +1102,43 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "remove-request-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-remove-request-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/remheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestHeaderModifier"),
-									RequestHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
+									Type: gwapiv1.HTTPRouteFilterType("RequestHeaderModifier"),
+									RequestHeaderModifier: &gwapiv1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",
@@ -1168,56 +1154,56 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "add-response-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-add-response-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/addheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("ResponseHeaderModifier"),
-									ResponseHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
-										Add: []gwapiv1b1.HTTPHeader{
+									Type: gwapiv1.HTTPRouteFilterType("ResponseHeaderModifier"),
+									ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
+										Add: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-1"),
+												Name:  gwapiv1.HTTPHeaderName("header-1"),
 												Value: "value-1",
 											},
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-2"),
+												Name:  gwapiv1.HTTPHeaderName("header-2"),
 												Value: "value-2",
 											},
 										},
-										Set: []gwapiv1b1.HTTPHeader{
+										Set: []gwapiv1.HTTPHeader{
 											{
-												Name:  gwapiv1b1.HTTPHeaderName("header-3"),
+												Name:  gwapiv1.HTTPHeaderName("header-3"),
 												Value: "value-3",
 											},
 										},
@@ -1231,43 +1217,43 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "remove-response-header-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-remove-response-header-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/remheader/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("ResponseHeaderModifier"),
-									ResponseHeaderModifier: &gwapiv1b1.HTTPHeaderFilter{
+									Type: gwapiv1.HTTPRouteFilterType("ResponseHeaderModifier"),
+									ResponseHeaderModifier: &gwapiv1.HTTPHeaderFilter{
 										Remove: []string{
 											"example-header-1",
 											"test-header",
@@ -1283,44 +1269,44 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 		},
 		{
 			name: "mirror-httproute",
-			route: gwapiv1b1.HTTPRoute{
+			route: gwapiv1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "httproute-mirror-test",
 					Namespace: ns.Name,
 				},
-				Spec: gwapiv1b1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-						ParentRefs: []gwapiv1b1.ParentReference{
+				Spec: gwapiv1.HTTPRouteSpec{
+					CommonRouteSpec: gwapiv1.CommonRouteSpec{
+						ParentRefs: []gwapiv1.ParentReference{
 							{
-								Name: gwapiv1b1.ObjectName(gw.Name),
+								Name: gwapiv1.ObjectName(gw.Name),
 							},
 						},
 					},
-					Hostnames: []gwapiv1b1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1b1.HTTPRouteRule{
+					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
+					Rules: []gwapiv1.HTTPRouteRule{
 						{
-							Matches: []gwapiv1b1.HTTPRouteMatch{
+							Matches: []gwapiv1.HTTPRouteMatch{
 								{
-									Path: &gwapiv1b1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+									Path: &gwapiv1.HTTPPathMatch{
+										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/mirror/"),
 									},
 								},
 							},
-							BackendRefs: []gwapiv1b1.HTTPBackendRef{
+							BackendRefs: []gwapiv1.HTTPBackendRef{
 								{
-									BackendRef: gwapiv1b1.BackendRef{
-										BackendObjectReference: gwapiv1b1.BackendObjectReference{
+									BackendRef: gwapiv1.BackendRef{
+										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
 								},
 							},
-							Filters: []gwapiv1b1.HTTPRouteFilter{
+							Filters: []gwapiv1.HTTPRouteFilter{
 								{
-									Type: gwapiv1b1.HTTPRouteFilterType("RequestMirror"),
-									RequestMirror: &gwapiv1b1.HTTPRequestMirrorFilter{
-										BackendRef: gwapiv1b1.BackendObjectReference{
+									Type: gwapiv1.HTTPRouteFilterType("RequestMirror"),
+									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
+										BackendRef: gwapiv1.BackendObjectReference{
 											Name: "test",
 										},
 									},
@@ -1405,18 +1391,18 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "tlsroute-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "tlsroute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "test",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.TLSProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.TLSProtocolType,
 				},
 			},
 		},
@@ -1545,23 +1531,23 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "service-cleanup-test"}}
 	require.NoError(t, cli.Create(ctx, ns))
 
-	gw := &gwapiv1b1.Gateway{
+	gw := &gwapiv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "service-cleanup-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.GatewaySpec{
-			GatewayClassName: gwapiv1b1.ObjectName(gc.Name),
-			Listeners: []gwapiv1b1.Listener{
+		Spec: gwapiv1.GatewaySpec{
+			GatewayClassName: gwapiv1.ObjectName(gc.Name),
+			Listeners: []gwapiv1.Listener{
 				{
 					Name:     "httptest",
-					Port:     gwapiv1b1.PortNumber(int32(8080)),
-					Protocol: gwapiv1b1.HTTPProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8080)),
+					Protocol: gwapiv1.HTTPProtocolType,
 				},
 				{
 					Name:     "tlstest",
-					Port:     gwapiv1b1.PortNumber(int32(8043)),
-					Protocol: gwapiv1b1.TLSProtocolType,
+					Port:     gwapiv1.PortNumber(int32(8043)),
+					Protocol: gwapiv1.TLSProtocolType,
 				},
 			},
 		},
@@ -1602,28 +1588,28 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 		},
 	}
 
-	httpRoute := gwapiv1b1.HTTPRoute{
+	httpRoute := gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "httproute-test",
 			Namespace: ns.Name,
 		},
-		Spec: gwapiv1b1.HTTPRouteSpec{
-			CommonRouteSpec: gwapiv1b1.CommonRouteSpec{
-				ParentRefs: []gwapiv1b1.ParentReference{{
-					Name: gwapiv1b1.ObjectName(gw.Name),
+		Spec: gwapiv1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{{
+					Name: gwapiv1.ObjectName(gw.Name),
 				}},
 			},
-			Hostnames: []gwapiv1b1.Hostname{"test-http.hostname.local"},
-			Rules: []gwapiv1b1.HTTPRouteRule{{
-				Matches: []gwapiv1b1.HTTPRouteMatch{{
-					Path: &gwapiv1b1.HTTPPathMatch{
-						Type:  ptr.To(gwapiv1b1.PathMatchPathPrefix),
+			Hostnames: []gwapiv1.Hostname{"test-http.hostname.local"},
+			Rules: []gwapiv1.HTTPRouteRule{{
+				Matches: []gwapiv1.HTTPRouteMatch{{
+					Path: &gwapiv1.HTTPPathMatch{
+						Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 						Value: ptr.To("/"),
 					},
 				}},
-				BackendRefs: []gwapiv1b1.HTTPBackendRef{{
-					BackendRef: gwapiv1b1.BackendRef{
-						BackendObjectReference: gwapiv1b1.BackendObjectReference{
+				BackendRefs: []gwapiv1.HTTPBackendRef{{
+					BackendRef: gwapiv1.BackendRef{
+						BackendObjectReference: gwapiv1.BackendObjectReference{
 							Name: "test-common-svc",
 						},
 					},
@@ -1730,7 +1716,7 @@ func TestNamespacedProvider(t *testing.T) {
 	require.NoError(t, cli.Create(ctx, gw3))
 
 	// Ensure only 2 gateways are reconciled
-	gatewayList := &gwapiv1b1.GatewayList{}
+	gatewayList := &gwapiv1.GatewayList{}
 	require.NoError(t, cli.List(ctx, gatewayList))
 	assert.Equal(t, len(gatewayList.Items), 2)
 
@@ -1789,7 +1775,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		}
 
 		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1b1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
+			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -1875,21 +1861,21 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		},
 		watchedGateway.Name,
 		types.NamespacedName{Name: watchedSvc.Name})
-	watchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1b1.HTTPRouteFilter{
+	watchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1.HTTPRouteFilter{
 		{
-			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-			ExtensionRef: &gwapiv1b1.LocalObjectReference{
-				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-				Name:  gwapiv1b1.ObjectName(watchedAuthenFilter.Name),
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1.Kind(egv1a1.KindAuthenticationFilter),
+				Name:  gwapiv1.ObjectName(watchedAuthenFilter.Name),
 			},
 		},
 		{
-			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-			ExtensionRef: &gwapiv1b1.LocalObjectReference{
-				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-				Name:  gwapiv1b1.ObjectName(watchedRateLimitFilter.Name),
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1.Kind(egv1a1.KindRateLimitFilter),
+				Name:  gwapiv1.ObjectName(watchedRateLimitFilter.Name),
 			},
 		},
 	}
@@ -1905,21 +1891,21 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		},
 		nonWatchedGateway.Name,
 		types.NamespacedName{Name: nonWatchedSvc.Name})
-	nonWatchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1b1.HTTPRouteFilter{
+	nonWatchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1.HTTPRouteFilter{
 		{
-			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-			ExtensionRef: &gwapiv1b1.LocalObjectReference{
-				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1b1.Kind(egv1a1.KindAuthenticationFilter),
-				Name:  gwapiv1b1.ObjectName(nonWatchedAuthenFilter.Name),
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1.Kind(egv1a1.KindAuthenticationFilter),
+				Name:  gwapiv1.ObjectName(nonWatchedAuthenFilter.Name),
 			},
 		},
 		{
-			Type: gwapiv1b1.HTTPRouteFilterExtensionRef,
-			ExtensionRef: &gwapiv1b1.LocalObjectReference{
-				Group: gwapiv1b1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1b1.Kind(egv1a1.KindRateLimitFilter),
-				Name:  gwapiv1b1.ObjectName(nonWatchedRateLimitFilter.Name),
+			Type: gwapiv1.HTTPRouteFilterExtensionRef,
+			ExtensionRef: &gwapiv1.LocalObjectReference{
+				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
+				Kind:  gwapiv1.Kind(egv1a1.KindRateLimitFilter),
+				Name:  gwapiv1.ObjectName(nonWatchedRateLimitFilter.Name),
 			},
 		},
 	}

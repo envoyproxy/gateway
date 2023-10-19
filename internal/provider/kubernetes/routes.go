@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -66,7 +66,7 @@ func (r *gatewayAPIReconciler) processTLSRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tlsRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
@@ -166,7 +166,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, grpcRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
@@ -269,7 +269,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 // the backend references and pushes the HTTPRoutes to the resourceTree.
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
-	httpRouteList := &gwapiv1b1.HTTPRouteList{}
+	httpRouteList := &gwapiv1.HTTPRouteList{}
 
 	// An HTTPRoute may reference an AuthenticationFilter, RateLimitFilter, or a filter managed
 	// by an extension so add them to the resource map first (if they exist).
@@ -309,7 +309,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 
 	httpRoutes := httpRouteList.Items
 	if len(r.namespaceLabels) != 0 {
-		var hrs []gwapiv1b1.HTTPRoute
+		var hrs []gwapiv1.HTTPRoute
 		for _, hr := range httpRoutes {
 			ns := hr.GetNamespace()
 			ok, err := r.checkObjectNamespaceLabels(ns)
@@ -338,7 +338,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOr(backendRef.Namespace, httpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
@@ -383,7 +383,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 				}
 
 				// Load in the backendRefs from any requestMirrorFilters on the HTTPRoute
-				if filter.Type == gwapiv1b1.HTTPRouteFilterRequestMirror {
+				if filter.Type == gwapiv1.HTTPRouteFilterRequestMirror {
 					// Make sure the config actually exists
 					mirrorFilter := filter.RequestMirror
 					if mirrorFilter == nil {
@@ -394,7 +394,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					mirrorBackendObj := mirrorFilter.BackendRef
 					// Wrap the filter's BackendObjectReference into a BackendRef so we can use existing tooling to check it
 					weight := int32(1)
-					mirrorBackendRef := gwapiv1b1.BackendRef{
+					mirrorBackendRef := gwapiv1.BackendRef{
 						BackendObjectReference: mirrorBackendObj,
 						Weight:                 &weight,
 					}
@@ -405,7 +405,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					}
 
 					backendNamespace := gatewayapi.NamespaceDerefOr(mirrorBackendRef.Namespace, httpRoute.Namespace)
-					resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+					resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
 						Group:     mirrorBackendRef.BackendObjectReference.Group,
 						Kind:      mirrorBackendRef.BackendObjectReference.Kind,
 						Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
@@ -436,7 +436,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 								"name", refGrant.Name)
 						}
 					}
-				} else if filter.Type == gwapiv1b1.HTTPRouteFilterExtensionRef {
+				} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the HTTPRoute
 					switch string(filter.ExtensionRef.Kind) {
 					case egv1a1.KindAuthenticationFilter:
@@ -485,7 +485,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 		resourceMap.allAssociatedNamespaces[httpRoute.Namespace] = struct{}{}
 		// Discard Status to reduce memory consumption in watchable
 		// It will be recomputed by the gateway-api layer
-		httpRoute.Status = gwapiv1b1.HTTPRouteStatus{}
+		httpRoute.Status = gwapiv1.HTTPRouteStatus{}
 		resourceTree.HTTPRoutes = append(resourceTree.HTTPRoutes, &httpRoute)
 	}
 
@@ -537,7 +537,7 @@ func (r *gatewayAPIReconciler) processTCPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, tcpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
@@ -618,7 +618,7 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 				}
 
 				backendNamespace := gatewayapi.NamespaceDerefOrAlpha(backendRef.Namespace, udpRoute.Namespace)
-				resourceMap.allAssociatedBackendRefs[gwapiv1b1.BackendObjectReference{
+				resourceMap.allAssociatedBackendRefs[gwapiv1.BackendObjectReference{
 					Group:     backendRef.BackendObjectReference.Group,
 					Kind:      backendRef.BackendObjectReference.Kind,
 					Namespace: gatewayapi.NamespacePtrV1Alpha2(backendNamespace),
