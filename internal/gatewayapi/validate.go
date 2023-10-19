@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func (t *Translator) validateBackendRef(backendRef *gwapiv1a2.BackendRef, parentRef *RouteParentContext, route RouteContext,
@@ -629,7 +630,7 @@ func (t *Translator) validateConflictedLayer4Listeners(gateways []*GatewayContex
 	}
 }
 
-func (t *Translator) validateCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*gwapiv1a2.ReferenceGrant) bool {
+func (t *Translator) validateCrossNamespaceRef(from crossNamespaceFrom, to crossNamespaceTo, referenceGrants []*gwapiv1b1.ReferenceGrant) bool {
 	for _, referenceGrant := range referenceGrants {
 		// The ReferenceGrant must be defined in the namespace of
 		// the "to" (the referent).
