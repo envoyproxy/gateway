@@ -5423,8 +5423,14 @@ spec:
                           type: object
                         type: array
                       prometheus:
+                        default:
+                          disabled: false
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
+                        properties:
+                          disabled:
+                            description: Disabled disables the Prometheus endpoint.
+                            type: boolean
                         type: object
                       sinks:
                         description: Sinks defines the metric sinks where metrics

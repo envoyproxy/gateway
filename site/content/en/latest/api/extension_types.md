@@ -994,6 +994,9 @@ _Appears in:_
 _Appears in:_
 - [ProxyMetrics](#proxymetrics)
 
+| Field | Description |
+| --- | --- |
+| `disabled` _boolean_ | Disabled disables the Prometheus endpoint. |
 
 
 #### ProviderType
