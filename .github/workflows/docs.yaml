@@ -48,11 +48,8 @@ jobs:
       with:
         node-version: '18'
 
-    - name: Install Site Dependencies
-      run: cd site && npm install
-
-    - name: Build Site
-      run: cd site && npm run build:production
+    - name: Install Site Dependencies and Build Site
+      run: make docs
 
     # Upload docs for GitHub Pages
     - name: Upload GitHub Pages artifact
