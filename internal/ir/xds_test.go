@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -1123,6 +1124,16 @@ func TestValidateLoadBalancer(t *testing.T) {
 			},
 			want: nil,
 		},
+		{
+			name: "consistent hash",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					SourceIP: ptr.To(true),
+				},
+			},
+			want: nil,
+		},
+
 		{
 			name: "least request and random set",
 			input: LoadBalancer{
