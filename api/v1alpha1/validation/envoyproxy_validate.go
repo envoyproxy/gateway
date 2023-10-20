@@ -101,8 +101,8 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}
 
-			if net.ParseIP(*serviceLoadBalancerIP) == nil {
-				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IP address", *serviceLoadBalancerIP))
+			if ip := net.ParseIP(*serviceLoadBalancerIP); ip == nil || ip.To4() == nil {
+				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
 			}
 		}
 	}

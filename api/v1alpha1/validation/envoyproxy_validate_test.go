@@ -256,6 +256,28 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "envoy service type 'LoadBalancer' with ipv6 loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("2001:db8::68"),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+
+		{
 			name: "valid user bootstrap replace type",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
