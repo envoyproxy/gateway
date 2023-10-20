@@ -168,11 +168,23 @@ func (r *gatewayAPIReconciler) validateServiceForReconcile(obj client.Object) bo
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
 		return false
 	}
+	labels := svc.GetLabels()
 
 	// Check if the Service belongs to a Gateway, if so, update the Gateway status.
-	gtw := r.findOwningGateway(ctx, svc.GetLabels())
+	gtw := r.findOwningGateway(ctx, labels)
 	if gtw != nil {
 		r.statusUpdateForGateway(ctx, gtw)
+		return false
+	}
+
+	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok {
+		res, _ := r.resources.GatewayAPIResources.Load(gclass)
+		for _, gw := range res.Gateways {
+			gw := gw
+			r.statusUpdateForGateway(ctx, gw)
+		}
 		return false
 	}
 
@@ -286,15 +298,27 @@ func (r *gatewayAPIReconciler) validateDeploymentForReconcile(obj client.Object)
 		r.log.Info("unexpected object type, bypassing reconciliation", "object", obj)
 		return false
 	}
+	labels := deployment.GetLabels()
 
 	// Only deployments in the configured namespace should be reconciled.
 	if deployment.Namespace == r.namespace {
 		// Check if the deployment belongs to a Gateway, if so, update the Gateway status.
-		gtw := r.findOwningGateway(ctx, deployment.GetLabels())
+		gtw := r.findOwningGateway(ctx, labels)
 		if gtw != nil {
 			r.statusUpdateForGateway(ctx, gtw)
 			return false
 		}
+	}
+
+	// Only merged gateways will have this label, update status of all Gateways under found GatewayClass.
+	gclass, ok := labels[gatewayapi.OwningGatewayClassLabel]
+	if ok {
+		res, _ := r.resources.GatewayAPIResources.Load(gclass)
+		for _, gtw := range res.Gateways {
+			gtw := gtw
+			r.statusUpdateForGateway(ctx, gtw)
+		}
+		return false
 	}
 
 	// There is no need to reconcile the Deployment any further.
@@ -377,7 +401,7 @@ func (r *gatewayAPIReconciler) filterHTTPRoutesByNamespaceLabels(httpRoutes []gw
 func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*appsv1.Deployment, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraDeploymentName(gateway),
+		Name:      infraName(gateway, r.mergeGateways),
 	}
 	deployment := new(appsv1.Deployment)
 	if err := r.client.Get(ctx, key, deployment); err != nil {
@@ -393,7 +417,7 @@ func (r *gatewayAPIReconciler) envoyDeploymentForGateway(ctx context.Context, ga
 func (r *gatewayAPIReconciler) envoyServiceForGateway(ctx context.Context, gateway *gwapiv1.Gateway) (*corev1.Service, error) {
 	key := types.NamespacedName{
 		Namespace: r.namespace,
-		Name:      infraServiceName(gateway),
+		Name:      infraName(gateway, r.mergeGateways),
 	}
 	svc := new(corev1.Service)
 	if err := r.client.Get(ctx, key, svc); err != nil {

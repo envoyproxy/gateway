@@ -8,6 +8,7 @@ package proxy
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,7 +46,7 @@ func (r *ResourceRender) Name() string {
 func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -72,8 +73,10 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			if port.Protocol == ir.UDPProtocolType {
 				protocol = corev1.ProtocolUDP
 			}
+			// Listeners on merged gateways will have a port name {GatewayNamespace}/{GatewayName}/{ListenerName}.
+			portName := strings.ReplaceAll(port.Name, "/", "-")
 			p := corev1.ServicePort{
-				Name:       port.Name,
+				Name:       portName,
 				Protocol:   protocol,
 				Port:       port.ServicePort,
 				TargetPort: target,
@@ -84,7 +87,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 
 	// Set the labels based on the owning gatewayclass name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -123,7 +126,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 	// Set the labels based on the owning gateway name.
 	labels := envoyLabels(r.infra.GetProxyMetadata().Labels)
-	if len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(labels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(labels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(labels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
@@ -169,7 +172,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 	// Set the labels based on the owning gateway name.
 	labels := r.infra.GetProxyMetadata().Labels
 	dpLabels := envoyLabels(labels)
-	if len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 {
+	if (len(dpLabels[gatewayapi.OwningGatewayNameLabel]) == 0 || len(dpLabels[gatewayapi.OwningGatewayNamespaceLabel]) == 0) && len(dpLabels[gatewayapi.OwningGatewayClassLabel]) == 0 {
 		return nil, fmt.Errorf("missing owning gateway labels")
 	}
 
