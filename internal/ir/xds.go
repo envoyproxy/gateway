@@ -45,6 +45,7 @@ var (
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
 	ErrRequestAuthenRequiresJwt      = errors.New("jwt field is required when request authentication is set")
+	ErrLoadBalancerInvalid           = errors.New("loadBalancer setting is invalid, only one setting can be set")
 )
 
 // Xds holds the intermediate representation of a Gateway and is
@@ -276,6 +277,8 @@ type HTTPRoute struct {
 	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	// load balancer policy to use when routing to the backend endpoints.
+	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -420,6 +423,12 @@ func (h HTTPRoute) Validate() error {
 			}
 		}
 	}
+	if h.LoadBalancer != nil {
+		if err := h.LoadBalancer.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+
 	return errs
 }
 
@@ -951,4 +960,59 @@ type TCPKeepalive struct {
 	// The duration, in seconds, between keep-alive probes.
 	// Defaults to `75s`.
 	Interval *uint32 `json:"interval,omitempty" yaml:"interval,omitempty"`
+}
+
+// LoadBalancer defines the load balancer settings.
+// +k8s:deepcopy-gen=true
+type LoadBalancer struct {
+	// RoundRobin load balacning policy
+	RoundRobin *RoundRobin `json:"roundRobin,omitempty" yaml:"roundRobin,omitempty"`
+	// LeastRequest load balancer policy
+	LeastRequest *LeastRequest `json:"leastRequest,omitempty" yaml:"leastRequest,omitempty"`
+	// Random load balancer policy
+	Random *Random `json:"random,omitempty" yaml:"random,omitempty"`
+	// ConsistentHash load balancer policy
+	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty" yaml:"consistentHash,omitempty"`
+}
+
+// Validate the fields within the LoadBalancer structure
+func (l *LoadBalancer) Validate() error {
+	var errs error
+	matchCount := 0
+	if l.RoundRobin != nil {
+		matchCount++
+	}
+	if l.LeastRequest != nil {
+		matchCount++
+	}
+	if l.Random != nil {
+		matchCount++
+	}
+	if l.ConsistentHash != nil {
+		matchCount++
+	}
+	if matchCount != 1 {
+		errs = multierror.Append(errs, ErrLoadBalancerInvalid)
+	}
+
+	return errs
+}
+
+// RoundRobin load balancer settings
+// +k8s:deepcopy-gen=true
+type RoundRobin struct{}
+
+// LeastRequest load balancer settings
+// +k8s:deepcopy-gen=true
+type LeastRequest struct{}
+
+// Random load balancer settings
+// +k8s:deepcopy-gen=true
+type Random struct{}
+
+// ConsistentHash load balancer settings
+// +k8s:deepcopy-gen=true
+type ConsistentHash struct {
+	// Hash based on the Source IP Address
+	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
 }

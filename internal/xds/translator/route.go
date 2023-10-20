@@ -66,8 +66,13 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 		}
 	}
 
+	// Hash Policy
+	if router.GetRoute() != nil {
+		router.GetRoute().HashPolicy = buildHashPolicy(httpRoute)
+	}
+
 	// Timeouts
-	if httpRoute.Timeout != nil {
+	if router.GetRoute() != nil && httpRoute.Timeout != nil {
 		router.GetRoute().Timeout = durationpb.New(httpRoute.Timeout.Duration)
 	}
 
@@ -329,4 +334,24 @@ func buildXdsAddedHeaders(headersToAdd []ir.AddHeader) []*corev3.HeaderValueOpti
 	}
 
 	return headerValueOptions
+}
+
+func buildHashPolicy(httpRoute *ir.HTTPRoute) []*routev3.RouteAction_HashPolicy {
+	// Return early
+	if httpRoute == nil || httpRoute.LoadBalancer == nil || httpRoute.LoadBalancer.ConsistentHash == nil {
+		return nil
+	}
+
+	if httpRoute.LoadBalancer.ConsistentHash.SourceIP != nil && *httpRoute.LoadBalancer.ConsistentHash.SourceIP {
+		hashPolicy := &routev3.RouteAction_HashPolicy{
+			PolicySpecifier: &routev3.RouteAction_HashPolicy_ConnectionProperties_{
+				ConnectionProperties: &routev3.RouteAction_HashPolicy_ConnectionProperties{
+					SourceIp: true,
+				},
+			},
+		}
+		return []*routev3.RouteAction_HashPolicy{hashPolicy}
+	}
+
+	return nil
 }

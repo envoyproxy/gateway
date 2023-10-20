@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -1096,6 +1097,50 @@ func TestValidateJwtRequestAuthentication(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateLoadBalancer(t *testing.T) {
+	tests := []struct {
+		name  string
+		input LoadBalancer
+		want  error
+	}{
+		{
+			name: "random",
+			input: LoadBalancer{
+				Random: &Random{},
+			},
+			want: nil,
+		},
+		{
+			name: "consistent hash",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					SourceIP: ptr.To(true),
+				},
+			},
+			want: nil,
+		},
+
+		{
+			name: "least request and random set",
+			input: LoadBalancer{
+				Random:       &Random{},
+				LeastRequest: &LeastRequest{},
+			},
+			want: ErrLoadBalancerInvalid,
 		},
 	}
 	for i := range tests {
