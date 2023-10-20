@@ -8,6 +8,7 @@ docs: docs.clean helm-readme-gen docs-api docs-api-headings ## Generate Envoy Ga
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
+	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs-release
 docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gateway Release Docs
