@@ -297,7 +297,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Telemetry: egv1a1.ProxyTelemetry{
+					Telemetry: &egv1a1.ProxyTelemetry{
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
@@ -320,7 +320,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Telemetry: egv1a1.ProxyTelemetry{
+					Telemetry: &egv1a1.ProxyTelemetry{
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{

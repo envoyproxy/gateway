@@ -86,6 +86,7 @@ func envoyLabels(extraLabels map[string]string) map[string]string {
 
 func enablePrometheus(infra *ir.ProxyInfra) bool {
 	if infra.Config != nil &&
+		infra.Config.Spec.Telemetry != nil &&
 		infra.Config.Spec.Telemetry.Metrics != nil &&
 		infra.Config.Spec.Telemetry.Metrics.Prometheus != nil &&
 		infra.Config.Spec.Telemetry.Metrics.Prometheus.Disable {
@@ -133,7 +134,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 	var bootstrapConfigurations string
 
 	var proxyMetrics *egv1a1.ProxyMetrics
-	if infra.Config != nil {
+	if infra.Config != nil &&
+		infra.Config.Spec.Telemetry != nil {
 		proxyMetrics = infra.Config.Spec.Telemetry.Metrics
 	}
 	// Get the default Bootstrap

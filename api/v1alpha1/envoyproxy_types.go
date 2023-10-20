@@ -42,7 +42,9 @@ type EnvoyProxySpec struct {
 	Logging ProxyLogging `json:"logging,omitempty"`
 
 	// Telemetry defines telemetry parameters for managed proxies.
-	Telemetry ProxyTelemetry `json:"telemetry,omitempty"`
+	//
+	// +optional
+	Telemetry *ProxyTelemetry `json:"telemetry,omitempty"`
 
 	// Bootstrap defines the Envoy Bootstrap as a YAML string.
 	// Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap

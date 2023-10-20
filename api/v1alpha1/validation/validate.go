@@ -172,7 +172,9 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 
-	if spec != nil && spec.Telemetry.AccessLog != nil {
+	if spec != nil &&
+		spec.Telemetry != nil &&
+		spec.Telemetry.AccessLog != nil {
 		accessLogErrs := validateProxyAccessLog(spec.Telemetry.AccessLog)
 		if len(accessLogErrs) > 0 {
 			errs = append(errs, accessLogErrs...)

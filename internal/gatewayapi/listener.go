@@ -154,6 +154,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
 		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
@@ -226,7 +227,9 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 }
 
 func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
-	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Tracing == nil {
+	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry == nil ||
+		envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
 
@@ -237,7 +240,9 @@ func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Trac
 }
 
 func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
-	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Metrics == nil {
+	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry == nil ||
+		envoyproxy.Spec.Telemetry.Metrics == nil {
 		return nil
 	}
 	return &ir.Metrics{
