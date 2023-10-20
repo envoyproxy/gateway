@@ -103,6 +103,23 @@ spec:
                   the newer listener (based on timestamp) will be rejected and its
                   status will be updated with a "Accepted=False" condition.
                 type: boolean
+              ports:
+                description: Ports defines the ports for the Proxy admin interface.
+                  If unspecified, defaults to 19000 for admin port and 19001 for extra
+                  port.
+                properties:
+                  adminPort:
+                    description: AdminPort defines the port for the Proxy admin interface.
+                      If unspecified, defaults to 19000.
+                    format: int32
+                    type: integer
+                  extraPort:
+                    description: ExtraPort defines the extra port for the Proxy extra
+                      interface like HealthCheck, Prometheus metrics. If unspecified,
+                      defaults to 19001.
+                    format: int32
+                    type: integer
+                type: object
               provider:
                 description: Provider defines the desired resource provider and provider-specific
                   configuration. If unspecified, the "Kubernetes" resource provider

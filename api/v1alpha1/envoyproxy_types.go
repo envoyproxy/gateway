@@ -44,6 +44,12 @@ type EnvoyProxySpec struct {
 	// Telemetry defines telemetry parameters for managed proxies.
 	Telemetry ProxyTelemetry `json:"telemetry,omitempty"`
 
+	// Ports defines the ports for the Proxy admin interface.
+	// If unspecified, defaults to 19000 for admin port and 19001 for extra port.
+	//
+	// +optional
+	Ports *ProxyPorts `json:"ports,omitempty"`
+
 	// Bootstrap defines the Envoy Bootstrap as a YAML string.
 	// Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap
 	// to learn more about the syntax.
@@ -71,6 +77,20 @@ type EnvoyProxySpec struct {
 	//
 	// +optional
 	MergeGateways *bool `json:"mergeGateways,omitempty"`
+}
+
+// ProxyPorts defines the ports for the Proxy admin interface and so on.
+type ProxyPorts struct {
+	// AdminPort defines the port for the Proxy admin interface.
+	// If unspecified, defaults to 19000.
+	// +optional
+	AdminPort *int32 `json:"adminPort,omitempty"`
+
+	// ExtraPort defines the extra port for the Proxy extra interface like
+	// HealthCheck, Prometheus metrics.
+	// If unspecified, defaults to 19001.
+	// +optional
+	ExtraPort *int32 `json:"extraPort,omitempty"`
 }
 
 type ProxyTelemetry struct {

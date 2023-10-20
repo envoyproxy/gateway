@@ -528,6 +528,7 @@ _Appears in:_
 | `provider` _[EnvoyProxyProvider](#envoyproxyprovider)_ | Provider defines the desired resource provider and provider-specific configuration. If unspecified, the "Kubernetes" resource provider is used with default configuration parameters. |
 | `logging` _[ProxyLogging](#proxylogging)_ | Logging defines logging parameters for managed proxies. |
 | `telemetry` _[ProxyTelemetry](#proxytelemetry)_ | Telemetry defines telemetry parameters for managed proxies. |
+| `ports` _[ProxyPorts](#proxyports)_ | Ports defines the ports for the Proxy admin interface. If unspecified, defaults to 19000 for admin port and 19001 for extra port. |
 | `bootstrap` _[ProxyBootstrap](#proxybootstrap)_ | Bootstrap defines the Envoy Bootstrap as a YAML string. Visit https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/bootstrap/v3/bootstrap.proto#envoy-v3-api-msg-config-bootstrap-v3-bootstrap to learn more about the syntax. If set, this is the Bootstrap configuration used for the managed Envoy Proxy fleet instead of the default Bootstrap configuration set by Envoy Gateway. Some fields within the Bootstrap that are required to communicate with the xDS Server (Envoy Gateway) and receive xDS resources from it are not configurable and will result in the `EnvoyProxy` resource being rejected. Backward compatibility across minor versions is not guaranteed. We strongly recommend using `egctl x translate` to generate a `EnvoyProxy` resource with the `Bootstrap` field set to the default Bootstrap configuration used. You can edit this configuration, and rerun `egctl x translate` to ensure there are no validation errors. |
 | `concurrency` _integer_ | Concurrency defines the number of worker threads to run. If unset, it defaults to the number of cpuset threads on the platform. |
 | `mergeGateways` _boolean_ | MergeGateways defines if Gateway resources should be merged onto the same Envoy Proxy Infrastructure. Setting this field to true would merge all Gateway Listeners under the parent Gateway Class. This means that the port, protocol and hostname tuple must be unique for every listener. If a duplicate listener is detected, the newer listener (based on timestamp) will be rejected and its status will be updated with a "Accepted=False" condition. |
@@ -1147,6 +1148,21 @@ _Appears in:_
 | `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+
+
+#### ProxyPorts
+
+
+
+ProxyPorts defines the ports for the Proxy admin interface and so on.
+
+_Appears in:_
+- [EnvoyProxySpec](#envoyproxyspec)
+
+| Field | Description |
+| --- | --- |
+| `adminPort` _integer_ | AdminPort defines the port for the Proxy admin interface. If unspecified, defaults to 19000. |
+| `extraPort` _integer_ | ExtraPort defines the extra port for the Proxy extra interface like HealthCheck, Prometheus metrics. If unspecified, defaults to 19001. |
 
 
 #### ProxyTelemetry
