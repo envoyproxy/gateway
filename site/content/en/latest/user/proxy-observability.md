@@ -50,14 +50,7 @@ TEMPO_IP=$(kubectl get svc tempo -n monitoring -o jsonpath='{.status.loadBalance
 
 ## Metrics
 
-By default, Envoy Gateway doesn't expose metrics of the EnvoyProxy instances. 
-You can enable metrics by setting the `telemetry.metrics.prometheus` in the `EnvoyProxy` CRD.
-
-Expose prometheus metrics endpoints:
-
-```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/metric/prometheus.yaml
-```
+By default, Envoy Gateway expose metrics with prometheus endpoint. 
 
 Verify metrics:
 
@@ -67,6 +60,12 @@ kubectl port-forward pod/$ENVOY_POD_NAME -n envoy-gateway-system 19001:19001
 
 # check metrics 
 curl localhost:19001/stats/prometheus  | grep "default/backend/rule/0/match/0-www"
+```
+
+You can disable metrics by setting the `telemetry.metrics.prometheus.disable` to `true` in the `EnvoyProxy` CRD.
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/metric/disable-prometheus.yaml
 ```
 
 Envoy Gateway can send metrics to OpenTelemetry Sink.
