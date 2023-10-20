@@ -34,6 +34,9 @@ func ExpectedServiceSpec(service *egv1a1.KubernetesServiceSpec) corev1.ServiceSp
 		if service.AllocateLoadBalancerNodePorts != nil {
 			serviceSpec.AllocateLoadBalancerNodePorts = service.AllocateLoadBalancerNodePorts
 		}
+		if service.LoadBalancerIP != nil {
+			serviceSpec.LoadBalancerIP = *service.LoadBalancerIP
+		}
 		// Preserve the client source IP and avoid a second hop for LoadBalancer.
 		serviceSpec.ExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyTypeLocal
 	}
