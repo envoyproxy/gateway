@@ -191,6 +191,17 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 		}
 	}
 
+	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Metrics != nil {
+		for _, sink := range spec.Telemetry.Metrics.Sinks {
+			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
+				if sink.OpenTelemetry == nil {
+					err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
+					errs = append(errs, err)
+				}
+			}
+		}
+	}
+
 	return errs
 }
 
