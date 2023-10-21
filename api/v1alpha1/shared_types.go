@@ -191,6 +191,13 @@ type KubernetesServiceSpec struct {
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
 
+	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
+	// may be ignored if the load balancer provider does not support this feature.
+	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
+	// providers such as GCP.
+	// +optional
+	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
+
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
 

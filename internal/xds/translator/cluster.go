@@ -27,11 +27,10 @@ const (
 	tcpClusterPerConnectionBufferLimitBytes = 32768
 )
 
-func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protocol ProtocolType, endpointType EndpointType) *clusterv3.Cluster {
+func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	cluster := &clusterv3.Cluster{
-		Name:            clusterName,
+		Name:            args.name,
 		ConnectTimeout:  durationpb.New(10 * time.Second),
-		LbPolicy:        clusterv3.Cluster_LEAST_REQUEST,
 		DnsLookupFamily: clusterv3.Cluster_V4_ONLY,
 		CommonLbConfig: &clusterv3.Cluster_CommonLbConfig{
 			LocalityConfigSpecifier: &clusterv3.Cluster_CommonLbConfig_LocalityWeightedLbConfig_{
@@ -40,14 +39,14 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpClusterPerConnectionBufferLimitBytes),
 	}
 
-	if tSocket != nil {
-		cluster.TransportSocket = tSocket
+	if args.tSocket != nil {
+		cluster.TransportSocket = args.tSocket
 	}
 
-	if endpointType == Static {
+	if args.endpointType == Static {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
-			ServiceName: clusterName,
+			ServiceName: args.name,
 			EdsConfig: &corev3.ConfigSource{
 				ResourceApiVersion: resource.DefaultAPIVersion,
 				ConfigSourceSpecifier: &corev3.ConfigSource_Ads{
@@ -61,8 +60,22 @@ func buildXdsCluster(clusterName string, tSocket *corev3.TransportSocket, protoc
 		cluster.RespectDnsTtl = true
 	}
 
-	if protocol == HTTP2 {
+	if args.protocol == HTTP2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
+	}
+
+	// Set Load Balancer policy
+	//nolint:gocritic
+	if args.loadBalancer == nil {
+		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+	} else if args.loadBalancer.LeastRequest != nil {
+		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
+	} else if args.loadBalancer.RoundRobin != nil {
+		cluster.LbPolicy = clusterv3.Cluster_ROUND_ROBIN
+	} else if args.loadBalancer.Random != nil {
+		cluster.LbPolicy = clusterv3.Cluster_RANDOM
+	} else if args.loadBalancer.ConsistentHash != nil {
+		cluster.LbPolicy = clusterv3.Cluster_MAGLEV
 	}
 
 	return cluster

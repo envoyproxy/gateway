@@ -56,13 +56,26 @@ func TestExpectedServiceSpec(t *testing.T) {
 			name: "LoadBalancerWithAllocateLoadBalancerNodePorts",
 			args: args{service: &egv1a1.KubernetesServiceSpec{
 				Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-				AllocateLoadBalancerNodePorts: ptr.To[bool](true),
+				AllocateLoadBalancerNodePorts: ptr.To(true),
 			}},
 			want: corev1.ServiceSpec{
 				Type:                          corev1.ServiceTypeLoadBalancer,
-				AllocateLoadBalancerNodePorts: ptr.To[bool](true),
+				AllocateLoadBalancerNodePorts: ptr.To(true),
 				SessionAffinity:               corev1.ServiceAffinityNone,
 				ExternalTrafficPolicy:         corev1.ServiceExternalTrafficPolicyTypeLocal,
+			},
+		},
+		{
+			name: "LoadBalancerWithLoadBalancerIP",
+			args: args{service: &egv1a1.KubernetesServiceSpec{
+				Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+				LoadBalancerIP: ptr.To("10.11.12.13"),
+			}},
+			want: corev1.ServiceSpec{
+				Type:                  corev1.ServiceTypeLoadBalancer,
+				LoadBalancerIP:        "10.11.12.13",
+				SessionAffinity:       corev1.ServiceAffinityNone,
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
 			},
 		},
 		{

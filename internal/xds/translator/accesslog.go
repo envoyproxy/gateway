@@ -245,7 +245,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			Weight:    ptr.To(uint32(1)),
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(otel.Host, otel.Port)},
 		}
-		if err := addXdsCluster(tCtx, addXdsClusterArgs{
+		if err := addXdsCluster(tCtx, &xdsClusterArgs{
 			name:         clusterName,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      nil,

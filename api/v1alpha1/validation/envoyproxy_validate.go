@@ -8,6 +8,7 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -93,6 +94,15 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.AllocateLoadBalancerNodePorts; serviceType != nil && serviceAllocateLoadBalancerNodePorts != nil {
 			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
 				errs = append(errs, fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+		}
+		if serviceType, serviceLoadBalancerIP := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerIP; serviceType != nil && serviceLoadBalancerIP != nil {
+			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
+				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+
+			if ip := net.ParseIP(*serviceLoadBalancerIP); ip == nil || ip.To4() == nil {
+				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
 			}
 		}
 	}

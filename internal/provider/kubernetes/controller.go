@@ -70,6 +70,7 @@ type gatewayAPIReconciler struct {
 	namespace       string
 	namespaceLabels []string
 	envoyGateway    *egv1a1.EnvoyGateway
+	mergeGateways   bool
 
 	resources *message.ProviderResources
 	extGVKs   []schema.GroupVersionKind
@@ -332,6 +333,10 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 			r.log.Error(err, "failed to process parametersRef for gatewayclass", "name", acceptedGC.Name)
 			return reconcile.Result{}, err
 		}
+	}
+
+	if resourceTree.EnvoyProxy != nil && resourceTree.EnvoyProxy.Spec.MergeGateways != nil {
+		r.mergeGateways = *resourceTree.EnvoyProxy.Spec.MergeGateways
 	}
 
 	if err := r.gatewayClassUpdater(ctx, acceptedGC, true, string(gwapiv1.GatewayClassReasonAccepted), status.MsgValidGatewayClass); err != nil {

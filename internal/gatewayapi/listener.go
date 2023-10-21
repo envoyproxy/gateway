@@ -27,31 +27,25 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 	t.validateConflictedLayer7Listeners(gateways)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
 	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	if t.MergeGateways {
+		t.validateConflictedMergedListeners(gateways)
+	}
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 	for _, gateway := range gateways {
-		// init IR per gateway
-		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
-		gwXdsIR := &ir.Xds{}
-		gwInfraIR := ir.NewInfra()
-		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
-		if resources.EnvoyProxy != nil {
-			gwInfraIR.Proxy.Config = resources.EnvoyProxy
-		}
-
-		// save the IR references in the map before the translation starts
-		xdsIR[irKey] = gwXdsIR
-		infraIR[irKey] = gwInfraIR
-
 		// Infra IR proxy ports must be unique.
 		var foundPorts []*protocolPort
+		irKey := t.getIRKey(gateway.Gateway)
 
-		gwXdsIR.AccessLog = processAccessLog(gwInfraIR.Proxy.Config)
-		gwXdsIR.Tracing = processTracing(gateway.Gateway, gwInfraIR.Proxy.Config)
-		gwXdsIR.Metrics = processMetrics(gwInfraIR.Proxy.Config)
+		if resources.EnvoyProxy != nil {
+			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
+		}
+
+		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
+		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
+		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
@@ -119,7 +113,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
-				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
+				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
@@ -139,14 +133,20 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				case gwapiv1.UDPProtocolType:
 					proto = ir.UDPProtocolType
 				}
+
+				infraPortName := string(listener.Name)
+				if t.MergeGateways {
+					infraPortName = irHTTPListenerName(listener)
+				}
+
 				infraPort := ir.ListenerPort{
-					Name:          string(listener.Name),
+					Name:          infraPortName,
 					Protocol:      proto,
 					ServicePort:   servicePort.port,
 					ContainerPort: containerPort,
 				}
 				// Only 1 listener is supported.
-				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
+				infraIR[irKey].Proxy.Listeners[0].Ports = append(infraIR[irKey].Proxy.Listeners[0].Ports, infraPort)
 			}
 		}
 	}

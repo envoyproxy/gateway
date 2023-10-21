@@ -5258,6 +5258,14 @@ spec:
                               if more than one are available or is otherwise expected
                               to be specified
                             type: string
+                          loadBalancerIP:
+                            description: LoadBalancerIP defines the IP Address of
+                              the underlying load balancer service. This field may
+                              be ignored if the load balancer provider does not support
+                              this feature. This field has been deprecated in Kubernetes,
+                              but it is still used for setting the IP Address in some
+                              cloud providers such as GCP.
+                            type: string
                           type:
                             default: LoadBalancer
                             description: Type determines how the Service is exposed.
