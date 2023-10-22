@@ -121,7 +121,6 @@ infraIR:
         spec:
           logging: {}
           mergeGateways: true
-          telemetry: {}
         status: {}
       listeners:
       - address: ""

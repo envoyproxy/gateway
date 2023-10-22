@@ -100,7 +100,6 @@ infraIR:
               envoyService:
                 type: LoadBalancer
             type: Kubernetes
-          telemetry: {}
         status: {}
       listeners:
       - address: ""

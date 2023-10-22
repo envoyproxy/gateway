@@ -776,7 +776,11 @@ func (in *EnvoyProxySpec) DeepCopyInto(out *EnvoyProxySpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.Logging.DeepCopyInto(&out.Logging)
-	in.Telemetry.DeepCopyInto(&out.Telemetry)
+	if in.Telemetry != nil {
+		in, out := &in.Telemetry, &out.Telemetry
+		*out = new(ProxyTelemetry)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Bootstrap != nil {
 		in, out := &in.Bootstrap, &out.Bootstrap
 		*out = new(ProxyBootstrap)

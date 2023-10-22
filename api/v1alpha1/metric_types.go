@@ -72,4 +72,6 @@ type OpenTelemetrySink struct {
 }
 
 type PrometheusProvider struct {
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
 }

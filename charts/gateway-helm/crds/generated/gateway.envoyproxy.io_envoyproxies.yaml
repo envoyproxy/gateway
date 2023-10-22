@@ -5433,6 +5433,10 @@ spec:
                       prometheus:
                         description: Prometheus defines the configuration for Admin
                           endpoint `/stats/prometheus`.
+                        properties:
+                          disable:
+                            description: Disable the Prometheus endpoint.
+                            type: boolean
                         type: object
                       sinks:
                         description: Sinks defines the metric sinks where metrics

@@ -349,7 +349,15 @@ func TestDeployment(t *testing.T) {
 			}
 
 			if tc.telemetry != nil {
-				tc.infra.Proxy.Config.Spec.Telemetry = *tc.telemetry
+				tc.infra.Proxy.Config.Spec.Telemetry = tc.telemetry
+			} else {
+				tc.infra.Proxy.Config.Spec.Telemetry = &egv1a1.ProxyTelemetry{
+					Metrics: &egv1a1.ProxyMetrics{
+						Prometheus: &egv1a1.PrometheusProvider{
+							Disable: true,
+						},
+					},
+				}
 			}
 
 			if len(tc.proxyLogging) > 0 {
