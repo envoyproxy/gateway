@@ -109,13 +109,12 @@ func patchRouteWithCorsConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error
 	}
 
 	var (
-		allowOrigins              []*matcherv3.StringMatcher
-		allowMethods              string
-		allowHeaders              string
-		exposeHeaders             string
-		maxAge                    string
-		allowCredentials          *wrappers.BoolValue
-		allowPrivateNetworkAccess *wrappers.BoolValue
+		allowOrigins     []*matcherv3.StringMatcher
+		allowMethods     string
+		allowHeaders     string
+		exposeHeaders    string
+		maxAge           string
+		allowCredentials *wrappers.BoolValue
 	)
 
 	//nolint:gocritic
@@ -128,16 +127,14 @@ func patchRouteWithCorsConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error
 	allowHeaders = strings.Join(irRoute.Cors.AllowHeaders, ", ")
 	exposeHeaders = strings.Join(irRoute.Cors.ExposeHeaders, ", ")
 	maxAge = strconv.Itoa(int(irRoute.Cors.MaxAge.Seconds()))
-	allowPrivateNetworkAccess = &wrappers.BoolValue{Value: irRoute.Cors.AllowPrivateNetworkAccess}
 
 	routeCfgProto := &corsv3.CorsPolicy{
-		AllowOriginStringMatch:    allowOrigins,
-		AllowMethods:              allowMethods,
-		AllowHeaders:              allowHeaders,
-		ExposeHeaders:             exposeHeaders,
-		MaxAge:                    maxAge,
-		AllowCredentials:          allowCredentials,
-		AllowPrivateNetworkAccess: allowPrivateNetworkAccess,
+		AllowOriginStringMatch: allowOrigins,
+		AllowMethods:           allowMethods,
+		AllowHeaders:           allowHeaders,
+		ExposeHeaders:          exposeHeaders,
+		MaxAge:                 maxAge,
+		AllowCredentials:       allowCredentials,
 	}
 
 	routeCfgAny, err := anypb.New(routeCfgProto)

@@ -328,10 +328,6 @@ type Cors struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
-	// AllowPrivateNetwork defines whether allow whose target server’s IP address
-	// is more private than that from which the request initiator was fetched.
-	// Defaults to false.
-	AllowPrivateNetworkAccess bool `json:"allowPrivateNetwork,omitempty" yaml:"allowPrivateNetwork,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
