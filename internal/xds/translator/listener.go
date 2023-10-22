@@ -134,17 +134,12 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}
 	}
 
-	// TODO: Make this a generic interface for all API Gateway features.
-	//       https://github.com/envoyproxy/gateway/issues/882
-	t.patchHCMWithRateLimit(mgr, irListener)
-
-	// Add the jwt authn filter, if needed.
-	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
+	// Add HTTP filters to the HCM, the filters have already been sorted in the
+	// correct order in the patchHCMWithFilters function.
+	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
 		return err
 	}
 
-	// Make sure the router filter is the last one.
-	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
 	mgrAny, err := protocov.ToAnyWithError(mgr)
 	if err != nil {
 		return err
