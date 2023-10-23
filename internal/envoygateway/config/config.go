@@ -23,6 +23,8 @@ const (
 	EnvoyGatewayServiceName = "envoy-gateway"
 	// EnvoyPrefix is the prefix applied to the Envoy ConfigMap, Service, Deployment, and ServiceAccount.
 	EnvoyPrefix = "envoy"
+	// DefaultCertificateExpiryDays holds the default certificate lifetime (in days).
+	DefaultCertificateExpiryDays = 365
 )
 
 // Server wraps the EnvoyGateway configuration and additional parameters
@@ -36,6 +38,8 @@ type Server struct {
 	DNSDomain string
 	// Logger is the logr implementation used by Envoy Gateway.
 	Logger logging.Logger
+	// CertificateExpiryDays holds the certificate lifetime (in days).
+	CertificateExpiryDays int
 }
 
 // New returns a Server with default parameters.
@@ -45,7 +49,8 @@ func New() (*Server, error) {
 		Namespace:    env.Lookup("ENVOY_GATEWAY_NAMESPACE", DefaultNamespace),
 		DNSDomain:    env.Lookup("KUBERNETES_CLUSTER_DOMAIN", DefaultDNSDomain),
 		// the default logger
-		Logger: logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		Logger:                logging.DefaultLogger(v1alpha1.LogLevelInfo),
+		CertificateExpiryDays: env.Lookup("ENVOY_GATEWAY_CERTIFICATE_EXPIRY_DAYS", DefaultCertificateExpiryDays),
 	}, nil
 }
 
