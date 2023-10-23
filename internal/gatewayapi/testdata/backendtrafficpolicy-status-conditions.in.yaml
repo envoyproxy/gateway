@@ -24,7 +24,7 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    namespace: envoy-gateway 
+    namespace: envoy-gateway
     name: target-httproute-in-gateway-1
   spec:
     targetRef:
@@ -35,18 +35,18 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    namespace: envoy-gateway 
+    namespace: envoy-gateway
     name: also-target-httproute-in-gateway-1
   spec:
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: httproute-1
-      namespace: envoy-gateway 
+      namespace: envoy-gateway
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    namespace: envoy-gateway 
+    namespace: envoy-gateway
     name: target-grpcroute-in-gateway-2
   spec:
     targetRef:
@@ -75,7 +75,7 @@ grpcRoutes:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: GRPCRoute
   metadata:
-    namespace: envoy-gateway 
+    namespace: envoy-gateway
     name: grpcroute-1
   spec:
     parentRefs:
