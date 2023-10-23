@@ -16,7 +16,7 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	runtime "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
+	runtimev3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
@@ -92,7 +92,7 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 
 	// Right now, EG does support RTDS(Runtime Discovery Service), this is used to avoid warning message
 	tCtx.SetResources(resourcev3.RuntimeType, []cachetypes.Resource{
-		&runtime.Runtime{
+		&runtimev3.Runtime{
 			Name:  "runtime-0", // hardcode in bootstrap template
 			Layer: &structpb.Struct{},
 		},
