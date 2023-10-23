@@ -16,9 +16,12 @@ import (
 	endpointv3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	listenerv3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	runtime "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
+	cachetypes "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -86,6 +89,14 @@ func (t *Translator) Translate(ir *ir.Xds) (*types.ResourceVersionTable, error) 
 	if err := processClusterForTracing(tCtx, ir.Tracing); err != nil {
 		return nil, err
 	}
+
+	// Right now, EG does support RTDS(Runtime Discovery Service), this is used to avoid warning message
+	tCtx.SetResources(resourcev3.RuntimeType, []cachetypes.Resource{
+		&runtime.Runtime{
+			Name:  "runtime-0", // hardcode in bootstrap template
+			Layer: &structpb.Struct{},
+		},
+	})
 
 	// Check if an extension want to inject any clusters/secrets
 	// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
