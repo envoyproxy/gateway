@@ -1284,6 +1284,33 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		r.log.Info("clientTrafficPolicy status subscriber shutting down")
 	}()
 
+	// BackendTrafficPolicy object status updater
+	go func() {
+		message.HandleSubscription(r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.BackendTrafficPolicyStatus]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.BackendTrafficPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.BackendTrafficPolicy)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("backendTrafficPolicy status subscriber shutting down")
+	}()
 }
 
 // watchResources watches gateway api resources.
