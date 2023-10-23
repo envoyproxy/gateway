@@ -113,7 +113,7 @@ New APIs will be added to Envoy Gateway config, which are used to manage Control
 
 ### EnvoyGatewayTelemetry
 
-```go
+``` go
 // EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
 // Control plane will focus on metrics observability telemetry and tracing telemetry later.
 type EnvoyGatewayTelemetry struct {
@@ -124,11 +124,11 @@ type EnvoyGatewayTelemetry struct {
 
 ### EnvoyGatewayMetrics
 
-```go
+> Prometheus will be exposed on 0.0.0.0:19001, which is not supported to be configured yet.
+
+``` go
 // EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
 type EnvoyGatewayMetrics struct {
-	// Address defines the address of Envoy Gateway Metrics Server.
-	Address *EnvoyGatewayMetricsAddress
 	// Sinks defines the metric sinks where metrics are sent to.
 	Sinks []EnvoyGatewayMetricSink `json:"sinks,omitempty"`
 	// Prometheus defines the configuration for prometheus endpoint.
@@ -169,28 +169,13 @@ type EnvoyGatewayPrometheusProvider struct {
 	Disable bool `json:"disable,omitempty"`
 }
 
-// EnvoyGatewayMetricsAddress defines the Envoy Gateway Metrics Address configuration.
-type EnvoyGatewayMetricsAddress struct {
-	// Port defines the port the metrics server is exposed on.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=19001
-	Port int `json:"port,omitempty"`
-	// Host defines the metrics server hostname.
-	//
-	// +optional
-	// +kubebuilder:default="0.0.0.0"
-	Host string `json:"host,omitempty"`
-}
-
 ```
 
 #### Example
 
 + The following is an example to enable prometheus metric.
 
-```yaml
+``` yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
@@ -202,16 +187,13 @@ provider:
   type: Kubernetes
 telemetry:
   metrics:
-    address:
-      host: 0.0.0.0
-      port: 19001
     prometheus:
       disable: false
 ```
 
 + The following is an example to send metric via Open Telemetry sink to OTEL gRPC Collector.
 
-```yaml
+``` yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
@@ -233,7 +215,7 @@ telemetry:
 
 + The following is an example to enable prometheus metric and send metric via Open Telemetry sink to OTEL HTTP Collector at the same time.
 
-```yaml
+``` yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyGateway
 gateway:
@@ -245,9 +227,6 @@ provider:
   type: Kubernetes
 telemetry:
   metrics:
-    address:
-      host: 0.0.0.0
-      port: 19001
     prometheus:
       disable: false
     sinks:

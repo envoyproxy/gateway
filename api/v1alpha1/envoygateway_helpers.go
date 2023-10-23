@@ -98,9 +98,7 @@ func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 		if e.Telemetry.Metrics.Prometheus == nil {
 			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
 		}
-		if e.Telemetry.Metrics.Address == nil {
-			e.Telemetry.Metrics.Address = DefaultEnvoyGatewayMetricsAddress()
-		}
+
 		if e.Telemetry.Metrics == nil {
 			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
 		}
@@ -109,16 +107,6 @@ func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	e.Telemetry = DefaultEnvoyGatewayTelemetry()
 
 	return e.Telemetry
-}
-
-// GetEnvoyGatewayMetricsAddress returns the EnvoyGateway Metrics Address.
-func (e *EnvoyGateway) GetEnvoyGatewayMetricsAddress() string {
-	address := e.GetEnvoyGatewayTelemetry().Metrics.Address
-	if address != nil {
-		return fmt.Sprintf("%s:%d", address.Host, address.Port)
-	}
-
-	return ""
 }
 
 // IfDisablePrometheus returns if disable prometheus.
@@ -136,16 +124,7 @@ func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 // DefaultEnvoyGatewayMetrics returns a new EnvoyGatewayMetrics with default configuration parameters.
 func DefaultEnvoyGatewayMetrics() *EnvoyGatewayMetrics {
 	return &EnvoyGatewayMetrics{
-		Address:    DefaultEnvoyGatewayMetricsAddress(),
 		Prometheus: DefaultEnvoyGatewayPrometheus(),
-	}
-}
-
-// DefaultEnvoyGatewayMetricsAddress returns a new EnvoyGatewayMetrics with default configuration parameters.
-func DefaultEnvoyGatewayMetricsAddress() *EnvoyGatewayMetricsAddress {
-	return &EnvoyGatewayMetricsAddress{
-		Host: GatewayMetricsHost,
-		Port: GatewayMetricsPort,
 	}
 }
 

@@ -415,24 +415,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `Address` _[EnvoyGatewayMetricsAddress](#envoygatewaymetricsaddress)_ | Address defines the address of Envoy Gateway Metrics Server. |
 | `sinks` _[EnvoyGatewayMetricSink](#envoygatewaymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
 | `prometheus` _[EnvoyGatewayPrometheusProvider](#envoygatewayprometheusprovider)_ | Prometheus defines the configuration for prometheus endpoint. |
-
-
-#### EnvoyGatewayMetricsAddress
-
-
-
-EnvoyGatewayMetricsAddress defines the Envoy Gateway Metrics Address configuration.
-
-_Appears in:_
-- [EnvoyGatewayMetrics](#envoygatewaymetrics)
-
-| Field | Description |
-| --- | --- |
-| `port` _integer_ | Port defines the port the metrics server is exposed on. |
-| `host` _string_ | Host defines the metrics server hostname. |
 
 
 #### EnvoyGatewayOpenTelemetrySink
