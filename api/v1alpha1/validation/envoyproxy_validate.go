@@ -24,7 +24,7 @@ import (
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
-// Validate validates the provided EnvoyProxy.
+// ValidateEnvoyProxy validates the provided EnvoyProxy.
 func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 	var errs []error
 	if proxy == nil {
@@ -96,7 +96,8 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}
 		}
-		if serviceType, serviceLoadBalancerIP := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerIP; serviceType != nil && serviceLoadBalancerIP != nil {
+		if serviceType, serviceLoadBalancerIP :=
+			spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerIP; serviceType != nil && serviceLoadBalancerIP != nil {
 			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
 				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}

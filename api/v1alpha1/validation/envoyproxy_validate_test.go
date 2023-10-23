@@ -276,7 +276,27 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
-
+		{
+			name: "envoy service with valid loadBalancerIP but not 'LoadBalancer' type",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerIP: ptr.To("10.11.12.13"),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
 		{
 			name: "valid user bootstrap replace type",
 			proxy: &egv1a1.EnvoyProxy{
@@ -354,6 +374,23 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			expected: false,
 		},
 		{
+			name: "should valid when accesslog is disabled",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Disable: true,
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
 			name: "should invalid when accesslog enabled using Text format, but `text` field being empty",
 			proxy: &egv1a1.EnvoyProxy{
 				ObjectMeta: metav1.ObjectMeta{
@@ -367,6 +404,29 @@ func TestValidateEnvoyProxy(t *testing.T) {
 								{
 									Format: egv1a1.ProxyAccessLogFormat{
 										Type: egv1a1.ProxyAccessLogFormatTypeText,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should invalid when accesslog enabled using JSON format, but `json` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeJSON,
 									},
 								},
 							},
@@ -395,6 +455,35 @@ func TestValidateEnvoyProxy(t *testing.T) {
 									Sinks: []egv1a1.ProxyAccessLogSink{
 										{
 											Type: egv1a1.ProxyAccessLogSinkTypeFile,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "should invalid when accesslog enabled using OpenTelemetry sink, but `openTelemetry` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						AccessLog: &egv1a1.ProxyAccessLog{
+							Settings: []egv1a1.ProxyAccessLogSetting{
+								{
+									Format: egv1a1.ProxyAccessLogFormat{
+										Type: egv1a1.ProxyAccessLogFormatTypeText,
+										Text: pointer.String("[%START_TIME%]"),
+									},
+									Sinks: []egv1a1.ProxyAccessLogSink{
+										{
+											Type: egv1a1.ProxyAccessLogSinkTypeOpenTelemetry,
 										},
 									},
 								},
