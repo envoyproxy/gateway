@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	summaryOutput    = "statsd"
 	prometheusOutput = "prom"
 )
 
@@ -103,6 +102,12 @@ func newEnvoyStatsCmd() *cobra.Command {
 			}
 
 			switch outputFormat {
+			case jsonOutput:
+				statsBytes, err := json.Marshal(stats)
+				if err != nil {
+					return err
+				}
+				_, _ = fmt.Fprint(c.OutOrStdout(), string(statsBytes))
 			// convert the json output to yaml
 			case yamlOutput:
 				var out []byte
@@ -124,7 +129,7 @@ func newEnvoyStatsCmd() *cobra.Command {
 			return nil
 		},
 	}
-	statsConfigCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", summaryOutput, "Output format: one of json|yaml|prom")
+	statsConfigCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", prometheusOutput, "Output format: one of json|yaml|prom")
 	statsConfigCmd.PersistentFlags().StringVarP(&statsType, "type", "t", "server", "Where to grab the stats: one of server|clusters")
 	statsConfigCmd.PersistentFlags().StringArrayVarP(&labelSelectors, "labels", "l", nil, "Labels to select the envoy proxy pod.")
 	statsConfigCmd.PersistentFlags().StringVarP(&podNamespace, "namespace", "n", "envoy-gateway-system", "Namespace where envoy proxy pod are installed.")
