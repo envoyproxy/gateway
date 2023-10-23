@@ -12,7 +12,7 @@ import (
 func statsCommand() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "stats",
-		Long:  "Retrieve Prometheus Stats from envoy proxy.",
+		Long:  "Retrieve statistics from envoy proxy.",
 		Short: "Retrieve stats from envoy proxy.",
 	}
 
