@@ -78,8 +78,9 @@ func (s *GatewayAPIStatuses) Close() {
 
 // PolicyStatuses contains policy related resources statuses
 type PolicyStatuses struct {
-	ClientTrafficPolicyStatuses watchable.Map[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]
-	EnvoyPatchPolicyStatuses    watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
+	ClientTrafficPolicyStatuses  watchable.Map[types.NamespacedName, *egv1a1.ClientTrafficPolicyStatus]
+	BackendTrafficPolicyStatuses watchable.Map[types.NamespacedName, *egv1a1.BackendTrafficPolicyStatus]
+	EnvoyPatchPolicyStatuses     watchable.Map[types.NamespacedName, *egv1a1.EnvoyPatchPolicyStatus]
 }
 
 func (p *PolicyStatuses) Close() {

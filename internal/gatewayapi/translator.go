@@ -98,6 +98,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -124,6 +125,7 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
+	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
 
 	return translateResult
 }
@@ -162,10 +164,29 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
 
+	// Process BackendTrafficPolicies
+	routes := []RouteContext{}
+	for _, h := range httpRoutes {
+		routes = append(routes, h)
+	}
+	for _, g := range grpcRoutes {
+		routes = append(routes, g)
+	}
+	for _, t := range tlsRoutes {
+		routes = append(routes, t)
+	}
+	for _, t := range tcpRoutes {
+		routes = append(routes, t)
+	}
+	for _, u := range udpRoutes {
+		routes = append(routes, u)
+	}
+	backendTrafficPolicies := ProcessBackendTrafficPolicies(resources.BackendTrafficPolicies, gateways, routes, xdsIR)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies, xdsIR, infraIR)
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original
