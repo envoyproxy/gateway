@@ -115,7 +115,7 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				Name:          providerutils.ExpectedContainerPortHashedName(p.Name),
+				Name:          providerutils.ExpectedContainerPortName(p.Name),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}
