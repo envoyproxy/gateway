@@ -2,98 +2,98 @@ name: Build and Test
 on:
   push:
     branches:
-    - "main"
-    - "release/v*"
+      - "main"
+      - "release/v*"
     paths-ignore:
-    - "**/*.png"
+      - "**/*.png"
   pull_request:
     branches:
-    - "main"
-    - "release/v*"
+      - "main"
+      - "release/v*"
     paths-ignore:
-    - "**/*.png"
+      - "**/*.png"
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
-    # Generate the install manifests first so it can checked
-    # for errors while running `make -k lint`
-    - run: make generate-manifests
-    - run: make lint-deps
-    - run: make -k lint
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
+      # Generate the install manifests first so it can checked
+      # for errors while running `make -k lint`
+      - run: make generate-manifests
+      - run: make lint-deps
+      - run: make -k lint
 
   gen-check:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
-    - run: make -k gen-check
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
+      - run: make -k gen-check
 
   license-check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
-    - run: make -k licensecheck
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
+      - run: make -k licensecheck
 
   coverage-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
 
-    # test
-    - name: Run Coverage Tests
-      run: make go.test.coverage
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        fail_ci_if_error: true
-        files: ./coverage.xml
-        name: codecov-envoy-gateway
-        verbose: true
+      # test
+      - name: Run Coverage Tests
+        run: make go.test.coverage
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
+          files: ./coverage.xml
+          name: codecov-envoy-gateway
+          verbose: true
 
   build:
     runs-on: ubuntu-latest
     needs: [lint, gen-check, license-check, coverage-test]
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
 
-    - name: Build EG Multiarch Binaries
-      run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
+      - name: Build EG Multiarch Binaries
+        run: make build-multiarch PLATFORMS="linux_amd64 linux_arm64"
 
-    - name: Upload EG Binaries
-      uses: actions/upload-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
+      - name: Upload EG Binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: envoy-gateway
+          path: bin/
 
   conformance-test:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+        version: [v1.26.6, v1.27.3, v1.28.0]
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
 
-    # conformance
-    - name: Run Standard Conformance Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make conformance
+      # conformance
+      - name: Run Standard Conformance Tests
+        env:
+          KIND_NODE_TAG: ${{ matrix.version }}
+          IMAGE_PULL_POLICY: IfNotPresent
+        run: make conformance
 
   crd-validation:
     runs-on: ubuntu-latest
-    needs: [ build ]
+    needs: [build]
     strategy:
       matrix:
-        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+        version: [v1.26.6, v1.27.3, v1.28.0]
     steps:
       - uses: actions/checkout@v4
       - uses: ./tools/github-actions/setup-deps
@@ -110,59 +110,59 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [ v1.26.6, v1.27.3, v1.28.0 ]
+        version: [v1.26.6, v1.27.3, v1.28.0]
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
 
-    # E2E
-    - name: Run E2E Tests
-      env:
-        KIND_NODE_TAG: ${{ matrix.version }}
-        IMAGE_PULL_POLICY: IfNotPresent
-      run: make e2e
+      # E2E
+      - name: Run E2E Tests
+        env:
+          KIND_NODE_TAG: ${{ matrix.version }}
+          IMAGE_PULL_POLICY: IfNotPresent
+        run: make e2e
 
   publish:
     runs-on: ubuntu-latest
     needs: [conformance-test, e2e-test]
     steps:
-    - uses: actions/checkout@v4
-    - uses: ./tools/github-actions/setup-deps
+      - uses: actions/checkout@v4
+      - uses: ./tools/github-actions/setup-deps
 
-    - name: Download EG Binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: envoy-gateway
-        path: bin/
+      - name: Download EG Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: envoy-gateway
+          path: bin/
 
-    - name: Give Privileges To EG Binaries
-      run: |
-        chmod +x bin/linux/amd64/envoy-gateway
-        chmod +x bin/linux/arm64/envoy-gateway
+      - name: Give Privileges To EG Binaries
+        run: |
+          chmod +x bin/linux/amd64/envoy-gateway
+          chmod +x bin/linux/arm64/envoy-gateway
 
-    # build and push image
-    - name: Login to DockerHub
-      if: github.event_name == 'push'
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
+      # build and push image
+      - name: Login to DockerHub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Setup Multiarch Environment
-      if: github.event_name == 'push'
-      run: make image.multiarch.setup
+      - name: Setup Multiarch Environment
+        if: github.event_name == 'push'
+        run: make image.multiarch.setup
 
-    - name: Build and Push EG Commit Image
-      if: github.event_name == 'push'
-      # tag is set to the short SHA of the commit
-      run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      - name: Build and Push EG Commit Image
+        if: github.event_name == 'push'
+        # tag is set to the short SHA of the commit
+        run: make image.push.multiarch PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
-    - name: Build and Push EG Latest Image
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      # tag is set to `latest` when pushing to main branch
-      run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
+      - name: Build and Push EG Latest Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # tag is set to `latest` when pushing to main branch
+        run: make image.push.multiarch TAG=latest PLATFORMS="linux_amd64 linux_arm64" IMAGE=envoyproxy/gateway-dev
 
-    - name: Build and Push EG Latest Helm Chart
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      # use `0.0.0` as the default latest version.
-      run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
+      - name: Build and Push EG Latest Helm Chart
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # use `0.0.0` as the default latest version.
+        run: OCI_REGISTRY=oci://docker.io/envoyproxy CHART_VERSION=v0.0.0-latest TAG=latest make helm-package helm-push
