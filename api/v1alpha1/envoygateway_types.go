@@ -19,6 +19,10 @@ const (
 	GatewayAdminPort = 19000
 	// GatewayAdminHost is the host of envoy gateway admin server.
 	GatewayAdminHost = "127.0.0.1"
+	// GatewayMetricsPort is the port which envoy gateway metrics server is listening on.
+	GatewayMetricsPort = 19001
+	// GatewayMetricsHost is the host of envoy gateway metrics server.
+	GatewayMetricsHost = "0.0.0.0"
 )
 
 // +kubebuilder:object:root=true
@@ -59,6 +63,12 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	Admin *EnvoyGatewayAdmin `json:"admin,omitempty"`
 
+	// Telemetry defines the desired control plane telemetry related abilities.
+	// If unspecified, the telemetry is used with default configuration.
+	//
+	// +optional
+	Telemetry *EnvoyGatewayTelemetry `json:"telemetry,omitempty"`
+
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
 	// functionality. The specific rate limit service used here is the reference
@@ -78,6 +88,13 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+}
+
+// EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
+// Control plane will focus on metrics observability telemetry and tracing telemetry later.
+type EnvoyGatewayTelemetry struct {
+	// Metrics defines metrics configuration for envoy gateway.
+	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.

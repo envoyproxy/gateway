@@ -404,6 +404,50 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
+		}, {
+			name: "should invalid when metrics type is OpenTelemetry, but `OpenTelemetry` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		}, {
+			name: "should valid when metrics type is OpenTelemetry and `OpenTelemetry` field being not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										Host: "0.0.0.0",
+										Port: 3217,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
 		},
 	}
 

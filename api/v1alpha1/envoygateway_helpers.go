@@ -19,10 +19,11 @@ func DefaultEnvoyGateway() *EnvoyGateway {
 			APIVersion: GroupVersion.String(),
 		},
 		EnvoyGatewaySpec{
-			Gateway:  DefaultGateway(),
-			Provider: DefaultEnvoyGatewayProvider(),
-			Logging:  DefaultEnvoyGatewayLogging(),
-			Admin:    DefaultEnvoyGatewayAdmin(),
+			Gateway:   DefaultGateway(),
+			Provider:  DefaultEnvoyGatewayProvider(),
+			Logging:   DefaultEnvoyGatewayLogging(),
+			Admin:     DefaultEnvoyGatewayAdmin(),
+			Telemetry: DefaultEnvoyGatewayTelemetry(),
 		},
 	}
 }
@@ -46,6 +47,9 @@ func (e *EnvoyGateway) SetEnvoyGatewayDefaults() {
 	}
 	if e.Admin == nil {
 		e.Admin = DefaultEnvoyGatewayAdmin()
+	}
+	if e.Telemetry == nil {
+		e.Telemetry = DefaultEnvoyGatewayTelemetry()
 	}
 }
 
@@ -85,6 +89,50 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 		Level: map[EnvoyGatewayLogComponent]LogLevel{
 			LogComponentGatewayDefault: LogLevelInfo,
 		},
+	}
+}
+
+// GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
+func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
+	if e.Telemetry != nil {
+		if e.Telemetry.Metrics.Prometheus == nil {
+			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
+		}
+
+		if e.Telemetry.Metrics == nil {
+			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
+		}
+		return e.Telemetry
+	}
+	e.Telemetry = DefaultEnvoyGatewayTelemetry()
+
+	return e.Telemetry
+}
+
+// IfDisablePrometheus returns if disable prometheus.
+func (e *EnvoyGateway) IfDisablePrometheus() bool {
+	return e.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable
+}
+
+// DefaultEnvoyGatewayTelemetry returns a new EnvoyGatewayTelemetry with default configuration parameters.
+func DefaultEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
+	return &EnvoyGatewayTelemetry{
+		Metrics: DefaultEnvoyGatewayMetrics(),
+	}
+}
+
+// DefaultEnvoyGatewayMetrics returns a new EnvoyGatewayMetrics with default configuration parameters.
+func DefaultEnvoyGatewayMetrics() *EnvoyGatewayMetrics {
+	return &EnvoyGatewayMetrics{
+		Prometheus: DefaultEnvoyGatewayPrometheus(),
+	}
+}
+
+// DefaultEnvoyGatewayPrometheus returns a new EnvoyGatewayMetrics with default configuration parameters.
+func DefaultEnvoyGatewayPrometheus() *EnvoyGatewayPrometheusProvider {
+	return &EnvoyGatewayPrometheusProvider{
+		// Enable prometheus pull by default.
+		Disable: false,
 	}
 }
 

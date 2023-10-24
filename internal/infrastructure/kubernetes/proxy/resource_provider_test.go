@@ -259,7 +259,7 @@ func TestDeployment(t *testing.T) {
 			infra:    newTestInfra(),
 			telemetry: &egv1a1.ProxyTelemetry{
 				Metrics: &egv1a1.ProxyMetrics{
-					Prometheus: &egv1a1.PrometheusProvider{},
+					Prometheus: &egv1a1.ProxyPrometheusProvider{},
 				},
 			},
 		},
@@ -353,7 +353,7 @@ func TestDeployment(t *testing.T) {
 			} else {
 				tc.infra.Proxy.Config.Spec.Telemetry = &egv1a1.ProxyTelemetry{
 					Metrics: &egv1a1.ProxyMetrics{
-						Prometheus: &egv1a1.PrometheusProvider{
+						Prometheus: &egv1a1.ProxyPrometheusProvider{
 							Disable: true,
 						},
 					},
