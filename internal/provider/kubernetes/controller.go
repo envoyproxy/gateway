@@ -1611,6 +1611,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
+	// Watch BackendTrafficPolicy
+	btpPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if len(r.namespaceLabels) != 0 {
+		btpPredicates = append(btpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.BackendTrafficPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		btpPredicates...,
+	); err != nil {
+		return err
+	}
+
 	r.log.Info("Watching gatewayAPI related objects")
 
 	// Watch any additional GVKs from the registered extension.
