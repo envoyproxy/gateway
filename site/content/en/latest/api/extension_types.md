@@ -946,7 +946,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs. This type is not implemented for EnvoyProxy until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)

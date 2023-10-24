@@ -78,9 +78,7 @@ spec:
                   level:
                     additionalProperties:
                       description: LogLevel defines a log level for Envoy Gateway
-                        and EnvoyProxy system logs. This type is not implemented for
-                        EnvoyProxy until https://github.com/envoyproxy/gateway/issues/280
-                        is fixed.
+                        and EnvoyProxy system logs.
                       enum:
                       - debug
                       - info
