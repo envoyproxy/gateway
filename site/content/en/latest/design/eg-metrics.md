@@ -3,14 +3,6 @@ date: 2023-10-10
 title: "Control Plane Observability: Metrics"
 ---
 
-{{% alert title="State" color="warning" %}}
-
-+ Author: [Xunzhuo Liu](https://github.com/Xunzhuo)
-+ Affiliation: Tencent
-+ Data: 2023-10-12
-+ Status: Done
-{{% /alert %}}
-
 This document aims to cover all aspects of envoy gateway control plane metrics observability.
 
 {{% alert title="Note" color="secondary" %}}
@@ -26,7 +18,7 @@ At present, the Envoy Gateway control plane provides logs and controller-runtime
 Our objectives include:
 
 + Supporting **PULL** mode for Prometheus metrics and exposing these metrics on the admin address.
-+ Supporting **PUSH** mode for Prometheus metrics, thereby sending metrics to the Open Telemetry Stats sink.
++ Supporting **PUSH** mode for Prometheus metrics, thereby sending metrics to the Open Telemetry Stats sink via gRPC or HTTP.
 
 ## Non-Goals
 
