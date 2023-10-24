@@ -210,3 +210,12 @@ generate-egctl-releases: ## Generate egctl releases
 	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_darwin_arm64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_darwin_arm64.tar.gz
 	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_linux_amd64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_linux_amd64.tar.gz
 	curl -sSL https://github.com/envoyproxy/gateway/releases/download/latest/egctl_latest_linux_arm64.tar.gz -o $(OUTPUT_DIR)/egctl_$(TAG)_linux_arm64.tar.gz
+
+.PHONY: validation
+validation: create-cluster kube-install-image kube-deploy run-validation delete-cluster
+
+.PHONY: run-validation
+run-validation: ## Run validation tests.
+	@$(LOG_TARGET)
+	kubectl wait --timeout=$(WAIT_TIMEOUT) -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+	go test -v -tags validation ./test/validation

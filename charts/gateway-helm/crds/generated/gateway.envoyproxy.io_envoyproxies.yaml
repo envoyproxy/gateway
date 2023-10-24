@@ -5291,6 +5291,9 @@ spec:
                     enum:
                     - Kubernetes
                     type: string
+                    x-kubernetes-validations:
+                    - message: type must be one of ['Kubernetes']
+                      rule: 'self == ''Kubernetes'' ? true : false'
                 required:
                 - type
                 type: object
