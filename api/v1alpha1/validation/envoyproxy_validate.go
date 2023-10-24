@@ -152,8 +152,7 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
 	// Ensure layered runtime resources config is same
-	if userBootstrap.LayeredRuntime == nil ||
-		cmp.Diff(userBootstrap.LayeredRuntime, defaultBootstrap.LayeredRuntime, protocmp.Transform()) != "" {
+	if cmp.Diff(userBootstrap.LayeredRuntime, defaultBootstrap.LayeredRuntime, protocmp.Transform()) != "" {
 		return fmt.Errorf("layered_runtime cannot be modified")
 	}
 	// Ensure that the xds_cluster config is same
