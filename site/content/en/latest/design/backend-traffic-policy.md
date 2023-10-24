@@ -150,6 +150,6 @@ entire Gateway then
 
 ## Alternatives
 
-- The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
+- The project can indefintely wait for these configuration parameters to be part of the [Gateway API][].
 
 [Gateway API]: https://gateway-api.sigs.k8s.io/
