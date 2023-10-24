@@ -27,14 +27,6 @@ xds:
           ldsConfig:
             ads: {}
             resourceApiVersion: V3
-        layeredRuntime:
-          layers:
-          - name: runtime-0
-            rtdsLayer:
-              name: runtime-0
-              rtdsConfig:
-                ads: {}
-                resourceApiVersion: V3
         staticResources:
           clusters:
           - connectTimeout: 0.250s
