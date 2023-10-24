@@ -1,8 +1,6 @@
 ---
 date: 2023-10-10
 title: "Control Plane Observability: Metrics"
-author: Xunzhuo Liu
-linkTitle: "Control Plane Observability: Metrics"
 ---
 
 {{% alert title="State" color="warning" %}}
@@ -16,14 +14,12 @@ linkTitle: "Control Plane Observability: Metrics"
 This document aims to cover all aspects of envoy gateway control plane metrics observability.
 
 {{% alert title="Note" color="secondary" %}}
-**Data plane** observability (while important) is outside of scope for this document.
+**Data plane** observability (while important) is outside of scope for this document. For dataplane observability, refer to [here](./metrics).
 {{% /alert %}}
 
 ## Current State
 
 At present, the Envoy Gateway control plane provides logs and controller-runtime metrics, without traces. Logs are managed through our proprietary library (`internal/logging`, a shim to `zap`) and are written to `/dev/stdout`.
-
-The absence of comprehensive and robust control plane metrics observability hinders the effective monitoring of Envoy Gateway in a production environment, a critical requirement before deploying Envoy Gateway into production.
 
 ## Goals
 
@@ -37,7 +33,6 @@ Our objectives include:
 Our non-goals include:
 
 + Supporting other stats sinks.
-+ Only focusing on code design and does not provide specific code implementation.
 
 ## Use-Cases
 
@@ -50,7 +45,7 @@ The use-cases include:
 
 ### Standards
 
-Our metrics, and traces in the future, will be built upon the [OpenTelemetry](https://opentelemetry.io/) standards. All metrics will be configured via the [OpenTelemetry SDK](https://opentelemetry.io/docs/specs/otel/metrics/sdk/), which offers neutral libraries that can be connected to various backends.
+Our metrics, will be built upon the [OpenTelemetry](https://opentelemetry.io/) standards. All metrics will be configured via the [OpenTelemetry SDK](https://opentelemetry.io/docs/specs/otel/metrics/sdk/), which offers neutral libraries that can be connected to various backends.
 
 This approach allows the Envoy Gateway code to concentrate on the crucial aspect - generating the metrics - and delegate all other tasks to systems designed for telemetry ingestion.
 
@@ -173,7 +168,7 @@ type EnvoyGatewayPrometheusProvider struct {
 
 #### Example
 
-+ The following is an example to enable prometheus metric.
++ The following is an example to disable prometheus metric.
 
 ``` yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -188,7 +183,7 @@ provider:
 telemetry:
   metrics:
     prometheus:
-      disable: false
+      disable: true
 ```
 
 + The following is an example to send metric via Open Telemetry sink to OTEL gRPC Collector.
@@ -213,7 +208,7 @@ telemetry:
           protocol: grpc
 ```
 
-+ The following is an example to enable prometheus metric and send metric via Open Telemetry sink to OTEL HTTP Collector at the same time.
++ The following is an example to disable prometheus metric and send metric via Open Telemetry sink to OTEL HTTP Collector at the same time.
 
 ``` yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
