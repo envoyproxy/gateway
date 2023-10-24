@@ -308,6 +308,21 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	}
 
+	// Add all BackendTrafficPolicies
+	backendTrafficPolicies := egv1a1.BackendTrafficPolicyList{}
+	if err := r.client.List(ctx, &backendTrafficPolicies); err != nil {
+		return reconcile.Result{}, fmt.Errorf("error listing BackendTrafficPolicies: %v", err)
+	}
+
+	for _, policy := range backendTrafficPolicies.Items {
+		policy := policy
+		// Discard Status to reduce memory consumption in watchable
+		// It will be recomputed by the gateway-api layer
+		policy.Status = egv1a1.BackendTrafficPolicyStatus{}
+		resourceTree.BackendTrafficPolicies = append(resourceTree.BackendTrafficPolicies, &policy)
+
+	}
+
 	// For this particular Gateway, and all associated objects, check whether the
 	// namespace exists. Add to the resourceTree.
 	for ns := range resourceMap.allAssociatedNamespaces {
@@ -1269,6 +1284,33 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		r.log.Info("clientTrafficPolicy status subscriber shutting down")
 	}()
 
+	// BackendTrafficPolicy object status updater
+	go func() {
+		message.HandleSubscription(r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *egv1a1.BackendTrafficPolicyStatus]) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(egv1a1.BackendTrafficPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*egv1a1.BackendTrafficPolicy)
+						if !ok {
+							panic(fmt.Sprintf("unsupported object type %T", obj))
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("backendTrafficPolicy status subscriber shutting down")
+	}()
 }
 
 // watchResources watches gateway api resources.
@@ -1565,6 +1607,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		source.Kind(mgr.GetCache(), &egv1a1.ClientTrafficPolicy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		ctpPredicates...,
+	); err != nil {
+		return err
+	}
+
+	// Watch BackendTrafficPolicy
+	btpPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if len(r.namespaceLabels) != 0 {
+		btpPredicates = append(btpPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &egv1a1.BackendTrafficPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		btpPredicates...,
 	); err != nil {
 		return err
 	}
