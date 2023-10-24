@@ -88,7 +88,7 @@ jobs:
           IMAGE_PULL_POLICY: IfNotPresent
         run: make conformance
 
-  crd-validation:
+  kube-test:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
@@ -103,7 +103,7 @@ jobs:
         env:
           KIND_NODE_TAG: ${{ matrix.version }}
           IMAGE_PULL_POLICY: IfNotPresent
-        run: make validation
+        run: make kube-test
 
   e2e-test:
     runs-on: ubuntu-latest

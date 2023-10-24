@@ -52,7 +52,7 @@ func TestEnvoyProxyProvider(t *testing.T) {
 					},
 				}
 			},
-			wantErrors: []string{"type must be one of ['Kubernetes']"},
+			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\""},
 		},
 	}
 
