@@ -95,6 +95,7 @@ func experimentalConformance(t *testing.T) {
 				GatewayClassName:     *flags.GatewayClassName,
 				Debug:                *flags.ShowDebug,
 				CleanupBaseResources: *flags.CleanupBaseResources,
+				SupportedFeatures:    suite.AllFeatures,
 				SkipTests: []string{
 					tests.GatewaySecretInvalidReferenceGrant.ShortName,
 					tests.HTTPRouteRewritePath.ShortName,
@@ -102,7 +103,7 @@ func experimentalConformance(t *testing.T) {
 					tests.GatewayWithAttachedRoutes.ShortName,
 					tests.HTTPRouteBackendProtocolH2C.ShortName,
 				},
-				SupportedFeatures: sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
+				ExemptFeatures: suite.MeshCoreFeatures,
 			},
 			Implementation:      *implementation,
 			ConformanceProfiles: conformanceProfiles,
