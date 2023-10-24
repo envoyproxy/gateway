@@ -5293,7 +5293,7 @@ spec:
                     type: string
                     x-kubernetes-validations:
                     - message: type must be one of ['Kubernetes']
-                      rule: 'self == ''Kubernetes'' ? true : false'
+                      rule: self == 'Kubernetes'
                 required:
                 - type
                 type: object

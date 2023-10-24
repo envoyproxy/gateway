@@ -97,7 +97,7 @@ type EnvoyProxyProvider struct {
 	// optional auxiliary control planes. Supported types are "Kubernetes".
 	//
 	// +unionDiscriminator
-	// +kubebuilder:validation:XValidation:message="type must be one of ['Kubernetes']",rule="self == 'Kubernetes' ? true : false"
+	// +kubebuilder:validation:XValidation:message="type must be one of ['Kubernetes']",rule="self == 'Kubernetes'"
 	Type ProviderType `json:"type"`
 	// Kubernetes defines the desired state of the Kubernetes resource provider.
 	// Kubernetes provides infrastructure resources for running the data plane,
