@@ -279,12 +279,10 @@ xdsIR:
           - POST
           allowOrigins:
           - distinct: false
-            ignoreCase: false
             name: ""
             safeRegex: '*.example.com'
           - distinct: false
             exact: foo.bar.com
-            ignoreCase: false
             name: ""
           exposeHeaders:
           - x-header-3
@@ -323,11 +321,9 @@ xdsIR:
           - POST
           allowOrigins:
           - distinct: false
-            ignoreCase: false
             name: ""
             prefix: example
           - distinct: false
-            ignoreCase: false
             name: ""
             suffix: bar.org
           exposeHeaders:
