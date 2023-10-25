@@ -44,6 +44,36 @@ spec:
           spec:
             description: spec defines the desired state of BackendTrafficPolicy.
             properties:
+              loadBalancer:
+                description: LoadBalancer policy to apply when routing traffic from
+                  the gateway to the backend endpoints
+                properties:
+                  consistentHash:
+                    description: ConsistentHash defines the configuration when the
+                      load balancer type is set to ConsistentHash
+                    properties:
+                      type:
+                        description: ConsistentHashType defines the type of input
+                          to hash on.
+                        enum:
+                        - SourceIP
+                        type: string
+                    required:
+                    - type
+                    type: object
+                  type:
+                    description: Type decides the type of Load Balancer policy. Valid
+                      RateLimitType values are "ConsistentHash", "LeastRequest", "Random",
+                      "RoundRobin",
+                    enum:
+                    - ConsistentHash
+                    - LeastRequest
+                    - Random
+                    - RoundRobin
+                    type: string
+                required:
+                - type
+                type: object
               rateLimit:
                 description: RateLimit allows the user to limit the number of incoming
                   requests to a predefined value based on attributes within the traffic

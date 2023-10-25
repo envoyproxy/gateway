@@ -117,6 +117,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
 | `rateLimit` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
+| `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 
 
 
@@ -194,6 +195,31 @@ _Appears in:_
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 
+
+
+
+#### ConsistentHash
+
+
+
+ConsistentHash defines the configuration related to the consistent hash load balancer policy
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ConsistentHashType](#consistenthashtype)_ |  |
+
+
+#### ConsistentHashType
+
+_Underlying type:_ `string`
+
+ConsistentHashType defines the type of input to hash on.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
 
 
 
@@ -1004,6 +1030,32 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `value` _string_ | Value defines the hard-coded value to add to each span. |
+
+
+#### LoadBalancer
+
+
+
+LoadBalancer defines the load balancer policy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid RateLimitType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
+| `consistentHash` _[ConsistentHash](#consistenthash)_ | ConsistentHash defines the configuration when the load balancer type is set to ConsistentHash |
+
+
+#### LoadBalancerType
+
+_Underlying type:_ `string`
+
+LoadBalancerType specifies the types of LoadBalancer.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
 
 
 #### LogLevel
