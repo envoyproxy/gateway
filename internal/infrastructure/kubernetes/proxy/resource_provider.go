@@ -8,7 +8,6 @@ package proxy
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
@@ -73,10 +72,9 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			if port.Protocol == ir.UDPProtocolType {
 				protocol = corev1.ProtocolUDP
 			}
-			// Listeners on merged gateways will have a port name {GatewayNamespace}/{GatewayName}/{ListenerName}.
-			portName := strings.ReplaceAll(port.Name, "/", "-")
+
 			p := corev1.ServicePort{
-				Name:       portName,
+				Name:       ExpectedResourceHashedName(port.Name),
 				Protocol:   protocol,
 				Port:       port.ServicePort,
 				TargetPort: target,
