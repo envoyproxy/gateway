@@ -238,10 +238,17 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 }
 
 func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) {
+	var (
+		rl *ir.RateLimit
+		lb *ir.LoadBalancer
+	)
+
 	// Build IR
-	var rl *ir.RateLimit
 	if policy.Spec.RateLimit != nil {
 		rl = t.buildRateLimit(policy)
+	}
+	if policy.Spec.LoadBalancer != nil {
+		lb = t.buildLoadBalancer(policy)
 	}
 
 	// Apply IR to all relevant routes
@@ -252,6 +259,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
 					r.RateLimit = rl
+					r.LoadBalancer = lb
 				}
 			}
 		}
@@ -260,12 +268,18 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 }
 
 func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, gateway *GatewayContext, xdsIR XdsIRMap) {
+	var (
+		rl *ir.RateLimit
+		lb *ir.LoadBalancer
+	)
+
 	// Build IR
-	var rl *ir.RateLimit
 	if policy.Spec.RateLimit != nil {
 		rl = t.buildRateLimit(policy)
 	}
-
+	if policy.Spec.LoadBalancer != nil {
+		lb = t.buildLoadBalancer(policy)
+	}
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
 	// set by a policy attaching to the route
@@ -278,6 +292,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			// Apply if not already set
 			if r.RateLimit == nil {
 				r.RateLimit = rl
+			}
+			if r.LoadBalancer == nil {
+				r.LoadBalancer = lb
 			}
 		}
 	}
@@ -391,4 +408,32 @@ func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.Rat
 	}
 
 	return rateLimit
+}
+
+func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.LoadBalancer {
+	var lb *ir.LoadBalancer
+	switch policy.Spec.LoadBalancer.Type {
+	case egv1a1.ConsistentHashLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			ConsistentHash: &ir.ConsistentHash{},
+		}
+		if policy.Spec.LoadBalancer.ConsistentHash != nil &&
+			policy.Spec.LoadBalancer.ConsistentHash.Type == egv1a1.SourceIPConsistentHashType {
+			lb.ConsistentHash.SourceIP = ptr.To(true)
+		}
+	case egv1a1.LeastRequestLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			LeastRequest: &ir.LeastRequest{},
+		}
+	case egv1a1.RandomLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			Random: &ir.Random{},
+		}
+	case egv1a1.RoundRobinLoadBalancerType:
+		lb = &ir.LoadBalancer{
+			RoundRobin: &ir.RoundRobin{},
+		}
+	}
+
+	return lb
 }
