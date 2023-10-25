@@ -57,6 +57,7 @@ spec:
                       to make requests.
                     items:
                       type: string
+                    minItems: 1
                     type: array
                   allowOrigins:
                     description: AllowOrigins defines the origins that are allowed
@@ -84,6 +85,7 @@ spec:
                       required:
                       - value
                       type: object
+                    minItems: 1
                     type: array
                   exposeHeaders:
                     description: ExposeHeaders defines the headers that can be exposed

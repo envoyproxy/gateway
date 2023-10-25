@@ -49,8 +49,10 @@ type SecurityPolicySpec struct {
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
 type CORS struct {
 	// AllowOrigins defines the origins that are allowed to make requests.
+	// +kubebuilder:validation:MinItems=1
 	AllowOrigins []StringMatch `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
 	// AllowMethods defines the methods that are allowed to make requests.
+	// +kubebuilder:validation:MinItems=1
 	AllowMethods []string `json:"allowMethods,omitempty" yaml:"allowMethods,omitempty"`
 	// AllowHeaders defines the headers that are allowed to be sent with requests.
 	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
