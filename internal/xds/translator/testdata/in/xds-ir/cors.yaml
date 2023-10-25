@@ -33,4 +33,3 @@ http:
       - "x-header-3"
       - "x-header-4"
       maxAge: 1000s
-      allowPrivateNetworkAccess: false

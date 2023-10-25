@@ -675,11 +675,16 @@ type StringMatch struct {
 	Prefix *string `json:"prefix,omitempty" yaml:"prefix,omitempty"`
 	// Suffix match condition.
 	Suffix *string `json:"suffix,omitempty" yaml:"suffix,omitempty"`
+	// Contains match condition.
+	Contains *string `json:"contains,omitempty" yaml:"contains,omitempty"`
 	// SafeRegex match condition.
 	SafeRegex *string `json:"safeRegex,omitempty" yaml:"safeRegex,omitempty"`
 	// Distinct match condition.
 	// Used to match any and all possible unique values encountered within the Name field.
 	Distinct bool `json:"distinct" yaml:"distinct"`
+	// IgnoreCase specifies whether the match should be case insensitive.
+	// This has no effect for the safe_regex match.
+	IgnoreCase bool `json:"ignoreCase" yaml:"ignoreCase"`
 }
 
 // Validate the fields within the StringMatch structure
@@ -693,6 +698,9 @@ func (s StringMatch) Validate() error {
 		matchCount++
 	}
 	if s.Suffix != nil {
+		matchCount++
+	}
+	if s.Contains != nil {
 		matchCount++
 	}
 	if s.SafeRegex != nil {

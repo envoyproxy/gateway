@@ -41,7 +41,73 @@ type SecurityPolicySpec struct {
 	// for this Policy to have effect and be applied to the Gateway.
 	// TargetRef
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+
+	// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
+	CORS *CORS `json:"cors,omitempty"`
 }
+
+// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
+type CORS struct {
+	// AllowOrigins defines the origins that are allowed to make requests.
+	AllowOrigins []StringMatch `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
+	// AllowMethods defines the methods that are allowed to make requests.
+	AllowMethods []string `json:"allowMethods,omitempty" yaml:"allowMethods,omitempty"`
+	// AllowHeaders defines the headers that are allowed to be sent with requests.
+	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
+	// ExposeHeaders defines the headers that can be exposed in the responses.
+	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
+	// MaxAge defines how long the results of a preflight request can be cached.
+	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+}
+
+// StringMatch defines how to match any strings.
+// TODO: zhaohuabing make this a shared type for all APIs
+type StringMatch struct {
+	// Type specifies how to match against a string.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *MatchType `json:"type,omitempty"`
+
+	// Value specifies the string value that the match must have.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+
+	// IgnoreCase specifies whether the match should be case insensitive.
+	// This has no effect for the safe_regex match.
+	// Defaults to false.
+	// +optional
+	// +kubebuilder:default=False
+	IgnoreCase bool `json:"caseSensitive,omitempty"`
+}
+
+// MatchType specifies the semantics of how a string value should be compared.
+// Valid MatchType values are "Exact", "Prefix", "Suffix", "Contains", "RegularExpression".
+//
+// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;Contains;RegularExpression
+type MatchType string
+
+const (
+	// MatchExact :the input string must match exactly the match value.
+	MatchExact MatchType = "Exact"
+
+	// MatchPrefix :the input string must start with the match value.
+	MatchPrefix MatchType = "Prefix"
+
+	// MatchSuffix :the input string must end with the match value.
+	MatchSuffix MatchType = "Suffix"
+
+	// MatchContains :the input string must contain the match value.
+	MatchContains MatchType = "Contains"
+
+	// MatchRegularExpression :The input string must match the regular expression
+	// specified in the match value.
+	// The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	MatchRegularExpression MatchType = "RegularExpression"
+)
 
 // SecurityPolicyStatus defines the state of SecurityPolicy
 type SecurityPolicyStatus struct {

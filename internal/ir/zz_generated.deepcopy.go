@@ -978,6 +978,11 @@ func (in *StringMatch) DeepCopyInto(out *StringMatch) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Contains != nil {
+		in, out := &in.Contains, &out.Contains
+		*out = new(string)
+		**out = **in
+	}
 	if in.SafeRegex != nil {
 		in, out := &in.SafeRegex, &out.SafeRegex
 		*out = new(string)
