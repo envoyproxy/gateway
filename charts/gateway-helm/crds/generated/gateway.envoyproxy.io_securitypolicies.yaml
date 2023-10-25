@@ -62,8 +62,9 @@ spec:
                     description: AllowOrigins defines the origins that are allowed
                       to make requests.
                     items:
-                      description: 'StringMatch defines how to match any strings.
-                        TODO: zhaohuabing make this a shared type for all APIs'
+                      description: StringMatch defines how to match any strings. This
+                        is a general purpose match condition that can be used by other
+                        EG APIs that need to match against a string.
                       properties:
                         caseSensitive:
                           default: "False"

@@ -61,7 +61,8 @@ type CORS struct {
 }
 
 // StringMatch defines how to match any strings.
-// TODO: zhaohuabing make this a shared type for all APIs
+// This is a general purpose match condition that can be used by other EG APIs
+// that need to match against a string.
 type StringMatch struct {
 	// Type specifies how to match against a string.
 	//

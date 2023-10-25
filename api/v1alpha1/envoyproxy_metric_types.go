@@ -60,7 +60,7 @@ type ProxyPrometheusProvider struct {
 }
 
 // Match defines the stats match configuration.
-type Match struct {
+type Match struct { // TODO: zhaohuabing this type should be renamed to StatsMatch
 	// MatcherType defines the stats matcher type
 	//
 	// +kubebuilder:validation:Enum=RegularExpression;Prefix;Suffix
@@ -70,7 +70,7 @@ type Match struct {
 
 type MatcherType string
 
-const (
+const ( // TODO: zhaohuabing the const types should be prefixed with StatsMatch
 	Prefix            MatcherType = "Prefix"
 	RegularExpression MatcherType = "RegularExpression"
 	Suffix            MatcherType = "Suffix"

@@ -1617,7 +1617,7 @@ _Appears in:_
 
 
 
-StringMatch defines how to match any strings. TODO: zhaohuabing make this a shared type for all APIs
+StringMatch defines how to match any strings. This is a general purpose match condition that can be used by other EG APIs that need to match against a string.
 
 _Appears in:_
 - [CORS](#cors)
