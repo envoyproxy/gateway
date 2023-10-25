@@ -24,6 +24,8 @@ API group.
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
 - [RateLimitFilter](#ratelimitfilter)
+- [SecurityPolicy](#securitypolicy)
+- [SecurityPolicyList](#securitypolicylist)
 
 
 
@@ -1521,6 +1523,55 @@ ResourceProviderType defines the types of custom resource providers supported by
 
 _Appears in:_
 - [EnvoyGatewayResourceProvider](#envoygatewayresourceprovider)
+
+
+
+#### SecurityPolicy
+
+
+
+SecurityPolicy allows the user to configure various security settings for a Gateway.
+
+_Appears in:_
+- [SecurityPolicyList](#securitypolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `SecurityPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[SecurityPolicySpec](#securitypolicyspec)_ | Spec defines the desired state of SecurityPolicy. |
+
+
+#### SecurityPolicyList
+
+
+
+SecurityPolicyList contains a list of SecurityPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `SecurityPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[SecurityPolicy](#securitypolicy) array_ |  |
+
+
+#### SecurityPolicySpec
+
+
+
+SecurityPolicySpec defines the desired state of SecurityPolicy.
+
+_Appears in:_
+- [SecurityPolicy](#securitypolicy)
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+
 
 
 

@@ -157,7 +157,11 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				key := utils.NamespacedName(backendTrafficPolicy)
 				r.ProviderResources.BackendTrafficPolicyStatuses.Store(key, &backendTrafficPolicy.Status)
 			}
-
+			for _, securityPolicy := range result.SecurityPolicies {
+				securityPolicy := securityPolicy
+				key := utils.NamespacedName(securityPolicy)
+				r.ProviderResources.SecurityPolicyStatuses.Store(key, &securityPolicy.Status)
+			}
 		},
 	)
 	r.Logger.Info("shutting down")
