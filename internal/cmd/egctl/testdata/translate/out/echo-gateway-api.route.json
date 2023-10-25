@@ -35,7 +35,8 @@
             "port": 80,
             "protocol": "HTTP"
           }
-        ]
+        ],
+        "infrastructure": {}
       },
       "status": {
         "listeners": [
@@ -66,6 +67,13 @@
                 "lastTransitionTime": null,
                 "reason": "Accepted",
                 "message": "Listener has been successfully translated"
+              },
+              {
+                "type": "ResolvedRefs",
+                "status": "True",
+                "lastTransitionTime": null,
+                "reason": "ResolvedRefs",
+                "message": "Listener references have been resolved"
               }
             ]
           }

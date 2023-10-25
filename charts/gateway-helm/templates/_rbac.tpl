@@ -67,6 +67,8 @@ resources:
 - authenticationfilters
 - envoypatchpolicies
 - clienttrafficpolicies
+- backendtrafficpolicies
+- securitypolicies
 - ratelimitfilters
 verbs:
 - get
@@ -82,6 +84,7 @@ apiGroups:
 resources:
 - envoypatchpolicies/status
 - clienttrafficpolicies/status
+- backendtrafficpolicies/status
 verbs:
 - update
 {{- end }}

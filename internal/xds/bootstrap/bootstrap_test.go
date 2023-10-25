@@ -22,21 +22,29 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		proxyMetrics *egv1a1.ProxyMetrics
 	}{
 		{
-			name: "default",
+			name: "disable-prometheus",
+			proxyMetrics: &egv1a1.ProxyMetrics{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+			},
 		},
 		{
 			name: "enable-prometheus",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Prometheus: &egv1a1.PrometheusProvider{},
+				Prometheus: &egv1a1.ProxyPrometheusProvider{},
 			},
 		},
 		{
 			name: "otel-metrics",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Sinks: []egv1a1.MetricSink{
+				Prometheus: &egv1a1.ProxyPrometheusProvider{
+					Disable: true,
+				},
+				Sinks: []egv1a1.ProxyMetricSink{
 					{
 						Type: egv1a1.MetricSinkTypeOpenTelemetry,
-						OpenTelemetry: &egv1a1.OpenTelemetrySink{
+						OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
 							Host: "otel-collector.monitoring.svc",
 							Port: 4317,
 						},
@@ -65,7 +73,6 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 						Value: "cluster",
 					},
 				},
-				Prometheus: &egv1a1.PrometheusProvider{},
 			},
 		},
 	}

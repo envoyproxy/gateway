@@ -53,11 +53,15 @@ func http2ProtocolOptions() *corev3.Http2ProtocolOptions {
 	}
 }
 
-func buildXdsTCPListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+// buildXdsTCPListener creates a xds Listener resource
+// TODO: Improve function parameters
+func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKeepalive, accesslog *ir.AccessLog) *listenerv3.Listener {
+	socketOptions := buildTCPSocketOptions(keepalive)
 	al := buildXdsAccessLog(accesslog, true)
 	return &listenerv3.Listener{
 		Name:                          name,
 		AccessLog:                     al,
+		SocketOptions:                 socketOptions,
 		PerConnectionBufferLimitBytes: wrapperspb.UInt32(tcpListenerPerConnectionBufferLimitBytes),
 		Address: &corev3.Address{
 			Address: &corev3.Address_SocketAddress{
@@ -130,17 +134,12 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}
 	}
 
-	// TODO: Make this a generic interface for all API Gateway features.
-	//       https://github.com/envoyproxy/gateway/issues/882
-	t.patchHCMWithRateLimit(mgr, irListener)
-
-	// Add the jwt authn filter, if needed.
-	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
+	// Add HTTP filters to the HCM, the filters have already been sorted in the
+	// correct order in the patchHCMWithFilters function.
+	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
 		return err
 	}
 
-	// Make sure the router filter is the last one.
-	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
 	mgrAny, err := protocov.ToAnyWithError(mgr)
 	if err != nil {
 		return err

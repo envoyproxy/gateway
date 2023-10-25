@@ -17,7 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/envoygateway"
@@ -56,7 +56,7 @@ func newTestInfraWithClient(t *testing.T, cli client.Client) *Infra {
 					Redis: &egv1a1.RateLimitRedisSettings{
 						URL: "",
 						TLS: &egv1a1.RedisTLSSettings{
-							CertificateRef: &gwapiv1b1.SecretObjectReference{
+							CertificateRef: &gwapiv1.SecretObjectReference{
 								Name: "ratelimit-cert",
 							},
 						},

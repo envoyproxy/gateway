@@ -10,7 +10,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -25,43 +25,37 @@ type ListenersTranslator interface {
 
 func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap, infraIR InfraIRMap, resources *Resources) {
 	t.validateConflictedLayer7Listeners(gateways)
-	t.validateConflictedLayer4Listeners(gateways, v1beta1.TCPProtocolType, v1beta1.TLSProtocolType)
-	t.validateConflictedLayer4Listeners(gateways, v1beta1.UDPProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType)
+	t.validateConflictedLayer4Listeners(gateways, gwapiv1.UDPProtocolType)
+	if t.MergeGateways {
+		t.validateConflictedMergedListeners(gateways)
+	}
 
 	// Iterate through all listeners to validate spec
 	// and compute status for each, and add valid ones
 	// to the Xds IR.
 	for _, gateway := range gateways {
-		// init IR per gateway
-		irKey := irStringKey(gateway.Gateway.Namespace, gateway.Gateway.Name)
-		gwXdsIR := &ir.Xds{}
-		gwInfraIR := ir.NewInfra()
-		gwInfraIR.Proxy.Name = irKey
-		gwInfraIR.Proxy.GetProxyMetadata().Labels = GatewayOwnerLabels(gateway.Namespace, gateway.Name)
-		if resources.EnvoyProxy != nil {
-			gwInfraIR.Proxy.Config = resources.EnvoyProxy
-		}
-
-		// save the IR references in the map before the translation starts
-		xdsIR[irKey] = gwXdsIR
-		infraIR[irKey] = gwInfraIR
-
 		// Infra IR proxy ports must be unique.
 		var foundPorts []*protocolPort
+		irKey := t.getIRKey(gateway.Gateway)
 
-		gwXdsIR.AccessLog = processAccessLog(gwInfraIR.Proxy.Config)
-		gwXdsIR.Tracing = processTracing(gateway.Gateway, gwInfraIR.Proxy.Config)
-		gwXdsIR.Metrics = processMetrics(gwInfraIR.Proxy.Config)
+		if resources.EnvoyProxy != nil {
+			infraIR[irKey].Proxy.Config = resources.EnvoyProxy
+		}
+
+		xdsIR[irKey].AccessLog = processAccessLog(infraIR[irKey].Proxy.Config)
+		xdsIR[irKey].Tracing = processTracing(gateway.Gateway, infraIR[irKey].Proxy.Config)
+		xdsIR[irKey].Metrics = processMetrics(infraIR[irKey].Proxy.Config)
 
 		for _, listener := range gateway.listeners {
 			// Process protocol & supported kinds
 			switch listener.Protocol {
-			case v1beta1.TLSProtocolType:
+			case gwapiv1.TLSProtocolType:
 				if listener.TLS != nil {
 					switch *listener.TLS.Mode {
-					case v1beta1.TLSModePassthrough:
+					case gwapiv1.TLSModePassthrough:
 						t.validateAllowedRoutes(listener, KindTLSRoute)
-					case v1beta1.TLSModeTerminate:
+					case gwapiv1.TLSModeTerminate:
 						t.validateAllowedRoutes(listener, KindTCPRoute)
 					default:
 						t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
@@ -69,19 +63,19 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				} else {
 					t.validateAllowedRoutes(listener, KindTCPRoute, KindTLSRoute)
 				}
-			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
+			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				t.validateAllowedRoutes(listener, KindHTTPRoute, KindGRPCRoute)
-			case v1beta1.TCPProtocolType:
+			case gwapiv1.TCPProtocolType:
 				t.validateAllowedRoutes(listener, KindTCPRoute)
-			case v1beta1.UDPProtocolType:
+			case gwapiv1.UDPProtocolType:
 				t.validateAllowedRoutes(listener, KindUDPRoute)
 			default:
 				listener.SetCondition(
-					v1beta1.ListenerConditionAccepted,
+					gwapiv1.ListenerConditionAccepted,
 					metav1.ConditionFalse,
-					v1beta1.ListenerReasonUnsupportedProtocol,
+					gwapiv1.ListenerReasonUnsupportedProtocol,
 					fmt.Sprintf("Protocol %s is unsupported, must be %s, %s, %s or %s.", listener.Protocol,
-						v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType, v1beta1.TCPProtocolType, v1beta1.UDPProtocolType),
+						gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType, gwapiv1.TCPProtocolType, gwapiv1.UDPProtocolType),
 				)
 			}
 
@@ -104,7 +98,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			servicePort := &protocolPort{protocol: listener.Protocol, port: int32(listener.Port)}
 			containerPort := servicePortToContainerPort(servicePort.port)
 			switch listener.Protocol {
-			case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
+			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
 					Name:    irHTTPListenerName(listener),
 					Address: "0.0.0.0",
@@ -116,10 +110,10 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				} else {
 					// Hostname specifies the virtual hostname to match for protocol types that define this concept.
 					// When unspecified, all hostnames are matched. This field is ignored for protocols that don’t require hostname based matching.
-					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener.
+					// see more https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/gwapiv1.Listener.
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
-				gwXdsIR.HTTP = append(gwXdsIR.HTTP, irListener)
+				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
@@ -128,25 +122,31 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 				foundPorts = append(foundPorts, servicePort)
 				var proto ir.ProtocolType
 				switch listener.Protocol {
-				case v1beta1.HTTPProtocolType:
+				case gwapiv1.HTTPProtocolType:
 					proto = ir.HTTPProtocolType
-				case v1beta1.HTTPSProtocolType:
+				case gwapiv1.HTTPSProtocolType:
 					proto = ir.HTTPSProtocolType
-				case v1beta1.TLSProtocolType:
+				case gwapiv1.TLSProtocolType:
 					proto = ir.TLSProtocolType
-				case v1beta1.TCPProtocolType:
+				case gwapiv1.TCPProtocolType:
 					proto = ir.TCPProtocolType
-				case v1beta1.UDPProtocolType:
+				case gwapiv1.UDPProtocolType:
 					proto = ir.UDPProtocolType
 				}
+
+				infraPortName := string(listener.Name)
+				if t.MergeGateways {
+					infraPortName = irHTTPListenerName(listener)
+				}
+
 				infraPort := ir.ListenerPort{
-					Name:          string(listener.Name),
+					Name:          infraPortName,
 					Protocol:      proto,
 					ServicePort:   servicePort.port,
 					ContainerPort: containerPort,
 				}
 				// Only 1 listener is supported.
-				gwInfraIR.Proxy.Listeners[0].Ports = append(gwInfraIR.Proxy.Listeners[0].Ports, infraPort)
+				infraIR[irKey].Proxy.Listeners[0].Ports = append(infraIR[irKey].Proxy.Listeners[0].Ports, infraPort)
 			}
 		}
 	}
@@ -154,6 +154,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry == nil ||
 		envoyproxy.Spec.Telemetry.AccessLog == nil ||
 		(!envoyproxy.Spec.Telemetry.AccessLog.Disable && len(envoyproxy.Spec.Telemetry.AccessLog.Settings) == 0) {
 		// use the default access log
@@ -225,8 +226,10 @@ func processAccessLog(envoyproxy *egv1a1.EnvoyProxy) *ir.AccessLog {
 	return irAccessLog
 }
 
-func processTracing(gw *v1beta1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
-	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Tracing == nil {
+func processTracing(gw *gwapiv1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Tracing {
+	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry == nil ||
+		envoyproxy.Spec.Telemetry.Tracing == nil {
 		return nil
 	}
 
@@ -237,7 +240,9 @@ func processTracing(gw *v1beta1.Gateway, envoyproxy *egv1a1.EnvoyProxy) *ir.Trac
 }
 
 func processMetrics(envoyproxy *egv1a1.EnvoyProxy) *ir.Metrics {
-	if envoyproxy == nil || envoyproxy.Spec.Telemetry.Metrics == nil {
+	if envoyproxy == nil ||
+		envoyproxy.Spec.Telemetry == nil ||
+		envoyproxy.Spec.Telemetry.Metrics == nil {
 		return nil
 	}
 	return &ir.Metrics{

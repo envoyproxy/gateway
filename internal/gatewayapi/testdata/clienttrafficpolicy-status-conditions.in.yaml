@@ -69,7 +69,7 @@ clientTrafficPolicies:
       namespace: envoy-gateway
       sectionName: https
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     namespace: envoy-gateway
@@ -83,7 +83,7 @@ gateways:
       allowedRoutes:
         namespaces:
           from: Same
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     namespace: envoy-gateway

@@ -56,15 +56,21 @@ type KubernetesDeploymentSpec struct {
 	// +optional
 	Strategy *appv1.DeploymentStrategy `json:"strategy,omitempty"`
 
-	// Pod defines the desired annotations and securityContext of container.
+	// Pod defines the desired specification of pod.
 	//
 	// +optional
 	Pod *KubernetesPodSpec `json:"pod,omitempty"`
 
-	// Container defines the resources and securityContext of container.
+	// Container defines the desired specification of main container.
 	//
 	// +optional
 	Container *KubernetesContainerSpec `json:"container,omitempty"`
+
+	// List of initialization containers belonging to the pod.
+	// More info: https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+	//
+	// +optional
+	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }
@@ -184,6 +190,13 @@ type KubernetesServiceSpec struct {
 	// services with type LoadBalancer and will be cleared if the type is changed to any other type.
 	// +optional
 	AllocateLoadBalancerNodePorts *bool `json:"allocateLoadBalancerNodePorts,omitempty"`
+
+	// LoadBalancerIP defines the IP Address of the underlying load balancer service. This field
+	// may be ignored if the load balancer provider does not support this feature.
+	// This field has been deprecated in Kubernetes, but it is still used for setting the IP Address in some cloud
+	// providers such as GCP.
+	// +optional
+	LoadBalancerIP *string `json:"loadBalancerIP,omitempty"`
 
 	// TODO: Expose config as use cases are better understood, e.g. labels.
 }

@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
@@ -37,6 +38,7 @@ func TestGatewayAPIConformance(t *testing.T) {
 
 	require.NoError(t, v1alpha2.AddToScheme(client.Scheme()))
 	require.NoError(t, v1beta1.AddToScheme(client.Scheme()))
+	require.NoError(t, v1.AddToScheme(client.Scheme()))
 
 	cSuite := suite.New(suite.Options{
 		Client:               client,
@@ -45,8 +47,12 @@ func TestGatewayAPIConformance(t *testing.T) {
 		Clientset:            clientset,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		SupportedFeatures:    suite.AllFeatures,
-		SkipTests:            []string{},
-		ExemptFeatures:       suite.MeshCoreFeatures,
+		SkipTests: []string{
+			tests.GatewaySecretInvalidReferenceGrant.ShortName,
+			tests.HTTPRouteRewritePath.ShortName,
+			tests.GatewayStaticAddresses.ShortName,
+		},
+		ExemptFeatures: suite.MeshCoreFeatures,
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)

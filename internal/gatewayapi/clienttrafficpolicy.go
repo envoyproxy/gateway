@@ -8,14 +8,16 @@ package gatewayapi
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
@@ -52,7 +54,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			policy := policy.DeepCopy()
 			res = append(res, policy)
 
-			gateway := getGatewayTargetRef(policy, gateways)
+			gateway := resolveCTPolicyTargetRef(policy, gateways)
 
 			// Negative statuses have already been assigned so its safe to skip
 			if gateway == nil {
@@ -86,8 +88,13 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			}
 			policyMap[key].Insert(section)
 
-			translateClientTrafficPolicy(policy, xdsIR)
-
+			// Translate for listener matching section name
+			for _, l := range gateway.listeners {
+				if string(l.Name) == section {
+					translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR)
+					break
+				}
+			}
 			// Set Accepted=True
 			status.SetClientTrafficPolicyCondition(policy,
 				gwv1a2.PolicyConditionAccepted,
@@ -105,7 +112,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			policy := policy.DeepCopy()
 			res = append(res, policy)
 
-			gateway := getGatewayTargetRef(policy, gateways)
+			gateway := resolveCTPolicyTargetRef(policy, gateways)
 
 			// Negative statuses have already been assigned so its safe to skip
 			if gateway == nil {
@@ -154,7 +161,15 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 			}
 			policyMap[key].Insert(AllSections)
 
-			translateClientTrafficPolicy(policy, xdsIR)
+			// Translate sections that have not yet been targeted
+			for _, l := range gateway.listeners {
+				// Skip if section has already been targeted
+				if s != nil && s.Has(string(l.Name)) {
+					continue
+				}
+
+				translateClientTrafficPolicyForListener(&policy.Spec, l, xdsIR)
+			}
 
 			// Set Accepted=True
 			status.SetClientTrafficPolicyCondition(policy,
@@ -169,7 +184,7 @@ func ProcessClientTrafficPolicies(clientTrafficPolicies []*egv1a1.ClientTrafficP
 	return res
 }
 
-func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*GatewayContext) *GatewayContext {
+func resolveCTPolicyTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*GatewayContext) *GatewayContext {
 	targetNs := policy.Spec.TargetRef.Namespace
 	// If empty, default to namespace of policy
 	if targetNs == nil {
@@ -229,7 +244,7 @@ func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Gateway
 	// If sectionName is set, make sure its valid
 	if policy.Spec.TargetRef.SectionName != nil {
 		found := false
-		for _, l := range gateway.Spec.Listeners {
+		for _, l := range gateway.listeners {
 			if l.Name == *(policy.Spec.TargetRef.SectionName) {
 				found = true
 				break
@@ -250,6 +265,59 @@ func getGatewayTargetRef(policy *egv1a1.ClientTrafficPolicy, gateways []*Gateway
 	return gateway
 }
 
-func translateClientTrafficPolicy(policy *egv1a1.ClientTrafficPolicy, xdsIR XdsIRMap) {
-	// TODO
+func translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPolicySpec, l *ListenerContext, xdsIR XdsIRMap) {
+	// Find IR
+	irKey := irStringKey(l.gateway.Namespace, l.gateway.Name)
+	// It must exist since we've already finished processing the gateways
+	gwXdsIR := xdsIR[irKey]
+
+	// Find Listener IR
+	// TODO: Support TLSRoute and TCPRoute once
+	// https://github.com/envoyproxy/gateway/issues/1635 is completed
+
+	irListenerName := irHTTPListenerName(l)
+	var httpIR *ir.HTTPListener
+	for _, http := range gwXdsIR.HTTP {
+		if http.Name == irListenerName {
+			httpIR = http
+			break
+		}
+	}
+
+	// IR must exist since we're past validation
+	if httpIR != nil {
+		// Translate TCPKeepalive
+		translateListenerTCPKeepalive(policySpec.TCPKeepalive, httpIR)
+	}
+}
+
+func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if tcpKeepAlive == nil {
+		return
+	}
+
+	irTCPKeepalive := &ir.TCPKeepalive{}
+
+	if tcpKeepAlive.Probes != nil {
+		irTCPKeepalive.Probes = tcpKeepAlive.Probes
+	}
+
+	if tcpKeepAlive.IdleTime != nil {
+		d, err := time.ParseDuration(string(*tcpKeepAlive.IdleTime))
+		if err != nil {
+			return
+		}
+		irTCPKeepalive.IdleTime = ptr.To(uint32(d.Seconds()))
+	}
+
+	if tcpKeepAlive.Interval != nil {
+		d, err := time.ParseDuration(string(*tcpKeepAlive.Interval))
+		if err != nil {
+			return
+		}
+		irTCPKeepalive.Interval = ptr.To(uint32(d.Seconds()))
+	}
+
+	httpIR.TCPKeepalive = irTCPKeepalive
 }

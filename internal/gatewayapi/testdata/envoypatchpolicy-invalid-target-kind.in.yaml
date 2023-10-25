@@ -19,7 +19,7 @@ envoyPatchPolicies:
         path: "/per_connection_buffer_limit_bytes"
         value: "1024"
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     namespace: envoy-gateway

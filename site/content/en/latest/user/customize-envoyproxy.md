@@ -55,7 +55,7 @@ After you apply the config, you should see the replicas of envoyproxy changes to
 And also you can dynamically change the value.
 
 ``` shell
-kubectl get deployment envoy-gateway
+kubectl get deployment -l gateway.envoyproxy.io/owning-gateway-name=eg
 ```
 
 ## Customize EnvoyProxy Image
@@ -310,12 +310,13 @@ spec:
 EOF
 ```
 
-You can use [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration)
+You can use [egctl translate][]
 to get the default xDS Bootstrap configuration used by Envoy Gateway.
 
 After applying the config, the bootstrap config will be overridden by the new config you provided.
 Any errors in the configuration will be surfaced as status within the `GatewayClass` resource.
-You can also validate this configuration using [egctl translate](https://gateway.envoyproxy.io/latest/user/egctl.html#validating-gateway-api-configuration).
+You can also validate this configuration using [egctl translate][].
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
 [EnvoyProxy]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy 
+[egctl translate]: https://gateway.envoyproxy.io/latest/user/egctl/#validating-gateway-api-configuration

@@ -1,5 +1,5 @@
 gateways:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
     creationTimestamp: null
@@ -7,6 +7,7 @@ gateways:
     namespace: envoy-gateway
   spec:
     gatewayClassName: envoy-gateway-class
+    infrastructure: {}
     listeners:
     - allowedRoutes:
         namespaces:
@@ -28,6 +29,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -35,7 +41,7 @@ gateways:
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
 httpRoutes:
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -69,7 +75,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -106,7 +112,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -145,7 +151,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -181,7 +187,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null
@@ -220,7 +226,7 @@ httpRoutes:
       parentRef:
         name: gateway-1
         namespace: envoy-gateway
-- apiVersion: gateway.networking.k8s.io/v1beta1
+- apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:
     creationTimestamp: null

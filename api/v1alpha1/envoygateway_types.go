@@ -7,7 +7,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -19,6 +19,10 @@ const (
 	GatewayAdminPort = 19000
 	// GatewayAdminHost is the host of envoy gateway admin server.
 	GatewayAdminHost = "127.0.0.1"
+	// GatewayMetricsPort is the port which envoy gateway metrics server is listening on.
+	GatewayMetricsPort = 19001
+	// GatewayMetricsHost is the host of envoy gateway metrics server.
+	GatewayMetricsHost = "0.0.0.0"
 )
 
 // +kubebuilder:object:root=true
@@ -51,12 +55,19 @@ type EnvoyGatewaySpec struct {
 	// +optional
 	// +kubebuilder:default={default: info}
 	Logging *EnvoyGatewayLogging `json:"logging,omitempty"`
+
 	// Admin defines the desired admin related abilities.
 	// If unspecified, the Admin is used with default configuration
 	// parameters.
 	//
 	// +optional
 	Admin *EnvoyGatewayAdmin `json:"admin,omitempty"`
+
+	// Telemetry defines the desired control plane telemetry related abilities.
+	// If unspecified, the telemetry is used with default configuration.
+	//
+	// +optional
+	Telemetry *EnvoyGatewayTelemetry `json:"telemetry,omitempty"`
 
 	// RateLimit defines the configuration associated with the Rate Limit service
 	// deployed by Envoy Gateway required to implement the Global Rate limiting
@@ -77,6 +88,13 @@ type EnvoyGatewaySpec struct {
 	//
 	// +optional
 	ExtensionAPIs *ExtensionAPISettings `json:"extensionApis,omitempty"`
+}
+
+// EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane.
+// Control plane will focus on metrics observability telemetry and tracing telemetry later.
+type EnvoyGatewayTelemetry struct {
+	// Metrics defines metrics configuration for envoy gateway.
+	Metrics *EnvoyGatewayMetrics `json:"metrics,omitempty"`
 }
 
 // EnvoyGatewayLogging defines logging for Envoy Gateway.
@@ -122,7 +140,7 @@ type Gateway struct {
 	// ControllerName defines the name of the Gateway API controller. If unspecified,
 	// defaults to "gateway.envoyproxy.io/gatewayclass-controller". See the following
 	// for additional details:
-	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass
+	//   https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1.GatewayClass
 	//
 	// +optional
 	ControllerName string `json:"controllerName,omitempty"`
@@ -340,7 +358,7 @@ type RedisTLSSettings struct {
 	// CertificateRef defines the client certificate reference for TLS connections.
 	// Currently only a Kubernetes Secret of type TLS is supported.
 	// +optional
-	CertificateRef *gwapiv1b1.SecretObjectReference `json:"certificateRef,omitempty"`
+	CertificateRef *gwapiv1.SecretObjectReference `json:"certificateRef,omitempty"`
 }
 
 // RateLimitRedisSettings defines the configuration for connecting to redis database.
@@ -414,7 +432,7 @@ type ExtensionTLS struct {
 	// CertificateRef can only reference a Kubernetes Secret at this time.
 	//
 	// +kubebuilder:validation:Required
-	CertificateRef gwapiv1b1.SecretObjectReference `json:"certificateRef"`
+	CertificateRef gwapiv1.SecretObjectReference `json:"certificateRef"`
 }
 
 // EnvoyGatewayAdmin defines the Envoy Gateway Admin configuration.
@@ -424,11 +442,14 @@ type EnvoyGatewayAdmin struct {
 	//
 	// +optional
 	Address *EnvoyGatewayAdminAddress `json:"address,omitempty"`
-
-	// Debug defines if enable the /debug endpoint of Envoy Gateway.
+	// EnableDumpConfig defines if enable dump config in Envoy Gateway logs.
 	//
 	// +optional
-	Debug bool `json:"debug,omitempty"`
+	EnableDumpConfig bool
+	// EnablePprof defines if enable pprof in Envoy Gateway Admin Server.
+	//
+	// +optional
+	EnablePprof bool
 }
 
 // EnvoyGatewayAdminAddress defines the Envoy Gateway Admin Address configuration.

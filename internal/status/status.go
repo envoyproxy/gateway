@@ -24,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
@@ -168,23 +168,24 @@ func (u *UpdateWriter) Send(update Update) {
 //	UDPRoute
 //	GRPCRoute
 //	EnvoyPatchPolicy
+//	ClientTrafficPolicy
 func isStatusEqual(objA, objB interface{}) bool {
 	opts := cmpopts.IgnoreFields(metav1.Condition{}, "LastTransitionTime")
 	switch a := objA.(type) {
-	case *gwapiv1b1.GatewayClass:
-		if b, ok := objB.(*gwapiv1b1.GatewayClass); ok {
+	case *gwapiv1.GatewayClass:
+		if b, ok := objB.(*gwapiv1.GatewayClass); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
 		}
-	case *gwapiv1b1.Gateway:
-		if b, ok := objB.(*gwapiv1b1.Gateway); ok {
+	case *gwapiv1.Gateway:
+		if b, ok := objB.(*gwapiv1.Gateway); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
 		}
-	case *gwapiv1b1.HTTPRoute:
-		if b, ok := objB.(*gwapiv1b1.HTTPRoute); ok {
+	case *gwapiv1.HTTPRoute:
+		if b, ok := objB.(*gwapiv1.HTTPRoute); ok {
 			if cmp.Equal(a.Status, b.Status, opts) {
 				return true
 			}
@@ -219,6 +220,19 @@ func isStatusEqual(objA, objB interface{}) bool {
 				return true
 			}
 		}
+	case *egv1a1.ClientTrafficPolicy:
+		if b, ok := objB.(*egv1a1.ClientTrafficPolicy); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
+	case *egv1a1.BackendTrafficPolicy:
+		if b, ok := objB.(*egv1a1.BackendTrafficPolicy); ok {
+			if cmp.Equal(a.Status, b.Status, opts) {
+				return true
+			}
+		}
 	}
+
 	return false
 }

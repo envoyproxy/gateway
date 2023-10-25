@@ -18,7 +18,6 @@ envoyProxy:
               address: 127.0.0.1
               port_value: 19000
     logging: {}
-    telemetry: {}
   status: {}
 gatewayClass:
   metadata:
@@ -46,6 +45,7 @@ gateways:
     namespace: default
   spec:
     gatewayClassName: eg
+    infrastructure: {}
     listeners:
     - name: tcp
       port: 1234
@@ -87,6 +87,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -103,6 +108,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -119,6 +129,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls-passthrough
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -135,6 +150,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -151,6 +171,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: grpc
       supportedKinds:
       - group: gateway.networking.k8s.io

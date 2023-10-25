@@ -19,6 +19,7 @@ gateways:
     namespace: envoy-gateway-system
   spec:
     gatewayClassName: eg
+    infrastructure: {}
     listeners:
     - name: tls
       port: 8443
@@ -32,6 +33,11 @@ gateways:
         reason: Invalid
         status: "False"
         type: Programmed
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls
       supportedKinds:
       - group: gateway.networking.k8s.io

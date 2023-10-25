@@ -8,6 +8,7 @@ package envoygateway
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -34,6 +35,9 @@ func init() {
 		panic(err)
 	}
 	// Add Gateway API types.
+	if err := gwapiv1.AddToScheme(scheme); err != nil {
+		panic(err)
+	}
 	if err := gwapiv1b1.AddToScheme(scheme); err != nil {
 		panic(err)
 	}

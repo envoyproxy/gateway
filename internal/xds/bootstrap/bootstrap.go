@@ -122,14 +122,14 @@ func (b *bootstrapConfig) render() error {
 // GetRenderedBootstrapConfig renders the bootstrap YAML string
 func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, error) {
 	var (
-		enablePrometheus bool
+		enablePrometheus = true
 		metricSinks      []metricSink
 		StatsMatcher     StatsMatcherParameters
 	)
 
 	if proxyMetrics != nil {
 		if proxyMetrics.Prometheus != nil {
-			enablePrometheus = true
+			enablePrometheus = !proxyMetrics.Prometheus.Disable
 		}
 
 		addresses := sets.NewString()
@@ -152,7 +152,6 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 		}
 
 		if proxyMetrics.Matches != nil {
-
 			// Add custom envoy proxy stats
 			for _, match := range proxyMetrics.Matches {
 				switch match.Type {
@@ -165,7 +164,6 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 				}
 			}
 		}
-
 	}
 
 	cfg := &bootstrapConfig{

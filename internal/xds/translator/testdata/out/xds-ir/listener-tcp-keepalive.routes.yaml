@@ -1,0 +1,24 @@
+- ignorePortInHostMatching: true
+  name: first-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: first-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: first-route
+      route:
+        cluster: first-route-dest
+- ignorePortInHostMatching: true
+  name: second-listener
+  virtualHosts:
+  - domains:
+    - '*'
+    name: second-listener/*
+    routes:
+    - match:
+        prefix: /
+      name: second-route
+      route:
+        cluster: second-route-dest

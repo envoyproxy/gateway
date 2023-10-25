@@ -47,6 +47,15 @@ envoyProxy:
                   stat_prefix: eg-ready-http
                   route_config:
                     name: local_route
+                    virtual_hosts:
+                    - name: prometheus_stats
+                      domains:
+                      - "*"
+                      routes:
+                      - match:
+                          prefix: /stats/prometheus
+                        route:
+                          cluster: prometheus_stats
                   http_filters:
                   - name: envoy.filters.http.health_check
                     typed_config:
@@ -60,6 +69,19 @@ envoyProxy:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
           clusters:
+          - name: prometheus_stats
+            connect_timeout: 0.250s
+            type: STATIC
+            lb_policy: ROUND_ROBIN
+            load_assignment:
+              cluster_name: prometheus_stats
+              endpoints:
+              - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 19000
           - connect_timeout: 10s
             load_assignment:
               cluster_name: xds_cluster
@@ -102,16 +124,7 @@ envoyProxy:
                       path_config_source:
                         path: "/sds/xds-trusted-ca.json"
                       resource_api_version: V3
-        layered_runtime:
-          layers:
-          - name: runtime-0
-            rtds_layer:
-              rtds_config:
-                ads: {}
-                resource_api_version: V3
-              name: runtime-0
     logging: {}
-    telemetry: {}
   status: {}
 gatewayClass:
   metadata:
@@ -139,6 +152,7 @@ gateways:
     namespace: default
   spec:
     gatewayClassName: eg
+    infrastructure: {}
     listeners:
     - name: tcp
       port: 1234
@@ -180,6 +194,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tcp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -196,6 +215,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: udp
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -212,6 +236,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: tls-passthrough
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -228,6 +257,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -244,6 +278,11 @@ gateways:
         reason: Accepted
         status: "True"
         type: Accepted
+      - lastTransitionTime: null
+        message: Listener references have been resolved
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: grpc
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -457,16 +496,20 @@ xds:
           ldsConfig:
             ads: {}
             resourceApiVersion: V3
-        layeredRuntime:
-          layers:
-          - name: runtime-0
-            rtdsLayer:
-              name: runtime-0
-              rtdsConfig:
-                ads: {}
-                resourceApiVersion: V3
         staticResources:
           clusters:
+          - connectTimeout: 0.250s
+            loadAssignment:
+              clusterName: prometheus_stats
+              endpoints:
+              - lbEndpoints:
+                - endpoint:
+                    address:
+                      socketAddress:
+                        address: 127.0.0.1
+                        portValue: 19000
+            name: prometheus_stats
+            type: STATIC
           - connectTimeout: 10s
             http2ProtocolOptions:
               connectionKeepalive:
@@ -533,6 +576,15 @@ xds:
                       '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
                   routeConfig:
                     name: local_route
+                    virtualHosts:
+                    - domains:
+                      - '*'
+                      name: prometheus_stats
+                      routes:
+                      - match:
+                          prefix: /stats/prometheus
+                        route:
+                          cluster: prometheus_stats
                   statPrefix: eg-ready-http
             name: envoy-gateway-proxy-ready-0.0.0.0-19001
     - '@type': type.googleapis.com/envoy.admin.v3.EndpointsConfigDump

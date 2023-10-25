@@ -184,7 +184,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
-								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
+								AllocateLoadBalancerNodePorts: ptr.To(false),
 							},
 						},
 					},
@@ -205,7 +205,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
 							EnvoyService: &egv1a1.KubernetesServiceSpec{
 								Type:                          egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeClusterIP),
-								AllocateLoadBalancerNodePorts: ptr.To[bool](false),
+								AllocateLoadBalancerNodePorts: ptr.To(false),
 							},
 						},
 					},
@@ -213,6 +213,70 @@ func TestValidateEnvoyProxy(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "envoy service type 'LoadBalancer' with valid loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("10.11.12.13"),
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with invalid loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("invalid-ip"),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "envoy service type 'LoadBalancer' with ipv6 loadBalancerIP",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           egv1a1.GetKubernetesServiceType(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("2001:db8::68"),
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+
 		{
 			name: "valid user bootstrap replace type",
 			proxy: &egv1a1.EnvoyProxy{
@@ -297,7 +361,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Telemetry: egv1a1.ProxyTelemetry{
+					Telemetry: &egv1a1.ProxyTelemetry{
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
@@ -320,7 +384,7 @@ func TestValidateEnvoyProxy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.EnvoyProxySpec{
-					Telemetry: egv1a1.ProxyTelemetry{
+					Telemetry: &egv1a1.ProxyTelemetry{
 						AccessLog: &egv1a1.ProxyAccessLog{
 							Settings: []egv1a1.ProxyAccessLogSetting{
 								{
@@ -340,6 +404,50 @@ func TestValidateEnvoyProxy(t *testing.T) {
 				},
 			},
 			expected: false,
+		}, {
+			name: "should invalid when metrics type is OpenTelemetry, but `OpenTelemetry` field being empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: false,
+		}, {
+			name: "should valid when metrics type is OpenTelemetry and `OpenTelemetry` field being not empty",
+			proxy: &egv1a1.EnvoyProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "test",
+				},
+				Spec: egv1a1.EnvoyProxySpec{
+					Telemetry: &egv1a1.ProxyTelemetry{
+						Metrics: &egv1a1.ProxyMetrics{
+							Sinks: []egv1a1.ProxyMetricSink{
+								{
+									Type: egv1a1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &egv1a1.ProxyOpenTelemetrySink{
+										Host: "0.0.0.0",
+										Port: 3217,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
 		},
 	}
 
@@ -535,37 +643,47 @@ func TestEnvoyGatewayAdmin(t *testing.T) {
 	// values should be set in default
 	egAdmin := eg.GetEnvoyGatewayAdmin()
 	assert.True(t, egAdmin != nil)
-	assert.True(t, egAdmin.Debug == false)
 	assert.True(t, egAdmin.Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, egAdmin.Address.Host == egv1a1.GatewayAdminHost)
+	assert.True(t, egAdmin.EnableDumpConfig == false)
+	assert.True(t, egAdmin.EnablePprof == false)
 
 	// override the admin config
 	// values should be updated
-	eg.Admin.Debug = true
-	eg.Admin.Address = nil
-	assert.True(t, eg.Admin.Debug == true)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == egv1a1.GatewayAdminPort)
-	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == egv1a1.GatewayAdminHost)
+	eg.Admin = &egv1a1.EnvoyGatewayAdmin{
+		Address: &egv1a1.EnvoyGatewayAdminAddress{
+			Host: "0.0.0.0",
+			Port: 19010,
+		},
+		EnableDumpConfig: true,
+		EnablePprof:      true,
+	}
+
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == 19010)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == "0.0.0.0")
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnableDumpConfig == true)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnablePprof == true)
 
 	// set eg defaults when admin is nil
 	// the admin should not be nil
 	eg.Admin = nil
 	eg.SetEnvoyGatewayDefaults()
 	assert.True(t, eg.Admin != nil)
-	assert.True(t, eg.Admin.Debug == false)
 	assert.True(t, eg.Admin.Address.Port == egv1a1.GatewayAdminPort)
 	assert.True(t, eg.Admin.Address.Host == egv1a1.GatewayAdminHost)
+	assert.True(t, eg.Admin.EnableDumpConfig == false)
+	assert.True(t, eg.Admin.EnablePprof == false)
 }
 
 func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 	cases := []struct {
 		logging   egv1a1.ProxyLogging
-		component egv1a1.LogComponent
+		component egv1a1.ProxyLogComponent
 		expected  egv1a1.LogLevel
 	}{
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
@@ -573,7 +691,7 @@ func TestGetEnvoyProxyDefaultComponentLevel(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
@@ -600,7 +718,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 				},
 			},
@@ -608,7 +726,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 				},
@@ -617,7 +735,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,
@@ -627,7 +745,7 @@ func TestGetEnvoyProxyComponentLevelArgs(t *testing.T) {
 		},
 		{
 			logging: egv1a1.ProxyLogging{
-				Level: map[egv1a1.LogComponent]egv1a1.LogLevel{
+				Level: map[egv1a1.ProxyLogComponent]egv1a1.LogLevel{
 					egv1a1.LogComponentDefault: egv1a1.LogLevelInfo,
 					egv1a1.LogComponentAdmin:   egv1a1.LogLevelWarn,
 					egv1a1.LogComponentFilter:  egv1a1.LogLevelDebug,

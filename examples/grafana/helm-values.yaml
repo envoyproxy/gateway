@@ -1,0 +1,12 @@
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server
+
+adminPassword: admin
+
+service:
+  type: LoadBalancer

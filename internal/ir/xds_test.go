@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 var (
@@ -42,13 +43,6 @@ var (
 		Port:      80,
 		Hostnames: []string{"example.com"},
 		Routes:    []*HTTPRoute{&happyHTTPRoute},
-	}
-	invalidRouteMatchHTTPListener = HTTPListener{
-		Name:      "invalid-route-match",
-		Address:   "0.0.0.0",
-		Port:      80,
-		Hostnames: []string{"example.com"},
-		Routes:    []*HTTPRoute{&emptyMatchHTTPRoute},
 	}
 	invalidBackendHTTPListener = HTTPListener{
 		Name:      "invalid-backend-match",
@@ -144,11 +138,6 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("example"),
 		},
-		Destination: &happyRouteDestination,
-	}
-	emptyMatchHTTPRoute = HTTPRoute{
-		Name:        "empty-match",
-		Hostname:    "*",
 		Destination: &happyRouteDestination,
 	}
 	invalidBackendHTTPRoute = HTTPRoute{
@@ -510,9 +499,9 @@ func TestValidateXds(t *testing.T) {
 		{
 			name: "invalid listener",
 			input: Xds{
-				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener, &invalidRouteMatchHTTPListener},
+				HTTP: []*HTTPListener{&happyHTTPListener, &invalidAddrHTTPListener},
 			},
-			want: []error{ErrListenerAddressInvalid, ErrHTTPRouteMatchEmpty},
+			want: []error{ErrListenerAddressInvalid},
 		},
 		{
 			name: "invalid backend",
@@ -578,11 +567,6 @@ func TestValidateHTTPListener(t *testing.T) {
 				Routes:  []*HTTPRoute{&happyHTTPRoute},
 			},
 			want: []error{ErrListenerPortInvalid, ErrHTTPListenerHostnamesEmpty},
-		},
-		{
-			name:  "invalid route match",
-			input: invalidRouteMatchHTTPListener,
-			want:  []error{ErrHTTPRouteMatchEmpty},
 		},
 	}
 	for _, test := range tests {
@@ -836,11 +820,6 @@ func TestValidateHTTPRoute(t *testing.T) {
 				Destination: &happyRouteDestination,
 			},
 			want: []error{ErrHTTPRouteHostnameEmpty},
-		},
-		{
-			name:  "empty match",
-			input: emptyMatchHTTPRoute,
-			want:  []error{ErrHTTPRouteMatchEmpty},
 		},
 		{
 			name:  "invalid backend",
@@ -1118,6 +1097,50 @@ func TestValidateJwtRequestAuthentication(t *testing.T) {
 				},
 			},
 			want: nil,
+		},
+	}
+	for i := range tests {
+		test := tests[i]
+		t.Run(test.name, func(t *testing.T) {
+			if test.want == nil {
+				require.NoError(t, test.input.Validate())
+			} else {
+				require.EqualError(t, test.input.Validate(), test.want.Error())
+			}
+		})
+	}
+}
+
+func TestValidateLoadBalancer(t *testing.T) {
+	tests := []struct {
+		name  string
+		input LoadBalancer
+		want  error
+	}{
+		{
+			name: "random",
+			input: LoadBalancer{
+				Random: &Random{},
+			},
+			want: nil,
+		},
+		{
+			name: "consistent hash",
+			input: LoadBalancer{
+				ConsistentHash: &ConsistentHash{
+					SourceIP: ptr.To(true),
+				},
+			},
+			want: nil,
+		},
+
+		{
+			name: "least request and random set",
+			input: LoadBalancer{
+				Random:       &Random{},
+				LeastRequest: &LeastRequest{},
+			},
+			want: ErrLoadBalancerInvalid,
 		},
 	}
 	for i := range tests {

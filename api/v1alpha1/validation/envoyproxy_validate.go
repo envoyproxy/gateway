@@ -8,6 +8,7 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 
 	bootstrapv3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
@@ -95,6 +96,15 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("allocateLoadBalancerNodePorts can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}
 		}
+		if serviceType, serviceLoadBalancerIP := spec.Provider.Kubernetes.EnvoyService.Type, spec.Provider.Kubernetes.EnvoyService.LoadBalancerIP; serviceType != nil && serviceLoadBalancerIP != nil {
+			if *serviceType != egv1a1.ServiceTypeLoadBalancer {
+				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
+			}
+
+			if ip := net.ParseIP(*serviceLoadBalancerIP); ip == nil || ip.To4() == nil {
+				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
+			}
+		}
 	}
 	return errs
 }
@@ -141,11 +151,7 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform()) != "" {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
-	// Ensure layered runtime resources config is same
-	if userBootstrap.LayeredRuntime == nil ||
-		cmp.Diff(userBootstrap.LayeredRuntime, defaultBootstrap.LayeredRuntime, protocmp.Transform()) != "" {
-		return fmt.Errorf("layered_runtime cannot be modified")
-	}
+
 	// Ensure that the xds_cluster config is same
 	var userXdsCluster, defaultXdsCluster *clusterv3.Cluster
 	for _, cluster := range userBootstrap.StaticResources.Clusters {
@@ -172,10 +178,23 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 
-	if spec != nil && spec.Telemetry.AccessLog != nil {
+	if spec != nil &&
+		spec.Telemetry != nil &&
+		spec.Telemetry.AccessLog != nil {
 		accessLogErrs := validateProxyAccessLog(spec.Telemetry.AccessLog)
 		if len(accessLogErrs) > 0 {
 			errs = append(errs, accessLogErrs...)
+		}
+	}
+
+	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Metrics != nil {
+		for _, sink := range spec.Telemetry.Metrics.Sinks {
+			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
+				if sink.OpenTelemetry == nil {
+					err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
+					errs = append(errs, err)
+				}
+			}
 		}
 	}
 

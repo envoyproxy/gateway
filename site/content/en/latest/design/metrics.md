@@ -23,14 +23,15 @@ Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for conf
 
 ## Use-Cases
 
-- Enable prometheus metric
+- Enable prometheus metric by default
+- Disable prometheus metric
 - Push metrics via Open Telemetry Sink
 - TODO: Customize histogram buckets of target metric
 - TODO: Support stats matcher
 
 ### ProxyMetric API Type
 
-```golang mdox-exec="sed '1,7d' api/config/v1alpha1/metric_types.go"
+```golang mdox-exec="sed '1,7d' api/v1alpha1/metric_types.go"
 type ProxyMetrics struct {
 	// Prometheus defines the configuration for Admin endpoint `/stats/prometheus`.
 	Prometheus *PrometheusProvider `json:"prometheus,omitempty"`
@@ -70,14 +71,16 @@ type OpenTelemetrySink struct {
 }
 
 type PrometheusProvider struct {
+	// Disable the Prometheus endpoint.
+	Disable bool `json:"disable,omitempty"`
 }
 ```
 
 ### Example
 
-1. The following is an example to enable prometheus metric.
+1. The following is an example to disable prometheus metric.
 
-```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/prometheus.yaml"
+```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/disable-prometheus.yaml"
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -86,7 +89,8 @@ metadata:
 spec:
   telemetry:
     metrics:
-      prometheus: {}
+      prometheus:
+        disable: true
 ```
 
 1. The following is an example to send metric via Open Telemetry sink.

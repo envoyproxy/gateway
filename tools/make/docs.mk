@@ -8,6 +8,7 @@ docs: docs.clean helm-readme-gen docs-api docs-api-headings ## Generate Envoy Ga
 	@$(LOG_TARGET)
 	cd $(ROOT_DIR)/site && npm install
 	cd $(ROOT_DIR)/site && npm run build:production
+	cp tools/hack/get-egctl.sh $(DOCS_OUTPUT_DIR)
 
 .PHONY: docs-release
 docs-release: docs-release-prepare docs-release-gen docs  ## Generate Envoy Gateway Release Docs
@@ -25,9 +26,13 @@ clean: docs.clean
 docs.clean:
 	@$(LOG_TARGET)
 	rm -rf $(DOCS_OUTPUT_DIR)
+	rm -rf site/node_modules
+	rm -rf site/resources
+	rm -f site/package-lock.json
+	rm -f site/.hugo_build.lock
 
 .PHONY: docs-api
-docs-api: docs-api-gen docs-api-headings
+docs-api: docs-api-gen helm-readme-gen docs-api-headings
 
 .PHONY: helm-readme-gen
 helm-readme-gen: $(tools/helm-docs)
