@@ -80,7 +80,7 @@ type StringMatch struct {
 // MatchType specifies the semantics of how a string value should be compared.
 // Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 //
-// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;Contains;RegularExpression
+// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
 type MatchType string
 
 const (
