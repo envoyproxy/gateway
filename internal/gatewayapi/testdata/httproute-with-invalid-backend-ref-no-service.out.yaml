@@ -114,4 +114,5 @@ xdsIR:
         pathMatch:
           distinct: false
           exact: /exact
+          ignoreCase: false
           name: ""

@@ -121,6 +121,7 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
+          ignoreCase: false
           name: ""
           prefix: /
         timeout: 1s

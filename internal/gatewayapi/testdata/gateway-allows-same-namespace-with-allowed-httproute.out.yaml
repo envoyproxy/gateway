@@ -117,5 +117,6 @@ xdsIR:
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
+          ignoreCase: false
           name: ""
           prefix: /

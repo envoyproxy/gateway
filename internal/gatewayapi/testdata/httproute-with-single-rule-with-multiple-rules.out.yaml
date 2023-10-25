@@ -146,16 +146,19 @@ xdsIR:
             weight: 1
         headerMatches:
         - distinct: false
+          ignoreCase: false
           name: Header-1
           safeRegex: '*regex*'
         hostname: '*'
         name: httproute/default/httproute-1/rule/2/match/0/*
         pathMatch:
           distinct: false
+          ignoreCase: false
           name: ""
           safeRegex: '*regex*'
         queryParamMatches:
         - distinct: false
+          ignoreCase: false
           name: QueryParam-1
           safeRegex: '*regex*'
       - backendWeights:
@@ -172,6 +175,7 @@ xdsIR:
         name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
           distinct: false
+          ignoreCase: false
           name: ""
           prefix: /prefix
       - backendWeights:
@@ -187,14 +191,17 @@ xdsIR:
         headerMatches:
         - distinct: false
           exact: exact
+          ignoreCase: false
           name: Header-1
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           exact: /exact
+          ignoreCase: false
           name: ""
         queryParamMatches:
         - distinct: false
           exact: exact
+          ignoreCase: false
           name: QueryParam-1

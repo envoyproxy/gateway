@@ -126,8 +126,10 @@ xdsIR:
             - headerMatches:
               - distinct: false
                 exact: one
+                ignoreCase: false
                 name: x-user-id
               - distinct: true
+                ignoreCase: false
                 name: x-org-id
               limit:
                 requests: 10

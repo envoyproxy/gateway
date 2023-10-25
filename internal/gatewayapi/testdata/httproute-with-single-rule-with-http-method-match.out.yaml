@@ -115,6 +115,7 @@ xdsIR:
         headerMatches:
         - distinct: false
           exact: POST
+          ignoreCase: false
           name: :method
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*

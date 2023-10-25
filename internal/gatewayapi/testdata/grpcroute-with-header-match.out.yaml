@@ -120,6 +120,7 @@ xdsIR:
         headerMatches:
         - distinct: false
           exact: foo
+          ignoreCase: false
           name: magic
         hostname: '*'
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*

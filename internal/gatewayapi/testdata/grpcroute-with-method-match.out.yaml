@@ -123,6 +123,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
+          ignoreCase: false
           name: ""
           safeRegex: /(?i)\.?[a-z_][a-z_0-9]*(\.[a-z_][a-z_0-9]*)*/FooBar[0-9]+
       - backendWeights:
@@ -137,6 +138,7 @@ xdsIR:
             weight: 1
         headerMatches:
         - distinct: false
+          ignoreCase: false
           name: :path
           suffix: /ExampleExact
         hostname: '*'

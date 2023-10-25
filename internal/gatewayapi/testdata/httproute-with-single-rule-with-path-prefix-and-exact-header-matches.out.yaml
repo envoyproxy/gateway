@@ -121,13 +121,16 @@ xdsIR:
         headerMatches:
         - distinct: false
           exact: Val-1
+          ignoreCase: false
           name: Header-1
         - distinct: false
           exact: Val-2
+          ignoreCase: false
           name: Header-2
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
+          ignoreCase: false
           name: ""
           prefix: /pathprefix
