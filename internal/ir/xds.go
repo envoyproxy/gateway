@@ -279,8 +279,8 @@ type HTTPRoute struct {
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
-	// Cors policy for the route.
-	Cors *Cors `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// CORS policy for the route.
+	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -314,10 +314,10 @@ type JwtRequestAuthentication struct {
 	Providers []egv1a1.JwtAuthenticationFilterProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
 
-// Cors holds the Cross-Origin Resource Sharing (CORS) policy for the route.
+// CORS holds the Cross-Origin Resource Sharing (CORS) policy for the route.
 //
 // +k8s:deepcopy-gen=true
-type Cors struct {
+type CORS struct {
 	// AllowOrigins defines the origins that are allowed to make requests.
 	AllowOrigins []*StringMatch `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
 	// AllowMethods defines the methods that are allowed to make requests.

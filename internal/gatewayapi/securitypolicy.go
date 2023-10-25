@@ -222,7 +222,7 @@ func resolveSecurityPolicyRouteTargetRef(policy *egv1a1.SecurityPolicy, routes m
 
 func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPolicy, route RouteContext, xdsIR XdsIRMap) {
 	// Build IR
-	var cors *ir.Cors
+	var cors *ir.CORS
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy)
 	}
@@ -234,7 +234,7 @@ func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPoli
 			for _, r := range http.Routes {
 				// Apply if there is a match
 				if strings.HasPrefix(r.Name, prefix) {
-					r.Cors = cors
+					r.CORS = cors
 				}
 			}
 		}
@@ -244,7 +244,7 @@ func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPoli
 
 func (t *Translator) translateSecurityPolicyForGateway(policy *egv1a1.SecurityPolicy, gateway *GatewayContext, xdsIR XdsIRMap) {
 	// Build IR
-	var cors *ir.Cors
+	var cors *ir.CORS
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy)
 	}
@@ -259,15 +259,15 @@ func (t *Translator) translateSecurityPolicyForGateway(policy *egv1a1.SecurityPo
 	for _, http := range ir.HTTP {
 		for _, r := range http.Routes {
 			// Apply if not already set
-			if r.Cors == nil {
-				r.Cors = cors
+			if r.CORS == nil {
+				r.CORS = cors
 			}
 		}
 	}
 
 }
 
-func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.Cors {
+func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 	var allowOrigins []*ir.StringMatch
 
 	for _, origin := range policy.Spec.CORS.AllowOrigins {
@@ -308,7 +308,7 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.Cors {
 		}
 	}
 
-	return &ir.Cors{
+	return &ir.CORS{
 		AllowOrigins:  allowOrigins,
 		AllowMethods:  policy.Spec.CORS.AllowMethods,
 		AllowHeaders:  policy.Spec.CORS.AllowHeaders,
