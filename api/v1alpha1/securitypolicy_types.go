@@ -80,7 +80,6 @@ type StringMatch struct {
 	// This has no effect for the safe_regex match.
 	// Defaults to false.
 	// +optional
-	// +kubebuilder:default=False
 	IgnoreCase bool `json:"caseSensitive,omitempty"`
 }
 
