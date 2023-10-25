@@ -116,6 +116,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
+| `rateLimit` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
 
 
 
@@ -821,22 +822,6 @@ HeaderMatch defines the match attributes within the HTTP Headers of the request.
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
-| Field | Description |
-| --- | --- |
-| `type` _[HeaderMatchType](#headermatchtype)_ | Type specifies how to match against the value of the header. |
-| `name` _string_ | Name of the HTTP header. |
-| `value` _string_ | Value within the HTTP header. Due to the case-insensitivity of header names, "foo" and "Foo" are considered equivalent. Do not set this field when Type="Distinct", implying matching on any/all unique values within the header. |
-
-
-#### HeaderMatchType
-
-_Underlying type:_ `string`
-
-HeaderMatchType specifies the semantics of how HTTP header values should be compared. Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
-
-_Appears in:_
-- [HeaderMatch](#headermatch)
-
 
 
 #### InfrastructureProviderType
@@ -1382,6 +1367,7 @@ RateLimitFilter allows the user to limit the number of incoming requests to a pr
 RateLimitFilterSpec defines the desired state of RateLimitFilter.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [RateLimitFilter](#ratelimitfilter)
 
 | Field | Description |
@@ -1594,21 +1580,6 @@ _Appears in:_
 
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
-
-| Field | Description |
-| --- | --- |
-| `type` _[SourceMatchType](#sourcematchtype)_ |  |
-| `value` _string_ | Value is the IP CIDR that represents the range of Source IP Addresses of the client. These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
-
-
-#### SourceMatchType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [SourceMatch](#sourcematch)
 
 
 

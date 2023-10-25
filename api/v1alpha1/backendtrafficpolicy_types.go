@@ -45,6 +45,10 @@ type BackendTrafficPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace
 	// for this Policy to have effect and be applied to the Gateway.
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+
+	// RateLimit allows the user to limit the number of incoming requests
+	// to a predefined value based on attributes within the traffic flow.
+	RateLimit *RateLimitFilterSpec `json:"rateLimit,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy

@@ -7,7 +7,9 @@ package gatewayapi
 
 import (
 	"fmt"
+	"net"
 	"sort"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,6 +17,7 @@ import (
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
@@ -35,7 +38,7 @@ type policyGatewayTargetContext struct {
 	attached bool
 }
 
-func ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
+func (t *Translator) ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
 	gateways []*GatewayContext,
 	routes []RouteContext,
 	xdsIR XdsIRMap) []*egv1a1.BackendTrafficPolicy {
@@ -82,39 +85,29 @@ func ProcessBackendTrafficPolicies(backendTrafficPolicies []*egv1a1.BackendTraff
 				continue
 			}
 
-			translateBackendTrafficPolicy(policy, xdsIR)
+			t.translateBackendTrafficPolicyForRoute(policy, route, xdsIR)
 
-			// Set Accepted=True
-			status.SetBackendTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"BackendTrafficPolicy has been accepted.",
-			)
+			message := "BackendTrafficPolicy has been accepted."
+			status.SetBackendTrafficPolicyAcceptedIfUnset(&policy.Status, message)
 		}
 	}
 
-	// Process the policies targeting Gateways with a section name
+	// Process the policies targeting Gateways
 	for _, policy := range backendTrafficPolicies {
 		if policy.Spec.TargetRef.Kind == KindGateway {
 			policy := policy.DeepCopy()
 			res = append(res, policy)
 
 			// Negative statuses have already been assigned so its safe to skip
-			gatewayKey := resolveBTPolicyGatewayTargetRef(policy, gatewayMap)
-			if gatewayKey == nil {
+			gateway := resolveBTPolicyGatewayTargetRef(policy, gatewayMap)
+			if gateway == nil {
 				continue
 			}
 
-			translateBackendTrafficPolicy(policy, xdsIR)
+			t.translateBackendTrafficPolicyForGateway(policy, gateway, xdsIR)
 
-			// Set Accepted=True
-			status.SetBackendTrafficPolicyCondition(policy,
-				gwv1a2.PolicyConditionAccepted,
-				metav1.ConditionTrue,
-				gwv1a2.PolicyReasonAccepted,
-				"BackendTrafficPolicy has been accepted.",
-			)
+			message := "BackendTrafficPolicy has been accepted."
+			status.SetBackendTrafficPolicyAcceptedIfUnset(&policy.Status, message)
 		}
 	}
 
@@ -243,6 +236,159 @@ func resolveBTPolicyRouteTargetRef(policy *egv1a1.BackendTrafficPolicy, routes m
 
 	return route.RouteContext
 }
-func translateBackendTrafficPolicy(policy *egv1a1.BackendTrafficPolicy, xdsIR XdsIRMap) {
-	// TODO
+
+func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.BackendTrafficPolicy, route RouteContext, xdsIR XdsIRMap) {
+	// Build IR
+	var rl *ir.RateLimit
+	if policy.Spec.RateLimit != nil {
+		rl = t.buildRateLimit(policy)
+	}
+
+	// Apply IR to all relevant routes
+	prefix := irRoutePrefix(route)
+	for _, ir := range xdsIR {
+		for _, http := range ir.HTTP {
+			for _, r := range http.Routes {
+				// Apply if there is a match
+				if strings.HasPrefix(r.Name, prefix) {
+					r.RateLimit = rl
+				}
+			}
+		}
+
+	}
+}
+
+func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.BackendTrafficPolicy, gateway *GatewayContext, xdsIR XdsIRMap) {
+	// Build IR
+	var rl *ir.RateLimit
+	if policy.Spec.RateLimit != nil {
+		rl = t.buildRateLimit(policy)
+	}
+
+	// Apply IR to all the routes within the specific Gateway
+	// If the feature is already set, then skip it, since it must be have
+	// set by a policy attaching to the route
+	irKey := t.getIRKey(gateway.Gateway)
+	// Should exist since we've validated this
+	ir := xdsIR[irKey]
+
+	for _, http := range ir.HTTP {
+		for _, r := range http.Routes {
+			// Apply if not already set
+			if r.RateLimit == nil {
+				r.RateLimit = rl
+			}
+		}
+	}
+
+}
+
+func (t *Translator) buildRateLimit(policy *egv1a1.BackendTrafficPolicy) *ir.RateLimit {
+	if policy.Spec.RateLimit.Global == nil {
+		message := "Global configuration empty for rateLimit"
+		status.SetBackendTrafficPolicyCondition(policy,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonInvalid,
+			message,
+		)
+		return nil
+	}
+	if !t.GlobalRateLimitEnabled {
+		message := "Enable Ratelimit in the EnvoyGateway config to configure global rateLimit"
+		status.SetBackendTrafficPolicyCondition(policy,
+			gwv1a2.PolicyConditionAccepted,
+			metav1.ConditionFalse,
+			gwv1a2.PolicyReasonInvalid,
+			message,
+		)
+		return nil
+	}
+	rateLimit := &ir.RateLimit{
+		Global: &ir.GlobalRateLimit{
+			Rules: make([]*ir.RateLimitRule, len(policy.Spec.RateLimit.Global.Rules)),
+		},
+	}
+
+	rules := rateLimit.Global.Rules
+	for i, rule := range policy.Spec.RateLimit.Global.Rules {
+		rules[i] = &ir.RateLimitRule{
+			Limit: &ir.RateLimitValue{
+				Requests: rule.Limit.Requests,
+				Unit:     ir.RateLimitUnit(rule.Limit.Unit),
+			},
+			HeaderMatches: make([]*ir.StringMatch, 0),
+		}
+		for _, match := range rule.ClientSelectors {
+			for _, header := range match.Headers {
+				switch {
+				case header.Type == nil && header.Value != nil:
+					fallthrough
+				case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
+					m := &ir.StringMatch{
+						Name:  header.Name,
+						Exact: header.Value,
+					}
+					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
+				case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
+					m := &ir.StringMatch{
+						Name:      header.Name,
+						SafeRegex: header.Value,
+					}
+					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
+				case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
+					m := &ir.StringMatch{
+						Name:     header.Name,
+						Distinct: true,
+					}
+					rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
+				default:
+					// set negative status condition.
+					message := "Unable to translate rateLimit. Either the header.Type is not valid or the header is missing a value"
+					status.SetBackendTrafficPolicyCondition(policy,
+						gwv1a2.PolicyConditionAccepted,
+						metav1.ConditionFalse,
+						gwv1a2.PolicyReasonInvalid,
+						message,
+					)
+
+					return nil
+				}
+			}
+
+			if match.SourceCIDR != nil {
+				// distinct means that each IP Address within the specified Source IP CIDR is treated as a
+				// distinct client selector and uses a separate rate limit bucket/counter.
+				distinct := false
+				sourceCIDR := match.SourceCIDR.Value
+				if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
+					distinct = true
+				}
+
+				ip, ipn, err := net.ParseCIDR(sourceCIDR)
+				if err != nil {
+					message := "Unable to translate rateLimit"
+					status.SetBackendTrafficPolicyCondition(policy,
+						gwv1a2.PolicyConditionAccepted,
+						metav1.ConditionFalse,
+						gwv1a2.PolicyReasonInvalid,
+						message,
+					)
+
+					return nil
+				}
+
+				mask, _ := ipn.Mask.Size()
+				rules[i].CIDRMatch = &ir.CIDRMatch{
+					CIDR:     ipn.String(),
+					IPv6:     ip.To4() == nil,
+					MaskLen:  mask,
+					Distinct: distinct,
+				}
+			}
+		}
+	}
+
+	return rateLimit
 }

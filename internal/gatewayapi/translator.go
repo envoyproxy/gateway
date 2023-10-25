@@ -183,6 +183,8 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	for _, u := range udpRoutes {
 		routes = append(routes, u)
 	}
+
+	// Process BackendTrafficPolicies
 	backendTrafficPolicies := ProcessBackendTrafficPolicies(
 		resources.BackendTrafficPolicies, gateways, routes, xdsIR)
 	// Process SecurityPolicies
