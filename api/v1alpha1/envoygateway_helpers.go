@@ -98,7 +98,6 @@ func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 		if e.Telemetry.Metrics.Prometheus == nil {
 			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
 		}
-
 		if e.Telemetry.Metrics == nil {
 			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
 		}
