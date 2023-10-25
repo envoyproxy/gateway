@@ -156,7 +156,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -180,7 +179,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
       tls:

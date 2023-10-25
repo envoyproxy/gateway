@@ -1055,7 +1055,7 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "Contains", "RegularExpression".
+MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 
 _Appears in:_
 - [StringMatch](#stringmatch)
@@ -1626,7 +1626,6 @@ _Appears in:_
 | --- | --- |
 | `type` _[MatchType](#matchtype)_ | Type specifies how to match against a string. |
 | `value` _string_ | Value specifies the string value that the match must have. |
-| `caseSensitive` _boolean_ | IgnoreCase specifies whether the match should be case insensitive. This has no effect for the safe_regex match. Defaults to false. |
 
 
 #### TCPKeepalive

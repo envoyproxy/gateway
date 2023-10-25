@@ -126,7 +126,6 @@ xdsIR:
         pathMatch:
           distinct: false
           exact: /com.example/Example
-          ignoreCase: false
           name: ""
       - backendWeights:
           invalid: 0
@@ -142,6 +141,5 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           safeRegex: /foo.*/Foobar

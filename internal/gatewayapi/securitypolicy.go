@@ -283,23 +283,15 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 		switch matchType {
 		case egv1a1.MatchExact:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Exact:      &origin.Value,
-				IgnoreCase: origin.IgnoreCase,
+				Exact: &origin.Value,
 			})
 		case egv1a1.MatchPrefix:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Prefix:     &origin.Value,
-				IgnoreCase: origin.IgnoreCase,
+				Prefix: &origin.Value,
 			})
 		case egv1a1.MatchSuffix:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Suffix:     &origin.Value,
-				IgnoreCase: origin.IgnoreCase,
-			})
-		case egv1a1.MatchContains:
-			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				Contains:   &origin.Value,
-				IgnoreCase: origin.IgnoreCase,
+				Suffix: &origin.Value,
 			})
 		case egv1a1.MatchRegularExpression:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{

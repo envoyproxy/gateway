@@ -75,16 +75,10 @@ type StringMatch struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
 	Value string `json:"value"`
-
-	// IgnoreCase specifies whether the match should be case insensitive.
-	// This has no effect for the safe_regex match.
-	// Defaults to false.
-	// +optional
-	IgnoreCase bool `json:"caseSensitive,omitempty"`
 }
 
 // MatchType specifies the semantics of how a string value should be compared.
-// Valid MatchType values are "Exact", "Prefix", "Suffix", "Contains", "RegularExpression".
+// Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 //
 // +kubebuilder:validation:Enum=Exact;Prefix;Suffix;Contains;RegularExpression
 type MatchType string
@@ -98,9 +92,6 @@ const (
 
 	// MatchSuffix :the input string must end with the match value.
 	MatchSuffix MatchType = "Suffix"
-
-	// MatchContains :the input string must contain the match value.
-	MatchContains MatchType = "Contains"
 
 	// MatchRegularExpression :The input string must match the regular expression
 	// specified in the match value.

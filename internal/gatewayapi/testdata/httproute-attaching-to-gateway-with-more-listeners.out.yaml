@@ -328,7 +328,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -352,7 +351,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -376,7 +374,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/foo1_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -400,7 +397,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/bar1_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -424,7 +420,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/foo2_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -448,7 +443,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/bar2_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -472,7 +466,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/foo3_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
     - address: 0.0.0.0
@@ -496,6 +489,5 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/bar3_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /

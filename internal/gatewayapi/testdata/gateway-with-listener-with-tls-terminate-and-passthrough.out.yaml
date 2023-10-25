@@ -190,7 +190,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/foo_bar_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
       tls:

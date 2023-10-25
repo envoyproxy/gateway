@@ -66,11 +66,6 @@ spec:
                         is a general purpose match condition that can be used by other
                         EG APIs that need to match against a string.
                       properties:
-                        caseSensitive:
-                          description: IgnoreCase specifies whether the match should
-                            be case insensitive. This has no effect for the safe_regex
-                            match. Defaults to false.
-                          type: boolean
                         type:
                           default: Exact
                           description: Type specifies how to match against a string.

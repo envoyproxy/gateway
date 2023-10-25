@@ -143,7 +143,6 @@ xdsIR:
         pathMatch:
           distinct: false
           exact: /test/path/1
-          ignoreCase: false
           name: ""
         requestAuthentication:
           jwt:
@@ -167,7 +166,6 @@ xdsIR:
         pathMatch:
           distinct: false
           exact: /test/path/2
-          ignoreCase: false
           name: ""
         requestAuthentication:
           jwt:

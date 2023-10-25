@@ -123,7 +123,6 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
       - backendWeights:
@@ -140,6 +139,5 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /com.ExampleExact

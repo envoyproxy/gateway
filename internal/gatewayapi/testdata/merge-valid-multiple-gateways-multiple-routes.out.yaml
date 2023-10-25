@@ -248,7 +248,6 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
         requestAuthentication:
@@ -285,6 +284,5 @@ xdsIR:
         name: httproute/default/httproute-2/rule/0/match/0/example_com
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /

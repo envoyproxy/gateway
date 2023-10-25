@@ -357,7 +357,6 @@ xdsIR:
         name: httproute/envoy-gateway/httproute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
-          ignoreCase: false
           name: ""
           prefix: /
   envoy-gateway/gateway-2:
@@ -380,7 +379,6 @@ xdsIR:
         headerMatches:
         - distinct: false
           exact: foo
-          ignoreCase: false
           name: magic
         hostname: '*'
         name: grpcroute/envoy-gateway/grpcroute-1/rule/0/match/0/*
