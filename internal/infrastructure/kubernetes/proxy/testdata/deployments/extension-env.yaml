@@ -156,10 +156,10 @@ spec:
           name: envoy
           ports:
             - containerPort: 8080
-              name: EnvoyHTTPPort
+              name: EnvoyH-d76a15e2
               protocol: TCP
             - containerPort: 8443
-              name: EnvoyHTTPSPort
+              name: EnvoyH-6658f727
               protocol: TCP
           resources:
             limits:

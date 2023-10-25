@@ -56,16 +56,6 @@ func ExpectedResourceHashedName(name string) string {
 	return fmt.Sprintf("%s-%s", config.EnvoyPrefix, hashedName)
 }
 
-// ExpectedContainerPortName returns expected container port name with max length of 15 characters.
-// If mergedGateways is enabled or listener port name is larger than 15 characters it will return partially hashed name up to the 7 characters.
-// Listeners on merged gateways have a infraIR port name {GatewayNamespace}/{GatewayName}/{ListenerName}.
-func ExpectedContainerPortName(infraPortName string) string {
-	if len(infraPortName) > 15 {
-		return providerutils.GetHashedName(infraPortName, 7)
-	}
-	return infraPortName
-}
-
 // EnvoyAppLabel returns the labels used for all Envoy resources.
 func EnvoyAppLabel() map[string]string {
 	return map[string]string{
@@ -125,7 +115,8 @@ func expectedProxyContainers(infra *ir.ProxyInfra,
 				return nil, fmt.Errorf("invalid protocol %q", p.Protocol)
 			}
 			port := corev1.ContainerPort{
-				Name:          ExpectedContainerPortName(p.Name),
+				// hashed container port name including up to the 6 characters of the port name and the maximum of 15 characters.
+				Name:          providerutils.GetHashedName(p.Name, 6),
 				ContainerPort: p.ContainerPort,
 				Protocol:      protocol,
 			}
