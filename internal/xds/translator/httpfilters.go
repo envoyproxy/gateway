@@ -106,7 +106,7 @@ func (t *Translator) patchHCMWithFilters(
 	}
 
 	// Add the cors filter, if needed
-	if err := patchHCMWithCorsFilter(mgr, irListener); err != nil {
+	if err := patchHCMWithCORSFilter(mgr, irListener); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func patchRouteWithFilters(
 	}
 
 	// Add the cors per route config to the route, if needed.
-	if err := patchRouteWithCorsConfig(route, irRoute); err != nil {
+	if err := patchRouteWithCORSConfig(route, irRoute); err != nil {
 		return err
 	}
 	return nil

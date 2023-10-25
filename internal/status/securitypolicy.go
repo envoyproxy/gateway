@@ -18,3 +18,15 @@ func SetSecurityPolicyCondition(c *egv1a1.SecurityPolicy, conditionType gwv1a2.P
 	cond := newCondition(string(conditionType), status, string(reason), message, time.Now(), c.Generation)
 	c.Status.Conditions = MergeConditions(c.Status.Conditions, cond)
 }
+
+func SetSecurityPolicyAcceptedIfUnset(s *egv1a1.SecurityPolicyStatus, message string) {
+	// Return early if Accepted condition is already set
+	for _, c := range s.Conditions {
+		if c.Type == string(gwv1a2.PolicyConditionAccepted) {
+			return
+		}
+	}
+
+	cond := newCondition(string(gwv1a2.PolicyConditionAccepted), metav1.ConditionTrue, string(gwv1a2.PolicyReasonAccepted), message, time.Now(), 0)
+	s.Conditions = MergeConditions(s.Conditions, cond)
+}

@@ -132,6 +132,24 @@ _Appears in:_
 
 
 
+#### CORS
+
+
+
+CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `allowOrigins` _[StringMatch](#stringmatch) array_ | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowMethods` _string array_ | AllowMethods defines the methods that are allowed to make requests. |
+| `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
+| `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
+| `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
+
+
 #### ClaimToHeader
 
 
@@ -1033,6 +1051,17 @@ _Appears in:_
 | `value` _string_ |  |
 
 
+#### MatchType
+
+_Underlying type:_ `string`
+
+MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+
+_Appears in:_
+- [StringMatch](#stringmatch)
+
+
+
 #### MatcherType
 
 _Underlying type:_ `string`
@@ -1557,6 +1586,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
 
 
 
@@ -1581,6 +1611,21 @@ _Appears in:_
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
+
+
+#### StringMatch
+
+
+
+StringMatch defines how to match any strings. This is a general purpose match condition that can be used by other EG APIs that need to match against a string.
+
+_Appears in:_
+- [CORS](#cors)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MatchType](#matchtype)_ | Type specifies how to match against a string. |
+| `value` _string_ | Value specifies the string value that the match must have. |
 
 
 #### TCPKeepalive
