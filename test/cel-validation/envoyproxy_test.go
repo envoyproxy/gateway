@@ -6,7 +6,7 @@
 //go:build validation
 // +build validation
 
-package validation
+package cel_validation
 
 import (
 	"context"
