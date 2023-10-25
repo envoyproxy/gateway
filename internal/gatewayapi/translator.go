@@ -185,7 +185,7 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	}
 
 	// Process BackendTrafficPolicies
-	backendTrafficPolicies := ProcessBackendTrafficPolicies(
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
 		resources.BackendTrafficPolicies, gateways, routes, xdsIR)
 	// Process SecurityPolicies
 	securityPolicies := ProcessSecurityPolicies(
