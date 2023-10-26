@@ -7,7 +7,6 @@ gateways:
     namespace: default
   spec:
     gatewayClassName: envoy-gateway-class
-    infrastructure: {}
     listeners:
     - allowedRoutes:
         namespaces:
