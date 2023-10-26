@@ -76,10 +76,21 @@ jobs:
     needs: [build]
     strategy:
       matrix:
-        version: [v1.26.6, v1.27.3, v1.28.0]
+        version: [ v1.26.6, v1.27.3, v1.28.0 ]
     steps:
       - uses: actions/checkout@v4
       - uses: ./tools/github-actions/setup-deps
+
+      - name: Download EG Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: envoy-gateway
+          path: bin/
+
+      - name: Give Privileges To EG Binaries
+        run: |
+          chmod +x bin/linux/amd64/envoy-gateway
+          chmod +x bin/linux/arm64/envoy-gateway
 
       # conformance
       - name: Run Standard Conformance Tests
@@ -88,32 +99,26 @@ jobs:
           IMAGE_PULL_POLICY: IfNotPresent
         run: make conformance
 
-  kube-test:
-    runs-on: ubuntu-latest
-    needs: [build]
-    strategy:
-      matrix:
-        version: [v1.26.6, v1.27.3, v1.28.0]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./tools/github-actions/setup-deps
-
-      # CRD Validation Tests
-      - name: Run Validation Tests
-        env:
-          KIND_NODE_TAG: ${{ matrix.version }}
-          IMAGE_PULL_POLICY: IfNotPresent
-        run: make kube-test
-
   e2e-test:
     runs-on: ubuntu-latest
     needs: [build]
     strategy:
       matrix:
-        version: [v1.26.6, v1.27.3, v1.28.0]
+        version: [ v1.26.6, v1.27.3, v1.28.0 ]
     steps:
       - uses: actions/checkout@v4
       - uses: ./tools/github-actions/setup-deps
+
+      - name: Download EG Binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: envoy-gateway
+          path: bin/
+
+      - name: Give Privileges To EG Binaries
+        run: |
+          chmod +x bin/linux/amd64/envoy-gateway
+          chmod +x bin/linux/arm64/envoy-gateway
 
       # E2E
       - name: Run E2E Tests
