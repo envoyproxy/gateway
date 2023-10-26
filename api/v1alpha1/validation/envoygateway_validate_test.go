@@ -413,6 +413,47 @@ func TestValidateEnvoyGateway(t *testing.T) {
 				},
 			},
 			expect: false,
+		}, {
+			name: "valid gateway metrics sink",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					Telemetry: &v1alpha1.EnvoyGatewayTelemetry{
+						Metrics: &v1alpha1.EnvoyGatewayMetrics{
+							Sinks: []v1alpha1.EnvoyGatewayMetricSink{
+								{
+									Type: v1alpha1.MetricSinkTypeOpenTelemetry,
+									OpenTelemetry: &v1alpha1.EnvoyGatewayOpenTelemetrySink{
+										Host:     "x.x.x.x",
+										Port:     4317,
+										Protocol: "grpc",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: true,
+		}, {
+			name: "invalid gateway metrics sink",
+			eg: &v1alpha1.EnvoyGateway{
+				EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{
+					Gateway:  v1alpha1.DefaultGateway(),
+					Provider: v1alpha1.DefaultEnvoyGatewayProvider(),
+					Telemetry: &v1alpha1.EnvoyGatewayTelemetry{
+						Metrics: &v1alpha1.EnvoyGatewayMetrics{
+							Sinks: []v1alpha1.EnvoyGatewayMetricSink{
+								{
+									Type: v1alpha1.MetricSinkTypeOpenTelemetry,
+								},
+							},
+						},
+					},
+				},
+			},
+			expect: false,
 		},
 	}
 

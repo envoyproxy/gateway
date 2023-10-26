@@ -38,7 +38,6 @@ gateways:
     namespace: default
   spec:
     gatewayClassName: eg
-    infrastructure: {}
     listeners:
     - name: tcp
       port: 1234

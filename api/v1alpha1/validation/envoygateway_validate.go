@@ -82,6 +82,16 @@ func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 				return fmt.Errorf("unsupported extension server TLS certificateRef %v", certificateRefKind)
 			}
 		}
+	case eg.Telemetry != nil:
+		if eg.Telemetry.Metrics != nil {
+			for _, sink := range eg.Telemetry.Metrics.Sinks {
+				if sink.Type == v1alpha1.MetricSinkTypeOpenTelemetry {
+					if sink.OpenTelemetry == nil {
+						return fmt.Errorf("OpenTelemetry is required when sink Type is OpenTelemetry")
+					}
+				}
+			}
+		}
 	}
 	return nil
 }

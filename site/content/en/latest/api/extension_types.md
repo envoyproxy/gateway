@@ -15,6 +15,8 @@ API group.
 
 ### Resource Types
 - [AuthenticationFilter](#authenticationfilter)
+- [BackendTrafficPolicy](#backendtrafficpolicy)
+- [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
 - [ClientTrafficPolicyList](#clienttrafficpolicylist)
 - [EnvoyGateway](#envoygateway)
@@ -22,6 +24,8 @@ API group.
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
 - [RateLimitFilter](#ratelimitfilter)
+- [SecurityPolicy](#securitypolicy)
+- [SecurityPolicyList](#securitypolicylist)
 
 
 
@@ -67,6 +71,57 @@ _Appears in:_
 
 
 
+#### BackendTrafficPolicy
+
+
+
+BackendTrafficPolicy allows the user to configure the behavior of the connection between the downstream client and Envoy Proxy listener.
+
+_Appears in:_
+- [BackendTrafficPolicyList](#backendtrafficpolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `BackendTrafficPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[BackendTrafficPolicySpec](#backendtrafficpolicyspec)_ | spec defines the desired state of BackendTrafficPolicy. |
+
+
+#### BackendTrafficPolicyList
+
+
+
+BackendTrafficPolicyList contains a list of BackendTrafficPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `BackendTrafficPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[BackendTrafficPolicy](#backendtrafficpolicy) array_ |  |
+
+
+#### BackendTrafficPolicySpec
+
+
+
+spec defines the desired state of BackendTrafficPolicy.
+
+_Appears in:_
+- [BackendTrafficPolicy](#backendtrafficpolicy)
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
+| `rateLimit` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
+| `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
+
+
+
+
 #### BootstrapType
 
 _Underlying type:_ `string`
@@ -76,6 +131,24 @@ BootstrapType defines the types of bootstrap supported by Envoy Gateway.
 _Appears in:_
 - [ProxyBootstrap](#proxybootstrap)
 
+
+
+#### CORS
+
+
+
+CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `allowOrigins` _[StringMatch](#stringmatch) array_ | AllowOrigins defines the origins that are allowed to make requests. |
+| `allowMethods` _string array_ | AllowMethods defines the methods that are allowed to make requests. |
+| `allowHeaders` _string array_ | AllowHeaders defines the headers that are allowed to be sent with requests. |
+| `exposeHeaders` _string array_ | ExposeHeaders defines the headers that can be exposed in the responses. |
+| `maxAge` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#duration-v1-meta)_ | MaxAge defines how long the results of a preflight request can be cached. |
 
 
 #### ClaimToHeader
@@ -143,6 +216,31 @@ _Appears in:_
 
 
 
+#### ConsistentHash
+
+
+
+ConsistentHash defines the configuration related to the consistent hash load balancer policy
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+| Field | Description |
+| --- | --- |
+| `type` _[ConsistentHashType](#consistenthashtype)_ |  |
+
+
+#### ConsistentHashType
+
+_Underlying type:_ `string`
+
+ConsistentHashType defines the type of input to hash on.
+
+_Appears in:_
+- [ConsistentHash](#consistenthash)
+
+
+
 #### CustomTag
 
 
@@ -202,6 +300,7 @@ EnvoyGateway is the schema for the envoygateways API.
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
+| `telemetry` _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ | Telemetry defines the desired control plane telemetry related abilities. If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
@@ -337,6 +436,66 @@ _Appears in:_
 | `level` _object (keys:[EnvoyGatewayLogComponent](#envoygatewaylogcomponent), values:[LogLevel](#loglevel))_ | Level is the logging level. If unspecified, defaults to "info". EnvoyGatewayLogComponent options: default/provider/gateway-api/xds-translator/xds-server/infrastructure/global-ratelimit. LogLevel options: debug/info/error/warn. |
 
 
+#### EnvoyGatewayMetricSink
+
+
+
+EnvoyGatewayMetricSink defines control plane metric sinks where metrics are sent to.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG control plane currently supports OpenTelemetry. |
+| `openTelemetry` _[EnvoyGatewayOpenTelemetrySink](#envoygatewayopentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
+
+
+#### EnvoyGatewayMetrics
+
+
+
+EnvoyGatewayMetrics defines control plane push/pull metrics configurations.
+
+_Appears in:_
+- [EnvoyGatewayTelemetry](#envoygatewaytelemetry)
+
+| Field | Description |
+| --- | --- |
+| `sinks` _[EnvoyGatewayMetricSink](#envoygatewaymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `prometheus` _[EnvoyGatewayPrometheusProvider](#envoygatewayprometheusprovider)_ | Prometheus defines the configuration for prometheus endpoint. |
+
+
+#### EnvoyGatewayOpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the sink service hostname. |
+| `protocol` _string_ | Protocol define the sink service protocol. |
+| `port` _integer_ | Port defines the port the sink service is exposed on. |
+
+
+#### EnvoyGatewayPrometheusProvider
+
+
+
+EnvoyGatewayPrometheusProvider will expose prometheus endpoint in pull mode.
+
+_Appears in:_
+- [EnvoyGatewayMetrics](#envoygatewaymetrics)
+
+| Field | Description |
+| --- | --- |
+| `disable` _boolean_ | Disable defines if disables the prometheus metrics in pull mode. |
+
+
 #### EnvoyGatewayProvider
 
 
@@ -384,9 +543,25 @@ _Appears in:_
 | `provider` _[EnvoyGatewayProvider](#envoygatewayprovider)_ | Provider defines the desired provider and provider-specific configuration. If unspecified, the Kubernetes provider is used with default configuration parameters. |
 | `logging` _[EnvoyGatewayLogging](#envoygatewaylogging)_ | Logging defines logging parameters for Envoy Gateway. |
 | `admin` _[EnvoyGatewayAdmin](#envoygatewayadmin)_ | Admin defines the desired admin related abilities. If unspecified, the Admin is used with default configuration parameters. |
+| `telemetry` _[EnvoyGatewayTelemetry](#envoygatewaytelemetry)_ | Telemetry defines the desired control plane telemetry related abilities. If unspecified, the telemetry is used with default configuration. |
 | `rateLimit` _[RateLimit](#ratelimit)_ | RateLimit defines the configuration associated with the Rate Limit service deployed by Envoy Gateway required to implement the Global Rate limiting functionality. The specific rate limit service used here is the reference implementation in Envoy. For more details visit https://github.com/envoyproxy/ratelimit. This configuration is unneeded for "Local" rate limiting. |
 | `extensionManager` _[ExtensionManager](#extensionmanager)_ | ExtensionManager defines an extension manager to register for the Envoy Gateway Control Plane. |
 | `extensionApis` _[ExtensionAPISettings](#extensionapisettings)_ | ExtensionAPIs defines the settings related to specific Gateway API Extensions implemented by Envoy Gateway |
+
+
+#### EnvoyGatewayTelemetry
+
+
+
+EnvoyGatewayTelemetry defines telemetry configurations for envoy gateway control plane. Control plane will focus on metrics observability telemetry and tracing telemetry later.
+
+_Appears in:_
+- [EnvoyGateway](#envoygateway)
+- [EnvoyGatewaySpec](#envoygatewayspec)
+
+| Field | Description |
+| --- | --- |
+| `metrics` _[EnvoyGatewayMetrics](#envoygatewaymetrics)_ | Metrics defines metrics configuration for envoy gateway. |
 
 
 #### EnvoyJSONPatchConfig
@@ -691,22 +866,6 @@ HeaderMatch defines the match attributes within the HTTP Headers of the request.
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
-| Field | Description |
-| --- | --- |
-| `type` _[HeaderMatchType](#headermatchtype)_ | Type specifies how to match against the value of the header. |
-| `name` _string_ | Name of the HTTP header. |
-| `value` _string_ | Value within the HTTP header. Due to the case-insensitivity of header names, "foo" and "Foo" are considered equivalent. Do not set this field when Type="Distinct", implying matching on any/all unique values within the header. |
-
-
-#### HeaderMatchType
-
-_Underlying type:_ `string`
-
-HeaderMatchType specifies the semantics of how HTTP header values should be compared. Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
-
-_Appears in:_
-- [HeaderMatch](#headermatch)
-
 
 
 #### InfrastructureProviderType
@@ -891,11 +1050,37 @@ _Appears in:_
 | `value` _string_ | Value defines the hard-coded value to add to each span. |
 
 
+#### LoadBalancer
+
+
+
+LoadBalancer defines the load balancer policy to be applied.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid RateLimitType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
+| `consistentHash` _[ConsistentHash](#consistenthash)_ | ConsistentHash defines the configuration when the load balancer type is set to ConsistentHash |
+
+
+#### LoadBalancerType
+
+_Underlying type:_ `string`
+
+LoadBalancerType specifies the types of LoadBalancer.
+
+_Appears in:_
+- [LoadBalancer](#loadbalancer)
+
+
+
 #### LogLevel
 
 _Underlying type:_ `string`
 
-LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs. This type is not implemented for EnvoyProxy until https://github.com/envoyproxy/gateway/issues/280 is fixed.
+LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
@@ -918,6 +1103,17 @@ _Appears in:_
 | `value` _string_ |  |
 
 
+#### MatchType
+
+_Underlying type:_ `string`
+
+MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+
+_Appears in:_
+- [StringMatch](#stringmatch)
+
+
+
 #### MatcherType
 
 _Underlying type:_ `string`
@@ -929,21 +1125,6 @@ _Appears in:_
 
 
 
-#### MetricSink
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
-| `openTelemetry` _[OpenTelemetrySink](#opentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
-
-
 #### MetricSinkType
 
 _Underlying type:_ `string`
@@ -951,7 +1132,8 @@ _Underlying type:_ `string`
 
 
 _Appears in:_
-- [MetricSink](#metricsink)
+- [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
+- [ProxyMetricSink](#proxymetricsink)
 
 
 
@@ -969,35 +1151,6 @@ _Appears in:_
 | `host` _string_ | Host define the extension service hostname. |
 | `port` _integer_ | Port defines the port the extension service is exposed on. |
 | `resources` _object (keys:string, values:string)_ | Resources is a set of labels that describe the source of a log entry, including envoy node info. It's recommended to follow [semantic conventions](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/). |
-
-
-#### OpenTelemetrySink
-
-
-
-
-
-_Appears in:_
-- [MetricSink](#metricsink)
-
-| Field | Description |
-| --- | --- |
-| `host` _string_ | Host define the service hostname. |
-| `port` _integer_ | Port defines the port the service is exposed on. |
-
-
-#### PrometheusProvider
-
-
-
-
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `disable` _boolean_ | Disable the Prometheus endpoint. |
 
 
 #### ProviderType
@@ -1136,6 +1289,21 @@ _Appears in:_
 | `level` _object (keys:[ProxyLogComponent](#proxylogcomponent), values:[LogLevel](#loglevel))_ | Level is a map of logging level per component, where the component is the key and the log level is the value. If unspecified, defaults to "default: warn". |
 
 
+#### ProxyMetricSink
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[MetricSinkType](#metricsinktype)_ | Type defines the metric sink type. EG currently only supports OpenTelemetry. |
+| `openTelemetry` _[ProxyOpenTelemetrySink](#proxyopentelemetrysink)_ | OpenTelemetry defines the configuration for OpenTelemetry sink. It's required if the sink type is OpenTelemetry. |
+
+
 #### ProxyMetrics
 
 
@@ -1147,10 +1315,39 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `prometheus` _[PrometheusProvider](#prometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
-| `sinks` _[MetricSink](#metricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
+| `prometheus` _[ProxyPrometheusProvider](#proxyprometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
+| `sinks` _[ProxyMetricSink](#proxymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
 | `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
+
+
+#### ProxyOpenTelemetrySink
+
+
+
+
+
+_Appears in:_
+- [ProxyMetricSink](#proxymetricsink)
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Host define the service hostname. |
+| `port` _integer_ | Port defines the port the service is exposed on. |
+
+
+#### ProxyPrometheusProvider
+
+
+
+
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `disable` _boolean_ | Disable the Prometheus endpoint. |
 
 
 #### ProxyTelemetry
@@ -1251,6 +1448,7 @@ RateLimitFilter allows the user to limit the number of incoming requests to a pr
 RateLimitFilterSpec defines the desired state of RateLimitFilter.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [RateLimitFilter](#ratelimitfilter)
 
 | Field | Description |
@@ -1395,6 +1593,56 @@ _Appears in:_
 
 
 
+#### SecurityPolicy
+
+
+
+SecurityPolicy allows the user to configure various security settings for a Gateway.
+
+_Appears in:_
+- [SecurityPolicyList](#securitypolicylist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `SecurityPolicy`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[SecurityPolicySpec](#securitypolicyspec)_ | Spec defines the desired state of SecurityPolicy. |
+
+
+#### SecurityPolicyList
+
+
+
+SecurityPolicyList contains a list of SecurityPolicy resources.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
+| `kind` _string_ | `SecurityPolicyList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[SecurityPolicy](#securitypolicy) array_ |  |
+
+
+#### SecurityPolicySpec
+
+
+
+SecurityPolicySpec defines the desired state of SecurityPolicy.
+
+_Appears in:_
+- [SecurityPolicy](#securitypolicy)
+
+| Field | Description |
+| --- | --- |
+| `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
+| `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+
+
+
+
 #### ServiceType
 
 _Underlying type:_ `string`
@@ -1415,21 +1663,21 @@ _Appears in:_
 _Appears in:_
 - [RateLimitSelectCondition](#ratelimitselectcondition)
 
-| Field | Description |
-| --- | --- |
-| `type` _[SourceMatchType](#sourcematchtype)_ |  |
-| `value` _string_ | Value is the IP CIDR that represents the range of Source IP Addresses of the client. These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header. For example, `192.168.0.1/32`, `192.168.0.0/24`, `001:db8::/64`. |
 
 
-#### SourceMatchType
-
-_Underlying type:_ `string`
+#### StringMatch
 
 
+
+StringMatch defines how to match any strings. This is a general purpose match condition that can be used by other EG APIs that need to match against a string.
 
 _Appears in:_
-- [SourceMatch](#sourcematch)
+- [CORS](#cors)
 
+| Field | Description |
+| --- | --- |
+| `type` _[MatchType](#matchtype)_ | Type specifies how to match against a string. |
+| `value` _string_ | Value specifies the string value that the match must have. |
 
 
 #### TCPKeepalive

@@ -32,6 +32,7 @@ The Helm chart for Envoy Gateway
 | config.envoyGateway.logging.level.default | string | `"info"` |  |
 | config.envoyGateway.provider.type | string | `"Kubernetes"` |  |
 | createNamespace | bool | `false` |  |
+| deployment.envoyGateway.cert.expiryDays | int | `365` |  |
 | deployment.envoyGateway.image.repository | string | `"${ImageRepository}"` |  |
 | deployment.envoyGateway.image.tag | string | `"${ImageTag}"` |  |
 | deployment.envoyGateway.imagePullPolicy | string | `"Always"` |  |

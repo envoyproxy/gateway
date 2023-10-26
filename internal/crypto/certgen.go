@@ -28,9 +28,6 @@ const (
 	// DefaultEnvoyDNSPrefix defines the default Envoy DNS prefix.
 	DefaultEnvoyDNSPrefix = "*"
 
-	// DefaultCertificateLifetime holds the default certificate lifetime (in days).
-	DefaultCertificateLifetime = 365
-
 	// keySize sets the RSA key size to 2048 bits. This is minimum recommended size
 	// for RSA keys.
 	keySize = 2048
@@ -97,7 +94,7 @@ func GenerateCerts(cfg *config.Server) (*Certificates, error) {
 	switch certCfg.Provider.Type {
 	case ProviderTypeEnvoyGateway:
 		now := time.Now()
-		expiry := now.Add(24 * time.Duration(DefaultCertificateLifetime) * time.Hour)
+		expiry := now.Add(24 * time.Duration(cfg.CertificateExpiryDays) * time.Hour)
 		caCertPEM, caKeyPEM, err := newCA(DefaultEnvoyGatewayDNSPrefix, expiry)
 		if err != nil {
 			return nil, err

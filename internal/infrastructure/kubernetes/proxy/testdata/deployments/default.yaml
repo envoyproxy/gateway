@@ -130,14 +130,6 @@ spec:
                             path_config_source:
                               path: "/sds/xds-trusted-ca.json"
                             resource_api_version: V3
-              layered_runtime:
-                layers:
-                - name: runtime-0
-                  rtds_layer:
-                    rtds_config:
-                      ads: {}
-                      resource_api_version: V3
-                    name: runtime-0
             - --log-level warn
             - --cpuset-threads
           command:
@@ -158,10 +150,10 @@ spec:
           name: envoy
           ports:
             - containerPort: 8080
-              name: EnvoyHTTPPort
+              name: EnvoyH-d76a15e2
               protocol: TCP
             - containerPort: 8443
-              name: EnvoyHTTPSPort
+              name: EnvoyH-6658f727
               protocol: TCP
           resources:
             requests:

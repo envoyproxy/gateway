@@ -1,5 +1,7 @@
 deployment:
   envoyGateway:
+    cert:
+      expiryDays: 365
     image:
       repository: ${ImageRepository}
       tag: '${ImageTag}'

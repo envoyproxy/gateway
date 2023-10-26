@@ -152,11 +152,7 @@ func validateBootstrap(boostrapConfig *egv1a1.ProxyBootstrap) error {
 		cmp.Diff(userBootstrap.DynamicResources, defaultBootstrap.DynamicResources, protocmp.Transform()) != "" {
 		return fmt.Errorf("dynamic_resources cannot be modified")
 	}
-	// Ensure layered runtime resources config is same
-	if userBootstrap.LayeredRuntime == nil ||
-		cmp.Diff(userBootstrap.LayeredRuntime, defaultBootstrap.LayeredRuntime, protocmp.Transform()) != "" {
-		return fmt.Errorf("layered_runtime cannot be modified")
-	}
+
 	// Ensure that the xds_cluster config is same
 	var userXdsCluster, defaultXdsCluster *clusterv3.Cluster
 	for _, cluster := range userBootstrap.StaticResources.Clusters {
@@ -189,6 +185,17 @@ func validateProxyTelemetry(spec *egv1a1.EnvoyProxySpec) []error {
 		accessLogErrs := validateProxyAccessLog(spec.Telemetry.AccessLog)
 		if len(accessLogErrs) > 0 {
 			errs = append(errs, accessLogErrs...)
+		}
+	}
+
+	if spec != nil && spec.Telemetry != nil && spec.Telemetry.Metrics != nil {
+		for _, sink := range spec.Telemetry.Metrics.Sinks {
+			if sink.Type == egv1a1.MetricSinkTypeOpenTelemetry {
+				if sink.OpenTelemetry == nil {
+					err := fmt.Errorf("opentelemetry is required if the sink type is OpenTelemetry")
+					errs = append(errs, err)
+				}
+			}
 		}
 	}
 

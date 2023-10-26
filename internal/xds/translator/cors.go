@@ -22,9 +22,9 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-// patchHCMWithCorsFilter builds and appends the Cors Filter to the HTTP
+// patchHCMWithCORSFilter builds and appends the CORS Filter to the HTTP
 // Connection Manager if applicable.
-func patchHCMWithCorsFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func patchHCMWithCORSFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -33,7 +33,7 @@ func patchHCMWithCorsFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 		return errors.New("ir listener is nil")
 	}
 
-	if !listenerContainsCors(irListener) {
+	if !listenerContainsCORS(irListener) {
 		return nil
 	}
 
@@ -44,7 +44,7 @@ func patchHCMWithCorsFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 		}
 	}
 
-	corsFilter, err := buildHCMCorsFilter()
+	corsFilter, err := buildHCMCORSFilter()
 	if err != nil {
 		return err
 	}
@@ -55,8 +55,8 @@ func patchHCMWithCorsFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTT
 	return nil
 }
 
-// buildHCMCorsFilter returns a Cors filter from the provided IR listener.
-func buildHCMCorsFilter() (*hcmv3.HttpFilter, error) {
+// buildHCMCORSFilter returns a CORS filter from the provided IR listener.
+func buildHCMCORSFilter() (*hcmv3.HttpFilter, error) {
 	corsProto := &corsv3.Cors{}
 
 	corsAny, err := anypb.New(corsProto)
@@ -72,15 +72,15 @@ func buildHCMCorsFilter() (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-// listenerContainsCors returns true if the provided listener has Cors
+// listenerContainsCORS returns true if the provided listener has CORS
 // policies attached to its routes.
-func listenerContainsCors(irListener *ir.HTTPListener) bool {
+func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 	if irListener == nil {
 		return false
 	}
 
 	for _, route := range irListener.Routes {
-		if route.Cors != nil {
+		if route.CORS != nil {
 			return true
 		}
 	}
@@ -88,16 +88,16 @@ func listenerContainsCors(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-// patchRouteWithCorsConfig patches the provided route with the Cors config if
+// patchRouteWithCORSConfig patches the provided route with the CORS config if
 // applicable.
-func patchRouteWithCorsConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func patchRouteWithCORSConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
 	if irRoute == nil {
 		return errors.New("ir route is nil")
 	}
-	if irRoute.Cors == nil {
+	if irRoute.CORS == nil {
 		return nil
 	}
 
@@ -119,14 +119,14 @@ func patchRouteWithCorsConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error
 
 	//nolint:gocritic
 
-	for _, origin := range irRoute.Cors.AllowOrigins {
+	for _, origin := range irRoute.CORS.AllowOrigins {
 		allowOrigins = append(allowOrigins, buildXdsStringMatcher(origin))
 	}
 
-	allowMethods = strings.Join(irRoute.Cors.AllowMethods, ", ")
-	allowHeaders = strings.Join(irRoute.Cors.AllowHeaders, ", ")
-	exposeHeaders = strings.Join(irRoute.Cors.ExposeHeaders, ", ")
-	maxAge = strconv.Itoa(int(irRoute.Cors.MaxAge.Seconds()))
+	allowMethods = strings.Join(irRoute.CORS.AllowMethods, ", ")
+	allowHeaders = strings.Join(irRoute.CORS.AllowHeaders, ", ")
+	exposeHeaders = strings.Join(irRoute.CORS.ExposeHeaders, ", ")
+	maxAge = strconv.Itoa(int(irRoute.CORS.MaxAge.Seconds()))
 
 	routeCfgProto := &corsv3.CorsPolicy{
 		AllowOriginStringMatch: allowOrigins,

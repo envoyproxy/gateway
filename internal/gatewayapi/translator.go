@@ -98,6 +98,8 @@ func newTranslateResult(gateways []*GatewayContext,
 	tcpRoutes []*TCPRouteContext,
 	udpRoutes []*UDPRouteContext,
 	clientTrafficPolicies []*egv1a1.ClientTrafficPolicy,
+	backendTrafficPolicies []*egv1a1.BackendTrafficPolicy,
+	securityPolicies []*egv1a1.SecurityPolicy,
 	xdsIR XdsIRMap, infraIR InfraIRMap) *TranslateResult {
 	translateResult := &TranslateResult{
 		XdsIR:   xdsIR,
@@ -124,6 +126,8 @@ func newTranslateResult(gateways []*GatewayContext,
 	}
 
 	translateResult.ClientTrafficPolicies = append(translateResult.ClientTrafficPolicies, clientTrafficPolicies...)
+	translateResult.BackendTrafficPolicies = append(translateResult.BackendTrafficPolicies, backendTrafficPolicies...)
+	translateResult.SecurityPolicies = append(translateResult.SecurityPolicies, securityPolicies...)
 
 	return translateResult
 }
@@ -162,10 +166,38 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process all relevant UDPRoutes.
 	udpRoutes := t.ProcessUDPRoutes(resources.UDPRoutes, gateways, resources, xdsIR)
 
+	// Process BackendTrafficPolicies
+	routes := []RouteContext{}
+	for _, h := range httpRoutes {
+		routes = append(routes, h)
+	}
+	for _, g := range grpcRoutes {
+		routes = append(routes, g)
+	}
+	for _, t := range tlsRoutes {
+		routes = append(routes, t)
+	}
+	for _, t := range tcpRoutes {
+		routes = append(routes, t)
+	}
+	for _, u := range udpRoutes {
+		routes = append(routes, u)
+	}
+
+	// Process BackendTrafficPolicies
+	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
+		resources.BackendTrafficPolicies, gateways, routes, xdsIR)
+	// Process SecurityPolicies
+	securityPolicies := t.ProcessSecurityPolicies(
+		resources.SecurityPolicies, gateways, routes, xdsIR)
+
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)
 
-	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes, tcpRoutes, udpRoutes, clientTrafficPolicies, xdsIR, infraIR)
+	return newTranslateResult(gateways, httpRoutes, grpcRoutes, tlsRoutes,
+		tcpRoutes, udpRoutes, clientTrafficPolicies, backendTrafficPolicies,
+		securityPolicies, xdsIR, infraIR)
+
 }
 
 // GetRelevantGateways returns GatewayContexts, containing a copy of the original

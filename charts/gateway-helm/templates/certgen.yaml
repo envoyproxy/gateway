@@ -31,6 +31,8 @@ spec:
               fieldPath: metadata.namespace
         - name: KUBERNETES_CLUSTER_DOMAIN
           value: {{ .Values.kubernetesClusterDomain }}
+        - name: ENVOY_GATEWAY_CERTIFICATE_EXPIRY_DAYS
+          value: "{{ .Values.deployment.envoyGateway.cert.expiryDays }}"
         image: {{ .Values.deployment.envoyGateway.image.repository }}:{{ .Values.deployment.envoyGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.deployment.envoyGateway.imagePullPolicy }}
         name: envoy-gateway-certgen
