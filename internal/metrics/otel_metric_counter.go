@@ -32,7 +32,7 @@ func (f *Counter) Increment() {
 }
 
 func (f *Counter) Decrement() {
-	f.Add(1)
+	f.Add(-1)
 }
 
 func (f *Counter) With(labelValues ...LabelValue) *Counter {

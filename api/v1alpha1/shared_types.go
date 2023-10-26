@@ -21,6 +21,10 @@ const (
 	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
+	// HTTPProtocol is the common-used http protocol.
+	HTTPProtocol = "http"
+	// GRPCProtocol is the common-used grpc protocol.
+	GRPCProtocol = "grpc"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.

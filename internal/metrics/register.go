@@ -8,6 +8,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
@@ -73,7 +74,7 @@ func start(address string, handler http.Handler) error {
 
 func newOptions(svr *config.Server) registerOptions {
 	newOpts := registerOptions{}
-	newOpts.address = fmt.Sprintf("%s:%d", v1alpha1.GatewayMetricsHost, v1alpha1.GatewayMetricsPort)
+	newOpts.address = net.JoinHostPort(v1alpha1.GatewayMetricsHost, fmt.Sprint(v1alpha1.GatewayMetricsPort))
 
 	if !svr.EnvoyGateway.IfDisablePrometheus() {
 		newOpts.pullOptions.disable = true
@@ -142,7 +143,7 @@ func registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) e
 // registerOTELHTTPexporter registers OTEL HTTP metrics exporter (PUSH mode).
 func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
-		if sink.protocol == "http" {
+		if sink.protocol == v1alpha1.HTTPProtocol {
 			address := fmt.Sprintf("%s:%d", sink.host, sink.port)
 			httpexporter, err := otlpmetrichttp.New(
 				context.Background(),
@@ -165,8 +166,8 @@ func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) e
 // registerOTELgRPCexporter registers OTEL gRPC metrics exporter (PUSH mode).
 func registerOTELgRPCexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
-		if sink.protocol == "grpc" {
-			address := fmt.Sprintf("%s:%d", sink.host, sink.port)
+		if sink.protocol == v1alpha1.GRPCProtocol {
+			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
 			httpexporter, err := otlpmetricgrpc.New(
 				context.Background(),
 				otlpmetricgrpc.WithEndpoint(address),

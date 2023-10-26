@@ -57,35 +57,35 @@ type Metadata struct {
 }
 
 // metrics stores stores metrics
-type metricstore struct {
+type store struct {
 	started bool
 	mu      sync.Mutex
 	stores  map[string]Metadata
 }
 
 // stores is a global that stores all registered metrics
-var stores = metricstore{
+var stores = store{
 	stores: map[string]Metadata{},
 }
 
 // register records a newly defined metric. Only valid before an exporter is set.
-func (d *metricstore) register(metricstore Metadata) {
+func (d *store) register(store Metadata) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if d.started {
-		metricsLogger.Error(errors.New("cannot initialize metric after metric has started"), "metric", metricstore.Name)
+		metricsLogger.Error(errors.New("cannot initialize metric after metric has started"), "metric", store.Name)
 	}
-	d.stores[metricstore.Name] = metricstore
+	d.stores[store.Name] = store
 }
 
 // preAddOptions runs pre-run steps before adding to meter provider.
-func (d *metricstore) preAddOptions() []metric.Option {
+func (d *store) preAddOptions() []metric.Option {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	d.started = true
 	opts := []metric.Option{}
-	for name, metricstore := range d.stores {
-		if metricstore.Bounds == nil {
+	for name, store := range d.stores {
+		if store.Bounds == nil {
 			continue
 		}
 		// for each histogram metric (i.e. those with bounds), set up a view explicitly defining those buckets.
@@ -93,7 +93,7 @@ func (d *metricstore) preAddOptions() []metric.Option {
 			metric.Instrument{Name: name},
 			metric.Stream{
 				Aggregation: metric.AggregationExplicitBucketHistogram{
-					Boundaries: metricstore.Bounds,
+					Boundaries: store.Bounds,
 				}},
 		))
 		opts = append(opts, v)
