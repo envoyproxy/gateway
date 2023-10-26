@@ -24,7 +24,7 @@ import (
 	_ "github.com/envoyproxy/gateway/internal/xds/extensions" // register the generated types to support protojson unmarshalling
 )
 
-// Validate validates the provided EnvoyProxy.
+// ValidateEnvoyProxy validates the provided EnvoyProxy.
 func ValidateEnvoyProxy(proxy *egv1a1.EnvoyProxy) error {
 	var errs []error
 	if proxy == nil {
