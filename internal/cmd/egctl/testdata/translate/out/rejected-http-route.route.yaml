@@ -19,7 +19,6 @@ gateways:
     namespace: envoy-gateway-system
   spec:
     gatewayClassName: eg
-    infrastructure: {}
     listeners:
     - name: tls
       port: 8443
