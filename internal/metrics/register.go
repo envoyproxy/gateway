@@ -144,7 +144,7 @@ func registerOTELPromExporter(otelOpts *[]metric.Option, opts registerOptions) e
 func registerOTELHTTPexporter(otelOpts *[]metric.Option, opts registerOptions) error {
 	for _, sink := range opts.pushOptions.sinks {
 		if sink.protocol == v1alpha1.HTTPProtocol {
-			address := fmt.Sprintf("%s:%d", sink.host, sink.port)
+			address := net.JoinHostPort(sink.host, fmt.Sprint(sink.port))
 			httpexporter, err := otlpmetrichttp.New(
 				context.Background(),
 				otlpmetrichttp.WithEndpoint(address),
