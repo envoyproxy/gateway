@@ -8,7 +8,9 @@ package validation
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
@@ -468,4 +470,231 @@ func TestValidateEnvoyGateway(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnvoyGateway(t *testing.T) {
+	envoyGateway := v1alpha1.DefaultEnvoyGateway()
+	assert.True(t, envoyGateway.Provider != nil)
+	assert.True(t, envoyGateway.Gateway != nil)
+	assert.True(t, envoyGateway.Logging != nil)
+	envoyGateway.SetEnvoyGatewayDefaults()
+	assert.Equal(t, envoyGateway.Logging, v1alpha1.DefaultEnvoyGatewayLogging())
+
+	logging := v1alpha1.DefaultEnvoyGatewayLogging()
+	assert.True(t, logging != nil)
+	assert.True(t, logging.Level[v1alpha1.LogComponentGatewayDefault] == v1alpha1.LogLevelInfo)
+
+	gatewayLogging := &v1alpha1.EnvoyGatewayLogging{
+		Level: logging.Level,
+	}
+	gatewayLogging.SetEnvoyGatewayLoggingDefaults()
+	assert.True(t, gatewayLogging != nil)
+	assert.True(t, gatewayLogging.Level[v1alpha1.LogComponentGatewayDefault] == v1alpha1.LogLevelInfo)
+}
+
+func TestDefaultEnvoyGatewayLoggingLevel(t *testing.T) {
+	type args struct {
+		component string
+		level     v1alpha1.LogLevel
+	}
+	tests := []struct {
+		name string
+		args args
+		want v1alpha1.LogLevel
+	}{
+		{
+			name: "test default info level for empty level",
+			args: args{component: "", level: ""},
+			want: v1alpha1.LogLevelInfo,
+		},
+		{
+			name: "test default info level for empty level",
+			args: args{component: string(v1alpha1.LogComponentGatewayDefault), level: ""},
+			want: v1alpha1.LogLevelInfo,
+		},
+		{
+			name: "test default info level for info level",
+			args: args{component: string(v1alpha1.LogComponentGatewayDefault), level: v1alpha1.LogLevelInfo},
+			want: v1alpha1.LogLevelInfo,
+		},
+		{
+			name: "test default error level for error level",
+			args: args{component: string(v1alpha1.LogComponentGatewayDefault), level: v1alpha1.LogLevelError},
+			want: v1alpha1.LogLevelError,
+		},
+		{
+			name: "test gateway-api error level for error level",
+			args: args{component: string(v1alpha1.LogComponentGatewayAPIRunner), level: v1alpha1.LogLevelError},
+			want: v1alpha1.LogLevelError,
+		},
+		{
+			name: "test gateway-api info level for info level",
+			args: args{component: string(v1alpha1.LogComponentGatewayAPIRunner), level: v1alpha1.LogLevelInfo},
+			want: v1alpha1.LogLevelInfo,
+		},
+		{
+			name: "test default gateway-api warn level for info level",
+			args: args{component: string(v1alpha1.LogComponentGatewayAPIRunner), level: ""},
+			want: v1alpha1.LogLevelInfo,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			logging := &v1alpha1.EnvoyGatewayLogging{}
+			if got := logging.DefaultEnvoyGatewayLoggingLevel(tt.args.level); got != tt.want {
+				t.Errorf("defaultLevel() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnvoyGatewayProvider(t *testing.T) {
+	envoyGateway := &v1alpha1.EnvoyGateway{
+		TypeMeta:         metav1.TypeMeta{},
+		EnvoyGatewaySpec: v1alpha1.EnvoyGatewaySpec{Provider: v1alpha1.DefaultEnvoyGatewayProvider()},
+	}
+	assert.True(t, envoyGateway.Provider != nil)
+
+	envoyGatewayProvider := envoyGateway.GetEnvoyGatewayProvider()
+	assert.True(t, envoyGatewayProvider.Kubernetes == nil)
+	assert.Equal(t, envoyGateway.Provider, envoyGatewayProvider)
+
+	envoyGatewayProvider.Kubernetes = v1alpha1.DefaultEnvoyGatewayKubeProvider()
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, v1alpha1.DefaultKubernetesDeployment(v1alpha1.DefaultRateLimitImage))
+
+	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{}
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment == nil)
+
+	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
+			Replicas:  nil,
+			Pod:       nil,
+			Container: nil,
+		}}
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas == nil)
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod == nil)
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container == nil)
+	envoyGatewayKubeProvider := envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
+
+	envoyGatewayProvider.Kubernetes = &v1alpha1.EnvoyGatewayKubernetesProvider{
+		RateLimitDeployment: &v1alpha1.KubernetesDeploymentSpec{
+			Replicas: nil,
+			Pod:      nil,
+			Container: &v1alpha1.KubernetesContainerSpec{
+				Resources:       nil,
+				SecurityContext: nil,
+				Image:           nil,
+			},
+		}}
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources == nil)
+	envoyGatewayProvider.GetEnvoyGatewayKubeProvider()
+
+	assert.True(t, envoyGatewayProvider.Kubernetes != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes, envoyGatewayKubeProvider)
+
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment, v1alpha1.DefaultKubernetesDeployment(v1alpha1.DefaultRateLimitImage))
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Replicas, v1alpha1.DefaultKubernetesDeploymentReplicas())
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Pod, v1alpha1.DefaultKubernetesPod())
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container, v1alpha1.DefaultKubernetesContainer(v1alpha1.DefaultRateLimitImage))
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Resources, v1alpha1.DefaultResourceRequirements())
+	assert.True(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image != nil)
+	assert.Equal(t, envoyGatewayProvider.Kubernetes.RateLimitDeployment.Container.Image, v1alpha1.DefaultKubernetesContainerImage(v1alpha1.DefaultRateLimitImage))
+}
+
+func TestEnvoyGatewayAdmin(t *testing.T) {
+	// default envoygateway config admin should not be nil
+	eg := v1alpha1.DefaultEnvoyGateway()
+	assert.True(t, eg.Admin != nil)
+
+	// get default admin config from envoygateway
+	// values should be set in default
+	egAdmin := eg.GetEnvoyGatewayAdmin()
+	assert.True(t, egAdmin != nil)
+	assert.True(t, egAdmin.Address.Port == v1alpha1.GatewayAdminPort)
+	assert.True(t, egAdmin.Address.Host == v1alpha1.GatewayAdminHost)
+	assert.True(t, egAdmin.EnableDumpConfig == false)
+	assert.True(t, egAdmin.EnablePprof == false)
+
+	// override the admin config
+	// values should be updated
+	eg.Admin = &v1alpha1.EnvoyGatewayAdmin{
+		Address: &v1alpha1.EnvoyGatewayAdminAddress{
+			Host: "0.0.0.0",
+			Port: 19010,
+		},
+		EnableDumpConfig: true,
+		EnablePprof:      true,
+	}
+
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Port == 19010)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().Address.Host == "0.0.0.0")
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnableDumpConfig == true)
+	assert.True(t, eg.GetEnvoyGatewayAdmin().EnablePprof == true)
+
+	// set eg defaults when admin is nil
+	// the admin should not be nil
+	eg.Admin = nil
+	eg.SetEnvoyGatewayDefaults()
+	assert.True(t, eg.Admin != nil)
+	assert.True(t, eg.Admin.Address.Port == v1alpha1.GatewayAdminPort)
+	assert.True(t, eg.Admin.Address.Host == v1alpha1.GatewayAdminHost)
+	assert.True(t, eg.Admin.EnableDumpConfig == false)
+	assert.True(t, eg.Admin.EnablePprof == false)
+}
+
+func TestEnvoyGatewayTelemetry(t *testing.T) {
+	// default envoygateway config telemetry should not be nil
+	eg := v1alpha1.DefaultEnvoyGateway()
+	assert.True(t, eg.Telemetry != nil)
+
+	// get default telemetry config from envoygateway
+	// values should be set in default
+	egTelemetry := eg.GetEnvoyGatewayTelemetry()
+	assert.True(t, egTelemetry != nil)
+	assert.True(t, egTelemetry.Metrics != nil)
+	assert.True(t, egTelemetry.Metrics.Prometheus.Disable == false)
+	assert.True(t, egTelemetry.Metrics.Sinks == nil)
+
+	// override the telemetry config
+	// values should be updated
+	eg.Telemetry.Metrics = &v1alpha1.EnvoyGatewayMetrics{
+		Prometheus: &v1alpha1.EnvoyGatewayPrometheusProvider{
+			Disable: true,
+		},
+		Sinks: []v1alpha1.EnvoyGatewayMetricSink{
+			{
+				Type: v1alpha1.MetricSinkTypeOpenTelemetry,
+				OpenTelemetry: &v1alpha1.EnvoyGatewayOpenTelemetrySink{
+					Host:     "otel-collector.monitoring.svc.cluster.local",
+					Protocol: "grpc",
+					Port:     4317,
+				},
+			}, {
+				Type: v1alpha1.MetricSinkTypeOpenTelemetry,
+				OpenTelemetry: &v1alpha1.EnvoyGatewayOpenTelemetrySink{
+					Host:     "otel-collector.monitoring.svc.cluster.local",
+					Protocol: "http",
+					Port:     4318,
+				},
+			},
+		},
+	}
+
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable == true)
+	assert.True(t, len(eg.GetEnvoyGatewayTelemetry().Metrics.Sinks) == 2)
+	assert.True(t, eg.GetEnvoyGatewayTelemetry().Metrics.Sinks[0].Type == v1alpha1.MetricSinkTypeOpenTelemetry)
+
+	// set eg defaults when telemetry is nil
+	// the telemetry should not be nil
+	eg.Telemetry = nil
+	eg.SetEnvoyGatewayDefaults()
+	assert.True(t, eg.Telemetry != nil)
+	assert.True(t, eg.Telemetry.Metrics != nil)
+	assert.True(t, eg.Telemetry.Metrics.Prometheus.Disable == false)
+	assert.True(t, eg.Telemetry.Metrics.Sinks == nil)
 }
