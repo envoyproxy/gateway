@@ -15,7 +15,7 @@ import (
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-// Validate validates the provided EnvoyGateway.
+// ValidateEnvoyGateway validates the provided EnvoyGateway.
 func ValidateEnvoyGateway(eg *v1alpha1.EnvoyGateway) error {
 	switch {
 	case eg == nil:
