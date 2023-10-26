@@ -41,25 +41,6 @@ func TestValidateSecurityPolicy(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "empty provider list",
-			policy: &egv1a1.SecurityPolicy{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindSecurityPolicy,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "test",
-				},
-				Spec: egv1a1.SecurityPolicySpec{
-					JWT: &egv1a1.JWT{
-						Providers: []egv1a1.JWTProvider{},
-					},
-				},
-			},
-			expected: false,
-		},
-		{
 			name: "valid security policy with url",
 			policy: &egv1a1.SecurityPolicy{
 				TypeMeta: metav1.TypeMeta{

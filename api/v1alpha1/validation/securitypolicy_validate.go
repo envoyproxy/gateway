@@ -63,10 +63,6 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 func ValidateJWTProvider(providers []egv1a1.JWTProvider) error {
 	var errs []error
 
-	if len(providers) == 0 {
-		errs = append(errs, errors.New("no jwt providers are specified"))
-	}
-
 	var names []string
 	for _, provider := range providers {
 		switch {
