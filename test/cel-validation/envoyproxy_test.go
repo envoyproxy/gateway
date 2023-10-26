@@ -3,10 +3,10 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-//go:build validation
-// +build validation
+//go:build celvalidation
+// +build celvalidation
 
-package cel_validation
+package celvalidation
 
 import (
 	"context"
