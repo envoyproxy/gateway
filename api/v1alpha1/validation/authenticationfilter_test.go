@@ -14,6 +14,7 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
+// TODO zhaohuabing remove this file after deprecating authentication filter
 func TestValidateAuthenticationFilter(t *testing.T) {
 	testCases := []struct {
 		name     string

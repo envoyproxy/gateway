@@ -273,7 +273,7 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// RequestAuthentication defines the schema for authenticating HTTP requests.
+	// RequestAuthentication defines the schema for authenticating HTTP requests. //TODO zhaohuabing remove this field
 	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
@@ -281,6 +281,8 @@ type HTTPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// JWTAuthentication defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWTAuthentication *JWTAuthentication `json:"jwtAuthentication,omitempty" yaml:"jwtAuthentication,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -300,6 +302,7 @@ type UnstructuredRef struct {
 // TODO: Add support for additional request authentication providers, i.e. OIDC.
 //
 // +k8s:deepcopy-gen=true
+// TODO zhaohuabing remove this type
 type RequestAuthentication struct {
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JwtRequestAuthentication `json:"jwt,omitempty" yaml:"jwt,omitempty"`
@@ -309,6 +312,7 @@ type RequestAuthentication struct {
 // JSON Web Tokens (JWT).
 //
 // +k8s:deepcopy-gen=true
+// TODO zhaohuabing remove this type
 type JwtRequestAuthentication struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JwtAuthenticationFilterProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
@@ -328,6 +332,15 @@ type CORS struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+}
+
+// JWTAuthentication defines the schema for authenticating HTTP requests using
+// JSON Web Tokens (JWT).
+//
+// +k8s:deepcopy-gen=true
+type JWTAuthentication struct {
+	// Providers defines a list of JSON Web Token (JWT) authentication providers.
+	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -446,6 +459,11 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
+	if h.JWTAuthentication != nil {
+		if err := h.JWTAuthentication.validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
 
 	return errs
 }
@@ -454,6 +472,16 @@ func (j *JwtRequestAuthentication) Validate() error {
 	var errs error
 
 	if err := validation.ValidateJwtProviders(j.Providers); err != nil {
+		errs = multierror.Append(errs, err)
+	}
+
+	return errs
+}
+
+func (j *JWTAuthentication) validate() error {
+	var errs error
+
+	if err := validation.ValidateJWTAuthentication(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 

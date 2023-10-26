@@ -17,33 +17,34 @@ import (
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
-// TODO zhaohuabing remove this file after deprecating authentication filter
-// ValidateAuthenticationFilter validates the provided filter. The only supported
-// ValidateAuthenticationFilter type is "JWT".
-func ValidateAuthenticationFilter(filter *egv1a1.AuthenticationFilter) error {
+// ValidateSecurityPolicy validates the provided SecurityPolicy.
+func ValidateSecurityPolicy(policy *egv1a1.SecurityPolicy) error {
 	var errs []error
-	if filter == nil {
-		return errors.New("filter is nil")
+	if policy == nil {
+		return errors.New("policy is nil")
 	}
-	if err := validateAuthenticationFilterSpec(&filter.Spec); err != nil {
-		errs = append(errs, errors.New("filter is nil"))
+	if err := validateSecurityPolicySpec(&policy.Spec); err != nil {
+		errs = append(errs, errors.New("policy is nil"))
 	}
 
 	return utilerrors.NewAggregate(errs)
 }
 
-// validateAuthenticationFilterSpec validates the provided spec. The only supported
-// ValidateAuthenticationFilter type is "JWT".
-func validateAuthenticationFilterSpec(spec *egv1a1.AuthenticationFilterSpec) error {
+// validateSecurityPolicySpec validates the provided spec.
+func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 	var errs []error
 
+	sum := 0
 	switch {
 	case spec == nil:
 		errs = append(errs, errors.New("spec is nil"))
-	case spec.Type != egv1a1.JwtAuthenticationFilterProviderType:
-		errs = append(errs, fmt.Errorf("unsupported authenticationfilter type: %v", spec.Type))
-	case len(spec.JwtProviders) == 0:
-		errs = append(errs, fmt.Errorf("at least one provider must be specified for type %v", spec.Type))
+	case spec.CORS != nil:
+		sum++
+	case spec.JWTAuthentication != nil:
+		sum++
+	}
+	if sum == 0 {
+		errs = append(errs, errors.New("no security policy is specified"))
 	}
 
 	// Return early if any errors exist.
@@ -51,16 +52,20 @@ func validateAuthenticationFilterSpec(spec *egv1a1.AuthenticationFilterSpec) err
 		return utilerrors.NewAggregate(errs)
 	}
 
-	if err := ValidateJwtProviders(spec.JwtProviders); err != nil {
+	if err := ValidateJWTAuthentication(spec.JWTAuthentication.Providers); err != nil {
 		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
 }
 
-// ValidateJwtProviders validates the provided JWT authentication filter providers.
-func ValidateJwtProviders(providers []egv1a1.JwtAuthenticationFilterProvider) error {
+// ValidateJWTAuthentication validates the provided JWT authentication configuration.
+func ValidateJWTAuthentication(providers []egv1a1.JWTProvider) error {
 	var errs []error
+
+	if len(providers) == 0 {
+		errs = append(errs, errors.New("no jwt providers are specified"))
+	}
 
 	var names []string
 	for _, provider := range providers {

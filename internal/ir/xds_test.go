@@ -426,14 +426,12 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("jwtauthen"),
 		},
-		RequestAuthentication: &RequestAuthentication{
-			JWT: &JwtRequestAuthentication{
-				Providers: []egv1a1.JwtAuthenticationFilterProvider{
-					{
-						Name: "test1",
-						RemoteJWKS: egv1a1.RemoteJWKS{
-							URI: "https://test1.local",
-						},
+		JWTAuthentication: &JWTAuthentication{
+			Providers: []egv1a1.JWTProvider{
+				{
+					Name: "test1",
+					RemoteJWKS: egv1a1.RemoteJWKS{
+						URI: "https://test1.local",
 					},
 				},
 			},
@@ -1072,20 +1070,20 @@ func TestValidateStringMatch(t *testing.T) {
 func TestValidateJwtRequestAuthentication(t *testing.T) {
 	tests := []struct {
 		name  string
-		input JwtRequestAuthentication
+		input JWTAuthentication
 		want  error
 	}{
 		{
 			name: "nil rules",
-			input: JwtRequestAuthentication{
+			input: JWTAuthentication{
 				Providers: nil,
 			},
 			want: nil,
 		},
 		{
 			name: "provider with remote jwks uri",
-			input: JwtRequestAuthentication{
-				Providers: []egv1a1.JwtAuthenticationFilterProvider{
+			input: JWTAuthentication{
+				Providers: []egv1a1.JWTProvider{
 					{
 						Name:      "test",
 						Issuer:    "https://test.local",
@@ -1103,9 +1101,9 @@ func TestValidateJwtRequestAuthentication(t *testing.T) {
 		test := tests[i]
 		t.Run(test.name, func(t *testing.T) {
 			if test.want == nil {
-				require.NoError(t, test.input.Validate())
+				require.NoError(t, test.input.validate())
 			} else {
-				require.EqualError(t, test.input.Validate(), test.want.Error())
+				require.EqualError(t, test.input.validate(), test.want.Error())
 			}
 		})
 	}
