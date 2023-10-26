@@ -76,8 +76,10 @@ func newOptions(svr *config.Server) registerOptions {
 	newOpts := registerOptions{}
 	newOpts.address = net.JoinHostPort(v1alpha1.GatewayMetricsHost, fmt.Sprint(v1alpha1.GatewayMetricsPort))
 
-	if !svr.EnvoyGateway.DisablePrometheus() {
+	if svr.EnvoyGateway.DisablePrometheus() {
 		newOpts.pullOptions.disable = true
+	} else {
+		newOpts.pullOptions.disable = false
 		newOpts.pullOptions.registry = metricsserver.Registry
 		newOpts.pullOptions.gatherer = metricsserver.Registry
 	}
