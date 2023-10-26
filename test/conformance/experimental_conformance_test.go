@@ -100,7 +100,7 @@ func experimentalConformance(t *testing.T) {
 					tests.HTTPRouteRewritePath.ShortName,
 					tests.GatewayStaticAddresses.ShortName,
 					tests.GatewayWithAttachedRoutes.ShortName,
-					tests.HTTPRouteBackendProtocolH2C.SHortName,
+					tests.HTTPRouteBackendProtocolH2C.ShortName,
 				},
 				SupportedFeatures: sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
 			},
