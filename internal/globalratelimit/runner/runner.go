@@ -111,13 +111,14 @@ func (r *Runner) serveXdsConfigServer(ctx context.Context) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources.
-	message.HandleSubscription(r.XdsIR.Subscribe(ctx),
-		func(update message.Update[string, *ir.Xds]) {
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGlobalRateLimitRunner), Resource: "xds-ir"}, r.XdsIR.Subscribe(ctx),
+		func(update message.Update[string, *ir.Xds], errChan chan error) {
 			r.Logger.Info("received a notification")
 
 			if update.Delete {
 				if err := r.addNewSnapshot(ctx, nil); err != nil {
 					r.Logger.Error(err, "failed to update the config snapshot")
+					errChan <- err
 				}
 			} else {
 				// Translate to ratelimit xDS Config.
