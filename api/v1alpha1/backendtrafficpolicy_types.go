@@ -49,7 +49,7 @@ type BackendTrafficPolicySpec struct {
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.
 	// +optional
-	RateLimit *RateLimitFilterSpec `json:"rateLimit,omitempty"`
+	RateLimit *RateLimitPolicy `json:"rateLimit,omitempty"`
 
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints

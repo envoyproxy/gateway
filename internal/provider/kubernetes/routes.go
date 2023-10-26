@@ -108,7 +108,7 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 
-	// An GRPCRoute may reference an AuthenticationFilter and RateLimitFilter,
+	// An GRPCRoute may reference an AuthenticationFilter,
 	// so add them to the resource map first (if they exist).
 	authenFilters, err := r.getAuthenticationFilters(ctx)
 	if err != nil {
@@ -117,15 +117,6 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	for i := range authenFilters {
 		filter := authenFilters[i]
 		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
-	}
-
-	rateLimitFilters, err := r.getRateLimitFilters(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range rateLimitFilters {
-		filter := rateLimitFilters[i]
-		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
 	}
 
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
@@ -224,18 +215,6 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 						}
 
 						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
-					case egv1a1.KindRateLimitFilter:
-						key := types.NamespacedName{
-							Namespace: grpcRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}
-						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
-						if !ok {
-							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
-							continue
-						}
-
-						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
 					default:
 						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
 						// managed by an extension and add to resourceTree
@@ -271,7 +250,7 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
 
-	// An HTTPRoute may reference an AuthenticationFilter, RateLimitFilter, or a filter managed
+	// An HTTPRoute may reference an AuthenticationFilter, or a filter managed
 	// by an extension so add them to the resource map first (if they exist).
 	authenFilters, err := r.getAuthenticationFilters(ctx)
 	if err != nil {
@@ -280,15 +259,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	for i := range authenFilters {
 		filter := authenFilters[i]
 		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
-	}
-
-	rateLimitFilters, err := r.getRateLimitFilters(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range rateLimitFilters {
-		filter := rateLimitFilters[i]
-		resourceMap.rateLimitFilters[utils.NamespacedName(&filter)] = &filter
 	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
@@ -451,18 +421,6 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 						}
 
 						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
-					case egv1a1.KindRateLimitFilter:
-						key := types.NamespacedName{
-							Namespace: httpRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}
-						rateLimitFilter, ok := resourceMap.rateLimitFilters[key]
-						if !ok {
-							r.log.Error(err, "RateLimitFilter not found; bypassing rule", "index", i)
-							continue
-						}
-
-						resourceTree.RateLimitFilters = append(resourceTree.RateLimitFilters, rateLimitFilter)
 					default:
 						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
 						// managed by an extension and add to resourceTree

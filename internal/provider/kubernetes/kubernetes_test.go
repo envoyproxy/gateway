@@ -73,7 +73,6 @@ func TestProvider(t *testing.T) {
 		"gateway scheduled status":             testGatewayScheduledStatus,
 		"httproute":                            testHTTPRoute,
 		"tlsroute":                             testTLSRoute,
-		"ratelimit filter":                     testRateLimitFilter,
 		"authentication filter":                testAuthenFilter,
 		"stale service cleanup route deletion": testServiceCleanupForMultipleRoutes,
 	}
@@ -456,182 +455,6 @@ func testLongNameHashedResources(ctx context.Context, t *testing.T, provider *Pr
 	// to eliminate this endless loop:
 	// reconcile->store->translate->update-status->reconcile
 	assert.Equal(t, gw.Spec, res.Gateways[0].Spec)
-}
-
-func testRateLimitFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
-	cli := provider.manager.GetClient()
-
-	gc := test.GetGatewayClass("ratelimit-test", egv1a1.GatewayControllerName)
-	require.NoError(t, cli.Create(ctx, gc))
-
-	// Ensure the GatewayClass reports ready.
-	require.Eventually(t, func() bool {
-		if err := cli.Get(ctx, types.NamespacedName{Name: gc.Name}, gc); err != nil {
-			return false
-		}
-
-		for _, cond := range gc.Status.Conditions {
-			if cond.Type == string(gwapiv1.GatewayClassConditionStatusAccepted) && cond.Status == metav1.ConditionTrue {
-				return true
-			}
-		}
-
-		return false
-	}, defaultWait, defaultTick)
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gc))
-	}()
-
-	// Create the namespace for the Gateway under test.
-	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ratelimit-test"}}
-	require.NoError(t, cli.Create(ctx, ns))
-
-	gw := &gwapiv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ratelimit-test",
-			Namespace: ns.Name,
-		},
-		Spec: gwapiv1.GatewaySpec{
-			GatewayClassName: gwapiv1.ObjectName(gc.Name),
-			Listeners: []gwapiv1.Listener{
-				{
-					Name:     "test",
-					Port:     gwapiv1.PortNumber(int32(8080)),
-					Protocol: gwapiv1.HTTPProtocolType,
-				},
-			},
-		},
-	}
-	require.NoError(t, cli.Create(ctx, gw))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, gw))
-	}()
-
-	svc := test.GetService(types.NamespacedName{Namespace: ns.Name, Name: "test"}, nil, map[string]int32{
-		"http":  80,
-		"https": 443,
-	})
-
-	require.NoError(t, cli.Create(ctx, svc))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, svc))
-	}()
-
-	rateLimitFilter := test.GetRateLimitFilter("ratelimit-test", ns.Name)
-
-	require.NoError(t, cli.Create(ctx, rateLimitFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, rateLimitFilter))
-	}()
-
-	var testCases = []struct {
-		name  string
-		route gwapiv1.HTTPRoute
-	}{
-		{
-			name: "ratelimit-test-httproute",
-			route: gwapiv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ratelimit-test",
-					Namespace: ns.Name,
-				},
-				Spec: gwapiv1.HTTPRouteSpec{
-					CommonRouteSpec: gwapiv1.CommonRouteSpec{
-						ParentRefs: []gwapiv1.ParentReference{
-							{
-								Name: gwapiv1.ObjectName(gw.Name),
-							},
-						},
-					},
-					Hostnames: []gwapiv1.Hostname{"test.hostname.local"},
-					Rules: []gwapiv1.HTTPRouteRule{
-						{
-							Matches: []gwapiv1.HTTPRouteMatch{
-								{
-									Path: &gwapiv1.HTTPPathMatch{
-										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
-										Value: ptr.To("/ratelimitfilter/"),
-									},
-								},
-							},
-							BackendRefs: []gwapiv1.HTTPBackendRef{
-								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "test",
-										},
-									},
-								},
-							},
-							Filters: []gwapiv1.HTTPRouteFilter{
-								{
-									Type: gwapiv1.HTTPRouteFilterExtensionRef,
-									ExtensionRef: &gwapiv1.LocalObjectReference{
-										Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-										Kind:  gwapiv1.Kind(egv1a1.KindRateLimitFilter),
-										Name:  gwapiv1.ObjectName("ratelimit-test"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.NoError(t, cli.Create(ctx, &testCase.route))
-			defer func() {
-				require.NoError(t, cli.Delete(ctx, &testCase.route))
-			}()
-
-			require.Eventually(t, func() bool {
-				return resources.GatewayAPIResources.Len() != 0
-			}, defaultWait, defaultTick)
-
-			// Ensure the test HTTPRoute in the HTTPRoute resources is as expected.
-			key := types.NamespacedName{
-				Namespace: testCase.route.Namespace,
-				Name:      testCase.route.Name,
-			}
-			require.Eventually(t, func() bool {
-				return cli.Get(ctx, key, &testCase.route) == nil
-			}, defaultWait, defaultTick)
-
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok &&
-					len(res.HTTPRoutes) != 0 &&
-					assert.Equal(t, testCase.route.Spec, res.HTTPRoutes[0].Spec)
-			}, defaultWait, defaultTick)
-
-			// Ensure the RateLimitFilter is in the resource map.
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok &&
-					len(res.RateLimitFilters) != 0 &&
-					assert.Equal(t, rateLimitFilter.Spec, res.RateLimitFilters[0].Spec)
-			}, defaultWait, defaultTick)
-
-			// Update the rate limit filter.
-			rateLimitFilter.Spec.Global.Rules = append(rateLimitFilter.Spec.Global.Rules, test.GetRateLimitGlobalRule("two"))
-			require.NoError(t, cli.Update(ctx, rateLimitFilter))
-
-			// Ensure the RateLimitFilter in the resource map has been updated.
-			require.Eventually(t, func() bool {
-				res, ok := resources.GatewayAPIResources.Load("ratelimit-test")
-				return ok &&
-					len(res.RateLimitFilters) != 0 &&
-					assert.Equal(t, 2, len(res.RateLimitFilters[0].Spec.Global.Rules))
-			}, defaultWait, defaultTick)
-		})
-	}
 }
 
 func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
@@ -1820,20 +1643,6 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		require.NoError(t, cli.Delete(ctx, nonWatchedAuthenFilter))
 	}()
 
-	watchedRateLimitFilter := test.GetRateLimitFilter("watched-rate-limit-filter", watchedNS.Name)
-	require.NoError(t, cli.Create(ctx, watchedRateLimitFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, watchedRateLimitFilter))
-	}()
-
-	nonWatchedRateLimitFilter := test.GetRateLimitFilter("non-watched-rate-limit-filter", nonWatchedNS.Name)
-	require.NoError(t, cli.Create(ctx, nonWatchedRateLimitFilter))
-
-	defer func() {
-		require.NoError(t, cli.Delete(ctx, nonWatchedRateLimitFilter))
-	}()
-
 	watchedSvc := test.GetService(types.NamespacedName{Namespace: watchedNS.Name, Name: "watched-service"}, nil, map[string]int32{
 		"http":  80,
 		"https": 443,
@@ -1870,14 +1679,6 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 				Name:  gwapiv1.ObjectName(watchedAuthenFilter.Name),
 			},
 		},
-		{
-			Type: gwapiv1.HTTPRouteFilterExtensionRef,
-			ExtensionRef: &gwapiv1.LocalObjectReference{
-				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1.Kind(egv1a1.KindRateLimitFilter),
-				Name:  gwapiv1.ObjectName(watchedRateLimitFilter.Name),
-			},
-		},
 	}
 	require.NoError(t, cli.Create(ctx, watchedHTTPRoute))
 	defer func() {
@@ -1898,14 +1699,6 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
 				Kind:  gwapiv1.Kind(egv1a1.KindAuthenticationFilter),
 				Name:  gwapiv1.ObjectName(nonWatchedAuthenFilter.Name),
-			},
-		},
-		{
-			Type: gwapiv1.HTTPRouteFilterExtensionRef,
-			ExtensionRef: &gwapiv1.LocalObjectReference{
-				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1.Kind(egv1a1.KindRateLimitFilter),
-				Name:  gwapiv1.ObjectName(nonWatchedRateLimitFilter.Name),
 			},
 		},
 	}
@@ -2046,8 +1839,4 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 		return res != nil && len(res.AuthenticationFilters) == 1
 	}, defaultWait, defaultTick)
 
-	require.Eventually(t, func() bool {
-		res, _ := resources.GatewayAPIResources.Load(gc.Name)
-		return res != nil && len(res.RateLimitFilters) == 1
-	}, defaultWait, defaultTick)
 }

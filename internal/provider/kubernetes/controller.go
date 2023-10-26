@@ -139,9 +139,6 @@ type resourceMappings struct {
 	// authenFilters is a map of AuthenticationFilters, where the key is the
 	// namespaced name of the AuthenticationFilter.
 	authenFilters map[types.NamespacedName]*egv1a1.AuthenticationFilter
-	// rateLimitFilters is a map of RateLimitFilters, where the key is the
-	// namespaced name of the RateLimitFilter.
-	rateLimitFilters map[types.NamespacedName]*egv1a1.RateLimitFilter
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
@@ -154,7 +151,6 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1b1.ReferenceGrant{},
 		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
-		rateLimitFilters:         map[types.NamespacedName]*egv1a1.RateLimitFilter{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
@@ -657,7 +653,7 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
 //   - For Service, ServiceImports objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
 //     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
-//   - For AuthenticationFilter and RateLimitFilter objects that are referenced in HTTPRoute objects via
+//   - For AuthenticationFilter objects that are referenced in HTTPRoute objects via
 //     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
 //     particular AuthenticationFilter CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
@@ -673,9 +669,6 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, rateLimitFilterHTTPRouteIndex, rateLimitFilterHTTPRouteIndexFunc); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -686,27 +679,6 @@ func authenFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
 		for i := range rule.Filters {
 			filter := rule.Filters[i]
 			if gatewayapi.IsAuthnHTTPFilter(&filter) {
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
-}
-
-func rateLimitFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
-	httproute := rawObj.(*gwapiv1.HTTPRoute)
-	var filters []string
-	for _, rule := range httproute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsRateLimitHTTPFilter(&filter) {
 				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
 					filters = append(filters,
 						types.NamespacedName{
@@ -775,10 +747,6 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, rateLimitFilterGRPCRouteIndex, rateLimitFilterGRPCRouteIndexFunc); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -827,27 +795,6 @@ func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
 		for i := range rule.Filters {
 			filter := rule.Filters[i]
 			if gatewayapi.IsAuthnGRPCFilter(&filter) {
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: grpcroute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
-}
-
-func rateLimitFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
-	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
-	var filters []string
-	for _, rule := range grpcroute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsRateLimitGRPCFilter(&filter) {
 				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
 					filters = append(filters,
 						types.NamespacedName{
@@ -1574,22 +1521,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		source.Kind(mgr.GetCache(), &egv1a1.AuthenticationFilter{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		afPredicates...,
-	); err != nil {
-		return err
-	}
-
-	rfPredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
-		predicate.NewPredicateFuncs(r.httpRoutesForRateLimitFilter),
-	}
-	if len(r.namespaceLabels) != 0 {
-		rfPredicates = append(rfPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
-	}
-	// Watch RateLimitFilter CRUDs and enqueue associated HTTPRoute objects.
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &egv1a1.RateLimitFilter{}),
-		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
-		rfPredicates...,
 	); err != nil {
 		return err
 	}
