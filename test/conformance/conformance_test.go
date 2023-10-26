@@ -51,6 +51,8 @@ func TestGatewayAPIConformance(t *testing.T) {
 			tests.GatewaySecretInvalidReferenceGrant.ShortName,
 			tests.HTTPRouteRewritePath.ShortName,
 			tests.GatewayStaticAddresses.ShortName,
+			tests.GatewayWithAttachedRoutes.ShortName,
+			tests.HTTPRouteBackendProtocolH2C.ShortName,
 		},
 		ExemptFeatures: suite.MeshCoreFeatures,
 	})

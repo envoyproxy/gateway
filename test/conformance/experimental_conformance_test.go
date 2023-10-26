@@ -99,6 +99,8 @@ func experimentalConformance(t *testing.T) {
 					tests.GatewaySecretInvalidReferenceGrant.ShortName,
 					tests.HTTPRouteRewritePath.ShortName,
 					tests.GatewayStaticAddresses.ShortName,
+					tests.GatewayWithAttachedRoutes.ShortName,
+					tests.HTTPRouteBackendProtocolH2C.SHortName,
 				},
 				SupportedFeatures: sets.Set[suite.SupportedFeature]{}.Insert(suite.HTTPRouteExtendedFeatures.UnsortedList()...),
 			},
