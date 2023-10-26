@@ -92,7 +92,7 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 	}
 }
 
-// GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
+// GetEnvoyGatewayTelemetry returns the EnvoyGatewayTelemetry of EnvoyGateway or a default EnvoyGatewayTelemetry if unspecified.
 func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	if e.Telemetry != nil {
 		if e.Telemetry.Metrics.Prometheus == nil {
@@ -109,8 +109,8 @@ func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	return e.Telemetry
 }
 
-// IfDisablePrometheus returns if disable prometheus.
-func (e *EnvoyGateway) IfDisablePrometheus() bool {
+// DisablePrometheus returns if disable prometheus.
+func (e *EnvoyGateway) DisablePrometheus() bool {
 	return e.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable
 }
 
