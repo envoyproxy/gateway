@@ -5288,6 +5288,8 @@ spec:
                         - message: loadBalancerIP can only be set for LoadBalancer
                             type
                           rule: '!has(self.loadBalancerIP) || self.type == ''LoadBalancer'''
+                        - message: loadBalancerIP must be a valid IPv4 address
+                          rule: '!has(self.loadBalancerIP) || self.loadBalancerIP.matches(r"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4})")'
                     type: object
                   type:
                     description: Type is the type of resource provider to use. A resource
