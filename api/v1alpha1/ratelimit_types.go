@@ -5,9 +5,9 @@
 
 package v1alpha1
 
-// RateLimitPolicy defines the desired state of RateLimitFilter.
+// RateLimitSpec defines the desired state of RateLimitSpec.
 // +union
-type RateLimitPolicy struct {
+type RateLimitSpec struct {
 	// Type decides the scope for the RateLimits.
 	// Valid RateLimitType values are "Global".
 	//

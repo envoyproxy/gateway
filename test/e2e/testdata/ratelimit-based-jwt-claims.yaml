@@ -14,21 +14,27 @@ spec:
       header: x-claim-name
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: RateLimitFilter
+kind: BackendTrafficPolicy
 metadata:
   name: ratelimit-specific-user
   namespace: gateway-conformance-infra
 spec:
-  type: Global
-  global:
-    rules:
-    - clientSelectors:
-      - headers:
-        - name: x-claim-name
-          value: John Doe
-      limit:
-        requests: 3
-        unit: Hour
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: http-ratelimit-based-jwt-claims
+    namespace: gateway-conformance-infra
+  rateLimit:
+    type: Global
+    global:
+      rules:
+      - clientSelectors:
+        - headers:
+          - name: x-claim-name
+            value: John Doe
+        limit:
+          requests: 3
+          unit: Hour
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -48,11 +54,6 @@ spec:
         kind: AuthenticationFilter
         name: jwt-example
       type: ExtensionRef
-    - type: ExtensionRef
-      extensionRef:
-        group: gateway.envoyproxy.io
-        kind: RateLimitFilter
-        name: ratelimit-specific-user
     matches:
     - path:
         type: PathPrefix

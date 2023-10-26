@@ -115,7 +115,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
-| `rateLimit` _[RateLimitPolicy](#ratelimitpolicy)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
+| `rateLimit` _[RateLimitSpec](#ratelimitspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 
 
@@ -833,7 +833,7 @@ _Appears in:_
 GlobalRateLimit defines global rate limit configuration.
 
 _Appears in:_
-- [RateLimitPolicy](#ratelimitpolicy)
+- [RateLimitSpec](#ratelimitspec)
 
 | Field | Description |
 | --- | --- |
@@ -1424,21 +1424,6 @@ _Appears in:_
 
 
 
-#### RateLimitPolicy
-
-
-
-RateLimitPolicy defines the desired state of RateLimitFilter.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-
-| Field | Description |
-| --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
-| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
-
-
 #### RateLimitRedisSettings
 
 
@@ -1484,6 +1469,21 @@ _Appears in:_
 | `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
 
 
+#### RateLimitSpec
+
+
+
+RateLimitSpec defines the desired state of RateLimitSpec.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+
+
 #### RateLimitType
 
 _Underlying type:_ `string`
@@ -1491,7 +1491,7 @@ _Underlying type:_ `string`
 RateLimitType specifies the types of RateLimiting.
 
 _Appears in:_
-- [RateLimitPolicy](#ratelimitpolicy)
+- [RateLimitSpec](#ratelimitspec)
 
 
 
