@@ -254,10 +254,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			return err
 		}
 
-		// Create authn jwks clusters, if needed.
+		// Create authn jwks clusters, if needed. // TODO zhaohuabing remove this after deprecating authentication filter
 		if err := createJwksClusters(tCtx, httpListener.Routes); err != nil {
 			return err
 		}
+
+		// Create authn jwks clusters, if needed.
+		if err := createJWKSClusters(tCtx, httpListener.Routes); err != nil {
+			return err
+		}
+
 		// Check if an extension want to modify the listener that was just configured/created
 		// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op
 		if err := processExtensionPostListenerHook(tCtx, xdsListener, t.ExtensionManager); err != nil {

@@ -158,6 +158,7 @@ _Appears in:_
 ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 
 _Appears in:_
+- [JWTProvider](#jwtprovider)
 - [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
 
 | Field | Description |
@@ -906,6 +907,39 @@ _Appears in:_
 
 
 
+#### JWT
+
+
+
+JWT defines the configuration for JSON Web Token (JWT) authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `providers` _[JWTProvider](#jwtprovider) array_ | Providers defines the JSON Web Token (JWT) authentication provider type. 
+ When multiple JWT providers are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
+
+
+#### JWTProvider
+
+
+
+JWTProvider defines how a JSON Web Token (JWT) can be verified.
+
+_Appears in:_
+- [JWT](#jwt)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name defines a unique name for the JWT provider. A name can have a variety of forms, including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels. |
+| `issuer` _string_ | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
+| `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
+| `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
+| `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+
+
 #### JwtAuthenticationFilterProvider
 
 
@@ -1560,6 +1594,7 @@ _Appears in:_
 RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
 
 _Appears in:_
+- [JWTProvider](#jwtprovider)
 - [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
 
 | Field | Description |
@@ -1639,6 +1674,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 
 
 
