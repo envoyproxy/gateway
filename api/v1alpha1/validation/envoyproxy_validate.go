@@ -66,6 +66,7 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	return utilerrors.NewAggregate(errs)
 }
 
+// TODO: remove this function if CEL validation became stable
 func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
@@ -80,6 +81,7 @@ func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
+// TODO: remove this function if CEL validation became stable
 func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {
@@ -101,6 +103,7 @@ func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 				errs = append(errs, fmt.Errorf("loadBalancerIP can only be set for %v type", egv1a1.ServiceTypeLoadBalancer))
 			}
 
+			// TODO: find a way to support this in CEL
 			if ip := net.ParseIP(*serviceLoadBalancerIP); ip == nil || ip.To4() == nil {
 				errs = append(errs, fmt.Errorf("loadBalancerIP:%s is an invalid IPv4 address", *serviceLoadBalancerIP))
 			}

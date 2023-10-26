@@ -122,6 +122,8 @@ type EnvoyProxyKubernetesProvider struct {
 	// are applied.
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 }
 
