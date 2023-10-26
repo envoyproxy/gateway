@@ -98,9 +98,9 @@ spec:
                       request can be cached.
                     type: string
                 type: object
-              jwtAuthentication:
-                description: JWTAuthentication defines the configuration for JSON
-                  Web Token (JWT) authentication.
+              jwt:
+                description: JWT defines the configuration for JSON Web Token (JWT)
+                  authentication.
                 properties:
                   providers:
                     description: "Providers defines the JSON Web Token (JWT) authentication

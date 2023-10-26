@@ -9,7 +9,7 @@ http:
     hostname: "*"
     pathMatch:
       exact: "foo/bar"
-    jwtAuthentication:
+    jwt:
       providers:
       - name: example
         issuer: https://www.example.com
@@ -42,7 +42,7 @@ http:
     hostname: "*"
     pathMatch:
       exact: "foo/baz"
-    jwtAuthentication:
+    jwt:
       providers:
       - name: example
         issuer: https://www.example.com

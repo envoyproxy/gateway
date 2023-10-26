@@ -99,8 +99,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 	for _, route := range irListener.Routes {
 		if route != nil && routeContainsJWTAuthn(route) {
 			var reqs []*jwtauthnv3.JwtRequirement
-			for i := range route.JWTAuthentication.Providers {
-				irProvider := route.JWTAuthentication.Providers[i]
+			for i := range route.JWT.Providers {
+				irProvider := route.JWT.Providers[i]
 				// Create the cluster for the remote jwks, if it doesn't exist.
 				jwksCluster, err := newJWKSCluster(&irProvider)
 				if err != nil {
@@ -246,8 +246,8 @@ func createJWKSClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 
 	for _, route := range routes {
 		if routeContainsJWTAuthn(route) {
-			for i := range route.JWTAuthentication.Providers {
-				provider := route.JWTAuthentication.Providers[i]
+			for i := range route.JWT.Providers {
+				provider := route.JWT.Providers[i]
 				jwks, err := newJWKSCluster(&provider)
 				epType := DefaultEndpointType
 				if jwks.isStatic {
@@ -349,9 +349,9 @@ func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 	}
 
 	if irRoute != nil &&
-		irRoute.JWTAuthentication != nil &&
-		irRoute.JWTAuthentication.Providers != nil &&
-		len(irRoute.JWTAuthentication.Providers) > 0 {
+		irRoute.JWT != nil &&
+		irRoute.JWT.Providers != nil &&
+		len(irRoute.JWT.Providers) > 0 {
 		return true
 	}
 

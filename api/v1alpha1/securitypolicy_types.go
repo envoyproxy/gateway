@@ -47,11 +47,10 @@ type SecurityPolicySpec struct {
 	// +optional
 	CORS *CORS `json:"cors,omitempty"`
 
-	// JWTAuthentication defines the configuration for JSON Web Token (JWT)
-	// authentication.
+	// JWT defines the configuration for JSON Web Token (JWT) authentication.
 	//
 	// +optional
-	JWTAuthentication *JWTAuthentication `json:"jwtAuthentication,omitempty"`
+	JWT *JWT `json:"jwt,omitempty"`
 }
 
 // CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
@@ -70,8 +69,8 @@ type CORS struct {
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
 }
 
-// JWTAuthentication defines the configuration for JSON Web Token (JWT) authentication.
-type JWTAuthentication struct {
+// JWT defines the configuration for JSON Web Token (JWT) authentication.
+type JWT struct {
 
 	// Providers defines the JSON Web Token (JWT) authentication provider type.
 	//

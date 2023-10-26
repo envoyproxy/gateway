@@ -907,11 +907,11 @@ _Appears in:_
 
 
 
-#### JWTAuthentication
+#### JWT
 
 
 
-JWTAuthentication defines the configuration for JSON Web Token (JWT) authentication.
+JWT defines the configuration for JSON Web Token (JWT) authentication.
 
 _Appears in:_
 - [SecurityPolicySpec](#securitypolicyspec)
@@ -929,7 +929,7 @@ _Appears in:_
 JWTProvider defines how a JSON Web Token (JWT) can be verified.
 
 _Appears in:_
-- [JWTAuthentication](#jwtauthentication)
+- [JWT](#jwt)
 
 | Field | Description |
 | --- | --- |
@@ -1674,7 +1674,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
-| `jwtAuthentication` _[JWTAuthentication](#jwtauthentication)_ | JWTAuthentication defines the configuration for JSON Web Token (JWT) authentication. |
+| `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 
 
 

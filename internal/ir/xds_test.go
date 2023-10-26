@@ -426,7 +426,7 @@ var (
 		PathMatch: &StringMatch{
 			Exact: ptrTo("jwtauthen"),
 		},
-		JWTAuthentication: &JWTAuthentication{
+		JWT: &JWT{
 			Providers: []egv1a1.JWTProvider{
 				{
 					Name: "test1",
@@ -1070,19 +1070,19 @@ func TestValidateStringMatch(t *testing.T) {
 func TestValidateJwtRequestAuthentication(t *testing.T) {
 	tests := []struct {
 		name  string
-		input JWTAuthentication
+		input JWT
 		want  error
 	}{
 		{
 			name: "nil rules",
-			input: JWTAuthentication{
+			input: JWT{
 				Providers: nil,
 			},
 			want: nil,
 		},
 		{
 			name: "provider with remote jwks uri",
-			input: JWTAuthentication{
+			input: JWT{
 				Providers: []egv1a1.JWTProvider{
 					{
 						Name:      "test",

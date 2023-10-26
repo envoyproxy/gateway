@@ -40,7 +40,7 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		errs = append(errs, errors.New("spec is nil"))
 	case spec.CORS != nil:
 		sum++
-	case spec.JWTAuthentication != nil:
+	case spec.JWT != nil:
 		sum++
 	}
 	if sum == 0 {
@@ -52,15 +52,15 @@ func validateSecurityPolicySpec(spec *egv1a1.SecurityPolicySpec) error {
 		return utilerrors.NewAggregate(errs)
 	}
 
-	if err := ValidateJWTAuthentication(spec.JWTAuthentication.Providers); err != nil {
+	if err := ValidateJWTProvider(spec.JWT.Providers); err != nil {
 		errs = append(errs, err)
 	}
 
 	return utilerrors.NewAggregate(errs)
 }
 
-// ValidateJWTAuthentication validates the provided JWT authentication configuration.
-func ValidateJWTAuthentication(providers []egv1a1.JWTProvider) error {
+// ValidateJWTProvider validates the provided JWT authentication configuration.
+func ValidateJWTProvider(providers []egv1a1.JWTProvider) error {
 	var errs []error
 
 	if len(providers) == 0 {

@@ -281,8 +281,8 @@ type HTTPRoute struct {
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
-	// JWTAuthentication defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWTAuthentication *JWTAuthentication `json:"jwtAuthentication,omitempty" yaml:"jwtAuthentication,omitempty"`
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -334,11 +334,11 @@ type CORS struct {
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
 }
 
-// JWTAuthentication defines the schema for authenticating HTTP requests using
+// JWT defines the schema for authenticating HTTP requests using
 // JSON Web Tokens (JWT).
 //
 // +k8s:deepcopy-gen=true
-type JWTAuthentication struct {
+type JWT struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
@@ -459,8 +459,8 @@ func (h HTTPRoute) Validate() error {
 			errs = multierror.Append(errs, err)
 		}
 	}
-	if h.JWTAuthentication != nil {
-		if err := h.JWTAuthentication.validate(); err != nil {
+	if h.JWT != nil {
+		if err := h.JWT.validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -478,10 +478,10 @@ func (j *JwtRequestAuthentication) Validate() error {
 	return errs
 }
 
-func (j *JWTAuthentication) validate() error {
+func (j *JWT) validate() error {
 	var errs error
 
-	if err := validation.ValidateJWTAuthentication(j.Providers); err != nil {
+	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 

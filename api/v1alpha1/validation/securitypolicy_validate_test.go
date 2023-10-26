@@ -52,7 +52,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{},
 					},
 				},
@@ -71,7 +71,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -99,7 +99,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -127,7 +127,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -161,7 +161,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "unqualified_...",
@@ -189,7 +189,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "",
@@ -217,7 +217,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "unique",
@@ -261,7 +261,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -289,7 +289,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -317,7 +317,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -345,7 +345,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -372,7 +372,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -406,7 +406,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -440,7 +440,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:      "test",
@@ -467,7 +467,7 @@ func TestValidateSecurityPolicy(t *testing.T) {
 					Name:      "test",
 				},
 				Spec: egv1a1.SecurityPolicySpec{
-					JWTAuthentication: &egv1a1.JWTAuthentication{
+					JWT: &egv1a1.JWT{
 						Providers: []egv1a1.JWTProvider{
 							{
 								Name:   "test",

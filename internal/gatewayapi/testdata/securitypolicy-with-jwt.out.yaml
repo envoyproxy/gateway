@@ -189,7 +189,7 @@ securityPolicies:
     name: policy-for-route
     namespace: default
   spec:
-    jwtAuthentication:
+    jwt:
       providers:
       - audiences:
         - three.foo.com
@@ -219,7 +219,7 @@ securityPolicies:
     name: policy-for-gateway
     namespace: envoy-gateway
   spec:
-    jwtAuthentication:
+    jwt:
       providers:
       - audiences:
         - one.foo.com
@@ -275,7 +275,7 @@ xdsIR:
               port: 8080
             weight: 1
         hostname: '*'
-        jwtAuthentication:
+        jwt:
           providers:
           - audiences:
             - one.foo.com
@@ -319,7 +319,7 @@ xdsIR:
               port: 8080
             weight: 1
         hostname: gateway.envoyproxy.io
-        jwtAuthentication:
+        jwt:
           providers:
           - audiences:
             - three.foo.com

@@ -223,16 +223,16 @@ func resolveSecurityPolicyRouteTargetRef(policy *egv1a1.SecurityPolicy, routes m
 func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPolicy, route RouteContext, xdsIR XdsIRMap) {
 	// Build IR
 	var (
-		cors              *ir.CORS
-		jwtAuthentication *ir.JWTAuthentication
+		cors *ir.CORS
+		jwt  *ir.JWT
 	)
 
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy)
 	}
 
-	if policy.Spec.JWTAuthentication != nil {
-		jwtAuthentication = t.buildJWTAuthentication(policy)
+	if policy.Spec.JWT != nil {
+		jwt = t.buildJWT(policy)
 	}
 
 	// Apply IR to all relevant routes
@@ -245,7 +245,7 @@ func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPoli
 				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					r.CORS = cors
-					r.JWTAuthentication = jwtAuthentication
+					r.JWT = jwt
 				}
 			}
 		}
@@ -256,16 +256,16 @@ func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPoli
 func (t *Translator) translateSecurityPolicyForGateway(policy *egv1a1.SecurityPolicy, gateway *GatewayContext, xdsIR XdsIRMap) {
 	// Build IR
 	var (
-		cors              *ir.CORS
-		jwtAuthentication *ir.JWTAuthentication
+		cors *ir.CORS
+		jwt  *ir.JWT
 	)
 
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy)
 	}
 
-	if policy.Spec.JWTAuthentication != nil {
-		jwtAuthentication = t.buildJWTAuthentication(policy)
+	if policy.Spec.JWT != nil {
+		jwt = t.buildJWT(policy)
 	}
 
 	// Apply IR to all the routes within the specific Gateway
@@ -281,8 +281,8 @@ func (t *Translator) translateSecurityPolicyForGateway(policy *egv1a1.SecurityPo
 			if r.CORS == nil {
 				r.CORS = cors
 			}
-			if r.JWTAuthentication == nil {
-				r.JWTAuthentication = jwtAuthentication
+			if r.JWT == nil {
+				r.JWT = jwt
 			}
 		}
 	}
@@ -331,8 +331,8 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 	}
 }
 
-func (t *Translator) buildJWTAuthentication(policy *egv1a1.SecurityPolicy) *ir.JWTAuthentication {
-	return &ir.JWTAuthentication{
-		Providers: policy.Spec.JWTAuthentication.Providers,
+func (t *Translator) buildJWT(policy *egv1a1.SecurityPolicy) *ir.JWT {
+	return &ir.JWT{
+		Providers: policy.Spec.JWT.Providers,
 	}
 }
