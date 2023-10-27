@@ -23,7 +23,6 @@ API group.
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
-- [RateLimitFilter](#ratelimitfilter)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
 
@@ -116,7 +115,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
-| `rateLimit` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
+| `rateLimit` _[RateLimitSpec](#ratelimitspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 
 
@@ -835,7 +834,7 @@ _Appears in:_
 GlobalRateLimit defines global rate limit configuration.
 
 _Appears in:_
-- [RateLimitFilterSpec](#ratelimitfilterspec)
+- [RateLimitSpec](#ratelimitspec)
 
 | Field | Description |
 | --- | --- |
@@ -1459,38 +1458,6 @@ _Appears in:_
 
 
 
-#### RateLimitFilter
-
-
-
-RateLimitFilter allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
-| `kind` _string_ | `RateLimitFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | Spec defines the desired state of RateLimitFilter. |
-
-
-#### RateLimitFilterSpec
-
-
-
-RateLimitFilterSpec defines the desired state of RateLimitFilter.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [RateLimitFilter](#ratelimitfilter)
-
-| Field | Description |
-| --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
-| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
-
-
 #### RateLimitRedisSettings
 
 
@@ -1536,6 +1503,21 @@ _Appears in:_
 | `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
 
 
+#### RateLimitSpec
+
+
+
+RateLimitSpec defines the desired state of RateLimitSpec.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+
+
 #### RateLimitType
 
 _Underlying type:_ `string`
@@ -1543,7 +1525,7 @@ _Underlying type:_ `string`
 RateLimitType specifies the types of RateLimiting.
 
 _Appears in:_
-- [RateLimitFilterSpec](#ratelimitfilterspec)
+- [RateLimitSpec](#ratelimitspec)
 
 
 

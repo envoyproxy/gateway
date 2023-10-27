@@ -317,9 +317,6 @@ func applyHTTPFiltersContextToIRRoute(httpFiltersContext *HTTPFiltersContext, ir
 	if httpFiltersContext.RequestAuthentication != nil {
 		irRoute.RequestAuthentication = httpFiltersContext.RequestAuthentication
 	}
-	if httpFiltersContext.RateLimit != nil {
-		irRoute.RateLimit = httpFiltersContext.RateLimit
-	}
 
 	if len(httpFiltersContext.ExtensionRefs) > 0 {
 		irRoute.ExtensionRefs = httpFiltersContext.ExtensionRefs

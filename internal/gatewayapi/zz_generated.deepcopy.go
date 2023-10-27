@@ -171,17 +171,6 @@ func (in *Resources) DeepCopyInto(out *Resources) {
 			}
 		}
 	}
-	if in.RateLimitFilters != nil {
-		in, out := &in.RateLimitFilters, &out.RateLimitFilters
-		*out = make([]*apiv1alpha1.RateLimitFilter, len(*in))
-		for i := range *in {
-			if (*in)[i] != nil {
-				in, out := &(*in)[i], &(*out)[i]
-				*out = new(apiv1alpha1.RateLimitFilter)
-				(*in).DeepCopyInto(*out)
-			}
-		}
-	}
 	if in.EnvoyProxy != nil {
 		in, out := &in.EnvoyProxy, &out.EnvoyProxy
 		*out = new(apiv1alpha1.EnvoyProxy)
