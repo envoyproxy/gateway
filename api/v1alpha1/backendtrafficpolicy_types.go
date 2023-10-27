@@ -18,7 +18,6 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:shortName=btp
 // +kubebuilder:subresource:status
-// +kubebuilder:subresource:overrideStrategy
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 //
@@ -28,6 +27,8 @@ type BackendTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// +kubebuilder:validation:Required
+	//
 	// spec defines the desired state of BackendTrafficPolicy.
 	Spec BackendTrafficPolicySpec `json:"spec"`
 
@@ -37,8 +38,10 @@ type BackendTrafficPolicy struct {
 
 // spec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
-
+	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway' || self.kind == 'HTTPRoute' || self.kind == 'GRPCRoute' || self.kind == 'UDPRoute' || self.kind == 'TCPRoute' || self.kind == 'TLSRoute'", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
+	// +kubebuilder:validation:XValidation:rule="has(self.sectionName) ? self.kind == 'Gateway': true", message="sectionName can only be set when kind is 'Gateway'."
+	// +kubebuilder:validation:Required
 	//
 	// targetRef is the name of the resource this policy
 	// is being attached to.

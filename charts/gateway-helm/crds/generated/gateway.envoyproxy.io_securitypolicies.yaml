@@ -235,6 +235,11 @@ spec:
                 - kind
                 - name
                 type: object
+                x-kubernetes-validations:
+                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+                  rule: self.group == 'gateway.networking.k8s.io'
+                - message: this policy can only have a targetRef.kind of Gateway
+                  rule: self.kind == 'Gateway'
             required:
             - targetRef
             type: object
