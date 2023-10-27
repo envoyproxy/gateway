@@ -16,7 +16,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -189,9 +188,6 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
-			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
@@ -204,14 +200,6 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 	default:
 		return fmt.Errorf("unsupported filter type %v", filter.Type)
 	}
-}
-
-// IsAuthnHTTPFilter returns true if the provided filter is an AuthenticationFilter.
-func IsAuthnHTTPFilter(filter *gwapiv1.HTTPRouteFilter) bool {
-	return filter.Type == gwapiv1.HTTPRouteFilterExtensionRef &&
-		filter.ExtensionRef != nil &&
-		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
 }
 
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
@@ -227,9 +215,6 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 		switch {
 		case filter.ExtensionRef == nil:
 			return errors.New("extensionRef field must be specified for an extended filter")
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
-			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
@@ -242,14 +227,6 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 	default:
 		return fmt.Errorf("unsupported filter type %v", filter.Type)
 	}
-}
-
-// IsAuthnGRPCFilter returns true if the provided filter is an AuthenticationFilter.
-func IsAuthnGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
-	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
-		filter.ExtensionRef != nil &&
-		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
 }
 
 // GatewayOwnerLabels returns the Gateway Owner labels using

@@ -220,18 +220,22 @@ will be rate limited at 10 requests/hour.
 
 ```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: AuthenticationFilter
+kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  type: JWT
-  jwtProviders:
-  - name: example
-    remoteJWKS:
-      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
-    claimToHeaders:
-    - claim: name
-      header: custom-request-header
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: eg
+  jwt:
+    providers:
+      - name: example
+        remoteJWKS:
+          uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+        claimToHeaders:
+      - claim: name
+        header: custom-request-header
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: RateLimitFilter
@@ -266,11 +270,6 @@ spec:
       port: 3000
       weight: 1
     filters:
-    - extensionRef:
-        group: gateway.envoyproxy.io
-        kind: AuthenticationFilter
-        name: jwt-example
-      type: ExtensionRef
     - type: ExtensionRef
       extensionRef:
         group: gateway.envoyproxy.io

@@ -1067,7 +1067,7 @@ func TestValidateStringMatch(t *testing.T) {
 	}
 }
 
-func TestValidateJwtRequestAuthentication(t *testing.T) {
+func TestValidateJWT(t *testing.T) {
 	tests := []struct {
 		name  string
 		input JWT

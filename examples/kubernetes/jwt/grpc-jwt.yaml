@@ -1,13 +1,17 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: AuthenticationFilter
+kind: SecurityPolicy
 metadata:
   name: jwt-example
 spec:
-  type: JWT
-  jwtProviders:
-  - name: example
-    remoteJWKS:
-      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: GRPCRoute
+    name: yages
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: GRPCRoute
@@ -27,9 +31,3 @@ spec:
       name: yages
       port: 9000
       weight: 1
-    filters:
-    - extensionRef:
-        group: gateway.envoyproxy.io
-        kind: AuthenticationFilter
-        name: jwt-example
-      type: ExtensionRef

@@ -254,11 +254,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			return err
 		}
 
-		// Create authn jwks clusters, if needed. // TODO zhaohuabing remove this after deprecating authentication filter
-		if err := createJwksClusters(tCtx, httpListener.Routes); err != nil {
-			return err
-		}
-
 		// Create authn jwks clusters, if needed.
 		if err := createJWKSClusters(tCtx, httpListener.Routes); err != nil {
 			return err

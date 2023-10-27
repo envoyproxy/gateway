@@ -44,7 +44,6 @@ var (
 	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrRequestAuthenRequiresJwt      = errors.New("jwt field is required when request authentication is set")
 	ErrLoadBalancerInvalid           = errors.New("loadBalancer setting is invalid, only one setting can be set")
 )
 
@@ -273,8 +272,6 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// RequestAuthentication defines the schema for authenticating HTTP requests. //TODO zhaohuabing remove this field
-	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
@@ -294,28 +291,6 @@ type HTTPRoute struct {
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
-}
-
-// RequestAuthentication defines the schema for authenticating HTTP requests.
-// Only one of "jwt" can be specified.
-//
-// TODO: Add support for additional request authentication providers, i.e. OIDC.
-//
-// +k8s:deepcopy-gen=true
-// TODO zhaohuabing remove this type
-type RequestAuthentication struct {
-	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JwtRequestAuthentication `json:"jwt,omitempty" yaml:"jwt,omitempty"`
-}
-
-// JwtRequestAuthentication defines the schema for authenticating HTTP requests using
-// JSON Web Tokens (JWT).
-//
-// +k8s:deepcopy-gen=true
-// TODO zhaohuabing remove this type
-type JwtRequestAuthentication struct {
-	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	Providers []egv1a1.JwtAuthenticationFilterProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
 
 // CORS holds the Cross-Origin Resource Sharing (CORS) policy for the route.
@@ -444,16 +419,6 @@ func (h HTTPRoute) Validate() error {
 			}
 		}
 	}
-	if h.RequestAuthentication != nil {
-		switch {
-		case h.RequestAuthentication.JWT == nil:
-			errs = multierror.Append(errs, ErrRequestAuthenRequiresJwt)
-		default:
-			if err := h.RequestAuthentication.JWT.Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
-		}
-	}
 	if h.LoadBalancer != nil {
 		if err := h.LoadBalancer.Validate(); err != nil {
 			errs = multierror.Append(errs, err)
@@ -463,16 +428,6 @@ func (h HTTPRoute) Validate() error {
 		if err := h.JWT.validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
-	}
-
-	return errs
-}
-
-func (j *JwtRequestAuthentication) Validate() error {
-	var errs error
-
-	if err := validation.ValidateJwtProviders(j.Providers); err != nil {
-		errs = multierror.Append(errs, err)
 	}
 
 	return errs

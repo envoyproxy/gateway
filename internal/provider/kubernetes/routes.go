@@ -17,7 +17,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
 	"github.com/envoyproxy/gateway/internal/provider/utils"
 )
@@ -108,17 +107,6 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	grpcRouteList := &gwapiv1a2.GRPCRouteList{}
 
-	// An GRPCRoute may reference an AuthenticationFilter,
-	// so add them to the resource map first (if they exist).
-	authenFilters, err := r.getAuthenticationFilters(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range authenFilters {
-		filter := authenFilters[i]
-		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
-	}
-
 	if err := r.client.List(ctx, grpcRouteList, &client.ListOptions{
 		FieldSelector: fields.OneTermEqualSelector(gatewayGRPCRouteIndex, gatewayNamespaceName),
 	}); err != nil {
@@ -202,34 +190,23 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 				}
 				if filter.Type == gwapiv1a2.GRPCRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the GRPCRoute
-					switch string(filter.ExtensionRef.Kind) {
-					case egv1a1.KindAuthenticationFilter:
-						key := types.NamespacedName{
-							Namespace: grpcRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}
-						authFilter, ok := resourceMap.authenFilters[key]
-						if !ok {
-							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
-							continue
-						}
-
-						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
-					default:
-						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
-						// managed by an extension and add to resourceTree
-						key := types.NamespacedName{
-							Namespace: grpcRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}
-						extRefFilter, ok := resourceMap.extensionRefFilters[key]
-						if !ok {
-							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
-							continue
-						}
-
-						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+					// Check if it's a Kind managed by an extension and add to resourceTree
+					key := types.NamespacedName{
+						Namespace: grpcRoute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
 					}
+					extRefFilter, ok := resourceMap.extensionRefFilters[key]
+					if !ok {
+						r.log.Error(
+							errors.New("filter not found; bypassing rule"),
+							"Filter not found; bypassing rule",
+							"name",
+							filter.ExtensionRef.Name, "index", i)
+						continue
+					}
+
+					resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+
 				}
 			}
 		}
@@ -249,17 +226,6 @@ func (r *gatewayAPIReconciler) processGRPCRoutes(ctx context.Context, gatewayNam
 func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNamespaceName string,
 	resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	httpRouteList := &gwapiv1.HTTPRouteList{}
-
-	// An HTTPRoute may reference an AuthenticationFilter, or a filter managed
-	// by an extension so add them to the resource map first (if they exist).
-	authenFilters, err := r.getAuthenticationFilters(ctx)
-	if err != nil {
-		return err
-	}
-	for i := range authenFilters {
-		filter := authenFilters[i]
-		resourceMap.authenFilters[utils.NamespacedName(&filter)] = &filter
-	}
 
 	extensionRefFilters, err := r.getExtensionRefFilters(ctx)
 	if err != nil {
@@ -408,34 +374,22 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 					}
 				} else if filter.Type == gwapiv1.HTTPRouteFilterExtensionRef {
 					// NOTE: filters must be in the same namespace as the HTTPRoute
-					switch string(filter.ExtensionRef.Kind) {
-					case egv1a1.KindAuthenticationFilter:
-						key := types.NamespacedName{
-							Namespace: httpRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}
-						authFilter, ok := resourceMap.authenFilters[key]
-						if !ok {
-							r.log.Error(err, "AuthenticationFilter not found; bypassing rule", "index", i)
-							continue
-						}
-
-						resourceTree.AuthenticationFilters = append(resourceTree.AuthenticationFilters, authFilter)
-					default:
-						// If the Kind does not match any Envoy Gateway resources, check if it's a Kind
-						// managed by an extension and add to resourceTree
-						key := types.NamespacedName{
-							Namespace: httpRoute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}
-						extRefFilter, ok := resourceMap.extensionRefFilters[key]
-						if !ok {
-							r.log.Error(err, "Filter not found; bypassing rule", "name", filter.ExtensionRef.Name, "index", i)
-							continue
-						}
-
-						resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
+					// Check if it's a Kind managed by an extension and add to resourceTree
+					key := types.NamespacedName{
+						Namespace: httpRoute.Namespace,
+						Name:      string(filter.ExtensionRef.Name),
 					}
+					extRefFilter, ok := resourceMap.extensionRefFilters[key]
+					if !ok {
+						r.log.Error(
+							errors.New("filter not found; bypassing rule"),
+							"Filter not found; bypassing rule",
+							"name", filter.ExtensionRef.Name,
+							"index", i)
+						continue
+					}
+
+					resourceTree.ExtensionRefFilters = append(resourceTree.ExtensionRefFilters, extRefFilter)
 				}
 			}
 		}

@@ -64,12 +64,10 @@ apiGroups:
 - gateway.envoyproxy.io
 resources:
 - envoyproxies
-- authenticationfilters
 - envoypatchpolicies
 - clienttrafficpolicies
 - backendtrafficpolicies
 - securitypolicies
-- ratelimitfilters
 verbs:
 - get
 - list
