@@ -24,7 +24,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: All listeners for a given port must use a unique hostname
@@ -47,7 +47,7 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: All listeners for a given port must use a unique hostname

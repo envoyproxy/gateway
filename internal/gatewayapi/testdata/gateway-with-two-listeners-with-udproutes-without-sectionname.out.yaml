@@ -22,7 +22,7 @@ gateways:
       protocol: UDP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -43,7 +43,7 @@ gateways:
       supportedKinds:
       - group: gateway.networking.k8s.io
         kind: UDPRoute
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane

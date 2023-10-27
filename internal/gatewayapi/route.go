@@ -780,7 +780,7 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 		accepted := false
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a UDP listener
-			if listener.AttachedRoutes() > 0 {
+			if listener.AttachedRoutes() > 1 {
 				continue
 			}
 			if !listener.IsReady() {
@@ -911,7 +911,7 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 		accepted := false
 		for _, listener := range parentRef.listeners {
 			// only one route is allowed for a TCP listener
-			if listener.AttachedRoutes() > 0 {
+			if listener.AttachedRoutes() > 1 {
 				continue
 			}
 			if !listener.IsReady() {
@@ -1105,8 +1105,6 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 			continue
 		}
 
-		parentRefCtx.SetListeners(allowedListeners...)
-
 		// Its safe to increment AttachedRoutes since we've found a valid parentRef
 		// and the listener allows this Route kind
 
@@ -1126,6 +1124,8 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 			)
 			continue
 		}
+
+		parentRefCtx.SetListeners(allowedListeners...)
 
 		parentRefCtx.SetCondition(routeContext,
 			gwapiv1.RouteConditionAccepted,
