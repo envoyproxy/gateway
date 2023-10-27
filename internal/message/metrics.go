@@ -18,5 +18,5 @@ var (
 
 	runnerLabel = metrics.NewLabel("runner")
 
-	resourceLabel = metrics.NewLabel("resource")
+	messageLabel = metrics.NewLabel("message")
 )

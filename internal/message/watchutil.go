@@ -30,7 +30,7 @@ func (m Metadata) LabelValues() []metrics.LabelValue {
 		labels = append(labels, runnerLabel.Value(m.Runner))
 	}
 	if m.Resource != "" {
-		labels = append(labels, resourceLabel.Value(m.Resource))
+		labels = append(labels, messageLabel.Value(m.Resource))
 	}
 
 	return labels
