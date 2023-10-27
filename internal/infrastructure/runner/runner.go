@@ -54,7 +54,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 
 func (r *Runner) subscribeToProxyInfraIR(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentInfrastructureRunner), Resource: "infra-ir"}, r.InfraIR.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentInfrastructureRunner), Message: "infra-ir"}, r.InfraIR.Subscribe(ctx),
 		func(update message.Update[string, *ir.Infra], errChan chan error) {
 			r.Logger.Info("received an update")
 			val := update.Value

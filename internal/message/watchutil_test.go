@@ -23,7 +23,7 @@ func TestHandleSubscriptionAlreadyClosed(t *testing.T) {
 
 	var calls int
 	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Resource: "demo"},
+		message.Metadata{Runner: "demo", Message: "demo"},
 		ch,
 		func(update message.Update[string, any], errChans chan error) { calls++ },
 	)
@@ -48,7 +48,7 @@ func TestHandleSubscriptionAlreadyInitialized(t *testing.T) {
 	var storeCalls int
 	var deleteCalls int
 	message.HandleSubscription[string, any](
-		message.Metadata{Runner: "demo", Resource: "demo"},
+		message.Metadata{Runner: "demo", Message: "demo"},
 		m.Subscribe(context.Background()),
 		func(update message.Update[string, any], errChans chan error) {
 			end()
@@ -123,7 +123,7 @@ func TestXdsIRUpdates(t *testing.T) {
 			}()
 
 			updates := 0
-			message.HandleSubscription(message.Metadata{Runner: "demo", Resource: "demo"}, snapshotC, func(u message.Update[string, *ir.Xds], errChans chan error) {
+			message.HandleSubscription(message.Metadata{Runner: "demo", Message: "demo"}, snapshotC, func(u message.Update[string, *ir.Xds], errChans chan error) {
 				end()
 				if u.Key == "test" {
 					updates += 1

@@ -133,7 +133,7 @@ func registerServer(srv serverv3.Server, g *grpc.Server) {
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 	// Subscribe to resources
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentXdsServerRunner), Resource: "xds"}, r.Xds.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentXdsServerRunner), Message: "xds"}, r.Xds.Subscribe(ctx),
 		func(update message.Update[string, *xdstypes.ResourceVersionTable], errChan chan error) {
 			key := update.Key
 			val := update.Value

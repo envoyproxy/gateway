@@ -1028,7 +1028,7 @@ func (r *gatewayAPIReconciler) addFinalizer(ctx context.Context, gc *gwapiv1.Gat
 func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 	// Gateway object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "gateway-status"}, r.resources.GatewayStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "gateway-status"}, r.resources.GatewayStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1.GatewayStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1051,7 +1051,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// HTTPRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "httproute-status"}, r.resources.HTTPRouteStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "httproute-status"}, r.resources.HTTPRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1.HTTPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1081,7 +1081,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// GRPCRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "grpcroute-status"}, r.resources.GRPCRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.GRPCRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1111,7 +1111,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// TLSRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "tlsroute-status"}, r.resources.TLSRouteStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "tlsroute-status"}, r.resources.TLSRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.TLSRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1141,7 +1141,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// TCPRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "tcproute-status"}, r.resources.TCPRouteStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "tcproute-status"}, r.resources.TCPRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.TCPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1171,7 +1171,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// UDPRoute object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "udproute-status"}, r.resources.UDPRouteStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "udproute-status"}, r.resources.UDPRouteStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *gwapiv1a2.UDPRouteStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1201,7 +1201,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// EnvoyPatchPolicy object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "envoypatchpolicy-status"}, r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "envoypatchpolicy-status"}, r.resources.EnvoyPatchPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *v1alpha1.EnvoyPatchPolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1231,7 +1231,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// ClientTrafficPolicy object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "clienttrafficpolicy-status"}, r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "clienttrafficpolicy-status"}, r.resources.ClientTrafficPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *v1alpha1.ClientTrafficPolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {
@@ -1261,7 +1261,7 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 
 	// BackendTrafficPolicy object status updater
 	go func() {
-		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Resource: "backendtrafficpolicy-status"}, r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "backendtrafficpolicy-status"}, r.resources.BackendTrafficPolicyStatuses.Subscribe(ctx),
 			func(update message.Update[types.NamespacedName, *v1alpha1.BackendTrafficPolicyStatus], errChan chan error) {
 				// skip delete updates.
 				if update.Delete {

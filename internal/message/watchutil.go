@@ -20,8 +20,8 @@ type Update[K comparable, V any] watchable.Update[K, V]
 var logger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("watchable")
 
 type Metadata struct {
-	Runner   string
-	Resource string
+	Runner  string
+	Message string
 }
 
 func (m Metadata) LabelValues() []metrics.LabelValue {
@@ -29,8 +29,8 @@ func (m Metadata) LabelValues() []metrics.LabelValue {
 	if m.Runner != "" {
 		labels = append(labels, runnerLabel.Value(m.Runner))
 	}
-	if m.Resource != "" {
-		labels = append(labels, messageLabel.Value(m.Resource))
+	if m.Message != "" {
+		labels = append(labels, messageLabel.Value(m.Message))
 	}
 
 	return labels
