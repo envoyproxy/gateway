@@ -572,12 +572,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 			}
 			irListener.Routes = append(irListener.Routes, perHostRoutes...)
 		}
-		// Theoretically there should only be one parent ref per
-		// Route that attaches to a given Listener, so fine to just increment here, but we
-		// might want to check to ensure we're not double-counting.
-		if len(routeRoutes) > 0 {
-			listener.IncrementAttachedRoutes()
-		}
 	}
 
 	return hasHostnameIntersection
@@ -680,12 +674,6 @@ func (t *Translator) processTLSRouteParentRefs(tlsRoute *TLSRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Settings) > 0 {
-				listener.IncrementAttachedRoutes()
-			}
 		}
 
 		if !hasHostnameIntersection {
@@ -817,12 +805,6 @@ func (t *Translator) processUDPRouteParentRefs(udpRoute *UDPRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.UDP = append(gwXdsIR.UDP, irListener)
 
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Settings) > 0 {
-				listener.IncrementAttachedRoutes()
-			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -954,12 +936,6 @@ func (t *Translator) processTCPRouteParentRefs(tcpRoute *TCPRouteContext, resour
 			gwXdsIR := xdsIR[irKey]
 			gwXdsIR.TCP = append(gwXdsIR.TCP, irListener)
 
-			// Theoretically there should only be one parent ref per
-			// Route that attaches to a given Listener, so fine to just increment here, but we
-			// might want to check to ensure we're not double-counting.
-			if len(irListener.Destination.Settings) > 0 {
-				listener.IncrementAttachedRoutes()
-			}
 		}
 
 		// If no negative conditions have been set, the route is considered "Accepted=True".
@@ -1110,16 +1086,6 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 			continue
 		}
 
-		if !HasReadyListener(selectedListeners) {
-			parentRefCtx.SetCondition(routeContext,
-				gwapiv1.RouteConditionAccepted,
-				metav1.ConditionFalse,
-				"NoReadyListeners",
-				"There are no ready listeners for this parent ref",
-			)
-			continue
-		}
-
 		var allowedListeners []*ListenerContext
 		for _, listener := range selectedListeners {
 			acceptedKind := GetRouteType(routeContext)
@@ -1140,6 +1106,26 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 		}
 
 		parentRefCtx.SetListeners(allowedListeners...)
+
+		// Its safe to increment AttachedRoutes since we've found a valid parentRef
+		// and the listener allows this Route kind
+
+		// Theoretically there should only be one parent ref per
+		// Route that attaches to a given Listener, so fine to just increment here, but we
+		// might want to check to ensure we're not double-counting.
+		for _, listener := range allowedListeners {
+			listener.IncrementAttachedRoutes()
+		}
+
+		if !HasReadyListener(selectedListeners) {
+			parentRefCtx.SetCondition(routeContext,
+				gwapiv1.RouteConditionAccepted,
+				metav1.ConditionFalse,
+				"NoReadyListeners",
+				"There are no ready listeners for this parent ref",
+			)
+			continue
+		}
 
 		parentRefCtx.SetCondition(routeContext,
 			gwapiv1.RouteConditionAccepted,
