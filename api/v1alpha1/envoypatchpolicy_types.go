@@ -17,6 +17,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=epp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

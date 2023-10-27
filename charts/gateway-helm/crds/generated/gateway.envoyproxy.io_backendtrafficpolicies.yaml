@@ -12,7 +12,7 @@ spec:
     listKind: BackendTrafficPolicyList
     plural: backendtrafficpolicies
     shortNames:
-    - btpolicy
+    - btp
     singular: backendtrafficpolicy
   scope: Namespaced
   versions:

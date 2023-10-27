@@ -16,7 +16,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=btpolicy
+// +kubebuilder:resource:shortName=btp
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:overrideStrategy
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`

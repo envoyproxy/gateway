@@ -15,6 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=eproxy
 // +kubebuilder:subresource:status
 
 // EnvoyProxy is the schema for the envoyproxies API.
