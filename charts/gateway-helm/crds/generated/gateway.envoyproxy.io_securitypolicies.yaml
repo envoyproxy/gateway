@@ -11,6 +11,8 @@ spec:
     kind: SecurityPolicy
     listKind: SecurityPolicyList
     plural: securitypolicies
+    shortNames:
+    - sp
     singular: securitypolicy
   scope: Namespaced
   versions:

@@ -11,6 +11,8 @@ spec:
     kind: ClientTrafficPolicy
     listKind: ClientTrafficPolicyList
     plural: clienttrafficpolicies
+    shortNames:
+    - ctp
     singular: clienttrafficpolicy
   scope: Namespaced
   versions:
