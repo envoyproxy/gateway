@@ -40,7 +40,6 @@ type BackendTrafficPolicy struct {
 type BackendTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway' || self.kind == 'HTTPRoute' || self.kind == 'GRPCRoute' || self.kind == 'UDPRoute' || self.kind == 'TCPRoute' || self.kind == 'TLSRoute'", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
-	// +kubebuilder:validation:XValidation:rule="has(self.sectionName) ? self.kind == 'Gateway': true", message="sectionName can only be set when kind is 'Gateway'."
 	// +kubebuilder:validation:Required
 	//
 	// targetRef is the name of the resource this policy

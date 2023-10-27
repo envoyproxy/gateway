@@ -270,8 +270,6 @@ spec:
                   rule: self.kind == 'Gateway' || self.kind == 'HTTPRoute' || self.kind
                     == 'GRPCRoute' || self.kind == 'UDPRoute' || self.kind == 'TCPRoute'
                     || self.kind == 'TLSRoute'
-                - message: sectionName can only be set when kind is 'Gateway'.
-                  rule: 'has(self.sectionName) ? self.kind == ''Gateway'': true'
             required:
             - targetRef
             type: object

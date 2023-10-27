@@ -133,40 +133,6 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
-		{
-			desc: "targetRef section name with gateway",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("Gateway"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-						SectionName: &sectionName,
-					},
-				}
-			},
-			wantErrors: []string{},
-		},
-		{
-			desc: "targetRef section name with httproute",
-			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
-				btp.Spec = egv1a1.BackendTrafficPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
-							Kind:  gwapiv1a2.Kind("HTTPRoute"),
-							Name:  gwapiv1a2.ObjectName("eg"),
-						},
-						SectionName: &sectionName,
-					},
-				}
-			},
-			wantErrors: []string{
-				"spec.targetRef: Invalid value: \"object\": sectionName can only be set when kind is 'Gateway'.",
-			},
-		},
 	}
 
 	for _, tc := range cases {
