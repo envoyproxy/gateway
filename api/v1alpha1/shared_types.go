@@ -235,3 +235,43 @@ const (
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
 	XDSTranslation  XDSTranslatorHook = "Translation"
 )
+
+// StringMatch defines how to match any strings.
+// This is a general purpose match condition that can be used by other EG APIs
+// that need to match against a string.
+type StringMatch struct {
+	// Type specifies how to match against a string.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *MatchType `json:"type,omitempty"`
+
+	// Value specifies the string value that the match must have.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+}
+
+// MatchType specifies the semantics of how a string value should be compared.
+// Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+//
+// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
+type MatchType string
+
+const (
+	// MatchExact :the input string must match exactly the match value.
+	MatchExact MatchType = "Exact"
+
+	// MatchPrefix :the input string must start with the match value.
+	MatchPrefix MatchType = "Prefix"
+
+	// MatchSuffix :the input string must end with the match value.
+	MatchSuffix MatchType = "Suffix"
+
+	// MatchRegularExpression :The input string must match the regular expression
+	// specified in the match value.
+	// The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	MatchRegularExpression MatchType = "RegularExpression"
+)

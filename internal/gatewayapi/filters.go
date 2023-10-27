@@ -13,7 +13,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
@@ -56,8 +55,6 @@ type HTTPFilterIR struct {
 	RemoveResponseHeaders []string
 
 	Mirrors []*ir.RouteDestination
-
-	RequestAuthentication *ir.RequestAuthentication
 
 	ExtensionRefs []*ir.UnstructuredRef
 }
@@ -662,21 +659,6 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 	}
 
 	filterNs := filterContext.Route.GetNamespace()
-	// Set the filter context and return early if a matching AuthenticationFilter is found.
-	if string(extFilter.Kind) == egv1a1.KindAuthenticationFilter {
-		for _, authenFilter := range resources.AuthenticationFilters {
-			if authenFilter.Namespace == filterNs &&
-				authenFilter.Name == string(extFilter.Name) {
-				filterContext.HTTPFilterIR.RequestAuthentication = &ir.RequestAuthentication{
-					JWT: &ir.JwtRequestAuthentication{
-						Providers: authenFilter.Spec.JwtProviders,
-					},
-				}
-				return
-			}
-		}
-	}
-
 	// This list of resources will be empty unless an extension is loaded (and introduces resources)
 	for _, res := range resources.ExtensionRefFilters {
 		if res.GetKind() == string(extFilter.Kind) && res.GetName() == string(extFilter.Name) && res.GetNamespace() == filterNs {

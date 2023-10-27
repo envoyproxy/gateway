@@ -91,10 +91,6 @@ func TestTranslateXds(t *testing.T) {
 			requireSecrets: true,
 		},
 		{
-			name:           "mixed-tls-jwt-authn",
-			requireSecrets: true,
-		},
-		{
 			name: "tls-route-passthrough",
 		},
 		{
@@ -152,18 +148,6 @@ func TestTranslateXds(t *testing.T) {
 			name: "ratelimit-sourceip",
 		},
 		{
-			name: "authn-single-route-single-match",
-		},
-		{
-			name: "authn-multi-route-single-provider",
-		},
-		{
-			name: "authn-multi-route-multi-provider",
-		},
-		{
-			name: "authn-ratelimit",
-		},
-		{
 			name: "accesslog",
 		},
 		{
@@ -194,16 +178,16 @@ func TestTranslateXds(t *testing.T) {
 			name: "cors",
 		},
 		{
-			name: "jwt-authn-multi-route-multi-provider",
+			name: "jwt-multi-route-multi-provider",
 		},
 		{
-			name: "jwt-authn-multi-route-single-provider",
+			name: "jwt-multi-route-single-provider",
 		},
 		{
-			name: "jwt-authn-ratelimit",
+			name: "jwt-ratelimit",
 		},
 		{
-			name: "jwt-authn-single-route-single-match",
+			name: "jwt-single-route-single-match",
 		},
 	}
 

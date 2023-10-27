@@ -42,23 +42,19 @@ import (
 )
 
 const (
-	classGatewayIndex             = "classGatewayIndex"
-	gatewayTLSRouteIndex          = "gatewayTLSRouteIndex"
-	gatewayHTTPRouteIndex         = "gatewayHTTPRouteIndex"
-	gatewayGRPCRouteIndex         = "gatewayGRPCRouteIndex"
-	gatewayTCPRouteIndex          = "gatewayTCPRouteIndex"
-	gatewayUDPRouteIndex          = "gatewayUDPRouteIndex"
-	secretGatewayIndex            = "secretGatewayIndex"
-	targetRefGrantRouteIndex      = "targetRefGrantRouteIndex"
-	backendHTTPRouteIndex         = "backendHTTPRouteIndex"
-	backendGRPCRouteIndex         = "backendGRPCRouteIndex"
-	backendTLSRouteIndex          = "backendTLSRouteIndex"
-	backendTCPRouteIndex          = "backendTCPRouteIndex"
-	backendUDPRouteIndex          = "backendUDPRouteIndex"
-	authenFilterHTTPRouteIndex    = "authenHTTPRouteIndex"
-	rateLimitFilterHTTPRouteIndex = "rateLimitHTTPRouteIndex"
-	authenFilterGRPCRouteIndex    = "authenGRPCRouteIndex"
-	rateLimitFilterGRPCRouteIndex = "rateLimitGRPCRouteIndex"
+	classGatewayIndex        = "classGatewayIndex"
+	gatewayTLSRouteIndex     = "gatewayTLSRouteIndex"
+	gatewayHTTPRouteIndex    = "gatewayHTTPRouteIndex"
+	gatewayGRPCRouteIndex    = "gatewayGRPCRouteIndex"
+	gatewayTCPRouteIndex     = "gatewayTCPRouteIndex"
+	gatewayUDPRouteIndex     = "gatewayUDPRouteIndex"
+	secretGatewayIndex       = "secretGatewayIndex"
+	targetRefGrantRouteIndex = "targetRefGrantRouteIndex"
+	backendHTTPRouteIndex    = "backendHTTPRouteIndex"
+	backendGRPCRouteIndex    = "backendGRPCRouteIndex"
+	backendTLSRouteIndex     = "backendTLSRouteIndex"
+	backendTCPRouteIndex     = "backendTCPRouteIndex"
+	backendUDPRouteIndex     = "backendUDPRouteIndex"
 )
 
 type gatewayAPIReconciler struct {
@@ -136,9 +132,6 @@ type resourceMappings struct {
 	allAssociatedBackendRefs map[gwapiv1.BackendObjectReference]struct{}
 	// Map for storing referenceGrant NamespaceNames for BackendRefs, SecretRefs.
 	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1b1.ReferenceGrant
-	// authenFilters is a map of AuthenticationFilters, where the key is the
-	// namespaced name of the AuthenticationFilter.
-	authenFilters map[types.NamespacedName]*v1alpha1.AuthenticationFilter
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
@@ -150,7 +143,6 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedNamespaces:  map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1b1.ReferenceGrant{},
-		authenFilters:            map[types.NamespacedName]*v1alpha1.AuthenticationFilter{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
@@ -653,9 +645,6 @@ func addReferenceGrantIndexers(ctx context.Context, mgr manager.Manager) error {
 // addHTTPRouteIndexers adds indexing on HTTPRoute.
 //   - For Service, ServiceImports objects that are referenced in HTTPRoute objects via `.spec.rules.backendRefs`.
 //     This helps in querying for HTTPRoutes that are affected by a particular Service CRUD.
-//   - For AuthenticationFilter objects that are referenced in HTTPRoute objects via
-//     `.spec.rules[].filters`. This helps in querying for HTTPRoutes that are affected by a
-//     particular AuthenticationFilter CRUD.
 func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, gatewayHTTPRouteIndex, gatewayHTTPRouteIndexFunc); err != nil {
 		return err
@@ -665,32 +654,7 @@ func addHTTPRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1.HTTPRoute{}, authenFilterHTTPRouteIndex, authenFilterHTTPRouteIndexFunc); err != nil {
-		return err
-	}
-
 	return nil
-}
-
-func authenFilterHTTPRouteIndexFunc(rawObj client.Object) []string {
-	httproute := rawObj.(*gwapiv1.HTTPRoute)
-	var filters []string
-	for _, rule := range httproute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsAuthnHTTPFilter(&filter) {
-				if err := gatewayapi.ValidateHTTPRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
 }
 
 func gatewayHTTPRouteIndexFunc(rawObj client.Object) []string {
@@ -743,10 +707,6 @@ func addGRPCRouteIndexers(ctx context.Context, mgr manager.Manager) error {
 		return err
 	}
 
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &gwapiv1a2.GRPCRoute{}, authenFilterGRPCRouteIndex, authenFilterGRPCRouteIndexFunc); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -786,27 +746,6 @@ func backendGRPCRouteIndexFunc(rawObj client.Object) []string {
 		}
 	}
 	return backendRefs
-}
-
-func authenFilterGRPCRouteIndexFunc(rawObj client.Object) []string {
-	grpcroute := rawObj.(*gwapiv1a2.GRPCRoute)
-	var filters []string
-	for _, rule := range grpcroute.Spec.Rules {
-		for i := range rule.Filters {
-			filter := rule.Filters[i]
-			if gatewayapi.IsAuthnGRPCFilter(&filter) {
-				if err := gatewayapi.ValidateGRPCRouteFilter(&filter); err == nil {
-					filters = append(filters,
-						types.NamespacedName{
-							Namespace: grpcroute.Namespace,
-							Name:      string(filter.ExtensionRef.Name),
-						}.String(),
-					)
-				}
-			}
-		}
-	}
-	return filters
 }
 
 // addTLSRouteIndexers adds indexing on TLSRoute, for Service objects that are
@@ -1288,6 +1227,36 @@ func (r *gatewayAPIReconciler) subscribeAndUpdateStatus(ctx context.Context) {
 		)
 		r.log.Info("backendTrafficPolicy status subscriber shutting down")
 	}()
+
+	// SecurityPolicy object status updater
+	go func() {
+		message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentProviderRunner), Message: "securitypolicy-status"}, r.resources.SecurityPolicyStatuses.Subscribe(ctx),
+			func(update message.Update[types.NamespacedName, *v1alpha1.SecurityPolicyStatus], errChan chan error) {
+				// skip delete updates.
+				if update.Delete {
+					return
+				}
+				key := update.Key
+				val := update.Value
+				r.statusUpdater.Send(status.Update{
+					NamespacedName: key,
+					Resource:       new(v1alpha1.SecurityPolicy),
+					Mutator: status.MutatorFunc(func(obj client.Object) client.Object {
+						t, ok := obj.(*v1alpha1.SecurityPolicy)
+						if !ok {
+							err := fmt.Errorf("unsupported object type %T", obj)
+							errChan <- err
+							panic(err)
+						}
+						tCopy := t.DeepCopy()
+						tCopy.Status = *val
+						return tCopy
+					}),
+				})
+			},
+		)
+		r.log.Info("securityPolicy status subscriber shutting down")
+	}()
 }
 
 // watchResources watches gateway api resources.
@@ -1526,22 +1495,6 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		return err
 	}
 
-	// Watch AuthenticationFilter CRUDs and enqueue associated HTTPRoute objects.
-	afPredicates := []predicate.Predicate{
-		predicate.GenerationChangedPredicate{},
-		predicate.NewPredicateFuncs(r.httpRoutesForAuthenticationFilter),
-	}
-	if len(r.namespaceLabels) != 0 {
-		afPredicates = append(afPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
-	}
-	if err := c.Watch(
-		source.Kind(mgr.GetCache(), &v1alpha1.AuthenticationFilter{}),
-		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
-		afPredicates...,
-	); err != nil {
-		return err
-	}
-
 	// Watch EnvoyPatchPolicy if enabled in config
 	eppPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
 	if len(r.namespaceLabels) != 0 {
@@ -1582,6 +1535,20 @@ func (r *gatewayAPIReconciler) watchResources(ctx context.Context, mgr manager.M
 		source.Kind(mgr.GetCache(), &v1alpha1.BackendTrafficPolicy{}),
 		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
 		btpPredicates...,
+	); err != nil {
+		return err
+	}
+
+	// Watch SecurityPolicy
+	spPredicates := []predicate.Predicate{predicate.GenerationChangedPredicate{}}
+	if len(r.namespaceLabels) != 0 {
+		spPredicates = append(spPredicates, predicate.NewPredicateFuncs(r.hasMatchingNamespaceLabels))
+	}
+
+	if err := c.Watch(
+		source.Kind(mgr.GetCache(), &v1alpha1.SecurityPolicy{}),
+		handler.EnqueueRequestsFromMapFunc(r.enqueueClass),
+		spPredicates...,
 	); err != nil {
 		return err
 	}

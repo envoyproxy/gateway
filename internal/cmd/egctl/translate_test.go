@@ -111,27 +111,27 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:   "authn-single-route-single-match-to-xds",
+			name:   "jwt-single-route-single-match-to-xds",
 			from:   "gateway-api",
 			to:     "xds",
 			output: jsonOutput,
 			expect: true,
 		},
 		{
-			name:   "authn-single-route-single-match-to-xds",
+			name:   "jwt-single-route-single-match-to-xds",
 			from:   "gateway-api",
 			to:     "xds",
 			output: yamlOutput,
 			expect: true,
 		},
 		{
-			name:   "authn-single-route-single-match-to-xds",
+			name:   "jwt-single-route-single-match-to-xds",
 			from:   "gateway-api",
 			to:     "xds",
 			expect: true,
 		},
 		{
-			name:         "authn-single-route-single-match-to-xds",
+			name:         "jwt-single-route-single-match-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
@@ -139,7 +139,7 @@ func TestTranslate(t *testing.T) {
 			expect:       false,
 		},
 		{
-			name:         "authn-single-route-single-match-to-xds",
+			name:         "jwt-single-route-single-match-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
@@ -147,7 +147,7 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:         "authn-single-route-single-match-to-xds",
+			name:         "jwt-single-route-single-match-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
@@ -155,7 +155,7 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:         "authn-single-route-single-match-to-xds",
+			name:         "jwt-single-route-single-match-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
@@ -163,7 +163,7 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:         "authn-single-route-single-match-to-xds",
+			name:         "jwt-single-route-single-match-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,
@@ -171,7 +171,7 @@ func TestTranslate(t *testing.T) {
 			expect:       true,
 		},
 		{
-			name:         "authn-single-route-single-match-to-xds",
+			name:         "jwt-single-route-single-match-to-xds",
 			from:         "gateway-api",
 			to:           "xds",
 			output:       yamlOutput,

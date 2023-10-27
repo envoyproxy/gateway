@@ -18,8 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
 
 func TestValidateGRPCFilterRef(t *testing.T) {
@@ -92,42 +90,6 @@ func TestValidateGRPCFilterRef(t *testing.T) {
 			},
 			expected: false,
 		},
-		{
-			name: "invalid authenticationfilter group",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
-				ExtensionRef: &gwapiv1.LocalObjectReference{
-					Group: "UnsupportedGroup",
-					Kind:  egv1a1.KindAuthenticationFilter,
-					Name:  "test",
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "invalid authenticationfilter kind",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
-				ExtensionRef: &gwapiv1.LocalObjectReference{
-					Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-					Kind:  "UnsupportedKind",
-					Name:  "test",
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "valid authenticationfilter",
-			filter: &gwapiv1a2.GRPCRouteFilter{
-				Type: gwapiv1a2.GRPCRouteFilterExtensionRef,
-				ExtensionRef: &gwapiv1.LocalObjectReference{
-					Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-					Kind:  egv1a1.KindAuthenticationFilter,
-					Name:  "test",
-				},
-			},
-			expected: true,
-		},
 	}
 	for _, tc := range testCases {
 		tc := tc
@@ -194,42 +156,6 @@ func TestValidateHTTPFilterRef(t *testing.T) {
 				Type: gwapiv1.HTTPRouteFilterExtensionRef,
 			},
 			expected: false,
-		},
-		{
-			name: "invalid authenticationfilter group",
-			filter: &gwapiv1.HTTPRouteFilter{
-				Type: gwapiv1.HTTPRouteFilterExtensionRef,
-				ExtensionRef: &gwapiv1.LocalObjectReference{
-					Group: "UnsupportedGroup",
-					Kind:  egv1a1.KindAuthenticationFilter,
-					Name:  "test",
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "invalid authenticationfilter kind",
-			filter: &gwapiv1.HTTPRouteFilter{
-				Type: gwapiv1.HTTPRouteFilterExtensionRef,
-				ExtensionRef: &gwapiv1.LocalObjectReference{
-					Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-					Kind:  "UnsupportedKind",
-					Name:  "test",
-				},
-			},
-			expected: false,
-		},
-		{
-			name: "valid authenticationfilter",
-			filter: &gwapiv1.HTTPRouteFilter{
-				Type: gwapiv1.HTTPRouteFilterExtensionRef,
-				ExtensionRef: &gwapiv1.LocalObjectReference{
-					Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-					Kind:  egv1a1.KindAuthenticationFilter,
-					Name:  "test",
-				},
-			},
-			expected: true,
 		},
 		{
 			name: "valid extension resource",

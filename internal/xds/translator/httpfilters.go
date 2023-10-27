@@ -100,12 +100,6 @@ func (t *Translator) patchHCMWithFilters(
 	//       https://github.com/envoyproxy/gateway/issues/882
 	t.patchHCMWithRateLimit(mgr, irListener)
 
-	// Add the jwt authn filter, if needed.
-	// TODO zhaohuabing remove this after deprecating authentication filter
-	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
-		return err
-	}
-
 	// Add the cors filter, if needed
 	if err := patchHCMWithCORSFilter(mgr, irListener); err != nil {
 		return err
@@ -132,11 +126,6 @@ func patchRouteWithFilters(
 	//       https://github.com/envoyproxy/gateway/issues/882
 	if err :=
 		patchRouteWithRateLimit(route.GetRoute(), irRoute); err != nil {
-		return nil
-	}
-
-	// Add the jwt per route config to the route, if needed. // TODO zhaohuabing remove this after deprecating authentication filter
-	if err := patchRouteWithJwtConfig(route, irRoute); err != nil {
 		return nil
 	}
 

@@ -1,12 +1,15 @@
 ---
-title: "Request Authentication"
+title: "JWT Authentication"
 ---
 
 This guide provides instructions for configuring [JSON Web Token (JWT)][jwt] authentication. JWT authentication checks
 if an incoming request has a valid JWT before routing the request to a backend service. Currently, Envoy Gateway only
 supports validating a JWT from an HTTP header, e.g. `Authorization: Bearer <token>`.
 
-## Installation
+Envoy Gateway introduces a new CRD called [SecurityPolicy][SecurityPolicy] that allows the user to configure JWT authentication. 
+This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HTTPRoute] or [GRPCRoute][GRPCRoute] resource.
+
+## Prerequisites
 
 Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
 For GRPC - follow the steps from the [GRPC Routing](grpc-routing.md) example.
@@ -14,39 +17,42 @@ Before proceeding, you should be able to query the example backend using HTTP or
 
 ## Configuration
 
-Allow requests with a valid JWT by creating an [AuthenticationFilter][] and referencing it from the example HTTPRoute or GRPCRoute.
+Allow requests with a valid JWT by creating an [SecurityPolicy][SecurityPolicy] and attaching it to the example
+HTTPRoute or GRPCRoute.
 
 ### HTTPRoute
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/authn/jwt.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/jwt/jwt.yaml
 ```
 
-The HTTPRoute is now updated to authenticate requests for `/foo` and allow unauthenticated requests to `/bar`. The
-`/foo` route rule references an AuthenticationFilter that provides the JWT authentication configuration.
+Two HTTPRoute has been created, one for `/foo` and another for `/bar`. A SecurityPolicy has been created and targeted
+HTTPRoute foo to authenticate requests for `/foo`. The HTTPRoute bar is not targeted by the SecurityPolicy and will allow   
+unauthenticated requests to `/bar`.
 
 Verify the HTTPRoute configuration and status:
 
 ```shell
-kubectl get httproute/backend -o yaml
+kubectl get httproute/foo -o yaml
+kubectl get httproute/bar -o yaml
 ```
 
-The AuthenticationFilter is configured for JWT authentication and uses a single [JSON Web Key Set (JWKS)][jwks]
+The SecurityPolicy is configured for JWT authentication and uses a single [JSON Web Key Set (JWKS)][jwks]
 provider for authenticating the JWT.
 
-Verify the AuthenticationFilter configuration:
+Verify the SecurityPolicy configuration:
 
 ```shell
-kubectl get authenticationfilter/jwt-example -o yaml
+kubectl get securitypolicy/jwt-example -o yaml
 ```
 
 ### GRPCRoute
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/authn/grtpc-jwt.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/jwt/grtpc-jwt.yaml
 ```
 
-The GRPCRoute is now updated to authenticate all requests to `yages` service, by referencing an AuthenticationFilter that provides the JWT authentication configuration.
+A SecurityPolicy has been created and targeted GRPCRoute yages to authenticate all requests for `yages` service..
 
 Verify the GRPCRoute configuration and status:
 
@@ -54,13 +60,13 @@ Verify the GRPCRoute configuration and status:
 kubectl get grpcroute/yages -o yaml
 ```
 
-The AuthenticationFilter is configured for JWT authentication and uses a single [JSON Web Key Set (JWKS)][jwks]
+The SecurityPolicy is configured for JWT authentication and uses a single [JSON Web Key Set (JWKS)][jwks]
 provider for authenticating the JWT.
 
-Verify the AuthenticationFilter configuration:
+Verify the SecurityPolicy configuration:
 
 ```shell
-kubectl get authenticationfilter/jwt-example -o yaml
+kubectl get securitypolicy/jwt-example -o yaml
 ```
 
 ## Testing
@@ -146,16 +152,19 @@ You should see the below response
 
 Follow the steps from the [Quickstart](quickstart.md) guide to uninstall Envoy Gateway and the example manifest.
 
-Delete the AuthenticationFilter:
+Delete the SecurityPolicy:
 
 ```shell
-kubectl delete authenticationfilter/jwt-example
+kubectl delete securitypolicy/jwt-example
 ```
 
 ## Next Steps
 
 Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
 
+[SecurityPolicy]: https://gateway.envoyproxy.io/latest/design/security-policy
 [jwt]: https://tools.ietf.org/html/rfc7519
-[AuthenticationFilter]: https://gateway.envoyproxy.io/latest/api/extension_types.html#authenticationfilter
 [jwks]: https://tools.ietf.org/html/rfc7517
+[Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute

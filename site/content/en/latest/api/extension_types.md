@@ -14,7 +14,6 @@ API group.
 
 
 ### Resource Types
-- [AuthenticationFilter](#authenticationfilter)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
@@ -25,48 +24,6 @@ API group.
 - [EnvoyProxy](#envoyproxy)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
-
-
-
-#### AuthenticationFilter
-
-
-
-
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
-| `kind` _string_ | `AuthenticationFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[AuthenticationFilterSpec](#authenticationfilterspec)_ | Spec defines the desired state of the AuthenticationFilter type. |
-
-
-#### AuthenticationFilterSpec
-
-
-
-AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
-
-_Appears in:_
-- [AuthenticationFilter](#authenticationfilter)
-
-| Field | Description |
-| --- | --- |
-| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT". |
-| `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
-
-
-#### AuthenticationFilterType
-
-_Underlying type:_ `string`
-
-AuthenticationFilterType is a type of authentication provider.
-
-_Appears in:_
-- [AuthenticationFilterSpec](#authenticationfilterspec)
 
 
 
@@ -158,7 +115,6 @@ ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
-- [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
 
 | Field | Description |
 | --- | --- |
@@ -939,24 +895,6 @@ _Appears in:_
 | `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
 
 
-#### JwtAuthenticationFilterProvider
-
-
-
-JwtAuthenticationFilterProvider defines the JSON Web Token (JWT) authentication provider type and how JWTs should be verified:
-
-_Appears in:_
-- [AuthenticationFilterSpec](#authenticationfilterspec)
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name defines a unique name for the JWT provider. A name can have a variety of forms, including RFC1123 subdomains, RFC 1123 labels, or RFC 1035 labels. |
-| `issuer` _string_ | Issuer is the principal that issued the JWT and takes the form of a URL or email address. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.1 for URL format and https://rfc-editor.org/rfc/rfc5322.html for email format. If not provided, the JWT issuer is not checked. |
-| `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
-| `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
-| `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
-
-
 #### KubernetesContainerSpec
 
 
@@ -1577,7 +1515,6 @@ RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
 
 _Appears in:_
 - [JWTProvider](#jwtprovider)
-- [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
 
 | Field | Description |
 | --- | --- |
