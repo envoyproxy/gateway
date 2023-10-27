@@ -49,6 +49,7 @@ func HandleSubscription[K comparable, V any](
 	subscription <-chan watchable.Snapshot[K, V],
 	handle func(updateFunc Update[K, V], errChans chan error),
 ) {
+	//TODO: find a suitable value
 	errChans := make(chan error, 10)
 	go func() {
 		for err := range errChans {
