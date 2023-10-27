@@ -8,13 +8,13 @@ package message
 import "github.com/envoyproxy/gateway/internal/metrics"
 
 var (
-	messageDepth = metrics.NewGauge("message_depth", "Current depth of message queue.")
+	watchableDepth = metrics.NewGauge("watchable_depth", "Current depth of watchable queue.")
 
-	messageSubscribedDurationSeconds = metrics.NewHistogram("message_subscribed_duration_seconds", "How long in seconds a subscribed message is handled.", []float64{0.001, 0.01, 0.1, 1, 5, 10})
+	watchableSubscribedDurationSeconds = metrics.NewHistogram("watchable_subscribed_duration_seconds", "How long in seconds a subscribed watchable is handled.", []float64{0.001, 0.01, 0.1, 1, 5, 10})
 
-	messageSubscribedTotal = metrics.NewCounter("message_subscribed_total", "Total number of subscribed message.")
+	watchableSubscribedTotal = metrics.NewCounter("watchable_subscribed_total", "Total number of subscribed watchable.")
 
-	messageSubscribedErrorsTotal = metrics.NewCounter("message_subscribed_errors_total", "Total number of subscribed message errors.")
+	watchableSubscribedErrorsTotal = metrics.NewCounter("watchable_subscribed_errors_total", "Total number of subscribed watchable errors.")
 
 	runnerLabel = metrics.NewLabel("runner")
 

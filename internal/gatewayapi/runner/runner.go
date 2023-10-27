@@ -49,7 +49,7 @@ func (r *Runner) Start(ctx context.Context) (err error) {
 }
 
 func (r *Runner) subscribeAndTranslate(ctx context.Context) {
-	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGatewayAPIRunner), Resource: "gatewayapi-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
+	message.HandleSubscription(message.Metadata{Runner: string(v1alpha1.LogComponentGatewayAPIRunner), Resource: "provider-resources"}, r.ProviderResources.GatewayAPIResources.Subscribe(ctx),
 		func(update message.Update[string, *gatewayapi.Resources], errChan chan error) {
 			r.Logger.Info("received an update")
 

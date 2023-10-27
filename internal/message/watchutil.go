@@ -25,7 +25,7 @@ type Metadata struct {
 }
 
 func (m Metadata) LabelValues() []metrics.LabelValue {
-	labels := []metrics.LabelValue{}
+	labels := make([]metrics.LabelValue, 0, 2)
 	if m.Runner != "" {
 		labels = append(labels, runnerLabel.Value(m.Runner))
 	}
@@ -53,7 +53,7 @@ func HandleSubscription[K comparable, V any](
 	go func() {
 		for err := range errChans {
 			logger.WithValues("runner", meta.Runner).Error(err, "observed an error")
-			messageSubscribedErrorsTotal.With(meta.LabelValues()...).Increment()
+			watchableSubscribedErrorsTotal.With(meta.LabelValues()...).Increment()
 		}
 	}()
 
@@ -64,17 +64,17 @@ func HandleSubscription[K comparable, V any](
 				Key:   k,
 				Value: v,
 			}, errChans)
-			messageSubscribedTotal.With(meta.LabelValues()...).Increment()
-			messageSubscribedDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+			watchableSubscribedTotal.With(meta.LabelValues()...).Increment()
+			watchableSubscribedDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
 		}
 	}
 	for snapshot := range subscription {
-		messageDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
+		watchableDepth.With(meta.LabelValues()...).Record(float64(len(subscription)))
 		for _, update := range snapshot.Updates {
 			startHandleTime := time.Now()
 			handle(Update[K, V](update), errChans)
-			messageSubscribedTotal.With(meta.LabelValues()...).Increment()
-			messageSubscribedDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
+			watchableSubscribedTotal.With(meta.LabelValues()...).Increment()
+			watchableSubscribedDurationSeconds.With(meta.LabelValues()...).Record(time.Since(startHandleTime).Seconds())
 		}
 	}
 }

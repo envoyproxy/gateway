@@ -31,7 +31,6 @@ import (
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
 	"github.com/envoyproxy/gateway/internal/envoygateway/config"
 	"github.com/envoyproxy/gateway/internal/gatewayapi"
@@ -139,7 +138,7 @@ type resourceMappings struct {
 	allAssociatedRefGrants map[types.NamespacedName]*gwapiv1b1.ReferenceGrant
 	// authenFilters is a map of AuthenticationFilters, where the key is the
 	// namespaced name of the AuthenticationFilter.
-	authenFilters map[types.NamespacedName]*egv1a1.AuthenticationFilter
+	authenFilters map[types.NamespacedName]*v1alpha1.AuthenticationFilter
 	// extensionRefFilters is a map of filters managed by an extension.
 	// The key is the namespaced name of the filter and the value is the
 	// unstructured form of the resource.
@@ -151,7 +150,7 @@ func newResourceMapping() *resourceMappings {
 		allAssociatedNamespaces:  map[string]struct{}{},
 		allAssociatedBackendRefs: map[gwapiv1.BackendObjectReference]struct{}{},
 		allAssociatedRefGrants:   map[types.NamespacedName]*gwapiv1b1.ReferenceGrant{},
-		authenFilters:            map[types.NamespacedName]*egv1a1.AuthenticationFilter{},
+		authenFilters:            map[types.NamespacedName]*v1alpha1.AuthenticationFilter{},
 		extensionRefFilters:      map[types.NamespacedName]unstructured.Unstructured{},
 	}
 }
