@@ -126,6 +126,7 @@ func TestGatewayClassHasMatchingNamespaceLabels(t *testing.T) {
 					},
 					"scheduled-status-test",
 					types.NamespacedName{Name: "service"},
+					80,
 				))
 			require.Equal(t, tc.expect, res)
 		})
@@ -263,7 +264,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
-				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "other-service"),
 			expect:        false,
@@ -273,7 +274,7 @@ func TestValidateEndpointSliceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
-				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			endpointSlice: test.GetEndpointSlice(types.NamespacedName{Name: "endpointslice"}, "service"),
 			expect:        true,
@@ -358,7 +359,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
-				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
@@ -370,7 +371,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			name: "route service routes exist but with non-existing gateway reference",
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
-				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+				test.GetHTTPRoute(types.NamespacedName{Name: "httproute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
@@ -380,7 +381,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 			configs: []client.Object{
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
-				test.GetGRPCRoute(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}),
+				test.GetGRPCRoute(types.NamespacedName{Name: "grpcroute-test"}, "scheduled-status-test", types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
@@ -391,7 +392,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
 				test.GetTLSRoute(types.NamespacedName{Name: "tlsroute-test"}, "scheduled-status-test",
-					types.NamespacedName{Name: "service"}),
+					types.NamespacedName{Name: "service"}, 443),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
@@ -402,7 +403,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
 				test.GetUDPRoute(types.NamespacedName{Name: "udproute-test"}, "scheduled-status-test",
-					types.NamespacedName{Name: "service"}),
+					types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,
@@ -413,7 +414,7 @@ func TestValidateServiceForReconcile(t *testing.T) {
 				test.GetGatewayClass("test-gc", v1alpha1.GatewayControllerName),
 				sampleGateway,
 				test.GetTCPRoute(types.NamespacedName{Name: "tcproute-test"}, "scheduled-status-test",
-					types.NamespacedName{Name: "service"}),
+					types.NamespacedName{Name: "service"}, 80),
 			},
 			service: test.GetService(types.NamespacedName{Name: "service"}, nil, nil),
 			expect:  true,

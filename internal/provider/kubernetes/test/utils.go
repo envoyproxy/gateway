@@ -92,7 +92,7 @@ func GetSecret(nsname types.NamespacedName) *corev1.Secret {
 }
 
 // GetHTTPRoute returns a sample HTTPRoute with a parent reference.
-func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1.HTTPRoute {
+func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1.HTTPRoute {
 	return &gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -111,6 +111,7 @@ func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Name: gwapiv1.ObjectName(serviceName.Name),
+									Port: ptr.To(gwapiv1.PortNumber(port)),
 								},
 							},
 						},
@@ -122,7 +123,7 @@ func GetHTTPRoute(nsName types.NamespacedName, parent string, serviceName types.
 }
 
 // GetGRPCRoute returns a sample GRPCRoute with a parent reference.
-func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.GRPCRoute {
+func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.GRPCRoute {
 	return &gwapiv1a2.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -141,6 +142,7 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 							BackendRef: gwapiv1.BackendRef{
 								BackendObjectReference: gwapiv1.BackendObjectReference{
 									Name: gwapiv1.ObjectName(serviceName.Name),
+									Port: ptr.To(gwapiv1.PortNumber(port)),
 								},
 							},
 						},
@@ -152,7 +154,7 @@ func GetGRPCRoute(nsName types.NamespacedName, parent string, serviceName types.
 }
 
 // GetTLSRoute returns a sample TLSRoute with a parent reference.
-func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.TLSRoute {
+func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.TLSRoute {
 	return &gwapiv1a2.TLSRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -170,6 +172,7 @@ func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.N
 						{
 							BackendObjectReference: gwapiv1a2.BackendObjectReference{
 								Name: gwapiv1a2.ObjectName(serviceName.Name),
+								Port: ptr.To(gwapiv1.PortNumber(port)),
 							},
 						},
 					},
@@ -180,7 +183,7 @@ func GetTLSRoute(nsName types.NamespacedName, parent string, serviceName types.N
 }
 
 // GetTCPRoute returns a sample TCPRoute with a parent reference.
-func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.TCPRoute {
+func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.TCPRoute {
 	return &gwapiv1a2.TCPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -198,6 +201,7 @@ func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 						{
 							BackendObjectReference: gwapiv1a2.BackendObjectReference{
 								Name: gwapiv1a2.ObjectName(serviceName.Name),
+								Port: ptr.To(gwapiv1a2.PortNumber(port)),
 							},
 						},
 					},
@@ -208,7 +212,7 @@ func GetTCPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 }
 
 // GetUDPRoute returns a sample UDPRoute with a parent reference.
-func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName) *gwapiv1a2.UDPRoute {
+func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.NamespacedName, port int32) *gwapiv1a2.UDPRoute {
 	return &gwapiv1a2.UDPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nsName.Namespace,
@@ -226,6 +230,7 @@ func GetUDPRoute(nsName types.NamespacedName, parent string, serviceName types.N
 						{
 							BackendObjectReference: gwapiv1a2.BackendObjectReference{
 								Name: gwapiv1a2.ObjectName(serviceName.Name),
+								Port: ptr.To(gwapiv1a2.PortNumber(port)),
 							},
 						},
 					},

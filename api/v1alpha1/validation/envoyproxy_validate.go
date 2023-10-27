@@ -66,6 +66,7 @@ func validateEnvoyProxySpec(spec *egv1a1.EnvoyProxySpec) error {
 	return utilerrors.NewAggregate(errs)
 }
 
+// TODO: remove this function if CEL validation became stable
 func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec != nil && spec.Provider != nil {
@@ -80,6 +81,7 @@ func validateProvider(spec *egv1a1.EnvoyProxySpec) []error {
 	return errs
 }
 
+// TODO: remove this function if CEL validation became stable
 func validateService(spec *egv1a1.EnvoyProxySpec) []error {
 	var errs []error
 	if spec.Provider.Kubernetes != nil && spec.Provider.Kubernetes.EnvoyService != nil {

@@ -99,7 +99,7 @@ func startEnv() (*envtest.Environment, *rest.Config, error) {
 	return env, cfg, nil
 }
 
-func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {
+func testGatewayClassController(ctx context.Context, t *testing.T, provider *Provider, _ *message.ProviderResources) {
 	cli := provider.manager.GetClient()
 
 	gc := test.GetGatewayClass("test-gc-controllername", egv1a1.GatewayControllerName)
@@ -171,7 +171,7 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	gc := test.GetGatewayClass("gc-with-param-ref", egv1a1.GatewayControllerName)
 	gc.Spec.ParametersRef = &gwapiv1.ParametersReference{
 		Group:     gwapiv1.Group(egv1a1.GroupVersion.Group),
-		Kind:      gwapiv1.Kind(egv1a1.KindEnvoyProxy),
+		Kind:      egv1a1.KindEnvoyProxy,
 		Name:      epName,
 		Namespace: gatewayapi.NamespacePtr(testNs),
 	}
@@ -562,6 +562,7 @@ func testAuthenFilter(ctx context.Context, t *testing.T, provider *Provider, res
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -744,6 +745,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -776,15 +778,6 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									Path: &gwapiv1.HTTPPathMatch{
 										Type:  ptr.To(gwapiv1.PathMatchPathPrefix),
 										Value: ptr.To("/redirect/"),
-									},
-								},
-							},
-							BackendRefs: []gwapiv1.HTTPBackendRef{
-								{
-									BackendRef: gwapiv1.BackendRef{
-										BackendObjectReference: gwapiv1.BackendObjectReference{
-											Name: "test",
-										},
 									},
 								},
 							},
@@ -839,6 +832,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -891,6 +885,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -954,6 +949,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1006,6 +1002,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1069,6 +1066,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1121,6 +1119,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									BackendRef: gwapiv1.BackendRef{
 										BackendObjectReference: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1131,6 +1130,7 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 									RequestMirror: &gwapiv1.HTTPRequestMirrorFilter{
 										BackendRef: gwapiv1.BackendObjectReference{
 											Name: "test",
+											Port: ptr.To(gwapiv1.PortNumber(80)),
 										},
 									},
 								},
@@ -1185,6 +1185,11 @@ func testHTTPRoute(ctx context.Context, t *testing.T, provider *Provider, resour
 
 			// Ensure the Service is in the resource map.
 			require.Eventually(t, func() bool {
+				// The redirect test case does not have a service.
+				if testCase.name == "redirect-httproute" {
+					return true
+				}
+
 				res, ok := resources.GatewayAPIResources.Load("httproute-test")
 				if !ok {
 					return false
@@ -1226,6 +1231,9 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 					Name:     "test",
 					Port:     gwapiv1.PortNumber(int32(8080)),
 					Protocol: gwapiv1.TLSProtocolType,
+					TLS: &gwapiv1.GatewayTLSConfig{
+						Mode: ptr.To(gwapiv1.TLSModePassthrough),
+					},
 				},
 			},
 		},
@@ -1270,6 +1278,7 @@ func testTLSRoute(ctx context.Context, t *testing.T, provider *Provider, resourc
 								{
 									BackendObjectReference: gwapiv1a2.BackendObjectReference{
 										Name: "test",
+										Port: ptr.To(gwapiv1.PortNumber(90)),
 									},
 								},
 							},
@@ -1371,6 +1380,9 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 					Name:     "tlstest",
 					Port:     gwapiv1.PortNumber(int32(8043)),
 					Protocol: gwapiv1.TLSProtocolType,
+					TLS: &gwapiv1.GatewayTLSConfig{
+						Mode: ptr.To(gwapiv1.TLSModePassthrough),
+					},
 				},
 			},
 		},
@@ -1405,6 +1417,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 				BackendRefs: []gwapiv1a2.BackendRef{{
 					BackendObjectReference: gwapiv1a2.BackendObjectReference{
 						Name: "test-common-svc",
+						Port: ptr.To(gwapiv1.PortNumber(90)),
 					}},
 				}},
 			},
@@ -1434,6 +1447,7 @@ func testServiceCleanupForMultipleRoutes(ctx context.Context, t *testing.T, prov
 					BackendRef: gwapiv1.BackendRef{
 						BackendObjectReference: gwapiv1.BackendObjectReference{
 							Name: "test-common-svc",
+							Port: ptr.To(gwapiv1.PortNumber(80)),
 						},
 					},
 				}},
@@ -1669,13 +1683,13 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "watched-http-route",
 		},
 		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name})
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
 	watchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1.HTTPRouteFilter{
 		{
 			Type: gwapiv1.HTTPRouteFilterExtensionRef,
 			ExtensionRef: &gwapiv1.LocalObjectReference{
 				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1.Kind(egv1a1.KindAuthenticationFilter),
+				Kind:  egv1a1.KindAuthenticationFilter,
 				Name:  gwapiv1.ObjectName(watchedAuthenFilter.Name),
 			},
 		},
@@ -1691,13 +1705,13 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "non-watched-http-route",
 		},
 		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedSvc.Name})
+		types.NamespacedName{Name: nonWatchedSvc.Name}, 8001)
 	nonWatchedHTTPRoute.Spec.Rules[0].Filters = []gwapiv1.HTTPRouteFilter{
 		{
 			Type: gwapiv1.HTTPRouteFilterExtensionRef,
 			ExtensionRef: &gwapiv1.LocalObjectReference{
 				Group: gwapiv1.Group(egv1a1.GroupVersion.Group),
-				Kind:  gwapiv1.Kind(egv1a1.KindAuthenticationFilter),
+				Kind:  egv1a1.KindAuthenticationFilter,
 				Name:  gwapiv1.ObjectName(nonWatchedAuthenFilter.Name),
 			},
 		},
@@ -1713,7 +1727,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "watched-grpc-route",
 		},
 		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name})
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
 	require.NoError(t, cli.Create(ctx, watchedGRPCRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedGRPCRoute))
@@ -1725,7 +1739,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "non-watched-grpc-route",
 		},
 		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedNS.Name})
+		types.NamespacedName{Name: nonWatchedNS.Name}, 8001)
 	require.NoError(t, cli.Create(ctx, nonWatchedGRPCRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedGRPCRoute))
@@ -1737,7 +1751,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "watched-tcp-route",
 		},
 		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name})
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
 	require.NoError(t, cli.Create(ctx, watchedTCPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedTCPRoute))
@@ -1749,7 +1763,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "non-watched-tcp-route",
 		},
 		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedNS.Name})
+		types.NamespacedName{Name: nonWatchedNS.Name}, 80)
 	require.NoError(t, cli.Create(ctx, nonWatchedTCPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedTCPRoute))
@@ -1761,7 +1775,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "watched-tls-route",
 		},
 		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name})
+		types.NamespacedName{Name: watchedSvc.Name}, 443)
 	require.NoError(t, cli.Create(ctx, watchedTLSRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedTLSRoute))
@@ -1773,7 +1787,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "non-watched-tls-route",
 		},
 		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedNS.Name})
+		types.NamespacedName{Name: nonWatchedNS.Name}, 443)
 	require.NoError(t, cli.Create(ctx, nonWatchedTLSRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedTLSRoute))
@@ -1785,7 +1799,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "watched-udp-route",
 		},
 		watchedGateway.Name,
-		types.NamespacedName{Name: watchedSvc.Name})
+		types.NamespacedName{Name: watchedSvc.Name}, 80)
 	require.NoError(t, cli.Create(ctx, watchedUDPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, watchedUDPRoute))
@@ -1797,7 +1811,7 @@ func TestNamespaceSelectorsProvider(t *testing.T) {
 			Name:      "non-watched-udp-route",
 		},
 		nonWatchedGateway.Name,
-		types.NamespacedName{Name: nonWatchedNS.Name})
+		types.NamespacedName{Name: nonWatchedNS.Name}, 80)
 	require.NoError(t, cli.Create(ctx, nonWatchedUDPRoute))
 	defer func() {
 		require.NoError(t, cli.Delete(ctx, nonWatchedUDPRoute))

@@ -3,10 +3,10 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
-//go:build validation
-// +build validation
+//go:build celvalidation
+// +build celvalidation
 
-package cel_validation
+package celvalidation
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestEnvoyProxyProvider(t *testing.T) {
@@ -53,6 +54,139 @@ func TestEnvoyProxyProvider(t *testing.T) {
 				}
 			},
 			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"Kubernetes\""},
+		},
+		{
+			desc: "invalid service type",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: ptr.To(egv1a1.ServiceType("foo")),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"Unsupported value: \"foo\": supported values: \"ClusterIP\", \"LoadBalancer\", \"NodePort\""},
+		},
+		{
+			desc: "allocateLoadBalancerNodePorts-pass-case1",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                          ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								AllocateLoadBalancerNodePorts: ptr.To(true),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "allocateLoadBalancerNodePorts-pass-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "allocateLoadBalancerNodePorts-fail",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:                          ptr.To(egv1a1.ServiceTypeClusterIP),
+								AllocateLoadBalancerNodePorts: ptr.To(true),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"allocateLoadBalancerNodePorts can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "loadBalancerIP-pass-case1",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("20.205.243.166"), // github ip for test only
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerIP-pass-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type: ptr.To(egv1a1.ServiceTypeClusterIP),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{},
+		},
+		{
+			desc: "loadBalancerIP-fail-case1",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           ptr.To(egv1a1.ServiceTypeClusterIP),
+								LoadBalancerIP: ptr.To("a.b.c.d"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP can only be set for LoadBalancer type"},
+		},
+		{
+			desc: "loadBalancerIP-fail-case2",
+			mutate: func(envoy *egv1a1.EnvoyProxy) {
+				envoy.Spec = egv1a1.EnvoyProxySpec{
+					Provider: &egv1a1.EnvoyProxyProvider{
+						Type: egv1a1.ProviderTypeKubernetes,
+						Kubernetes: &egv1a1.EnvoyProxyKubernetesProvider{
+							EnvoyService: &egv1a1.KubernetesServiceSpec{
+								Type:           ptr.To(egv1a1.ServiceTypeLoadBalancer),
+								LoadBalancerIP: ptr.To("a.b.c.d"),
+							},
+						},
+					},
+				}
+			},
+			wantErrors: []string{"loadBalancerIP must be a valid IPv4 address"},
 		},
 	}
 
