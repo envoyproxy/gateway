@@ -193,6 +193,18 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "cors",
 		},
+		{
+			name: "jwt-authn-multi-route-multi-provider",
+		},
+		{
+			name: "jwt-authn-multi-route-single-provider",
+		},
+		{
+			name: "jwt-authn-ratelimit",
+		},
+		{
+			name: "jwt-authn-single-route-single-match",
+		},
 	}
 
 	for _, tc := range testCases {

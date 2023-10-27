@@ -17,7 +17,9 @@ import (
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	jwtauthnv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/jwt_authn/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
@@ -27,10 +29,14 @@ import (
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
 
-// TODO zhaohuabing remove this file after deprecating authentication filter
-// patchHCMWithJwtAuthnFilter builds and appends the Jwt Filter to the HTTP
+const (
+	jwtAuthnFilter   = "envoy.filters.http.jwt_authn"
+	envoyTrustBundle = "/etc/ssl/certs/ca-certificates.crt"
+)
+
+// patchHCMWithJWTAuthnFilter builds and appends the Jwt Filter to the HTTP
 // Connection Manager if applicable, and it does not already exist.
-func patchHCMWithJwtAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+func patchHCMWithJWTAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	if mgr == nil {
 		return errors.New("hcm is nil")
 	}
@@ -39,7 +45,7 @@ func patchHCMWithJwtAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 		return errors.New("ir listener is nil")
 	}
 
-	if !listenerContainsJwtAuthn(irListener) {
+	if !listenerContainsJWTAuthn(irListener) {
 		return nil
 	}
 
@@ -50,7 +56,7 @@ func patchHCMWithJwtAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 		}
 	}
 
-	jwtFilter, err := buildHCMJwtFilter(irListener)
+	jwtFilter, err := buildHCMJWTFilter(irListener)
 	if err != nil {
 		return err
 	}
@@ -61,9 +67,9 @@ func patchHCMWithJwtAuthnFilter(mgr *hcmv3.HttpConnectionManager, irListener *ir
 	return nil
 }
 
-// buildHCMJwtFilter returns a JWT authn HTTP filter from the provided IR listener.
-func buildHCMJwtFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
-	jwtAuthnProto, err := buildJwtAuthn(irListener)
+// buildHCMJWTFilter returns a JWT authn HTTP filter from the provided IR listener.
+func buildHCMJWTFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
+	jwtAuthnProto, err := buildJWTAuthn(irListener)
 	if err != nil {
 		return nil, err
 	}
@@ -85,18 +91,18 @@ func buildHCMJwtFilter(irListener *ir.HTTPListener) (*hcmv3.HttpFilter, error) {
 	}, nil
 }
 
-// buildJwtAuthn returns a JwtAuthentication based on the provided IR HTTPListener.
-func buildJwtAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, error) {
+// buildJWTAuthn returns a JwtAuthentication based on the provided IR HTTPListener.
+func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, error) {
 	jwtProviders := make(map[string]*jwtauthnv3.JwtProvider)
 	reqMap := make(map[string]*jwtauthnv3.JwtRequirement)
 
 	for _, route := range irListener.Routes {
-		if route != nil && routeContainsJwtAuthn(route) {
+		if route != nil && routeContainsJWTAuthn(route) {
 			var reqs []*jwtauthnv3.JwtRequirement
-			for i := range route.RequestAuthentication.JWT.Providers {
-				irProvider := route.RequestAuthentication.JWT.Providers[i]
+			for i := range route.JWT.Providers {
+				irProvider := route.JWT.Providers[i]
 				// Create the cluster for the remote jwks, if it doesn't exist.
-				jwksCluster, err := newJwksCluster(&irProvider)
+				jwksCluster, err := newJWKSCluster(&irProvider)
 				if err != nil {
 					return nil, err
 				}
@@ -158,9 +164,39 @@ func buildJwtAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 	}, nil
 }
 
-// patchRouteWithJwtConfig patches the provided route with a JWT PerRouteConfig, if the
+// buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
+// as the CA to authenticate server certificates.
+func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
+	tlsCtxProto := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContext{
+				ValidationContext: &tlsv3.CertificateValidationContext{
+					TrustedCa: &corev3.DataSource{
+						Specifier: &corev3.DataSource_Filename{
+							Filename: envoyTrustBundle,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tlsCtxAny, err := anypb.New(tlsCtxProto)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketTls,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: tlsCtxAny,
+		},
+	}, nil
+}
+
+// patchRouteWithJWTConfig patches the provided route with a JWT PerRouteConfig, if the
 // route doesn't contain it.
-func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func patchRouteWithJWTConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -170,7 +206,7 @@ func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 
 	filterCfg := route.GetTypedPerFilterConfig()
 	if _, ok := filterCfg[jwtAuthnFilter]; !ok {
-		if !routeContainsJwtAuthn(irRoute) {
+		if !routeContainsJWTAuthn(irRoute) {
 			return nil
 		}
 
@@ -192,8 +228,15 @@ func patchRouteWithJwtConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	return nil
 }
 
-// createJwksClusters creates JWKS clusters from the provided routes, if needed.
-func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
+type jwksCluster struct {
+	name     string
+	hostname string
+	port     uint32
+	isStatic bool
+}
+
+// createJWKSClusters creates JWKS clusters from the provided routes, if needed.
+func createJWKSClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
 	if tCtx == nil ||
 		tCtx.XdsResources == nil ||
 		tCtx.XdsResources[resource.ClusterType] == nil ||
@@ -202,10 +245,10 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 	}
 
 	for _, route := range routes {
-		if routeContainsJwtAuthn(route) {
-			for i := range route.RequestAuthentication.JWT.Providers {
-				provider := route.RequestAuthentication.JWT.Providers[i]
-				jwks, err := newJwksCluster(&provider)
+		if routeContainsJWTAuthn(route) {
+			for i := range route.JWT.Providers {
+				provider := route.JWT.Providers[i]
+				jwks, err := newJWKSCluster(&provider)
 				epType := DefaultEndpointType
 				if jwks.isStatic {
 					epType = Static
@@ -237,8 +280,8 @@ func createJwksClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 	return nil
 }
 
-// newJwksCluster returns a jwksCluster from the provided provider.
-func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCluster, error) {
+// newJWKSCluster returns a jwksCluster from the provided provider.
+func newJWKSCluster(provider *v1alpha1.JWTProvider) (*jwksCluster, error) {
 	static := false
 	if provider == nil {
 		return nil, errors.New("nil provider")
@@ -282,15 +325,15 @@ func newJwksCluster(provider *v1alpha1.JwtAuthenticationFilterProvider) (*jwksCl
 	}, nil
 }
 
-// listenerContainsJwtAuthn returns true if JWT authentication exists for the
+// listenerContainsJWTAuthn returns true if JWT authentication exists for the
 // provided listener.
-func listenerContainsJwtAuthn(irListener *ir.HTTPListener) bool {
+func listenerContainsJWTAuthn(irListener *ir.HTTPListener) bool {
 	if irListener == nil {
 		return false
 	}
 
 	for _, route := range irListener.Routes {
-		if routeContainsJwtAuthn(route) {
+		if routeContainsJWTAuthn(route) {
 			return true
 		}
 	}
@@ -298,18 +341,17 @@ func listenerContainsJwtAuthn(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-// routeContainsJwtAuthn returns true if JWT authentication exists for the
+// routeContainsJWTAuthn returns true if JWT authentication exists for the
 // provided route.
-func routeContainsJwtAuthn(irRoute *ir.HTTPRoute) bool {
+func routeContainsJWTAuthn(irRoute *ir.HTTPRoute) bool {
 	if irRoute == nil {
 		return false
 	}
 
 	if irRoute != nil &&
-		irRoute.RequestAuthentication != nil &&
-		irRoute.RequestAuthentication.JWT != nil &&
-		irRoute.RequestAuthentication.JWT.Providers != nil &&
-		len(irRoute.RequestAuthentication.JWT.Providers) > 0 {
+		irRoute.JWT != nil &&
+		irRoute.JWT.Providers != nil &&
+		len(irRoute.JWT.Providers) > 0 {
 		return true
 	}
 

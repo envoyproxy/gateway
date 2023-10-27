@@ -7,7 +7,6 @@ package gatewayapi
 
 import (
 	"fmt"
-	"net"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,7 +58,6 @@ type HTTPFilterIR struct {
 	Mirrors []*ir.RouteDestination
 
 	RequestAuthentication *ir.RequestAuthentication
-	RateLimit             *ir.RateLimit
 
 	ExtensionRefs []*ir.UnstructuredRef
 }
@@ -674,102 +672,6 @@ func (t *Translator) processExtensionRefHTTPFilter(extFilter *gwapiv1.LocalObjec
 						Providers: authenFilter.Spec.JwtProviders,
 					},
 				}
-				return
-			}
-		}
-	}
-
-	// Set the filter context and return early if a matching RateLimitFilter is found.
-	if string(extFilter.Kind) == egv1a1.KindRateLimitFilter {
-		for _, rateLimitFilter := range resources.RateLimitFilters {
-			if rateLimitFilter.Namespace == filterNs &&
-				rateLimitFilter.Name == string(extFilter.Name) {
-				if rateLimitFilter.Spec.Global == nil {
-					errMsg := fmt.Sprintf("Global configuration empty for RateLimitFilter: %s/%s", filterNs,
-						extFilter.Name)
-					t.processUnresolvedHTTPFilter(errMsg, filterContext)
-					return
-				}
-				if !t.GlobalRateLimitEnabled {
-					errMsg := fmt.Sprintf("Enable Ratelimit in the EnvoyGateway config to configure RateLimitFilter: %s/%s",
-						filterNs, extFilter.Name)
-					t.processUnresolvedHTTPFilter(errMsg, filterContext)
-					return
-				}
-				rateLimit := &ir.RateLimit{
-					Global: &ir.GlobalRateLimit{
-						Rules: make([]*ir.RateLimitRule, len(rateLimitFilter.Spec.Global.Rules)),
-					},
-				}
-				rules := rateLimit.Global.Rules
-				for i, rule := range rateLimitFilter.Spec.Global.Rules {
-					rules[i] = &ir.RateLimitRule{
-						Limit: &ir.RateLimitValue{
-							Requests: rule.Limit.Requests,
-							Unit:     ir.RateLimitUnit(rule.Limit.Unit),
-						},
-						HeaderMatches: make([]*ir.StringMatch, 0),
-					}
-					for _, match := range rule.ClientSelectors {
-						for _, header := range match.Headers {
-							switch {
-							case header.Type == nil && header.Value != nil:
-								fallthrough
-							case *header.Type == egv1a1.HeaderMatchExact && header.Value != nil:
-								m := &ir.StringMatch{
-									Name:  header.Name,
-									Exact: header.Value,
-								}
-								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-							case *header.Type == egv1a1.HeaderMatchRegularExpression && header.Value != nil:
-								m := &ir.StringMatch{
-									Name:      header.Name,
-									SafeRegex: header.Value,
-								}
-								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-							case *header.Type == egv1a1.HeaderMatchDistinct && header.Value == nil:
-								m := &ir.StringMatch{
-									Name:     header.Name,
-									Distinct: true,
-								}
-								rules[i].HeaderMatches = append(rules[i].HeaderMatches, m)
-							default:
-								// set negative status condition.
-								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter. Either the header.Type is not valid or the header is missing a value: %s/%s", filterNs,
-									extFilter.Name)
-								t.processUnresolvedHTTPFilter(errMsg, filterContext)
-								return
-							}
-						}
-
-						if match.SourceCIDR != nil {
-							// distinct means that each IP Address within the specified Source IP CIDR is treated as a
-							// distinct client selector and uses a separate rate limit bucket/counter.
-							distinct := false
-							sourceCIDR := match.SourceCIDR.Value
-							if match.SourceCIDR.Type != nil && *match.SourceCIDR.Type == egv1a1.SourceMatchDistinct {
-								distinct = true
-							}
-
-							ip, ipn, err := net.ParseCIDR(sourceCIDR)
-							if err != nil {
-								errMsg := fmt.Sprintf("Unable to translate RateLimitFilter: %s/%s", filterNs,
-									extFilter.Name)
-								t.processUnresolvedHTTPFilter(errMsg, filterContext)
-								return
-							}
-
-							mask, _ := ipn.Mask.Size()
-							rules[i].CIDRMatch = &ir.CIDRMatch{
-								CIDR:     ipn.String(),
-								IPv6:     ip.To4() == nil,
-								MaskLen:  mask,
-								Distinct: distinct,
-							}
-						}
-					}
-				}
-				filterContext.HTTPFilterIR.RateLimit = rateLimit
 				return
 			}
 		}

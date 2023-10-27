@@ -192,9 +192,6 @@ func ValidateHTTPRouteFilter(filter *gwapiv1.HTTPRouteFilter, extGKs ...schema.G
 		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
 			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
 			return nil
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
-			return nil
 		default:
 			for _, gk := range extGKs {
 				if filter.ExtensionRef.Group == gwapiv1.Group(gk.Group) &&
@@ -217,14 +214,6 @@ func IsAuthnHTTPFilter(filter *gwapiv1.HTTPRouteFilter) bool {
 		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
 }
 
-// IsRateLimitHTTPFilter returns true if the provided filter is a RateLimitFilter.
-func IsRateLimitHTTPFilter(filter *gwapiv1.HTTPRouteFilter) bool {
-	return filter.Type == gwapiv1.HTTPRouteFilterExtensionRef &&
-		filter.ExtensionRef != nil &&
-		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-		string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter
-}
-
 // ValidateGRPCRouteFilter validates the provided filter within GRPCRoute.
 func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.GroupKind) error {
 	switch {
@@ -240,9 +229,6 @@ func ValidateGRPCRouteFilter(filter *v1alpha2.GRPCRouteFilter, extGKs ...schema.
 			return errors.New("extensionRef field must be specified for an extended filter")
 		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
 			string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter:
-			return nil
-		case string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-			string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter:
 			return nil
 		default:
 			for _, gk := range extGKs {
@@ -264,14 +250,6 @@ func IsAuthnGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
 		filter.ExtensionRef != nil &&
 		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
 		string(filter.ExtensionRef.Kind) == egv1a1.KindAuthenticationFilter
-}
-
-// IsRateLimitGRPCFilter returns true if the provided filter is an RateLimitFilter.
-func IsRateLimitGRPCFilter(filter *v1alpha2.GRPCRouteFilter) bool {
-	return filter.Type == v1alpha2.GRPCRouteFilterExtensionRef &&
-		filter.ExtensionRef != nil &&
-		string(filter.ExtensionRef.Group) == egv1a1.GroupVersion.Group &&
-		string(filter.ExtensionRef.Kind) == egv1a1.KindRateLimitFilter
 }
 
 // GatewayOwnerLabels returns the Gateway Owner labels using
