@@ -267,9 +267,10 @@ spec:
                 - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
                   rule: self.group == 'gateway.networking.k8s.io'
                 - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute
-                  rule: self.kind == 'Gateway' || self.kind == 'HTTPRoute' || self.kind
-                    == 'GRPCRoute' || self.kind == 'UDPRoute' || self.kind == 'TCPRoute'
-                    || self.kind == 'TLSRoute'
+                  rule: self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute',
+                    'TCPRoute', 'TLSRoute']
+                - message: this policy does not yet support the sectionName field
+                  rule: '!has(self.sectionName)'
             required:
             - targetRef
             type: object

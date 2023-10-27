@@ -31,6 +31,8 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 		Spec: egv1a1.ClientTrafficPolicySpec{},
 	}
 
+	sectionName := gwapiv1a2.SectionName("foo")
+
 	cases := []struct {
 		desc         string
 		mutate       func(ctp *egv1a1.ClientTrafficPolicy)
@@ -114,6 +116,23 @@ func TestClientTrafficPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
 				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
+			},
+		},
+		{
+			desc: "sectionName disabled until supported",
+			mutate: func(ctp *egv1a1.ClientTrafficPolicy) {
+				ctp.Spec = egv1a1.ClientTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+						},
+						SectionName: &sectionName,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
 			},
 		},
 	}

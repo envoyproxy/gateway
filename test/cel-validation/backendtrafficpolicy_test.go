@@ -133,6 +133,24 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute",
 			},
 		},
+		{
+			desc: "sectionName disabled until supported",
+			mutate: func(btp *egv1a1.BackendTrafficPolicy) {
+				btp.Spec = egv1a1.BackendTrafficPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+						SectionName: &sectionName,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
+			},
+		},
 	}
 
 	for _, tc := range cases {

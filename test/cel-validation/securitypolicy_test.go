@@ -31,6 +31,8 @@ func TestSecurityPolicyTarget(t *testing.T) {
 		Spec: egv1a1.SecurityPolicySpec{},
 	}
 
+	sectionName := gwapiv1a2.SectionName("foo")
+
 	cases := []struct {
 		desc         string
 		mutate       func(sp *egv1a1.SecurityPolicy)
@@ -114,6 +116,24 @@ func TestSecurityPolicyTarget(t *testing.T) {
 			wantErrors: []string{
 				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.group of gateway.networking.k8s.io",
 				"spec.targetRef: Invalid value: \"object\": this policy can only have a targetRef.kind of Gateway",
+			},
+		},
+		{
+			desc: "sectionName disabled until supported",
+			mutate: func(sp *egv1a1.SecurityPolicy) {
+				sp.Spec = egv1a1.SecurityPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: gwapiv1a2.Group("gateway.networking.k8s.io"),
+							Kind:  gwapiv1a2.Kind("Gateway"),
+							Name:  gwapiv1a2.ObjectName("eg"),
+						},
+						SectionName: &sectionName,
+					},
+				}
+			},
+			wantErrors: []string{
+				"spec.targetRef: Invalid value: \"object\": this policy does not yet support the sectionName field",
 			},
 		},
 	}

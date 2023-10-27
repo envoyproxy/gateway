@@ -28,8 +28,6 @@ type ClientTrafficPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// +kubebuilder:validation:Required
-	//
 	// Spec defines the desired state of ClientTrafficPolicy.
 	Spec ClientTrafficPolicySpec `json:"spec"`
 
@@ -41,7 +39,8 @@ type ClientTrafficPolicy struct {
 type ClientTrafficPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
 	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway'", message="this policy can only have a targetRef.kind of Gateway"
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
+	//
 	// TargetRef is the name of the Gateway resource this policy
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
