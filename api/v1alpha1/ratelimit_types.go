@@ -75,29 +75,29 @@ type RateLimitSelectCondition struct {
 	// +listMapKey=name
 	// +optional
 	// +kubebuilder:validation:MaxItems=16
-	Headers []HeaderMatch `json:"headers,omitempty"`
+	Headers []RateLimitHeaderMatch `json:"headers,omitempty"`
 
 	// SourceCIDR is the client IP Address range to match on.
 	//
 	// +optional
-	SourceCIDR *SourceMatch `json:"sourceCIDR,omitempty"`
+	SourceCIDR *RateLimitSourceMatch `json:"sourceCIDR,omitempty"`
 }
 
-type SourceMatchType string
+type RateLimitSourceMatchType string
 
 const (
 	// SourceMatchExact All IP Addresses within the specified Source IP CIDR are treated as a single client selector
 	// and share the same rate limit bucket.
-	SourceMatchExact SourceMatchType = "Exact"
+	SourceMatchExact RateLimitSourceMatchType = "Exact"
 	// SourceMatchDistinct Each IP Address within the specified Source IP CIDR is treated as a distinct client selector
 	// and uses a separate rate limit bucket/counter.
-	SourceMatchDistinct SourceMatchType = "Distinct"
+	SourceMatchDistinct RateLimitSourceMatchType = "Distinct"
 )
 
-type SourceMatch struct {
+type RateLimitSourceMatch struct {
 	// +optional
 	// +kubebuilder:default=Exact
-	Type *SourceMatchType `json:"type,omitempty"`
+	Type *RateLimitSourceMatchType `json:"type,omitempty"`
 
 	// Value is the IP CIDR that represents the range of Source IP Addresses of the client.
 	// These could also be the intermediate addresses through which the request has flown through and is part of the  `X-Forwarded-For` header.
@@ -107,49 +107,25 @@ type SourceMatch struct {
 	Value string `json:"value"`
 }
 
-// HeaderMatch defines the match attributes within the HTTP Headers of the request.
-type HeaderMatch struct { // TODO: zhaohuabing this type could be replaced with a general purpose StringMatch type.
-	// Type specifies how to match against the value of the header.
-	//
-	// +optional
-	// +kubebuilder:default=Exact
-	Type *HeaderMatchType `json:"type,omitempty"`
-
+// RateLimitHeaderMatch defines the match attributes within the HTTP Headers of the request.
+type RateLimitHeaderMatch struct {
 	// Name of the HTTP header.
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	Name string `json:"name"`
 
-	// Value within the HTTP header. Due to the
-	// case-insensitivity of header names, "foo" and "Foo" are considered equivalent.
+	// Distinct matches any and all possible unique values encountered in the
+	// specified HTTP Header.
+	// Note that each unique value will receive its own rate limit bucket.
+	// Only one of Distinct or Match can be set.
+	Distinct *bool `json:"distinct,omitempty"`
+
+	// Match specifies how to match against the value of the header.
 	// Do not set this field when Type="Distinct", implying matching on any/all unique
 	// values within the header.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=1024
-	Value *string `json:"value,omitempty"`
+	// Only one of Distinct or Match can be set.
+	Match *StringMatch `json:"match,omitempty"`
 }
-
-// HeaderMatchType specifies the semantics of how HTTP header values should be compared.
-// Valid HeaderMatchType values are "Exact", "RegularExpression", and "Distinct".
-//
-// +kubebuilder:validation:Enum=Exact;RegularExpression;Distinct
-type HeaderMatchType string
-
-// HeaderMatchType constants.
-const (
-	// HeaderMatchExact matches the exact value of the Value field against the value of
-	// the specified HTTP Header.
-	HeaderMatchExact HeaderMatchType = "Exact"
-	// HeaderMatchRegularExpression matches a regular expression against the value of the
-	// specified HTTP Header. The regex string must adhere to the syntax documented in
-	// https://github.com/google/re2/wiki/Syntax.
-	HeaderMatchRegularExpression HeaderMatchType = "RegularExpression"
-	// HeaderMatchDistinct matches any and all possible unique values encountered in the
-	// specified HTTP Header. Note that each unique value will receive its own rate limit
-	// bucket.
-	HeaderMatchDistinct HeaderMatchType = "Distinct"
-)
 
 // RateLimitValue defines the limits for rate limiting.
 type RateLimitValue struct {
