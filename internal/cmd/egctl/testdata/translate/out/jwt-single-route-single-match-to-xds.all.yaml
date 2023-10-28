@@ -238,7 +238,7 @@ xds:
                             httpUri:
                               cluster: raw_githubusercontent_com_443
                               timeout: 5s
-                              uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+                              uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
                             retryPolicy: {}
                       requirementMap:
                         httproute/envoy-gateway-system/backend/rule/0/match/0/www_example_com:
