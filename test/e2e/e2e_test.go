@@ -41,12 +41,9 @@ func TestE2E(t *testing.T) {
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.SupportedFeatures, *flags.ExemptFeatures)
 
 	cSuite := suite.New(suite.Options{
-		Client:           client,
-		GatewayClassName: *flags.GatewayClassName,
-		Debug:            *flags.ShowDebug,
-		SkipTests: []string{
-			tests.RateLimitBasedJwtClaimsTest.ShortName,
-		},
+		Client:               client,
+		GatewayClassName:     *flags.GatewayClassName,
+		Debug:                *flags.ShowDebug,
 		CleanupBaseResources: *flags.CleanupBaseResources,
 		FS:                   &Manifests,
 	})
