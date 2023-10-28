@@ -1,0 +1,72 @@
+date: Oct 27, 2023
+
+changes:
+  - area: documentation
+    change: |
+      Introduced a new website based on Hugo
+      Added Grafana dashboards and integration docs for EnvoyProxy metrics
+      Added Grafana integration docs for Gateway API metrics
+
+  - area: installation
+    change: |
+      Added Support for configuring Envoy Gateway Label and Annotations using Helm
+      Increased default Resource defaults for Envoy Gateway to 100m CPU and 256Mi Memory
+      Fixes Helm values for EnvoyGateway startup configuration
+      Added opt-in field to skip creating control plane TLS Certificates allowing users to bring their own certificates.
+
+  - area: api
+    change: |
+      Upgraded to Gateway API v1.0.0
+      Added the ClientTrafficPolicy CRD with Keep Alive Support
+      Added the BackendTrafficPolicy CRD with RateLimit and LoadBalancer Support
+      Added the SecurityPolicy CRD with CORS and JWT Support
+      Added EnvoyGateway Metrics with Prometheus and OpenTelemetry support
+      Added Support for InitContainers in EnvoyProxy CRD
+      Added Support for LoadBalancerIP in EnvoyProxy CRD
+      Added Support for AllocateLoadBalancerNodePorts in EnvoyProxy CRD
+      Added Support for LoadBalancerClass in EnvoyProxy CRD
+      Added Support for selecting EnvoyProxy stats to be generated
+      Added Support for enabling EnvoyProxy Virtual Host metrics
+      Added Support for Merging Gateway resources onto the same infrastructure
+
+    breaking-change: |
+      Removed the AuthenticationFilter CRD
+      Removed the RateLimitFilter CRD
+      Enabled EnvoyProxy Prometheus Endpoint by default with an option to disable it
+      Updated the Bootstrap field within the EnvoyProxy CRD with an additional value
+      field to specify bootstrap config
+
+  - area: ci-tooling-testing
+    change: |
+
+  - area: conformance
+    change: |
+
+  - area: watchable
+    change: |
+      Improved caching of resource by implementing a compare function agnostic of resource order
+
+  - area: translator
+    breaking-change: |
+      Added support for routing to EndpointSlice endpoints
+      Added support for HTTPRoute Timeouts
+      Added support for multiple RequestMirror filters per HTTPRoute rule
+      Use / instead of - in IR Route Names
+      Added Support to ignore ports in Host header
+
+  - area: providers
+    change: |
+      Added the generationChangedPredicate to most resources to limit resource reconiliation
+      Improved reconiliation by using the same enqueue request for all resources
+      Added support for reconciling ServiceImport CRD
+      Added support for selectively watching resources based on Namespace Selector
+
+  - area: xds
+    change: |
+      Fixed Layered Runtime warnings
+      Upgraded to the latest version of go-control-plane that fixed xDS Resource ordering issues for ADS.
+      Added HTTP2 Keep Alives to the xds connection
+
+  - area: cli
+    change: |
+      Added Support for egctl stats command
