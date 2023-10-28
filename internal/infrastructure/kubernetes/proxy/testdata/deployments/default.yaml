@@ -145,7 +145,7 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: metadata.name
-          image: envoyproxy/envoy-dev:latest
+          image: envoyproxy/envoy:distroless-v1.28-latest
           imagePullPolicy: IfNotPresent
           name: envoy
           ports:
