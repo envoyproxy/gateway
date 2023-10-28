@@ -37,7 +37,7 @@ type SecurityPolicy struct {
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
 type SecurityPolicySpec struct {
 	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
-	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway'", message="this policy can only have a targetRef.kind of Gateway"
+	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute"
 	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
 	//
 	// TargetRef is the name of the Gateway resource this policy
