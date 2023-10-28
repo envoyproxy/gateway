@@ -128,7 +128,7 @@ func (t *Translator) buildRateLimitFilter(irListener *ir.HTTPListener) *hcmv3.Ht
 // patchRouteWithRateLimit builds rate limit actions and appends to the route.
 func patchRouteWithRateLimit(xdsRouteAction *routev3.RouteAction, irRoute *ir.HTTPRoute) error { //nolint:unparam
 	// Return early if no rate limit config exists.
-	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil {
+	if irRoute.RateLimit == nil || irRoute.RateLimit.Global == nil || xdsRouteAction == nil {
 		return nil
 	}
 
