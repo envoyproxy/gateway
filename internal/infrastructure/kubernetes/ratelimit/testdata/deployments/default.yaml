@@ -73,7 +73,7 @@ spec:
           value: "/certs/ca.crt"
         - name: FORCE_START_WITHOUT_INITIAL_CONFIG
           value: "true"
-        image: envoyproxy/ratelimit:master
+        image: envoyproxy/ratelimit:b9796237
         imagePullPolicy: IfNotPresent
         name: envoy-ratelimit
         ports:
