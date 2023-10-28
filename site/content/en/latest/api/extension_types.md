@@ -1059,43 +1059,6 @@ _Appears in:_
 
 
 
-#### Match
-
-
-
-Match defines the stats match configuration.
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `type` _[MatcherType](#matchertype)_ | MatcherType defines the stats matcher type |
-| `value` _string_ |  |
-
-
-#### MatchType
-
-_Underlying type:_ `string`
-
-MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
-
-_Appears in:_
-- [StringMatch](#stringmatch)
-
-
-
-#### MatcherType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [Match](#match)
-
-
-
 #### MetricSinkType
 
 _Underlying type:_ `string`
@@ -1288,7 +1251,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[ProxyPrometheusProvider](#proxyprometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[ProxyMetricSink](#proxymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
+| `matches` _[StatsMatch](#statsmatch) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 
 
@@ -1620,6 +1583,32 @@ _Appears in:_
 
 
 
+#### StatsMatch
+
+
+
+Match defines the stats match configuration.
+
+_Appears in:_
+- [ProxyMetrics](#proxymetrics)
+
+| Field | Description |
+| --- | --- |
+| `type` _[StatsMatchType](#statsmatchtype)_ | MatcherType defines the stats matcher type |
+| `value` _string_ |  |
+
+
+#### StatsMatchType
+
+_Underlying type:_ `string`
+
+
+
+_Appears in:_
+- [StatsMatch](#statsmatch)
+
+
+
 #### StringMatch
 
 
@@ -1631,8 +1620,19 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[MatchType](#matchtype)_ | Type specifies how to match against a string. |
+| `type` _[StringMatchType](#stringmatchtype)_ | Type specifies how to match against a string. |
 | `value` _string_ | Value specifies the string value that the match must have. |
+
+
+#### StringMatchType
+
+_Underlying type:_ `string`
+
+StringMatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+
+_Appears in:_
+- [StringMatch](#stringmatch)
+
 
 
 #### TCPKeepalive

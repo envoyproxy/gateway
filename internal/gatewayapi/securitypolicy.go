@@ -296,26 +296,26 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 		origin := origin.DeepCopy()
 
 		// matchType default to exact
-		matchType := egv1a1.MatchExact
+		matchType := egv1a1.StringMatchExact
 		if origin.Type != nil {
 			matchType = *origin.Type
 		}
 
 		// TODO zhaohuabing: extract a utils function to build StringMatch
 		switch matchType {
-		case egv1a1.MatchExact:
+		case egv1a1.StringMatchExact:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				Exact: &origin.Value,
 			})
-		case egv1a1.MatchPrefix:
+		case egv1a1.StringMatchPrefix:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				Prefix: &origin.Value,
 			})
-		case egv1a1.MatchSuffix:
+		case egv1a1.StringMatchSuffix:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				Suffix: &origin.Value,
 			})
-		case egv1a1.MatchRegularExpression:
+		case egv1a1.StringMatchRegularExpression:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				SafeRegex: &origin.Value,
 			})

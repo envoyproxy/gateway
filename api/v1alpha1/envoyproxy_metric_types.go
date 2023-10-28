@@ -23,7 +23,7 @@ type ProxyMetrics struct {
 	// `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,
 	// https://github.com/envoyproxy/envoy/issues/14610
 	//
-	Matches []Match `json:"matches,omitempty"`
+	Matches []StatsMatch `json:"matches,omitempty"`
 
 	// EnableVirtualHostStats enables envoy stat metrics for virtual hosts.
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
@@ -60,18 +60,18 @@ type ProxyPrometheusProvider struct {
 }
 
 // Match defines the stats match configuration.
-type Match struct { // TODO: zhaohuabing this type should be renamed to StatsMatch
+type StatsMatch struct {
 	// MatcherType defines the stats matcher type
 	//
 	// +kubebuilder:validation:Enum=RegularExpression;Prefix;Suffix
-	Type  MatcherType `json:"type"`
-	Value string      `json:"value"`
+	Type  StatsMatchType `json:"type"`
+	Value string         `json:"value"`
 }
 
-type MatcherType string
+type StatsMatchType string
 
-const ( // TODO: zhaohuabing the const types should be prefixed with StatsMatch
-	Prefix            MatcherType = "Prefix"
-	RegularExpression MatcherType = "RegularExpression"
-	Suffix            MatcherType = "Suffix"
+const (
+	StatsMatchPrefix            StatsMatchType = "Prefix"
+	StatsMatchRegularExpression StatsMatchType = "RegularExpression"
+	StatsMatchSuffix            StatsMatchType = "Suffix"
 )

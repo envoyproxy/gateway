@@ -155,11 +155,11 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 			// Add custom envoy proxy stats
 			for _, match := range proxyMetrics.Matches {
 				switch match.Type {
-				case egv1a1.Prefix:
+				case egv1a1.StatsMatchPrefix:
 					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
-				case egv1a1.Suffix:
+				case egv1a1.StatsMatchSuffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
-				case egv1a1.RegularExpression:
+				case egv1a1.StatsMatchRegularExpression:
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 				}
 			}

@@ -55,21 +55,21 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "custom-stats-matcher",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Matches: []egv1a1.Match{
+				Matches: []egv1a1.StatsMatch{
 					{
-						Type:  egv1a1.Prefix,
+						Type:  egv1a1.StatsMatchPrefix,
 						Value: "http",
 					},
 					{
-						Type:  egv1a1.Suffix,
+						Type:  egv1a1.StatsMatchSuffix,
 						Value: "upstream_rq",
 					},
 					{
-						Type:  egv1a1.RegularExpression,
+						Type:  egv1a1.StatsMatchRegularExpression,
 						Value: "virtual.*",
 					},
 					{
-						Type:  egv1a1.Prefix,
+						Type:  egv1a1.StatsMatchPrefix,
 						Value: "cluster",
 					},
 				},
