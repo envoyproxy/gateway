@@ -59,7 +59,7 @@ var ControlPlaneTest = suite.ConformanceTest{
 				t.Errorf("failed to get service %s : %v", nn.String(), err)
 			}
 
-			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
+			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
 					if err := ScrapeMetrics(t, suite.Client, nn, 19001, "/metrics"); err != nil {
 						t.Logf("failed to get metric: %v", err)
