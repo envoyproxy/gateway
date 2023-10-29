@@ -29,7 +29,7 @@ var PrometheusTest = suite.ConformanceTest{
 	Manifests:   []string{"testdata/prometheus.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
 		t.Run("Prometheus", func(t *testing.T) {
-			nn := types.NamespacedName{Name: "envoy-gateway-lb", Namespace: "envoy-gateway-system"}
+			nn := types.NamespacedName{Name: "envoy-gateway-metrics-lb", Namespace: "envoy-gateway-system"}
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
 					svc := corev1.Service{}
