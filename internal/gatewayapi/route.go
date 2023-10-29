@@ -554,9 +554,6 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					DirectResponse:        routeRoute.DirectResponse,
 					URLRewrite:            routeRoute.URLRewrite,
 					Mirrors:               routeRoute.Mirrors,
-					RateLimit:             routeRoute.RateLimit,
-					CORS:                  routeRoute.CORS,
-					JWT:                   routeRoute.JWT,
 					Timeout:               routeRoute.Timeout,
 					ExtensionRefs:         routeRoute.ExtensionRefs,
 				}
