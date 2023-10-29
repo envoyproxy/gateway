@@ -20,10 +20,10 @@ import (
 )
 
 func init() {
-	ConformanceTests = append(ConformanceTests, PrometheusTest)
+	ConformanceTests = append(ConformanceTests, ControlPlaneTest)
 }
 
-var PrometheusTest = suite.ConformanceTest{
+var ControlPlaneTest = suite.ConformanceTest{
 	ShortName:   "ControlPlane",
 	Description: "Make sure control plane prometheus endpoint is working",
 	Manifests:   []string{"testdata/prometheus.yaml"},
