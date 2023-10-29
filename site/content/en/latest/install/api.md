@@ -56,9 +56,9 @@ The Helm chart for Envoy Gateway
 | deployment.ports[1].port | int | `18001` |  |
 | deployment.ports[1].targetPort | int | `18001` |  |
 | deployment.replicas | int | `1` |  |
-| envoyGatewayMetricsService.ports[0].name | string | `"https"` |  |
-| envoyGatewayMetricsService.ports[0].port | int | `8443` |  |
+| envoyGatewayMetricsService.ports[0].name | string | `"http"` |  |
+| envoyGatewayMetricsService.ports[0].port | int | `19001` |  |
 | envoyGatewayMetricsService.ports[0].protocol | string | `"TCP"` |  |
-| envoyGatewayMetricsService.ports[0].targetPort | string | `"https"` |  |
+| envoyGatewayMetricsService.ports[0].targetPort | string | `"http"` |  |
 | kubernetesClusterDomain | string | `"cluster.local"` |  |
 

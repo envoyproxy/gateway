@@ -49,10 +49,10 @@ config:
 
 envoyGatewayMetricsService:
   ports:
-    - name: https
-      port: 8443
+    - name: http
+      port: 19001
       protocol: TCP
-      targetPort: https
+      targetPort: 19001
 
 createNamespace: false
 
