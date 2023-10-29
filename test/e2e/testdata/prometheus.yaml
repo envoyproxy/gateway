@@ -8,6 +8,7 @@ metadata:
 spec:
   selector:
     control-plane: envoy-gateway
+    app.kubernetes.io/instance: eg
   ports:
     - name: http-metrics
       port: 19001
