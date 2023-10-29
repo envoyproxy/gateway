@@ -43,7 +43,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite)
+		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -252,7 +252,7 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 	return routeAction
 }
 
-func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *routev3.RouteAction {
+func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
 	routeAction := &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
 			Cluster: destName,
@@ -268,7 +268,20 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *route
 				Substitution: *urlRewrite.Path.FullReplace,
 			}
 		} else if urlRewrite.Path.PrefixMatchReplace != nil {
-			routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			// Circumvent the case of "//" when the replace string is "/"
+			// An empty replace string does not seem to solve the issue so we are using
+			// a regex match and replace instead
+			if pathMatch != nil && pathMatch.Prefix != nil &&
+				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
+				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
+					Pattern: &matcherv3.RegexMatcher{
+						Regex: "^" + *pathMatch.Prefix,
+					},
+					Substitution: "",
+				}
+			} else {
+				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			}
 		}
 	}
 

@@ -97,7 +97,6 @@ func experimentalConformance(t *testing.T) {
 				CleanupBaseResources: *flags.CleanupBaseResources,
 				SupportedFeatures:    suite.AllFeatures,
 				SkipTests: []string{
-					tests.HTTPRouteRewritePath.ShortName,
 					tests.GatewayStaticAddresses.ShortName,
 					tests.GatewayWithAttachedRoutes.ShortName,
 					tests.HTTPRouteBackendProtocolH2C.ShortName,
