@@ -59,6 +59,8 @@ var ControlPlaneTest = suite.ConformanceTest{
 				t.Errorf("failed to get service %s : %v", nn.String(), err)
 			}
 
+			// too much flakes in the test if timeout is 1 minute
+			// this should not take so long, but we give it a long timeout to be safe, and poll every second
 			if err := wait.PollUntilContextTimeout(context.TODO(), time.Second, 2*time.Minute, true,
 				func(_ context.Context) (done bool, err error) {
 					if err := ScrapeMetrics(t, suite.Client, nn, 19001, "/metrics"); err != nil {
