@@ -16,6 +16,7 @@ import (
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tcpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/tcp_proxy/v3"
 	udpv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/udp/udp_proxy/v3"
+	quicv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/quic/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -77,8 +78,33 @@ func buildXdsTCPListener(name, address string, port uint32, keepalive *ir.TCPKee
 	}
 }
 
+// buildXdsQuicListener creates a xds Listener resource for quic
+func buildXdsQuicListener(name, address string, port uint32, accesslog *ir.AccessLog) *listenerv3.Listener {
+	xdsListener := &listenerv3.Listener{
+		Name:      name + "-quic",
+		AccessLog: buildXdsAccessLog(accesslog, true),
+		Address: &corev3.Address{
+			Address: &corev3.Address_SocketAddress{
+				SocketAddress: &corev3.SocketAddress{
+					Protocol: corev3.SocketAddress_UDP,
+					Address:  address,
+					PortSpecifier: &corev3.SocketAddress_PortValue{
+						PortValue: port,
+					},
+				},
+			},
+		},
+		UdpListenerConfig: &listenerv3.UdpListenerConfig{
+			DownstreamSocketConfig: &corev3.UdpSocketConfig{},
+			QuicOptions:            &listenerv3.QuicProtocolOptions{},
+		},
+	}
+
+	return xdsListener
+}
+
 func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener,
-	accesslog *ir.AccessLog, tracing *ir.Tracing) error {
+	accesslog *ir.AccessLog, tracing *ir.Tracing, http3Listener bool) error {
 	al := buildXdsAccessLog(accesslog, false)
 
 	hcmTracing, err := buildHCMTracing(tracing)
@@ -137,6 +163,10 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		}
 	}
 
+	if http3Listener {
+		mgr.CodecType = hcmv3.HttpConnectionManager_HTTP3
+		mgr.Http3ProtocolOptions = &corev3.Http3ProtocolOptions{}
+	}
 	// Add HTTP filters to the HCM, the filters have already been sorted in the
 	// correct order in the patchHCMWithFilters function.
 	if err := t.patchHCMWithFilters(mgr, irListener); err != nil {
@@ -158,9 +188,17 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 	}
 
 	if irListener.TLS != nil {
-		tSocket, err := buildXdsDownstreamTLSSocket(irListener.TLS)
-		if err != nil {
-			return err
+		var tSocket *corev3.TransportSocket
+		if http3Listener {
+			tSocket, err = buildDownstreamQUICTransportSocket(irListener.TLS)
+			if err != nil {
+				return err
+			}
+		} else {
+			tSocket, err = buildXdsDownstreamTLSSocket(irListener.TLS)
+			if err != nil {
+				return err
+			}
 		}
 		filterChain.TransportSocket = tSocket
 		if err := addServerNamesMatch(xdsListener, filterChain, irListener.Hostnames); err != nil {
@@ -300,6 +338,37 @@ func addXdsTLSInspectorFilter(xdsListener *listenerv3.Listener) error {
 	xdsListener.ListenerFilters = append(xdsListener.ListenerFilters, filter)
 
 	return nil
+}
+
+func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {
+	tlsCtx := &quicv3.QuicDownstreamTransport{
+		DownstreamTlsContext: &tlsv3.DownstreamTlsContext{
+			CommonTlsContext: &tlsv3.CommonTlsContext{
+				AlpnProtocols: []string{"h3"},
+			},
+			RequireClientCertificate: &wrappers.BoolValue{Value: true},
+		},
+	}
+
+	for _, tlsConfig := range tlsConfigs {
+		tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs = append(
+			tlsCtx.DownstreamTlsContext.CommonTlsContext.TlsCertificateSdsSecretConfigs,
+			&tlsv3.SdsSecretConfig{
+				Name:      tlsConfig.Name,
+				SdsConfig: makeConfigSource(),
+			})
+	}
+
+	tlsCtxAny, err := anypb.New(tlsCtx)
+	if err != nil {
+		return nil, err
+	}
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketQuic,
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: tlsCtxAny,
+		},
+	}, nil
 }
 
 func buildXdsDownstreamTLSSocket(tlsConfigs []*ir.TLSListenerConfig) (*corev3.TransportSocket, error) {

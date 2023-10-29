@@ -119,6 +119,7 @@ infraIR:
         status: {}
       listeners:
       - address: ""
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http

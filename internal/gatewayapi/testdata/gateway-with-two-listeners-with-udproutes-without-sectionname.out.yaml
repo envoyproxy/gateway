@@ -69,11 +69,15 @@ infraIR:
     proxy:
       listeners:
       - address: ""
+        name: envoy-gateway/gateway-1/udp1
         ports:
         - containerPort: 10161
           name: udp1
           protocol: UDP
           servicePort: 161
+      - address: ""
+        name: envoy-gateway/gateway-1/udp2
+        ports:
         - containerPort: 10162
           name: udp2
           protocol: UDP

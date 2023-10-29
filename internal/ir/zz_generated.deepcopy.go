@@ -809,9 +809,13 @@ func (in *ProxyInfra) DeepCopyInto(out *ProxyInfra) {
 	}
 	if in.Listeners != nil {
 		in, out := &in.Listeners, &out.Listeners
-		*out = make([]ProxyListener, len(*in))
+		*out = make([]*ProxyListener, len(*in))
 		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = new(ProxyListener)
+				(*in).DeepCopyInto(*out)
+			}
 		}
 	}
 	if in.Addresses != nil {

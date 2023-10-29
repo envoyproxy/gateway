@@ -48,6 +48,7 @@ infraIR:
     proxy:
       listeners:
       - address: ""
+        name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10090
           name: tls

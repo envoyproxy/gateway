@@ -20,6 +20,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -124,12 +125,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		var xdsRouteCfg *routev3.RouteConfiguration
 
 		// Search for an existing listener, if it does not exist, create one.
-		xdsListener := findXdsListenerByHostPort(
-			tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
+		xdsListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
+		var quicXDSListener *listenerv3.Listener
 		if xdsListener == nil {
-			xdsListener = buildXdsTCPListener(
-				httpListener.Name, httpListener.Address, httpListener.Port,
-				httpListener.TCPKeepalive, accessLog)
+			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accessLog)
+			if httpListener.EnableHTTP3 {
+				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
+				if err := tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
+					return err
+				}
+			}
 			if err := tCtx.AddXdsResource(resourcev3.ListenerType, xdsListener); err != nil {
 				// skip this listener if failed to add xds listener to the
 				// resource version table. Normally, this should not happen.
@@ -155,8 +160,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		}
 
 		if addFilterChain {
-			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing); err != nil {
-				errs = multierror.Append(errs, err)
+			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
+				return err
+			}
+			if httpListener.EnableHTTP3 {
+				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -239,6 +249,13 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				}
 			}
 
+			if httpListener.EnableHTTP3 {
+				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.Port))
+				if xdsRoute.ResponseHeadersToAdd == nil {
+					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
+				}
+				xdsRoute.ResponseHeadersToAdd = append(xdsRoute.ResponseHeadersToAdd, http3AltSvcHeader)
+			}
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
@@ -296,6 +313,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 	}
 
 	return errs
+}
+
+func buildHTTP3AltSvcHeader(port int) *corev3.HeaderValueOption {
+	return &corev3.HeaderValueOption{
+		Append: &wrapperspb.BoolValue{Value: true},
+		Header: &corev3.HeaderValue{
+			Key:   "alt-svc",
+			Value: strings.Join([]string{fmt.Sprintf(`%s=":%d"; ma=86400`, "h3", port)}, ", "),
+		},
+	}
 }
 
 func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListeners []*ir.TCPListener, accesslog *ir.AccessLog) error {

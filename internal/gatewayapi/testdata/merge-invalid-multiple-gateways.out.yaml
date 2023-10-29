@@ -113,11 +113,15 @@ infraIR:
         status: {}
       listeners:
       - address: ""
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: envoy-gateway/gateway-1/http
           protocol: HTTP
           servicePort: 80
+      - address: ""
+        name: envoy-gateway/gateway-2/udp
+        ports:
         - containerPort: 10080
           name: envoy-gateway/gateway-2/udp
           protocol: UDP

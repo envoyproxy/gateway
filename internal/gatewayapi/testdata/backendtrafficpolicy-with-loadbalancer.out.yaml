@@ -286,6 +286,7 @@ infraIR:
     proxy:
       listeners:
       - address: ""
+        name: envoy-gateway/gateway-1/http
         ports:
         - containerPort: 10080
           name: http
@@ -300,6 +301,7 @@ infraIR:
     proxy:
       listeners:
       - address: ""
+        name: envoy-gateway/gateway-2/http
         ports:
         - containerPort: 10080
           name: http
