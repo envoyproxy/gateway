@@ -277,9 +277,9 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
 				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 					Pattern: &matcherv3.RegexMatcher{
-						Regex: "^" + *pathMatch.Prefix,
+						Regex: "^" + *pathMatch.Prefix + `\/*`,
 					},
-					Substitution: "",
+					Substitution: "/",
 				}
 			} else {
 				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
