@@ -16,4 +16,4 @@
         cluster: rewrite-route-dest
         regexRewrite:
           pattern:
-            regex: ^/origin
+            regex: ^/origin/
