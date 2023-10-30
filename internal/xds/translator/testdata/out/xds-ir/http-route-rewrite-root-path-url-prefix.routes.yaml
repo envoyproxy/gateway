@@ -10,10 +10,10 @@
         - name: :authority
           stringMatch:
             exact: gateway.envoyproxy.io
-        pathSeparatedPrefix: /origin/
+        pathSeparatedPrefix: /origin
       name: rewrite-route
       route:
         cluster: rewrite-route-dest
         regexRewrite:
           pattern:
-            regex: ^/origin/
+            regex: ^/origin
