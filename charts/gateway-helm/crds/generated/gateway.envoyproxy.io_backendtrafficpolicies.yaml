@@ -77,7 +77,8 @@ spec:
                 x-kubernetes-validations:
                 - message: If LoadBalancer type is consistentHash, consistentHash
                     field needs to be set.
-                  rule: self.type == 'ConsistentHash' && has(self.consistentHash)
+                  rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
+                    : !has(self.consistentHash)'
               rateLimit:
                 description: RateLimit allows the user to limit the number of incoming
                   requests to a predefined value based on attributes within the traffic
