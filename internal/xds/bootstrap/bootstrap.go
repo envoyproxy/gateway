@@ -103,6 +103,7 @@ type readyServerParameters struct {
 }
 
 type StatsMatcherParameters struct {
+	Exacts             []string
 	Prefixs            []string
 	Suffixs            []string
 	RegularExpressions []string
@@ -154,12 +155,19 @@ func GetRenderedBootstrapConfig(proxyMetrics *egv1a1.ProxyMetrics) (string, erro
 		if proxyMetrics.Matches != nil {
 			// Add custom envoy proxy stats
 			for _, match := range proxyMetrics.Matches {
-				switch match.Type {
-				case egv1a1.StatsMatchPrefix:
+				// matchType default to exact
+				matchType := egv1a1.StringMatchExact
+				if match.Type != nil {
+					matchType = *match.Type
+				}
+				switch matchType {
+				case egv1a1.StringMatchExact:
+					StatsMatcher.Exacts = append(StatsMatcher.Exacts, match.Value)
+				case egv1a1.StringMatchPrefix:
 					StatsMatcher.Prefixs = append(StatsMatcher.Prefixs, match.Value)
-				case egv1a1.StatsMatchSuffix:
+				case egv1a1.StringMatchSuffix:
 					StatsMatcher.Suffixs = append(StatsMatcher.Suffixs, match.Value)
-				case egv1a1.StatsMatchRegularExpression:
+				case egv1a1.StringMatchRegularExpression:
 					StatsMatcher.RegularExpressions = append(StatsMatcher.RegularExpressions, match.Value)
 				}
 			}

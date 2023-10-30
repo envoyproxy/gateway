@@ -13,6 +13,9 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
+      {{- range $_, $item := .StatsMatcher.Exacts }}
+      - exact: {{$item}}
+      {{- end}}
       {{- range $_, $item := .StatsMatcher.Prefixs }}
       - prefix: {{$item}}
       {{- end}}

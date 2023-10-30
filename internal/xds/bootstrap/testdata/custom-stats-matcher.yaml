@@ -12,6 +12,7 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
+      - exact: http.foo.bar.cluster.upstream_rq
       - prefix: http
       - prefix: cluster
       - suffix: upstream_rq

@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
+	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
 func TestGetRenderedBootstrapConfig(t *testing.T) {
@@ -55,21 +56,25 @@ func TestGetRenderedBootstrapConfig(t *testing.T) {
 		{
 			name: "custom-stats-matcher",
 			proxyMetrics: &egv1a1.ProxyMetrics{
-				Matches: []egv1a1.StatsMatch{
+				Matches: []egv1a1.StringMatch{
 					{
-						Type:  egv1a1.StatsMatchPrefix,
+						Type:  ptr.To(egv1a1.StringMatchExact),
+						Value: "http.foo.bar.cluster.upstream_rq",
+					},
+					{
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
 						Value: "http",
 					},
 					{
-						Type:  egv1a1.StatsMatchSuffix,
+						Type:  ptr.To(egv1a1.StringMatchSuffix),
 						Value: "upstream_rq",
 					},
 					{
-						Type:  egv1a1.StatsMatchRegularExpression,
+						Type:  ptr.To(egv1a1.StringMatchRegularExpression),
 						Value: "virtual.*",
 					},
 					{
-						Type:  egv1a1.StatsMatchPrefix,
+						Type:  ptr.To(egv1a1.StringMatchPrefix),
 						Value: "cluster",
 					},
 				},
