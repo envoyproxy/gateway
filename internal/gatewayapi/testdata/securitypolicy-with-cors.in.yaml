@@ -77,7 +77,7 @@ securityPolicies:
     cors:
       allowOrigins:
       - type: RegularExpression
-        value: "*.example.com"
+        value: "FooBar[0-9]+"
       - type: Exact
         value: foo.bar.com
       allowMethods:

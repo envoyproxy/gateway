@@ -6,8 +6,10 @@
 package gatewayapi
 
 import (
+	"errors"
 	"fmt"
 	"net/netip"
+	"regexp"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -283,6 +285,7 @@ func (t *Translator) validateTerminateModeAndGetTLSSecrets(listener *ListenerCon
 
 	secrets := make([]*v1.Secret, 0)
 	for _, certificateRef := range listener.TLS.CertificateRefs {
+		// TODO zhaohuabing: reuse validateSecretRef
 		if certificateRef.Group != nil && string(*certificateRef.Group) != "" {
 			listener.SetCondition(
 				gwapiv1.ListenerConditionResolvedRefs,
@@ -720,5 +723,63 @@ func (t *Translator) validateHostname(hostname string) error {
 		return fmt.Errorf("label: %q in hostname %q cannot exceed 63 characters", hostname[labelIdx:], hostname)
 	}
 
+	return nil
+}
+
+// validateSecretRef checks three things:
+//  1. Dose the secret reference has valid Group and kind
+//  2. If the secret reference is a cross namespace reference, is it permitted by
+//     any ReferenceGrant
+//  3. Does the secret exist
+func (t *Translator) validateSecretRef(
+	from crossNamespaceFrom,
+	secretRef gwapiv1b1.SecretObjectReference,
+	resources *Resources) (*v1.Secret, error) {
+	if secretRef.Group != nil && string(*secretRef.Group) != "" {
+		return nil, errors.New("secret ref group must be unspecified/empty")
+	}
+
+	if secretRef.Kind != nil && string(*secretRef.Kind) != KindSecret {
+		return nil, fmt.Errorf("secret ref kind must be %s", KindSecret)
+	}
+
+	secretNamespace := from.namespace
+
+	if secretRef.Namespace != nil &&
+		string(*secretRef.Namespace) != "" &&
+		string(*secretRef.Namespace) != from.namespace {
+		if !t.validateCrossNamespaceRef(
+			from,
+			crossNamespaceTo{
+				group:     "",
+				kind:      KindSecret,
+				namespace: string(*secretRef.Namespace),
+				name:      string(secretRef.Name),
+			},
+			resources.ReferenceGrants,
+		) {
+			return nil,
+				fmt.Errorf(
+					"certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+					*secretRef.Namespace, secretRef.Name)
+		}
+
+		secretNamespace = string(*secretRef.Namespace)
+	}
+
+	secret := resources.GetSecret(secretNamespace, string(secretRef.Name))
+
+	if secret == nil {
+		return nil, fmt.Errorf(
+			"secret %s/%s does not exist", secretNamespace, secretRef.Name)
+	}
+
+	return secret, nil
+}
+
+func validateRegex(regex string) error {
+	if _, err := regexp.Compile(regex); err != nil {
+		return fmt.Errorf("regex %q is invalid: %v", regex, err)
+	}
 	return nil
 }

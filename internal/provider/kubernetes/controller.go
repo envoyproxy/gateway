@@ -324,6 +324,9 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 		resourceTree.SecurityPolicies = append(resourceTree.SecurityPolicies, &policy)
 	}
 
+	// Add the referenced Secrets in SecurityPolicies to the resourceTree
+	r.processSecurityPolicySecretRefs(ctx, resourceTree, resourceMap)
+
 	// For this particular Gateway, and all associated objects, check whether the
 	// namespace exists. Add to the resourceTree.
 	for ns := range resourceMap.allAssociatedNamespaces {
@@ -386,6 +389,61 @@ func (r *gatewayAPIReconciler) Reconcile(ctx context.Context, _ reconcile.Reques
 
 	r.log.Info("reconciled gateways successfully")
 	return reconcile.Result{}, nil
+}
+
+// processSecurityPolicySecretRefs adds the referenced Secrets in SecurityPolicies
+// to the resourceTree
+func (r *gatewayAPIReconciler) processSecurityPolicySecretRefs(
+	ctx context.Context, resourceTree *gatewayapi.Resources, resourceMap *resourceMappings) {
+	for _, policy := range resourceTree.SecurityPolicies {
+		oidc := policy.Spec.OIDC
+		if oidc != nil {
+			secret := new(corev1.Secret)
+			secretNamespace := gatewayapi.NamespaceDerefOr(oidc.ClientSecret.Namespace, policy.Namespace)
+			err := r.client.Get(ctx,
+				types.NamespacedName{Namespace: secretNamespace, Name: string(oidc.ClientSecret.Name)},
+				secret,
+			)
+			if err != nil && !kerrors.IsNotFound(err) {
+				r.log.Error(err, "unable to find the Secret for OIDC client secret")
+				// we don't return an error here, because we want to continue
+				// reconciling the rest of the resources despite that this
+				// SecurityPolicy is invalid.
+				// This SecurityPolicy will be marked as invalid in its status
+				// when translating to IR because the referenced secret can't be
+				// found.
+			}
+
+			if secretNamespace != policy.Namespace {
+				from := ObjectKindNamespacedName{
+					kind:      v1alpha1.KindSecurityPolicy,
+					namespace: policy.Namespace,
+					name:      policy.Name,
+				}
+				to := ObjectKindNamespacedName{
+					kind:      gatewayapi.KindSecret,
+					namespace: secretNamespace,
+					name:      secret.Name,
+				}
+				refGrant, err := r.findReferenceGrant(ctx, from, to)
+				switch {
+				case err != nil:
+					r.log.Error(err, "failed to find ReferenceGrant")
+				case refGrant == nil:
+					r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+						"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+				default:
+					// RefGrant found
+					resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+					r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+						"name", refGrant.Name)
+				}
+			}
+			resourceMap.allAssociatedNamespaces[secretNamespace] = struct{}{} // TODO Zhaohuabing do we need this line?
+			resourceTree.Secrets = append(resourceTree.Secrets, secret)
+			r.log.Info("processing Secret", "namespace", secretNamespace, "name", string(oidc.ClientSecret.Name))
+		}
+	}
 }
 
 func (r *gatewayAPIReconciler) gatewayClassUpdater(ctx context.Context, gc *gwapiv1.GatewayClass, accepted bool, reason, msg string) error {

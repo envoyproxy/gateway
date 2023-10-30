@@ -14,18 +14,19 @@ import (
 )
 
 const (
-	KindEnvoyProxy    = "EnvoyProxy"
-	KindGateway       = "Gateway"
-	KindGatewayClass  = "GatewayClass"
-	KindGRPCRoute     = "GRPCRoute"
-	KindHTTPRoute     = "HTTPRoute"
-	KindNamespace     = "Namespace"
-	KindTLSRoute      = "TLSRoute"
-	KindTCPRoute      = "TCPRoute"
-	KindUDPRoute      = "UDPRoute"
-	KindService       = "Service"
-	KindServiceImport = "ServiceImport"
-	KindSecret        = "Secret"
+	KindEnvoyProxy     = "EnvoyProxy"
+	KindGateway        = "Gateway"
+	KindGatewayClass   = "GatewayClass"
+	KindGRPCRoute      = "GRPCRoute"
+	KindHTTPRoute      = "HTTPRoute"
+	KindNamespace      = "Namespace"
+	KindTLSRoute       = "TLSRoute"
+	KindTCPRoute       = "TCPRoute"
+	KindUDPRoute       = "UDPRoute"
+	KindService        = "Service"
+	KindServiceImport  = "ServiceImport"
+	KindSecret         = "Secret"
+	KindSecurityPolicy = "SecurityPolicy"
 
 	GroupMultiClusterService = "multicluster.x-k8s.io"
 	// OwningGatewayNamespaceLabel is the owner reference label used for managed infra.
@@ -187,9 +188,10 @@ func (t *Translator) Translate(resources *Resources) *TranslateResult {
 	// Process BackendTrafficPolicies
 	backendTrafficPolicies := t.ProcessBackendTrafficPolicies(
 		resources.BackendTrafficPolicies, gateways, routes, xdsIR)
+
 	// Process SecurityPolicies
 	securityPolicies := t.ProcessSecurityPolicies(
-		resources.SecurityPolicies, gateways, routes, xdsIR)
+		resources.SecurityPolicies, gateways, routes, resources, xdsIR)
 
 	// Sort xdsIR based on the Gateway API spec
 	sortXdsIRMap(xdsIR)

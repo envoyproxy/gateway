@@ -6,13 +6,17 @@
 package ir
 
 import (
-	"cmp"
 	"errors"
 	"net"
 	"reflect"
 
+	"cmp"
+
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
+
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -281,6 +285,8 @@ type HTTPRoute struct {
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
+	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -317,6 +323,29 @@ type CORS struct {
 type JWT struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// OIDC defines the schema for authenticating HTTP requests using
+// OpenID Connect (OIDC).
+//
+// +k8s:deepcopy-gen=true
+type OIDC struct {
+	// The OIDC Provider configuration.
+	Provider egv1a1.OIDCProvider `json:"provider"`
+
+	// The OIDC client ID assigned to the filter to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	ClientID string `json:"clientID"`
+
+	// The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// This is an Opaque secret. The client secret should be stored in the key "client_secret".
+	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+
+	// The OIDC scopes to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
