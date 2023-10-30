@@ -6,6 +6,8 @@
 package translator
 
 import (
+	"strings"
+
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
@@ -104,6 +106,8 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 					Prefix: "/",
 				}
 			} else {
+				// Remove trailing /
+				strings.TrimSuffix(*pathMatch.Prefix, "/")
 				outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
 					PathSeparatedPrefix: *pathMatch.Prefix,
 				}
