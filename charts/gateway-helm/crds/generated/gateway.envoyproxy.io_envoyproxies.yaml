@@ -5424,19 +5424,26 @@ spec:
                           `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856,
                           https://github.com/envoyproxy/envoy/issues/14610'
                         items:
-                          description: Match defines the stats match configuration.
+                          description: StringMatch defines how to match any strings.
+                            This is a general purpose match condition that can be
+                            used by other EG APIs that need to match against a string.
                           properties:
                             type:
-                              description: MatcherType defines the stats matcher type
+                              default: Exact
+                              description: Type specifies how to match against a string.
                               enum:
-                              - RegularExpression
+                              - Exact
                               - Prefix
                               - Suffix
+                              - RegularExpression
                               type: string
                             value:
+                              description: Value specifies the string value that the
+                                match must have.
+                              maxLength: 1024
+                              minLength: 1
                               type: string
                           required:
-                          - type
                           - value
                           type: object
                         type: array
