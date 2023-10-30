@@ -6,8 +6,6 @@
 package translator
 
 import (
-	"strings"
-
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
@@ -101,10 +99,9 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			// when the prefix ends with "/", use RouteMatch_Prefix
-			if strings.HasSuffix(*pathMatch.Prefix, "/") {
+			if *pathMatch.Prefix == "/" {
 				outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
-					Prefix: *pathMatch.Prefix,
+					Prefix: "/",
 				}
 			} else {
 				outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
@@ -271,6 +268,7 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMa
 			// Circumvent the case of "//" when the replace string is "/"
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
+			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
 			if pathMatch != nil && pathMatch.Prefix != nil &&
 				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
 				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
