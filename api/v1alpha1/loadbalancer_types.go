@@ -7,6 +7,8 @@ package v1alpha1
 
 // LoadBalancer defines the load balancer policy to be applied.
 // +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
 	// Valid RateLimitType values are
