@@ -15,6 +15,7 @@ package status
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -73,9 +74,32 @@ func NewUpdateHandler(log logr.Logger, client client.Client) *UpdateHandler {
 }
 
 func (u *UpdateHandler) apply(update Update) {
-	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		obj := update.Resource
+	var statusUpdateErr error
+	obj := update.Resource
+	objKind := kindOf(obj)
 
+	startTime := time.Now()
+
+	statusUpdateTotal.With(kindLabel.Value(objKind)).Increment()
+
+	defer func() {
+		updateDuration := time.Since(startTime)
+		if statusUpdateErr != nil {
+			statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
+			statusUpdateFailed.With(kindLabel.Value(objKind)).Increment()
+		} else {
+			statusUpdateDurationSeconds.With(kindLabel.Value(objKind)).Record(updateDuration.Seconds())
+			statusUpdateSuccess.With(kindLabel.Value(objKind)).Increment()
+		}
+	}()
+
+	if statusUpdateErr = retry.OnError(retry.DefaultBackoff, func(err error) bool {
+		if kerrors.IsConflict(err) {
+			statusUpdateConflict.With(kindLabel.Value(objKind)).Increment()
+			return true
+		}
+		return false
+	}, func() error {
 		// Get the resource.
 		if err := u.client.Get(context.Background(), update.NamespacedName, obj); err != nil {
 			if kerrors.IsNotFound(err) {
@@ -90,14 +114,15 @@ func (u *UpdateHandler) apply(update Update) {
 			u.log.WithName(update.NamespacedName.Name).
 				WithName(update.NamespacedName.Namespace).
 				Info("status unchanged, bypassing update")
+			statusUpdateNoop.With(kindLabel.Value(objKind)).Increment()
 			return nil
 		}
 
 		newObj.SetUID(obj.GetUID())
 
 		return u.client.Status().Update(context.Background(), newObj)
-	}); err != nil {
-		u.log.Error(err, "unable to update status", "name", update.NamespacedName.Name,
+	}); statusUpdateErr != nil {
+		u.log.Error(statusUpdateErr, "unable to update status", "name", update.NamespacedName.Name,
 			"namespace", update.NamespacedName.Namespace)
 	}
 }
@@ -242,4 +267,34 @@ func isStatusEqual(objA, objB interface{}) bool {
 	}
 
 	return false
+}
+
+// kindOf returns the kind string for the given Kubernetes object.
+func kindOf(obj interface{}) string {
+	switch obj.(type) {
+	case *gwapiv1.GatewayClass:
+		return "GatewayClass"
+	case *gwapiv1.Gateway:
+		return "Gateway"
+	case *gwapiv1.HTTPRoute:
+		return "HTTPRoute"
+	case *gwapiv1a2.TLSRoute:
+		return "TLSRoute"
+	case *gwapiv1a2.TCPRoute:
+		return "TCPRoute"
+	case *gwapiv1a2.UDPRoute:
+		return "UDPRoute"
+	case *gwapiv1a2.GRPCRoute:
+		return "GRPCRoute"
+	case *egv1a1.EnvoyPatchPolicy:
+		return "EnvoyPatchPolicy"
+	case *egv1a1.ClientTrafficPolicy:
+		return "ClientTrafficPolicy"
+	case *egv1a1.BackendTrafficPolicy:
+		return "BackendTrafficPolicy"
+	case *egv1a1.SecurityPolicy:
+		return "SecurityPolicy"
+	}
+
+	return ""
 }
