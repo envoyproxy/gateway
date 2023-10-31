@@ -37,7 +37,7 @@ func New(cfg *rest.Config, svr *config.Server, resources *message.ProviderResour
 	mgrOpts := manager.Options{
 		Scheme:                 envoygateway.GetScheme(),
 		Logger:                 svr.Logger.Logger,
-		LeaderElection:         false,
+		LeaderElection:         true,
 		HealthProbeBindAddress: ":8081",
 		LeaderElectionID:       "5b9825d2.gateway.envoyproxy.io",
 	}
