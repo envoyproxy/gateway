@@ -41,7 +41,6 @@ func TestBuildXdsCluster(t *testing.T) {
 	require.Equal(t, bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket)
 	assert.True(t, proto.Equal(bootstrapXdsCluster.TransportSocket, dynamicXdsCluster.TransportSocket))
 	assert.True(t, proto.Equal(bootstrapXdsCluster.ConnectTimeout, dynamicXdsCluster.ConnectTimeout))
-	assert.True(t, proto.Equal(bootstrapXdsCluster.TypedExtensionProtocolOptions[extensionOptionsKey], dynamicXdsCluster.TypedExtensionProtocolOptions[extensionOptionsKey]))
 }
 
 func TestBuildXdsClusterLoadAssignment(t *testing.T) {

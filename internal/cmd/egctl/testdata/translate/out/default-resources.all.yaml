@@ -98,13 +98,12 @@ envoyProxy:
               envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
                 "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
                 explicit_http_config:
-                  http2_protocol_options: {}
+                  http2_protocol_options:
+                    connection_keepalive:
+                      interval: 30s
+                      timeout: 5s
             name: xds_cluster
             type: STRICT_DNS
-            http2_protocol_options:
-              connection_keepalive:
-                interval: 30s
-                timeout: 5s
             transport_socket:
               name: envoy.transport_sockets.tls
               typed_config:
@@ -510,10 +509,6 @@ xds:
             name: prometheus_stats
             type: STATIC
           - connectTimeout: 10s
-            http2ProtocolOptions:
-              connectionKeepalive:
-                interval: 30s
-                timeout: 5s
             loadAssignment:
               clusterName: xds_cluster
               endpoints:
@@ -550,7 +545,10 @@ xds:
               envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
                 '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
                 explicitHttpConfig:
-                  http2ProtocolOptions: {}
+                  http2ProtocolOptions:
+                    connectionKeepalive:
+                      interval: 30s
+                      timeout: 5s
           listeners:
           - address:
               socketAddress:
