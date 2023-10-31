@@ -449,13 +449,13 @@ spec:
     spec:
       containers:
       - args:
-          - -conf
-          - /root/Corefile
+        - -conf
+        - /root/Corefile
         image: coredns/coredns
         name: coredns
         volumeMounts:
-          - mountPath: /root
-            name: conf
+        - mountPath: /root
+          name: conf
       volumes:
       - configMap:
           defaultMode: 420
