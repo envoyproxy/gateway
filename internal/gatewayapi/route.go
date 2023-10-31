@@ -11,7 +11,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/discovery/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a1 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -1042,7 +1042,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
-			// Fall back to Service CluserIP routing
+			// Fall back to Service ClusterIP routing
 			ep := ir.NewDestEndpoint(
 				service.Spec.ClusterIP,
 				uint32(*backendRef.Port))
@@ -1127,8 +1127,8 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlice(endpointSlices []*v1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
-	endpoints := []*ir.DestinationEndpoint{}
+func getIREndpointsFromEndpointSlice(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+	var endpoints []*ir.DestinationEndpoint
 	for _, endpointSlice := range endpointSlices {
 		for _, endpoint := range endpointSlice.Endpoints {
 			for _, endpointPort := range endpointSlice.Ports {
@@ -1141,6 +1141,7 @@ func getIREndpointsFromEndpointSlice(endpointSlices []*v1.EndpointSlice, portNam
 						ep := ir.NewDestEndpoint(
 							address,
 							uint32(*endpointPort.Port))
+						ep.SetHostAddressType(endpointSlice.AddressType)
 						endpoints = append(endpoints, ep)
 					}
 				}

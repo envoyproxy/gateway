@@ -19,6 +19,7 @@ import (
 	matcherv3 "github.com/envoyproxy/go-control-plane/envoy/type/matcher/v3"
 	resourcev3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/tetratelabs/multierror"
+	discoveryv1 "k8s.io/api/discovery/v1"
 
 	extensionTypes "github.com/envoyproxy/gateway/internal/extension/types"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -211,15 +212,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			vHost.Routes = append(vHost.Routes, xdsRoute)
 
 			if httpRoute.Destination != nil {
-				if err := addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         httpRoute.Destination.Name,
-					settings:     httpRoute.Destination.Settings,
-					tSocket:      nil,
-					protocol:     protocol,
-					endpointType: Static,
-					loadBalancer: httpRoute.LoadBalancer,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-					return err
+				clusterArgs := splitEndpointsByHostAddressType(httpRoute.Destination, httpRoute.LoadBalancer, protocol)
+				for _, clusterArg := range clusterArgs {
+					if err := addXdsCluster(tCtx, clusterArg); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+						return err
+					}
 				}
 			}
 
@@ -368,7 +365,7 @@ func findXdsListener(tCtx *types.ResourceVersionTable, name string) *listenerv3.
 	return nil
 }
 
-// findXdsRouteConfig finds an xds route with the name and returns nil if there is no match.
+// findXdsRouteConfig finds a xds route with the name and returns nil if there is no match.
 func findXdsRouteConfig(tCtx *types.ResourceVersionTable, name string) *routev3.RouteConfiguration {
 	if tCtx == nil || tCtx.XdsResources == nil || tCtx.XdsResources[resourcev3.RouteType] == nil {
 		return nil
@@ -461,5 +458,53 @@ const (
 const (
 	DefaultEndpointType EndpointType = iota
 	Static
+	DNS
 	EDS
 )
+
+// splitEndpointsByHostAddressType splits FQDN host address type DestinationEndpoints from DestinationSettings.
+func splitEndpointsByHostAddressType(rd *ir.RouteDestination, lb *ir.LoadBalancer, protocol ProtocolType) []*xdsClusterArgs {
+	// Group DestinationSettings by the type of endpoint.
+	groups := make(map[EndpointType][]*ir.DestinationSetting)
+	groupOrders := []EndpointType{Static, DNS}
+
+	for _, ds := range rd.Settings {
+		var fqdn, ips []*ir.DestinationEndpoint
+		for _, ep := range ds.Endpoints {
+			if ep.Type == discoveryv1.AddressTypeFQDN {
+				fqdn = append(fqdn, ep)
+			} else {
+				ips = append(ips, ep)
+			}
+		}
+		if len(fqdn) > 0 {
+			groups[DNS] = append(groups[DNS], &ir.DestinationSetting{
+				Weight:    ds.Weight,
+				Endpoints: fqdn,
+			})
+		}
+		if len(ips) > 0 {
+			groups[Static] = append(groups[Static], &ir.DestinationSetting{
+				Weight:    ds.Weight,
+				Endpoints: ips,
+			})
+		}
+	}
+
+	clusterArgs := make([]*xdsClusterArgs, 0, len(groups))
+	for _, endpointType := range groupOrders {
+		if len(groups[endpointType]) == 0 {
+			continue
+		}
+
+		clusterArgs = append(clusterArgs, &xdsClusterArgs{
+			name:         fmt.Sprintf("%s-%d", rd.Name, endpointType),
+			settings:     groups[endpointType],
+			tSocket:      nil,
+			protocol:     protocol,
+			endpointType: endpointType,
+			loadBalancer: lb,
+		})
+	}
+	return clusterArgs
+}

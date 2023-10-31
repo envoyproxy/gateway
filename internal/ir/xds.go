@@ -12,13 +12,14 @@ import (
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
-
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/validation"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
-	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	egv1a1validation "github.com/envoyproxy/gateway/api/v1alpha1/validation"
 )
 
 var (
@@ -32,7 +33,7 @@ var (
 	ErrHTTPRouteNameEmpty            = errors.New("field Name must be specified")
 	ErrHTTPRouteHostnameEmpty        = errors.New("field Hostname must be specified")
 	ErrDestinationNameEmpty          = errors.New("field Name must be specified")
-	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP address")
+	ErrDestEndpointHostInvalid       = errors.New("field Address must be a valid IP or FQDN address")
 	ErrDestEndpointPortInvalid       = errors.New("field Port specified is invalid")
 	ErrStringMatchConditionInvalid   = errors.New("only one of the Exact, Prefix, SafeRegex or Distinct fields must be set")
 	ErrStringMatchNameIsEmpty        = errors.New("field Name must be specified")
@@ -436,7 +437,7 @@ func (h HTTPRoute) Validate() error {
 func (j *JWT) validate() error {
 	var errs error
 
-	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
+	if err := egv1a1validation.ValidateJWTProvider(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
@@ -466,7 +467,6 @@ func (r RouteDestination) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -488,7 +488,6 @@ func (d DestinationSetting) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationEndpoint holds the endpoint details associated with the destination
@@ -498,20 +497,34 @@ type DestinationEndpoint struct {
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
 	Port uint32 `json:"port" yaml:"port"`
+	// Type specifies the type of Host address.
+	Type discoveryv1.AddressType `json:"type" yaml:"type"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
-	// Only support IP hosts for now
-	if ip := net.ParseIP(d.Host); ip == nil {
-		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
+	switch d.Type {
+	case discoveryv1.AddressTypeFQDN:
+		if err := validation.IsDNS1123Subdomain(d.Host); err != nil {
+			errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
+		}
+	default:
+		if ip := net.ParseIP(d.Host); ip == nil {
+			errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
+		}
 	}
+
 	if d.Port == 0 {
 		errs = multierror.Append(errs, ErrDestEndpointPortInvalid)
 	}
 
 	return errs
+}
+
+// SetHostAddressType sets the host address type of DestinationEndpoint.
+func (d *DestinationEndpoint) SetHostAddressType(hostType discoveryv1.AddressType) {
+	d.Type = hostType
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.
@@ -530,7 +543,7 @@ type AddHeader struct {
 	Append bool   `json:"append" yaml:"append"`
 }
 
-// / Validate the fields within the AddHeader structure
+// Validate the fields within the AddHeader structure
 func (h AddHeader) Validate() error {
 	var errs error
 	if h.Name == "" {
