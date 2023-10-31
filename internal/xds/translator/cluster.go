@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/model"
 )
 
 const (
@@ -60,7 +61,14 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.RespectDnsTtl = true
 	}
 
-	if args.protocol == HTTP2 {
+	isHttp2 := false
+	for _, ds := range args.settings {
+		if ds.Protocol == model.GRPC {
+			isHttp2 = true
+			break
+		}
+	}
+	if isHttp2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
 	}
 

@@ -8,6 +8,7 @@ package translator
 import (
 	"bytes"
 	"errors"
+
 	"net/url"
 	"strconv"
 	"strings"
@@ -27,6 +28,7 @@ import (
 	goyaml "gopkg.in/yaml.v3" // nolint: depguard
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/model"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
 )
@@ -432,6 +434,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	host, port := t.getRateLimitServiceGrpcHostPort()
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To(uint32(1)),
+		Protocol:  model.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))},
 	}
 
@@ -444,7 +447,6 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
-		protocol:     HTTP2,
 		endpointType: DefaultEndpointType,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err

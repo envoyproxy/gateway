@@ -11,13 +11,14 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/discovery/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a1 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
+	"github.com/envoyproxy/gateway/internal/model"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
@@ -1005,6 +1006,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 	}
 
 	var endpoints []*ir.DestinationEndpoint
+	protocol := inspectAppProtocolByRouteKind(routeType)
 	switch KindDerefOr(backendRef.Kind, KindService) {
 	case KindServiceImport:
 		serviceImport := resources.GetServiceImport(backendNamespace, string(backendRef.Name))
@@ -1037,6 +1039,12 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 			}
 		}
 
+		// support HTTPRouteBackendProtocolH2C
+		if servicePort.AppProtocol != nil &&
+			*servicePort.AppProtocol == "kubernetes.io/h2c" {
+			protocol = model.HTTP2
+		}
+
 		// Route to endpoints by default
 		if !t.EndpointRoutingDisabled {
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
@@ -1052,9 +1060,26 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 
 	ds = &ir.DestinationSetting{
 		Weight:    &weight,
+		Protocol:  protocol,
 		Endpoints: endpoints,
 	}
 	return ds, weight
+}
+
+func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) model.AppProtocol {
+	switch kind {
+	case KindUDPRoute:
+		return model.UDP
+	case KindHTTPRoute:
+		return model.HTTP
+	case KindTCPRoute:
+		return model.TCP
+	case KindGRPCRoute:
+		return model.GRPC
+	case KindTLSRoute:
+		return model.HTTPS
+	}
+	return model.TCP
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our
@@ -1127,7 +1152,7 @@ func (t *Translator) processAllowedListenersForParentRefs(routeContext RouteCont
 	return relevantRoute
 }
 
-func getIREndpointsFromEndpointSlice(endpointSlices []*v1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
+func getIREndpointsFromEndpointSlice(endpointSlices []*discoveryv1.EndpointSlice, portName string, portProtocol corev1.Protocol) []*ir.DestinationEndpoint {
 	endpoints := []*ir.DestinationEndpoint{}
 	for _, endpointSlice := range endpointSlices {
 		for _, endpoint := range endpointSlice.Endpoints {

@@ -268,7 +268,6 @@ func createJWKSClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute
 					name:         jwks.name,
 					settings:     []*ir.DestinationSetting{ds},
 					tSocket:      tSocket,
-					protocol:     DefaultProtocol,
 					endpointType: epType,
 				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 					return err

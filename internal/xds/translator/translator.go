@@ -153,11 +153,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 		}
 
-		protocol := DefaultProtocol
-		if httpListener.IsHTTP2 {
-			protocol = HTTP2
-		}
-
 		// store virtual hosts by domain
 		vHosts := map[string]*routev3.VirtualHost{}
 		// keep track of order by using a list as well as the map
@@ -215,7 +210,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 					name:         httpRoute.Destination.Name,
 					settings:     httpRoute.Destination.Settings,
 					tSocket:      nil,
-					protocol:     protocol,
 					endpointType: Static,
 					loadBalancer: httpRoute.LoadBalancer,
 				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
@@ -229,7 +223,6 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 						name:         mirrorDest.Name,
 						settings:     mirrorDest.Settings,
 						tSocket:      nil,
-						protocol:     protocol,
 						endpointType: Static,
 					}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 						return err
@@ -276,7 +269,6 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
-			protocol:     DefaultProtocol,
 			endpointType: Static,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
@@ -313,7 +305,6 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
-			protocol:     DefaultProtocol,
 			endpointType: Static,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
@@ -439,10 +430,10 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 }
 
 type xdsClusterArgs struct {
-	name         string
-	settings     []*ir.DestinationSetting
-	tSocket      *corev3.TransportSocket
-	protocol     ProtocolType
+	name     string
+	settings []*ir.DestinationSetting
+	tSocket  *corev3.TransportSocket
+	//protocol     ProtocolType
 	endpointType EndpointType
 	loadBalancer *ir.LoadBalancer
 }

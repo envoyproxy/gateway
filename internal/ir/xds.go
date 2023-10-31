@@ -12,13 +12,13 @@ import (
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
+	"github.com/envoyproxy/gateway/internal/model"
 )
 
 var (
@@ -172,6 +172,7 @@ type HTTPListener struct {
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
 	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
+	// TODO: review the usage about this field
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
@@ -466,7 +467,6 @@ func (r RouteDestination) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -474,7 +474,9 @@ func (r RouteDestination) Validate() error {
 type DestinationSetting struct {
 	// Weight associated with this destination.
 	// Note: Weight is not used in TCP/UDP route.
-	Weight    *uint32                `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Protocol associated with this destination/port.
+	Protocol  model.AppProtocol      `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
@@ -488,7 +490,6 @@ func (d DestinationSetting) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationEndpoint holds the endpoint details associated with the destination
