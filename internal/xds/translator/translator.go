@@ -430,24 +430,14 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 }
 
 type xdsClusterArgs struct {
-	name     string
-	settings []*ir.DestinationSetting
-	tSocket  *corev3.TransportSocket
-	//protocol     ProtocolType
+	name         string
+	settings     []*ir.DestinationSetting
+	tSocket      *corev3.TransportSocket
 	endpointType EndpointType
 	loadBalancer *ir.LoadBalancer
 }
 
-type ProtocolType int
 type EndpointType int
-
-const (
-	DefaultProtocol ProtocolType = iota
-	TCP
-	UDP
-	HTTP
-	HTTP2
-)
 
 const (
 	DefaultEndpointType EndpointType = iota
