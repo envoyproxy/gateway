@@ -171,8 +171,8 @@ type HTTPListener struct {
 	TLS []*TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
-	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
-	// TODO: review the usage about this field
+	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
+	// grpc-web and grpc-stats are also enabled if this is set.
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
