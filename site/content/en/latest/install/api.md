@@ -40,13 +40,6 @@ The Helm chart for Envoy Gateway
 | deployment.envoyGateway.resources.limits.memory | string | `"1024Mi"` |  |
 | deployment.envoyGateway.resources.requests.cpu | string | `"100m"` |  |
 | deployment.envoyGateway.resources.requests.memory | string | `"256Mi"` |  |
-| deployment.kubeRbacProxy.image.repository | string | `"gcr.io/kubebuilder/kube-rbac-proxy"` |  |
-| deployment.kubeRbacProxy.image.tag | string | `"v0.14.1"` |  |
-| deployment.kubeRbacProxy.imagePullPolicy | string | `"IfNotPresent"` |  |
-| deployment.kubeRbacProxy.resources.limits.cpu | string | `"500m"` |  |
-| deployment.kubeRbacProxy.resources.limits.memory | string | `"128Mi"` |  |
-| deployment.kubeRbacProxy.resources.requests.cpu | string | `"5m"` |  |
-| deployment.kubeRbacProxy.resources.requests.memory | string | `"64Mi"` |  |
 | deployment.pod.annotations | object | `{}` |  |
 | deployment.pod.labels | object | `{}` |  |
 | deployment.ports[0].name | string | `"grpc"` |  |

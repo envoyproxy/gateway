@@ -71,22 +71,6 @@ spec:
         - mountPath: /certs
           name: certs
           readOnly: true
-      - args:
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=0
-        env:
-        - name: KUBERNETES_CLUSTER_DOMAIN
-          value: {{ .Values.kubernetesClusterDomain }}
-        image: {{ .Values.deployment.kubeRbacProxy.image.repository }}:{{ .Values.deployment.kubeRbacProxy.image.tag | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.deployment.kubeRbacProxy.imagePullPolicy }}
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: https
-          protocol: TCP
-        resources: {{- toYaml .Values.deployment.kubeRbacProxy.resources | nindent 10
-          }}
       securityContext:
         runAsNonRoot: true
       serviceAccountName: envoy-gateway
