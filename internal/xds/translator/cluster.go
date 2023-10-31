@@ -63,7 +63,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	isHTTP2 := false
 	for _, ds := range args.settings {
-		if ds.Protocol == model.GRPC {
+		if ds.Protocol == model.GRPC ||
+			ds.Protocol == model.HTTP2 {
 			isHTTP2 = true
 			break
 		}
