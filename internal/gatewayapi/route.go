@@ -1042,7 +1042,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 			endpointSlices := resources.GetEndpointSlicesForBackend(backendNamespace, string(backendRef.Name), KindDerefOr(backendRef.Kind, KindService))
 			endpoints = getIREndpointsFromEndpointSlice(endpointSlices, servicePort.Name, servicePort.Protocol)
 		} else {
-			// Fall back to Service CluserIP routing
+			// Fall back to Service ClusterIP routing
 			ep := ir.NewDestEndpoint(
 				service.Spec.ClusterIP,
 				uint32(*backendRef.Port))
