@@ -100,7 +100,6 @@ func experimentalConformance(t *testing.T) {
 					tests.HTTPRouteRewritePath.ShortName,
 					tests.GatewayStaticAddresses.ShortName,
 					tests.GatewayWithAttachedRoutes.ShortName,
-					tests.HTTPRouteBackendProtocolH2C.ShortName,
 				},
 				ExemptFeatures: suite.MeshCoreFeatures,
 			},
