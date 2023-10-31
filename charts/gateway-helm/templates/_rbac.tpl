@@ -83,6 +83,7 @@ resources:
 - envoypatchpolicies/status
 - clienttrafficpolicies/status
 - backendtrafficpolicies/status
+- securitypolicies/status
 verbs:
 - update
 {{- end }}
