@@ -19,7 +19,6 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/model"
 )
 
 const (
@@ -63,8 +62,8 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 	isHTTP2 := false
 	for _, ds := range args.settings {
-		if ds.Protocol == model.GRPC ||
-			ds.Protocol == model.HTTP2 {
+		if ds.Protocol == ir.GRPC ||
+			ds.Protocol == ir.HTTP2 {
 			isHTTP2 = true
 			break
 		}

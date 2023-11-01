@@ -18,7 +18,6 @@ import (
 	mcsapi "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 
 	"github.com/envoyproxy/gateway/internal/ir"
-	"github.com/envoyproxy/gateway/internal/model"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 )
 
@@ -1042,7 +1041,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 		// support HTTPRouteBackendProtocolH2C
 		if servicePort.AppProtocol != nil &&
 			*servicePort.AppProtocol == "kubernetes.io/h2c" {
-			protocol = model.HTTP2
+			protocol = ir.HTTP2
 		}
 
 		// Route to endpoints by default
@@ -1066,20 +1065,20 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 	return ds, weight
 }
 
-func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) model.AppProtocol {
+func inspectAppProtocolByRouteKind(kind gwapiv1.Kind) ir.AppProtocol {
 	switch kind {
 	case KindUDPRoute:
-		return model.UDP
+		return ir.UDP
 	case KindHTTPRoute:
-		return model.HTTP
+		return ir.HTTP
 	case KindTCPRoute:
-		return model.TCP
+		return ir.TCP
 	case KindGRPCRoute:
-		return model.GRPC
+		return ir.GRPC
 	case KindTLSRoute:
-		return model.HTTPS
+		return ir.HTTPS
 	}
-	return model.TCP
+	return ir.TCP
 }
 
 // processAllowedListenersForParentRefs finds out if the route attaches to one of our

@@ -18,7 +18,6 @@ import (
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
-	"github.com/envoyproxy/gateway/internal/model"
 )
 
 var (
@@ -476,7 +475,7 @@ type DestinationSetting struct {
 	// Note: Weight is not used in TCP/UDP route.
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
 	// Protocol associated with this destination/port.
-	Protocol  model.AppProtocol      `json:"protocol" yaml:"protocol"`
+	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
