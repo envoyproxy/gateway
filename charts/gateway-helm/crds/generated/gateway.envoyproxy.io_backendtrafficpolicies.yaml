@@ -63,8 +63,8 @@ spec:
                     type: object
                   type:
                     description: Type decides the type of Load Balancer policy. Valid
-                      RateLimitType values are "ConsistentHash", "LeastRequest", "Random",
-                      "RoundRobin",
+                      LoadBalancerType values are "ConsistentHash", "LeastRequest",
+                      "Random", "RoundRobin",
                     enum:
                     - ConsistentHash
                     - LeastRequest

@@ -11,7 +11,7 @@ package v1alpha1
 // +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? has(self.consistentHash) : !has(self.consistentHash)",message="If LoadBalancer type is consistentHash, consistentHash field needs to be set."
 type LoadBalancer struct {
 	// Type decides the type of Load Balancer policy.
-	// Valid RateLimitType values are
+	// Valid LoadBalancerType values are
 	// "ConsistentHash",
 	// "LeastRequest",
 	// "Random",
