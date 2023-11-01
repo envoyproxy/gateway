@@ -8,6 +8,7 @@ package translator
 import (
 	"bytes"
 	"errors"
+
 	"net/url"
 	"strconv"
 	"strings"
@@ -432,6 +433,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 	host, port := t.getRateLimitServiceGrpcHostPort()
 	ds := &ir.DestinationSetting{
 		Weight:    ptr.To(uint32(1)),
+		Protocol:  ir.GRPC,
 		Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(host, uint32(port))},
 	}
 
@@ -444,7 +446,6 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
-		protocol:     HTTP2,
 		endpointType: DefaultEndpointType,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err

@@ -115,6 +115,7 @@ xdsIR:
           - endpoints:
             - host: 8.8.8.8
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
