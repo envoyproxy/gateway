@@ -73,7 +73,7 @@ spec:
     providers:
     - name: example
       remoteJWKS:
-        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
   targetRef:
     group: gateway.networking.k8s.io
     kind: Gateway

@@ -175,6 +175,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
@@ -190,6 +191,7 @@ xdsIR:
         - endpoints:
           - host: 7.7.7.7
             port: 8162
+          protocol: UDP
           weight: 1
       name: envoy-gateway/gateway-1/udp/udproute-1
       port: 10080

@@ -6,13 +6,13 @@
 package ir
 
 import (
+	"cmp"
 	"errors"
 	"net"
 	"reflect"
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -79,19 +79,19 @@ func (x *Xds) Equal(y *Xds) bool {
 
 // sort ensures the listeners are in a consistent order.
 func (x *Xds) sort() {
-	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
 	for _, l := range x.HTTP {
-		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) bool {
-			return r1.Name < r2.Name
+		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) int {
+			return cmp.Compare(r1.Name, r2.Name)
 		})
 	}
-	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
-	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
 }
 
@@ -171,7 +171,8 @@ type HTTPListener struct {
 	TLS []*TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
-	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
+	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
+	// grpc-web and grpc-stats are also enabled if this is set.
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
@@ -466,7 +467,6 @@ func (r RouteDestination) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -474,7 +474,9 @@ func (r RouteDestination) Validate() error {
 type DestinationSetting struct {
 	// Weight associated with this destination.
 	// Note: Weight is not used in TCP/UDP route.
-	Weight    *uint32                `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Protocol associated with this destination/port.
+	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
@@ -488,7 +490,6 @@ func (d DestinationSetting) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationEndpoint holds the endpoint details associated with the destination

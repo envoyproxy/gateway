@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway/tools/src/kind
 
-go 1.20
+go 1.21
 
 require sigs.k8s.io/kind v0.20.0
 

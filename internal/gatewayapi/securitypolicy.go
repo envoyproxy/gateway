@@ -317,7 +317,7 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 			})
 		case egv1a1.MatchRegularExpression:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				SafeRegex: &origin.Value,
+				SafeRegex: &origin.Value, // TODO zhaohuabing: check if the value is a valid regex
 			})
 		}
 	}

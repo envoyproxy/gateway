@@ -23,7 +23,7 @@ gateways:
         mode: Terminate
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: Secret envoy-gateway/tls-secret-1 must contain valid tls.crt and

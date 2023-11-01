@@ -11,7 +11,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 
 ## Prerequisites
 
-Follow the steps from the [Quickstart](quickstart.md) guide to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
 For GRPC - follow the steps from the [GRPC Routing](grpc-routing.md) example.
 Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
@@ -49,7 +49,7 @@ kubectl get securitypolicy/jwt-example -o yaml
 ### GRPCRoute
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/jwt/grtpc-jwt.yaml
+kubectl apply -f https://raw.githubusercontent.com/envoyproxy/gateway/latest/examples/kubernetes/jwt/grpc-jwt.yaml
 ```
 
 A SecurityPolicy has been created and targeted GRPCRoute yages to authenticate all requests for `yages` service..
@@ -71,7 +71,7 @@ kubectl get securitypolicy/jwt-example -o yaml
 
 ## Testing
 
-Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](quickstart.md) guide is set. If not, follow the
+Ensure the `GATEWAY_HOST` environment variable from the [Quickstart](../quickstart) guide is set. If not, follow the
 Quickstart instructions to set the variable.
 
 ```shell
@@ -91,7 +91,7 @@ A `401` HTTP response code should be returned.
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 __Note:__ The above command decodes and returns the token's payload. You can replace `f2` with `f1` to view the token's
@@ -128,7 +128,7 @@ Error invoking method "yages.Echo/Ping": rpc error: code = Unauthenticated desc 
 Get the JWT used for testing request authentication:
 
 ```shell
-TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
+TOKEN=$(curl https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/test.jwt -s) && echo "$TOKEN" | cut -d '.' -f2 - | base64 --decode -
 ```
 
 __Note:__ The above command decodes and returns the token's payload. You can replace `f2` with `f1` to view the token's
@@ -150,7 +150,7 @@ You should see the below response
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart](quickstart.md) guide to uninstall Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart](../quickstart) guide to uninstall Envoy Gateway and the example manifest.
 
 Delete the SecurityPolicy:
 

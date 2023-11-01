@@ -72,12 +72,6 @@
                 },
                 {
                   "connectTimeout": "10s",
-                  "http2ProtocolOptions": {
-                    "connectionKeepalive": {
-                      "interval": "30s",
-                      "timeout": "5s"
-                    }
-                  },
                   "loadAssignment": {
                     "clusterName": "xds_cluster",
                     "endpoints": [
@@ -136,7 +130,12 @@
                     "envoy.extensions.upstreams.http.v3.HttpProtocolOptions": {
                       "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions",
                       "explicitHttpConfig": {
-                        "http2ProtocolOptions": {}
+                        "http2ProtocolOptions": {
+                          "connectionKeepalive": {
+                            "interval": "30s",
+                            "timeout": "5s"
+                          }
+                        }
                       }
                     }
                   }
@@ -397,7 +396,7 @@
                                       "httpUri": {
                                         "cluster": "raw_githubusercontent_com_443",
                                         "timeout": "5s",
-                                        "uri": "https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json"
+                                        "uri": "https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json"
                                       },
                                       "retryPolicy": {}
                                     }

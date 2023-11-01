@@ -16,7 +16,7 @@ gateways:
       protocol: UDP
   status:
     listeners:
-    - attachedRoutes: 1
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -128,6 +128,7 @@ xdsIR:
         - endpoints:
           - host: 7.7.7.7
             port: 8162
+          protocol: UDP
           weight: 1
       name: envoy-gateway/gateway-1/udp/udproute-1
       port: 10162

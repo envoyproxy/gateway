@@ -44,7 +44,7 @@ export GITHUB_REMOTE=origin
     git push ${GITHUB_REMOTE} release/v${MAJOR_VERSION}.${MINOR_VERSION}
     ```
 
-7. Create a topic branch for updating the Envoy proxy image to the tag supported by the release. Reference [PR #958][]
+7. Create a topic branch for updating the Envoy proxy image and Envoy Ratelimit image to the tag supported by the release. Reference [PR #2098][]
    for additional details on updating the image tag.
 8. Sign, commit, and push your changes to your fork.
 9. Submit a [Pull Request][] to merge the changes into the `release/v${MAJOR_VERSION}.${MINOR_VERSION}` branch. Do not
@@ -247,6 +247,6 @@ It's important that the world knows about the release. Use the following steps t
 [release]: https://github.com/envoyproxy/gateway/releases
 [Generate]: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
 [PR #635]: https://github.com/envoyproxy/gateway/pull/635
-[PR #958]: https://github.com/envoyproxy/gateway/pull/958
+[PR #2098]: https://github.com/envoyproxy/gateway/pull/2098
 [PR #1002]: https://github.com/envoyproxy/gateway/pull/1002
 [VERSION]: https://github.com/envoyproxy/gateway/blob/main/VERSION

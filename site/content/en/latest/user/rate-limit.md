@@ -21,7 +21,7 @@ can be linked to a [Gateway][], [HTTPRoute][] or [GRPCRoute][] resource.
 
 ### Install Envoy Gateway
 
-* Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the HTTPRoute example manifest.
+* Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the HTTPRoute example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Install Redis
@@ -607,7 +607,7 @@ spec:
   jwtProviders:
   - name: example
     remoteJWKS:
-      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/authn/jwks.json
+      uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
     claimToHeaders:
     - claim: name
       header: x-claim-name

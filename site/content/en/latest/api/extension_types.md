@@ -275,8 +275,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `address` _[EnvoyGatewayAdminAddress](#envoygatewayadminaddress)_ | Address defines the address of Envoy Gateway Admin Server. |
-| `EnableDumpConfig` _boolean_ | EnableDumpConfig defines if enable dump config in Envoy Gateway logs. |
-| `EnablePprof` _boolean_ | EnablePprof defines if enable pprof in Envoy Gateway Admin Server. |
+| `enableDumpConfig` _boolean_ | EnableDumpConfig defines if enable dump config in Envoy Gateway logs. |
+| `enablePprof` _boolean_ | EnablePprof defines if enable pprof in Envoy Gateway Admin Server. |
 
 
 #### EnvoyGatewayAdminAddress
@@ -1032,7 +1032,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid RateLimitType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
+| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid LoadBalancerType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
 | `consistentHash` _[ConsistentHash](#consistenthash)_ | ConsistentHash defines the configuration when the load balancer type is set to ConsistentHash |
 
 
