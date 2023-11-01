@@ -1032,7 +1032,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid RateLimitType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
+| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid LoadBalancerType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
 | `consistentHash` _[ConsistentHash](#consistenthash)_ | ConsistentHash defines the configuration when the load balancer type is set to ConsistentHash |
 
 
