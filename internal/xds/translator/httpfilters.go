@@ -136,7 +136,7 @@ func patchRouteWithFilters(
 
 	// Add the jwt per route config to the route, if needed.
 	if err := patchRouteWithJWTConfig(route, irRoute); err != nil {
-		return nil
+		return err
 	}
 
 	return nil
