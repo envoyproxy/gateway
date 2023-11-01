@@ -1,6 +1,6 @@
 module local
 
-go 1.20
+go 1.21
 
 require github.com/elastic/crd-ref-docs v0.0.9
 
