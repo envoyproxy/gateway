@@ -163,6 +163,7 @@ xdsIR:
         - endpoints:
           - host: 7.7.7.7
             port: 8162
+          protocol: UDP
           weight: 1
       name: envoy-gateway/gateway-1/udp1/udproute-1
       port: 10162
@@ -173,6 +174,7 @@ xdsIR:
         - endpoints:
           - host: 7.7.7.7
             port: 8162
+          protocol: UDP
           weight: 1
       name: envoy-gateway/gateway-1/udp2/udproute-2
       port: 10163

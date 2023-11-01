@@ -159,6 +159,7 @@ xdsIR:
         - endpoints:
           - host: 7.7.7.7
             port: 8163
+          protocol: TCP
           weight: 1
       name: envoy-gateway/gateway-1/tcp1/tcproute-1
       port: 10161
@@ -170,6 +171,7 @@ xdsIR:
         - endpoints:
           - host: 7.7.7.7
             port: 8163
+          protocol: TCP
           weight: 1
       name: envoy-gateway/gateway-1/tcp2/tcproute-1
       port: 10162

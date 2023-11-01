@@ -99,7 +99,6 @@ func experimentalConformance(t *testing.T) {
 				SkipTests: []string{
 					tests.GatewayStaticAddresses.ShortName,
 					tests.GatewayWithAttachedRoutes.ShortName,
-					tests.HTTPRouteBackendProtocolH2C.ShortName,
 				},
 				ExemptFeatures: suite.MeshCoreFeatures,
 			},

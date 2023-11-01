@@ -115,6 +115,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -131,6 +132,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: whales.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/whales_envoyproxy_io
