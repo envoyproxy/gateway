@@ -23,7 +23,7 @@ gateways:
         mode: Passthrough
   status:
     listeners:
-    - attachedRoutes: 0
+    - attachedRoutes: 1
       conditions:
       - lastTransitionTime: null
         message: TLS Passthrough mode is not supported, TLS mode must be Terminate.
