@@ -16,7 +16,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Configuration
 
-The below example defines a SecurityPolicy that allows CORS requests from `*.foo.com`.
+The below example defines a SecurityPolicy that allows CORS requests from `www.foo.com`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
@@ -31,8 +31,8 @@ spec:
     name: backend
   cors:
     allowOrigins:
-    - type: Suffix
-      value: ".foo.com"
+    - type: Exact
+      value: "www.foo.com"
     allowMethods:
     - GET
     - POST
