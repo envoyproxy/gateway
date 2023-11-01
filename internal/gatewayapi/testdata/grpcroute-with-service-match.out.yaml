@@ -120,11 +120,11 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/1/*
+        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
         pathMatch:
           distinct: false
           name: ""
-          safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*
+          prefix: /com.ExampleExact
       - backendWeights:
           invalid: 0
           valid: 0
@@ -137,8 +137,8 @@ xdsIR:
             protocol: GRPC
             weight: 1
         hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/0/*
+        name: grpcroute/default/grpcroute-1/rule/0/match/1/*
         pathMatch:
           distinct: false
           name: ""
-          prefix: /com.ExampleExact
+          safeRegex: /com.[A-Z]+/[A-Za-z_][A-Za-z_0-9]*

@@ -1,6 +1,6 @@
 module github.com/envoyproxy/gateway/tools/src/helm-docs
 
-go 1.20
+go 1.21
 
 require github.com/norwoodj/helm-docs v1.11.3
 

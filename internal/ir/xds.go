@@ -6,6 +6,7 @@
 package ir
 
 import (
+	"cmp"
 	"errors"
 	"net"
 	"reflect"
@@ -78,19 +79,19 @@ func (x *Xds) Equal(y *Xds) bool {
 
 // sort ensures the listeners are in a consistent order.
 func (x *Xds) sort() {
-	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
 	for _, l := range x.HTTP {
-		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) bool {
-			return r1.Name < r2.Name
+		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) int {
+			return cmp.Compare(r1.Name, r2.Name)
 		})
 	}
-	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
-	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
 }
 
