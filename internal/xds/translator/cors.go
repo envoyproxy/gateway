@@ -126,7 +126,9 @@ func patchRouteWithCORSConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error
 	allowMethods = strings.Join(irRoute.CORS.AllowMethods, ", ")
 	allowHeaders = strings.Join(irRoute.CORS.AllowHeaders, ", ")
 	exposeHeaders = strings.Join(irRoute.CORS.ExposeHeaders, ", ")
-	maxAge = strconv.Itoa(int(irRoute.CORS.MaxAge.Seconds()))
+	if irRoute.CORS.MaxAge != nil {
+		maxAge = strconv.Itoa(int(irRoute.CORS.MaxAge.Seconds()))
+	}
 
 	routeCfgProto := &corsv3.CorsPolicy{
 		AllowOriginStringMatch: allowOrigins,
