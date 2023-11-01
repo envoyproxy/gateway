@@ -50,7 +50,7 @@ changes:
       Improved caching of resource by implementing a compare function agnostic of resource order
 
   - area: translator
-    change: |  
+    change: |
       Added support for routing to EndpointSlice endpoints
       Added support for HTTPRoute Timeouts
       Added support for multiple RequestMirror filters per HTTPRoute rule
