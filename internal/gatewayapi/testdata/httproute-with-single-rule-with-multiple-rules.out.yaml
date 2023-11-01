@@ -137,46 +137,6 @@ xdsIR:
           invalid: 0
           valid: 0
         destination:
-          name: httproute/default/httproute-1/rule/2
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            weight: 1
-        headerMatches:
-        - distinct: false
-          name: Header-1
-          safeRegex: '*regex*'
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/2/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          safeRegex: '*regex*'
-        queryParamMatches:
-        - distinct: false
-          name: QueryParam-1
-          safeRegex: '*regex*'
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: httproute/default/httproute-1/rule/1
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            weight: 1
-        hostname: '*'
-        name: httproute/default/httproute-1/rule/1/match/0/*
-        pathMatch:
-          distinct: false
-          name: ""
-          prefix: /prefix
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
           name: httproute/default/httproute-1/rule/0
           settings:
           - endpoints:
@@ -197,3 +157,43 @@ xdsIR:
         - distinct: false
           exact: exact
           name: QueryParam-1
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/httproute-1/rule/1
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
+        hostname: '*'
+        name: httproute/default/httproute-1/rule/1/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          prefix: /prefix
+      - backendWeights:
+          invalid: 0
+          valid: 0
+        destination:
+          name: httproute/default/httproute-1/rule/2
+          settings:
+          - endpoints:
+            - host: 7.7.7.7
+              port: 8080
+            weight: 1
+        headerMatches:
+        - distinct: false
+          name: Header-1
+          safeRegex: '*regex*'
+        hostname: '*'
+        name: httproute/default/httproute-1/rule/2/match/0/*
+        pathMatch:
+          distinct: false
+          name: ""
+          safeRegex: '*regex*'
+        queryParamMatches:
+        - distinct: false
+          name: QueryParam-1
+          safeRegex: '*regex*'
