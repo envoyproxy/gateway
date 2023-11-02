@@ -2,7 +2,7 @@ apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: UDPRoute
 metadata:
   name: udp-coredns
-  namespace: gateway-conformance-infra
+  namespace: gateway-conformance-udp
 spec:
   parentRefs:
   - name: udp-gateway

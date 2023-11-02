@@ -37,12 +37,11 @@ var UDPRouteTest = suite.ConformanceTest{
 	Description: "Make sure UDPRoute is working",
 	Manifests:   []string{"testdata/udproute.yaml"},
 	Test: func(t *testing.T, suite *suite.ConformanceTestSuite) {
-		t.Run("udp-coredns", func(t *testing.T) {
-			ns := "gateway-conformance-infra"
+		t.Run("Simple UDP request matching UDPRoute should reach coredns backend", func(t *testing.T) {
+			namespace := "gateway-conformance-udp"
 			domain := "foo.bar.com."
-
-			routeNN := types.NamespacedName{Name: "udp-coredns", Namespace: ns}
-			gwNN := types.NamespacedName{Name: "udp-gateway", Namespace: ns}
+			routeNN := types.NamespacedName{Name: "udp-coredns", Namespace: namespace}
+			gwNN := types.NamespacedName{Name: "udp-gateway", Namespace: namespace}
 			gwAddr := GatewayAndUDPRoutesMustBeAccepted(t, suite.Client, suite.TimeoutConfig, suite.ControllerName, NewGatewayRef(gwNN), routeNN)
 
 			msg := new(dns.Msg)
