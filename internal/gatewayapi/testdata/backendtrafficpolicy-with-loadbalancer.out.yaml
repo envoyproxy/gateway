@@ -248,6 +248,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: GRPC
             weight: 1
         hostname: '*'
         loadBalancer:
@@ -274,6 +275,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         loadBalancer:

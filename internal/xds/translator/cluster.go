@@ -60,7 +60,15 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.RespectDnsTtl = true
 	}
 
-	if args.protocol == HTTP2 {
+	isHTTP2 := false
+	for _, ds := range args.settings {
+		if ds.Protocol == ir.GRPC ||
+			ds.Protocol == ir.HTTP2 {
+			isHTTP2 = true
+			break
+		}
+	}
+	if isHTTP2 {
 		cluster.TypedExtensionProtocolOptions = buildTypedExtensionProtocolOptions()
 	}
 

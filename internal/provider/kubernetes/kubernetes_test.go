@@ -196,9 +196,19 @@ func testGatewayClassWithParamRef(ctx context.Context, t *testing.T, provider *P
 	}, defaultWait, defaultTick)
 
 	// Ensure the resource map contains the EnvoyProxy.
-	res, ok := resources.GatewayAPIResources.Load(gc.Name)
-	assert.Equal(t, ok, true)
-	assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+	require.Eventually(t, func() bool {
+		res, ok := resources.GatewayAPIResources.Load(gc.Name)
+		if !ok {
+			return false
+		}
+
+		if res.EnvoyProxy != nil {
+			assert.Equal(t, res.EnvoyProxy.Spec, ep.Spec)
+			return true
+		}
+
+		return false
+	}, defaultWait, defaultTick)
 }
 
 func testGatewayScheduledStatus(ctx context.Context, t *testing.T, provider *Provider, resources *message.ProviderResources) {

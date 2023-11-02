@@ -137,7 +137,7 @@ _udp.foo.bar.com.	0	IN	SRV	0 0 42376 .
 
 ## Clean-Up
 
-Follow the steps from the [Quickstart Guide](quickstart.md) to uninstall Envoy Gateway.
+Follow the steps from the [Quickstart Guide](../quickstart) to uninstall Envoy Gateway.
 
 Delete the CoreDNS example manifest and the UDPRoute:
 

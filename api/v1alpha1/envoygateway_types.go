@@ -445,11 +445,11 @@ type EnvoyGatewayAdmin struct {
 	// EnableDumpConfig defines if enable dump config in Envoy Gateway logs.
 	//
 	// +optional
-	EnableDumpConfig bool
+	EnableDumpConfig bool `json:"enableDumpConfig,omitempty"`
 	// EnablePprof defines if enable pprof in Envoy Gateway Admin Server.
 	//
 	// +optional
-	EnablePprof bool
+	EnablePprof bool `json:"enablePprof,omitempty"`
 }
 
 // EnvoyGatewayAdminAddress defines the Envoy Gateway Admin Address configuration.

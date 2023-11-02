@@ -2,7 +2,7 @@ module local
 
 go 1.19
 
-require github.com/bufbuild/buf v1.27.1
+require github.com/bufbuild/buf v1.27.2
 
 require (
 	connectrpc.com/connect v1.11.1 // indirect
@@ -29,7 +29,7 @@ require (
 	github.com/google/pprof v0.0.0-20230926050212-f7f687d19a98 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jdx/go-netrc v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.1 // indirect
+	github.com/klauspost/compress v1.17.2 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/term v0.5.0 // indirect

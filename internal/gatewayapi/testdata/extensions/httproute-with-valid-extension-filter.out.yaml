@@ -122,6 +122,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         extensionRefs:
         - object:
