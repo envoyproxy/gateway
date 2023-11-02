@@ -1,6 +1,11 @@
----
-title: "Release Announcement"
----
++++
+title = "Release Announcement"
+description = "Envoy Gateway Release Announcement"
+linktitle = "Announcement"
+
+[[cascade]]
+type = "docs"
++++
 
 This document provides details for Envoy Gateway releases. Envoy Gateway follows the Semantic Versioning [v2.0.0 spec][]
 for release versioning. Since Envoy Gateway is a new project, minor releases are the only defined releases. Envoy

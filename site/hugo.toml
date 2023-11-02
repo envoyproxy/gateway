@@ -208,7 +208,7 @@ enable = true
 [menu]
   [[menu.main]]
     name = "Blog"
-    weight = -100
+    weight = -99
     pre = "<i class='fas fa-rss pr-2'></i>"
     url = "/blog"
   [[menu.main]]
@@ -217,13 +217,13 @@ enable = true
     pre = "<i class='fa fa-star pr-2'></i>"
     url = "/about"
   [[menu.main]]
-    name = "GitHub"
-    weight = -99
-    pre = "<i class='fab fa-github pr-2'></i>"
-    url = "https://github.com/envoyproxy/gateway"
+    name = "Announcements"
+    weight = -101
+    pre = "<i class='fas fa-comments pr-2'></i>"
+    url = "/announcements"
   [[menu.main]]
     name = "Documentation"
-    weight = -101
+    weight = -102
     pre = "<i class='fas fa-book pr-2'></i>"
     url = "/v0.6.0"
 
