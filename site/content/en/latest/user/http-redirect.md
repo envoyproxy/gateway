@@ -21,7 +21,7 @@ For example, to issue a permanent redirect (301) from HTTP to HTTPS, configure `
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-to-https-filter-redirect
@@ -109,7 +109,7 @@ Define a https listener on the existing gateway
 
 ```shell
 cat <<EOF | kubectl apply -n default -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -143,7 +143,7 @@ Create two HTTPRoutes and attach them to the HTTP and HTTPS listeners using the 
 
 ```shell
 cat <<EOF | kubectl apply -n default -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: tls-redirect
@@ -152,7 +152,8 @@ spec:
     - name: eg
       sectionName: http
   hostnames:
-    - "*.example.com"
+    # - "*.example.com" # catch all hostnames
+    - "www.example.com"
   rules:
     - filters:
         - type: RequestRedirect
@@ -204,7 +205,7 @@ below will issue a 302 redirect to all `path.redirect.example` requests whose pa
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-filter-path-redirect
@@ -249,7 +250,7 @@ curl -vvv --header "Host: path.redirect.example" "http://${GATEWAY_HOST}/get"
 You should receive a `302` with a redirect location of `http://path.redirect.example/status/200`.
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[HTTPRoute filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilter
+[HTTPRoute filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilter
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[req_filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRequestRedirectFilter
-[sectionName]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io%2fv1.CommonRouteSpec
+[req_filter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRequestRedirectFilter
+[sectionName]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.CommonRouteSpec
