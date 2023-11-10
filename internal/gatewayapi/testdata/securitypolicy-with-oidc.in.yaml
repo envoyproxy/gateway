@@ -5,21 +5,21 @@ secrets:
     namespace: envoy-gateway
     name: client1-secret
   data:
-    client_secret: Y2xpZW50MTpzZWNyZXQK
+    clientSecret: Y2xpZW50MTpzZWNyZXQK
 - apiVersion: v1
   kind: Secret
   metadata:
     namespace: default
     name: client2-secret
   data:
-    client_secret: Y2xpZW50MTpzZWNyZXQK
+    clientSecret: Y2xpZW50MTpzZWNyZXQK
 - apiVersion: v1
   kind: Secret
   metadata:
     namespace: envoy-gateway
     name: client3-secret
   data:
-    client_secret: Y2xpZW50MTpzZWNyZXQK
+    clientSecret: Y2xpZW50MTpzZWNyZXQK
 referenceGrants:
 - apiVersion: gateway.networking.k8s.io/v1alpha2
   kind: ReferenceGrant
@@ -108,7 +108,7 @@ securityPolicies:
   kind: SecurityPolicy
   metadata:
     namespace: envoy-gateway
-    name: policy-for-gateway-discover-endpoints # This policy should attach httproute-2
+    name: policy-for-gateway-discover-endpoints  # This policy should attach httproute-2
   spec:
     targetRef:
       group: gateway.networking.k8s.io

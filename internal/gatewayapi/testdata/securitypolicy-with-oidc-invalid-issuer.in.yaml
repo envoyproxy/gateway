@@ -5,7 +5,7 @@ secrets:
     namespace: default
     name: client1-secret
   data:
-    client_secret: Y2xpZW50MTpzZWNyZXQK
+    clientSecret: Y2xpZW50MTpzZWNyZXQK
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway

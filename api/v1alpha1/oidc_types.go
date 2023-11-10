@@ -9,7 +9,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-const OIDCClientSecretKey = "client_secret"
+const OIDCClientSecretKey = "clientSecret"
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
 type OIDC struct {
@@ -27,7 +27,7 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key
-	// "client_secret".
+	// "clientSecret".
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 
@@ -40,6 +40,17 @@ type OIDC struct {
 }
 
 // OIDCProvider defines the OIDC Provider configuration.
+// To make the EG OIDC config easy to use, some of the low-level ouath2 filter
+// configuration knobs are hidden from the user, and default values will be provided
+// when translating to XDS. For example:
+//
+// * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
+//
+// * signout_path: uses a default signout path "/signout"
+//
+// * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback"
+//
+// If we get requests to expose these knobs, we can always do so later.
 type OIDCProvider struct {
 	// The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery).
 	// Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST
@@ -54,11 +65,11 @@ type OIDCProvider struct {
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
 	// +optional
-	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+	AuthorizationEndpoint *string `json:"authorizationEndpoint,omitempty"`
 
 	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
 	// If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse).
 	//
 	// +optional
-	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
+	TokenEndpoint *string `json:"tokenEndpoint,omitempty"`
 }

@@ -1085,7 +1085,7 @@ _Appears in:_
 | `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
 | `clientID` _string_ | The client ID assigned to this policy to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
 | `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
- This is an Opaque secret. The client secret should be stored in the key "client_secret". |
+ This is an Opaque secret. The client secret should be stored in the key "clientSecret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
 
 
@@ -1093,7 +1093,11 @@ _Appears in:_
 
 
 
-OIDCProvider defines the OIDC Provider configuration.
+OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
+ * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
+ * signout_path: uses a default signout path "/signout" 
+ * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
+ If we get requests to expose these knobs, we can always do so later.
 
 _Appears in:_
 - [OIDC](#oidc)

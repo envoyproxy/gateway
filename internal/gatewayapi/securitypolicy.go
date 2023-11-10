@@ -476,13 +476,13 @@ type OpenIDConfig struct {
 // discoverEndpointsFromIssuer discovers the token and authorization endpoints from the issuer's well-known url
 // return error if failed to fetch the well-known configuration
 func discoverEndpointsFromIssuer(provider *egv1a1.OIDCProvider) error {
-	if provider.TokenEndpoint == "" || provider.AuthorizationEndpoint == "" {
+	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
 		tokenEndpoint, authorizationEndpoint, err := fetchEndpointsFromIssuer(provider.Issuer)
 		if err != nil {
 			return fmt.Errorf("error fetching endpoints from issuer: %w", err)
 		}
-		provider.TokenEndpoint = tokenEndpoint
-		provider.AuthorizationEndpoint = authorizationEndpoint
+		provider.TokenEndpoint = &tokenEndpoint
+		provider.AuthorizationEndpoint = &authorizationEndpoint
 	}
 	return nil
 }
