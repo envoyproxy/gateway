@@ -236,7 +236,7 @@ metadata:
 spec:
   bootstrap:
     type: Replace
-    bootstrap: |
+    value: |
       admin:
         access_log:
         - name: envoy.access_loggers.file
