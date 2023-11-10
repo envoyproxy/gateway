@@ -29,7 +29,7 @@ const (
 	DefaultEnvoyDNSPrefix = "*"
 
 	// DefaultCertificateLifetime holds the default certificate lifetime (in days).
-	DefaultCertificateLifetime = 365
+	DefaultCertificateLifetime = 365 * 5
 
 	// keySize sets the RSA key size to 2048 bits. This is minimum recommended size
 	// for RSA keys.
