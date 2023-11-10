@@ -76,6 +76,15 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	return ""
 }
 
+// NamespaceMode returns if uses namespace mode.
+func (e *EnvoyGateway) NamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Watch != nil &&
+		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
+		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+}
+
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
