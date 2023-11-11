@@ -283,10 +283,7 @@ xdsIR:
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         oidc:
           clientID: client2.oauth.foo.com
-          clientSecret:
-            group: null
-            kind: null
-            name: client2-secret
+          clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
             issuer: https://oauth.foo.com
@@ -314,10 +311,7 @@ xdsIR:
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         oidc:
           clientID: client1.apps.googleusercontent.com
-          clientSecret:
-            group: null
-            kind: null
-            name: client1-secret
+          clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
             issuer: https://accounts.google.com
@@ -343,11 +337,7 @@ xdsIR:
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         oidc:
           clientID: client3.bar.foo.com
-          clientSecret:
-            group: null
-            kind: null
-            name: client3-secret
-            namespace: envoy-gateway
+          clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
             issuer: https://oauth.bar.com

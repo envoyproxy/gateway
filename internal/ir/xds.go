@@ -153,7 +153,9 @@ func (x Xds) Printable() *Xds {
 
 		for _, route := range listener.Routes {
 			// Omit field
-			route.OIDC.ClientSecret = []byte{}
+			if route.OIDC != nil {
+				route.OIDC.ClientSecret = []byte{}
+			}
 		}
 	}
 	return out
