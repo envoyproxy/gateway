@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/status"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
+	"github.com/tetratelabs/multierror"
 )
 
 func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.SecurityPolicy,
@@ -255,16 +256,15 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
 	var (
-		cors *ir.CORS
-		jwt  *ir.JWT
-		oidc *ir.OIDC
-		err  error
+		cors      *ir.CORS
+		jwt       *ir.JWT
+		oidc      *ir.OIDC
+		err, errs error
 	)
 
 	if policy.Spec.CORS != nil {
-		cors, err = t.buildCORS(policy.Spec.CORS)
-		if err != nil {
-			return err
+		if cors, err = t.buildCORS(policy.Spec.CORS); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 
@@ -273,16 +273,20 @@ func (t *Translator) translateSecurityPolicyForRoute(
 	}
 
 	if policy.Spec.OIDC != nil {
-		oidc, err = t.buildOIDC(policy, resources)
-		if err != nil {
-			return err
+		if oidc, err = t.buildOIDC(policy, resources); err != nil {
+			errs = multierror.Append(errs, err)
 		}
 	}
 
-	// Apply IR to all relevant routes
 	// It can be difficult to reason about the state of the system if we apply
 	// part of the policy and not the rest. Therefore, we either apply all of it
 	// or none of it (when get errors when translating the policy)
+
+	if errs != nil {
+		return errs
+	}
+
+	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
 		for _, http := range ir.HTTP {
