@@ -76,6 +76,15 @@ func (e *EnvoyGateway) GetEnvoyGatewayAdminAddress() string {
 	return ""
 }
 
+// NamespaceMode returns if uses namespace mode.
+func (e *EnvoyGateway) NamespaceMode() bool {
+	return e.Provider != nil &&
+		e.Provider.Kubernetes != nil &&
+		e.Provider.Kubernetes.Watch != nil &&
+		e.Provider.Kubernetes.Watch.Type == KubernetesWatchModeTypeNamespaces &&
+		len(e.Provider.Kubernetes.Watch.Namespaces) > 0
+}
+
 // DefaultGateway returns a new Gateway with default configuration parameters.
 func DefaultGateway() *Gateway {
 	return &Gateway{
@@ -92,13 +101,12 @@ func DefaultEnvoyGatewayLogging() *EnvoyGatewayLogging {
 	}
 }
 
-// GetEnvoyGatewayAdmin returns the EnvoyGatewayAdmin of EnvoyGateway or a default EnvoyGatewayAdmin if unspecified.
+// GetEnvoyGatewayTelemetry returns the EnvoyGatewayTelemetry of EnvoyGateway or a default EnvoyGatewayTelemetry if unspecified.
 func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	if e.Telemetry != nil {
 		if e.Telemetry.Metrics.Prometheus == nil {
 			e.Telemetry.Metrics.Prometheus = DefaultEnvoyGatewayPrometheus()
 		}
-
 		if e.Telemetry.Metrics == nil {
 			e.Telemetry.Metrics = DefaultEnvoyGatewayMetrics()
 		}
@@ -109,8 +117,8 @@ func (e *EnvoyGateway) GetEnvoyGatewayTelemetry() *EnvoyGatewayTelemetry {
 	return e.Telemetry
 }
 
-// IfDisablePrometheus returns if disable prometheus.
-func (e *EnvoyGateway) IfDisablePrometheus() bool {
+// DisablePrometheus returns if disable prometheus.
+func (e *EnvoyGateway) DisablePrometheus() bool {
 	return e.GetEnvoyGatewayTelemetry().Metrics.Prometheus.Disable
 }
 

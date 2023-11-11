@@ -13,6 +13,9 @@ stats_config:
   stats_matcher:
     inclusion_list:
       patterns:
+      {{- range $_, $item := .StatsMatcher.Exacts }}
+      - exact: {{$item}}
+      {{- end}}
       {{- range $_, $item := .StatsMatcher.Prefixs }}
       - prefix: {{$item}}
       {{- end}}
@@ -141,13 +144,12 @@ static_resources:
       envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
         "@type": "type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions"
         explicit_http_config:
-          http2_protocol_options: {}
+          http2_protocol_options:
+            connection_keepalive:
+              interval: 30s
+              timeout: 5s
     name: xds_cluster
     type: STRICT_DNS
-    http2_protocol_options:
-      connection_keepalive:
-        interval: 30s
-        timeout: 5s
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:

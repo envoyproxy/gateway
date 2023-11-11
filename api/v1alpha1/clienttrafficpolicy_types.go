@@ -17,6 +17,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=ctp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -36,6 +37,10 @@ type ClientTrafficPolicy struct {
 
 // ClientTrafficPolicySpec defines the desired state of ClientTrafficPolicy.
 type ClientTrafficPolicySpec struct {
+	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
+	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway'", message="this policy can only have a targetRef.kind of Gateway"
+	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
+	//
 	// TargetRef is the name of the Gateway resource this policy
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace

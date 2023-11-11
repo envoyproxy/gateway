@@ -16,9 +16,8 @@ const (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName=btpolicy
+// +kubebuilder:resource:shortName=btp
 // +kubebuilder:subresource:status
-// +kubebuilder:subresource:overrideStrategy
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 //
@@ -37,8 +36,9 @@ type BackendTrafficPolicy struct {
 
 // spec defines the desired state of BackendTrafficPolicy.
 type BackendTrafficPolicySpec struct {
-
-	// +kubebuilder:validation:XValidation:rule="self.kind == 'Gateway' || self.kind == 'HTTPRoute' || self.kind == 'GRPCRoute' || self.kind == 'UDPRoute' || self.kind == 'TCPRoute' || self.kind == 'TLSRoute'", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
+	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
+	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute', 'UDPRoute', 'TCPRoute', 'TLSRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute/TCPRoute/UDPRoute/TLSRoute"
+	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
 	//
 	// targetRef is the name of the resource this policy
 	// is being attached to.
@@ -49,7 +49,7 @@ type BackendTrafficPolicySpec struct {
 	// RateLimit allows the user to limit the number of incoming requests
 	// to a predefined value based on attributes within the traffic flow.
 	// +optional
-	RateLimit *RateLimitFilterSpec `json:"rateLimit,omitempty"`
+	RateLimit *RateLimitSpec `json:"rateLimit,omitempty"`
 
 	// LoadBalancer policy to apply when routing traffic from the gateway to
 	// the backend endpoints

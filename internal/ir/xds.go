@@ -6,13 +6,13 @@
 package ir
 
 import (
+	"cmp"
 	"errors"
 	"net"
 	"reflect"
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -44,7 +44,6 @@ var (
 	ErrAddHeaderEmptyName            = errors.New("header modifier filter cannot configure a header without a name to be added")
 	ErrAddHeaderDuplicate            = errors.New("header modifier filter attempts to add the same header more than once (case insensitive)")
 	ErrRemoveHeaderDuplicate         = errors.New("header modifier filter attempts to remove the same header more than once (case insensitive)")
-	ErrRequestAuthenRequiresJwt      = errors.New("jwt field is required when request authentication is set")
 	ErrLoadBalancerInvalid           = errors.New("loadBalancer setting is invalid, only one setting can be set")
 )
 
@@ -80,19 +79,19 @@ func (x *Xds) Equal(y *Xds) bool {
 
 // sort ensures the listeners are in a consistent order.
 func (x *Xds) sort() {
-	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.HTTP, func(l1, l2 *HTTPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
 	for _, l := range x.HTTP {
-		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) bool {
-			return r1.Name < r2.Name
+		slices.SortFunc(l.Routes, func(r1, r2 *HTTPRoute) int {
+			return cmp.Compare(r1.Name, r2.Name)
 		})
 	}
-	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.TCP, func(l1, l2 *TCPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
-	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) bool {
-		return l1.Name < l2.Name
+	slices.SortFunc(x.UDP, func(l1, l2 *UDPListener) int {
+		return cmp.Compare(l1.Name, l2.Name)
 	})
 }
 
@@ -172,7 +171,8 @@ type HTTPListener struct {
 	TLS []*TLSListenerConfig `json:"tls,omitempty" yaml:"tls,omitempty"`
 	// Routes associated with HTTP traffic to the service.
 	Routes []*HTTPRoute `json:"routes,omitempty" yaml:"routes,omitempty"`
-	// IsHTTP2 is set if the upstream client as well as the downstream server are configured to serve HTTP2 traffic.
+	// IsHTTP2 is set if the listener is configured to serve HTTP2 traffic,
+	// grpc-web and grpc-stats are also enabled if this is set.
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
@@ -273,14 +273,14 @@ type HTTPRoute struct {
 	// RateLimit defines the more specific match conditions as well as limits for ratelimiting
 	// the requests on this route.
 	RateLimit *RateLimit `json:"rateLimit,omitempty" yaml:"rateLimit,omitempty"`
-	// RequestAuthentication defines the schema for authenticating HTTP requests.
-	RequestAuthentication *RequestAuthentication `json:"requestAuthentication,omitempty" yaml:"requestAuthentication,omitempty"`
 	// Timeout is the time until which entire response is received from the upstream.
 	Timeout *metav1.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 	// load balancer policy to use when routing to the backend endpoints.
 	LoadBalancer *LoadBalancer `json:"loadBalancer,omitempty" yaml:"loadBalancer,omitempty"`
 	// CORS policy for the route.
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
+	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
+	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -292,26 +292,6 @@ type HTTPRoute struct {
 // +k8s:deepcopy-gen=true
 type UnstructuredRef struct {
 	Object *unstructured.Unstructured `json:"object,omitempty" yaml:"object,omitempty"`
-}
-
-// RequestAuthentication defines the schema for authenticating HTTP requests.
-// Only one of "jwt" can be specified.
-//
-// TODO: Add support for additional request authentication providers, i.e. OIDC.
-//
-// +k8s:deepcopy-gen=true
-type RequestAuthentication struct {
-	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
-	JWT *JwtRequestAuthentication `json:"jwt,omitempty" yaml:"jwt,omitempty"`
-}
-
-// JwtRequestAuthentication defines the schema for authenticating HTTP requests using
-// JSON Web Tokens (JWT).
-//
-// +k8s:deepcopy-gen=true
-type JwtRequestAuthentication struct {
-	// Providers defines a list of JSON Web Token (JWT) authentication providers.
-	Providers []egv1a1.JwtAuthenticationFilterProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
 
 // CORS holds the Cross-Origin Resource Sharing (CORS) policy for the route.
@@ -328,6 +308,15 @@ type CORS struct {
 	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
 	// MaxAge defines how long the results of a preflight request can be cached.
 	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
+}
+
+// JWT defines the schema for authenticating HTTP requests using
+// JSON Web Tokens (JWT).
+//
+// +k8s:deepcopy-gen=true
+type JWT struct {
+	// Providers defines a list of JSON Web Token (JWT) authentication providers.
+	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure
@@ -431,18 +420,13 @@ func (h HTTPRoute) Validate() error {
 			}
 		}
 	}
-	if h.RequestAuthentication != nil {
-		switch {
-		case h.RequestAuthentication.JWT == nil:
-			errs = multierror.Append(errs, ErrRequestAuthenRequiresJwt)
-		default:
-			if err := h.RequestAuthentication.JWT.Validate(); err != nil {
-				errs = multierror.Append(errs, err)
-			}
-		}
-	}
 	if h.LoadBalancer != nil {
 		if err := h.LoadBalancer.Validate(); err != nil {
+			errs = multierror.Append(errs, err)
+		}
+	}
+	if h.JWT != nil {
+		if err := h.JWT.validate(); err != nil {
 			errs = multierror.Append(errs, err)
 		}
 	}
@@ -450,10 +434,10 @@ func (h HTTPRoute) Validate() error {
 	return errs
 }
 
-func (j *JwtRequestAuthentication) Validate() error {
+func (j *JWT) validate() error {
 	var errs error
 
-	if err := validation.ValidateJwtProviders(j.Providers); err != nil {
+	if err := validation.ValidateJWTProvider(j.Providers); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 
@@ -483,7 +467,6 @@ func (r RouteDestination) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationSetting holds the settings associated with the destination
@@ -491,7 +474,9 @@ func (r RouteDestination) Validate() error {
 type DestinationSetting struct {
 	// Weight associated with this destination.
 	// Note: Weight is not used in TCP/UDP route.
-	Weight    *uint32                `json:"weight,omitempty" yaml:"weight,omitempty"`
+	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`
+	// Protocol associated with this destination/port.
+	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
@@ -505,7 +490,6 @@ func (d DestinationSetting) Validate() error {
 	}
 
 	return errs
-
 }
 
 // DestinationEndpoint holds the endpoint details associated with the destination

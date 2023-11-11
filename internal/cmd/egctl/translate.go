@@ -738,20 +738,6 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(v1.ServiceSpec),
 			}
 			resources.Services = append(resources.Services, service)
-		case egv1a1.KindAuthenticationFilter:
-			typedSpec := spec.Interface()
-			authenticationFilter := &egv1a1.AuthenticationFilter{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindAuthenticationFilter,
-					APIVersion: egv1a1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      name,
-				},
-				Spec: typedSpec.(egv1a1.AuthenticationFilterSpec),
-			}
-			resources.AuthenticationFilters = append(resources.AuthenticationFilters, authenticationFilter)
 		case egv1a1.KindEnvoyPatchPolicy:
 			typedSpec := spec.Interface()
 			envoyPatchPolicy := &egv1a1.EnvoyPatchPolicy{
@@ -766,20 +752,48 @@ func kubernetesYAMLToResources(str string, addMissingResources bool) (*gatewayap
 				Spec: typedSpec.(egv1a1.EnvoyPatchPolicySpec),
 			}
 			resources.EnvoyPatchPolicies = append(resources.EnvoyPatchPolicies, envoyPatchPolicy)
-		case egv1a1.KindRateLimitFilter:
+		case egv1a1.KindClientTrafficPolicy:
 			typedSpec := spec.Interface()
-			rateLimitFilter := &egv1a1.RateLimitFilter{
+			clientTrafficPolicy := &egv1a1.ClientTrafficPolicy{
 				TypeMeta: metav1.TypeMeta{
-					Kind:       egv1a1.KindRateLimitFilter,
+					Kind:       egv1a1.KindClientTrafficPolicy,
 					APIVersion: egv1a1.GroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      name,
 				},
-				Spec: typedSpec.(egv1a1.RateLimitFilterSpec),
+				Spec: typedSpec.(egv1a1.ClientTrafficPolicySpec),
 			}
-			resources.RateLimitFilters = append(resources.RateLimitFilters, rateLimitFilter)
+			resources.ClientTrafficPolicies = append(resources.ClientTrafficPolicies, clientTrafficPolicy)
+		case egv1a1.KindBackendTrafficPolicy:
+			typedSpec := spec.Interface()
+			backendTrafficPolicy := &egv1a1.BackendTrafficPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindBackendTrafficPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.BackendTrafficPolicySpec),
+			}
+			resources.BackendTrafficPolicies = append(resources.BackendTrafficPolicies, backendTrafficPolicy)
+		case egv1a1.KindSecurityPolicy:
+			typedSpec := spec.Interface()
+			securityPolicy := &egv1a1.SecurityPolicy{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       egv1a1.KindSecurityPolicy,
+					APIVersion: egv1a1.GroupVersion.String(),
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      name,
+				},
+				Spec: typedSpec.(egv1a1.SecurityPolicySpec),
+			}
+			resources.SecurityPolicies = append(resources.SecurityPolicies, securityPolicy)
 		}
 	}
 

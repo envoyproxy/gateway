@@ -15,6 +15,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=eproxy
 // +kubebuilder:subresource:status
 
 // EnvoyProxy is the schema for the envoyproxies API.
@@ -122,6 +123,9 @@ type EnvoyProxyKubernetesProvider struct {
 	// are applied.
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:message="allocateLoadBalancerNodePorts can only be set for LoadBalancer type",rule="!has(self.allocateLoadBalancerNodePorts) || self.type == 'LoadBalancer'"
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP can only be set for LoadBalancer type",rule="!has(self.loadBalancerIP) || self.type == 'LoadBalancer'"
+	// +kubebuilder:validation:XValidation:message="loadBalancerIP must be a valid IPv4 address",rule="!has(self.loadBalancerIP) || self.loadBalancerIP.matches(r\"^(((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.|$)){4})\")"
 	EnvoyService *KubernetesServiceSpec `json:"envoyService,omitempty"`
 }
 

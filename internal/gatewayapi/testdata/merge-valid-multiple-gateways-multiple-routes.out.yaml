@@ -125,12 +125,6 @@ httpRoutes:
     - backendRefs:
       - name: service-1
         port: 8080
-      filters:
-      - extensionRef:
-          group: gateway.envoyproxy.io
-          kind: AuthenticationFilter
-          name: test
-        type: ExtensionRef
       matches:
       - path:
           value: /
@@ -241,6 +235,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
@@ -248,13 +243,6 @@ xdsIR:
           distinct: false
           name: ""
           prefix: /
-        requestAuthentication:
-          jwt:
-            providers:
-            - issuer: https://www.test.local
-              name: test
-              remoteJWKS:
-                uri: https://test.local/jwt/public-key/jwks.json
     - address: 0.0.0.0
       hostnames:
       - '*'
@@ -277,6 +265,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: example.com
         name: httproute/default/httproute-2/rule/0/match/0/example_com

@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	debugLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("admin")
+	adminLogger = logging.DefaultLogger(v1alpha1.LogLevelInfo).WithName("admin")
 )
 
 func Init(cfg *config.Server) error {
@@ -36,7 +36,7 @@ func start(cfg *config.Server) error {
 	address := cfg.EnvoyGateway.GetEnvoyGatewayAdminAddress()
 	enablePprof := cfg.EnvoyGateway.GetEnvoyGatewayAdmin().EnablePprof
 
-	debugLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
+	adminLogger.Info("starting admin server", "address", address, "enablePprof", enablePprof)
 
 	if enablePprof {
 		// Serve pprof endpoints to aid in live debugging.
@@ -47,7 +47,7 @@ func start(cfg *config.Server) error {
 		handlers.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	}
 
-	debugServer := &http.Server{
+	adminServer := &http.Server{
 		Handler:           handlers,
 		Addr:              address,
 		ReadTimeout:       5 * time.Second,
@@ -58,7 +58,7 @@ func start(cfg *config.Server) error {
 
 	// Listen And Serve Admin Server.
 	go func() {
-		if err := debugServer.ListenAndServe(); err != nil {
+		if err := adminServer.ListenAndServe(); err != nil {
 			cfg.Logger.Error(err, "start admin server failed")
 		}
 	}()

@@ -222,9 +222,17 @@ func resolveSecurityPolicyRouteTargetRef(policy *egv1a1.SecurityPolicy, routes m
 
 func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPolicy, route RouteContext, xdsIR XdsIRMap) {
 	// Build IR
-	var cors *ir.CORS
+	var (
+		cors *ir.CORS
+		jwt  *ir.JWT
+	)
+
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy)
+	}
+
+	if policy.Spec.JWT != nil {
+		jwt = t.buildJWT(policy)
 	}
 
 	// Apply IR to all relevant routes
@@ -233,8 +241,11 @@ func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPoli
 		for _, http := range ir.HTTP {
 			for _, r := range http.Routes {
 				// Apply if there is a match
+				// TODO zhaohuabing: extract a utils function to check if an HTTP
+				// route is associated with a Gateway API xRoute
 				if strings.HasPrefix(r.Name, prefix) {
 					r.CORS = cors
+					r.JWT = jwt
 				}
 			}
 		}
@@ -244,13 +255,21 @@ func (t *Translator) translateSecurityPolicyForRoute(policy *egv1a1.SecurityPoli
 
 func (t *Translator) translateSecurityPolicyForGateway(policy *egv1a1.SecurityPolicy, gateway *GatewayContext, xdsIR XdsIRMap) {
 	// Build IR
-	var cors *ir.CORS
+	var (
+		cors *ir.CORS
+		jwt  *ir.JWT
+	)
+
 	if policy.Spec.CORS != nil {
 		cors = t.buildCORS(policy)
 	}
 
+	if policy.Spec.JWT != nil {
+		jwt = t.buildJWT(policy)
+	}
+
 	// Apply IR to all the routes within the specific Gateway
-	// If the feature is already set, then skip it, since it must be have
+	// If the feature is already set, then skip it, since it must have be
 	// set by a policy attaching to the route
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
@@ -261,6 +280,9 @@ func (t *Translator) translateSecurityPolicyForGateway(policy *egv1a1.SecurityPo
 			// Apply if not already set
 			if r.CORS == nil {
 				r.CORS = cors
+			}
+			if r.JWT == nil {
+				r.JWT = jwt
 			}
 		}
 	}
@@ -274,28 +296,28 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 		origin := origin.DeepCopy()
 
 		// matchType default to exact
-		matchType := egv1a1.MatchExact
+		matchType := egv1a1.StringMatchExact
 		if origin.Type != nil {
 			matchType = *origin.Type
 		}
 
 		// TODO zhaohuabing: extract a utils function to build StringMatch
 		switch matchType {
-		case egv1a1.MatchExact:
+		case egv1a1.StringMatchExact:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				Exact: &origin.Value,
 			})
-		case egv1a1.MatchPrefix:
+		case egv1a1.StringMatchPrefix:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				Prefix: &origin.Value,
 			})
-		case egv1a1.MatchSuffix:
+		case egv1a1.StringMatchSuffix:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
 				Suffix: &origin.Value,
 			})
-		case egv1a1.MatchRegularExpression:
+		case egv1a1.StringMatchRegularExpression:
 			allowOrigins = append(allowOrigins, &ir.StringMatch{
-				SafeRegex: &origin.Value,
+				SafeRegex: &origin.Value, // TODO zhaohuabing: check if the value is a valid regex
 			})
 		}
 	}
@@ -306,5 +328,11 @@ func (t *Translator) buildCORS(policy *egv1a1.SecurityPolicy) *ir.CORS {
 		AllowHeaders:  policy.Spec.CORS.AllowHeaders,
 		ExposeHeaders: policy.Spec.CORS.ExposeHeaders,
 		MaxAge:        policy.Spec.CORS.MaxAge,
+	}
+}
+
+func (t *Translator) buildJWT(policy *egv1a1.SecurityPolicy) *ir.JWT {
+	return &ir.JWT{
+		Providers: policy.Spec.JWT.Providers,
 	}
 }

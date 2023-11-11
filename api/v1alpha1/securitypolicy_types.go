@@ -16,6 +16,7 @@ const (
 )
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=sp
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.conditions[?(@.type=="Accepted")].reason`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -35,6 +36,10 @@ type SecurityPolicy struct {
 
 // SecurityPolicySpec defines the desired state of SecurityPolicy.
 type SecurityPolicySpec struct {
+	// +kubebuilder:validation:XValidation:rule="self.group == 'gateway.networking.k8s.io'", message="this policy can only have a targetRef.group of gateway.networking.k8s.io"
+	// +kubebuilder:validation:XValidation:rule="self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']", message="this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute"
+	// +kubebuilder:validation:XValidation:rule="!has(self.sectionName)",message="this policy does not yet support the sectionName field"
+	//
 	// TargetRef is the name of the Gateway resource this policy
 	// is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace
@@ -43,64 +48,15 @@ type SecurityPolicySpec struct {
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
-	CORS *CORS `json:"cors,omitempty"`
-}
-
-// CORS defines the configuration for Cross-Origin Resource Sharing (CORS).
-type CORS struct {
-	// AllowOrigins defines the origins that are allowed to make requests.
-	// +kubebuilder:validation:MinItems=1
-	AllowOrigins []StringMatch `json:"allowOrigins,omitempty" yaml:"allowOrigins,omitempty"`
-	// AllowMethods defines the methods that are allowed to make requests.
-	// +kubebuilder:validation:MinItems=1
-	AllowMethods []string `json:"allowMethods,omitempty" yaml:"allowMethods,omitempty"`
-	// AllowHeaders defines the headers that are allowed to be sent with requests.
-	AllowHeaders []string `json:"allowHeaders,omitempty" yaml:"allowHeaders,omitempty"`
-	// ExposeHeaders defines the headers that can be exposed in the responses.
-	ExposeHeaders []string `json:"exposeHeaders,omitempty" yaml:"exposeHeaders,omitempty"`
-	// MaxAge defines how long the results of a preflight request can be cached.
-	MaxAge *metav1.Duration `json:"maxAge,omitempty" yaml:"maxAge,omitempty"`
-}
-
-// StringMatch defines how to match any strings.
-// This is a general purpose match condition that can be used by other EG APIs
-// that need to match against a string.
-type StringMatch struct {
-	// Type specifies how to match against a string.
 	//
 	// +optional
-	// +kubebuilder:default=Exact
-	Type *MatchType `json:"type,omitempty"`
+	CORS *CORS `json:"cors,omitempty"`
 
-	// Value specifies the string value that the match must have.
+	// JWT defines the configuration for JSON Web Token (JWT) authentication.
 	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=1024
-	Value string `json:"value"`
+	// +optional
+	JWT *JWT `json:"jwt,omitempty"`
 }
-
-// MatchType specifies the semantics of how a string value should be compared.
-// Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
-//
-// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
-type MatchType string
-
-const (
-	// MatchExact :the input string must match exactly the match value.
-	MatchExact MatchType = "Exact"
-
-	// MatchPrefix :the input string must start with the match value.
-	MatchPrefix MatchType = "Prefix"
-
-	// MatchSuffix :the input string must end with the match value.
-	MatchSuffix MatchType = "Suffix"
-
-	// MatchRegularExpression :The input string must match the regular expression
-	// specified in the match value.
-	// The regex string must adhere to the syntax documented in
-	// https://github.com/google/re2/wiki/Syntax.
-	MatchRegularExpression MatchType = "RegularExpression"
-)
 
 // SecurityPolicyStatus defines the state of SecurityPolicy
 type SecurityPolicyStatus struct {

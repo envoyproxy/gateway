@@ -8,7 +8,7 @@ Service. To learn more about GatewayClass and ParametersRef, please refer to [Ga
 
 ## Installation
 
-Follow the steps from the [Quickstart Guide](quickstart.md) to install Envoy Gateway and the example manifest.
+Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
 ## Add GatewayClass ParametersRef
@@ -236,7 +236,7 @@ metadata:
 spec:
   bootstrap:
     type: Replace
-    bootstrap: |
+    value: |
       admin:
         access_log:
         - name: envoy.access_loggers.file

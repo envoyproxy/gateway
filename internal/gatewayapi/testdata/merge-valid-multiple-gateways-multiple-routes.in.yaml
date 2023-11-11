@@ -60,12 +60,6 @@ httpRoutes:
       backendRefs:
       - name: service-1
         port: 8080
-      filters:
-      - type: ExtensionRef
-        extensionRef:
-          group: gateway.envoyproxy.io
-          kind: AuthenticationFilter
-          name: test
 - apiVersion: gateway.networking.k8s.io/v1beta1
   kind: HTTPRoute
   metadata:
@@ -85,16 +79,3 @@ httpRoutes:
       backendRefs:
       - name: service-2
         port: 8080
-authenticationFilters:
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: AuthenticationFilter
-  metadata:
-    namespace: default
-    name: test
-  spec:
-    type: JWT
-    jwtProviders:
-    - name: test
-      issuer: https://www.test.local
-      remoteJWKS:
-        uri: https://test.local/jwt/public-key/jwks.json

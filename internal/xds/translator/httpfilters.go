@@ -40,7 +40,7 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	switch filter.Name {
 	case wellknown.CORS:
 		order = 1
-	case jwtAuthenFilter:
+	case jwtAuthnFilter:
 		order = 2
 	case wellknown.HTTPRateLimit:
 		order = 3
@@ -100,13 +100,13 @@ func (t *Translator) patchHCMWithFilters(
 	//       https://github.com/envoyproxy/gateway/issues/882
 	t.patchHCMWithRateLimit(mgr, irListener)
 
-	// Add the jwt authn filter, if needed.
-	if err := patchHCMWithJwtAuthnFilter(mgr, irListener); err != nil {
+	// Add the cors filter, if needed
+	if err := patchHCMWithCORSFilter(mgr, irListener); err != nil {
 		return err
 	}
 
-	// Add the cors filter, if needed
-	if err := patchHCMWithCORSFilter(mgr, irListener); err != nil {
+	// Add the jwt authn filter, if needed.
+	if err := patchHCMWithJWTAuthnFilter(mgr, irListener); err != nil {
 		return err
 	}
 
@@ -129,14 +129,15 @@ func patchRouteWithFilters(
 		return nil
 	}
 
-	// Add the jwt per route config to the route, if needed.
-	if err := patchRouteWithJwtConfig(route, irRoute); err != nil {
-		return nil
-	}
-
 	// Add the cors per route config to the route, if needed.
 	if err := patchRouteWithCORSConfig(route, irRoute); err != nil {
 		return err
 	}
+
+	// Add the jwt per route config to the route, if needed.
+	if err := patchRouteWithJWTConfig(route, irRoute); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -11,6 +11,8 @@ spec:
     kind: SecurityPolicy
     listKind: SecurityPolicyList
     plural: securitypolicies
+    shortNames:
+    - sp
     singular: securitypolicy
   scope: Namespaced
   versions:
@@ -98,6 +100,92 @@ spec:
                       request can be cached.
                     type: string
                 type: object
+              jwt:
+                description: JWT defines the configuration for JSON Web Token (JWT)
+                  authentication.
+                properties:
+                  providers:
+                    description: "Providers defines the JSON Web Token (JWT) authentication
+                      provider type. \n When multiple JWT providers are specified,
+                      the JWT is considered valid if any of the providers successfully
+                      validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html."
+                    items:
+                      description: JWTProvider defines how a JSON Web Token (JWT)
+                        can be verified.
+                      properties:
+                        audiences:
+                          description: Audiences is a list of JWT audiences allowed
+                            access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3.
+                            If not provided, JWT audiences are not checked.
+                          items:
+                            type: string
+                          maxItems: 8
+                          type: array
+                        claimToHeaders:
+                          description: 'ClaimToHeaders is a list of JWT claims that
+                            must be extracted into HTTP request headers For examples,
+                            following config: The claim must be of type; string, int,
+                            double, bool. Array type claims are not supported'
+                          items:
+                            description: ClaimToHeader defines a configuration to
+                              convert JWT claims into HTTP headers
+                            properties:
+                              claim:
+                                description: 'Claim is the JWT Claim that should be
+                                  saved into the header : it can be a nested claim
+                                  of type (eg. "claim.nested.key", "sub"). The nested
+                                  claim name must use dot "." to separate the JSON
+                                  name path.'
+                                type: string
+                              header:
+                                description: Header defines the name of the HTTP request
+                                  header that the JWT Claim will be saved into.
+                                type: string
+                            required:
+                            - claim
+                            - header
+                            type: object
+                          type: array
+                        issuer:
+                          description: Issuer is the principal that issued the JWT
+                            and takes the form of a URL or email address. For additional
+                            details, see https://tools.ietf.org/html/rfc7519#section-4.1.1
+                            for URL format and https://rfc-editor.org/rfc/rfc5322.html
+                            for email format. If not provided, the JWT issuer is not
+                            checked.
+                          maxLength: 253
+                          type: string
+                        name:
+                          description: Name defines a unique name for the JWT provider.
+                            A name can have a variety of forms, including RFC1123
+                            subdomains, RFC 1123 labels, or RFC 1035 labels.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        remoteJWKS:
+                          description: RemoteJWKS defines how to fetch and cache JSON
+                            Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
+                          properties:
+                            uri:
+                              description: URI is the HTTPS URI to fetch the JWKS.
+                                Envoy's system trust bundle is used to validate the
+                                server certificate.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                          required:
+                          - uri
+                          type: object
+                      required:
+                      - name
+                      - remoteJWKS
+                      type: object
+                    maxItems: 4
+                    minItems: 1
+                    type: array
+                required:
+                - providers
+                type: object
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the
@@ -147,6 +235,13 @@ spec:
                 - kind
                 - name
                 type: object
+                x-kubernetes-validations:
+                - message: this policy can only have a targetRef.group of gateway.networking.k8s.io
+                  rule: self.group == 'gateway.networking.k8s.io'
+                - message: this policy can only have a targetRef.kind of Gateway/HTTPRoute/GRPCRoute
+                  rule: self.kind in ['Gateway', 'HTTPRoute', 'GRPCRoute']
+                - message: this policy does not yet support the sectionName field
+                  rule: '!has(self.sectionName)'
             required:
             - targetRef
             type: object

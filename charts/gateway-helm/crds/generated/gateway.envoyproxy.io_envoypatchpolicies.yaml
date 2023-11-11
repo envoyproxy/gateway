@@ -11,6 +11,8 @@ spec:
     kind: EnvoyPatchPolicy
     listKind: EnvoyPatchPolicyList
     plural: envoypatchpolicies
+    shortNames:
+    - epp
     singular: envoypatchpolicy
   scope: Namespaced
   versions:

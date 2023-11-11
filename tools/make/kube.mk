@@ -1,5 +1,5 @@
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION ?= 1.24.1
+ENVTEST_K8S_VERSION ?= 1.27.1
 # GATEWAY_API_VERSION refers to the version of Gateway API CRDs.
 # For more details, see https://gateway-api.sigs.k8s.io/guides/getting-started/#installing-gateway-api 
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{.Version}}' sigs.k8s.io/gateway-api)
@@ -48,8 +48,7 @@ kube-generate: $(tools/controller-gen) ## Generate code containing DeepCopy, Dee
 .PHONY: kube-test
 kube-test: manifests generate $(tools/setup-envtest) ## Run Kubernetes provider tests.
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration ./... -coverprofile cover.out
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=celvalidation ./... -coverprofile cover.out
+	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test --tags=integration,celvalidation ./... -coverprofile cover.out
 
 ##@ Kubernetes Deployment
 

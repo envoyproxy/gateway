@@ -64,8 +64,8 @@ httpRoutes:
     parents:
     - conditions:
       - lastTransitionTime: null
-        message: There are no ready listeners for this parent ref
-        reason: NoReadyListeners
+        message: No listeners included by this parent ref allowed this attachment.
+        reason: NotAllowedByListeners
         status: "False"
         type: Accepted
       - lastTransitionTime: null

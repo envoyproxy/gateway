@@ -14,7 +14,6 @@ API group.
 
 
 ### Resource Types
-- [AuthenticationFilter](#authenticationfilter)
 - [BackendTrafficPolicy](#backendtrafficpolicy)
 - [BackendTrafficPolicyList](#backendtrafficpolicylist)
 - [ClientTrafficPolicy](#clienttrafficpolicy)
@@ -23,51 +22,8 @@ API group.
 - [EnvoyPatchPolicy](#envoypatchpolicy)
 - [EnvoyPatchPolicyList](#envoypatchpolicylist)
 - [EnvoyProxy](#envoyproxy)
-- [RateLimitFilter](#ratelimitfilter)
 - [SecurityPolicy](#securitypolicy)
 - [SecurityPolicyList](#securitypolicylist)
-
-
-
-#### AuthenticationFilter
-
-
-
-
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
-| `kind` _string_ | `AuthenticationFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[AuthenticationFilterSpec](#authenticationfilterspec)_ | Spec defines the desired state of the AuthenticationFilter type. |
-
-
-#### AuthenticationFilterSpec
-
-
-
-AuthenticationFilterSpec defines the desired state of the AuthenticationFilter type.
-
-_Appears in:_
-- [AuthenticationFilter](#authenticationfilter)
-
-| Field | Description |
-| --- | --- |
-| `type` _[AuthenticationFilterType](#authenticationfiltertype)_ | Type defines the type of authentication provider to use. Supported provider types are "JWT". |
-| `jwtProviders` _[JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider) array_ | JWT defines the JSON Web Token (JWT) authentication provider type. When multiple jwtProviders are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
-
-
-#### AuthenticationFilterType
-
-_Underlying type:_ `string`
-
-AuthenticationFilterType is a type of authentication provider.
-
-_Appears in:_
-- [AuthenticationFilterSpec](#authenticationfilterspec)
 
 
 
@@ -116,7 +72,7 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
-| `rateLimit` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
+| `rateLimit` _[RateLimitSpec](#ratelimitspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
 
 
@@ -158,7 +114,7 @@ _Appears in:_
 ClaimToHeader defines a configuration to convert JWT claims into HTTP headers
 
 _Appears in:_
-- [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
+- [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
@@ -319,8 +275,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `address` _[EnvoyGatewayAdminAddress](#envoygatewayadminaddress)_ | Address defines the address of Envoy Gateway Admin Server. |
-| `EnableDumpConfig` _boolean_ | EnableDumpConfig defines if enable dump config in Envoy Gateway logs. |
-| `EnablePprof` _boolean_ | EnablePprof defines if enable pprof in Envoy Gateway Admin Server. |
+| `enableDumpConfig` _boolean_ | EnableDumpConfig defines if enable dump config in Envoy Gateway logs. |
+| `enablePprof` _boolean_ | EnablePprof defines if enable pprof in Envoy Gateway Admin Server. |
 
 
 #### EnvoyGatewayAdminAddress
@@ -834,7 +790,7 @@ _Appears in:_
 GlobalRateLimit defines global rate limit configuration.
 
 _Appears in:_
-- [RateLimitFilterSpec](#ratelimitfilterspec)
+- [RateLimitSpec](#ratelimitspec)
 
 | Field | Description |
 | --- | --- |
@@ -906,14 +862,29 @@ _Appears in:_
 
 
 
-#### JwtAuthenticationFilterProvider
+#### JWT
 
 
 
-JwtAuthenticationFilterProvider defines the JSON Web Token (JWT) authentication provider type and how JWTs should be verified:
+JWT defines the configuration for JSON Web Token (JWT) authentication.
 
 _Appears in:_
-- [AuthenticationFilterSpec](#authenticationfilterspec)
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `providers` _[JWTProvider](#jwtprovider) array_ | Providers defines the JSON Web Token (JWT) authentication provider type. 
+ When multiple JWT providers are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
+
+
+#### JWTProvider
+
+
+
+JWTProvider defines how a JSON Web Token (JWT) can be verified.
+
+_Appears in:_
+- [JWT](#jwt)
 
 | Field | Description |
 | --- | --- |
@@ -1061,7 +1032,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid RateLimitType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
+| `type` _[LoadBalancerType](#loadbalancertype)_ | Type decides the type of Load Balancer policy. Valid LoadBalancerType values are "ConsistentHash", "LeastRequest", "Random", "RoundRobin", |
 | `consistentHash` _[ConsistentHash](#consistenthash)_ | ConsistentHash defines the configuration when the load balancer type is set to ConsistentHash |
 
 
@@ -1085,43 +1056,6 @@ LogLevel defines a log level for Envoy Gateway and EnvoyProxy system logs.
 _Appears in:_
 - [EnvoyGatewayLogging](#envoygatewaylogging)
 - [ProxyLogging](#proxylogging)
-
-
-
-#### Match
-
-
-
-Match defines the stats match configuration.
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `type` _[MatcherType](#matchertype)_ | MatcherType defines the stats matcher type |
-| `value` _string_ |  |
-
-
-#### MatchType
-
-_Underlying type:_ `string`
-
-MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
-
-_Appears in:_
-- [StringMatch](#stringmatch)
-
-
-
-#### MatcherType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [Match](#match)
 
 
 
@@ -1317,7 +1251,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[ProxyPrometheusProvider](#proxyprometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[ProxyMetricSink](#proxymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
+| `matches` _[StringMatch](#stringmatch) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 
 
@@ -1425,38 +1359,6 @@ _Appears in:_
 
 
 
-#### RateLimitFilter
-
-
-
-RateLimitFilter allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow.
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway.envoyproxy.io/v1alpha1`
-| `kind` _string_ | `RateLimitFilter`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[RateLimitFilterSpec](#ratelimitfilterspec)_ | Spec defines the desired state of RateLimitFilter. |
-
-
-#### RateLimitFilterSpec
-
-
-
-RateLimitFilterSpec defines the desired state of RateLimitFilter.
-
-_Appears in:_
-- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
-- [RateLimitFilter](#ratelimitfilter)
-
-| Field | Description |
-| --- | --- |
-| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
-| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
-
-
 #### RateLimitRedisSettings
 
 
@@ -1502,6 +1404,21 @@ _Appears in:_
 | `sourceCIDR` _[SourceMatch](#sourcematch)_ | SourceCIDR is the client IP Address range to match on. |
 
 
+#### RateLimitSpec
+
+
+
+RateLimitSpec defines the desired state of RateLimitSpec.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `type` _[RateLimitType](#ratelimittype)_ | Type decides the scope for the RateLimits. Valid RateLimitType values are "Global". |
+| `global` _[GlobalRateLimit](#globalratelimit)_ | Global defines global rate limit configuration. |
+
+
 #### RateLimitType
 
 _Underlying type:_ `string`
@@ -1509,7 +1426,7 @@ _Underlying type:_ `string`
 RateLimitType specifies the types of RateLimiting.
 
 _Appears in:_
-- [RateLimitFilterSpec](#ratelimitfilterspec)
+- [RateLimitSpec](#ratelimitspec)
 
 
 
@@ -1560,7 +1477,7 @@ _Appears in:_
 RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint.
 
 _Appears in:_
-- [JwtAuthenticationFilterProvider](#jwtauthenticationfilterprovider)
+- [JWTProvider](#jwtprovider)
 
 | Field | Description |
 | --- | --- |
@@ -1639,6 +1556,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 
 
 
@@ -1673,11 +1591,23 @@ StringMatch defines how to match any strings. This is a general purpose match co
 
 _Appears in:_
 - [CORS](#cors)
+- [ProxyMetrics](#proxymetrics)
 
 | Field | Description |
 | --- | --- |
-| `type` _[MatchType](#matchtype)_ | Type specifies how to match against a string. |
+| `type` _[StringMatchType](#stringmatchtype)_ | Type specifies how to match against a string. |
 | `value` _string_ | Value specifies the string value that the match must have. |
+
+
+#### StringMatchType
+
+_Underlying type:_ `string`
+
+StringMatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+
+_Appears in:_
+- [StringMatch](#stringmatch)
+
 
 
 #### TCPKeepalive

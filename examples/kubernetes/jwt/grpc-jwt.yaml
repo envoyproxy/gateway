@@ -1,0 +1,33 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: jwt-example
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: GRPCRoute
+    name: yages
+  jwt:
+    providers:
+    - name: example
+      remoteJWKS:
+        uri: https://raw.githubusercontent.com/envoyproxy/gateway/main/examples/kubernetes/jwt/jwks.json
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: GRPCRoute
+metadata:
+  name: yages
+  labels:
+    example: grpc-routing
+spec:
+  parentRefs:
+  - name: example-gateway
+  hostnames:
+  - "grpc-example.com"
+  rules:
+  - backendRefs:
+    - group: ""
+      kind: Service
+      name: yages
+      port: 9000
+      weight: 1

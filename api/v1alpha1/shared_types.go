@@ -21,6 +21,10 @@ const (
 	DefaultEnvoyProxyImage = "envoyproxy/envoy-dev:latest"
 	// DefaultRateLimitImage is the default image used by ratelimit.
 	DefaultRateLimitImage = "envoyproxy/ratelimit:master"
+	// HTTPProtocol is the common-used http protocol.
+	HTTPProtocol = "http"
+	// GRPCProtocol is the common-used grpc protocol.
+	GRPCProtocol = "grpc"
 )
 
 // GroupVersionKind unambiguously identifies a Kind.
@@ -230,4 +234,44 @@ const (
 	XDSRoute        XDSTranslatorHook = "Route"
 	XDSHTTPListener XDSTranslatorHook = "HTTPListener"
 	XDSTranslation  XDSTranslatorHook = "Translation"
+)
+
+// StringMatch defines how to match any strings.
+// This is a general purpose match condition that can be used by other EG APIs
+// that need to match against a string.
+type StringMatch struct {
+	// Type specifies how to match against a string.
+	//
+	// +optional
+	// +kubebuilder:default=Exact
+	Type *StringMatchType `json:"type,omitempty"`
+
+	// Value specifies the string value that the match must have.
+	//
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1024
+	Value string `json:"value"`
+}
+
+// StringMatchType specifies the semantics of how a string value should be compared.
+// Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+//
+// +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
+type StringMatchType string
+
+const (
+	// MatchExact :the input string must match exactly the match value.
+	StringMatchExact StringMatchType = "Exact"
+
+	// MatchPrefix :the input string must start with the match value.
+	StringMatchPrefix StringMatchType = "Prefix"
+
+	// MatchSuffix :the input string must end with the match value.
+	StringMatchSuffix StringMatchType = "Suffix"
+
+	// MatchRegularExpression :The input string must match the regular expression
+	// specified in the match value.
+	// The regex string must adhere to the syntax documented in
+	// https://github.com/google/re2/wiki/Syntax.
+	StringMatchRegularExpression StringMatchType = "RegularExpression"
 )

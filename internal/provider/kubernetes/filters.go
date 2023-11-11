@@ -10,65 +10,7 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 )
-
-func (r *gatewayAPIReconciler) getAuthenticationFilters(ctx context.Context) ([]egv1a1.AuthenticationFilter, error) {
-	authenList := new(egv1a1.AuthenticationFilterList)
-	if err := r.client.List(ctx, authenList); err != nil {
-		return nil, fmt.Errorf("failed to list AuthenticationFilters: %v", err)
-	}
-
-	authens := authenList.Items
-	if len(r.namespaceLabels) != 0 {
-		var as []egv1a1.AuthenticationFilter
-		for _, a := range authens {
-			ns := a.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for AuthenicationFilter %s in namespace %s: %s", a.GetName(), ns, err)
-			}
-
-			if ok {
-				as = append(as, a)
-			}
-		}
-
-		authens = as
-	}
-
-	return authens, nil
-}
-
-func (r *gatewayAPIReconciler) getRateLimitFilters(ctx context.Context) ([]egv1a1.RateLimitFilter, error) {
-	rateLimitList := new(egv1a1.RateLimitFilterList)
-	if err := r.client.List(ctx, rateLimitList); err != nil {
-		return nil, fmt.Errorf("failed to list RateLimitFilters: %v", err)
-	}
-
-	rateLimits := rateLimitList.Items
-	if len(r.namespaceLabels) != 0 {
-		var rls []egv1a1.RateLimitFilter
-		for _, rl := range rateLimits {
-			ns := rl.GetNamespace()
-			ok, err := r.checkObjectNamespaceLabels(ns)
-			if err != nil {
-				// TODO: should return? or just proceed?
-				return nil, fmt.Errorf("failed to check namespace labels for RateLimitFilter %s in namespace %s: %s", rl.GetName(), ns, err)
-			}
-
-			if ok {
-				rls = append(rls, rl)
-			}
-		}
-
-		rateLimits = rls
-	}
-
-	return rateLimits, nil
-}
 
 func (r *gatewayAPIReconciler) getExtensionRefFilters(ctx context.Context) ([]unstructured.Unstructured, error) {
 	var resourceItems []unstructured.Unstructured

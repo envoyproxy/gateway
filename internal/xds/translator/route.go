@@ -43,7 +43,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 	case httpRoute.Redirect != nil:
 		router.Action = &routev3.Route_Redirect{Redirect: buildXdsRedirectAction(httpRoute.Redirect)}
 	case httpRoute.URLRewrite != nil:
-		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite)
+		routeAction := buildXdsURLRewriteAction(httpRoute.Destination.Name, httpRoute.URLRewrite, httpRoute.PathMatch)
 		if httpRoute.Mirrors != nil {
 			routeAction.RequestMirrorPolicies = buildXdsRequestMirrorPolicies(httpRoute.Mirrors)
 		}
@@ -78,7 +78,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 
 	// Add per route filter configs to the route, if needed.
 	if err := patchRouteWithFilters(router, httpRoute); err != nil {
-		return nil
+		return nil // TODO zhaohuabing we need to handle this error
 	}
 
 	return router
@@ -101,14 +101,15 @@ func buildXdsRouteMatch(pathMatch *ir.StringMatch, headerMatches []*ir.StringMat
 				Path: *pathMatch.Exact,
 			}
 		} else if pathMatch.Prefix != nil {
-			// when the prefix ends with "/", use RouteMatch_Prefix
-			if strings.HasSuffix(*pathMatch.Prefix, "/") {
+			if *pathMatch.Prefix == "/" {
 				outMatch.PathSpecifier = &routev3.RouteMatch_Prefix{
-					Prefix: *pathMatch.Prefix,
+					Prefix: "/",
 				}
 			} else {
+				// Remove trailing /
+				trimmedPrefix := strings.TrimSuffix(*pathMatch.Prefix, "/")
 				outMatch.PathSpecifier = &routev3.RouteMatch_PathSeparatedPrefix{
-					PathSeparatedPrefix: *pathMatch.Prefix,
+					PathSeparatedPrefix: trimmedPrefix,
 				}
 			}
 		} else if pathMatch.SafeRegex != nil {
@@ -252,7 +253,7 @@ func buildXdsRedirectAction(redirection *ir.Redirect) *routev3.RedirectAction {
 	return routeAction
 }
 
-func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *routev3.RouteAction {
+func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite, pathMatch *ir.StringMatch) *routev3.RouteAction {
 	routeAction := &routev3.RouteAction{
 		ClusterSpecifier: &routev3.RouteAction_Cluster{
 			Cluster: destName,
@@ -268,7 +269,21 @@ func buildXdsURLRewriteAction(destName string, urlRewrite *ir.URLRewrite) *route
 				Substitution: *urlRewrite.Path.FullReplace,
 			}
 		} else if urlRewrite.Path.PrefixMatchReplace != nil {
-			routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			// Circumvent the case of "//" when the replace string is "/"
+			// An empty replace string does not seem to solve the issue so we are using
+			// a regex match and replace instead
+			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
+			if pathMatch != nil && pathMatch.Prefix != nil &&
+				(*urlRewrite.Path.PrefixMatchReplace == "" || *urlRewrite.Path.PrefixMatchReplace == "/") {
+				routeAction.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
+					Pattern: &matcherv3.RegexMatcher{
+						Regex: "^" + *pathMatch.Prefix + `\/*`,
+					},
+					Substitution: "/",
+				}
+			} else {
+				routeAction.PrefixRewrite = *urlRewrite.Path.PrefixMatchReplace
+			}
 		}
 	}
 

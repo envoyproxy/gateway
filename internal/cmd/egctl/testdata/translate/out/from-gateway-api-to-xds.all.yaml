@@ -42,10 +42,6 @@ xds:
             name: prometheus_stats
             type: STATIC
           - connectTimeout: 10s
-            http2ProtocolOptions:
-              connectionKeepalive:
-                interval: 30s
-                timeout: 5s
             loadAssignment:
               clusterName: xds_cluster
               endpoints:
@@ -82,7 +78,10 @@ xds:
               envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
                 '@type': type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
                 explicitHttpConfig:
-                  http2ProtocolOptions: {}
+                  http2ProtocolOptions:
+                    connectionKeepalive:
+                      interval: 30s
+                      timeout: 5s
           listeners:
           - address:
               socketAddress:

@@ -52,9 +52,10 @@ go.testdata.complete: ## Override test ouputdata
 	go test -timeout 30s github.com/envoyproxy/gateway/internal/gatewayapi --override-testdata=true
 
 .PHONY: go.test.coverage
-go.test.coverage: kube-test $(tools/setup-envtest) ## Run go unit and integration tests in GitHub Actions
+go.test.coverage: $(tools/setup-envtest) ## Run go unit and integration tests in GitHub Actions
 	@$(LOG_TARGET)
-	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... --tags=integration -race -coverprofile=coverage.xml -covermode=atomic
+	KUBEBUILDER_ASSETS="$(shell $(tools/setup-envtest) use $(ENVTEST_K8S_VERSION) -p path)" \
+		go test ./... --tags=integration,celvalidation -race -coverprofile=coverage.xml -covermode=atomic
 
 .PHONY: go.clean
 go.clean: ## Clean the building output files

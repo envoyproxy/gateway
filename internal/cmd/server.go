@@ -17,6 +17,7 @@ import (
 	infrarunner "github.com/envoyproxy/gateway/internal/infrastructure/runner"
 	"github.com/envoyproxy/gateway/internal/logging"
 	"github.com/envoyproxy/gateway/internal/message"
+	"github.com/envoyproxy/gateway/internal/metrics"
 	providerrunner "github.com/envoyproxy/gateway/internal/provider/runner"
 	xdsserverrunner "github.com/envoyproxy/gateway/internal/xds/server/runner"
 	xdstranslatorrunner "github.com/envoyproxy/gateway/internal/xds/translator/runner"
@@ -54,6 +55,11 @@ func server() error {
 	if err := admin.Init(cfg); err != nil {
 		return err
 	}
+	// Init eg metrics servers.
+	if err := metrics.Init(cfg); err != nil {
+		return err
+	}
+
 	// init eg runners.
 	if err := setupRunners(cfg); err != nil {
 		return err
