@@ -14,8 +14,6 @@ import (
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
 
-	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -152,6 +150,11 @@ func (x Xds) Printable() *Xds {
 	for _, listener := range out.HTTP {
 		// Omit field
 		listener.TLS = nil
+
+		for _, route := range listener.Routes {
+			// Omit field
+			route.OIDC.ClientSecret = []byte{}
+		}
 	}
 	return out
 }
@@ -330,21 +333,22 @@ type JWT struct {
 // +k8s:deepcopy-gen=true
 type OIDC struct {
 	// The OIDC Provider configuration.
-	Provider egv1a1.OIDCProvider `json:"provider"`
+	Provider egv1a1.OIDCProvider `json:"provider" yaml:"provider"`
 
-	// The OIDC client ID assigned to the filter to be used in the
+	// The OIDC client ID to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	ClientID string `json:"clientID"`
+	ClientID string `json:"clientID" yaml:"clientID"`
 
-	// The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the
+	// The OIDC client secret to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key "clientSecret".
-	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
+
+	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
-	Scopes []string `json:"scopes,omitempty"`
+	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure

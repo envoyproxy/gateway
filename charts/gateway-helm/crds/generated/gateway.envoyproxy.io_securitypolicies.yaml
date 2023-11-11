@@ -191,16 +191,15 @@ spec:
                   (OIDC) authentication.
                 properties:
                   clientID:
-                    description: The client ID assigned to this policy to be used
-                      in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                    description: The client ID to be used in the OIDC [Authentication
+                      Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                     minLength: 1
                     type: string
                   clientSecret:
                     description: "The Kubernetes secret which contains the OIDC client
-                      secret assigned to the filter to be used in the [Authentication
-                      Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+                      secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                       \n This is an Opaque secret. The client secret should be stored
-                      in the key \"client_secret\"."
+                      in the key \"clientSecret\"."
                     properties:
                       group:
                         default: ""

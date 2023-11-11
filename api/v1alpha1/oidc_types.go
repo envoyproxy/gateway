@@ -16,14 +16,13 @@ type OIDC struct {
 	// The OIDC Provider configuration.
 	Provider OIDCProvider `json:"provider"`
 
-	// The client ID assigned to this policy to be used in the OIDC
+	// The client ID to be used in the OIDC
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// +kubebuilder:validation:MinLength=1
 	ClientID string `json:"clientID"`
 
-	// The Kubernetes secret which contains the OIDC client secret assigned to
-	// the filter to be used in the
+	// The Kubernetes secret which contains the OIDC client secret to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key

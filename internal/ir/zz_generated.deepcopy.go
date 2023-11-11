@@ -691,7 +691,11 @@ func (in *Metrics) DeepCopy() *Metrics {
 func (in *OIDC) DeepCopyInto(out *OIDC) {
 	*out = *in
 	in.Provider.DeepCopyInto(&out.Provider)
-	in.ClientSecret.DeepCopyInto(&out.ClientSecret)
+	if in.ClientSecret != nil {
+		in, out := &in.ClientSecret, &out.ClientSecret
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
 	if in.Scopes != nil {
 		in, out := &in.Scopes, &out.Scopes
 		*out = make([]string, len(*in))

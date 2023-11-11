@@ -427,8 +427,8 @@ func (t *Translator) buildOIDC(
 		return nil, err
 	}
 
-	val, ok := clientSecret.Data[egv1a1.OIDCClientSecretKey]
-	if !ok || len(val) == 0 {
+	clientSecretBytes, ok := clientSecret.Data[egv1a1.OIDCClientSecretKey]
+	if !ok || len(clientSecretBytes) == 0 {
 		return nil, fmt.Errorf("client secret not found in secret %s/%s", clientSecret.Namespace, clientSecret.Name)
 	}
 
@@ -444,7 +444,7 @@ func (t *Translator) buildOIDC(
 	return &ir.OIDC{
 		Provider:     *provider,
 		ClientID:     oidc.ClientID,
-		ClientSecret: oidc.ClientSecret,
+		ClientSecret: clientSecretBytes,
 		Scopes:       scopes,
 	}, nil
 }

@@ -727,10 +727,9 @@ func (t *Translator) validateHostname(hostname string) error {
 }
 
 // validateSecretRef checks three things:
-//  1. Dose the secret reference has valid Group and kind
-//  2. If the secret reference is a cross namespace reference, is it permitted by
-//     any ReferenceGrant
-//  3. Does the secret exist
+// 1. Does the secret reference have a valid Group and kind
+// 2. If the secret reference is a cross-namespace reference, is it permitted by any ReferenceGrant
+// 3. Does the secret exist
 func (t *Translator) validateSecretRef(
 	from crossNamespaceFrom,
 	secretRef gwapiv1b1.SecretObjectReference,

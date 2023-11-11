@@ -1083,8 +1083,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
-| `clientID` _string_ | The client ID assigned to this policy to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
-| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret assigned to the filter to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
+| `clientID` _string_ | The client ID to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
+| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
  This is an Opaque secret. The client secret should be stored in the key "clientSecret". |
 | `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
 
