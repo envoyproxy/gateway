@@ -1160,7 +1160,7 @@ _Appears in:_
 
 
 
-
+ProxyAccessLogSink defines the sink of accesslog.
 
 _Appears in:_
 - [ProxyAccessLogSetting](#proxyaccesslogsetting)
@@ -1227,7 +1227,7 @@ _Appears in:_
 
 
 
-
+ProxyMetricSink defines the sink of metrics. Default metrics sink is OpenTelemetry.
 
 _Appears in:_
 - [ProxyMetrics](#proxymetrics)

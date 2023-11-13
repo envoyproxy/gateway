@@ -5350,9 +5350,18 @@ spec:
                                   - JSON
                                   type: string
                               type: object
+                              x-kubernetes-validations:
+                              - message: If AccessLogFormat type is Text, text field
+                                  needs to be set.
+                                rule: 'self.type == ''Text'' ? has(self.text) : !has(self.text)'
+                              - message: If AccessLogFormat type is JSON, json field
+                                  needs to be set.
+                                rule: 'self.type == ''JSON'' ? has(self.json) : !has(self.json)'
                             sinks:
                               description: Sinks defines the sinks of accesslog.
                               items:
+                                description: ProxyAccessLogSink defines the sink of
+                                  accesslog.
                                 properties:
                                   file:
                                     description: File defines the file accesslog sink.
@@ -5397,6 +5406,15 @@ spec:
                                     - OpenTelemetry
                                     type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: If AccessLogSink type is File, file field
+                                    needs to be set.
+                                  rule: 'self.type == ''File'' ? has(self.file) :
+                                    !has(self.file)'
+                                - message: If AccessLogSink type is OpenTelemetry,
+                                    openTelemetry field needs to be set.
+                                  rule: 'self.type == ''OpenTelemetry'' ? has(self.openTelemetry)
+                                    : !has(self.openTelemetry)'
                               minItems: 1
                               type: array
                           required:
@@ -5459,6 +5477,8 @@ spec:
                         description: Sinks defines the metric sinks where metrics
                           are sent to.
                         items:
+                          description: ProxyMetricSink defines the sink of metrics.
+                            Default metrics sink is OpenTelemetry.
                           properties:
                             openTelemetry:
                               description: OpenTelemetry defines the configuration
@@ -5489,6 +5509,11 @@ spec:
                           required:
                           - type
                           type: object
+                          x-kubernetes-validations:
+                          - message: If MetricSink type is OpenTelemetry, openTelemetry
+                              field needs to be set.
+                            rule: 'self.type == ''OpenTelemetry'' ? has(self.openTelemetry)
+                              : !has(self.openTelemetry)'
                         type: array
                     type: object
                   tracing:

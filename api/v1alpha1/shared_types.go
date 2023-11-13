@@ -260,16 +260,16 @@ type StringMatch struct {
 type StringMatchType string
 
 const (
-	// MatchExact :the input string must match exactly the match value.
+	// StringMatchExact :the input string must match exactly the match value.
 	StringMatchExact StringMatchType = "Exact"
 
-	// MatchPrefix :the input string must start with the match value.
+	// StringMatchPrefix :the input string must start with the match value.
 	StringMatchPrefix StringMatchType = "Prefix"
 
-	// MatchSuffix :the input string must end with the match value.
+	// StringMatchSuffix :the input string must end with the match value.
 	StringMatchSuffix StringMatchType = "Suffix"
 
-	// MatchRegularExpression :The input string must match the regular expression
+	// StringMatchRegularExpression :The input string must match the regular expression
 	// specified in the match value.
 	// The regex string must adhere to the syntax documented in
 	// https://github.com/google/re2/wiki/Syntax.

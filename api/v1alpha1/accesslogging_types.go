@@ -35,6 +35,9 @@ const (
 // ProxyAccessLogFormat defines the format of accesslog.
 // By default accesslogs are written to standard output.
 // +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'Text' ? has(self.text) : !has(self.text)",message="If AccessLogFormat type is Text, text field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'JSON' ? has(self.json) : !has(self.json)",message="If AccessLogFormat type is JSON, json field needs to be set."
 type ProxyAccessLogFormat struct {
 	// Type defines the type of accesslog format.
 	// +kubebuilder:validation:Enum=Text;JSON
@@ -65,9 +68,15 @@ const (
 	ProxyAccessLogSinkTypeOpenTelemetry ProxyAccessLogSinkType = "OpenTelemetry"
 )
 
+// ProxyAccessLogSink defines the sink of accesslog.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'File' ? has(self.file) : !has(self.file)",message="If AccessLogSink type is File, file field needs to be set."
+// +kubebuilder:validation:XValidation:rule="self.type == 'OpenTelemetry' ? has(self.openTelemetry) : !has(self.openTelemetry)",message="If AccessLogSink type is OpenTelemetry, openTelemetry field needs to be set."
 type ProxyAccessLogSink struct {
 	// Type defines the type of accesslog sink.
 	// +kubebuilder:validation:Enum=File;OpenTelemetry
+	// +unionDiscriminator
 	Type ProxyAccessLogSinkType `json:"type,omitempty"`
 	// File defines the file accesslog sink.
 	// +optional
