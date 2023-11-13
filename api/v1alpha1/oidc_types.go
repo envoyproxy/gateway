@@ -9,7 +9,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-const OIDCClientSecretKey = "clientSecret"
+const OIDCClientSecretKey = "client-secret"
 
 // OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
 type OIDC struct {
@@ -26,7 +26,7 @@ type OIDC struct {
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
 	// This is an Opaque secret. The client secret should be stored in the key
-	// "clientSecret".
+	// "client-secret".
 	// +kubebuilder:validation:Required
 	ClientSecret gwapiv1b1.SecretObjectReference `json:"clientSecret"`
 

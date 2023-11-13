@@ -16,7 +16,7 @@ gateways:
       protocol: HTTP
   status:
     listeners:
-    - attachedRoutes: 3
+    - attachedRoutes: 2
       conditions:
       - lastTransitionTime: null
         message: Sending translated listener configuration to the data plane
@@ -39,40 +39,6 @@ gateways:
         kind: HTTPRoute
       - group: gateway.networking.k8s.io
         kind: GRPCRoute
-grpcRoutes:
-- apiVersion: gateway.networking.k8s.io/v1alpha2
-  kind: GRPCRoute
-  metadata:
-    creationTimestamp: null
-    name: grpcroute-1
-    namespace: default
-  spec:
-    parentRefs:
-    - name: gateway-1
-      namespace: envoy-gateway
-      sectionName: http
-    rules:
-    - backendRefs:
-      - name: service-1
-        port: 8080
-  status:
-    parents:
-    - conditions:
-      - lastTransitionTime: null
-        message: Route is accepted
-        reason: Accepted
-        status: "True"
-        type: Accepted
-      - lastTransitionTime: null
-        message: Resolved all the Object references for the Route
-        reason: ResolvedRefs
-        status: "True"
-        type: ResolvedRefs
-      controllerName: gateway.envoyproxy.io/gatewayclass-controller
-      parentRef:
-        name: gateway-1
-        namespace: envoy-gateway
-        sectionName: http
 httpRoutes:
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
@@ -173,68 +139,55 @@ securityPolicies:
     name: policy-for-http-route
     namespace: default
   spec:
+    jwt:
+      providers:
+      - audiences:
+        - two.foo.com
+        claimToHeaders:
+        - claim: claim2
+          header: one-route-example-key
+        issuer: https://two.example.com
+        name: example2
+        remoteJWKS:
+          uri: https://one.example.com/jwt/public-key/jwks.json
     oidc:
-      clientID: client2.oauth.foo.com
+      clientID: client1.apps.googleusercontent.com
       clientSecret:
         group: null
         kind: null
         name: client2-secret
       provider:
-        authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-        issuer: https://oauth.foo.com
-        tokenEndpoint: https://oauth.foo.com/token
-      scopes:
-      - openid
-      - email
-      - profile
+        issuer: https://accounts.google.com
     targetRef:
       group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: httproute-1
+      name: httproute-2
       namespace: default
   status:
     conditions:
     - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
+      message: Secret default/client2-secret does not exist.
+      reason: Invalid
+      status: "False"
       type: Accepted
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: SecurityPolicy
   metadata:
     creationTimestamp: null
-    name: policy-cross-namespace-secretRef
-    namespace: default
-  spec:
-    oidc:
-      clientID: client3.bar.foo.com
-      clientSecret:
-        group: null
-        kind: null
-        name: client3-secret
-        namespace: default
-      provider:
-        authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
-        issuer: https://oauth.bar.com
-        tokenEndpoint: https://oauth.bar.com/token
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: GRPCRoute
-      name: grpcroute-1
-  status:
-    conditions:
-    - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
-      type: Accepted
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: SecurityPolicy
-  metadata:
-    creationTimestamp: null
-    name: policy-for-gateway-discover-endpoints
+    name: policy-for-gateway
     namespace: envoy-gateway
   spec:
+    jwt:
+      providers:
+      - audiences:
+        - one.foo.com
+        claimToHeaders:
+        - claim: claim1
+          header: one-route-example-key
+        issuer: https://one.example.com
+        name: example1
+        remoteJWKS:
+          uri: https://one.example.com/jwt/public-key/jwks.json
     oidc:
       clientID: client1.apps.googleusercontent.com
       clientSecret:
@@ -251,9 +204,9 @@ securityPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: SecurityPolicy has been accepted.
-      reason: Accepted
-      status: "True"
+      message: Secret envoy-gateway/client1-secret does not exist.
+      reason: Invalid
+      status: "False"
       type: Accepted
 xdsIR:
   envoy-gateway/gateway-1:
@@ -264,7 +217,7 @@ xdsIR:
     - address: 0.0.0.0
       hostnames:
       - '*'
-      isHTTP2: true
+      isHTTP2: false
       name: envoy-gateway/gateway-1/http
       port: 10080
       routes:
@@ -280,18 +233,18 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        jwt:
+          providers:
+          - audiences:
+            - one.foo.com
+            claimToHeaders:
+            - claim: claim1
+              header: one-route-example-key
+            issuer: https://one.example.com
+            name: example1
+            remoteJWKS:
+              uri: https://one.example.com/jwt/public-key/jwks.json
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
-        oidc:
-          clientID: client2.oauth.foo.com
-          clientSecret: Y2xpZW50MTpzZWNyZXQK
-          provider:
-            authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-            issuer: https://oauth.foo.com
-            tokenEndpoint: https://oauth.foo.com/token
-          scopes:
-          - openid
-          - email
-          - profile
         pathMatch:
           distinct: false
           name: ""
@@ -308,39 +261,19 @@ xdsIR:
             protocol: HTTP
             weight: 1
         hostname: gateway.envoyproxy.io
+        jwt:
+          providers:
+          - audiences:
+            - two.foo.com
+            claimToHeaders:
+            - claim: claim2
+              header: one-route-example-key
+            issuer: https://two.example.com
+            name: example2
+            remoteJWKS:
+              uri: https://one.example.com/jwt/public-key/jwks.json
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
-        oidc:
-          clientID: client1.apps.googleusercontent.com
-          clientSecret: Y2xpZW50MTpzZWNyZXQK
-          provider:
-            authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-            issuer: https://accounts.google.com
-            tokenEndpoint: https://oauth2.googleapis.com/token
-          scopes:
-          - openid
         pathMatch:
           distinct: false
           name: ""
           prefix: /bar
-      - backendWeights:
-          invalid: 0
-          valid: 0
-        destination:
-          name: grpcroute/default/grpcroute-1/rule/0
-          settings:
-          - endpoints:
-            - host: 7.7.7.7
-              port: 8080
-            protocol: GRPC
-            weight: 1
-        hostname: '*'
-        name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
-        oidc:
-          clientID: client3.bar.foo.com
-          clientSecret: Y2xpZW50MTpzZWNyZXQK
-          provider:
-            authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
-            issuer: https://oauth.bar.com
-            tokenEndpoint: https://oauth.bar.com/token
-          scopes:
-          - openid

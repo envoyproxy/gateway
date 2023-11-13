@@ -199,7 +199,7 @@ spec:
                     description: "The Kubernetes secret which contains the OIDC client
                       secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
                       \n This is an Opaque secret. The client secret should be stored
-                      in the key \"clientSecret\"."
+                      in the key \"client-secret\"."
                     properties:
                       group:
                         default: ""

@@ -60,7 +60,7 @@ func (t *Translator) ProcessSecurityPolicies(securityPolicies []*egv1a1.Security
 
 	// Translate
 	// 1. First translate Policies targeting xRoutes
-	// 2.. Finally, the policies targeting Gateways
+	// 2. Finally, the policies targeting Gateways
 
 	// Process the policies targeting xRoutes
 	for _, policy := range securityPolicies {
@@ -279,15 +279,9 @@ func (t *Translator) translateSecurityPolicyForRoute(
 		}
 	}
 
-	// It can be difficult to reason about the state of the system if we apply
-	// part of the policy and not the rest. Therefore, we either apply all of it
-	// or none of it (when get errors when translating the policy)
-
-	if errs != nil {
-		return errs
-	}
-
 	// Apply IR to all relevant routes
+	// Note: there are multiple features in a security policy, even if some of them
+	// are invalid, we still want to apply the valid ones.
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
 		for _, http := range ir.HTTP {
@@ -303,7 +297,7 @@ func (t *Translator) translateSecurityPolicyForRoute(
 			}
 		}
 	}
-	return nil
+	return errs
 }
 
 func (t *Translator) translateSecurityPolicyForGateway(
@@ -311,16 +305,16 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	resources *Resources, xdsIR XdsIRMap) error {
 	// Build IR
 	var (
-		cors *ir.CORS
-		jwt  *ir.JWT
-		oidc *ir.OIDC
-		err  error
+		cors      *ir.CORS
+		jwt       *ir.JWT
+		oidc      *ir.OIDC
+		err, errs error
 	)
 
 	if policy.Spec.CORS != nil {
 		cors, err = t.buildCORS(policy.Spec.CORS)
 		if err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 
@@ -331,7 +325,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	if policy.Spec.OIDC != nil {
 		oidc, err = t.buildOIDC(policy, resources)
 		if err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 
@@ -342,6 +336,8 @@ func (t *Translator) translateSecurityPolicyForGateway(
 	// It can be difficult to reason about the state of the system if we apply
 	// part of the policy and not the rest. Therefore, we either apply all of it
 	// or none of it (when get errors when translating the policy)
+	// Note: there are multiple features in a security policy, even if some of them
+	// are invalid, we still want to apply the valid ones.
 	irKey := t.getIRKey(gateway.Gateway)
 	// Should exist since we've validated this
 	ir := xdsIR[irKey]
@@ -360,7 +356,7 @@ func (t *Translator) translateSecurityPolicyForGateway(
 			}
 		}
 	}
-	return nil
+	return errs
 }
 
 func (t *Translator) buildCORS(cors *egv1a1.CORS) (*ir.CORS, error) {

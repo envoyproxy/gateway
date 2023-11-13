@@ -344,7 +344,7 @@ type OIDC struct {
 	// The OIDC client secret to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	//
-	// This is an Opaque secret. The client secret should be stored in the key "clientSecret".
+	// This is an Opaque secret. The client secret should be stored in the key "client-secret".
 
 	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 
