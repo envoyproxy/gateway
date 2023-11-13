@@ -99,7 +99,6 @@ to access the limited resource in another domains. The browsers are supposed to 
 determine whether to send the actual request or not. The CORS filter only response to the preflight requests according to
 its configuration. It won't deny any requests. The browsers are responsible for enforcing the CORS policy.
 
-```shell
 
 ## Clean-Up
 
