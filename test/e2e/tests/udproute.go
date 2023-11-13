@@ -3,6 +3,8 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
+// This file contains code derived from upstream gateway-api, it will be moved to upstream.
+
 //go:build e2e
 // +build e2e
 
@@ -61,8 +63,6 @@ var UDPRouteTest = suite.ConformanceTest{
 		})
 	},
 }
-
-// This will be moved to upstream.
 
 // GatewayRef is a tiny type for specifying an UDP Route ParentRef without
 // relying on a specific api version.
@@ -159,32 +159,31 @@ func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected
 		return false
 	}
 
-	// TODO(robscott): Allow for arbitrarily ordered parents
-	for i, eParent := range expected {
-		aParent := actual[i]
-		if aParent.ControllerName != eParent.ControllerName {
+	for i, expectedParent := range expected {
+		actualParent := actual[i]
+		if actualParent.ControllerName != expectedParent.ControllerName {
 			t.Logf("Route %s/%s ControllerName doesn't match", routeName.Namespace, routeName.Name)
 			return false
 		}
-		if !reflect.DeepEqual(aParent.ParentRef.Group, eParent.ParentRef.Group) {
-			t.Logf("Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, eParent.ParentRef.Group, aParent.ParentRef.Group)
+		if !reflect.DeepEqual(actualParent.ParentRef.Group, expectedParent.ParentRef.Group) {
+			t.Logf("Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Group, actualParent.ParentRef.Group)
 			return false
 		}
-		if !reflect.DeepEqual(aParent.ParentRef.Kind, eParent.ParentRef.Kind) {
-			t.Logf("Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, eParent.ParentRef.Kind, aParent.ParentRef.Kind)
+		if !reflect.DeepEqual(actualParent.ParentRef.Kind, expectedParent.ParentRef.Kind) {
+			t.Logf("Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Kind, actualParent.ParentRef.Kind)
 			return false
 		}
-		if aParent.ParentRef.Name != eParent.ParentRef.Name {
+		if actualParent.ParentRef.Name != expectedParent.ParentRef.Name {
 			t.Logf("Route %s/%s ParentReference.Name doesn't match", routeName.Namespace, routeName.Name)
 			return false
 		}
-		if !reflect.DeepEqual(aParent.ParentRef.Namespace, eParent.ParentRef.Namespace) {
-			if namespaceRequired || aParent.ParentRef.Namespace != nil {
-				t.Logf("Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, eParent.ParentRef.Namespace, aParent.ParentRef.Namespace)
+		if !reflect.DeepEqual(actualParent.ParentRef.Namespace, expectedParent.ParentRef.Namespace) {
+			if namespaceRequired || actualParent.ParentRef.Namespace != nil {
+				t.Logf("Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Namespace, actualParent.ParentRef.Namespace)
 				return false
 			}
 		}
-		if !conditionsMatch(t, eParent.Conditions, aParent.Conditions) {
+		if !conditionsMatch(t, expectedParent.Conditions, actualParent.Conditions) {
 			return false
 		}
 	}
