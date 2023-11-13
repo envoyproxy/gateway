@@ -305,6 +305,22 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							"name", refGrant.Name)
 					}
 				}
+
+				backendservice := ObjectKindNamespacedName{
+					kind:      gatewayapi.KindDerefOr(backendRef.Kind, gatewayapi.KindService),
+					namespace: backendNamespace,
+					name:      string(backendRef.Name),
+				}
+
+				bacTLSPolicy, err := r.findBackendTLSPolicy(ctx, backendservice)
+				if err != nil {
+					r.log.Error(err, "failed to find backend tls policy")
+
+				}
+				if err := validateAndPushBackenTLS(backendRef, bacTLSPolicy); err != nil {
+					r.log.Error(err, "failed validating backend tls policy")
+				}
+
 			}
 
 			for i := range rule.Filters {
@@ -402,6 +418,10 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 	}
 
 	return nil
+}
+
+func validateAndPushBackenTLS(ref gwapiv1.HTTPBackendRef, policy *gwapiv1a2.BackendTLSPolicy) error {
+
 }
 
 // processTCPRoutes finds TCPRoutes corresponding to a gatewayNamespaceName, further checks for

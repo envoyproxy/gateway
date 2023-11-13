@@ -163,7 +163,23 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						}
 						route.Destination.Settings = append(route.Destination.Settings, ds)
 						route.BackendWeights.Valid += backendWeight
+						route.BackendTLS = func() *ir.TLSBundle {
+							target := gwapiv1a1.PolicyTargetReferenceWithSectionName{
+								PolicyTargetReference: gwapiv1a1.PolicyTargetReference{
+									Group:     *backendRef.Group,
+									Kind:      *backendRef.Kind,
+									Name:      backendRef.Name,
+									Namespace: backendRef.Namespace,
+								},
+								SectionName: nil,
+							}
+							if !backendTLSExists(resources.BackendTLSPolicies, target) {
+								return nil
+							}
+							tlsBundle := getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, resources.Secrets, target)
 
+							return tlsBundle
+						}()
 					} else {
 						route.BackendWeights.Invalid += backendWeight
 					}
@@ -1159,4 +1175,71 @@ func getIREndpointsFromEndpointSlice(endpointSlices []*discoveryv1.EndpointSlice
 	}
 
 	return endpoints
+}
+
+func backendTLSExists(policies []*gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTargetReferenceWithSectionName) bool {
+	for _, policy := range policies {
+		//fmt.Println("printing from backend tls exist ")
+		//fmt.Println(string(policy.Spec.TargetRef.Name), " -- ", routename)
+		//fmt.Println(string(*policy.Spec.TargetRef.Namespace), " -- ", routenamespace)
+		//fmt.Println(string(policy.Spec.TargetRef.Kind), " -- ", routekind)
+		//if string(policy.Spec.TargetRef.Name) == routename &&
+		//	string(*policy.Spec.TargetRef.Namespace) == routenamespace &&
+		//	string(policy.Spec.TargetRef.Kind) == routekind {
+		//	return true
+		//}
+		fmt.Println("printing from 1947 : ", policy.Spec.TargetRef, "----", target)
+		if TargetMatched(policy.Spec.TargetRef, target) {
+			fmt.Println(" matched ")
+			return true
+		}
+	}
+	return false
+}
+
+func TargetMatched(t1, t2 gwapiv1a1.PolicyTargetReferenceWithSectionName) bool {
+	if t1.Kind == t2.Kind && t1.Name == t2.Name { //todo() check the namespace and group
+		return true
+	}
+	return false
+}
+
+func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*corev1.ConfigMap, secrets []*corev1.Secret, target gwapiv1a1.PolicyTargetReferenceWithSectionName) *ir.TLSBundle {
+	targetPolicy := &gwapiv1a1.BackendTLSPolicy{}
+
+	for _, policy := range policies {
+		if TargetMatched(policy.Spec.TargetRef, target) {
+			targetPolicy = policy
+		}
+	}
+
+	tlsBundle := &ir.TLSBundle{}
+
+	if _, exists := targetPolicy.Annotations["gateway.voyagermesh.com/cert-secret-ref"]; exists {
+		secretName := targetPolicy.Annotations["gateway.voyagermesh.com/cert-secret-ref"]
+
+		for _, secret := range secrets {
+			if secret.Name == secretName && secret.Namespace == targetPolicy.Namespace {
+				tlsBundle.CertificateByte = secret.Data["tls.crt"]
+				tlsBundle.PrivateKeyByte = secret.Data["tls.key"]
+				if ca, ok := secret.Data["ca.crt"]; ok {
+					tlsBundle.CaCertificate = ca
+				}
+				break
+			}
+		}
+	}
+
+	if tlsBundle.CaCertificate == nil {
+		for _, configmap := range configmaps {
+			if configmap.Name == targetPolicy.Name && configmap.Namespace == targetPolicy.Namespace {
+				tlsBundle.CaCertificate = []byte(configmap.Data["ca.crt"])
+				break
+			}
+		}
+	}
+
+	tlsBundle.Name = fmt.Sprintf("%s/%s", targetPolicy.Name, targetPolicy.Namespace)
+
+	return tlsBundle
 }

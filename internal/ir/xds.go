@@ -8,14 +8,14 @@ package ir
 import (
 	"cmp"
 	"errors"
-	"net"
-	"reflect"
-
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"kmodules.xyz/client-go/meta"
+	"net"
+	"reflect"
 
 	egv1a1 "github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/api/v1alpha1/validation"
@@ -283,6 +283,8 @@ type HTTPRoute struct {
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
+
+	BackendTLS *TLSBundle `json:"backendTLS,omitempty" yaml:"backendTLS,omitempty"`
 }
 
 // UnstructuredRef holds unstructured data for an arbitrary k8s resource introduced by an extension
@@ -1017,4 +1019,21 @@ type Random struct{}
 type ConsistentHash struct {
 	// Hash based on the Source IP Address
 	SourceIP *bool `json:"sourceIP,omitempty" yaml:"sourceIP,omitempty"`
+}
+
+// TLSBundle contains tls certificate, private key and ca file in []byte format.
+// +k8s:deepcopy-gen=true
+type TLSBundle struct {
+	Name            string
+	CertificateByte []byte
+	PrivateKeyByte  []byte
+	CaCertificate   []byte
+}
+
+func (b TLSBundle) GetXdsCertSecretName() string {
+	return meta.NameWithSuffix(b.Name, "tls")
+}
+
+func (b TLSBundle) GetXdsCaSecretName() string {
+	return meta.NameWithSuffix(b.Name, "ca")
 }

@@ -40,12 +40,14 @@ type Resources struct {
 	ServiceImports         []*mcsapi.ServiceImport        `json:"serviceImports,omitempty" yaml:"serviceImports,omitempty"`
 	EndpointSlices         []*discoveryv1.EndpointSlice   `json:"endpointSlices,omitempty" yaml:"endpointSlices,omitempty"`
 	Secrets                []*v1.Secret                   `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	ConfigMaps             []*v1.ConfigMap                `json:"configMaps,omitempty" yaml:"configMaps,omitempty"`
 	EnvoyProxy             *egv1a1.EnvoyProxy             `json:"envoyProxy,omitempty" yaml:"envoyProxy,omitempty"`
 	ExtensionRefFilters    []unstructured.Unstructured    `json:"extensionRefFilters,omitempty" yaml:"extensionRefFilters,omitempty"`
 	EnvoyPatchPolicies     []*egv1a1.EnvoyPatchPolicy     `json:"envoyPatchPolicies,omitempty" yaml:"envoyPatchPolicies,omitempty"`
 	ClientTrafficPolicies  []*egv1a1.ClientTrafficPolicy  `json:"clientTrafficPolicies,omitempty" yaml:"clientTrafficPolicies,omitempty"`
 	BackendTrafficPolicies []*egv1a1.BackendTrafficPolicy `json:"backendTrafficPolicies,omitempty" yaml:"backendTrafficPolicies,omitempty"`
 	SecurityPolicies       []*egv1a1.SecurityPolicy       `json:"securityPolicies,omitempty" yaml:"securityPolicies,omitempty"`
+	BackendTLSPolicies     []*gwapiv1a2.BackendTLSPolicy  `json:"backendTLSPolicy,omitempty" yaml:"backendTLSPolicy,omitempty"`
 }
 
 func NewResources() *Resources {
@@ -57,6 +59,7 @@ func NewResources() *Resources {
 		Services:               []*v1.Service{},
 		EndpointSlices:         []*discoveryv1.EndpointSlice{},
 		Secrets:                []*v1.Secret{},
+		ConfigMaps:             []*v1.ConfigMap{},
 		ReferenceGrants:        []*gwapiv1b1.ReferenceGrant{},
 		Namespaces:             []*v1.Namespace{},
 		ExtensionRefFilters:    []unstructured.Unstructured{},
@@ -64,6 +67,7 @@ func NewResources() *Resources {
 		ClientTrafficPolicies:  []*egv1a1.ClientTrafficPolicy{},
 		BackendTrafficPolicies: []*egv1a1.BackendTrafficPolicy{},
 		SecurityPolicies:       []*egv1a1.SecurityPolicy{},
+		BackendTLSPolicies:     []*gwapiv1a2.BackendTLSPolicy{},
 	}
 }
 
