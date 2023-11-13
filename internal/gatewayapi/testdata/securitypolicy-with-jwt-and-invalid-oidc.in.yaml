@@ -66,15 +66,15 @@ securityPolicies:
       namespace: envoy-gateway
     jwt:
       providers:
-        - name: example1
-          issuer: https://one.example.com
-          audiences:
-          - one.foo.com
-          remoteJWKS:
-            uri: https://one.example.com/jwt/public-key/jwks.json
-          claimToHeaders:
-          - header: one-route-example-key
-            claim: claim1
+      - name: example1
+        issuer: https://one.example.com
+        audiences:
+        - one.foo.com
+        remoteJWKS:
+          uri: https://one.example.com/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: one-route-example-key
+          claim: claim1
     oidc:
       provider:
         issuer: "https://accounts.google.com"
@@ -94,15 +94,15 @@ securityPolicies:
       namespace: default
     jwt:
       providers:
-        - name: example2
-          issuer: https://two.example.com
-          audiences:
-          - two.foo.com
-          remoteJWKS:
-            uri: https://one.example.com/jwt/public-key/jwks.json
-          claimToHeaders:
-          - header: one-route-example-key
-            claim: claim2
+      - name: example2
+        issuer: https://two.example.com
+        audiences:
+        - two.foo.com
+        remoteJWKS:
+          uri: https://one.example.com/jwt/public-key/jwks.json
+        claimToHeaders:
+        - header: one-route-example-key
+          claim: claim2
     oidc:
       provider:
         issuer: "https://accounts.google.com"
