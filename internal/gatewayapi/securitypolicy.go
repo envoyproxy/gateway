@@ -428,13 +428,16 @@ func (t *Translator) buildOIDC(
 		kind:      KindSecurityPolicy,
 		namespace: policy.Namespace,
 	}
-	if clientSecret, err = t.validateSecretRef(from, oidc.ClientSecret, resources); err != nil {
+	if clientSecret, err = t.validateSecretRef(
+		false, from, oidc.ClientSecret, resources); err != nil {
 		return nil, err
 	}
 
 	clientSecretBytes, ok := clientSecret.Data[egv1a1.OIDCClientSecretKey]
 	if !ok || len(clientSecretBytes) == 0 {
-		return nil, fmt.Errorf("client secret not found in secret %s/%s", clientSecret.Namespace, clientSecret.Name)
+		return nil, fmt.Errorf(
+			"client secret not found in secret %s/%s",
+			clientSecret.Namespace, clientSecret.Name)
 	}
 
 	// Discover the token and authorization endpoints from the issuer's

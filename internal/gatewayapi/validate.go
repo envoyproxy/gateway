@@ -727,10 +727,12 @@ func (t *Translator) validateHostname(hostname string) error {
 }
 
 // validateSecretRef checks three things:
-// 1. Does the secret reference have a valid Group and kind
-// 2. If the secret reference is a cross-namespace reference, is it permitted by any ReferenceGrant
-// 3. Does the secret exist
+//  1. Does the secret reference have a valid Group and kind
+//  2. If the secret reference is a cross-namespace reference,
+//     is it permitted by any ReferenceGrant
+//  3. Does the secret exist
 func (t *Translator) validateSecretRef(
+	allowCrossNamespace bool,
 	from crossNamespaceFrom,
 	secretRef gwapiv1b1.SecretObjectReference,
 	resources *Resources) (*v1.Secret, error) {
@@ -747,6 +749,12 @@ func (t *Translator) validateSecretRef(
 	if secretRef.Namespace != nil &&
 		string(*secretRef.Namespace) != "" &&
 		string(*secretRef.Namespace) != from.namespace {
+		if !allowCrossNamespace {
+			return nil, fmt.Errorf(
+				"secret ref namespace must be unspecified/empty or %s",
+				from.namespace)
+		}
+
 		if !t.validateCrossNamespaceRef(
 			from,
 			crossNamespaceTo{
