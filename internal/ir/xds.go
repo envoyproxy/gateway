@@ -13,6 +13,7 @@ import (
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -149,6 +150,13 @@ func (x Xds) Printable() *Xds {
 	for _, listener := range out.HTTP {
 		// Omit field
 		listener.TLS = nil
+
+		for _, route := range listener.Routes {
+			// Omit field
+			if route.OIDC != nil {
+				route.OIDC.ClientSecret = []byte{}
+			}
+		}
 	}
 	return out
 }
@@ -281,6 +289,8 @@ type HTTPRoute struct {
 	CORS *CORS `json:"cors,omitempty" yaml:"cors,omitempty"`
 	// JWT defines the schema for authenticating HTTP requests using JSON Web Tokens (JWT).
 	JWT *JWT `json:"jwt,omitempty" yaml:"jwt,omitempty"`
+	// OIDC defines the schema for authenticating HTTP requests using OpenID Connect (OIDC).
+	OIDC *OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
 	// ExtensionRefs holds unstructured resources that were introduced by an extension and used on the HTTPRoute as extensionRef filters
 	ExtensionRefs []*UnstructuredRef `json:"extensionRefs,omitempty" yaml:"extensionRefs,omitempty"`
 }
@@ -317,6 +327,30 @@ type CORS struct {
 type JWT struct {
 	// Providers defines a list of JSON Web Token (JWT) authentication providers.
 	Providers []egv1a1.JWTProvider `json:"providers,omitempty" yaml:"providers,omitempty"`
+}
+
+// OIDC defines the schema for authenticating HTTP requests using
+// OpenID Connect (OIDC).
+//
+// +k8s:deepcopy-gen=true
+type OIDC struct {
+	// The OIDC Provider configuration.
+	Provider egv1a1.OIDCProvider `json:"provider" yaml:"provider"`
+
+	// The OIDC client ID to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	ClientID string `json:"clientID" yaml:"clientID"`
+
+	// The OIDC client secret to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	//
+	// This is an Opaque secret. The client secret should be stored in the key "client-secret".
+
+	ClientSecret []byte `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
+
+	// The OIDC scopes to be used in the
+	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
+	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure

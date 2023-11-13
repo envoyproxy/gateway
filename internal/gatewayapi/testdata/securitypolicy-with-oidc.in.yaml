@@ -1,0 +1,148 @@
+secrets:
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: envoy-gateway
+    name: client1-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: client2-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    namespace: default
+    name: client3-secret
+  data:
+    client-secret: Y2xpZW50MTpzZWNyZXQK
+gateways:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    namespace: envoy-gateway
+    name: gateway-1
+  spec:
+    gatewayClassName: envoy-gateway-class
+    listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+httpRoutes:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-1
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/foo"
+      backendRefs:
+      - name: service-1
+        port: 8080
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    namespace: default
+    name: httproute-2
+  spec:
+    hostnames:
+    - gateway.envoyproxy.io
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - matches:
+      - path:
+          value: "/bar"
+      backendRefs:
+      - name: service-1
+        port: 8080
+grpcRoutes:
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    namespace: default
+    name: grpcroute-1
+  spec:
+    parentRefs:
+    - namespace: envoy-gateway
+      name: gateway-1
+      sectionName: http
+    rules:
+    - backendRefs:
+      - name: service-1
+        port: 8080
+securityPolicies:
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: envoy-gateway
+    name: policy-for-gateway-discover-endpoints  # This policy should attach httproute-2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway-1
+      namespace: envoy-gateway
+    oidc:
+      provider:
+        issuer: "https://accounts.google.com"
+      clientID: "client1.apps.googleusercontent.com"
+      clientSecret:
+        name: "client1-secret"
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-for-http-route   # This policy should attach httproute-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-1
+      namespace: default
+    oidc:
+      provider:
+        issuer: "https://oauth.foo.com"
+        authorizationEndpoint: "https://oauth.foo.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.foo.com/token"
+      clientID: "client2.oauth.foo.com"
+      clientSecret:
+        name: "client2-secret"
+      scopes: ["openid", "email", "profile"]
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: SecurityPolicy
+  metadata:
+    namespace: default
+    name: policy-cross-namespace-secretRef  # This policy should attach grpcroute-1
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: grpcroute-1
+    oidc:
+      provider:
+        issuer: "https://oauth.bar.com"
+        authorizationEndpoint: "https://oauth.bar.com/oauth2/v2/auth"
+        tokenEndpoint: "https://oauth.bar.com/token"
+      clientID: "client3.bar.foo.com"
+      clientSecret:
+        namespace: default
+        name: "client3-secret"
