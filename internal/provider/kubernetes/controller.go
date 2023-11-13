@@ -619,6 +619,20 @@ func (r *gatewayAPIReconciler) findReferenceGrant(ctx context.Context, from, to 
 	return nil, nil
 }
 
+func (r *gatewayAPIReconciler) findBackendTLSPolicy(ctx context.Context, targetBackend gwapiv1a2.PolicyTargetReferenceWithSectionName) (*gwapiv1a2.BackendTLSPolicy, error) {
+	backendTLSPolicyList := new(gwapiv1a2.BackendTLSPolicyList)
+	if err := r.client.List(ctx, backendTLSPolicyList); err != nil {
+		return nil, fmt.Errorf("failed to list backendTLSPolicies: %v", err)
+	}
+
+	for _, bacTLS := range backendTLSPolicyList.Items {
+		if gatewayapi.TargetMatched(bacTLS, targetBackend) {
+			return &bacTLS, nil
+		}
+	}
+	return nil, nil
+}
+
 func (r *gatewayAPIReconciler) processGateways(ctx context.Context, acceptedGC *gwapiv1.GatewayClass, resourceMap *resourceMappings, resourceTree *gatewayapi.Resources) error {
 	// Find gateways for the acceptedGC
 	// Find the Gateways that reference this Class.

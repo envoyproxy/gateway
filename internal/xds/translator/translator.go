@@ -8,6 +8,9 @@ package translator
 import (
 	"errors"
 	"fmt"
+	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"google.golang.org/protobuf/types/known/anypb"
 	"strings"
 	"time"
 
@@ -504,10 +507,31 @@ func processXdsCluster(tCtx *types.ResourceVersionTable, httpRoute *ir.HTTPRoute
 		endpointType = EndpointTypeStatic
 	}
 
+	tsocket := &corev3.TransportSocket{}
+	tsocket = nil
+
+	if httpRoute.BackendTLS != nil {
+		if httpRoute.BackendTLS.Mtls() {
+			tlsSecret := buildXdsUpstreamTLSCertSecret(*httpRoute.BackendTLS)
+			if err := tCtx.AddXdsResource(resourcev3.SecretType, tlsSecret); err != nil {
+				return err
+			}
+		}
+		CaSecret := buildXdsUpstreamTLSCASecret(*httpRoute.BackendTLS)
+		if err := tCtx.AddXdsResource(resourcev3.SecretType, CaSecret); err != nil {
+			return err
+		}
+		temp, err := buildXdsUpstreamTLSSocketWthCert(httpRoute.BackendTLS)
+		if err != nil {
+			return err
+		}
+		tsocket = temp
+	}
+
 	if err := addXdsCluster(tCtx, &xdsClusterArgs{
 		name:           httpRoute.Destination.Name,
 		settings:       httpRoute.Destination.Settings,
-		tSocket:        nil,
+		tSocket:        tsocket,
 		endpointType:   endpointType,
 		loadBalancer:   httpRoute.LoadBalancer,
 		proxyProtocol:  httpRoute.ProxyProtocol,
@@ -571,4 +595,93 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 		return err
 	}
 	return nil
+}
+
+type xdsClusterArgs struct {
+	name         string
+	settings     []*ir.DestinationSetting
+	tSocket      *corev3.TransportSocket
+	endpointType EndpointType
+	loadBalancer *ir.LoadBalancer
+}
+
+type EndpointType int
+
+const (
+	DefaultEndpointType EndpointType = iota
+	Static
+	EDS
+)
+
+func buildXdsUpstreamTLSCertSecret(tlsConfig ir.TLSBundle) *tlsv3.Secret {
+	// Build the tls secret
+
+	return &tlsv3.Secret{
+		Name: tlsConfig.GetXdsCertSecretName(), // GetBackendTLSCertSecretName(tlsConfig),
+		Type: &tlsv3.Secret_TlsCertificate{
+			TlsCertificate: &tlsv3.TlsCertificate{
+				CertificateChain: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.CertificateByte},
+				},
+				PrivateKey: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.PrivateKeyByte},
+				},
+			},
+		},
+	}
+}
+
+func buildXdsUpstreamTLSCASecret(tlsConfig ir.TLSBundle) *tlsv3.Secret {
+	// Build the tls secret
+
+	return &tlsv3.Secret{
+		Name: tlsConfig.GetXdsCaSecretName(), // GetBackendTLSCaSecretName(tlsConfig),
+		Type: &tlsv3.Secret_ValidationContext{
+			ValidationContext: &tlsv3.CertificateValidationContext{
+				TrustedCa: &corev3.DataSource{
+					Specifier: &corev3.DataSource_InlineBytes{InlineBytes: tlsConfig.CaCertificate},
+				},
+			},
+		},
+	}
+}
+
+func buildXdsUpstreamTLSSocketWthCert(tlsConfigs *ir.TLSBundle) (*corev3.TransportSocket, error) {
+
+	tlsCtx := &tlsv3.UpstreamTlsContext{
+		CommonTlsContext: &tlsv3.CommonTlsContext{
+			TlsCertificateSdsSecretConfigs: func() []*tlsv3.SdsSecretConfig {
+				if !tlsConfigs.Mtls() {
+					return nil
+				}
+				x := []*tlsv3.SdsSecretConfig{
+					{
+						Name:      tlsConfigs.GetXdsCertSecretName(),
+						SdsConfig: makeConfigSource(),
+					},
+				}
+				return x
+			}(),
+			ValidationContextType: &tlsv3.CommonTlsContext_ValidationContextSdsSecretConfig{
+				ValidationContextSdsSecretConfig: &tlsv3.SdsSecretConfig{
+					Name:      tlsConfigs.GetXdsCaSecretName(),
+					SdsConfig: makeConfigSource(),
+				},
+			},
+		},
+		Sni:                tlsConfigs.Hostname,
+		AllowRenegotiation: true,
+	}
+
+	tlsCtxAny, err := anypb.New(tlsCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev3.TransportSocket{
+		Name: wellknown.TransportSocketTLS, // "envoy.transport_sockets.starttls",
+		ConfigType: &corev3.TransportSocket_TypedConfig{
+			TypedConfig: tlsCtxAny,
+		},
+	}, nil
 }

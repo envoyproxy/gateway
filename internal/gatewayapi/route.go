@@ -7,6 +7,7 @@ package gatewayapi
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -191,6 +192,10 @@ func (t *Translator) processHTTPRouteRules(httpRoute *HTTPRouteContext, parentRe
 						}
 						route.Destination.Settings = append(route.Destination.Settings, ds)
 						route.BackendWeights.Valid += backendWeight
+						route.BackendTLS = func() *ir.TLSBundle {
+							targetBackend := GetTargetBackendReference(backendRef.BackendRef, NamespaceDerefOr(NamespacePtr(httpRoute.Namespace), "default"))
+							return getBackendTLSBundle(resources.BackendTLSPolicies, resources.ConfigMaps, resources.Secrets, targetBackend)
+						}()
 					} else {
 						route.BackendWeights.Invalid += backendWeight
 					}
@@ -663,6 +668,7 @@ func (t *Translator) processHTTPRouteParentRefListener(route RouteContext, route
 					Timeout:               routeRoute.Timeout,
 					Retry:                 routeRoute.Retry,
 					IsHTTP2:               routeRoute.IsHTTP2,
+					BackendTLS:            routeRoute.BackendTLS,
 				}
 				// Don't bother copying over the weights unless the route has invalid backends.
 				if routeRoute.BackendWeights.Invalid > 0 {
@@ -1314,4 +1320,97 @@ func getIREndpointsFromEndpointSlice(endpointSlice *discoveryv1.EndpointSlice, p
 	}
 
 	return endpoints
+}
+
+func GetTargetBackendReference(backendRef gwapiv1a1.BackendRef, namespace string) gwapiv1a1.PolicyTargetReferenceWithSectionName {
+	ref := gwapiv1a1.PolicyTargetReferenceWithSectionName{
+		PolicyTargetReference: gwapiv1a1.PolicyTargetReference{
+			Group:     *backendRef.Group,
+			Kind:      *backendRef.Kind,
+			Name:      backendRef.Name,
+			Namespace: NamespacePtr(NamespaceDerefOr(backendRef.Namespace, namespace)),
+		},
+		SectionName: SectionNamePtr(strconv.Itoa(int(*backendRef.Port))),
+	}
+	return ref
+}
+
+func TargetMatched(policy gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTargetReferenceWithSectionName) bool {
+
+	policyTarget := policy.Spec.TargetRef
+
+	if target.Group == policyTarget.Group &&
+		target.Kind == policyTarget.Kind &&
+		target.Name == policyTarget.Name &&
+		NamespaceDerefOr(policyTarget.Namespace, policy.Namespace) == string(*target.Namespace) {
+		if policyTarget.SectionName != nil && *policyTarget.SectionName != *target.SectionName {
+			return false
+		}
+		return true
+	}
+	return false
+}
+
+func getBackendTLSPolicy(policies []*gwapiv1a1.BackendTLSPolicy, target gwapiv1a1.PolicyTargetReferenceWithSectionName) *gwapiv1a1.BackendTLSPolicy {
+	for _, policy := range policies {
+		if TargetMatched(*policy, target) {
+			return policy
+		}
+	}
+	return nil
+}
+
+func getBackendTLSBundle(policies []*gwapiv1a1.BackendTLSPolicy, configmaps []*corev1.ConfigMap, secrets []*corev1.Secret, targetBackend gwapiv1a1.PolicyTargetReferenceWithSectionName) *ir.TLSBundle {
+
+	backendTLSPolicy := getBackendTLSPolicy(policies, targetBackend)
+
+	if backendTLSPolicy == nil {
+		return nil
+	}
+
+	tlsBundle := &ir.TLSBundle{}
+
+	caRefMap := make(map[string]string)
+
+	for _, caRef := range backendTLSPolicy.Spec.TLS.CACertRefs {
+		caRefMap[string(caRef.Name)] = string(caRef.Kind)
+	}
+
+	ca := ""
+
+	for _, cmap := range configmaps {
+		if kind, ok := caRefMap[cmap.Name]; ok && kind == cmap.Kind {
+			if crt, dataOk := cmap.Data["ca.crt"]; dataOk {
+				if ca != "" {
+					ca += "\n"
+				}
+				ca += crt
+			}
+		}
+	}
+
+	for _, secret := range secrets {
+		if kind, ok := caRefMap[secret.Name]; ok && kind == secret.Kind {
+			if crt, dataOk := secret.Data["ca.crt"]; dataOk {
+				if ca != "" {
+					ca += "\n"
+				}
+				ca += string(crt)
+			}
+			if tls, tlsOk := secret.Data["tls.crt"]; tlsOk {
+				if key, keyOk := secret.Data["tls.key"]; keyOk {
+					tlsBundle.CertificateByte = tls
+					tlsBundle.PrivateKeyByte = key
+				}
+			}
+		}
+	}
+
+	tlsBundle.CaCertificate = []byte(ca)
+
+	tlsBundle.Name = fmt.Sprintf("%s/%s", backendTLSPolicy.Name, backendTLSPolicy.Namespace)
+
+	tlsBundle.Hostname = string(backendTLSPolicy.Spec.TLS.Hostname)
+
+	return tlsBundle
 }

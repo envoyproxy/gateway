@@ -8,6 +8,8 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -274,6 +276,11 @@ func (r *gatewayAPIReconciler) processHTTPRoutes(ctx context.Context, gatewayNam
 							"name", refGrant.Name)
 					}
 				}
+
+				targetBackend := gatewayapi.GetTargetBackendReference(backendRef.BackendRef, gatewayapi.NamespaceDerefOr(gatewayapi.NamespacePtr(httpRoute.Namespace), "default"))
+				if err := r.ProcessBackendTLS(ctx, targetBackend, resourceTree, resourceMap); err != nil {
+					r.log.Error(err, "failed to process BackendTLSPolicy")
+				}
 			}
 
 			for i := range rule.Filters {
@@ -508,6 +515,72 @@ func (r *gatewayAPIReconciler) processUDPRoutes(ctx context.Context, gatewayName
 		// It will be recomputed by the gateway-api layer
 		udpRoute.Status = gwapiv1a2.UDPRouteStatus{}
 		resourceTree.UDPRoutes = append(resourceTree.UDPRoutes, &udpRoute)
+	}
+
+	return nil
+}
+
+func (r *gatewayAPIReconciler) ProcessBackendTLS(ctx context.Context, targetBackend gwapiv1a2.PolicyTargetReferenceWithSectionName, resTree *gatewayapi.Resources, resourceMap *resourceMappings) error {
+
+	bacTLSPolicy, err := r.findBackendTLSPolicy(ctx, targetBackend)
+	if err != nil {
+		r.log.Error(err, "failed to find backend tls policy")
+
+	}
+
+	valid := false
+
+	if bacTLSPolicy != nil {
+		if string(*targetBackend.Namespace) != bacTLSPolicy.Namespace {
+			from := ObjectKindNamespacedName{
+				kind:      bacTLSPolicy.Kind,
+				namespace: bacTLSPolicy.Namespace,
+				name:      bacTLSPolicy.Name,
+			}
+			to := ObjectKindNamespacedName{
+				kind:      string(targetBackend.Kind),
+				namespace: string(*targetBackend.Namespace),
+				name:      string(targetBackend.Name),
+			}
+			refGrant, err := r.findReferenceGrant(ctx, from, to)
+			switch {
+			case err != nil:
+				r.log.Error(err, "failed to find ReferenceGrant")
+			case refGrant == nil:
+				r.log.Info("no matching ReferenceGrants found", "from", from.kind,
+					"from namespace", from.namespace, "target", to.kind, "target namespace", to.namespace)
+			default:
+				valid = true
+				resourceMap.allAssociatedRefGrants[utils.NamespacedName(refGrant)] = refGrant
+				r.log.Info("added ReferenceGrant to resource map", "namespace", refGrant.Namespace,
+					"name", refGrant.Name)
+			}
+		} else {
+			valid = true
+		}
+	}
+
+	if valid {
+		resTree.BackendTLSPolicies = append(resTree.BackendTLSPolicies, bacTLSPolicy)
+		for _, caRef := range bacTLSPolicy.Spec.TLS.CACertRefs {
+			key := client.ObjectKey{
+				Namespace: bacTLSPolicy.Namespace,
+				Name:      string(caRef.Name),
+			}
+			if caRef.Kind == gatewayapi.KindSecret {
+				secret := &corev1.Secret{}
+				if err := r.client.Get(ctx, key, secret); err != nil {
+					return err
+				}
+				resTree.Secrets = append(resTree.Secrets, secret)
+			} else {
+				cmap := &corev1.ConfigMap{}
+				if err := r.client.Get(ctx, key, cmap); err != nil {
+					return err
+				}
+				resTree.ConfigMaps = append(resTree.ConfigMaps, cmap)
+			}
+		}
 	}
 
 	return nil
