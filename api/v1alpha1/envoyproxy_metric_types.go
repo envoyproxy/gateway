@@ -29,14 +29,21 @@ type ProxyMetrics struct {
 	EnableVirtualHostStats bool `json:"enableVirtualHostStats,omitempty"`
 }
 
+// ProxyMetricSink defines the sink of metrics.
+// Default metrics sink is OpenTelemetry.
+// +union
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'OpenTelemetry' ? has(self.openTelemetry) : !has(self.openTelemetry)",message="If MetricSink type is OpenTelemetry, openTelemetry field needs to be set."
 type ProxyMetricSink struct {
 	// Type defines the metric sink type.
 	// EG currently only supports OpenTelemetry.
 	// +kubebuilder:validation:Enum=OpenTelemetry
 	// +kubebuilder:default=OpenTelemetry
+	// +unionDiscriminator
 	Type MetricSinkType `json:"type"`
 	// OpenTelemetry defines the configuration for OpenTelemetry sink.
 	// It's required if the sink type is OpenTelemetry.
+	// +optional
 	OpenTelemetry *ProxyOpenTelemetrySink `json:"openTelemetry,omitempty"`
 }
 

@@ -56,6 +56,11 @@ type SecurityPolicySpec struct {
 	//
 	// +optional
 	JWT *JWT `json:"jwt,omitempty"`
+
+	// OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+	//
+	// +optional
+	OIDC *OIDC `json:"oidc,omitempty"`
 }
 
 // SecurityPolicyStatus defines the state of SecurityPolicy
