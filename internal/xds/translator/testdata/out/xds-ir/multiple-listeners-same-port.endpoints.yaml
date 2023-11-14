@@ -9,7 +9,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: first-route-dest/setting/0
+      region: first-route-dest/backend/0
 - clusterName: second-route-dest
   endpoints:
   - lbEndpoints:
@@ -21,7 +21,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: second-route-dest/setting/0
+      region: second-route-dest/backend/0
 - clusterName: third-route-dest
   endpoints:
   - lbEndpoints:
@@ -33,7 +33,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: third-route-dest/setting/0
+      region: third-route-dest/backend/0
 - clusterName: fourth-route-dest
   endpoints:
   - lbEndpoints:
@@ -45,7 +45,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: fourth-route-dest/setting/0
+      region: fourth-route-dest/backend/0
 - clusterName: tcp-route-dest
   endpoints:
   - lbEndpoints:
@@ -57,7 +57,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tcp-route-dest/setting/0
+      region: tcp-route-dest/backend/0
 - clusterName: tls-route-dest
   endpoints:
   - lbEndpoints:
@@ -69,4 +69,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tls-route-dest/setting/0
+      region: tls-route-dest/backend/0

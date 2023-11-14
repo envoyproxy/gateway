@@ -15,4 +15,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tls-terminate-dest/setting/0
+      region: tls-terminate-dest/backend/0

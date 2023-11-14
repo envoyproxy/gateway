@@ -15,4 +15,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tcp-route-complex-dest/setting/0
+      region: tcp-route-complex-dest/backend/0

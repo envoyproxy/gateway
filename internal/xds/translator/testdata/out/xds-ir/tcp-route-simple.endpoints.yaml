@@ -15,4 +15,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tcp-route-simple-dest/setting/0
+      region: tcp-route-simple-dest/backend/0

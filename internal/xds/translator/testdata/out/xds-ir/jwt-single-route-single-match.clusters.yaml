@@ -30,7 +30,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: localhost_443/setting/0
+        region: localhost_443/backend/0
   name: localhost_443
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

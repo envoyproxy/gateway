@@ -9,4 +9,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: direct-route-dest/setting/0
+      region: direct-route-dest/backend/0

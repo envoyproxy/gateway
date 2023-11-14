@@ -9,7 +9,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: first-route-www.test.com-dest/setting/0
+      region: first-route-www.test.com-dest/backend/0
 - clusterName: second-route-www.test.com-dest
   endpoints:
   - lbEndpoints:
@@ -21,7 +21,7 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: second-route-www.test.com-dest/setting/0
+      region: second-route-www.test.com-dest/backend/0
 - clusterName: "192_168_1_250_8080"
   endpoints:
   - lbEndpoints:
@@ -33,4 +33,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: 192_168_1_250_8080/setting/0
+      region: 192_168_1_250_8080/backend/0

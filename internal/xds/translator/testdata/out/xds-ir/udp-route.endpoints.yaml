@@ -15,4 +15,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: udp-route-dest/setting/0
+      region: udp-route-dest/backend/0

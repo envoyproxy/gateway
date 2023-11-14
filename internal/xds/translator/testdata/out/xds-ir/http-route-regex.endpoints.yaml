@@ -9,4 +9,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: regex-route-dest/setting/0
+      region: regex-route-dest/backend/0

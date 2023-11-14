@@ -72,7 +72,7 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: ratelimit_cluster/setting/0
+        region: ratelimit_cluster/backend/0
   name: ratelimit_cluster
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

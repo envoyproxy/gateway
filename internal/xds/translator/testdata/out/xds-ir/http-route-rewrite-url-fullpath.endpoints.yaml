@@ -9,4 +9,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: rewrite-route/setting/0
+      region: rewrite-route/backend/0

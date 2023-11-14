@@ -15,4 +15,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: tls-passthrough-dest/setting/0
+      region: tls-passthrough-dest/backend/0

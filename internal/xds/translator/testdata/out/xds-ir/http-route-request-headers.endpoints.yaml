@@ -9,4 +9,4 @@
       loadBalancingWeight: 1
     loadBalancingWeight: 1
     locality:
-      region: request-header-route-dest/setting/0
+      region: request-header-route-dest/backend/0

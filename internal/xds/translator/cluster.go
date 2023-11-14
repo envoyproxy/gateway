@@ -123,7 +123,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// We use the name of the backendRef as a pseudo region name.
 		locality := &endpointv3.LocalityLbEndpoints{
 			Locality: &corev3.Locality{
-				Region: fmt.Sprintf("%s/setting/%d", clusterName, i),
+				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
 			},
 			LbEndpoints: endpoints,
 			Priority:    0,
