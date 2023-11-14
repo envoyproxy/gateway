@@ -91,7 +91,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
-	for _, ds := range destSettings {
+	for i, ds := range destSettings {
 
 		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
 
@@ -118,8 +118,13 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 			endpoints = append(endpoints, lbEndpoint)
 		}
 
+		// Envoy requires a distinct region to be set for each LocalityLbEndpoints.
+		// If we don't do this, Envoy will merge all LocalityLbEndpoints into one.
+		// We use the name of the backendRef as a pseudo region name.
 		locality := &endpointv3.LocalityLbEndpoints{
-			Locality:    &corev3.Locality{},
+			Locality: &corev3.Locality{
+				Region: fmt.Sprintf("%s/backend/%d", clusterName, i),
+			},
 			LbEndpoints: endpoints,
 			Priority:    0,
 		}
