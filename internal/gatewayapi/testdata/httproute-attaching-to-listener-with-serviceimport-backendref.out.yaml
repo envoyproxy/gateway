@@ -115,7 +115,6 @@ xdsIR:
           - endpoints:
             - host: 8.8.8.8
               port: 8080
-            name: service-import-1
             protocol: HTTP
             weight: 1
         hostname: '*'

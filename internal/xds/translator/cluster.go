@@ -91,7 +91,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 
 func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.DestinationSetting) *endpointv3.ClusterLoadAssignment {
 	localities := make([]*endpointv3.LocalityLbEndpoints, 0, len(destSettings))
-	for _, ds := range destSettings {
+	for i, ds := range destSettings {
 
 		endpoints := make([]*endpointv3.LbEndpoint, 0, len(ds.Endpoints))
 
@@ -123,7 +123,7 @@ func buildXdsClusterLoadAssignment(clusterName string, destSettings []*ir.Destin
 		// We use the name of the backendRef as a pseudo region name.
 		locality := &endpointv3.LocalityLbEndpoints{
 			Locality: &corev3.Locality{
-				Region: fmt.Sprintf("%s/%s", clusterName, ds.Name),
+				Region: fmt.Sprintf("%s/setting/%d", clusterName, i),
 			},
 			LbEndpoints: endpoints,
 			Priority:    0,

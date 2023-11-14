@@ -118,19 +118,16 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: service-1
             protocol: HTTP
             weight: 1
           - endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: service-2
             protocol: HTTP
             weight: 2
           - endpoints:
             - host: 7.7.7.7
               port: 8080
-            name: service-3
             protocol: HTTP
             weight: 3
         hostname: '*'
