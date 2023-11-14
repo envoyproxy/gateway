@@ -506,6 +506,7 @@ func (r RouteDestination) Validate() error {
 // DestinationSetting holds the settings associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationSetting struct {
+	Name string `json:"name" yaml:"name"`
 	// Weight associated with this destination.
 	// Note: Weight is not used in TCP/UDP route.
 	Weight *uint32 `json:"weight,omitempty" yaml:"weight,omitempty"`

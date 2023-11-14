@@ -1034,6 +1034,7 @@ func (t *Translator) processDestination(backendRef gwapiv1.BackendRef,
 	}
 
 	ds = &ir.DestinationSetting{
+		Name:      string(backendRef.Name),
 		Weight:    &weight,
 		Protocol:  protocol,
 		Endpoints: endpoints,
