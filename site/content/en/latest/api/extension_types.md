@@ -363,7 +363,7 @@ _Appears in:_
 | `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the managed Envoy ratelimit deployment resource are applied. |
 | `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
-| `overwrite_control_plane_certs` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
+| `overwriteControlPlaneCerts` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
 
 
 #### EnvoyGatewayLogComponent

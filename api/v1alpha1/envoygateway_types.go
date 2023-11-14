@@ -192,7 +192,8 @@ type EnvoyGatewayKubernetesProvider struct {
 	// +optional
 	Deploy *KubernetesDeployMode `json:"deploy,omitempty"`
 	// OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set.
-	OverwriteControlPlaneCerts bool `json:"overwrite_control_plane_certs,omitempty"`
+	// +optional
+	OverwriteControlPlaneCerts *bool `json:"overwriteControlPlaneCerts,omitempty"`
 }
 
 const (

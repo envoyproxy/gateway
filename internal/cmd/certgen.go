@@ -66,7 +66,8 @@ func outputCerts(ctx context.Context, cli client.Client, cfg *config.Server, cer
 	if cfg.EnvoyGateway != nil &&
 		cfg.EnvoyGateway.Provider != nil &&
 		cfg.EnvoyGateway.Provider.Kubernetes != nil &&
-		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
+		cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts != nil &&
+		*cfg.EnvoyGateway.Provider.Kubernetes.OverwriteControlPlaneCerts {
 		updateSecrets = true
 	}
 	secrets, err := kubernetes.CreateOrUpdateSecrets(ctx, cli, kubernetes.CertsToSecret(cfg.Namespace, certs), updateSecrets)
