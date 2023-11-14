@@ -131,7 +131,8 @@ xds:
                     portValue: 3000
               loadBalancingWeight: 1
             loadBalancingWeight: 1
-            locality: {}
+            locality:
+              region: httproute/envoy-gateway-system/backend/rule/0/backend/0
     - '@type': type.googleapis.com/envoy.admin.v3.ClustersConfigDump
       dynamicActiveClusters:
       - cluster:
@@ -169,7 +170,8 @@ xds:
                       portValue: 443
                 loadBalancingWeight: 1
               loadBalancingWeight: 1
-              locality: {}
+              locality:
+                region: raw_githubusercontent_com_443/backend/0
           name: raw_githubusercontent_com_443
           outlierDetection: {}
           perConnectionBufferLimitBytes: 32768
