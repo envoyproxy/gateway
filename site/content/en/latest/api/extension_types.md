@@ -74,6 +74,7 @@ _Appears in:_
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
 | `rateLimit` _[RateLimitSpec](#ratelimitspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
+| `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
 
 
 
@@ -1320,6 +1321,31 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `disable` _boolean_ | Disable the Prometheus endpoint. |
+
+
+#### ProxyProtocol
+
+
+
+ProxyProtocol defines the configuration related to the proxy protocol when communicating with the backend.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `version` _[ProxyProtocolVersion](#proxyprotocolversion)_ | Version of ProxyProtol Valid ProxyProtocolVersion values are "V1" "V2" |
+
+
+#### ProxyProtocolVersion
+
+_Underlying type:_ `string`
+
+ProxyProtocolVersion defines the version of the Proxy Protocol to use.
+
+_Appears in:_
+- [ProxyProtocol](#proxyprotocol)
+
 
 
 #### ProxyTelemetry

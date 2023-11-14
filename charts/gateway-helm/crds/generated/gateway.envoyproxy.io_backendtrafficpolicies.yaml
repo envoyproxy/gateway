@@ -79,6 +79,20 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
+              proxyProtocol:
+                description: ProxyProtocol enables the Proxy Protocol when communicating
+                  with the backend.
+                properties:
+                  version:
+                    description: Version of ProxyProtol Valid ProxyProtocolVersion
+                      values are "V1" "V2"
+                    enum:
+                    - V1
+                    - V2
+                    type: string
+                required:
+                - version
+                type: object
               rateLimit:
                 description: RateLimit allows the user to limit the number of incoming
                   requests to a predefined value based on attributes within the traffic
