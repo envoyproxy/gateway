@@ -44,6 +44,12 @@ spec:
           spec:
             description: Spec defines the desired state of ClientTrafficPolicy.
             properties:
+              enableProxyProtocol:
+                description: EnableProxyProtocol interprets the ProxyProtocol header
+                  and adds the Client Address into the X-Forwarded-For header. Note
+                  Proxy Protocol must be present when this field is set, else the
+                  connection is closed.
+                type: boolean
               targetRef:
                 description: TargetRef is the name of the Gateway resource this policy
                   is being attached to. This Policy and the TargetRef MUST be in the

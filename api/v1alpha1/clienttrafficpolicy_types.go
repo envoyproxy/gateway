@@ -53,6 +53,13 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol interprets the ProxyProtocol header and adds the
+	// Client Address into the X-Forwarded-For header.
+	// Note Proxy Protocol must be present when this field is set, else the connection
+	// is closed.
+	//
+	// +optional
+	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
 }
 
 // TCPKeepalive define the TCP Keepalive configuration.
