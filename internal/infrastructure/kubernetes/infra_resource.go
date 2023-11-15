@@ -10,9 +10,13 @@ import (
 	"reflect"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/envoyproxy/gateway/internal/infrastructure/kubernetes/resource"
 )
@@ -74,8 +78,52 @@ func (i *Infra) createOrUpdateDeployment(ctx context.Context, r ResourceRender) 
 		Name:      deployment.Name,
 	}
 
+	hpa, err := r.HorizontalPodAutoscaler()
+	if err != nil {
+		return err
+	}
+
+	var opts cmp.Options
+	if hpa != nil {
+		opts = append(opts, cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "Replicas"))
+	}
+
 	return i.Client.CreateOrUpdate(ctx, key, current, deployment, func() bool {
-		return !reflect.DeepEqual(deployment.Spec, current.Spec)
+		return !cmp.Equal(current.Spec, deployment.Spec, opts...)
+	})
+}
+
+// configureHPA configures HorizontalPodAutoscaler object in the kube api server based on the provided ResourceRender,
+// there are two operations on this method:
+// 1. if an HPA is defined and it doesn't exist then creates, or otherwise updates
+// 2. if an HPA is not defined then delete the object irrespective of its existence
+func (i *Infra) configureHPA(ctx context.Context, r ResourceRender) error {
+	hpa, err := r.HorizontalPodAutoscaler()
+	if err != nil {
+		return err
+	}
+
+	// when HorizontalPodAutoscaler is disabled,
+	// then delete the object in the kube api server if any.
+	if hpa == nil {
+		hpa = &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: i.Namespace,
+				Name:      r.Name(),
+			},
+		}
+
+		return i.Client.Delete(ctx, hpa)
+	}
+
+	current := &autoscalingv2.HorizontalPodAutoscaler{}
+	key := types.NamespacedName{
+		Namespace: hpa.Namespace,
+		Name:      hpa.Name,
+	}
+
+	return i.Client.CreateOrUpdate(ctx, key, current, hpa, func() bool {
+		return !cmp.Equal(hpa.Spec, current.Spec)
 	})
 }
 
@@ -144,4 +192,18 @@ func (i *Infra) deleteService(ctx context.Context, r ResourceRender) error {
 	}
 
 	return i.Client.Delete(ctx, svc)
+}
+
+// deleteHpa deletes the Horizontal Pod Autoscaler associated to its renderer, if it exists.
+func (i *Infra) deleteHPA(ctx context.Context, r ResourceRender) error {
+	hpa, err := r.HorizontalPodAutoscaler()
+	if err != nil {
+		return err
+	}
+
+	if hpa == nil {
+		return nil
+	}
+
+	return i.Client.Delete(ctx, hpa)
 }

@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/exp/maps"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -56,7 +57,7 @@ func (r *ResourceRender) ServiceAccount() (*corev1.ServiceAccount, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Name),
+			Name:      r.Name(),
 			Labels:    labels,
 		},
 	}, nil
@@ -110,7 +111,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:   r.Namespace,
-			Name:        ExpectedResourceHashedName(r.infra.Name),
+			Name:        r.Name(),
 			Labels:      labels,
 			Annotations: annotations,
 		},
@@ -135,7 +136,7 @@ func (r *ResourceRender) ConfigMap() (*corev1.ConfigMap, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Name),
+			Name:      r.Name(),
 			Labels:    labels,
 		},
 		Data: map[string]string{
@@ -192,7 +193,7 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: r.Namespace,
-			Name:      ExpectedResourceHashedName(r.infra.Name),
+			Name:      r.Name(),
 			Labels:    dpLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -224,5 +225,46 @@ func (r *ResourceRender) Deployment() (*appsv1.Deployment, error) {
 		},
 	}
 
+	// omit the deployment replicas if HPA is being set
+	if provider.GetEnvoyProxyKubeProvider().EnvoyHpa != nil {
+		deployment.Spec.Replicas = nil
+	}
+
 	return deployment, nil
+}
+
+func (r *ResourceRender) HorizontalPodAutoscaler() (*autoscalingv2.HorizontalPodAutoscaler, error) {
+	provider := r.infra.GetProxyConfig().GetEnvoyProxyProvider()
+	if provider.Type != egv1a1.ProviderTypeKubernetes {
+		return nil, fmt.Errorf("invalid provider type %v for Kubernetes infra manager", provider.Type)
+	}
+
+	hpaConfig := provider.GetEnvoyProxyKubeProvider().EnvoyHpa
+	if hpaConfig == nil {
+		return nil, nil
+	}
+
+	hpa := &autoscalingv2.HorizontalPodAutoscaler{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "autoscaling/v2",
+			Kind:       "HorizontalPodAutoscaler",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: r.Namespace,
+			Name:      r.Name(),
+		},
+		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+				Name:       r.Name(),
+			},
+			MinReplicas: hpaConfig.MinReplicas,
+			MaxReplicas: hpaConfig.MaxReplicas,
+			Metrics:     hpaConfig.Metrics,
+			Behavior:    hpaConfig.Behavior,
+		},
+	}
+
+	return hpa, nil
 }
