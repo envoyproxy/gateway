@@ -241,6 +241,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	var (
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
+		pp *ir.ProxyProtocol
 	)
 
 	// Build IR
@@ -250,7 +251,9 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 	if policy.Spec.LoadBalancer != nil {
 		lb = t.buildLoadBalancer(policy)
 	}
-
+	if policy.Spec.ProxyProtocol != nil {
+		pp = t.buildProxyProtocol(policy)
+	}
 	// Apply IR to all relevant routes
 	prefix := irRoutePrefix(route)
 	for _, ir := range xdsIR {
@@ -260,6 +263,7 @@ func (t *Translator) translateBackendTrafficPolicyForRoute(policy *egv1a1.Backen
 				if strings.HasPrefix(r.Name, prefix) {
 					r.RateLimit = rl
 					r.LoadBalancer = lb
+					r.ProxyProtocol = pp
 				}
 			}
 		}
@@ -271,6 +275,7 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	var (
 		rl *ir.RateLimit
 		lb *ir.LoadBalancer
+		pp *ir.ProxyProtocol
 	)
 
 	// Build IR
@@ -279,6 +284,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 	}
 	if policy.Spec.LoadBalancer != nil {
 		lb = t.buildLoadBalancer(policy)
+	}
+	if policy.Spec.ProxyProtocol != nil {
+		pp = t.buildProxyProtocol(policy)
 	}
 	// Apply IR to all the routes within the specific Gateway
 	// If the feature is already set, then skip it, since it must be have
@@ -295,6 +303,9 @@ func (t *Translator) translateBackendTrafficPolicyForGateway(policy *egv1a1.Back
 			}
 			if r.LoadBalancer == nil {
 				r.LoadBalancer = lb
+			}
+			if r.ProxyProtocol == nil {
+				r.ProxyProtocol = pp
 			}
 		}
 	}
@@ -436,4 +447,20 @@ func (t *Translator) buildLoadBalancer(policy *egv1a1.BackendTrafficPolicy) *ir.
 	}
 
 	return lb
+}
+
+func (t *Translator) buildProxyProtocol(policy *egv1a1.BackendTrafficPolicy) *ir.ProxyProtocol {
+	var pp *ir.ProxyProtocol
+	switch policy.Spec.ProxyProtocol.Version {
+	case egv1a1.ProxyProtocolVersionV1:
+		pp = &ir.ProxyProtocol{
+			Version: ir.ProxyProtocolVersionV1,
+		}
+	case egv1a1.ProxyProtocolVersionV2:
+		pp = &ir.ProxyProtocol{
+			Version: ir.ProxyProtocolVersionV2,
+		}
+	}
+
+	return pp
 }
