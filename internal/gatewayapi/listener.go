@@ -100,7 +100,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 			switch listener.Protocol {
 			case gwapiv1.HTTPProtocolType, gwapiv1.HTTPSProtocolType:
 				irListener := &ir.HTTPListener{
-					Name:    irHTTPListenerName(listener),
+					Name:    irListenerName(listener),
 					Address: "0.0.0.0",
 					Port:    uint32(containerPort),
 					TLS:     irTLSConfigs(listener.tlsSecrets),
@@ -114,6 +114,13 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 					irListener.Hostnames = append(irListener.Hostnames, "*")
 				}
 				xdsIR[irKey].HTTP = append(xdsIR[irKey].HTTP, irListener)
+			case gwapiv1.TCPProtocolType, gwapiv1.TLSProtocolType:
+				irListener := &ir.TCPListener{
+					Name:    irListenerName(listener),
+					Address: "0.0.0.0",
+					Port:    uint32(containerPort),
+				}
+				xdsIR[irKey].TCP = append(xdsIR[irKey].TCP, irListener)
 			}
 
 			// Add the listener to the Infra IR. Infra IR ports must have a unique port number per layer-4 protocol
@@ -136,7 +143,7 @@ func (t *Translator) ProcessListeners(gateways []*GatewayContext, xdsIR XdsIRMap
 
 				infraPortName := string(listener.Name)
 				if t.MergeGateways {
-					infraPortName = irHTTPListenerName(listener)
+					infraPortName = irListenerName(listener)
 				}
 
 				infraPort := ir.ListenerPort{
