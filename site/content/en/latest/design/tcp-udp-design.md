@@ -6,8 +6,8 @@ Even though most of the use cases for Envoy Gateway are at Layer-7, Envoy Gatewa
 and UDP traffic. This document will explore the options we have when operating Envoy Gateway at Layer-4 and explain the 
 design decision.
 
-Envoy can work as a non-transparent proxy or a transparent proxy for both [TCP](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/ip_transparency#arch-overview-ip-transparency-original-src-listener)
- and [UDP](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-msg-extensions-filters-udp-udp-proxy-v3-udpproxyconfig)
+Envoy can work as a non-transparent proxy or a transparent proxy for both [TCP][]
+ and [UDP][]
 , so ideally, Envoy Gateway should also be able to work in these two modes:
 
 ## Non-transparent Proxy Mode
@@ -47,3 +47,6 @@ In a Kubernetes cluster, Envoy Gateway will have to carefully cooperate with CNI
 
 The implementation will only support proxying in non-transparent mode i.e. the backend will see the source IP and 
 port of the deployed Envoy instance instead of the client.
+
+[TCP]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/other_features/ip_transparency#arch-overview-ip-transparency-original-src-listener
+[UDP]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/udp/udp_proxy/v3/udp_proxy.proto#envoy-v3-api-msg-extensions-filters-udp-udp-proxy-v3-udpproxyconfig

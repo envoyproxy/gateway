@@ -4,11 +4,11 @@ title: "Observability: Tracing"
 
 ## Overview
 
-Envoy supports extensible tracing to different sinks, Zipkin, OpenTelemetry etc. Overview of Envoy tracing can be found [here](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/observability/tracing).
+Envoy supports extensible tracing to different sinks, Zipkin, OpenTelemetry etc. Overview of Envoy tracing can be found [here][tracing].
 
-Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels) for implementers such as Envoy Gateway to expose features. Since tracing is not covered by `Core` or `Extended` APIs, EG should provide an easy to config tracing per `EnvoyProxy`.
+Envoy Gateway leverages [Gateway API][] for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels][] for implementers such as Envoy Gateway to expose features. Since tracing is not covered by `Core` or `Extended` APIs, EG should provide an easy to config tracing per `EnvoyProxy`.
 
-Only OpenTelemetry sink can be configured currently, you can use [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) to export to other tracing backends.
+Only OpenTelemetry sink can be configured currently, you can use [OpenTelemetry Collector][] to export to other tracing backends.
 
 ## Goals
 
@@ -159,3 +159,8 @@ spec:
             name: X-Header-1
             defaultValue: "-"
 ```
+
+[tracing]: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/observability/tracing
+[Gateway API]: https://gateway-api.sigs.k8s.io/
+[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
+[OpenTelemetry Collector]: https://opentelemetry.io/docs/collector/

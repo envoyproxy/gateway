@@ -173,7 +173,7 @@ namespace to reference Secrets in the "envoy-gateway-system" namespace:
 
 ```console
 $ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1alpha2
 kind: ReferenceGrant
 metadata:
   name: example
@@ -212,7 +212,7 @@ Update the Gateway HTTPS listener with `namespace: envoy-gateway-system`, for ex
 
 ```console
 $ cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg

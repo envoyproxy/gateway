@@ -285,14 +285,14 @@ GatewayClass and Gateway resources define the data plane infrastructure. Note th
 running with the Kubernetes provider.
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: example-class
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: example-gateway
@@ -312,7 +312,7 @@ The following example will configure the data plane to use a ClusterIP service i
 service:
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: example-class
@@ -323,7 +323,7 @@ spec:
     group: gateway.envoyproxy.io
     kind: EnvoyProxy
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: example-gateway
@@ -346,8 +346,8 @@ spec:
 __Note:__ The NetworkPublishing API is currently undefined and is provided here for illustration purposes only.
 
 [issue_51]: https://github.com/envoyproxy/gateway/issues/51
-[design_doc]: https://github.com/envoyproxy/gateway/blob/main/docs/design/SYSTEM_DESIGN.md
+[design_doc]: ../system-design/
 [gw_api]: https://gateway-api.sigs.k8s.io/
-[gc]: https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1alpha2.GatewayClass
+[gc]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
 [cr]: https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/
 [union]: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#unions
