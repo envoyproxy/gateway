@@ -43,7 +43,7 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 		cluster.TransportSocket = args.tSocket
 	}
 
-	if args.endpointType == Static {
+	if args.endpointType == EndpointTypeStatic {
 		cluster.ClusterDiscoveryType = &clusterv3.Cluster_Type{Type: clusterv3.Cluster_EDS}
 		cluster.EdsClusterConfig = &clusterv3.Cluster_EdsClusterConfig{
 			ServiceName: args.name,

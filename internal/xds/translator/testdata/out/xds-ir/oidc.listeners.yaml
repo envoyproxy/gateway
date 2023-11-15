@@ -45,7 +45,7 @@
                 path:
                   exact: /signout
               tokenEndpoint:
-                cluster: oauth2_token_endpoint_oauth.foo.com
+                cluster: oauth_foo_com_443
                 timeout: 10s
                 uri: https://oauth.foo.com/token
         - name: envoy.filters.http.oauth2_second-route
@@ -79,7 +79,7 @@
                 path:
                   exact: /signout
               tokenEndpoint:
-                cluster: oauth2_token_endpoint_oauth.bar.com
+                cluster: oauth_bar_com_443
                 timeout: 10s
                 uri: https://oauth.bar.com/token
         - name: envoy.filters.http.oauth2_third-route
@@ -113,7 +113,7 @@
                 path:
                   exact: /signout
               tokenEndpoint:
-                cluster: oauth2_token_endpoint_oauth.bar.com
+                cluster: oauth_bar_com_443
                 timeout: 10s
                 uri: https://oauth.bar.com/token
         - name: envoy.filters.http.router

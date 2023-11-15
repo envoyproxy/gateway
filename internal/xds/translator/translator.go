@@ -195,7 +195,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 			}
 
 			// 1:1 between IR HTTPRoute and xDS config.route.v3.Route
-			xdsRoute := buildXdsRoute(httpRoute)
+			xdsRoute, err := buildXdsRoute(httpRoute)
+			if err != nil {
+				return err
+			}
 
 			// Check if an extension want to modify the route we just generated
 			// If no extension exists (or it doesn't subscribe to this hook) then this is a quick no-op.
@@ -210,7 +213,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 					name:         httpRoute.Destination.Name,
 					settings:     httpRoute.Destination.Settings,
 					tSocket:      nil,
-					endpointType: Static,
+					endpointType: EndpointTypeStatic,
 					loadBalancer: httpRoute.LoadBalancer,
 				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 					return err
@@ -223,7 +226,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 						name:         mirrorDest.Name,
 						settings:     mirrorDest.Settings,
 						tSocket:      nil,
-						endpointType: Static,
+						endpointType: EndpointTypeStatic,
 					}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 						return err
 					}
@@ -284,7 +287,7 @@ func processTCPListenerXdsTranslation(tCtx *types.ResourceVersionTable, tcpListe
 			name:         tcpListener.Destination.Name,
 			settings:     tcpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: Static,
+			endpointType: EndpointTypeStatic,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
@@ -320,7 +323,7 @@ func processUDPListenerXdsTranslation(tCtx *types.ResourceVersionTable, udpListe
 			name:         udpListener.Destination.Name,
 			settings:     udpListener.Destination.Settings,
 			tSocket:      nil,
-			endpointType: Static,
+			endpointType: EndpointTypeStatic,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}
@@ -431,7 +434,7 @@ func addXdsCluster(tCtx *types.ResourceVersionTable, args *xdsClusterArgs) error
 	xdsCluster := buildXdsCluster(args)
 	xdsEndpoints := buildXdsClusterLoadAssignment(args.name, args.settings)
 	// Use EDS for static endpoints
-	if args.endpointType == Static {
+	if args.endpointType == EndpointTypeStatic {
 		if err := tCtx.AddXdsResource(resourcev3.EndpointType, xdsEndpoints); err != nil {
 			return err
 		}
@@ -455,7 +458,6 @@ type xdsClusterArgs struct {
 type EndpointType int
 
 const (
-	DefaultEndpointType EndpointType = iota
-	Static
-	EDS
+	EndpointTypeDNS EndpointType = iota
+	EndpointTypeStatic
 )

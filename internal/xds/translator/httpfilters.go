@@ -114,7 +114,7 @@ func (t *Translator) patchHCMWithFilters(
 	}
 
 	// Add oauth2 filters, if needed.
-	if err := patchHCMWithOAuth2Filter(mgr, irListener); err != nil {
+	if err := patchHCMWithOAuth2Filters(mgr, irListener); err != nil {
 		return err
 	}
 

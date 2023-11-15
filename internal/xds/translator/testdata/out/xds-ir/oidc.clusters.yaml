@@ -47,7 +47,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: oauth2_token_endpoint_oauth.foo.com
+    clusterName: oauth_foo_com_443
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -58,8 +58,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: oauth2_token_endpoint_oauth.foo.com/backend/0
-  name: oauth2_token_endpoint_oauth.foo.com
+        region: oauth_foo_com_443/backend/0
+  name: oauth_foo_com_443
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true
@@ -76,7 +76,7 @@
   dnsRefreshRate: 30s
   lbPolicy: LEAST_REQUEST
   loadAssignment:
-    clusterName: oauth2_token_endpoint_oauth.bar.com
+    clusterName: oauth_bar_com_443
     endpoints:
     - lbEndpoints:
       - endpoint:
@@ -87,8 +87,8 @@
         loadBalancingWeight: 1
       loadBalancingWeight: 1
       locality:
-        region: oauth2_token_endpoint_oauth.bar.com/backend/0
-  name: oauth2_token_endpoint_oauth.bar.com
+        region: oauth_bar_com_443/backend/0
+  name: oauth_bar_com_443
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768
   respectDnsTtl: true

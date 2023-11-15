@@ -9,8 +9,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"net/url"
-	"strconv"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -30,16 +28,16 @@ import (
 
 const (
 	oauth2Filter                = "envoy.filters.http.oauth2"
-	defaultTokenEndpointPort    = 443
 	defaultTokenEndpointTimeout = 10
 	redirectURL                 = "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback"
 	redirectPathMatcher         = "/oauth2/callback"
 	defaultSignoutPath          = "/signout"
 )
 
-// patchHCMWithOAuth2Filter builds and appends the oauth2 Filters to the HTTP
+// patchHCMWithOAuth2Filters builds and appends the oauth2 Filters to the HTTP
 // Connection Manager if applicable, and it does not already exist.
-func patchHCMWithOAuth2Filter(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
+// Note: this method creates an oauth2 filter for each route that contains an OIDC config.
+func patchHCMWithOAuth2Filters(mgr *hcmv3.HttpConnectionManager, irListener *ir.HTTPListener) error {
 	var errs error
 
 	if mgr == nil {
@@ -51,21 +49,24 @@ func patchHCMWithOAuth2Filter(mgr *hcmv3.HttpConnectionManager, irListener *ir.H
 	}
 
 	for _, route := range irListener.Routes {
-		if routeContainsOIDC(route) {
-			filter, err := buildHCMOAuth2Filter(route)
-			if err != nil {
-				errs = multierror.Append(errs, err)
-			}
-
-			// skip if the filter already exists
-			for _, existingFilter := range mgr.HttpFilters {
-				if filter.Name == existingFilter.Name {
-					continue
-				}
-			}
-
-			mgr.HttpFilters = append(mgr.HttpFilters, filter)
+		if !routeContainsOIDC(route) {
+			continue
 		}
+
+		filter, err := buildHCMOAuth2Filter(route)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		// skip if the filter already exists
+		for _, existingFilter := range mgr.HttpFilters {
+			if filter.Name == existingFilter.Name {
+				continue
+			}
+		}
+
+		mgr.HttpFilters = append(mgr.HttpFilters, filter)
 	}
 
 	return nil
@@ -73,7 +74,10 @@ func patchHCMWithOAuth2Filter(mgr *hcmv3.HttpConnectionManager, irListener *ir.H
 
 // buildHCMOAuth2Filter returns an OAuth2 HTTP filter from the provided IR HTTPRoute.
 func buildHCMOAuth2Filter(route *ir.HTTPRoute) (*hcmv3.HttpFilter, error) {
-	oauth2Proto := oauth2Config(route)
+	oauth2Proto, err := oauth2Config(route)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := oauth2Proto.ValidateAll(); err != nil {
 		return nil, err
@@ -96,17 +100,23 @@ func oauth2FilterName(route *ir.HTTPRoute) string {
 	return fmt.Sprintf("%s_%s", oauth2Filter, route.Name)
 }
 
-func oauth2Config(route *ir.HTTPRoute) *oauth2v3.OAuth2 {
-	// Ignore the errors because we already validate the token endpoint
-	// URL in the gateway API translator.
-	tokenEndpointURL, _ := url.Parse(route.OIDC.Provider.TokenEndpoint)
+func oauth2Config(route *ir.HTTPRoute) (*oauth2v3.OAuth2, error) {
+	cluster, err := url2Cluster(route.OIDC.Provider.TokenEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	if cluster.endpointType == EndpointTypeStatic {
+		return nil, fmt.Errorf(
+			"static IP cluster is not allowed: %s",
+			route.OIDC.Provider.TokenEndpoint)
+	}
 
 	oauth2 := &oauth2v3.OAuth2{
 		Config: &oauth2v3.OAuth2Config{
 			TokenEndpoint: &corev3.HttpUri{
 				Uri: route.OIDC.Provider.TokenEndpoint,
 				HttpUpstreamType: &corev3.HttpUri_Cluster{
-					Cluster: oauth2TokenEndpointClusterName(tokenEndpointURL),
+					Cluster: cluster.name,
 				},
 				Timeout: &duration.Duration{
 					Seconds: defaultTokenEndpointTimeout,
@@ -150,7 +160,7 @@ func oauth2Config(route *ir.HTTPRoute) *oauth2v3.OAuth2 {
 			AuthScopes: route.OIDC.Scopes,
 		},
 	}
-	return oauth2
+	return oauth2, nil
 }
 
 // routeContainsOIDC returns true if OIDC exists for the provided route.
@@ -167,65 +177,78 @@ func routeContainsOIDC(irRoute *ir.HTTPRoute) bool {
 	return false
 }
 
-// createOAuth2TokenEndpointClusters creates token endpoint clusters from the provided routes, if needed.
-func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
-	if tCtx == nil ||
-		tCtx.XdsResources == nil ||
-		tCtx.XdsResources[resourcev3.ClusterType] == nil ||
-		len(routes) == 0 {
-		return nil
+// createOAuth2TokenEndpointClusters creates token endpoint clusters from the
+// provided routes, if needed.
+func createOAuth2TokenEndpointClusters(tCtx *types.ResourceVersionTable,
+	routes []*ir.HTTPRoute) error {
+	if tCtx == nil || tCtx.XdsResources == nil {
+		return errors.New("xds resource table is nil")
 	}
 
+	var errs error
 	for _, route := range routes {
 		if !routeContainsOIDC(route) {
 			continue
 		}
 
-		// Ignore the errors because we already validate the token endpoint
-		// URL in the gateway API translator.
-		tokenEndpointURL, _ := url.Parse(route.OIDC.Provider.TokenEndpoint)
-		port := defaultTokenEndpointPort
-		if tokenEndpointURL.Port() != "" {
-			port, _ = strconv.Atoi(tokenEndpointURL.Port())
+		var (
+			cluster *urlCluster
+			ds      *ir.DestinationSetting
+			tSocket *corev3.TransportSocket
+			err     error
+		)
+
+		cluster, err = url2Cluster(route.OIDC.Provider.TokenEndpoint)
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		// EG does not support static IP clusters for token endpoint clusters.
+		// This validation could be removed since it's already validated in the
+		// Gateway API translator.
+		if cluster.endpointType == EndpointTypeStatic {
+			errs = multierror.Append(errs, fmt.Errorf(
+				"static IP cluster is not allowed: %s",
+				route.OIDC.Provider.TokenEndpoint))
+			continue
 		}
 
 		tlsContext := &tlsv3.UpstreamTlsContext{
-			Sni: tokenEndpointURL.Hostname(),
+			Sni: cluster.hostname,
 		}
 
 		tlsContextAny, err := anypb.New(tlsContext)
 		if err != nil {
-			return err
+			errs = multierror.Append(errs, err)
+			continue
 		}
-		tSocket := &corev3.TransportSocket{
+		tSocket = &corev3.TransportSocket{
 			Name: "envoy.transport_sockets.tls",
 			ConfigType: &corev3.TransportSocket_TypedConfig{
 				TypedConfig: tlsContextAny,
 			},
 		}
 
-		ds := &ir.DestinationSetting{
+		ds = &ir.DestinationSetting{
 			Weight: ptr.To(uint32(1)),
 			Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(
-				tokenEndpointURL.Hostname(),
-				uint32(port))},
+				cluster.hostname,
+				cluster.port),
+			},
 		}
 
-		if err := addXdsCluster(tCtx, &xdsClusterArgs{
-			name:         oauth2TokenEndpointClusterName(tokenEndpointURL),
+		if err = addXdsCluster(tCtx, &xdsClusterArgs{
+			name:         cluster.name,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      tSocket,
-			endpointType: DefaultEndpointType, // TODO support static endpoint
+			endpointType: cluster.endpointType,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 
-	return nil
-}
-
-func oauth2TokenEndpointClusterName(tokenEndpointURL *url.URL) string {
-	return fmt.Sprintf("oauth2_token_endpoint_%s", tokenEndpointURL.Hostname())
+	return errs
 }
 
 // createOAuth2Secrets creates OAuth2 client and HMAC secrets from the provided
@@ -303,7 +326,7 @@ func oauth2HMACSecretName(route *ir.HTTPRoute) string {
 
 func generateHMACSecretKey() ([]byte, error) {
 	// Set the desired length of the secret key in bytes
-	keyLength := 32 // Adjust this value as needed
+	keyLength := 32
 
 	// Create a byte slice to hold the random bytes
 	key := make([]byte, keyLength)
@@ -319,6 +342,8 @@ func generateHMACSecretKey() ([]byte, error) {
 
 // patchRouteCfgWithOAuth2Filter patches the provided route configuration with
 // the oauth2 filter if applicable.
+// Note: this method disables all the oauth2 filters by default. The filter will
+// be enabled per-route in the typePerFilterConfig of the route.
 func patchRouteCfgWithOAuth2Filter(routeCfg *routev3.RouteConfiguration, irListener *ir.HTTPListener) error {
 	if routeCfg == nil {
 		return errors.New("route configuration is nil")
@@ -327,37 +352,43 @@ func patchRouteCfgWithOAuth2Filter(routeCfg *routev3.RouteConfiguration, irListe
 		return errors.New("ir listener is nil")
 	}
 
+	var errs error
 	for _, route := range irListener.Routes {
-		if routeContainsOIDC(route) {
-			perRouteFilterName := oauth2FilterName(route)
-			filterCfg := routeCfg.TypedPerFilterConfig
-
-			if _, ok := filterCfg[perRouteFilterName]; ok {
-				// This should not happen since this is the only place where the oauth2
-				// filter is added in a route.
-				return fmt.Errorf("route config already contains oauth2 config: %+v", route)
-			}
-
-			// Disable all the filters by default. The filter will be enabled
-			// per-route in the typePerFilterConfig of the route.
-			routeCfgAny, err := anypb.New(&routev3.FilterConfig{
-				Disabled: true,
-			})
-			if err != nil {
-				return err
-			}
-			if filterCfg == nil {
-				routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
-			}
-
-			routeCfg.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
+		if !routeContainsOIDC(route) {
+			continue
 		}
+
+		perRouteFilterName := oauth2FilterName(route)
+		filterCfg := routeCfg.TypedPerFilterConfig
+
+		if _, ok := filterCfg[perRouteFilterName]; ok {
+			// This should not happen since this is the only place where the oauth2
+			// filter is added in a route.
+			errs = multierror.Append(errs, fmt.Errorf(
+				"route config already contains oauth2 config: %+v", route))
+			continue
+		}
+
+		// Disable all the filters by default. The filter will be enabled
+		// per-route in the typePerFilterConfig of the route.
+		routeCfgAny, err := anypb.New(&routev3.FilterConfig{Disabled: true})
+		if err != nil {
+			errs = multierror.Append(errs, err)
+			continue
+		}
+
+		if filterCfg == nil {
+			routeCfg.TypedPerFilterConfig = make(map[string]*anypb.Any)
+		}
+
+		routeCfg.TypedPerFilterConfig[perRouteFilterName] = routeCfgAny
 	}
-	return nil
+	return errs
 }
 
 // patchRouteWithOAuth2 patches the provided route with the oauth2 config if
 // applicable.
+// Note: this method enables the corresponding oauth2 filter for the provided route.
 func patchRouteWithOAuth2(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
