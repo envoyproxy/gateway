@@ -194,9 +194,9 @@ func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
 	}, nil
 }
 
-// patchRouteWithJWTConfig patches the provided route with a JWT PerRouteConfig, if the
+// patchRouteWithJWT patches the provided route with a JWT PerRouteConfig, if the
 // route doesn't contain it.
-func patchRouteWithJWTConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func patchRouteWithJWT(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}

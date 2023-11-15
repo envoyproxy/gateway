@@ -240,6 +240,11 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 		}
 		xdsRouteCfg.VirtualHosts = append(xdsRouteCfg.VirtualHosts, vHostsList...)
 
+		// Add per-route filter configs to the route config.
+		if err := patchRouteCfgWithPerRouteConfig(xdsRouteCfg, httpListener); err != nil {
+			return err
+		}
+
 		// TODO: Make this into a generic interface for API Gateway features.
 		//       https://github.com/envoyproxy/gateway/issues/882
 		// Check if a ratelimit cluster exists, if not, add it, if its needed.
@@ -249,6 +254,16 @@ func (t *Translator) processHTTPListenerXdsTranslation(tCtx *types.ResourceVersi
 
 		// Create authn jwks clusters, if needed.
 		if err := createJWKSClusters(tCtx, httpListener.Routes); err != nil {
+			return err
+		}
+
+		// Create oauth2 token endpoint clusters, if needed.
+		if err := createOAuth2TokenEndpointClusters(tCtx, httpListener.Routes); err != nil {
+			return err
+		}
+
+		// Create oauth2 client and HMAC secrets, if needed.
+		if err := createOAuth2Secrets(tCtx, httpListener.Routes); err != nil {
 			return err
 		}
 

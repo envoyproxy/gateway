@@ -335,7 +335,7 @@ type JWT struct {
 // +k8s:deepcopy-gen=true
 type OIDC struct {
 	// The OIDC Provider configuration.
-	Provider egv1a1.OIDCProvider `json:"provider" yaml:"provider"`
+	Provider OIDCProvider `json:"provider" yaml:"provider"`
 
 	// The OIDC client ID to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
@@ -351,6 +351,14 @@ type OIDC struct {
 	// The OIDC scopes to be used in the
 	// [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest).
 	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+}
+
+type OIDCProvider struct {
+	// The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint).
+	AuthorizationEndpoint string `json:"authorizationEndpoint,omitempty"`
+
+	// The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint).
+	TokenEndpoint string `json:"tokenEndpoint,omitempty"`
 }
 
 // Validate the fields within the HTTPRoute structure

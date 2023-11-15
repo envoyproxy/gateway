@@ -286,7 +286,6 @@ xdsIR:
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
-            issuer: https://oauth.foo.com
             tokenEndpoint: https://oauth.foo.com/token
           scopes:
           - openid
@@ -314,7 +313,6 @@ xdsIR:
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth
-            issuer: https://accounts.google.com
             tokenEndpoint: https://oauth2.googleapis.com/token
           scopes:
           - openid
@@ -340,7 +338,6 @@ xdsIR:
           clientSecret: Y2xpZW50MTpzZWNyZXQK
           provider:
             authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
-            issuer: https://oauth.bar.com
             tokenEndpoint: https://oauth.bar.com/token
           scopes:
           - openid

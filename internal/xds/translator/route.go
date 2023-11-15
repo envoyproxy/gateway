@@ -77,7 +77,7 @@ func buildXdsRoute(httpRoute *ir.HTTPRoute) *routev3.Route {
 	}
 
 	// Add per route filter configs to the route, if needed.
-	if err := patchRouteWithFilters(router, httpRoute); err != nil {
+	if err := patchRouteWithPerRouteConfig(router, httpRoute); err != nil {
 		return nil // TODO zhaohuabing we need to handle this error
 	}
 

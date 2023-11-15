@@ -9,7 +9,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -416,6 +418,7 @@ func (t *Translator) buildOIDC(
 	var (
 		oidc         = policy.Spec.OIDC
 		clientSecret *v1.Secret
+		provider     *ir.OIDCProvider
 		err          error
 	)
 
@@ -438,11 +441,13 @@ func (t *Translator) buildOIDC(
 
 	// Discover the token and authorization endpoints from the issuer's
 	// well-known url if not explicitly specified
-	provider := oidc.Provider.DeepCopy()
-	if err := discoverEndpointsFromIssuer(provider); err != nil {
+	if provider, err = discoverEndpointsFromIssuer(&oidc.Provider); err != nil {
 		return nil, err
 	}
 
+	if err := validateTokenEndpoint(provider.TokenEndpoint); err != nil {
+		return nil, err
+	}
 	scopes := appendOpenidScopeIfNotExist(oidc.Scopes)
 
 	return &ir.OIDC{
@@ -479,16 +484,22 @@ type OpenIDConfig struct {
 
 // discoverEndpointsFromIssuer discovers the token and authorization endpoints from the issuer's well-known url
 // return error if failed to fetch the well-known configuration
-func discoverEndpointsFromIssuer(provider *egv1a1.OIDCProvider) error {
+func discoverEndpointsFromIssuer(provider *egv1a1.OIDCProvider) (*ir.OIDCProvider, error) {
 	if provider.TokenEndpoint == nil || provider.AuthorizationEndpoint == nil {
 		tokenEndpoint, authorizationEndpoint, err := fetchEndpointsFromIssuer(provider.Issuer)
 		if err != nil {
-			return fmt.Errorf("error fetching endpoints from issuer: %w", err)
+			return nil, fmt.Errorf("error fetching endpoints from issuer: %w", err)
 		}
-		provider.TokenEndpoint = &tokenEndpoint
-		provider.AuthorizationEndpoint = &authorizationEndpoint
+		return &ir.OIDCProvider{
+			TokenEndpoint:         tokenEndpoint,
+			AuthorizationEndpoint: authorizationEndpoint,
+		}, nil
 	}
-	return nil
+
+	return &ir.OIDCProvider{
+		TokenEndpoint:         *provider.TokenEndpoint,
+		AuthorizationEndpoint: *provider.AuthorizationEndpoint,
+	}, nil
 }
 
 func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {
@@ -507,4 +518,24 @@ func fetchEndpointsFromIssuer(issuerURL string) (string, string, error) {
 	}
 
 	return config.TokenEndpoint, config.AuthorizationEndpoint, nil
+}
+
+// validateTokenEndpoint validates the token endpoint URL
+func validateTokenEndpoint(tokenEndpoint string) error {
+	parsedURL, err := url.Parse(tokenEndpoint)
+	if err != nil {
+		return fmt.Errorf("error parsing token endpoint URL: %w", err)
+	}
+
+	if parsedURL.Scheme != "https" {
+		return fmt.Errorf("token endpoint URL scheme must be https: %s", tokenEndpoint)
+	}
+
+	if parsedURL.Port() != "" {
+		_, err = strconv.Atoi(parsedURL.Port())
+		if err != nil {
+			return fmt.Errorf("error parsing token endpoint URL port: %w", err)
+		}
+	}
+	return nil
 }

@@ -7,6 +7,7 @@ package translator
 
 import (
 	"sort"
+	"strings"
 
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -37,14 +38,16 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	order := 50
 
 	// Set a rational order for all the filters.
-	switch filter.Name {
-	case wellknown.CORS:
+	switch {
+	case filter.Name == wellknown.CORS:
 		order = 1
-	case jwtAuthnFilter:
+	case filter.Name == jwtAuthnFilter:
 		order = 2
-	case wellknown.HTTPRateLimit:
+	case filter.Name == wellknown.HTTPRateLimit:
 		order = 3
-	case wellknown.Router:
+	case isOAuth2Filter(filter):
+		order = 4
+	case filter.Name == wellknown.Router:
 		order = 100
 	}
 
@@ -110,6 +113,11 @@ func (t *Translator) patchHCMWithFilters(
 		return err
 	}
 
+	// Add oauth2 filters, if needed.
+	if err := patchHCMWithOAuth2Filter(mgr, irListener); err != nil {
+		return err
+	}
+
 	// Add the router filter
 	mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.HTTPRouter)
 
@@ -118,8 +126,19 @@ func (t *Translator) patchHCMWithFilters(
 	return nil
 }
 
-// patchRouteWithFilters appends per-route filter configurations to the route.
-func patchRouteWithFilters(
+// patchRouteCfgWithPerRouteConfig appends per-route filter configurations to the route
+// config.
+// This is a generic way to add per-route filter configurations for all filters
+// that has none-native per-route configuration support.
+func patchRouteCfgWithPerRouteConfig(
+	routeCfg *routev3.RouteConfiguration,
+	irListener *ir.HTTPListener) error {
+	// Only supports the oauth2 filter for now, other filters will be added later.
+	return patchRouteCfgWithOAuth2Filter(routeCfg, irListener)
+}
+
+// patchRouteWithPerRouteConfig appends per-route filter configurations to the route.
+func patchRouteWithPerRouteConfig(
 	route *routev3.Route,
 	irRoute *ir.HTTPRoute) error {
 	// TODO: Convert this into a generic interface for API Gateway features.
@@ -130,14 +149,26 @@ func patchRouteWithFilters(
 	}
 
 	// Add the cors per route config to the route, if needed.
-	if err := patchRouteWithCORSConfig(route, irRoute); err != nil {
+	if err := patchRouteWithCORS(route, irRoute); err != nil {
 		return err
 	}
 
 	// Add the jwt per route config to the route, if needed.
-	if err := patchRouteWithJWTConfig(route, irRoute); err != nil {
+	if err := patchRouteWithJWT(route, irRoute); err != nil {
+		return err
+	}
+
+	// Add the oauth2 per route config to the route, if needed.
+	if err := patchRouteWithOAuth2(route, irRoute); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// isOAuth2Filter returns true if the provided filter is an OAuth2 filter.
+func isOAuth2Filter(filter *hcmv3.HttpFilter) bool {
+	// Multiple oauth2 filters are added to the HCM filter chain, one for each
+	// route. The oauth2 filter name is prefixed with "envoy.filters.http.oauth2".
+	return strings.HasPrefix(filter.Name, oauth2Filter)
 }
