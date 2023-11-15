@@ -54,7 +54,17 @@ type JWTProvider struct {
 	// The claim must be of type; string, int, double, bool. Array type claims are not supported
 	//
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
-	// TODO: Add TBD JWT fields based on defined use cases.
+
+	// FromHeaders is a list of HTTP request headers to extract the JWT from.
+	// By default JWT Authentication extract JWT from the 'Authorization' HTTP Header using Bearer schema or
+	// extract it from access_token params
+	FromHeaders []FromHeader `json:"fromHeaders,omitempty"`
+
+	// FromCookies is a list of cookie names to extract the JWT from.
+	FromCookies []string `json:"fromCookies,omitempty"`
+
+	// FromParams is a list of query parameters to extract the JWT from.
+	FromParams []string `json:"fromParams,omitempty"`
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
@@ -80,4 +90,9 @@ type ClaimToHeader struct {
 	// (eg. "claim.nested.key", "sub"). The nested claim name must use dot "."
 	// to separate the JSON name path.
 	Claim string `json:"claim"`
+}
+
+type FromHeader struct {
+	Name        string `json:"name"`
+	ValuePrefix string `json:"valuePrefix"`
 }

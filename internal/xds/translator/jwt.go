@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
+	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -142,6 +143,9 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				JwksSourceSpecifier: remote,
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
+				FromHeaders:         buildJwtFromHeaders(irProvider.FromHeaders),
+				FromCookies:         irProvider.FromCookies,
+				FromParams:          irProvider.FromParams,
 			}
 
 			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
@@ -170,6 +174,22 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 		RequirementMap: reqMap,
 		Providers:      jwtProviders,
 	}, nil
+}
+
+// buildJwtFromHeaders returns a list of JwtHeader transformed from JWT FromHeader struct
+func buildJwtFromHeaders(headers []v1alpha1.FromHeader) []*jwtauthnv3.JwtHeader {
+	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
+
+	for _, header := range headers {
+		jwtHeader := &jwtauthnv3.JwtHeader{
+			Name:        header.Name,
+			ValuePrefix: header.ValuePrefix,
+		}
+
+		jwtHeaders = append(jwtHeaders, jwtHeader)
+	}
+
+	return jwtHeaders
 }
 
 // buildXdsUpstreamTLSSocket returns an xDS TransportSocket that uses envoyTrustBundle
