@@ -126,10 +126,20 @@ func (t *Translator) patchHCMWithFilters(
 	return nil
 }
 
-// patchRouteCfgWithPerRouteConfig appends per-route filter configurations to the route
-// config.
+// patchRouteCfgWithPerRouteConfig appends per-route filter configurations to the
+// route config.
 // This is a generic way to add per-route filter configurations for all filters
 // that has none-native per-route configuration support.
+//   - For the filter type that without native per-route configuration support, EG
+//     adds a filter for each route in the HCM filter chain.
+//   - patchRouteCfgWithPerRouteConfig disables all the filters in the
+//     typedFilterConfig of the route config.
+//   - PatchRouteWithPerRouteConfig enables the corresponding oauth2 filter for each
+//     route in the typedFilterConfig of the route.
+//
+// The filter types that have non-native per-route support: oauth2, basic authn
+// Note: The filter types that have native per-route configuration support should
+// use their own native per-route configuration.
 func patchRouteCfgWithPerRouteConfig(
 	routeCfg *routev3.RouteConfiguration,
 	irListener *ir.HTTPListener) error {
