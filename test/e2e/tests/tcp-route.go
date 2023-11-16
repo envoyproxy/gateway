@@ -14,7 +14,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -80,31 +79,6 @@ var TCPRouteTest = suite.ConformanceTest{
 		})
 
 	},
-}
-
-// GatewayRef is a tiny type for specifying an TCP Route ParentRef without
-// relying on a specific api version.
-type GatewayRef struct {
-	types.NamespacedName
-	listenerNames []*gatewayv1.SectionName
-}
-
-// NewGatewayRef creates a GatewayRef resource.  ListenerNames are optional.
-func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef {
-	var listeners []*gatewayv1.SectionName
-
-	if len(listenerNames) == 0 {
-		listenerNames = append(listenerNames, "")
-	}
-
-	for _, listener := range listenerNames {
-		sectionName := gatewayv1.SectionName(listener)
-		listeners = append(listeners, &sectionName)
-	}
-	return GatewayRef{
-		NamespacedName: nn,
-		listenerNames:  listeners,
-	}
 }
 
 func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
@@ -206,87 +180,4 @@ func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig c
 		return parentsForRouteMatch(t, routeName, parents, actual, namespaceRequired), nil
 	})
 	require.NoErrorf(t, waitErr, "error waiting for TCPRoute to have parents matching expectations")
-}
-
-func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected, actual []gatewayv1.RouteParentStatus, namespaceRequired bool) bool {
-	t.Helper()
-
-	if len(expected) != len(actual) {
-		t.Logf("Route %s/%s expected %d Parents got %d", routeName.Namespace, routeName.Name, len(expected), len(actual))
-		return false
-	}
-
-	for i, expectedParent := range expected {
-		actualParent := actual[i]
-		if actualParent.ControllerName != expectedParent.ControllerName {
-			t.Logf("Route %s/%s ControllerName doesn't match", routeName.Namespace, routeName.Name)
-			return false
-		}
-		if !reflect.DeepEqual(actualParent.ParentRef.Group, expectedParent.ParentRef.Group) {
-			t.Logf("Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Group, actualParent.ParentRef.Group)
-			return false
-		}
-		if !reflect.DeepEqual(actualParent.ParentRef.Kind, expectedParent.ParentRef.Kind) {
-			t.Logf("Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Kind, actualParent.ParentRef.Kind)
-			return false
-		}
-		if actualParent.ParentRef.Name != expectedParent.ParentRef.Name {
-			t.Logf("Route %s/%s ParentReference.Name doesn't match", routeName.Namespace, routeName.Name)
-			return false
-		}
-		if !reflect.DeepEqual(actualParent.ParentRef.Namespace, expectedParent.ParentRef.Namespace) {
-			if namespaceRequired || actualParent.ParentRef.Namespace != nil {
-				t.Logf("Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Namespace, actualParent.ParentRef.Namespace)
-				return false
-			}
-		}
-		if !conditionsMatch(t, expectedParent.Conditions, actualParent.Conditions) {
-			return false
-		}
-	}
-
-	t.Logf("Route %s/%s Parents matched expectations", routeName.Namespace, routeName.Name)
-	return true
-}
-
-func conditionsMatch(t *testing.T, expected, actual []metav1.Condition) bool {
-	t.Helper()
-
-	if len(actual) < len(expected) {
-		t.Logf("Expected more conditions to be present")
-		return false
-	}
-	for _, condition := range expected {
-		if !findConditionInList(t, actual, condition.Type, string(condition.Status), condition.Reason) {
-			return false
-		}
-	}
-
-	t.Logf("Conditions matched expectations")
-	return true
-}
-
-// findConditionInList finds a condition in a list of Conditions, checking
-// the Name, Value, and Reason. If an empty reason is passed, any Reason will match.
-// If an empty status is passed, any Status will match.
-func findConditionInList(t *testing.T, conditions []metav1.Condition, condName, expectedStatus, expectedReason string) bool {
-	t.Helper()
-
-	for _, cond := range conditions {
-		if cond.Type == condName {
-			// an empty Status string means "Match any status".
-			if expectedStatus == "" || cond.Status == metav1.ConditionStatus(expectedStatus) {
-				// an empty Reason string means "Match any reason".
-				if expectedReason == "" || cond.Reason == expectedReason {
-					return true
-				}
-				t.Logf("%s condition Reason set to %s, expected %s", condName, cond.Reason, expectedReason)
-			}
-
-			t.Logf("%s condition set to Status %s with Reason %v, expected Status %s", condName, cond.Status, cond.Reason, expectedStatus)
-		}
-	}
-
-	t.Logf("%s was not in conditions list [%v]", condName, conditions)
-	return false
 }
