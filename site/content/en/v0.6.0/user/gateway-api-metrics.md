@@ -33,7 +33,7 @@ Navigate to [http://localhost:9090](http://localhost:9090).
 Metrics can be queried from the 'Graph' tab e.g. `gatewayapi_gateway_created`
 See the [Gateway API State Metrics README](https://github.com/Kuadrant/gateway-api-state-metrics/tree/main#metrics) for the full list of Gateway API metrics available.
 
-Alerts can be see in the 'Alerts' tab.
+Alerts can be seen in the 'Alerts' tab.
 Gateway API specific alerts will be grouped under the 'gateway-api.rules' heading.
 
 ***Note:*** Alerts are defined in a PrometheusRules custom resource in the 'monitoring' namespace. You can modify the alert rules by updating this resource.

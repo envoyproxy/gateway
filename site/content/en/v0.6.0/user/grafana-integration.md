@@ -10,7 +10,7 @@ This guide shows you how to visualise the metrics exposed to prometheus using gr
 Follow the steps from the [Quickstart Guide](../quickstart) to install Envoy Gateway and the example manifest.
 Before proceeding, you should be able to query the example backend using HTTP.
 
-Follow the steps from the [Proxy Observability](proxy-observability.md#Metrics) to enable prometheus metrics.
+Follow the steps from the [Proxy Observability](../proxy-observability#Metrics) to enable prometheus metrics.
 
 [Prometheus](https://prometheus.io) is used to scrape metrics from the Envoy Proxy instances. Install Prometheus:
 

@@ -27,7 +27,7 @@ Before proceeding, you should be able to query the example backend using HTTP.
 
 ### Enable EnvoyPatchPolicy
 
-* By default EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
+* By default [EnvoyPatchPolicy][] is disabled. Lets enable it in the [EnvoyGateway][] startup configuration
 
 * The default installation of Envoy Gateway installs a default [EnvoyGateway][] configuration and attaches it
 using a `ConfigMap`. In the next step, we will update this resource to enable EnvoyPatchPolicy. 
@@ -194,9 +194,9 @@ across versions for these reasons
 * Envoy Gateway might alter the xDS translation creating a different xDS output
 such as changing the `name` field of resources.
 
-[EnvoyPatchPolicy]: https://gateway.envoyproxy.io/v0.6.0/api/extension_types.html#envoypatchpolicy
-[EnvoyGateway]: https://gateway.envoyproxy.io/v0.6.0/api/config_types.html#envoygateway
+[EnvoyPatchPolicy]: ../../api/extension_types#envoypatchpolicy
+[EnvoyGateway]: ../../api/extension_types#envoygateway
 [JSON Patch]: https://datatracker.ietf.org/doc/html/rfc6902
 [xDS]: https://www.envoyproxy.io/docs/envoy/v0.6.0/intro/arch_overview/operations/dynamic_configuration
 [Local Reply Modification]: https://www.envoyproxy.io/docs/envoy/v0.6.0/configuration/http/http_conn_man/local_reply
-[egctl x translate]: https://gateway.envoyproxy.io/v0.6.0/user/egctl.html#egctl-experimental-translate
+[egctl x translate]: ../egctl#egctl-experimental-translate

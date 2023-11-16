@@ -20,7 +20,7 @@ Envoy xDS API and its capabilities, this API is being introduced.
 * Add an API allowing users to modify the generated xDS Configuration
 
 ## Non Goals
-* Support multiple patch mechanisims
+* Support multiple patch mechanisms
 
 ## Implementation
 `EnvoyPatchPolicy` is a [Direct Policy Attachment][] type API that can be used to extend [Gateway API][]
@@ -32,14 +32,14 @@ resource objects.
 Here is an example highlighting how a user can configure global ratelimiting using an external rate limit service using this API.
 
 ```
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -51,7 +51,7 @@ spec:
       protocol: HTTP
       port: 80
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -167,10 +167,10 @@ patches will work.
 [Gateway API]: https://gateway-api.sigs.k8s.io/
 [Kubernetes]: https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
 [Kustomize]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/jsonpatch.md
-[Extension APIs]: https://gateway.envoyproxy.io/latest/api/extension_types.html
-[RateLimit]: https://gateway.envoyproxy.io/latest/user/rate-limit.html
-[EnvoyGateway]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoygateway
-[Extending the Control Plane]: https://gateway.envoyproxy.io/latest/design/extending-envoy-gateway.html
+[Extension APIs]: ../../api/extension_types/
+[RateLimit]: ../../user/rate-limit/
+[EnvoyGateway]: ../../api/extension_types#envoygateway
+[Extending the Control Plane]: ../extending-envoy-gateway/
 [EnvoyFilter]: https://istio.io/latest/docs/reference/config/networking/envoy-filter
-[egctl x translate]: https://gateway.envoyproxy.io/latest/user/egctl.html#egctl-experimental-translate
-[Bootstrap configuration using EnvoyProxy API]: https://gateway.envoyproxy.io/latest/user/customize-envoyproxy.html#customize-envoyproxy-bootstrap-config
+[egctl x translate]: ../../user/egctl#egctl-experimental-translate
+[Bootstrap configuration using EnvoyProxy API]: ../../user/customize-envoyproxy#customize-envoyproxy-bootstrap-config
