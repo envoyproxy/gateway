@@ -41,11 +41,11 @@ func newOrderedHTTPFilter(filter *hcmv3.HttpFilter) *OrderedHTTPFilter {
 	switch {
 	case filter.Name == wellknown.CORS:
 		order = 1
-	case filter.Name == jwtAuthnFilter:
-		order = 2
-	case filter.Name == wellknown.HTTPRateLimit:
-		order = 3
 	case isOAuth2Filter(filter):
+		order = 2
+	case filter.Name == jwtAuthnFilter:
+		order = 3
+	case filter.Name == wellknown.HTTPRateLimit:
 		order = 4
 	case filter.Name == wellknown.Router:
 		order = 100
