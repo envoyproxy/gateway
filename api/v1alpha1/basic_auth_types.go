@@ -9,8 +9,9 @@ import gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 // BasicAuth defines the configuration for 	the HTTP Basic Authentication.
 type BasicAuth struct {
-	// The Kubernetes secret which contains the username-password pairs used to
-	// verify user credentials in the "Authorization" header.
+	// The Kubernetes secret which contains the username-password pairs in
+	// htpasswd format, used to verify user credentials in the "Authorization"
+	// header.
 	//
 	// This is an Opaque secret. The username-password pairs should be stored in
 	// the key ".htpasswd". As the key name indicates, the value needs to be the
