@@ -182,6 +182,7 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 The important parts are
@@ -209,7 +210,7 @@ Status:
 Now we're ready to update the Gateway annotation to use this issuer instead:
 
 ```console
-$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt-staging
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/cluster-issuer=letsencrypt-staging
 ```
 
 The Gateway should be picked up by cert-manager, which will create a new certificate for you, and replace the Secret.
@@ -262,12 +263,13 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 And now you can update the Gateway listener to point to `letsencrypt` instead:
 
 ```console
-$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/cluster-issuer=letsencrypt
 ```
 
 As before, track it by looking at CertificateRequests.
