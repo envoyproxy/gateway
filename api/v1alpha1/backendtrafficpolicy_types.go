@@ -59,6 +59,12 @@ type BackendTrafficPolicySpec struct {
 	// ProxyProtocol enables the Proxy Protocol when communicating with the backend.
 	// +optional
 	ProxyProtocol *ProxyProtocol `json:"proxyProtocol,omitempty"`
+
+	// TcpKeepalive settings associated with the upstream client connection.
+	// Disabled by default.
+	//
+	// +optional
+	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty"`
 }
 
 // BackendTrafficPolicyStatus defines the state of BackendTrafficPolicy
