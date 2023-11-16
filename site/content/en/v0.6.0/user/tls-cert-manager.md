@@ -182,6 +182,7 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 The important parts are
@@ -262,6 +263,7 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 And now you can update the Gateway listener to point to `letsencrypt` instead:
