@@ -3,6 +3,8 @@
 // The full text of the Apache license is available in the LICENSE file at
 // the root of the repo.
 
+// This file contains code derived from upstream gateway-api, it will be moved to upstream.
+
 //go:build e2e
 // +build e2e
 
@@ -11,7 +13,9 @@ package tests
 import (
 	"context"
 	"fmt"
+	"net"
 	"reflect"
+	"strconv"
 	"testing"
 	"time"
 
@@ -31,31 +35,6 @@ import (
 
 func init() {
 	ConformanceTests = append(ConformanceTests, TCPRouteTest)
-}
-
-// GatewayRef is a tiny type for specifying an TCP Route ParentRef without
-// relying on a specific api version.
-type GatewayRef struct {
-	types.NamespacedName
-	listenerNames []*gatewayv1.SectionName
-}
-
-// NewGatewayRef creates a GatewayRef resource.  ListenerNames are optional.
-func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef {
-	var listeners []*gatewayv1.SectionName
-
-	if len(listenerNames) == 0 {
-		listenerNames = append(listenerNames, "")
-	}
-
-	for _, listener := range listenerNames {
-		sectionName := gatewayv1.SectionName(listener)
-		listeners = append(listeners, &sectionName)
-	}
-	return GatewayRef{
-		NamespacedName: nn,
-		listenerNames:  listeners,
-	}
 }
 
 var TCPRouteTest = suite.ConformanceTest{
@@ -103,10 +82,41 @@ var TCPRouteTest = suite.ConformanceTest{
 	},
 }
 
+// GatewayRef is a tiny type for specifying an TCP Route ParentRef without
+// relying on a specific api version.
+type GatewayRef struct {
+	types.NamespacedName
+	listenerNames []*gatewayv1.SectionName
+}
+
+// NewGatewayRef creates a GatewayRef resource.  ListenerNames are optional.
+func NewGatewayRef(nn types.NamespacedName, listenerNames ...string) GatewayRef {
+	var listeners []*gatewayv1.SectionName
+
+	if len(listenerNames) == 0 {
+		listenerNames = append(listenerNames, "")
+	}
+
+	for _, listener := range listenerNames {
+		sectionName := gatewayv1.SectionName(listener)
+		listeners = append(listeners, &sectionName)
+	}
+	return GatewayRef{
+		NamespacedName: nn,
+		listenerNames:  listeners,
+	}
+}
+
 func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutConfig config.TimeoutConfig, controllerName string, gw GatewayRef, routeNNs ...types.NamespacedName) string {
 	t.Helper()
 
-	gwAddr, err := kubernetes.WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName)
+	tcpRoute := &v1alpha2.TCPRoute{}
+	err := c.Get(context.Background(), routeNNs[0], tcpRoute)
+	if err != nil {
+		t.Logf("error fetching TCPRoute: %v", err)
+	}
+
+	gwAddr, err := WaitForGatewayAddress(t, c, timeoutConfig, gw.NamespacedName, string(*tcpRoute.Spec.ParentRefs[0].SectionName))
 	require.NoErrorf(t, err, "timed out waiting for Gateway address to be assigned")
 
 	ns := gatewayv1.Namespace(gw.Namespace)
@@ -143,6 +153,44 @@ func GatewayAndTCPRoutesMustBeAccepted(t *testing.T, c client.Client, timeoutCon
 
 }
 
+// WaitForGatewayAddress waits until at least one IP Address has been set in the
+// status of the specified Gateway.
+func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, gwName types.NamespacedName, sectionName string) (string, error) {
+	t.Helper()
+
+	var ipAddr, port string
+	waitErr := wait.PollUntilContextTimeout(context.Background(), 1*time.Second, timeoutConfig.GatewayMustHaveAddress, true, func(ctx context.Context) (bool, error) {
+		gw := &gatewayv1.Gateway{}
+		err := client.Get(ctx, gwName, gw)
+		if err != nil {
+			t.Logf("error fetching Gateway: %v", err)
+			return false, fmt.Errorf("error fetching Gateway: %w", err)
+		}
+
+		if err := kubernetes.ConditionsHaveLatestObservedGeneration(gw, gw.Status.Conditions); err != nil {
+			t.Log("Gateway", err)
+			return false, nil
+		}
+		for i, val := range gw.Spec.Listeners {
+			if val.Name == gatewayv1.SectionName(sectionName) {
+				port = strconv.FormatInt(int64(gw.Spec.Listeners[i].Port), 10)
+			}
+		}
+
+		// TODO: Support more than IPAddress
+		for _, address := range gw.Status.Addresses {
+			if address.Type != nil && *address.Type == gatewayv1.IPAddressType {
+				ipAddr = address.Value
+				return true, nil
+			}
+		}
+
+		return false, nil
+	})
+	require.NoErrorf(t, waitErr, "error waiting for Gateway to have at least one IP address in status")
+	return net.JoinHostPort(ipAddr, port), waitErr
+}
+
 func TCPRouteMustHaveParents(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, routeName types.NamespacedName, parents []gatewayv1.RouteParentStatus, namespaceRequired bool) {
 	t.Helper()
 
@@ -168,32 +216,31 @@ func parentsForRouteMatch(t *testing.T, routeName types.NamespacedName, expected
 		return false
 	}
 
-	// TODO(robscott): Allow for arbitrarily ordered parents
-	for i, eParent := range expected {
-		aParent := actual[i]
-		if aParent.ControllerName != eParent.ControllerName {
+	for i, expectedParent := range expected {
+		actualParent := actual[i]
+		if actualParent.ControllerName != expectedParent.ControllerName {
 			t.Logf("Route %s/%s ControllerName doesn't match", routeName.Namespace, routeName.Name)
 			return false
 		}
-		if !reflect.DeepEqual(aParent.ParentRef.Group, eParent.ParentRef.Group) {
-			t.Logf("Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, eParent.ParentRef.Group, aParent.ParentRef.Group)
+		if !reflect.DeepEqual(actualParent.ParentRef.Group, expectedParent.ParentRef.Group) {
+			t.Logf("Route %s/%s expected ParentReference.Group to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Group, actualParent.ParentRef.Group)
 			return false
 		}
-		if !reflect.DeepEqual(aParent.ParentRef.Kind, eParent.ParentRef.Kind) {
-			t.Logf("Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, eParent.ParentRef.Kind, aParent.ParentRef.Kind)
+		if !reflect.DeepEqual(actualParent.ParentRef.Kind, expectedParent.ParentRef.Kind) {
+			t.Logf("Route %s/%s expected ParentReference.Kind to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Kind, actualParent.ParentRef.Kind)
 			return false
 		}
-		if aParent.ParentRef.Name != eParent.ParentRef.Name {
+		if actualParent.ParentRef.Name != expectedParent.ParentRef.Name {
 			t.Logf("Route %s/%s ParentReference.Name doesn't match", routeName.Namespace, routeName.Name)
 			return false
 		}
-		if !reflect.DeepEqual(aParent.ParentRef.Namespace, eParent.ParentRef.Namespace) {
-			if namespaceRequired || aParent.ParentRef.Namespace != nil {
-				t.Logf("Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, eParent.ParentRef.Namespace, aParent.ParentRef.Namespace)
+		if !reflect.DeepEqual(actualParent.ParentRef.Namespace, expectedParent.ParentRef.Namespace) {
+			if namespaceRequired || actualParent.ParentRef.Namespace != nil {
+				t.Logf("Route %s/%s expected ParentReference.Namespace to be %v, got %v", routeName.Namespace, routeName.Name, expectedParent.ParentRef.Namespace, actualParent.ParentRef.Namespace)
 				return false
 			}
 		}
-		if !conditionsMatch(t, eParent.Conditions, aParent.Conditions) {
+		if !conditionsMatch(t, expectedParent.Conditions, actualParent.Conditions) {
 			return false
 		}
 	}
