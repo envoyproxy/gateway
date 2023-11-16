@@ -44,6 +44,23 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              basicAuth:
+                description: BasicAuth defines the configuration for the HTTP Basic
+                  Authentication.
+                properties:
+                  users:
+                    description: "Username-hashed password pairs used to verify user
+                      credentials in the \"Authorization\" header. \n The value needs
+                      to be the htpasswd format, for example: \"user1:{SHA}hashed_user1_password\".
+                      Right now, only SHA hash algorithm is supported. Reference to
+                      https://httpd.apache.org/docs/2.4/programs/htpasswd.html"
+                    items:
+                      type: string
+                    minItems: 1
+                    type: array
+                required:
+                - users
+                type: object
               cors:
                 description: CORS defines the configuration for Cross-Origin Resource
                   Sharing (CORS).

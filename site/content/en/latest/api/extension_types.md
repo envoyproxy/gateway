@@ -79,6 +79,21 @@ _Appears in:_
 
 
 
+#### BasicAuth
+
+
+
+BasicAuth defines the configuration for the HTTP Basic Authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `users` _string array_ | Username-hashed password pairs used to verify user credentials in the "Authorization" header. 
+ The value needs to be the htpasswd format, for example: "user1:{SHA}hashed_user1_password". Right now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html |
+
+
 #### BootstrapType
 
 _Underlying type:_ `string`
@@ -1620,6 +1635,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 
