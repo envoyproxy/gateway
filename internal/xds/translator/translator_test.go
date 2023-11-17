@@ -196,6 +196,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "http-route-partial-invalid",
 		},
+		{
+			name: "listener-proxy-protocol",
+		},
 	}
 
 	for _, tc := range testCases {
