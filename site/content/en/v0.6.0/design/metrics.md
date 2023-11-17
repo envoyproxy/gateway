@@ -78,7 +78,7 @@ type PrometheusProvider struct {
 
 ### Example
 
-1. The following is an example to disable prometheus metric.
+- The following is an example to disable prometheus metric.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/disable-prometheus.yaml"
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -93,7 +93,7 @@ spec:
         disable: true
 ```
 
-1. The following is an example to send metric via Open Telemetry sink.
+- The following is an example to send metric via Open Telemetry sink.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/otel-sink.yaml"
 apiVersion: gateway.envoyproxy.io/v1alpha1

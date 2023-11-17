@@ -158,7 +158,7 @@ EOF
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-ratelimit
@@ -310,7 +310,7 @@ EOF
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-ratelimit
@@ -441,7 +441,7 @@ EOF
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-ratelimit
@@ -533,7 +533,7 @@ spec:
           requests: 3
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-ratelimit
@@ -634,7 +634,7 @@ spec:
           requests: 3
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -821,9 +821,9 @@ kubectl rollout restart deployment envoy-gateway -n envoy-gateway-system
 ```
 
 [Global Rate Limiting]: https://www.envoyproxy.io/docs/envoy/v0.6.0/intro/arch_overview/other_features/global_rate_limiting
-[BackendTrafficPolicy]: https://gateway.envoyproxy.io/v0.6.0/api/extension_types.html#backendtrafficpolicy
+[BackendTrafficPolicy]: ../../api/extension_types#backendtrafficpolicy
 [Envoy Ratelimit]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: https://gateway.envoyproxy.io/v0.6.0/api/config_types.html#envoygateway
+[EnvoyGateway]: ../../api/extension_types#envoygateway
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
 [GRPCRoute]: https://gateway-api.sigs.k8s.io/api-types/grpcroute/

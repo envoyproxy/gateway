@@ -17,7 +17,7 @@ You can configure to rewrite the prefix in the url like below. In this example, 
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-filter-url-rewrite
@@ -116,7 +116,7 @@ You can configure to rewrite the fullpath in the url like below. In this example
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-filter-url-rewrite
@@ -210,7 +210,7 @@ You can configure to rewrite the hostname like below. In this example, any reque
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-filter-url-rewrite
@@ -294,4 +294,4 @@ $ curl -L -vvv --header "Host: path.rewrite.example" "http://${GATEWAY_HOST}/get
 
 You can see that the `X-Forwarded-Host` is `path.rewrite.example`, but the actual host is `envoygateway.io`.
 
-[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPURLRewriteFilter
+[HTTPURLRewriteFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPURLRewriteFilter

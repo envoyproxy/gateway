@@ -15,14 +15,14 @@ resources.
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --to xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -58,7 +58,7 @@ spec:
   selector:
     app: backend
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -259,14 +259,14 @@ You can also use the `--type`/`-t` flag to retrieve specific output types. In th
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --to xds -t route -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -302,7 +302,7 @@ spec:
   selector:
     app: backend
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -353,14 +353,14 @@ For example, this will provide the similar result as the above:
 
 ```shell
 cat <<EOF | egctl x translate --add-missing-resources --from gateway-api --to gateway-api -t route -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -372,7 +372,7 @@ spec:
       protocol: HTTP
       port: 80
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -396,7 +396,7 @@ spec:
 EOF
 ```
 
-You can see the output contains a [EnvoyProxy](https://gateway.envoyproxy.io/v0.6.0/api/config_types.html#envoyproxy) resource that
+You can see the output contains a [EnvoyProxy](../../api/extension_types#envoyproxy) resource that
 can be used as a starting point to modify the xDS bootstrap resource for the managed Envoy Proxy fleet.
 
 ```yaml
@@ -572,14 +572,14 @@ Sometimes you might find that egctl doesn't provide an expected result. For exam
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --type route --to xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -590,7 +590,7 @@ spec:
       protocol: TLS
       port: 8443
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -623,14 +623,14 @@ You can add an additional target `gateway-api` to show the processed Gateway API
 
 ```shell
 cat <<EOF | egctl x translate --from gateway-api --type route --to gateway-api,xds -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -641,7 +641,7 @@ spec:
       protocol: TLS
       port: 8443
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend

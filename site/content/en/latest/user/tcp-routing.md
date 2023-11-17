@@ -35,13 +35,13 @@ Install the GatewayClass and a `tcp-gateway` Gateway first.
 ```shell
 cat <<EOF | kubectl apply -f -
 kind: GatewayClass
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: tcp-gateway
@@ -300,5 +300,5 @@ Content-Length: 267
 
 You can see that the traffic routing to `bar` service when sending request to `8089` port.
 
-[TCPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
+[TCPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.TCPRoute
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/

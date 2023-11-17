@@ -148,7 +148,7 @@ cert-manager then follows the [Certificate Lifecycle](https://cert-manager.io/do
 To know how to issue the certificate, an ClusterIssuer is configured, and referenced through annotations on the Gateway resource, which you did above.
 Once a matching ClusterIssuer is found, that plugin does what needs to be done to acquire a signed certificate.
 
-In the case of the ACME protocol (used by Let's Encrypt,) cert-manager can also use an HTTP Gateway to solve the HTTP-01 challenge type.
+In the case of the ACME protocol (used by Let's Encrypt), cert-manager can also use an HTTP Gateway to solve the HTTP-01 challenge type.
 This is the other side of cert-manager's Gateway API support:
 the [ACME issuer](https://github.com/cert-manager/cert-manager/tree/master/pkg/issuer/acme/http/httproute.go) creates a temporary [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/), lets the ACME server(s) query it, and deletes it again.
 
@@ -182,6 +182,7 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 The important parts are
@@ -209,7 +210,7 @@ Status:
 Now we're ready to update the Gateway annotation to use this issuer instead:
 
 ```console
-$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt-staging
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/cluster-issuer=letsencrypt-staging
 ```
 
 The Gateway should be picked up by cert-manager, which will create a new certificate for you, and replace the Secret.
@@ -262,12 +263,13 @@ spec:
           - kind: Gateway
             name: eg
             namespace: default
+EOF
 ```
 
 And now you can update the Gateway listener to point to `letsencrypt` instead:
 
 ```console
-$ kubectl annotate --overwrite gateway/eg cert-manager.io/clusterissuer=letsencrypt
+$ kubectl annotate --overwrite gateway/eg cert-manager.io/cluster-issuer=letsencrypt
 ```
 
 As before, track it by looking at CertificateRequests.

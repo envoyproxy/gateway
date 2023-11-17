@@ -53,7 +53,7 @@ Here is an example where a user inputs a `GatewayClass` and the CLI generates th
 
 ```
 cat <<EOF | egctl x translate --from gateway-api --to gateway-api -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -65,7 +65,7 @@ EOF
 ```
 
 ```
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -173,7 +173,7 @@ unmarshalled into the Bootstrap object as well as ensure the user can override c
 
 ```
 cat <<EOF | egctl x translate --from gateway-api --to gateway-api -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -275,7 +275,7 @@ EOF
 ```
 
 ```
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -376,6 +376,6 @@ spec:
 ```
 
 [Issue 31]: https://github.com/envoyproxy/gateway/issues/31
-[EnvoyProxy]: https://gateway.envoyproxy.io/latest/api/config_types.html#envoyproxy
-[GatewayClass]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.GatewayClass
-[parametersRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParametersReference 
+[EnvoyProxy]: ../../api/extension_types#envoyproxy
+[GatewayClass]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.GatewayClass
+[parametersRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference 

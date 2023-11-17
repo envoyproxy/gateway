@@ -42,7 +42,7 @@ PROFILE	| FUNCTION
 
 Here is an example configuration to open admin server and enable Pprof:
 
-``` yaml
+```yaml
 apiVersion: gateway.envoyproxy.io/v1alpha1
 gateway:
     controllerName: "gateway.envoyproxy.io/gatewayclass-controller"

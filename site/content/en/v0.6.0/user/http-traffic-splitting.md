@@ -17,7 +17,7 @@ When a single backendRef is configured in a HTTPRoute, it will receive 100% of t
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-headers
@@ -149,7 +149,7 @@ Then create an HTTPRoute that uses both the app from the quickstart and the seco
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-headers
@@ -219,7 +219,7 @@ backend-2 service.
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-headers
@@ -265,7 +265,7 @@ with status code `500`.
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-headers
@@ -310,4 +310,4 @@ $ curl -vvv --header "Host: backends.example" "http://${GATEWAY_HOST}/get"
 ```
 
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[backendRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.BackendRef
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef
