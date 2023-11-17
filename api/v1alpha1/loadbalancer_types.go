@@ -5,6 +5,8 @@
 
 package v1alpha1
 
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 // LoadBalancer defines the load balancer policy to be applied.
 // +union
 //
@@ -24,6 +26,13 @@ type LoadBalancer struct {
 	//
 	// +optional
 	ConsistentHash *ConsistentHash `json:"consistentHash,omitempty"`
+
+	// SlowStartWindow defines the duration of the warm up period for newly added host.
+	// If set, during slow start window, traffic sent to the newly added hosts will gradually increase in a linear manner.
+	// Currently this is only supported for RoundRobin and LeastRequest load balancers.
+	// For additional details,
+	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
+	SlowStartWindow *metav1.Duration `json:"slowStartWindow,omitempty"`
 }
 
 // LoadBalancerType specifies the types of LoadBalancer.
