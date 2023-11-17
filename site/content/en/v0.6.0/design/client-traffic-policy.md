@@ -26,14 +26,14 @@ to define configuration that affect the connection between the downstream client
 Here is an example highlighting how a user can configure this API.
 
 ```
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -45,7 +45,7 @@ spec:
       protocol: HTTP
       port: 80
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -108,7 +108,7 @@ entire Gateway then
 
 ## Alternatives
 
-* The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
+* The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
 
 [Direct Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/#direct-policy-attachment
 [Gateway API]: https://gateway-api.sigs.k8s.io/

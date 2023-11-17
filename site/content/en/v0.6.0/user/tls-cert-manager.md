@@ -432,5 +432,5 @@ eg-https   kubernetes.io/tls   3      42m
 
 ## See Also
 
-* [Secure Gateways](secure-gateways.md)
+* [Secure Gateways](../secure-gateways/)
 * [Securing gateway.networking.k8s.io Gateway Resources](https://cert-manager.io/docs/usage/gateway/)

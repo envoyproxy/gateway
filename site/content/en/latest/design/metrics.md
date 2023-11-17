@@ -6,11 +6,11 @@ title: "Observability: Metrics"
 
 Envoy provide robust platform for metrics, Envoy support three different kinds of stats: counter, gauges, histograms.
 
-Envoy enables prometheus format output via the `/stats/prometheus` [admin endpoint](https://www.envoyproxy.io/docs/envoy/latest/operations/admin).
+Envoy enables prometheus format output via the `/stats/prometheus` [admin endpoint][].
 
-Envoy support different kinds of sinks, but EG will only support [Open Telemetry sink](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto).
+Envoy support different kinds of sinks, but EG will only support [Open Telemetry sink][].
 
-Envoy Gateway leverages [Gateway API](https://gateway-api.sigs.k8s.io/) for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels) for implementers such as Envoy Gateway to expose features. Since metrics is not covered by `Core` or `Extended` APIs, EG should provide an easy to config metrics per `EnvoyProxy`.
+Envoy Gateway leverages [Gateway API][] for configuring managed Envoy proxies. Gateway API defines core, extended, and implementation-specific API [support levels][] for implementers such as Envoy Gateway to expose features. Since metrics is not covered by `Core` or `Extended` APIs, EG should provide an easy to config metrics per `EnvoyProxy`.
 
 ## Goals
 
@@ -78,7 +78,7 @@ type PrometheusProvider struct {
 
 ### Example
 
-1. The following is an example to disable prometheus metric.
+- The following is an example to disable prometheus metric.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/disable-prometheus.yaml"
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -93,7 +93,7 @@ spec:
         disable: true
 ```
 
-1. The following is an example to send metric via Open Telemetry sink.
+- The following is an example to send metric via Open Telemetry sink.
 
 ```yaml mdox-exec="sed '1,12d' examples/kubernetes/metric/otel-sink.yaml"
 apiVersion: gateway.envoyproxy.io/v1alpha1
@@ -110,3 +110,8 @@ spec:
             host: otel-collector.monitoring.svc.cluster.local
             port: 4317
 ```
+
+[admin endpoint]: https://www.envoyproxy.io/docs/envoy/latest/operations/admin
+[Open Telemetry sink]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/stat_sinks/open_telemetry/v3/open_telemetry.proto
+[Gateway API]: https://gateway-api.sigs.k8s.io/
+[support levels]: https://gateway-api.sigs.k8s.io/concepts/conformance/?h=extended#2-support-levels
