@@ -31,7 +31,7 @@ func TestBuildXdsCluster(t *testing.T) {
 	args := &xdsClusterArgs{
 		name:         bootstrapXdsCluster.Name,
 		tSocket:      bootstrapXdsCluster.TransportSocket,
-		endpointType: DefaultEndpointType,
+		endpointType: EndpointTypeDNS,
 	}
 	dynamicXdsCluster := buildXdsCluster(args)
 

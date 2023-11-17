@@ -189,6 +189,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "jwt-single-route-single-match",
 		},
+		{
+			name: "oidc",
+		},
 	}
 
 	for _, tc := range testCases {

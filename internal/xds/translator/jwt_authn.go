@@ -8,22 +8,17 @@ package translator
 import (
 	"errors"
 	"fmt"
-	"net"
-	"net/url"
-	"strconv"
-	"strings"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	jwtauthnv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/jwt_authn/v3"
 	hcmv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	tlsv3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
+	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 
-	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	"github.com/envoyproxy/gateway/internal/xds/types"
@@ -97,64 +92,68 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 	reqMap := make(map[string]*jwtauthnv3.JwtRequirement)
 
 	for _, route := range irListener.Routes {
-		if route != nil && routeContainsJWTAuthn(route) {
-			var reqs []*jwtauthnv3.JwtRequirement
-			for i := range route.JWT.Providers {
-				irProvider := route.JWT.Providers[i]
-				// Create the cluster for the remote jwks, if it doesn't exist.
-				jwksCluster, err := newJWKSCluster(&irProvider)
-				if err != nil {
-					return nil, err
-				}
+		if route == nil || !routeContainsJWTAuthn(route) {
+			continue
+		}
 
-				remote := &jwtauthnv3.JwtProvider_RemoteJwks{
-					RemoteJwks: &jwtauthnv3.RemoteJwks{
-						HttpUri: &corev3.HttpUri{
-							Uri: irProvider.RemoteJWKS.URI,
-							HttpUpstreamType: &corev3.HttpUri_Cluster{
-								Cluster: jwksCluster.name,
-							},
-							Timeout: &durationpb.Duration{Seconds: 5},
-						},
-						CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
-						AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
-						RetryPolicy:   &corev3.RetryPolicy{},
-					},
-				}
-
-				claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
-				for _, claimToHeader := range irProvider.ClaimToHeaders {
-					claimToHeader := &jwtauthnv3.JwtClaimToHeader{HeaderName: claimToHeader.Header, ClaimName: claimToHeader.Claim}
-					claimToHeaders = append(claimToHeaders, claimToHeader)
-				}
-				jwtProvider := &jwtauthnv3.JwtProvider{
-					Issuer:              irProvider.Issuer,
-					Audiences:           irProvider.Audiences,
-					JwksSourceSpecifier: remote,
-					PayloadInMetadata:   irProvider.Issuer,
-					ClaimToHeaders:      claimToHeaders,
-				}
-
-				providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
-				jwtProviders[providerKey] = jwtProvider
-				reqs = append(reqs, &jwtauthnv3.JwtRequirement{
-					RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{
-						ProviderName: providerKey,
-					},
-				})
+		var reqs []*jwtauthnv3.JwtRequirement
+		for i := range route.JWT.Providers {
+			irProvider := route.JWT.Providers[i]
+			// Create the cluster for the remote jwks, if it doesn't exist.
+			jwksCluster, err := url2Cluster(irProvider.RemoteJWKS.URI)
+			if err != nil {
+				return nil, err
 			}
-			if len(reqs) == 1 {
-				reqMap[route.Name] = reqs[0]
-			} else {
-				orListReqs := &jwtauthnv3.JwtRequirement{
-					RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
-						RequiresAny: &jwtauthnv3.JwtRequirementOrList{
-							Requirements: reqs,
+
+			remote := &jwtauthnv3.JwtProvider_RemoteJwks{
+				RemoteJwks: &jwtauthnv3.RemoteJwks{
+					HttpUri: &corev3.HttpUri{
+						Uri: irProvider.RemoteJWKS.URI,
+						HttpUpstreamType: &corev3.HttpUri_Cluster{
+							Cluster: jwksCluster.name,
 						},
+						Timeout: &durationpb.Duration{Seconds: 5},
 					},
-				}
-				reqMap[route.Name] = orListReqs
+					CacheDuration: &durationpb.Duration{Seconds: 5 * 60},
+					AsyncFetch:    &jwtauthnv3.JwksAsyncFetch{},
+					RetryPolicy:   &corev3.RetryPolicy{},
+				},
 			}
+
+			claimToHeaders := []*jwtauthnv3.JwtClaimToHeader{}
+			for _, claimToHeader := range irProvider.ClaimToHeaders {
+				claimToHeader := &jwtauthnv3.JwtClaimToHeader{
+					HeaderName: claimToHeader.Header,
+					ClaimName:  claimToHeader.Claim}
+				claimToHeaders = append(claimToHeaders, claimToHeader)
+			}
+			jwtProvider := &jwtauthnv3.JwtProvider{
+				Issuer:              irProvider.Issuer,
+				Audiences:           irProvider.Audiences,
+				JwksSourceSpecifier: remote,
+				PayloadInMetadata:   irProvider.Issuer,
+				ClaimToHeaders:      claimToHeaders,
+			}
+
+			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
+			jwtProviders[providerKey] = jwtProvider
+			reqs = append(reqs, &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_ProviderName{
+					ProviderName: providerKey,
+				},
+			})
+		}
+		if len(reqs) == 1 {
+			reqMap[route.Name] = reqs[0]
+		} else {
+			orListReqs := &jwtauthnv3.JwtRequirement{
+				RequiresType: &jwtauthnv3.JwtRequirement_RequiresAny{
+					RequiresAny: &jwtauthnv3.JwtRequirementOrList{
+						Requirements: reqs,
+					},
+				},
+			}
+			reqMap[route.Name] = orListReqs
 		}
 	}
 
@@ -194,9 +193,9 @@ func buildXdsUpstreamTLSSocket() (*corev3.TransportSocket, error) {
 	}, nil
 }
 
-// patchRouteWithJWTConfig patches the provided route with a JWT PerRouteConfig, if the
+// patchRouteWithJWT patches the provided route with a JWT PerRouteConfig, if the
 // route doesn't contain it.
-func patchRouteWithJWTConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func patchRouteWithJWT(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
@@ -228,100 +227,56 @@ func patchRouteWithJWTConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error 
 	return nil
 }
 
-type jwksCluster struct {
-	name     string
-	hostname string
-	port     uint32
-	isStatic bool
-}
-
 // createJWKSClusters creates JWKS clusters from the provided routes, if needed.
 func createJWKSClusters(tCtx *types.ResourceVersionTable, routes []*ir.HTTPRoute) error {
-	if tCtx == nil ||
-		tCtx.XdsResources == nil ||
-		tCtx.XdsResources[resource.ClusterType] == nil ||
-		len(routes) == 0 {
-		return nil
+	if tCtx == nil || tCtx.XdsResources == nil {
+		return errors.New("xds resource table is nil")
 	}
 
+	var errs error
 	for _, route := range routes {
-		if routeContainsJWTAuthn(route) {
-			for i := range route.JWT.Providers {
-				provider := route.JWT.Providers[i]
-				jwks, err := newJWKSCluster(&provider)
-				epType := DefaultEndpointType
-				if jwks.isStatic {
-					epType = Static
-				}
-				if err != nil {
-					return err
-				}
-				ds := &ir.DestinationSetting{
-					Weight:    ptr.To(uint32(1)),
-					Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
-				}
-				tSocket, err := buildXdsUpstreamTLSSocket()
-				if err != nil {
-					return err
-				}
-				if err := addXdsCluster(tCtx, &xdsClusterArgs{
-					name:         jwks.name,
-					settings:     []*ir.DestinationSetting{ds},
-					tSocket:      tSocket,
-					endpointType: epType,
-				}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
-					return err
-				}
+		if !routeContainsJWTAuthn(route) {
+			continue
+		}
+
+		for i := range route.JWT.Providers {
+			var (
+				jwks    *urlCluster
+				ds      *ir.DestinationSetting
+				tSocket *corev3.TransportSocket
+				err     error
+			)
+
+			provider := route.JWT.Providers[i]
+			jwks, err = url2Cluster(provider.RemoteJWKS.URI)
+			if err != nil {
+				errs = multierror.Append(errs, err)
+				continue
+			}
+
+			ds = &ir.DestinationSetting{
+				Weight:    ptr.To(uint32(1)),
+				Endpoints: []*ir.DestinationEndpoint{ir.NewDestEndpoint(jwks.hostname, jwks.port)},
+			}
+
+			tSocket, err = buildXdsUpstreamTLSSocket()
+			if err != nil {
+				errs = multierror.Append(errs, err)
+				continue
+			}
+
+			if err = addXdsCluster(tCtx, &xdsClusterArgs{
+				name:         jwks.name,
+				settings:     []*ir.DestinationSetting{ds},
+				tSocket:      tSocket,
+				endpointType: jwks.endpointType,
+			}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
+				errs = multierror.Append(errs, err)
 			}
 		}
 	}
 
-	return nil
-}
-
-// newJWKSCluster returns a jwksCluster from the provided provider.
-func newJWKSCluster(provider *v1alpha1.JWTProvider) (*jwksCluster, error) {
-	static := false
-	if provider == nil {
-		return nil, errors.New("nil provider")
-	}
-
-	u, err := url.Parse(provider.RemoteJWKS.URI)
-	if err != nil {
-		return nil, err
-	}
-
-	var strPort string
-	switch u.Scheme {
-	case "https":
-		strPort = "443"
-	default:
-		return nil, fmt.Errorf("unsupported JWKS URI scheme %s", u.Scheme)
-	}
-
-	if u.Port() != "" {
-		strPort = u.Port()
-	}
-
-	name := fmt.Sprintf("%s_%s", strings.ReplaceAll(u.Hostname(), ".", "_"), strPort)
-
-	port, err := strconv.Atoi(strPort)
-	if err != nil {
-		return nil, err
-	}
-
-	if ip := net.ParseIP(u.Hostname()); ip != nil {
-		if v4 := ip.To4(); v4 != nil {
-			static = true
-		}
-	}
-
-	return &jwksCluster{
-		name:     name,
-		hostname: u.Hostname(),
-		port:     uint32(port),
-		isStatic: static,
-	}, nil
+	return errs
 }
 
 // listenerContainsJWTAuthn returns true if JWT authentication exists for the
