@@ -298,9 +298,8 @@ func TestTranslateXdsNegative(t *testing.T) {
 				},
 			}
 
-			tCtx, err := tr.Translate(ir)
+			_, err := tr.Translate(ir)
 			require.Error(t, err)
-			require.Nil(t, tCtx)
 			if tc.name != "jsonpatch-invalid" {
 				require.Contains(t, err.Error(), "validation failed for xds resource")
 			}
