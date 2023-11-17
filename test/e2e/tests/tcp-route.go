@@ -145,10 +145,14 @@ func WaitForGatewayAddress(t *testing.T, client client.Client, timeoutConfig con
 			t.Log("Gateway", err)
 			return false, nil
 		}
-		for i, val := range gw.Spec.Listeners {
-			if val.Name == gatewayv1.SectionName(sectionName) {
-				port = strconv.FormatInt(int64(gw.Spec.Listeners[i].Port), 10)
+		if sectionName != "" {
+			for i, val := range gw.Spec.Listeners {
+				if val.Name == gatewayv1.SectionName(sectionName) {
+					port = strconv.FormatInt(int64(gw.Spec.Listeners[i].Port), 10)
+				}
 			}
+		} else {
+			port = strconv.FormatInt(int64(gw.Spec.Listeners[0].Port), 10)
 		}
 
 		// TODO: Support more than IPAddress
