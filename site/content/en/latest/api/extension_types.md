@@ -80,6 +80,22 @@ _Appears in:_
 
 
 
+#### BasicAuth
+
+
+
+BasicAuth defines the configuration for 	the HTTP Basic Authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `users` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the username-password pairs in htpasswd format, used to verify user credentials in the "Authorization" header. 
+ This is an Opaque secret. The username-password pairs should be stored in the key ".htpasswd". As the key name indicates, the value needs to be the htpasswd format, for example: "user1:{SHA}hashed_user1_password". Right now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html for more details. 
+ Note: The secret must be in the same namespace as the SecurityPolicy. |
+
+
 #### BootstrapType
 
 _Underlying type:_ `string`
@@ -1622,6 +1638,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
 | `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 

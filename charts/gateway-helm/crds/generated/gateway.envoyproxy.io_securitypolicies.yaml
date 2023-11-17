@@ -44,6 +44,59 @@ spec:
           spec:
             description: Spec defines the desired state of SecurityPolicy.
             properties:
+              basicAuth:
+                description: BasicAuth defines the configuration for the HTTP Basic
+                  Authentication.
+                properties:
+                  users:
+                    description: "The Kubernetes secret which contains the username-password
+                      pairs in htpasswd format, used to verify user credentials in
+                      the \"Authorization\" header. \n This is an Opaque secret. The
+                      username-password pairs should be stored in the key \".htpasswd\".
+                      As the key name indicates, the value needs to be the htpasswd
+                      format, for example: \"user1:{SHA}hashed_user1_password\". Right
+                      now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html
+                      for more details. \n Note: The secret must be in the same namespace
+                      as the SecurityPolicy."
+                    properties:
+                      group:
+                        default: ""
+                        description: Group is the group of the referent. For example,
+                          "gateway.networking.k8s.io". When unspecified or empty string,
+                          core API group is inferred.
+                        maxLength: 253
+                        pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                      kind:
+                        default: Secret
+                        description: Kind is kind of the referent. For example "Secret".
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                        type: string
+                      name:
+                        description: Name is the name of the referent.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: "Namespace is the namespace of the referenced
+                          object. When unspecified, the local namespace is inferred.
+                          \n Note that when a namespace different than the local namespace
+                          is specified, a ReferenceGrant object is required in the
+                          referent namespace to allow that namespace's owner to accept
+                          the reference. See the ReferenceGrant documentation for
+                          details. \n Support: Core"
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                required:
+                - users
+                type: object
               cors:
                 description: CORS defines the configuration for Cross-Origin Resource
                   Sharing (CORS).

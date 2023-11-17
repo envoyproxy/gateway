@@ -52,6 +52,11 @@ type SecurityPolicySpec struct {
 	// +optional
 	CORS *CORS `json:"cors,omitempty"`
 
+	// BasicAuth defines the configuration for the HTTP Basic Authentication.
+	//
+	// +optional
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+
 	// JWT defines the configuration for JSON Web Token (JWT) authentication.
 	//
 	// +optional
