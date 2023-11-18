@@ -199,6 +199,9 @@ func TestTranslateXds(t *testing.T) {
 		{
 			name: "listener-proxy-protocol",
 		},
+		{
+			name: "jwt-custom-extractor",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -57,13 +57,16 @@ type JWTProvider struct {
 
 	// FromHeaders is a list of HTTP request headers to extract the JWT from.
 	// By default JWT Authentication extract JWT from the 'Authorization' HTTP Header using Bearer schema or
-	// extract it from access_token params
+	// extract it from 'access_token' query parameters.
+	// See further: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
 	FromHeaders []FromHeader `json:"fromHeaders,omitempty"`
 
 	// FromCookies is a list of cookie names to extract the JWT from.
+	// See further: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
 	FromCookies []string `json:"fromCookies,omitempty"`
 
 	// FromParams is a list of query parameters to extract the JWT from.
+	// See further: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
 	FromParams []string `json:"fromParams,omitempty"`
 }
 
