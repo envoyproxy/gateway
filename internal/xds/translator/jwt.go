@@ -176,8 +176,8 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 	}, nil
 }
 
-// buildJwtFromHeaders returns a list of JwtHeader transformed from JWT FromHeader struct
-func buildJwtFromHeaders(headers []v1alpha1.FromHeader) []*jwtauthnv3.JwtHeader {
+// buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
+func buildJwtFromHeaders(headers []v1alpha1.JWTFromHeader) []*jwtauthnv3.JwtHeader {
 	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
 
 	for _, header := range headers {

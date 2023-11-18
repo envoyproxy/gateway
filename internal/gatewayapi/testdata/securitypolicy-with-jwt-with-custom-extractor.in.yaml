@@ -117,9 +117,9 @@ securityPolicies:
         - header: three-route-example-key
           claim: claim3
         fromHeaders:
-          - name: "Authorization"
-            valuePrefix: "Bearer "
+        - name: "Authorization"
+          valuePrefix: "Bearer "
         fromCookies:
-          - session_access_token
+        - session_access_token
         fromParams:
-          - token
+        - token

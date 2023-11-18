@@ -199,6 +199,37 @@ spec:
                             - header
                             type: object
                           type: array
+                        fromCookies:
+                          description: 'FromCookies is a list of cookie names to extract
+                            the JWT token from. See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto'
+                          items:
+                            type: string
+                          type: array
+                        fromHeaders:
+                          description: 'FromHeaders is a list of HTTP request headers
+                            to extract the JWT token from. By default JWT Authentication
+                            extract JWT token from the Authorization HTTP Header using
+                            Bearer schema or extract it from access_token query parameters.
+                            See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto'
+                          items:
+                            description: JWTFromHeader defines an HTTP header location
+                              to extract JWT token
+                            properties:
+                              name:
+                                type: string
+                              valuePrefix:
+                                type: string
+                            required:
+                            - name
+                            - valuePrefix
+                            type: object
+                          type: array
+                        fromParams:
+                          description: 'FromParams is a list of query parameters to
+                            extract the JWT token from. See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto'
+                          items:
+                            type: string
+                          type: array
                         issuer:
                           description: Issuer is the principal that issued the JWT
                             and takes the form of a URL or email address. For additional

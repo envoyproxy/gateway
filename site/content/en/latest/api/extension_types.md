@@ -896,6 +896,21 @@ _Appears in:_
  When multiple JWT providers are specified, the JWT is considered valid if any of the providers successfully validate the JWT. For additional details, see https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/jwt_authn_filter.html. |
 
 
+#### JWTFromHeader
+
+
+
+JWTFromHeader defines an HTTP header location to extract JWT token
+
+_Appears in:_
+- [JWTProvider](#jwtprovider)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ |  |
+| `valuePrefix` _string_ |  |
+
+
 #### JWTProvider
 
 
@@ -912,6 +927,9 @@ _Appears in:_
 | `audiences` _string array_ | Audiences is a list of JWT audiences allowed access. For additional details, see https://tools.ietf.org/html/rfc7519#section-4.1.3. If not provided, JWT audiences are not checked. |
 | `remoteJWKS` _[RemoteJWKS](#remotejwks)_ | RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote HTTP/HTTPS endpoint. |
 | `claimToHeaders` _[ClaimToHeader](#claimtoheader) array_ | ClaimToHeaders is a list of JWT claims that must be extracted into HTTP request headers For examples, following config: The claim must be of type; string, int, double, bool. Array type claims are not supported |
+| `fromHeaders` _[JWTFromHeader](#jwtfromheader) array_ | FromHeaders is a list of HTTP request headers to extract the JWT token from. By default JWT Authentication extract JWT token from the Authorization HTTP Header using Bearer schema or extract it from access_token query parameters. See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto |
+| `fromCookies` _string array_ | FromCookies is a list of cookie names to extract the JWT token from. See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto |
+| `fromParams` _string array_ | FromParams is a list of query parameters to extract the JWT token from. See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto |
 
 
 #### KubernetesContainerSpec

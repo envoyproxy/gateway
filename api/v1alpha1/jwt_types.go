@@ -55,18 +55,18 @@ type JWTProvider struct {
 	//
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
 
-	// FromHeaders is a list of HTTP request headers to extract the JWT from.
-	// By default JWT Authentication extract JWT from the 'Authorization' HTTP Header using Bearer schema or
-	// extract it from 'access_token' query parameters.
-	// See further: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
-	FromHeaders []FromHeader `json:"fromHeaders,omitempty"`
+	// FromHeaders is a list of HTTP request headers to extract the JWT token from.
+	// By default JWT Authentication extract JWT token from the Authorization HTTP Header using Bearer schema or
+	// extract it from access_token query parameters.
+	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
+	FromHeaders []JWTFromHeader `json:"fromHeaders,omitempty"`
 
-	// FromCookies is a list of cookie names to extract the JWT from.
-	// See further: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
+	// FromCookies is a list of cookie names to extract the JWT token from.
+	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
 	FromCookies []string `json:"fromCookies,omitempty"`
 
-	// FromParams is a list of query parameters to extract the JWT from.
-	// See further: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
+	// FromParams is a list of query parameters to extract the JWT token from.
+	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
 	FromParams []string `json:"fromParams,omitempty"`
 }
 
@@ -95,7 +95,8 @@ type ClaimToHeader struct {
 	Claim string `json:"claim"`
 }
 
-type FromHeader struct {
+// JWTFromHeader defines an HTTP header location to extract JWT token
+type JWTFromHeader struct {
 	Name        string `json:"name"`
 	ValuePrefix string `json:"valuePrefix"`
 }
