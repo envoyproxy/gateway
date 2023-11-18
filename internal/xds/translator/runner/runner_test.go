@@ -156,8 +156,9 @@ func TestRunner_withExtensionManager(t *testing.T) {
 	xdsIR.Store("test", &res)
 	require.Eventually(t, func() bool {
 		out := xds.LoadAll()
-		// Ensure that xds has no key, value pairs
-		return len(out) == 0
+		// xDS translation is done in a best-effort manner, so event the extension
+		// manager returns an error, the xDS resources should still be created.
+		return len(out) == 1
 	}, time.Second*5, time.Millisecond*50)
 }
 
