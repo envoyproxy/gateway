@@ -186,6 +186,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo.bar.com
         name: httproute/default/httproute-1/rule/0/match/0/foo_bar_com
         pathMatch:
@@ -206,6 +207,7 @@ xdsIR:
             port: 8080
           protocol: HTTPS
           weight: 1
+          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tls-passthrough/tlsroute-1
       port: 10090
       tls:

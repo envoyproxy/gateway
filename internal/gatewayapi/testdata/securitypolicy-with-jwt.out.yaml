@@ -275,6 +275,7 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
+            addressTypeState: OnlyIP
         hostname: '*'
         jwt:
           providers:
@@ -320,6 +321,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: gateway.envoyproxy.io
         jwt:
           providers:

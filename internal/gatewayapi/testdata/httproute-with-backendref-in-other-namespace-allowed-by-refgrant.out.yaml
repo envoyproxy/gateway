@@ -115,6 +115,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*
         pathMatch:

@@ -117,6 +117,7 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
+            addressTypeState: OnlyIP
         headerMatches:
         - distinct: false
           exact: foo

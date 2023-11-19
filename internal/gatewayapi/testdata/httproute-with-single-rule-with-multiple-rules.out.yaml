@@ -144,6 +144,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         headerMatches:
         - distinct: false
           exact: exact
@@ -169,6 +170,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: '*'
         name: httproute/default/httproute-1/rule/1/match/0/*
         pathMatch:
@@ -186,6 +188,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         headerMatches:
         - distinct: false
           name: Header-1

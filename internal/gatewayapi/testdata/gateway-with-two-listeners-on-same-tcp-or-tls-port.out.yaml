@@ -128,6 +128,7 @@ xdsIR:
             port: 8163
           protocol: TCP
           weight: 1
+          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tcp1/tcproute-1
       port: 10162
       tls: {}

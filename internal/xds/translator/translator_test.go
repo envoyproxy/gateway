@@ -18,7 +18,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/require"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
@@ -28,7 +27,6 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 	"github.com/envoyproxy/gateway/internal/utils/field"
 	"github.com/envoyproxy/gateway/internal/utils/file"
-	"github.com/envoyproxy/gateway/internal/utils/ptr"
 	xtypes "github.com/envoyproxy/gateway/internal/xds/types"
 	"github.com/envoyproxy/gateway/internal/xds/utils"
 )
@@ -87,6 +85,9 @@ func TestTranslateXds(t *testing.T) {
 		},
 		{
 			name: "http-route-weighted-invalid-backend",
+		},
+		{
+			name: "http-route-dns-cluster",
 		},
 		{
 			name:           "simple-tls",
@@ -447,275 +448,6 @@ func TestTranslateXdsWithExtension(t *testing.T) {
 					require.Equal(t, requireTestDataOutFile(t, "extension-xds-ir", tc.name+".secrets.yaml"), requireResourcesToYAMLString(t, secrets))
 				}
 			}
-		})
-	}
-}
-
-func TestSplitEndpointsByHostAddressType(t *testing.T) {
-	protocol := DefaultProtocol
-
-	testCases := []struct {
-		name   string
-		input  *ir.RouteDestination
-		output []*xdsClusterArgs
-	}{
-		{
-			name: "all ip host type addresses",
-			input: &ir.RouteDestination{
-				Name: "test-cluster",
-				Settings: []*ir.DestinationSetting{
-					{
-						Weight: ptr.To(uint32(1)),
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "1.2.3.4",
-								Port: 1001,
-								Type: discoveryv1.AddressTypeIPv4,
-							},
-							{
-								Host: "5.6.7.8",
-								Port: 1002,
-								Type: discoveryv1.AddressTypeIPv4,
-							},
-						},
-					},
-					{
-						Weight: ptr.To(uint32(10)),
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "9.8.7.6",
-								Port: 1003,
-								Type: discoveryv1.AddressTypeIPv4,
-							},
-							{
-								Host: "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-								Port: 1004,
-								Type: discoveryv1.AddressTypeIPv6,
-							},
-						},
-					},
-				},
-			},
-			output: []*xdsClusterArgs{
-				{
-					name:         "test-cluster-1",
-					protocol:     protocol,
-					endpointType: Static,
-					settings: []*ir.DestinationSetting{
-						{
-							Weight: ptr.To(uint32(1)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "1.2.3.4",
-									Port: 1001,
-									Type: discoveryv1.AddressTypeIPv4,
-								},
-								{
-									Host: "5.6.7.8",
-									Port: 1002,
-									Type: discoveryv1.AddressTypeIPv4,
-								},
-							},
-						},
-						{
-							Weight: ptr.To(uint32(10)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "9.8.7.6",
-									Port: 1003,
-									Type: discoveryv1.AddressTypeIPv4,
-								},
-								{
-									Host: "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-									Port: 1004,
-									Type: discoveryv1.AddressTypeIPv6,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "all fqdn host type addresses",
-			input: &ir.RouteDestination{
-				Name: "test-cluster",
-				Settings: []*ir.DestinationSetting{
-					{
-						Weight: ptr.To(uint32(1)),
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "foobar.com",
-								Port: 1001,
-								Type: discoveryv1.AddressTypeFQDN,
-							},
-							{
-								Host: "foo.bar.com",
-								Port: 1002,
-								Type: discoveryv1.AddressTypeFQDN,
-							},
-						},
-					},
-					{
-						Weight: ptr.To(uint32(10)),
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "foo.bar",
-								Port: 1003,
-								Type: discoveryv1.AddressTypeFQDN,
-							},
-						},
-					},
-				},
-			},
-			output: []*xdsClusterArgs{
-				{
-					name:         "test-cluster-2",
-					protocol:     protocol,
-					endpointType: DNS,
-					settings: []*ir.DestinationSetting{
-						{
-							Weight: ptr.To(uint32(1)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "foobar.com",
-									Port: 1001,
-									Type: discoveryv1.AddressTypeFQDN,
-								},
-								{
-									Host: "foo.bar.com",
-									Port: 1002,
-									Type: discoveryv1.AddressTypeFQDN,
-								},
-							},
-						},
-						{
-							Weight: ptr.To(uint32(10)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "foo.bar",
-									Port: 1003,
-									Type: discoveryv1.AddressTypeFQDN,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "mixed ip and fqdn host type addresses",
-			input: &ir.RouteDestination{
-				Name: "test-cluster",
-				Settings: []*ir.DestinationSetting{
-					{
-						Weight: ptr.To(uint32(1)),
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "1.2.3.4",
-								Port: 1001,
-								Type: discoveryv1.AddressTypeIPv4,
-							},
-							{
-								Host: "foo.bar.com",
-								Port: 1002,
-								Type: discoveryv1.AddressTypeFQDN,
-							},
-						},
-					},
-					{
-						Weight: ptr.To(uint32(10)),
-						Endpoints: []*ir.DestinationEndpoint{
-							{
-								Host: "foobar.com",
-								Port: 1003,
-								Type: discoveryv1.AddressTypeFQDN,
-							},
-							{
-								Host: "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-								Port: 1004,
-								Type: discoveryv1.AddressTypeIPv6,
-							},
-						},
-					},
-				},
-			},
-			output: []*xdsClusterArgs{
-				{
-					name:         "test-cluster-1",
-					protocol:     protocol,
-					endpointType: Static,
-					settings: []*ir.DestinationSetting{
-						{
-							Weight: ptr.To(uint32(1)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "1.2.3.4",
-									Port: 1001,
-									Type: discoveryv1.AddressTypeIPv4,
-								},
-							},
-						},
-						{
-							Weight: ptr.To(uint32(10)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
-									Port: 1004,
-									Type: discoveryv1.AddressTypeIPv6,
-								},
-							},
-						},
-					},
-				},
-				{
-					name:         "test-cluster-2",
-					protocol:     protocol,
-					endpointType: DNS,
-					settings: []*ir.DestinationSetting{
-						{
-							Weight: ptr.To(uint32(1)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "foo.bar.com",
-									Port: 1002,
-									Type: discoveryv1.AddressTypeFQDN,
-								},
-							},
-						},
-						{
-							Weight: ptr.To(uint32(10)),
-							Endpoints: []*ir.DestinationEndpoint{
-								{
-									Host: "foobar.com",
-									Port: 1003,
-									Type: discoveryv1.AddressTypeFQDN,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "empty addresses",
-			input: &ir.RouteDestination{
-				Name: "test-cluster",
-				Settings: []*ir.DestinationSetting{
-					{
-						Weight:    ptr.To(uint32(100)),
-						Endpoints: []*ir.DestinationEndpoint{},
-					},
-				},
-			},
-			output: []*xdsClusterArgs{},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			actual := splitEndpointsByHostAddressType(tc.input, nil, protocol)
-			require.Equal(t, tc.output, actual)
 		})
 	}
 }

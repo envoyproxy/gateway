@@ -352,6 +352,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo.com
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
@@ -376,6 +377,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: bar.com
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:
@@ -400,6 +402,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo1.com
         name: httproute/default/httproute-1/rule/0/match/0/foo1_com
         pathMatch:
@@ -424,6 +427,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: bar1.com
         name: httproute/default/httproute-1/rule/0/match/0/bar1_com
         pathMatch:
@@ -448,6 +452,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo2.com
         name: httproute/default/httproute-1/rule/0/match/0/foo2_com
         pathMatch:
@@ -472,6 +477,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: bar2.com
         name: httproute/default/httproute-1/rule/0/match/0/bar2_com
         pathMatch:
@@ -496,6 +502,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo3.com
         name: httproute/default/httproute-1/rule/0/match/0/foo3_com
         pathMatch:
@@ -520,6 +527,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: bar3.com
         name: httproute/default/httproute-1/rule/0/match/0/bar3_com
         pathMatch:

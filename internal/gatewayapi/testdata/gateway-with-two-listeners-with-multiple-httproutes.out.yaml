@@ -182,6 +182,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo.com
         name: httproute/default/httproute-2/rule/0/match/0/foo_com
         pathMatch:
@@ -199,6 +200,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: foo.com
         name: httproute/default/httproute-1/rule/0/match/0/foo_com
         pathMatch:
@@ -223,6 +225,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: bar.com
         name: httproute/default/httproute-2/rule/0/match/0/bar_com
         pathMatch:
@@ -240,6 +243,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: bar.com
         name: httproute/default/httproute-1/rule/0/match/0/bar_com
         pathMatch:

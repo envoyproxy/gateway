@@ -131,6 +131,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: gateway.envoyproxy.io
         mirrors:
         - name: httproute/default/httproute-1/rule/0-mirror-0
@@ -140,6 +141,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         - name: httproute/default/httproute-1/rule/0-mirror-1
           settings:
           - endpoints:
@@ -147,6 +149,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         pathMatch:
           distinct: false

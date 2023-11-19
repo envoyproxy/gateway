@@ -165,6 +165,7 @@ xdsIR:
             port: 8162
           protocol: UDP
           weight: 1
+          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/udp1/udproute-1
       port: 10162
     - address: 0.0.0.0
@@ -176,5 +177,6 @@ xdsIR:
             port: 8162
           protocol: UDP
           weight: 1
+          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/udp2/udproute-2
       port: 10163

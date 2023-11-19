@@ -950,14 +950,48 @@ func TestValidateRouteDestination(t *testing.T) {
 			want:  nil,
 		},
 		{
-			name: "invalid ip",
+			name: "valid hostname",
 			input: RouteDestination{
-				Name: "invalid ip",
+				Name: "valid hostname",
 				Settings: []*DestinationSetting{
 					{
 						Endpoints: []*DestinationEndpoint{
 							{
 								Host: "example.com",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "valid ip",
+			input: RouteDestination{
+				Name: "valid ip",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "1.2.3.4",
+								Port: 8080,
+							},
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "invalid address",
+			input: RouteDestination{
+				Name: "invalid address",
+				Settings: []*DestinationSetting{
+					{
+						Endpoints: []*DestinationEndpoint{
+							{
+								Host: "example.com::foo.bar",
 								Port: 8080,
 							},
 						},

@@ -112,6 +112,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         headerMatches:
         - distinct: false
           exact: POST

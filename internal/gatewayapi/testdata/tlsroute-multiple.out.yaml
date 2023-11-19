@@ -136,6 +136,7 @@ xdsIR:
             port: 8080
           protocol: HTTPS
           weight: 1
+          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tls/tlsroute-1
       port: 10091
       tls:
@@ -151,6 +152,7 @@ xdsIR:
             port: 8080
           protocol: HTTPS
           weight: 1
+          addressTypeState: OnlyIP
       name: envoy-gateway/gateway-1/tls/tlsroute-2
       port: 10091
       tls:

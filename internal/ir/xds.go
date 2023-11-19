@@ -13,7 +13,6 @@ import (
 
 	"github.com/tetratelabs/multierror"
 	"golang.org/x/exp/slices"
-	discoveryv1 "k8s.io/api/discovery/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -480,6 +479,8 @@ type DestinationSetting struct {
 	// Protocol associated with this destination/port.
 	Protocol  AppProtocol            `json:"protocol" yaml:"protocol"`
 	Endpoints []*DestinationEndpoint `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	// AddressTypeState specifies the state of DestinationEndpoint address type.
+	AddressTypeState *DestinationAddressTypeState `json:"addressTypeState,omitempty" yaml:"addressTypeState,omitempty"`
 }
 
 // Validate the fields within the RouteDestination structure
@@ -494,6 +495,15 @@ func (d DestinationSetting) Validate() error {
 	return errs
 }
 
+// DestinationAddressTypeState describes the address type state for a group of DestinationEndpoint
+type DestinationAddressTypeState string
+
+const (
+	ONLYIP   DestinationAddressTypeState = "OnlyIP"
+	ONLYFQDN DestinationAddressTypeState = "OnlyFQDN"
+	MIXED    DestinationAddressTypeState = "Mixed"
+)
+
 // DestinationEndpoint holds the endpoint details associated with the destination
 // +kubebuilder:object:generate=true
 type DestinationEndpoint struct {
@@ -501,22 +511,17 @@ type DestinationEndpoint struct {
 	Host string `json:"host" yaml:"host"`
 	// Port on the service to forward the request to.
 	Port uint32 `json:"port" yaml:"port"`
-	// Type specifies the type of Host address.
-	Type discoveryv1.AddressType `json:"type" yaml:"type"`
 }
 
 // Validate the fields within the DestinationEndpoint structure
 func (d DestinationEndpoint) Validate() error {
 	var errs error
-	switch d.Type {
-	case discoveryv1.AddressTypeFQDN:
-		if err := validation.IsDNS1123Subdomain(d.Host); err != nil {
-			errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
-		}
-	default:
-		if ip := net.ParseIP(d.Host); ip == nil {
-			errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
-		}
+
+	err := validation.IsDNS1123Subdomain(d.Host)
+	ip := net.ParseIP(d.Host)
+
+	if err != nil && ip == nil {
+		errs = multierror.Append(errs, ErrDestEndpointHostInvalid)
 	}
 
 	if d.Port == 0 {
@@ -524,11 +529,6 @@ func (d DestinationEndpoint) Validate() error {
 	}
 
 	return errs
-}
-
-// SetHostAddressType sets the host address type of DestinationEndpoint.
-func (d *DestinationEndpoint) SetHostAddressType(hostType discoveryv1.AddressType) {
-	d.Type = hostType
 }
 
 // NewDestEndpoint creates a new DestinationEndpoint.

@@ -122,5 +122,6 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
+            addressTypeState: OnlyIP
         hostname: '*'
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
