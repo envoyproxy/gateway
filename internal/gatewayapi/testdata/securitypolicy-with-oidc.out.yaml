@@ -279,6 +279,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-1/rule/0/match/0/gateway_envoyproxy_io
         oidc:
@@ -306,6 +307,7 @@ xdsIR:
               port: 8080
             protocol: HTTP
             weight: 1
+            addressTypeState: OnlyIP
         hostname: gateway.envoyproxy.io
         name: httproute/default/httproute-2/rule/0/match/0/gateway_envoyproxy_io
         oidc:
@@ -331,6 +333,7 @@ xdsIR:
               port: 8080
             protocol: GRPC
             weight: 1
+            addressTypeState: OnlyIP
         hostname: '*'
         name: grpcroute/default/grpcroute-1/rule/0/match/-1/*
         oidc:
