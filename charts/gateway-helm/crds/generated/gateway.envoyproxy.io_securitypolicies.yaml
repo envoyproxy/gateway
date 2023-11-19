@@ -216,12 +216,18 @@ spec:
                               to extract JWT token
                             properties:
                               name:
+                                description: Name is the HTTP header name to retrieve
+                                  the token
                                 type: string
                               valuePrefix:
+                                description: 'ValuePrefix is the prefix that should
+                                  be stripped before extracting the token. The format
+                                  would be used by Envoy like "{ValuePrefix}<TOKEN>".
+                                  For example, "Authorization: Bearer <TOKEN>", then
+                                  the ValuePrefix="Bearer " with a space at the end.'
                                 type: string
                             required:
                             - name
-                            - valuePrefix
                             type: object
                           type: array
                         fromParams:

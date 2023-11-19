@@ -907,8 +907,8 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ |  |
-| `valuePrefix` _string_ |  |
+| `name` _string_ | Name is the HTTP header name to retrieve the token |
+| `valuePrefix` _string_ | ValuePrefix is the prefix that should be stripped before extracting the token. The format would be used by Envoy like "{ValuePrefix}<TOKEN>". For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end. |
 
 
 #### JWTProvider

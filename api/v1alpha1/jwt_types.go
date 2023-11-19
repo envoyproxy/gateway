@@ -97,6 +97,13 @@ type ClaimToHeader struct {
 
 // JWTFromHeader defines an HTTP header location to extract JWT token
 type JWTFromHeader struct {
-	Name        string `json:"name"`
-	ValuePrefix string `json:"valuePrefix"`
+	// Name is the HTTP header name to retrieve the token
+	//
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+
+	// ValuePrefix is the prefix that should be stripped before extracting the token.
+	// The format would be used by Envoy like "{ValuePrefix}<TOKEN>".
+	// For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end.
+	ValuePrefix *string `json:"valuePrefix,omitempty"`
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/tetratelabs/multierror"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"k8s.io/utils/pointer"
 
 	"github.com/envoyproxy/gateway/api/v1alpha1"
 	"github.com/envoyproxy/gateway/internal/ir"
@@ -183,7 +184,7 @@ func buildJwtFromHeaders(headers []v1alpha1.JWTFromHeader) []*jwtauthnv3.JwtHead
 	for _, header := range headers {
 		jwtHeader := &jwtauthnv3.JwtHeader{
 			Name:        header.Name,
-			ValuePrefix: header.ValuePrefix,
+			ValuePrefix: pointer.StringDeref(header.ValuePrefix, ""),
 		}
 
 		jwtHeaders = append(jwtHeaders, jwtHeader)
