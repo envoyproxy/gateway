@@ -244,7 +244,7 @@ type StringMatch struct {
 	//
 	// +optional
 	// +kubebuilder:default=Exact
-	Type *MatchType `json:"type,omitempty"`
+	Type *StringMatchType `json:"type,omitempty"`
 
 	// Value specifies the string value that the match must have.
 	//
@@ -253,25 +253,25 @@ type StringMatch struct {
 	Value string `json:"value"`
 }
 
-// MatchType specifies the semantics of how a string value should be compared.
+// StringMatchType specifies the semantics of how a string value should be compared.
 // Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
 //
 // +kubebuilder:validation:Enum=Exact;Prefix;Suffix;RegularExpression
-type MatchType string
+type StringMatchType string
 
 const (
-	// MatchExact :the input string must match exactly the match value.
-	MatchExact MatchType = "Exact"
+	// StringMatchExact :the input string must match exactly the match value.
+	StringMatchExact StringMatchType = "Exact"
 
-	// MatchPrefix :the input string must start with the match value.
-	MatchPrefix MatchType = "Prefix"
+	// StringMatchPrefix :the input string must start with the match value.
+	StringMatchPrefix StringMatchType = "Prefix"
 
-	// MatchSuffix :the input string must end with the match value.
-	MatchSuffix MatchType = "Suffix"
+	// StringMatchSuffix :the input string must end with the match value.
+	StringMatchSuffix StringMatchType = "Suffix"
 
-	// MatchRegularExpression :The input string must match the regular expression
+	// StringMatchRegularExpression :The input string must match the regular expression
 	// specified in the match value.
 	// The regex string must adhere to the syntax documented in
 	// https://github.com/google/re2/wiki/Syntax.
-	MatchRegularExpression MatchType = "RegularExpression"
+	StringMatchRegularExpression StringMatchType = "RegularExpression"
 )

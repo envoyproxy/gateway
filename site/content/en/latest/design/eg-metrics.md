@@ -37,13 +37,13 @@ The use-cases include:
 
 ### Standards
 
-Our metrics, will be built upon the [OpenTelemetry](https://opentelemetry.io/) standards. All metrics will be configured via the [OpenTelemetry SDK](https://opentelemetry.io/docs/specs/otel/metrics/sdk/), which offers neutral libraries that can be connected to various backends.
+Our metrics, will be built upon the [OpenTelemetry][] standards. All metrics will be configured via the [OpenTelemetry SDK][], which offers neutral libraries that can be connected to various backends.
 
 This approach allows the Envoy Gateway code to concentrate on the crucial aspect - generating the metrics - and delegate all other tasks to systems designed for telemetry ingestion.
 
 ### Attributes
 
-OpenTelemetry defines a set of [Semantic Conventions](https://opentelemetry.io/docs/concepts/semantic-conventions/), including [Kubernetes specific ones](https://opentelemetry.io/docs/specs/otel/resource/semantic_conventions/k8s/).
+OpenTelemetry defines a set of [Semantic Conventions][], including [Kubernetes specific ones][].
 
 These attributes can be expressed in logs (as keys of structured logs), traces (as attributes), and metrics (as labels).
 
@@ -53,7 +53,7 @@ We aim to use attributes consistently where applicable. Where possible, these sh
 
 Envoy Gateway supports both **PULL/PUSH** mode metrics, with Metrics exported via Prometheus by default.
 
-Additionally, Envoy Gateway can export metrics using both the [OTEL gRPC metrics exporter](https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/#general) and [OTEL HTTP metrics exporter](https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/#general), which pushes metrics by grpc/http to a remote OTEL collector.
+Additionally, Envoy Gateway can export metrics using both the [OTEL gRPC metrics exporter][] and [OTEL HTTP metrics exporter][], which pushes metrics by grpc/http to a remote OTEL collector.
 
 Users can extend these in two ways:
 
@@ -84,7 +84,7 @@ I propose the following:
 
 Metrics offer the greatest potential for providing guarantees. They often directly influence alerts and dashboards, making changes highly impactful. This contrasts with traces and logs, which are often used for ad-hoc analysis, where minor changes to information can be easily understood by a human.
 
-Moreover, there is precedent for this: [Kubernetes Metrics Lifecycle](https://kubernetes.io/docs/concepts/cluster-administration/system-metrics/#metric-lifecycle) has well-defined processes, and Envoy Gateway's dataplane (Envoy Proxy) metrics are de facto stable.
+Moreover, there is precedent for this: [Kubernetes Metrics Lifecycle][] has well-defined processes, and Envoy Gateway's dataplane (Envoy Proxy) metrics are de facto stable.
 
 Currently, all Envoy Gateway metrics lack defined stability. I suggest we categorize all existing metrics as either:
 
@@ -223,3 +223,11 @@ telemetry:
           port: 4318
           protocol: http
 ```
+
+[OpenTelemetry]: https://opentelemetry.io/
+[OpenTelemetry SDK]: https://opentelemetry.io/docs/specs/otel/metrics/sdk/
+[Semantic Conventions]: https://opentelemetry.io/docs/concepts/semantic-conventions/
+[Kubernetes specific ones]: https://opentelemetry.io/docs/specs/otel/resource/semantic_conventions/k8s/
+[OTEL gRPC metrics exporter]: https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/#general
+[OTEL HTTP metrics exporter]: https://opentelemetry.io/docs/specs/otel/metrics/sdk_exporters/otlp/#general
+[Kubernetes Metrics Lifecycle]: https://kubernetes.io/docs/concepts/cluster-administration/system-metrics/#metric-lifecycle

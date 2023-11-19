@@ -17,7 +17,7 @@ First, you need to add ParametersRef in GatewayClass, and refer to EnvoyProxy Co
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
@@ -318,5 +318,5 @@ Any errors in the configuration will be surfaced as status within the `GatewayCl
 You can also validate this configuration using [egctl translate][].
 
 [Gateway API documentation]: https://gateway-api.sigs.k8s.io/
-[EnvoyProxy]: https://gateway.envoyproxy.io/v0.6.0/api/config_types.html#envoyproxy 
-[egctl translate]: https://gateway.envoyproxy.io/v0.6.0/user/egctl/#validating-gateway-api-configuration
+[EnvoyProxy]: ../../api/extension_types#envoyproxy 
+[egctl translate]: ../egctl#validating-gateway-api-configuration

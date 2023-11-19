@@ -233,7 +233,7 @@ securityPolicies:
       - POST
       allowOrigins:
       - type: RegularExpression
-        value: '*.example.com'
+        value: FooBar[0-9]+
       - type: Exact
         value: foo.bar.com
       exposeHeaders:
@@ -278,7 +278,7 @@ xdsIR:
           allowOrigins:
           - distinct: false
             name: ""
-            safeRegex: '*.example.com'
+            safeRegex: FooBar[0-9]+
           - distinct: false
             exact: foo.bar.com
             name: ""

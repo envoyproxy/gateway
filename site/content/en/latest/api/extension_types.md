@@ -74,8 +74,26 @@ _Appears in:_
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | targetRef is the name of the resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. |
 | `rateLimit` _[RateLimitSpec](#ratelimitspec)_ | RateLimit allows the user to limit the number of incoming requests to a predefined value based on attributes within the traffic flow. |
 | `loadBalancer` _[LoadBalancer](#loadbalancer)_ | LoadBalancer policy to apply when routing traffic from the gateway to the backend endpoints |
+| `proxyProtocol` _[ProxyProtocol](#proxyprotocol)_ | ProxyProtocol enables the Proxy Protocol when communicating with the backend. |
+| `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the upstream client connection. Disabled by default. |
 
 
+
+
+#### BasicAuth
+
+
+
+BasicAuth defines the configuration for 	the HTTP Basic Authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `users` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the username-password pairs in htpasswd format, used to verify user credentials in the "Authorization" header. 
+ This is an Opaque secret. The username-password pairs should be stored in the key ".htpasswd". As the key name indicates, the value needs to be the htpasswd format, for example: "user1:{SHA}hashed_user1_password". Right now, only SHA hash algorithm is supported. Reference to https://httpd.apache.org/docs/2.4/programs/htpasswd.html for more details. 
+ Note: The secret must be in the same namespace as the SecurityPolicy. |
 
 
 #### BootstrapType
@@ -168,6 +186,7 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
+| `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
 
 
 
@@ -363,7 +382,7 @@ _Appears in:_
 | `rateLimitDeployment` _[KubernetesDeploymentSpec](#kubernetesdeploymentspec)_ | RateLimitDeployment defines the desired state of the Envoy ratelimit deployment resource. If unspecified, default settings for the managed Envoy ratelimit deployment resource are applied. |
 | `watch` _[KubernetesWatchMode](#kuberneteswatchmode)_ | Watch holds configuration of which input resources should be watched and reconciled. |
 | `deploy` _[KubernetesDeployMode](#kubernetesdeploymode)_ | Deploy holds configuration of how output managed resources such as the Envoy Proxy data plane should be deployed |
-| `overwrite_control_plane_certs` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
+| `overwriteControlPlaneCerts` _boolean_ | OverwriteControlPlaneCerts updates the secrets containing the control plane certs, when set. |
 
 
 #### EnvoyGatewayLogComponent
@@ -1059,43 +1078,6 @@ _Appears in:_
 
 
 
-#### Match
-
-
-
-Match defines the stats match configuration.
-
-_Appears in:_
-- [ProxyMetrics](#proxymetrics)
-
-| Field | Description |
-| --- | --- |
-| `type` _[MatcherType](#matchertype)_ | MatcherType defines the stats matcher type |
-| `value` _string_ |  |
-
-
-#### MatchType
-
-_Underlying type:_ `string`
-
-MatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
-
-_Appears in:_
-- [StringMatch](#stringmatch)
-
-
-
-#### MatcherType
-
-_Underlying type:_ `string`
-
-
-
-_Appears in:_
-- [Match](#match)
-
-
-
 #### MetricSinkType
 
 _Underlying type:_ `string`
@@ -1106,6 +1088,44 @@ _Appears in:_
 - [EnvoyGatewayMetricSink](#envoygatewaymetricsink)
 - [ProxyMetricSink](#proxymetricsink)
 
+
+
+#### OIDC
+
+
+
+OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+
+_Appears in:_
+- [SecurityPolicySpec](#securitypolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `provider` _[OIDCProvider](#oidcprovider)_ | The OIDC Provider configuration. |
+| `clientID` _string_ | The client ID to be used in the OIDC [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). |
+| `clientSecret` _[SecretObjectReference](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.SecretObjectReference)_ | The Kubernetes secret which contains the OIDC client secret to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). 
+ This is an Opaque secret. The client secret should be stored in the key "client-secret". |
+| `scopes` _string array_ | The OIDC scopes to be used in the [Authentication Request](https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest). The "openid" scope is always added to the list of scopes if not already specified. |
+
+
+#### OIDCProvider
+
+
+
+OIDCProvider defines the OIDC Provider configuration. To make the EG OIDC config easy to use, some of the low-level ouath2 filter configuration knobs are hidden from the user, and default values will be provided when translating to XDS. For example: 
+ * redirect_uri: uses a default redirect URI "%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback" 
+ * signout_path: uses a default signout path "/signout" 
+ * redirect_path_matcher: uses a default redirect path matcher "/oauth2/callback" 
+ If we get requests to expose these knobs, we can always do so later.
+
+_Appears in:_
+- [OIDC](#oidc)
+
+| Field | Description |
+| --- | --- |
+| `issuer` _string_ | The OIDC Provider's [issuer identifier](https://openid.net/specs/openid-connect-discovery-1_0.html#IssuerDiscovery). Issuer MUST be a URI RFC 3986 [RFC3986] with a scheme component that MUST be https, a host component, and optionally, port and path components and no query or fragment components. |
+| `authorizationEndpoint` _string_ | The OIDC Provider's [authorization endpoint](https://openid.net/specs/openid-connect-core-1_0.html#AuthorizationEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
+| `tokenEndpoint` _string_ | The OIDC Provider's [token endpoint](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint). If not provided, EG will try to discover it from the provider's [Well-Known Configuration Endpoint](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationResponse). |
 
 
 #### OpenTelemetryEnvoyProxyAccessLog
@@ -1197,7 +1217,7 @@ _Appears in:_
 
 
 
-
+ProxyAccessLogSink defines the sink of accesslog.
 
 _Appears in:_
 - [ProxyAccessLogSetting](#proxyaccesslogsetting)
@@ -1264,7 +1284,7 @@ _Appears in:_
 
 
 
-
+ProxyMetricSink defines the sink of metrics. Default metrics sink is OpenTelemetry.
 
 _Appears in:_
 - [ProxyMetrics](#proxymetrics)
@@ -1288,7 +1308,7 @@ _Appears in:_
 | --- | --- |
 | `prometheus` _[ProxyPrometheusProvider](#proxyprometheusprovider)_ | Prometheus defines the configuration for Admin endpoint `/stats/prometheus`. |
 | `sinks` _[ProxyMetricSink](#proxymetricsink) array_ | Sinks defines the metric sinks where metrics are sent to. |
-| `matches` _[Match](#match) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
+| `matches` _[StringMatch](#stringmatch) array_ | Matches defines configuration for selecting specific metrics instead of generating all metrics stats that are enabled by default. This helps reduce CPU and memory overhead in Envoy, but eliminating some stats may after critical functionality. Here are the stats that we strongly recommend not disabling: `cluster_manager.warming_clusters`, `cluster.<cluster_name>.membership_total`,`cluster.<cluster_name>.membership_healthy`, `cluster.<cluster_name>.membership_degraded`，reference  https://github.com/envoyproxy/envoy/issues/9856, https://github.com/envoyproxy/envoy/issues/14610 |
 | `enableVirtualHostStats` _boolean_ | EnableVirtualHostStats enables envoy stat metrics for virtual hosts. |
 
 
@@ -1319,6 +1339,31 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `disable` _boolean_ | Disable the Prometheus endpoint. |
+
+
+#### ProxyProtocol
+
+
+
+ProxyProtocol defines the configuration related to the proxy protocol when communicating with the backend.
+
+_Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `version` _[ProxyProtocolVersion](#proxyprotocolversion)_ | Version of ProxyProtol Valid ProxyProtocolVersion values are "V1" "V2" |
+
+
+#### ProxyProtocolVersion
+
+_Underlying type:_ `string`
+
+ProxyProtocolVersion defines the version of the Proxy Protocol to use.
+
+_Appears in:_
+- [ProxyProtocol](#proxyprotocol)
+
 
 
 #### ProxyTelemetry
@@ -1593,7 +1638,9 @@ _Appears in:_
 | --- | --- |
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `cors` _[CORS](#cors)_ | CORS defines the configuration for Cross-Origin Resource Sharing (CORS). |
+| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth defines the configuration for the HTTP Basic Authentication. |
 | `jwt` _[JWT](#jwt)_ | JWT defines the configuration for JSON Web Token (JWT) authentication. |
+| `oidc` _[OIDC](#oidc)_ | OIDC defines the configuration for the OpenID Connect (OIDC) authentication. |
 
 
 
@@ -1628,11 +1675,23 @@ StringMatch defines how to match any strings. This is a general purpose match co
 
 _Appears in:_
 - [CORS](#cors)
+- [ProxyMetrics](#proxymetrics)
 
 | Field | Description |
 | --- | --- |
-| `type` _[MatchType](#matchtype)_ | Type specifies how to match against a string. |
+| `type` _[StringMatchType](#stringmatchtype)_ | Type specifies how to match against a string. |
 | `value` _string_ | Value specifies the string value that the match must have. |
+
+
+#### StringMatchType
+
+_Underlying type:_ `string`
+
+StringMatchType specifies the semantics of how a string value should be compared. Valid MatchType values are "Exact", "Prefix", "Suffix", "RegularExpression".
+
+_Appears in:_
+- [StringMatch](#stringmatch)
+
 
 
 #### TCPKeepalive
@@ -1642,6 +1701,7 @@ _Appears in:_
 TCPKeepalive define the TCP Keepalive configuration.
 
 _Appears in:_
+- [BackendTrafficPolicySpec](#backendtrafficpolicyspec)
 - [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
 
 | Field | Description |

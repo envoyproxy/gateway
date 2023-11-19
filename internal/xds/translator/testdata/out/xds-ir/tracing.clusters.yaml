@@ -29,7 +29,8 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: tracing|otel-collector.monitoring.svc.cluster.local|4317/backend/0
   name: tracing|otel-collector.monitoring.svc.cluster.local|4317
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

@@ -52,10 +52,20 @@ type SecurityPolicySpec struct {
 	// +optional
 	CORS *CORS `json:"cors,omitempty"`
 
+	// BasicAuth defines the configuration for the HTTP Basic Authentication.
+	//
+	// +optional
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+
 	// JWT defines the configuration for JSON Web Token (JWT) authentication.
 	//
 	// +optional
 	JWT *JWT `json:"jwt,omitempty"`
+
+	// OIDC defines the configuration for the OpenID Connect (OIDC) authentication.
+	//
+	// +optional
+	OIDC *OIDC `json:"oidc,omitempty"`
 }
 
 // SecurityPolicyStatus defines the state of SecurityPolicy

@@ -29,7 +29,8 @@
               portValue: 4317
         loadBalancingWeight: 1
       loadBalancingWeight: 1
-      locality: {}
+      locality:
+        region: accesslog|otel-collector.default.svc.cluster.local|4317/backend/0
   name: accesslog|otel-collector.default.svc.cluster.local|4317
   outlierDetection: {}
   perConnectionBufferLimitBytes: 32768

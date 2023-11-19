@@ -38,7 +38,7 @@ __Note:__ Envoy Gateway does not collapse listeners across multiple Gateways.
 
 ```yaml
 kind: Gateway
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: gateway-1
   namespace: envoy-gateway
@@ -65,7 +65,7 @@ spec:
 
 ```yaml
 kind: Gateway
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: gateway-1
   namespace: envoy-gateway
@@ -91,7 +91,7 @@ spec:
 
 ```yaml
 kind: Gateway
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: gateway-1
   namespace: envoy-gateway
@@ -118,7 +118,7 @@ spec:
 
 ```yaml
 kind: Gateway
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: gateway-1
   namespace: envoy-gateway
@@ -250,4 +250,4 @@ type RouteContext interface {
 }
 ```
 
-[message bus]: watching.md
+[message bus]: ../watching/

@@ -250,7 +250,7 @@ func processClusterForAccessLog(tCtx *types.ResourceVersionTable, al *ir.AccessL
 			name:         clusterName,
 			settings:     []*ir.DestinationSetting{ds},
 			tSocket:      nil,
-			endpointType: DefaultEndpointType,
+			endpointType: EndpointTypeDNS,
 		}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 			return err
 		}

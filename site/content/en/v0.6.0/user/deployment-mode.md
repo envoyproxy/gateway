@@ -38,14 +38,14 @@ Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway contro
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg-marketing
 spec:
   controllerName: gateway.envoyproxy.io/marketing-gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -113,7 +113,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -211,14 +211,14 @@ Lets create a `GatewayClass` linked to the product team's Envoy Gateway controll
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg-product
 spec:
   controllerName: gateway.envoyproxy.io/product-gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -286,7 +286,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -374,7 +374,7 @@ Handling connection for 8889
 * Connection #0 to host localhost left intact
 ```
 
-With the below command you can ensure that you are no able to access the marketing team's backend exposed using the `www.marketing.example.com` hostname
+With the below command you can ensure that you are not able to access the marketing team's backend exposed using the `www.marketing.example.com` hostname
 and the product team's data plane.
 
 ```shell

@@ -99,7 +99,6 @@ to access the limited resource in another domains. The browsers are supposed to 
 determine whether to send the actual request or not. The CORS filter only response to the preflight requests according to
 its configuration. It won't deny any requests. The browsers are responsible for enforcing the CORS policy.
 
-```shell
 
 ## Clean-Up
 
@@ -115,7 +114,7 @@ kubectl delete securitypolicy/cors-example
 
 Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
 
-[SecurityPolicy]: https://gateway.envoyproxy.io/v0.6.0/design/security-policy
+[SecurityPolicy]: ../../design/security-policy/
 [cors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute

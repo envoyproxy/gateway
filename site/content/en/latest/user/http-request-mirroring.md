@@ -2,7 +2,7 @@
 title: "HTTPRoute Request Mirroring"
 ---
 
-The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams. It is possible to divide the traffic between these backends using [Traffic Splitting](http-traffic-splitting.md), but it is also possible to mirror requests to another Service instead. Request mirroring is accomplished using Gateway API's [HTTPRequestMirrorFilter][] on the `HTTPRoute`.
+The [HTTPRoute][] resource allows one or more [backendRefs][] to be provided. Requests will be routed to these upstreams. It is possible to divide the traffic between these backends using [Traffic Splitting][], but it is also possible to mirror requests to another Service instead. Request mirroring is accomplished using Gateway API's [HTTPRequestMirrorFilter][] on the `HTTPRoute`.
 
 When requests are made to a `HTTPRoute` that uses a `HTTPRequestMirrorFilter`, the response will never come from the `backendRef` defined in the filter. Responses from the mirror `backendRef` are always ignored.
 
@@ -79,7 +79,7 @@ service from the quickstart, and mirror request to the service that was just dep
 
 ```shell
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-mirror
@@ -166,7 +166,7 @@ When an `HTTPRoute` has multiple `backendRefs` and an `HTTPRequestMirrorFilter`,
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-mirror
@@ -205,7 +205,7 @@ Multiple `HTTPRequestMirrorFilters` are not supported on the same `HTTPRoute` `r
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: http-mirror
@@ -244,7 +244,8 @@ EOF
 Error from server: error when creating "STDIN": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.rules[0].filters: Invalid value: "RequestMirror": cannot be used multiple times in the same rule
 ```
 
-[Quickstart Guide]: quickstart.md
+[Quickstart Guide]: ../quickstart/
+[Traffic Splitting]: ../http-traffic-splitting/
 [HTTPRoute]: https://gateway-api.sigs.k8s.io/api-types/httproute/
-[backendRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.BackendRef
-[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRequestMirrorFilter
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.BackendRef
+[HTTPRequestMirrorFilter]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRequestMirrorFilter

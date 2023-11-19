@@ -12,7 +12,7 @@ This instantiated resource can be linked to a [Gateway][Gateway], [HTTPRoute][HT
 ## Prerequisites
 
 Follow the steps from the [Quickstart](../quickstart) guide to install Envoy Gateway and the example manifest.
-For GRPC - follow the steps from the [GRPC Routing](grpc-routing.md) example.
+For GRPC - follow the steps from the [GRPC Routing](../grpc-routing/) example.
 Before proceeding, you should be able to query the example backend using HTTP or GRPC.
 
 ## Configuration
@@ -162,7 +162,7 @@ kubectl delete securitypolicy/jwt-example
 
 Checkout the [Developer Guide](../../contributions/develop/) to get involved in the project.
 
-[SecurityPolicy]: https://gateway.envoyproxy.io/v0.6.0/design/security-policy
+[SecurityPolicy]: ../../design/security-policy
 [jwt]: https://tools.ietf.org/html/rfc7519
 [jwks]: https://tools.ietf.org/html/rfc7517
 [Gateway]: https://gateway-api.sigs.k8s.io/api-types/gateway

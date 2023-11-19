@@ -16,20 +16,20 @@ on the traffic entering the gateway.
 
 ## Implementation
 `SecurityPolicy` is a [Policy Attachment][] type API that can be used to extend [Gateway API][]
-to define authentication and authorization rules..
+to define authentication and authorization rules.
 
 ### Example
 Here is an example highlighting how a user can configure this API.
 
 ```
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg
 spec:
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -41,7 +41,7 @@ spec:
       protocol: HTTPS
       port: 443
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -109,7 +109,7 @@ entire Gateway then
 this route's parentRef which in turn overrides a Policy targeting the Gateway the listener/section is a part of. 
 
 ## Alternatives
-* The project can indefintely wait for these configuration parameters to be part of the [Gateway API].
+* The project can indefinitely wait for these configuration parameters to be part of the [Gateway API][].
 
 [Policy Attachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment 
 [Gateway API]: https://gateway-api.sigs.k8s.io/

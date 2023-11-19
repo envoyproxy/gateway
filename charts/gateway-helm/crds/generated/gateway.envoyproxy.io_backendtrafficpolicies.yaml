@@ -79,6 +79,20 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
+              proxyProtocol:
+                description: ProxyProtocol enables the Proxy Protocol when communicating
+                  with the backend.
+                properties:
+                  version:
+                    description: Version of ProxyProtol Valid ProxyProtocolVersion
+                      values are "V1" "V2"
+                    enum:
+                    - V1
+                    - V2
+                    type: string
+                required:
+                - version
+                type: object
               rateLimit:
                 description: RateLimit allows the user to limit the number of incoming
                   requests to a predefined value based on attributes within the traffic
@@ -276,6 +290,27 @@ spec:
                     'TCPRoute', 'TLSRoute']
                 - message: this policy does not yet support the sectionName field
                   rule: '!has(self.sectionName)'
+              tcpKeepalive:
+                description: TcpKeepalive settings associated with the upstream client
+                  connection. Disabled by default.
+                properties:
+                  idleTime:
+                    description: The duration a connection needs to be idle before
+                      keep-alive probes start being sent. The duration format is Defaults
+                      to `7200s`.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  interval:
+                    description: The duration between keep-alive probes. Defaults
+                      to `75s`.
+                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                    type: string
+                  probes:
+                    description: The total number of unacknowledged probes to send
+                      before deciding the connection is dead. Defaults to 9.
+                    format: int32
+                    type: integer
+                type: object
             required:
             - targetRef
             type: object

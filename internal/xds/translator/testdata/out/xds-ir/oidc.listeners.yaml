@@ -1,0 +1,135 @@
+- address:
+    socketAddress:
+      address: 0.0.0.0
+      portValue: 10080
+  defaultFilterChain:
+    filters:
+    - name: envoy.filters.network.http_connection_manager
+      typedConfig:
+        '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+        commonHttpProtocolOptions:
+          headersWithUnderscoresAction: REJECT_REQUEST
+        http2ProtocolOptions:
+          initialConnectionWindowSize: 1048576
+          initialStreamWindowSize: 65536
+          maxConcurrentStreams: 100
+        httpFilters:
+        - name: envoy.filters.http.oauth2_first-route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              - email
+              - profile
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oauth.foo.com/oauth2/v2/auth
+              credentials:
+                clientId: client.oauth.foo.com
+                hmacSecret:
+                  name: first-route/oauth2/hmac_secret
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: first-route/oauth2/client_secret
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              forwardBearerToken: true
+              redirectPathMatcher:
+                path:
+                  exact: /oauth2/callback
+              redirectUri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+              signoutPath:
+                path:
+                  exact: /signout
+              tokenEndpoint:
+                cluster: oauth_foo_com_443
+                timeout: 10s
+                uri: https://oauth.foo.com/token
+        - name: envoy.filters.http.oauth2_second-route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              - email
+              - profile
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
+              credentials:
+                clientId: client.oauth.bar.com
+                hmacSecret:
+                  name: second-route/oauth2/hmac_secret
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: second-route/oauth2/client_secret
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              forwardBearerToken: true
+              redirectPathMatcher:
+                path:
+                  exact: /oauth2/callback
+              redirectUri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+              signoutPath:
+                path:
+                  exact: /signout
+              tokenEndpoint:
+                cluster: oauth_bar_com_443
+                timeout: 10s
+                uri: https://oauth.bar.com/token
+        - name: envoy.filters.http.oauth2_third-route
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.oauth2.v3.OAuth2
+            config:
+              authScopes:
+              - openid
+              - email
+              - profile
+              authType: BASIC_AUTH
+              authorizationEndpoint: https://oauth.bar.com/oauth2/v2/auth
+              credentials:
+                clientId: test.oauth.bar.com
+                hmacSecret:
+                  name: third-route/oauth2/hmac_secret
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+                tokenSecret:
+                  name: third-route/oauth2/client_secret
+                  sdsConfig:
+                    ads: {}
+                    resourceApiVersion: V3
+              forwardBearerToken: true
+              redirectPathMatcher:
+                path:
+                  exact: /oauth2/callback
+              redirectUri: '%REQ(x-forwarded-proto)%://%REQ(:authority)%/oauth2/callback'
+              signoutPath:
+                path:
+                  exact: /signout
+              tokenEndpoint:
+                cluster: oauth_bar_com_443
+                timeout: 10s
+                uri: https://oauth.bar.com/token
+        - name: envoy.filters.http.router
+          typedConfig:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+        mergeSlashes: true
+        normalizePath: true
+        pathWithEscapedSlashesAction: UNESCAPE_AND_REDIRECT
+        rds:
+          configSource:
+            ads: {}
+            resourceApiVersion: V3
+          routeConfigName: first-listener
+        statPrefix: http
+        upgradeConfigs:
+        - upgradeType: websocket
+        useRemoteAddress: true
+  name: first-listener
+  perConnectionBufferLimitBytes: 32768

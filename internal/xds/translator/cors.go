@@ -88,9 +88,9 @@ func listenerContainsCORS(irListener *ir.HTTPListener) bool {
 	return false
 }
 
-// patchRouteWithCORSConfig patches the provided route with the CORS config if
+// patchRouteWithCORS patches the provided route with the CORS config if
 // applicable.
-func patchRouteWithCORSConfig(route *routev3.Route, irRoute *ir.HTTPRoute) error {
+func patchRouteWithCORS(route *routev3.Route, irRoute *ir.HTTPRoute) error {
 	if route == nil {
 		return errors.New("xds route is nil")
 	}
