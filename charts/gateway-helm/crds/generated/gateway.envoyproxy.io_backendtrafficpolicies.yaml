@@ -89,8 +89,8 @@ spec:
                     : !has(self.consistentHash)'
                 - message: Currently SlowStartWindow is only supported for RoundRobin
                     and LeastRequest load balancers.
-                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.status.slowStartWindow)
-                    : has(self.status.slowStartWindow)'
+                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStartWindow)
+                    : true '
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.

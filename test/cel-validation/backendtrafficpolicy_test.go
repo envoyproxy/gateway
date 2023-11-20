@@ -224,8 +224,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					LoadBalancer: &egv1a1.LoadBalancer{
 						Type: egv1a1.LeastRequestLoadBalancerType,
 						SlowStartWindow: &metav1.Duration{
-							Duration: 300 time.Second,
-						}
+							Duration: 10000000,
+						},
 					},
 				}
 			},
@@ -243,10 +243,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					LoadBalancer: &egv1a1.LoadBalancer{
-						Type: egv1a1.RoundRobinLoadBalancerTyp,
+						Type: egv1a1.RoundRobinLoadBalancerType,
 						SlowStartWindow: &metav1.Duration{
-							Duration: 300 time.Second,
-						}
+							Duration: 10000000,
+						},
 					},
 				}
 			},
@@ -266,8 +266,8 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 					LoadBalancer: &egv1a1.LoadBalancer{
 						Type: egv1a1.RandomLoadBalancerType,
 						SlowStartWindow: &metav1.Duration{
-							Duration: 300 time.Second,
-						}
+							Duration: 10000000,
+						},
 					},
 				}
 			},
@@ -287,10 +287,10 @@ func TestBackendTrafficPolicyTarget(t *testing.T) {
 						},
 					},
 					LoadBalancer: &egv1a1.LoadBalancer{
-						Type: egv1a1.RandomLoadBalancerType,
+						Type: egv1a1.ConsistentHashLoadBalancerType,
 						SlowStartWindow: &metav1.Duration{
-							Duration: 300 time.Second,
-						}
+							Duration: 10000000,
+						},
 					},
 				}
 			},
