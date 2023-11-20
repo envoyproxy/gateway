@@ -33,7 +33,8 @@ type LoadBalancer struct {
 	// For additional details,
 	// see https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="self.type in ['Random', 'ConsistentHash'] ? !has(self.slowStartWindow) : has(self.slowStartWindow)",message="Currently SlowStartWindow is only supported for RoundRobin and LeastRequest load balancers."
+	// +kubebuilder:validation:XValidation:rule="self.type == 'Random' ? !has(self.slowStartWindow) : has(self.slowStartWindow)",message="Currently SlowStartWindow is only supported for RoundRobin and LeastRequest load balancers."
+	// +kubebuilder:validation:XValidation:rule="self.type == 'ConsistentHash' ? !has(self.slowStartWindow) : has(self.slowStartWindow)",message="Currently SlowStartWindow is only supported for RoundRobin and LeastRequest load balancers."
 	SlowStartWindow *metav1.Duration `json:"slowStartWindow,omitempty"`
 }
 

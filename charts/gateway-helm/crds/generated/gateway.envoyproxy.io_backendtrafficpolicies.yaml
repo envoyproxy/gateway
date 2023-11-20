@@ -72,7 +72,11 @@ spec:
                     x-kubernetes-validations:
                     - message: Currently SlowStartWindow is only supported for RoundRobin
                         and LeastRequest load balancers.
-                      rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.slowStartWindow)
+                      rule: 'self.type == ''Random'' ? !has(self.slowStartWindow)
+                        : has(self.slowStartWindow)'
+                    - message: Currently SlowStartWindow is only supported for RoundRobin
+                        and LeastRequest load balancers.
+                      rule: 'self.type == ''ConsistentHash'' ? !has(self.slowStartWindow)
                         : has(self.slowStartWindow)'
                   type:
                     description: Type decides the type of Load Balancer policy. Valid
