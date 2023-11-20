@@ -6,11 +6,17 @@
 package translator
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
 	"strconv"
 	"strings"
+
+	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	"google.golang.org/protobuf/types/known/anypb"
+
+	"github.com/envoyproxy/gateway/internal/ir"
 )
 
 const (
@@ -61,4 +67,43 @@ func url2Cluster(strURL string) (*urlCluster, error) {
 		port:         uint32(port),
 		endpointType: epType,
 	}, nil
+}
+
+// enableFilterOnRoute enables a filterType on the provided route.
+func enableFilterOnRoute(filterType string, route *routev3.Route, irRoute *ir.HTTPRoute) error {
+	if route == nil {
+		return errors.New("xds route is nil")
+	}
+	if irRoute == nil {
+		return errors.New("ir route is nil")
+	}
+
+	filterName := perRouteFilterName(filterType, irRoute.Name)
+	filterCfg := route.GetTypedPerFilterConfig()
+	if _, ok := filterCfg[filterName]; ok {
+		// This should not happen since this is the only place where the filter
+		// config is added in a route.
+		return fmt.Errorf("route already contains filter config: %s, %+v",
+			filterType, route)
+	}
+
+	// Enable the corresponding filter for this route.
+	routeCfgAny, err := anypb.New(&routev3.FilterConfig{
+		Config: &anypb.Any{},
+	})
+	if err != nil {
+		return err
+	}
+
+	if filterCfg == nil {
+		route.TypedPerFilterConfig = make(map[string]*anypb.Any)
+	}
+
+	route.TypedPerFilterConfig[filterName] = routeCfgAny
+
+	return nil
+}
+
+func perRouteFilterName(filterType, routeName string) string {
+	return fmt.Sprintf("%s_%s", filterType, routeName)
 }
