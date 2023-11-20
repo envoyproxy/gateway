@@ -81,6 +81,12 @@ func (r *Runner) subscribeAndTranslate(ctx context.Context) {
 				if err != nil {
 					r.Logger.Error(err, "failed to translate xds ir")
 					errChan <- err
+				}
+
+				// xDS translation is done in a best-effort manner, so the result
+				// may contain partial resources even if there are errors.
+				if result == nil {
+					r.Logger.Info("no xds resources to publish")
 					return
 				}
 
