@@ -110,7 +110,7 @@ spec:
   ...
 
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -140,7 +140,7 @@ if they specify an `group` that matches the `group` of an `ExtensionRef` filter.
 modified configuration. If an extension is not registered or if the registered extension does not specify support for the `group` of an `ExtensionRef` filter then Envoy Gateway will treat it as an unknown resource
 and provide an error to the user.
 
-**Note:** Currently (as of [v1beta1][]) Gateway API does not provide a means to specify the namespace or version of an object referenced as an `ExtensionRef`. The extension mechanism will assume that
+**Note:** Currently (as of [v1][]) Gateway API does not provide a means to specify the namespace or version of an object referenced as an `ExtensionRef`. The extension mechanism will assume that
 the namespace of any `ExtensionRef` is the same as the namespace of the `HTTPRoute` or `GRPCRoute` it is attached to rather than treating the `name` field of an `ExtensionRef` as a `name.namespace` string.
 If Gateway API adds support for these fields then the design of the Envoy Gateway extensions will be updated to support them.
 
@@ -302,24 +302,24 @@ whenever Envoy Gateway creates an instance of Envoy Proxy. An extension develope
 
 ## Known Challenges
 
-Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does comes with a few trade-offs. One known trade-off is the impact of the time that it takes for the hook calls to be executed. Since an extension would make use of hook points in Envoy Gateway that use gRPC for communication, the time it takes to perform these requests could become a concern for some extension developers. One way to minimize the request time of the hook calls is to load the extension server as a sidecar to Envoy Gateway to minimize the impact of networking on the hook calls.
+Extending Envoy Gateway by using an external extension server which makes use of hook points in Envoy Gateway does come with a few trade-offs. One known trade-off is the impact of the time that it takes for the hook calls to be executed. Since an extension would make use of hook points in Envoy Gateway that use gRPC for communication, the time it takes to perform these requests could become a concern for some extension developers. One way to minimize the request time of the hook calls is to load the extension server as a sidecar to Envoy Gateway to minimize the impact of networking on the hook calls.
 
-[official goals]: https://github.com/envoyproxy/gateway/blob/main/GOALS.md#extensibility
-[ExtensionRef filters]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.LocalObjectReference
-[ExtensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.LocalObjectReference
-[ExtensionRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.LocalObjectReference
-[backendRefs]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.BackendObjectReference
+[official goals]: ../goals#extensibility
+[ExtensionRef filters]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference
+[ExtensionRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference
+[ExtensionRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.LocalObjectReference
+[backendRefs]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPBackendRef
 [Gateway API Policy attachments]: https://gateway-api.sigs.k8s.io/references/policy-attachment/?h=policy
 [Policy Attachments]: https://gateway-api.sigs.k8s.io/references/policy-attachment/?h=policy
 [policyAttachments]: https://gateway-api.sigs.k8s.io/references/policy-attachment/?h=policy
 [Envoy]: https://www.envoyproxy.io/
 [Envoy specific configuration (xDS)]: https://www.envoyproxy.io/docs/envoy/v1.25.1/configuration/configuration
-[v1beta1]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1
-[rate limiting]: https://gateway.envoyproxy.io/v0.3.0/user/rate-limit.html
-[authentication]: https://gateway.envoyproxy.io/v0.3.0/user/authn.html
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
-[GRPCRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
-[EnvoyGateway config]: https://gateway.envoyproxy.io/v0.3.0/api/config_types.html#envoygateway
+[v1]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1
+[rate limiting]: ../../user/rate-limit/
+[authentication]: ../../user/jwt-authentication/
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
+[GRPCRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRoute
+[EnvoyGateway config]: ../../api/extension_types#envoygateway
 [controller-runtime]: https://github.com/kubernetes-sigs/controller-runtime
 [Unstructured]: https://pkg.go.dev/k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 [Listener]: https://www.envoyproxy.io/docs/envoy/v1.23.0/api-v3/config/listener/v3/listener.proto#config-listener-v3-listener

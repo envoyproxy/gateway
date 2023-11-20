@@ -7,7 +7,7 @@ title: "Rate Limit Design"
 Rate limit is a feature that allows the user to limit the number of incoming requests
 to a predefined value based on attributes within the traffic flow.
 
-Here are some reasons why a user may want to implements Rate limits
+Here are some reasons why a user may want to implement Rate limits
 
 * To prevent malicious activity such as DDoS attacks.
 * To prevent applications and its resources (such as a database) from getting overloaded.
@@ -54,7 +54,7 @@ spec:
           requests: 10
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -103,7 +103,7 @@ spec:
           requests: 1000
           unit: Second
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -157,7 +157,7 @@ spec:
           requests: 10
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -207,7 +207,7 @@ spec:
           requests: 10
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -278,7 +278,7 @@ spec:
           requests: 10
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -326,7 +326,6 @@ spec:
           requests: 100
           unit: Hour
 ---
-
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
@@ -348,7 +347,7 @@ spec:
           requests: 100
           unit: Hour
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: example
@@ -430,12 +429,12 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
   * A Status field within the RateLimitFilter API will be added to reflect whether the specific configuration was programmed correctly in these multiple locations or not.
 
 [PolicyAttachment]: https://gateway-api.sigs.k8s.io/references/policy-attachment/
-[HTTPRoute]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute
-[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule
-[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io%2fv1beta1.HTTPBackendRef
-[matches]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
-[rule]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteMatch
-[extensionRef]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteFilterType
+[HTTPRoute]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRoute
+[HTTPRouteRule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
+[HTTPBackendRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPBackendRef
+[matches]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch
+[rule]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteMatch
+[extensionRef]: https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteFilterType
 [IP subnet]: https://en.wikipedia.org/wiki/Subnetwork
 [Actions]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route_components.proto#envoy-v3-api-msg-config-route-v3-ratelimit-action
 [descriptors]: https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/rate_limit_filter.html?highlight=descriptor#example-1
@@ -444,5 +443,5 @@ attribute such as [IP subnet][] in the future that are not relevant in the [HTTP
 [rate limit filter]: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/ratelimit/v3/rate_limit.proto#envoy-v3-api-msg-extensions-filters-http-ratelimit-v3-ratelimit 
 [rate limit service]: https://www.envoyproxy.io/docs/envoy/latest/configuration/other_features/rate_limit#config-rate-limit-service
 [reference implementation]: https://github.com/envoyproxy/ratelimit
-[EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/config/v1alpha1/envoygateway_types.go
+[EnvoyGateway]: https://github.com/envoyproxy/gateway/blob/main/api/v1alpha1/envoygateway_types.go
 [rate limit service configuration]: https://github.com/envoyproxy/ratelimit#configuration

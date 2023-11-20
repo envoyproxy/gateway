@@ -5,10 +5,10 @@ title: "Deployment Mode"
 
 ### One GatewayClass per Envoy Gateway
 
-* Envoy Gateway can accept a single [GatewayClass](https://gateway-api.sigs.k8s.io/api-types/gatewayclass/)
+* Envoy Gateway can accept a single [GatewayClass][]
 resource. If you've instantiated multiple GatewayClasses, we recommend running multiple Envoy Gateway controllers
 in different namespaces, linking a GatewayClass to each of them. 
-* Support for accepting multiple GatewayClass is being tracked [here](https://github.com/envoyproxy/gateway/issues/1231).
+* Support for accepting multiple GatewayClass is being tracked [here][issue1231].
 
 ### Supported Modes
 
@@ -18,7 +18,7 @@ in different namespaces, linking a GatewayClass to each of them.
 and **creates** managed data plane resources such as EnvoyProxy `Deployment` in the **namespace where Envoy Gateway is running**.
 * Envoy Gateway also supports **Namespaced** deployment mode, you can watch resources in the specific namespaces by assigning
 `EnvoyGateway.provider.kubernetes.watch.namespaces` and **creates** managed data plane resources in the **namespace where Envoy Gateway is running**.
-* Support for alternate deployment modes is being tracked [here](https://github.com/envoyproxy/gateway/issues/1117).
+* Support for alternate deployment modes is being tracked [here][issue1117].
 
 ### Multi-tenancy
 
@@ -38,14 +38,14 @@ Lets create a `GatewayClass` linked to the marketing team's Envoy Gateway contro
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg-marketing
 spec:
   controllerName: gateway.envoyproxy.io/marketing-gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -113,7 +113,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -211,14 +211,14 @@ Lets create a `GatewayClass` linked to the product team's Envoy Gateway controll
 
 ```shell
 cat <<EOF | kubectl apply -f -
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: eg-product
 spec:
   controllerName: gateway.envoyproxy.io/product-gatewayclass-controller
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: eg
@@ -286,7 +286,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.namespace
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: backend
@@ -398,3 +398,7 @@ Handling connection for 8889
 <
 * Connection #0 to host localhost left intact
 ```
+
+[GatewayClass]: https://gateway-api.sigs.k8s.io/api-types/gatewayclass/
+[issue1231]: https://github.com/envoyproxy/gateway/issues/1231
+[issue1117]: https://github.com/envoyproxy/gateway/issues/1117

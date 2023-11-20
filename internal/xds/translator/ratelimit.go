@@ -8,7 +8,6 @@ package translator
 import (
 	"bytes"
 	"errors"
-
 	"net/url"
 	"strconv"
 	"strings"
@@ -446,7 +445,7 @@ func (t *Translator) createRateLimitServiceCluster(tCtx *types.ResourceVersionTa
 		name:         clusterName,
 		settings:     []*ir.DestinationSetting{ds},
 		tSocket:      tSocket,
-		endpointType: DefaultEndpointType,
+		endpointType: EndpointTypeDNS,
 	}); err != nil && !errors.Is(err, ErrXdsClusterExists) {
 		return err
 	}
