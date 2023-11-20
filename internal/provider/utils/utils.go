@@ -29,7 +29,8 @@ func GetHashedName(nsName string, length int) string {
 	// replace `/` with `-` to create a valid K8s resource name
 	resourceName := strings.ReplaceAll(nsName, "/", "-")
 	if length > 0 && len(resourceName) > length {
-		return fmt.Sprintf("%s-%s", resourceName[0:length], hashedName[0:8])
+		trimmedName := strings.TrimSuffix(resourceName[0:length], "-")
+		return fmt.Sprintf("%s-%s", trimmedName, hashedName[0:8])
 	}
 	return fmt.Sprintf("%s-%s", resourceName, hashedName[0:8])
 }
