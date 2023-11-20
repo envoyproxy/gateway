@@ -47,7 +47,7 @@ bash VERSION=latest get-egctl.sh
 Yes, you can just use the below command if you want to live on the edge.
 
 ```shell
-curl https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash 
+curl -fsSL https://gateway.envoyproxy.io/get-egctl.sh | VERSION=latest bash 
 ```
 
 {{% alert title="Next Steps" color="warning" %}}
