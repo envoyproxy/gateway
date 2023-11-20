@@ -1046,7 +1046,7 @@ func (l *LoadBalancer) Validate() error {
 // RoundRobin load balancer settings
 // +k8s:deepcopy-gen=true
 type RoundRobin struct {
-	//SlowStartWindow  SlowStartWindow defines the duration of the warm up period for newly added host.
+	// SlowStartWindow defines the duration of the warm up period for newly added host.
 	// If set, slow start mode is enabled for newly added hosts in the cluster.
 	SlowStartWindow time.Duration `json:"slowStartWindow,omitempty" yaml:"slowStartWindow,omitempty"`
 }
@@ -1054,7 +1054,7 @@ type RoundRobin struct {
 // LeastRequest load balancer settings
 // +k8s:deepcopy-gen=true
 type LeastRequest struct {
-	//SlowStartWindow  SlowStartWindow defines the duration of the warm up period for newly added host.
+	// SlowStartWindow defines the duration of the warm up period for newly added host.
 	// If set, slow start mode is enabled for newly added hosts in the cluster.
 	SlowStartWindow time.Duration `json:"slowStartWindow,omitempty" yaml:"slowStartWindow,omitempty"`
 }

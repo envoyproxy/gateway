@@ -79,7 +79,6 @@ func buildXdsCluster(args *xdsClusterArgs) *clusterv3.Cluster {
 	} else if args.loadBalancer.LeastRequest != nil {
 		cluster.LbPolicy = clusterv3.Cluster_LEAST_REQUEST
 		if args.loadBalancer.LeastRequest.SlowStartWindow > 0 {
-
 			cluster.LbConfig = &clusterv3.Cluster_LeastRequestLbConfig_{
 				LeastRequestLbConfig: &clusterv3.Cluster_LeastRequestLbConfig{
 					SlowStartConfig: &clusterv3.Cluster_SlowStartConfig{
