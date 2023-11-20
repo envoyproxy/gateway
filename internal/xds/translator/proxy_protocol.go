@@ -14,8 +14,8 @@ import (
 	"github.com/envoyproxy/gateway/internal/ir"
 )
 
-// patchProxyProtocolFilter builds and appends the Proxy Protocol Filter to the HTTP
-// Connection Manager if applicable.
+// patchProxyProtocolFilter builds and appends the Proxy Protocol Filter to the
+// HTTP Listener's Listener Filters if applicable.
 func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, irListener *ir.HTTPListener) {
 	// Return early if unset
 	if xdsListener == nil || irListener == nil || !irListener.EnableProxyProtocol {
@@ -36,7 +36,7 @@ func patchProxyProtocolFilter(xdsListener *listenerv3.Listener, irListener *ir.H
 	}
 }
 
-// buildProxypProtocolFilter returns a Proxy Protocol filter from the provided IR listener.
+// buildProxypProtocolFilter returns a Proxy Protocol listener filter from the provided IR listener.
 func buildProxyProtocolFilter() *listenerv3.ListenerFilter {
 	pp := &proxyprotocolv3.ProxyProtocol{}
 
