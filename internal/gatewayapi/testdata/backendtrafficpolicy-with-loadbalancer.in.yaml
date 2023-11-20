@@ -113,22 +113,8 @@ backendTrafficPolicies:
 - apiVersion: gateway.envoyproxy.io/v1alpha1
   kind: BackendTrafficPolicy
   metadata:
-    namespace: default
-    name: policy-for-route
-  spec:
-    targetRef:
-      group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: httproute-2
-      namespace: default
-    loadBalancer:
-      type: LeastRequest
-      slowStartWindow: 300s
-- apiVersion: gateway.envoyproxy.io/v1alpha1
-  kind: BackendTrafficPolicy
-  metadata:
-    namespace: default
-    name: policy-for-route
+    namespace: envoy-gateway
+    name: policy-for-gateway2
   spec:
     targetRef:
       group: gateway.networking.k8s.io
@@ -137,4 +123,18 @@ backendTrafficPolicies:
       namespace: envoy-gateway
     loadBalancer:
       type: RoundRobin
+      slowStartWindow: 300s
+- apiVersion: gateway.envoyproxy.io/v1alpha1
+  kind: BackendTrafficPolicy
+  metadata:
+    namespace: default
+    name: policy-for-route2
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: httproute-2
+      namespace: default
+    loadBalancer:
+      type: LeastRequest
       slowStartWindow: 300s

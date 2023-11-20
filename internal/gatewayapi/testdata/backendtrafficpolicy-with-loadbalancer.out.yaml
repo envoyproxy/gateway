@@ -26,7 +26,7 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route
+    name: policy-for-route2
     namespace: default
   spec:
     loadBalancer:
@@ -69,8 +69,8 @@ backendTrafficPolicies:
   kind: BackendTrafficPolicy
   metadata:
     creationTimestamp: null
-    name: policy-for-route
-    namespace: default
+    name: policy-for-gateway2
+    namespace: envoy-gateway
   spec:
     loadBalancer:
       slowStartWindow: 5m0s
@@ -83,10 +83,9 @@ backendTrafficPolicies:
   status:
     conditions:
     - lastTransitionTime: null
-      message: Namespace:default TargetRef.Namespace:envoy-gateway, BackendTrafficPolicy
-        can only target a resource in the same namespace.
-      reason: Invalid
-      status: "False"
+      message: BackendTrafficPolicy has been accepted.
+      reason: Accepted
+      status: "True"
       type: Accepted
 gateways:
 - apiVersion: gateway.networking.k8s.io/v1

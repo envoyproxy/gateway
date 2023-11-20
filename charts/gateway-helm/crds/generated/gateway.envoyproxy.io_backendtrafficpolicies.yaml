@@ -69,15 +69,6 @@ spec:
                       and LeastRequest load balancers. For additional details, see
                       https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto#config-cluster-v3-cluster-slowstartconfig
                     type: string
-                    x-kubernetes-validations:
-                    - message: Currently SlowStartWindow is only supported for RoundRobin
-                        and LeastRequest load balancers.
-                      rule: 'self.type == ''Random'' ? !has(self.slowStartWindow)
-                        : has(self.slowStartWindow)'
-                    - message: Currently SlowStartWindow is only supported for RoundRobin
-                        and LeastRequest load balancers.
-                      rule: 'self.type == ''ConsistentHash'' ? !has(self.slowStartWindow)
-                        : has(self.slowStartWindow)'
                   type:
                     description: Type decides the type of Load Balancer policy. Valid
                       LoadBalancerType values are "ConsistentHash", "LeastRequest",
@@ -96,6 +87,10 @@ spec:
                     field needs to be set.
                   rule: 'self.type == ''ConsistentHash'' ? has(self.consistentHash)
                     : !has(self.consistentHash)'
+                - message: Currently SlowStartWindow is only supported for RoundRobin
+                    and LeastRequest load balancers.
+                  rule: 'self.type in [''Random'', ''ConsistentHash''] ? !has(self.status.slowStartWindow)
+                    : has(self.status.slowStartWindow)'
               proxyProtocol:
                 description: ProxyProtocol enables the Proxy Protocol when communicating
                   with the backend.
