@@ -184,6 +184,8 @@ type HTTPListener struct {
 	IsHTTP2 bool `json:"isHTTP2" yaml:"isHTTP2"`
 	// TCPKeepalive configuration for the listener
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
+	// EnableProxyProtocol enables the listener to interpret proxy protocol header
+	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure
