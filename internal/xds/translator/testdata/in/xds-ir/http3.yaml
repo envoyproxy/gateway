@@ -1,6 +1,7 @@
 http:
 - address: 0.0.0.0
-  enableHTTP3: true
+  http3Settings:
+    enabled: true
   hostnames:
   - '*'
   isHTTP2: false

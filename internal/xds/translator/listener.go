@@ -346,7 +346,7 @@ func buildDownstreamQUICTransportSocket(tlsConfigs []*ir.TLSListenerConfig) (*co
 			CommonTlsContext: &tlsv3.CommonTlsContext{
 				AlpnProtocols: []string{"h3"},
 			},
-			RequireClientCertificate: &wrappers.BoolValue{Value: true},
+			RequireClientCertificate: &wrappers.BoolValue{Value: false},
 		},
 	}
 

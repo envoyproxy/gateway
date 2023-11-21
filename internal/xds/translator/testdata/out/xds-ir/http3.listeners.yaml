@@ -45,7 +45,7 @@
               sdsConfig:
                 ads: {}
                 resourceApiVersion: V3
-          requireClientCertificate: true
+          requireClientCertificate: false
   name: envoy-gateway/gateway-1/tls-quic
   udpListenerConfig:
     downstreamSocketConfig: {}

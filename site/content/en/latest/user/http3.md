@@ -69,7 +69,8 @@ kind: ClientTrafficPolicy
 metadata:
   name: enable-http3
 spec:
-  enableHTTP3: true
+  http3Settings: 
+    enabled: true
   targetRef:
     group: gateway.networking.k8s.io
     kind: Gateway
@@ -88,26 +89,9 @@ kubectl get gateway/eg -o yaml
 
 ### Clusters without External LoadBalancer Support
 
-Get the name of the Envoy service created the by the example Gateway:
-
-```shell
-export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system --selector=gateway.envoyproxy.io/owning-gateway-namespace=default,gateway.envoyproxy.io/owning-gateway-name=eg -o jsonpath='{.items[0].metadata.name}')
-```
-
-Port forward to the Envoy service:
-
-```shell
-kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8443:443 &
-```
-
-Query the example app through Envoy proxy:
-
-For testing HTTP/3 traffic a custom build of curl with HTTP/3 support may be required. In this demo it is called qcurl. Follow the instructions [here](https://github.com/curl/curl/blob/master/docs/HTTP3.md). Follow the clusters with external loadbalancer example for easier access to qcurl using docker
-
-```shell
-qcurl -v -HHost:www.example.com --resolve "www.example.com:8443:127.0.0.1" \
---cacert example.com.crt https://www.example.com:8443/get
-```
+It is not possible at the moment to port-forward UDP protocol in kubernetes service 
+check out https://github.com/kubernetes/kubernetes/issues/47862. 
+Hence we need external loadbalancer to test this feature out.
 
 ### Clusters with External LoadBalancer Support
 
@@ -122,6 +106,5 @@ Query the example app through the Gateway:
 Below example uses a custom docker image with custom curl binary with built-in http3.
 
 ```shell
-docker run --net=host --rm ghcr.io/macbre/curl-http3 curl -v -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" \
---cacert example.com.crt https://www.example.com/get
+docker run --net=host --rm ghcr.io/macbre/curl-http3 curl -kv --http3 -HHost:www.example.com --resolve "www.example.com:443:${GATEWAY_HOST}" https://www.example.com/get
 ```

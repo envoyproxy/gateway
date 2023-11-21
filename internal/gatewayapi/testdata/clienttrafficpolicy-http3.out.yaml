@@ -6,7 +6,8 @@ clientTrafficPolicies:
     name: target-gateway-1
     namespace: envoy-gateway
   spec:
-    enableHTTP3: true
+    http3Settings:
+      enabled: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway
@@ -106,7 +107,8 @@ infraIR:
     proxy:
       listeners:
       - address: ""
-        enableHTTP3: true
+        http3Settings:
+          enabled: true
         name: envoy-gateway/gateway-1/tls
         ports:
         - containerPort: 10443
@@ -125,9 +127,10 @@ xdsIR:
       - path: /dev/stdout
     http:
     - address: 0.0.0.0
-      enableHTTP3: true
       hostnames:
       - '*'
+      http3Settings:
+        enabled: true
       isHTTP2: false
       name: envoy-gateway/gateway-1/tls
       port: 10443
@@ -141,6 +144,7 @@ xdsIR:
           - endpoints:
             - host: 7.7.7.7
               port: 8080
+            protocol: HTTP
             weight: 1
         hostname: '*'
         name: httproute/default/httproute-1/rule/0/match/0/*

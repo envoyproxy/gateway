@@ -190,8 +190,9 @@ type HTTPListener struct {
 	TCPKeepalive *TCPKeepalive `json:"tcpKeepalive,omitempty" yaml:"tcpKeepalive,omitempty"`
 	// EnableProxyProtocol enables the listener to interpret proxy protocol header
 	EnableProxyProtocol bool `json:"enableProxyProtocol,omitempty" yaml:"enableProxyProtocol,omitempty"`
-	// EnableHTTP3 is set to true to enable downstream HTTP3 support
-	EnableHTTP3 bool `json:"enableHTTP3,omitempty" yaml:"enableHTTP3,omitempty"`
+	// HTTP3Settings provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3Settings *HTTP3Settings `json:"http3Settings,omitempty"`
 }
 
 // Validate the fields within the HTTPListener structure

@@ -84,7 +84,7 @@ func (r *ResourceRender) Service() (*corev1.Service, error) {
 			ports = append(ports, p)
 
 			if port.Protocol == ir.HTTPSProtocolType {
-				if listener.EnableHTTP3 {
+				if listener.HTTP3Settings != nil && listener.HTTP3Settings.Enabled {
 					p := corev1.ServicePort{
 						Name:       ExpectedResourceHashedName(port.Name + "-h3"),
 						Protocol:   corev1.ProtocolUDP,

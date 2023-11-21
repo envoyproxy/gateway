@@ -5,7 +5,8 @@ clientTrafficPolicies:
     namespace: envoy-gateway
     name: target-gateway-1
   spec:
-    enableHTTP3: true
+    http3Settings:
+      enabled: true
     targetRef:
       group: gateway.networking.k8s.io
       kind: Gateway

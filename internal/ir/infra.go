@@ -61,8 +61,15 @@ type ProxyListener struct {
 	Address string `json:"address" yaml:"address"`
 	// Ports define network ports of the listener.
 	Ports []ListenerPort `json:"ports,omitempty" yaml:"ports,omitempty"`
-	// EnableHTTP3 enables HTTP/3 support.
-	EnableHTTP3 bool `json:"enableHTTP3,omitempty" yaml:"enableHTTP3,omitempty"`
+	// HTTP3Settings provides HTTP/3 configuration on the listener.
+	// +optional
+	HTTP3Settings *HTTP3Settings `json:"http3Settings,omitempty"`
+}
+
+type HTTP3Settings struct {
+	// Enabled enables HTTP/3 support on the listener.
+	// Disabled by default.
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // ListenerPort defines a network port of a listener.

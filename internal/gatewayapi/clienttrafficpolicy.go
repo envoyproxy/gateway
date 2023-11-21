@@ -293,16 +293,22 @@ func (t *Translator) translateClientTrafficPolicyForListener(policySpec *egv1a1.
 		translateListenerProxyProtocol(policySpec.EnableProxyProtocol, httpIR)
 		// enable http3 if set and TLS is enabled
 		if httpIR.TLS != nil {
-			httpIR.EnableHTTP3 = policySpec.EnableHTTP3
-			var proxyListenerIR *ir.ProxyListener
-			for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
-				if proxyListener.Name == irListenerName {
-					proxyListenerIR = proxyListener
-					break
+			if policySpec.HTTP3Settings != nil {
+				httpIR.HTTP3Settings = &ir.HTTP3Settings{
+					Enabled: policySpec.HTTP3Settings.Enabled,
 				}
-			}
-			if proxyListenerIR != nil {
-				proxyListenerIR.EnableHTTP3 = policySpec.EnableHTTP3
+				var proxyListenerIR *ir.ProxyListener
+				for _, proxyListener := range infraIR[irKey].Proxy.Listeners {
+					if proxyListener.Name == irListenerName {
+						proxyListenerIR = proxyListener
+						break
+					}
+				}
+				if proxyListenerIR != nil {
+					proxyListenerIR.HTTP3Settings = &ir.HTTP3Settings{
+						Enabled: policySpec.HTTP3Settings.Enabled,
+					}
+				}
 			}
 		}
 	}

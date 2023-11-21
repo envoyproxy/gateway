@@ -205,7 +205,7 @@ _Appears in:_
 | `targetRef` _[PolicyTargetReferenceWithSectionName](#policytargetreferencewithsectionname)_ | TargetRef is the name of the Gateway resource this policy is being attached to. This Policy and the TargetRef MUST be in the same namespace for this Policy to have effect and be applied to the Gateway. TargetRef |
 | `tcpKeepalive` _[TCPKeepalive](#tcpkeepalive)_ | TcpKeepalive settings associated with the downstream client connection. If defined, sets SO_KEEPALIVE on the listener socket to enable TCP Keepalives. Disabled by default. |
 | `enableProxyProtocol` _boolean_ | EnableProxyProtocol interprets the ProxyProtocol header and adds the Client Address into the X-Forwarded-For header. Note Proxy Protocol must be present when this field is set, else the connection is closed. |
-| `enableHTTP3` _boolean_ | EnableHTTP3 enables HTTP/3 support on the listener. Disabled by default. |
+| `http3Settings` _[HTTP3Settings](#http3settings)_ | HTTP3Settings provides HTTP/3 configuration on the listener. |
 
 
 
@@ -850,6 +850,20 @@ _Appears in:_
 | `group` _string_ |  |
 | `version` _string_ |  |
 | `kind` _string_ |  |
+
+
+#### HTTP3Settings
+
+
+
+
+
+_Appears in:_
+- [ClientTrafficPolicySpec](#clienttrafficpolicyspec)
+
+| Field | Description |
+| --- | --- |
+| `enabled` _boolean_ | Enabled enables HTTP/3 support on the listener. Disabled by default. |
 
 
 #### HeaderMatch

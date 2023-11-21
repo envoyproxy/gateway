@@ -59,10 +59,15 @@ type ClientTrafficPolicySpec struct {
 	//
 	// +optional
 	EnableProxyProtocol *bool `json:"enableProxyProtocol,omitempty"`
-	// EnableHTTP3 enables HTTP/3 support on the listener.
-	// Disabled by default.
+	// HTTP3Settings provides HTTP/3 configuration on the listener.
 	// +optional
-	EnableHTTP3 bool `json:"enableHTTP3,omitempty"`
+	HTTP3Settings *HTTP3Settings `json:"http3Settings,omitempty"`
+}
+
+type HTTP3Settings struct {
+	// Enabled enables HTTP/3 support on the listener.
+	// Disabled by default.
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 // ClientTrafficPolicyStatus defines the state of ClientTrafficPolicy

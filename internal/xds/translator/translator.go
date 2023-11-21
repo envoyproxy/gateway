@@ -127,9 +127,10 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 		// Search for an existing listener, if it does not exist, create one.
 		xdsListener := findXdsListenerByHostPort(tCtx, httpListener.Address, httpListener.Port, corev3.SocketAddress_TCP)
 		var quicXDSListener *listenerv3.Listener
+		enabledHTTP3 := httpListener.HTTP3Settings != nil && httpListener.HTTP3Settings.Enabled
 		if xdsListener == nil {
 			xdsListener = buildXdsTCPListener(httpListener.Name, httpListener.Address, httpListener.Port, httpListener.TCPKeepalive, accessLog)
-			if httpListener.EnableHTTP3 {
+			if enabledHTTP3 {
 				quicXDSListener = buildXdsQuicListener(httpListener.Name, httpListener.Address, httpListener.Port, accessLog)
 				if err := tCtx.AddXdsResource(resourcev3.ListenerType, quicXDSListener); err != nil {
 					return err
@@ -163,7 +164,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 			if err := t.addXdsHTTPFilterChain(xdsListener, httpListener, accessLog, tracing, false); err != nil {
 				return err
 			}
-			if httpListener.EnableHTTP3 {
+			if enabledHTTP3 {
 				if err := t.addXdsHTTPFilterChain(quicXDSListener, httpListener, accessLog, tracing, true); err != nil {
 					return err
 				}
@@ -249,7 +250,7 @@ func (t *Translator) processHTTPListenerXdsTranslation(
 				}
 			}
 
-			if httpListener.EnableHTTP3 {
+			if enabledHTTP3 {
 				http3AltSvcHeader := buildHTTP3AltSvcHeader(int(httpListener.Port))
 				if xdsRoute.ResponseHeadersToAdd == nil {
 					xdsRoute.ResponseHeadersToAdd = make([]*corev3.HeaderValueOption, 0)
