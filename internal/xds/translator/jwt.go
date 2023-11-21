@@ -144,9 +144,12 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 				JwksSourceSpecifier: remote,
 				PayloadInMetadata:   irProvider.Issuer,
 				ClaimToHeaders:      claimToHeaders,
-				FromHeaders:         buildJwtFromHeaders(irProvider.FromHeaders),
-				FromCookies:         irProvider.FromCookies,
-				FromParams:          irProvider.FromParams,
+			}
+
+			if irProvider.ExtractFrom != nil {
+				jwtProvider.FromHeaders = buildJwtFromHeaders(irProvider.ExtractFrom.Headers)
+				jwtProvider.FromCookies = irProvider.ExtractFrom.Cookies
+				jwtProvider.FromParams = irProvider.ExtractFrom.Params
 			}
 
 			providerKey := fmt.Sprintf("%s/%s", route.Name, irProvider.Name)
@@ -178,7 +181,7 @@ func buildJWTAuthn(irListener *ir.HTTPListener) (*jwtauthnv3.JwtAuthentication, 
 }
 
 // buildJwtFromHeaders returns a list of JwtHeader transformed from JWTFromHeader struct
-func buildJwtFromHeaders(headers []v1alpha1.JWTFromHeader) []*jwtauthnv3.JwtHeader {
+func buildJwtFromHeaders(headers []v1alpha1.JWTHeaderExtractor) []*jwtauthnv3.JwtHeader {
 	jwtHeaders := make([]*jwtauthnv3.JwtHeader, 0, len(headers))
 
 	for _, header := range headers {

@@ -17,13 +17,14 @@ http:
         - foo.com
         remoteJWKS:
           uri: https://localhost/jwt/public-key/jwks.json
-        fromHeaders:
-        - name: Authorization
-          valuePrefix: "Bearer "
-        fromCookies:
-        - session_access_token
-        fromParams:
-        - token
+        extractFrom:
+          headers:
+          - name: Authorization
+            valuePrefix: "Bearer "
+          cookies:
+          - session_access_token
+          params:
+          - token
     destination:
       name: "first-route-dest"
       settings:

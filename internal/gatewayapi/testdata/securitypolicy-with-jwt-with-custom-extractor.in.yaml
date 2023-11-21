@@ -116,10 +116,11 @@ securityPolicies:
         claimToHeaders:
         - header: three-route-example-key
           claim: claim3
-        fromHeaders:
-        - name: "Authorization"
-          valuePrefix: "Bearer "
-        fromCookies:
-        - session_access_token
-        fromParams:
-        - token
+        extractFrom:
+          headers:
+          - name: Authorization
+            valuePrefix: "Bearer "
+          cookies:
+          - session_access_token
+          params:
+          - token

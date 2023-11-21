@@ -196,13 +196,14 @@ securityPolicies:
         claimToHeaders:
         - claim: claim3
           header: three-route-example-key
-        fromCookies:
-        - session_access_token
-        fromHeaders:
-        - name: Authorization
-          valuePrefix: 'Bearer '
-        fromParams:
-        - token
+        extractFrom:
+          cookies:
+          - session_access_token
+          headers:
+          - name: Authorization
+            valuePrefix: 'Bearer '
+          params:
+          - token
         issuer: https://three.example.com
         name: example3
         remoteJWKS:
@@ -335,13 +336,14 @@ xdsIR:
             claimToHeaders:
             - claim: claim3
               header: three-route-example-key
-            fromCookies:
-            - session_access_token
-            fromHeaders:
-            - name: Authorization
-              valuePrefix: 'Bearer '
-            fromParams:
-            - token
+            extractFrom:
+              cookies:
+              - session_access_token
+              headers:
+              - name: Authorization
+                valuePrefix: 'Bearer '
+              params:
+              - token
             issuer: https://three.example.com
             name: example3
             remoteJWKS:

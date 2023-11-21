@@ -55,19 +55,10 @@ type JWTProvider struct {
 	//
 	ClaimToHeaders []ClaimToHeader `json:"claimToHeaders,omitempty"`
 
-	// FromHeaders is a list of HTTP request headers to extract the JWT token from.
-	// By default JWT Authentication extract JWT token from the Authorization HTTP Header using Bearer schema or
-	// extract it from access_token query parameters.
-	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
-	FromHeaders []JWTFromHeader `json:"fromHeaders,omitempty"`
-
-	// FromCookies is a list of cookie names to extract the JWT token from.
-	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
-	FromCookies []string `json:"fromCookies,omitempty"`
-
-	// FromParams is a list of query parameters to extract the JWT token from.
-	// See: https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/jwt_authn/v3/config.proto
-	FromParams []string `json:"fromParams,omitempty"`
+	// ExtractFrom defines different ways to extract the JWT token from HTTP request.
+	// If empty, it defaults to extract JWT token from the Authorization HTTP request header using Bearer schema
+	// or access_token from query parameters.
+	ExtractFrom *JWTExtractor `json:"extractFrom,omitempty"`
 }
 
 // RemoteJWKS defines how to fetch and cache JSON Web Key Sets (JWKS) from a remote
@@ -95,8 +86,8 @@ type ClaimToHeader struct {
 	Claim string `json:"claim"`
 }
 
-// JWTFromHeader defines an HTTP header location to extract JWT token
-type JWTFromHeader struct {
+// JWTHeaderExtractor defines an HTTP header location to extract JWT token
+type JWTHeaderExtractor struct {
 	// Name is the HTTP header name to retrieve the token
 	//
 	// +kubebuilder:validation:Required
@@ -106,4 +97,16 @@ type JWTFromHeader struct {
 	// The format would be used by Envoy like "{ValuePrefix}<TOKEN>".
 	// For example, "Authorization: Bearer <TOKEN>", then the ValuePrefix="Bearer " with a space at the end.
 	ValuePrefix *string `json:"valuePrefix,omitempty"`
+}
+
+// JWTExtractor defines a custom JWT token extraction from HTTP request.
+type JWTExtractor struct {
+	// Headers represents a list of HTTP request headers to extract the JWT token from.
+	Headers []JWTHeaderExtractor `json:"headers,omitempty"`
+
+	// Cookies represents a list of cookie names to extract the JWT token from.
+	Cookies []string `json:"cookies,omitempty"`
+
+	// Params represents a list of query parameters to extract the JWT token from.
+	Params []string `json:"params,omitempty"`
 }
