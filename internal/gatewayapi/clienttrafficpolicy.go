@@ -288,6 +288,9 @@ func translateClientTrafficPolicyForListener(policySpec *egv1a1.ClientTrafficPol
 	if httpIR != nil {
 		// Translate TCPKeepalive
 		translateListenerTCPKeepalive(policySpec.TCPKeepalive, httpIR)
+
+		// Translate Proxy Protocol
+		translateListenerProxyProtocol(policySpec.EnableProxyProtocol, httpIR)
 	}
 }
 
@@ -320,4 +323,15 @@ func translateListenerTCPKeepalive(tcpKeepAlive *egv1a1.TCPKeepalive, httpIR *ir
 	}
 
 	httpIR.TCPKeepalive = irTCPKeepalive
+}
+
+func translateListenerProxyProtocol(enableProxyProtocol *bool, httpIR *ir.HTTPListener) {
+	// Return early if not set
+	if enableProxyProtocol == nil {
+		return
+	}
+
+	if *enableProxyProtocol {
+		httpIR.EnableProxyProtocol = true
+	}
 }
