@@ -120,6 +120,9 @@ func (t *Translator) addXdsHTTPFilterChain(xdsListener *listenerv3.Listener, irL
 		Tracing: hcmTracing,
 	}
 
+	// Add the proxy protocol filter if needed
+	patchProxyProtocolFilter(xdsListener, irListener)
+
 	if irListener.IsHTTP2 {
 		mgr.HttpFilters = append(mgr.HttpFilters, xdsfilters.GRPCWeb)
 		// always enable grpc stats filter
